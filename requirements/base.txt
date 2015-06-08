@@ -1,0 +1,3 @@
+# Place your base dependencies here
+django
+psycopg2

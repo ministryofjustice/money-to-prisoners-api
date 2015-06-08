@@ -1,0 +1,3 @@
+# Place your production dependencies here
+-r base.txt
+

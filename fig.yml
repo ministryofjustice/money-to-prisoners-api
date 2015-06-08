@@ -1,0 +1,40 @@
+db:
+  build: docker/postgres
+  links:
+    - dbdata
+  volumes_from:
+    - dbdata
+  environment:
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: postgres
+
+dbdata:
+  image: busybox
+  command: /bin/sh
+  volumes:
+    - /var/lib/postgresql/data
+
+django:
+  build: .
+  command: python manage.py runserver 0.0.0.0:8000
+  volumes: 
+    - .:/app
+  ports:
+    - "8000:8000"
+  links:
+    - db
+  environment:
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: postgres
+    POSTGRES_HOST: db_1
+    POSTGRES_PORT: 5432
+
+djangogulpserve:
+  build: .
+  command: /bin/bash -c "gulp serve --host=$DJANGO_1_PORT_8000_TCP_ADDR --port=$TESTMOJDJANGO_DJANGO_1_PORT_8000_TCP_PORT"
+  volumes: 
+    - .:/app
+  ports:
+    - "3000:3000"
+  links:
+    - django
