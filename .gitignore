@@ -14,6 +14,7 @@ media/
 
 # sublime stuff
 *.sublime-workspace
+*.sublime-project
 
 # Virtual env
 venv/
