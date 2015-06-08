@@ -1,3 +1,4 @@
 # Place your base dependencies here
 Django==1.8.2
 psycopg2==2.6
+djangorestframework==3.1.3
