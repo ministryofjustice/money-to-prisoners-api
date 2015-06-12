@@ -14,17 +14,8 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-# TODO: Set your ALLOWED_HOSTS
-
-ALLOWED_HOSTS = []
-
-
-
-# TODO: Configure production database
-DATABASES = {}
-
-
-SECRET_KEY = os.environ['SECRET_KEY']
-
-DEBUG = False
-TEMPLATE_DEBUG = DEUBG
+ALLOWED_HOSTS = [
+    'localhost',
+    '.dsd.io',
+    '.service.gov.uk'
+]
