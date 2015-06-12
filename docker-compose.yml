@@ -1,0 +1,37 @@
+db:
+  build: docker/postgres
+  links:
+    - dbdata
+  volumes_from:
+    - dbdata
+  environment:
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: postgres
+
+dbdata:
+  image: busybox
+  command: /bin/sh
+  volumes:
+    - /var/lib/postgresql/data
+
+django:
+  build: .
+  command: >
+    /bin/bash -c
+    "pip3 install -r requirements/dev.txt &&
+    python manage.py migrate --noinput &&
+    python manage.py runserver 0.0.0.0:8000"
+  volumes:
+    - .:/app
+    - /tmp/pip_download_cache:/tmp/pip_download_cache
+  ports:
+    - "8000:8000"
+  links:
+    - db
+  environment:
+    DB_USERNAME: postgres
+    DB_PASSWORD: postgres
+    DB_HOST: db_1
+    DB_PORT: 5432
+    PIP_DOWNLOAD_CACHE: /tmp/pip_download_cache/
+

@@ -1,11 +1,7 @@
 FROM ubuntu:trusty
 
-RUN echo "Europe/London" > /etc/timezone  &&  dpkg-reconfigure -f noninteractive tzdata
-
 RUN apt-get update && \
     apt-get install -y software-properties-common python-software-properties
-
-RUN add-apt-repository -y ppa:chris-lea/node.js
 
 RUN apt-get update && \
     apt-get install -y \
