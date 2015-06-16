@@ -20,6 +20,7 @@ django:
     /bin/bash -c
     "pip3 install -r requirements/dev.txt &&
     python manage.py migrate --noinput &&
+    python manage.py load_test_data &&
     python manage.py runserver 0.0.0.0:8000"
   volumes:
     - .:/app
