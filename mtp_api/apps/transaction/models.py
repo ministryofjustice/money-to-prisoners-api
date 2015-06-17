@@ -14,7 +14,6 @@ class Transaction(TimeStampedModel):
     prisoner_name = models.CharField(blank=True, max_length=250)
     prisoner_dob = models.DateField(blank=True, null=True)
 
-    # credit_or_debit = models.CharField(max_length=50)
     amount = models.PositiveIntegerField()
     sender_bank_reference = models.CharField(
         blank=True, max_length=250
@@ -24,4 +23,3 @@ class Transaction(TimeStampedModel):
     )
     reference = models.TextField(blank=True)
     received_at = models.DateTimeField(auto_now=False)
-    # raw = models.TextField()

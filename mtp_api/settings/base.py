@@ -42,7 +42,7 @@ INSTALLED_APPS = (
 )
 
 PROJECT_APPS = (
-    'mtp_api.apps.core',
+    'core',
     'prison',
     'transaction'
 )

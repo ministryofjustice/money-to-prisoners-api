@@ -1,20 +1,20 @@
 [
 {
+    "model": "prison.prison",
     "fields": {
-        "modified": "2015-06-16T12:43:36.912Z",
-        "name": "Prison 1",
-        "created": "2015-06-16T12:43:36.904Z"
+        "created": "2015-06-17T13:47:18.099Z",
+        "modified": "2015-06-17T13:47:18.100Z",
+        "name": "HM Brixton"
     },
-    "pk": 1,
-    "model": "prison.prison"
+    "pk": "BXI"
 },
 {
+    "model": "prison.prison",
     "fields": {
-        "modified": "2015-06-16T12:43:38.720Z",
-        "name": "Prison 2",
-        "created": "2015-06-16T12:43:38.720Z"
+        "created": "2015-06-17T13:47:31.283Z",
+        "modified": "2015-06-17T13:47:31.283Z",
+        "name": "HM Preston"
     },
-    "pk": 2,
-    "model": "prison.prison"
+    "pk": "PNI"
 }
 ]

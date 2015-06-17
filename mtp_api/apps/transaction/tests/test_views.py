@@ -5,10 +5,11 @@ from rest_framework.test import APITestCase
 
 from transaction.models import Transaction
 
-from .utils import generate_transactions
+from transaction.tests.utils import generate_transactions
 
 
 class TransactionViewTestCase(APITestCase):
+    fixtures = ['test_prisons.json']
 
     def setUp(self):
         super(TransactionViewTestCase, self).setUp()
@@ -50,6 +51,3 @@ class TransactionViewTestCase(APITestCase):
         # get transaction from response data and make sure that they
         # all belong to last upload
         self.assertTransactionsInUpload(response, 1)
-        """
-        Asserts that
-        """
