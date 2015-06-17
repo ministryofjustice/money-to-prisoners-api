@@ -38,13 +38,16 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'django_filters'
+    'rest_framework.authtoken',
+    'rest_auth',
+    'django_filters',
 )
 
 PROJECT_APPS = (
     'core',
     'prison',
-    'transaction'
+    'transaction',
+    'mtp_auth'
 )
 
 INSTALLED_APPS += PROJECT_APPS
@@ -145,7 +148,10 @@ DATABASES = {
 
 
 REST_FRAMEWORK = {
-    'PAGE_SIZE': 20
+    'PAGE_SIZE': 20,
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    )
 }
 
 try:
