@@ -11,7 +11,6 @@ class Transaction(TimeStampedModel):
     prison = models.ForeignKey(Prison, blank=True, null=True)
 
     prisoner_number = models.CharField(blank=True, max_length=250)
-    prisoner_name = models.CharField(blank=True, max_length=250)
     prisoner_dob = models.DateField(blank=True, null=True)
 
     amount = models.PositiveIntegerField()

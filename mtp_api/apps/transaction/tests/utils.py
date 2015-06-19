@@ -1,6 +1,5 @@
 import datetime
 import random
-import names
 import string
 
 from django.utils import timezone
@@ -62,7 +61,6 @@ def generate_transactions(uploads=2, transaction_batch=30):
                 data.update({
                     'prison': Prison.objects.order_by('?').first(),
                     'prisoner_number': random_prison_number(),
-                    'prisoner_name': names.get_full_name(),
                     'prisoner_dob': random_dob()
                 })
             if include_sender_info:

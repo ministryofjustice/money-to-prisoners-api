@@ -15,6 +15,6 @@ class TransactionSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Transaction
         fields = (
-            'id', 'prisoner_number', 'prisoner_name', 'prisoner_dob',
+            'id', 'prisoner_number', 'prisoner_dob',
             'amount', 'sender', 'received_at'
         )

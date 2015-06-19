@@ -4,17 +4,17 @@
     "fields": {
         "created": "2015-06-17T13:47:18.099Z",
         "modified": "2015-06-17T13:47:18.100Z",
-        "name": "HM Brixton"
+        "name": "Prison 1"
     },
-    "pk": "BXI"
+    "pk": "IXB"
 },
 {
     "model": "prison.prison",
     "fields": {
         "created": "2015-06-17T13:47:31.283Z",
         "modified": "2015-06-17T13:47:31.283Z",
-        "name": "HM Preston"
+        "name": "Prison 2"
     },
-    "pk": "PNI"
+    "pk": "INP"
 }
 ]
