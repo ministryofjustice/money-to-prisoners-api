@@ -1,8 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.core.management import call_command
-from mtp_auth.tests.mommy_recipes import create_prison_user_mapping
-
-from prison.models import Prison
+from core.tests.utils import make_test_users, \
+    make_test_oauth_applications
 
 
 class Command(BaseCommand):
@@ -10,7 +9,9 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         call_command(
             'loaddata',
-            'test_prisons.json', 'test_transactions.json'
+            'test_prisons.json',
+            'test_transactions.json',
+            'initial_groups.json'
         )
-        for prison in Prison.objects.all():
-            create_prison_user_mapping(prison)
+        make_test_users()
+        make_test_oauth_applications()

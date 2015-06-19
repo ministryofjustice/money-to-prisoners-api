@@ -44,9 +44,6 @@ class OwnPrisonListModelMixin(object):
 
     def get_queryset(self):
         qs = super(OwnPrisonListModelMixin, self).get_queryset()
-        if self.request.user.is_superuser:
-            return qs
-
         return qs.filter(prison__in=self.get_prison_set_for_user())
 
 

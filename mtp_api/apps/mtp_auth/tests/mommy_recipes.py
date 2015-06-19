@@ -23,7 +23,6 @@ def create_prison_user_mapping(prison):
     if not User.objects.filter(username=name_and_password).exists():
         pu = make('PrisonUserMapping',
                   user__username=name_and_password,
-                  prisons=[prison]
-                  )
+                  prisons=[prison])
         pu.user.set_password(name_and_password)
         pu.user.save()
