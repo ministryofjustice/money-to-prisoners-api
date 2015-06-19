@@ -14,6 +14,6 @@ router.register(r'transactions', TransactionView)
 urlpatterns = patterns('',
     url(r'^', include(router.urls)),
     url(r'^$', TemplateView.as_view(template_name='core/index.html')),
-    url(r'^auth/', include('rest_auth.urls')),
+    url(r'^oauth2/', include('oauth2_provider.urls', namespace='oauth2_provider')),
     url(r'^admin/', include(admin.site.urls)),
 )
