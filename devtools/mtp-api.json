@@ -1,1 +1,87 @@
-{"id":"7b4a6dd5-9171-82c5-36a9-d698d459cf47","name":"mtp-api","timestamp":1434624269321,"requests":[{"collectionId":"7b4a6dd5-9171-82c5-36a9-d698d459cf47","id":"afc00fe3-15e4-c457-2d67-e2466a91ae8e","name":"http://localhost:8000/transactions/","description":"","url":"http://localhost:8000/transactions/","method":"GET","headers":"Authorization: Bearer x2coEAiNxyWHXylYOkqqZwQ0aq7WTk\n","data":[{"key":"grant_type","value":"password","type":"text"},{"key":"username","value":"test_hm_brixton","type":"text"},{"key":"password","value":"test_hm_brixton","type":"text"},{"key":"client_id","value":"cashbook","type":"text"},{"key":"client_secret","value":"cashbook","type":"text"}],"dataMode":"urlencoded","timestamp":0,"responses":[],"version":2},{"collectionId":"7b4a6dd5-9171-82c5-36a9-d698d459cf47","id":"ed00e6e9-2f51-ba55-5b8a-448fa8a18e0a","name":"http://localhost:8000/oauth2/token/","description":"Get an access_token","url":"http://localhost:8000/oauth2/token/","method":"POST","headers":"","data":[{"key":"grant_type","value":"password","type":"text"},{"key":"username","value":"test_hm_brixton","type":"text"},{"key":"password","value":"test_hm_brixton","type":"text"},{"key":"client_id","value":"cashbook","type":"text"},{"key":"client_secret","value":"cashbook","type":"text"}],"dataMode":"urlencoded","timestamp":0,"responses":[],"version":2}]}
+{
+  "id": "7b4a6dd5-9171-82c5-36a9-d698d459cf47",
+  "name": "mtp-api",
+  "timestamp": 1434624269321,
+  "requests": [
+    {
+      "collectionId": "7b4a6dd5-9171-82c5-36a9-d698d459cf47",
+      "id": "afc00fe3-15e4-c457-2d67-e2466a91ae8e",
+      "name": "http://localhost:8000/transactions/",
+      "description": "",
+      "url": "http://localhost:8000/transactions/",
+      "method": "GET",
+      "headers": "Authorization: Bearer x2coEAiNxyWHXylYOkqqZwQ0aq7WTk\n",
+      "data": [
+        {
+          "key": "grant_type",
+          "value": "password",
+          "type": "text"
+        },
+        {
+          "key": "username",
+          "value": "test_hm_brixton",
+          "type": "text"
+        },
+        {
+          "key": "password",
+          "value": "test_hm_brixton",
+          "type": "text"
+        },
+        {
+          "key": "client_id",
+          "value": "cashbook",
+          "type": "text"
+        },
+        {
+          "key": "client_secret",
+          "value": "cashbook",
+          "type": "text"
+        }
+      ],
+      "dataMode": "urlencoded",
+      "timestamp": 0,
+      "responses": [],
+      "version": 2
+    },
+    {
+      "collectionId": "7b4a6dd5-9171-82c5-36a9-d698d459cf47",
+      "id": "ed00e6e9-2f51-ba55-5b8a-448fa8a18e0a",
+      "name": "http://localhost:8000/oauth2/token/",
+      "description": "Get an access_token",
+      "url": "http://localhost:8000/oauth2/token/",
+      "method": "POST",
+      "headers": "",
+      "data": [
+        {
+          "key": "grant_type",
+          "value": "password",
+          "type": "text"
+        },
+        {
+          "key": "username",
+          "value": "test_hm_brixton",
+          "type": "text"
+        },
+        {
+          "key": "password",
+          "value": "test_hm_brixton",
+          "type": "text"
+        },
+        {
+          "key": "client_id",
+          "value": "cashbook",
+          "type": "text"
+        },
+        {
+          "key": "client_secret",
+          "value": "cashbook",
+          "type": "text"
+        }
+      ],
+      "dataMode": "urlencoded",
+      "timestamp": 0,
+      "responses": [],
+      "version": 2
+    }
+  ]
+}
