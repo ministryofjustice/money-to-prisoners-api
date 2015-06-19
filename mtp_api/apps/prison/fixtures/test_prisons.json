@@ -1,0 +1,20 @@
+[
+{
+    "model": "prison.prison",
+    "fields": {
+        "created": "2015-06-17T13:47:18.099Z",
+        "modified": "2015-06-17T13:47:18.100Z",
+        "name": "Prison 1"
+    },
+    "pk": "IXB"
+},
+{
+    "model": "prison.prison",
+    "fields": {
+        "created": "2015-06-17T13:47:31.283Z",
+        "modified": "2015-06-17T13:47:31.283Z",
+        "name": "Prison 2"
+    },
+    "pk": "INP"
+}
+]

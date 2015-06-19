@@ -9,11 +9,13 @@ https://docs.djangoproject.com/en/1.7/ref/settings/
 """
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
+import sys
 import os
 
 from django.conf import global_settings
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
+sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.7/howto/deployment/checklist/
@@ -35,9 +37,17 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'mtp_api.apps.core',
-    'rest_framework'
+    'rest_framework',
+    'django_filters'
 )
+
+PROJECT_APPS = (
+    'core',
+    'prison',
+    'transaction'
+)
+
+INSTALLED_APPS += PROJECT_APPS
 
 MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -134,6 +144,9 @@ DATABASES = {
 }
 
 
+REST_FRAMEWORK = {
+    'PAGE_SIZE': 20
+}
 
 try:
     from .local import *
