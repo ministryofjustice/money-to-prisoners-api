@@ -1,0 +1,3 @@
+# Place your development dependencies here
+-r dev.txt
+django-jenkins==0.17.0

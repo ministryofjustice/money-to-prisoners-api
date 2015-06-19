@@ -7,6 +7,8 @@ from rest_framework import filters
 from django_filters import FilterSet
 
 from .models import Transaction
+from mtp_auth.models import PrisonUserMapping
+from prison.models import Prison
 from .serializers import TransactionSerializer
 
 
@@ -32,8 +34,24 @@ class TransactionFilter(FilterSet):
         fields = ['upload_counter']
 
 
+class OwnPrisonListModelMixin(object):
+
+    def get_prison_set_for_user(self):
+        try:
+            return PrisonUserMapping.objects.get(user=self.request.user).prisons.all()
+        except PrisonUserMapping.DoesNotExist:
+            return Prison.objects.none()
+
+    def get_queryset(self):
+        qs = super(OwnPrisonListModelMixin, self).get_queryset()
+        if self.request.user.is_superuser:
+            return qs
+
+        return qs.filter(prison__in=self.get_prison_set_for_user())
+
+
 class TransactionView(
-    mixins.ListModelMixin, viewsets.GenericViewSet
+    OwnPrisonListModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet,
 ):
     queryset = Transaction.objects.all()
     serializer_class = TransactionSerializer
