@@ -1,3 +1,6 @@
-from django.shortcuts import render
+from prison.models import Prison
+from rest_framework.viewsets import ModelViewSet
+from rest_framework_extensions.mixins import NestedViewSetMixin
 
-# Create your views here.
+class PrisonViewSet(NestedViewSetMixin, ModelViewSet):
+    model = Prison

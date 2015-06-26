@@ -40,6 +40,7 @@ INSTALLED_APPS = (
     'oauth2_provider',
     'rest_framework',
     'django_filters',
+    'rest_framework_swagger',
 
 )
 
@@ -47,7 +48,8 @@ PROJECT_APPS = (
     'core',
     'prison',
     'transaction',
-    'mtp_auth'
+    'mtp_auth',
+    'accounting'
 )
 
 INSTALLED_APPS += PROJECT_APPS

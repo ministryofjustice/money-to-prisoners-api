@@ -1,8 +1,18 @@
 from django.db import models
+from django.db.models import Q
 
 from model_utils.models import TimeStampedModel
 
 from prison.models import Prison
+
+
+class TransactionQuerySet(models.QuerySet):
+
+    def pending(self):
+        return self.filter(Q(owner=None) & Q(credited=False))
+
+    def locked_by(self, user):
+        return self.filter(owner=user)
 
 
 class Transaction(TimeStampedModel):
@@ -22,3 +32,12 @@ class Transaction(TimeStampedModel):
     )
     reference = models.TextField(blank=True)
     received_at = models.DateTimeField(auto_now=False)
+
+
+    owner = models.ForeignKey('auth.User', null=True, blank=True)
+    credited = models.BooleanField(default=False)
+
+    objects = TransactionQuerySet.as_manager()
+
+    class Meta:
+        ordering = ('received_at',)
