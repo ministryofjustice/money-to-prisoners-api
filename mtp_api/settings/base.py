@@ -164,6 +164,7 @@ OAUTH2_PROVIDER = {
     }
 }
 
+
 try:
     from .local import *
 except ImportError:
