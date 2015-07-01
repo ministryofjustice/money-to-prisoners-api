@@ -4,9 +4,10 @@ from oauth2_provider.models import Application
 from prison.models import Prison
 
 
-def make_test_users():
+def make_test_users(users_per_prison=1):
     for prison in Prison.objects.all():
-        create_prison_user_mapping(prison)
+        for index in range(users_per_prison):
+            create_prison_user_mapping(prison)
 
 
 def make_test_oauth_applications():
@@ -17,4 +18,3 @@ def make_test_oauth_applications():
         client_secret='cashbook',
         name='cashbook',
         user=User.objects.first())
-
