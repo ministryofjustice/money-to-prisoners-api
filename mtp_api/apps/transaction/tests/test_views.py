@@ -555,3 +555,45 @@ class TransactionsReleaseTestCase(BaseTransactionViewTestCase):
             self._get_credited_transactions_qs(logged_in_user, prison).count(),
             len(credited_transactions)
         )
+
+
+class TransactionsPathTestCase(BaseTransactionViewTestCase):
+
+    def _get_url(self, user, prison):
+        return reverse(
+            'transaction-prison-user-list', kwargs={
+                'user_id': user.pk,
+                'prison_id': prison.pk
+            }
+        )
+
+    def test_cannot_path_somebody_else_s_transactions(self):
+        prison = self.prisons[0]
+        users = get_users_for_prison(prison)
+
+        logged_in_user = users[0]
+        transactions_owner = users[1]
+
+        pending_transactions = list(
+            self._get_pending_transactions_qs(prison, transactions_owner)
+        )
+
+        # if this starts failing, we need to iterate over users and get the
+        # first user with pending transactions.
+        self.assertTrue(len(pending_transactions) > 0)
+
+        # request
+        self.client.force_authenticate(user=logged_in_user)
+
+        url = self._get_url(transactions_owner, prison)
+        response = self.client.patch(url, {
+            'transaction_ids': [t.id for t in pending_transactions]
+        }, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_cannot_path_non_pending_transactions(self):
+        pass
+
+    def test_can_path_pending_transaction(self):
+        pass
