@@ -90,7 +90,6 @@ class TransactionView(
         MAX_SLICE_SIZE = 20
         DEFAULT_SLICE_SIZE = 20
         slice_size = min(MAX_SLICE_SIZE, int(request.query_params.get('count', DEFAULT_SLICE_SIZE)))
-
         with transaction.atomic():
             pending = self.get_queryset(filtering=False).pending().select_for_update()
             slice_pks = pending[:slice_size].values_list('pk', flat=True)

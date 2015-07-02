@@ -11,3 +11,8 @@ TRANSACTION_STATUS = Choices(
     # transactions with owner != None and credited == True
     ('CREDITED', 'credited', 'Credited'),
 )
+
+
+# max number of transactions a user can take at any time
+# this only refers to pending transactions
+TAKE_LIMIT = 20
