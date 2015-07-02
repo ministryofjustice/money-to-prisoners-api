@@ -41,3 +41,4 @@ def create_prison_user_mapping(prison):
     )
     pu.user.set_password(name_and_password)
     pu.user.save()
+    return pu

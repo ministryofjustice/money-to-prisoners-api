@@ -1,5 +1,4 @@
-from rest_framework.settings import api_settings
-from collections import Counter
+import urllib.parse
 
 from django.core.urlresolvers import reverse
 
@@ -7,11 +6,13 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from core.tests.utils import make_test_users, make_test_oauth_applications
-from transaction.tests.utils import generate_transactions
 from mtp_auth.models import PrisonUserMapping
 
-from transaction.models import Transaction
+from prison.models import Prison
+
 from transaction.constants import TRANSACTION_STATUS
+
+from .utils import generate_transactions
 
 
 def get_users_for_prison(prison):
@@ -24,35 +25,21 @@ def get_prisons_for_user(user):
 
 class BaseTransactionViewTestCase(APITestCase):
     fixtures = ['test_prisons.json']
+    STATUS_FILTERS = {
+        None: lambda t: True,
+        TRANSACTION_STATUS.PENDING: lambda t: t.owner and not t.credited,
+        TRANSACTION_STATUS.AVAILABLE: lambda t: not t.owner and not t.credited,
+        TRANSACTION_STATUS.CREDITED: lambda t: t.owner and t.credited
+    }
 
     def setUp(self):
         super(BaseTransactionViewTestCase, self).setUp()
-        make_test_users(users_per_prison=2)
+        self.owners = make_test_users(users_per_prison=2)
         self.transactions = generate_transactions(
-            uploads=2, transaction_batch=101
+            uploads=1, transaction_batch=101
         )
+        self.prisons = Prison.objects.all()
         make_test_oauth_applications()
-
-    def calculate_prison_transaction_counts(self, filter_):
-        filter_ = filter_ or (lambda x: True)
-        return Counter([t.prison for t in self.transactions if filter_(t)])
-
-    def calculate_owner_transaction_counts(self, filter_):
-        filter_ = filter_ or (lambda x: True)
-        return Counter([t.owner for t in self.transactions if filter_(t)])
-
-    def assertResultsBelongToUser(self, results, user):
-        if not results:
-            return
-
-        ids = {x['id'] for x in results}
-
-        user_prisons = set(user.prisonusermapping.prisons.values_list('pk', flat=True))
-
-        self.assertEqual(
-            Transaction.objects.filter(id__in=ids, prison_id__in=user_prisons).count(),
-            len(results)
-        )
 
 
 class TransactionsEndpointTestCase(BaseTransactionViewTestCase):
@@ -74,150 +61,127 @@ class TransactionsEndpointTestCase(BaseTransactionViewTestCase):
 
 class TransactionsByPrisonEndpointTestCase(BaseTransactionViewTestCase):
 
-    def _request_and_assert(self, prison, expected_count, status_param=None):
-        url = self._get_list(prison, status=status_param)
+    def _request_and_assert(self, status_param=None):
+        for prison in self.prisons:
+            expected_ids = [
+                t.pk for t in self.transactions if
+                    t.prison == prison and
+                    self.STATUS_FILTERS[status_param](t)
+            ]
+            url = self._get_list_url(prison, status=status_param)
 
-        expected_owners = get_users_for_prison(prison)
-        self.client.force_authenticate(user=expected_owners[0])
+            expected_owners = get_users_for_prison(prison)
+            self.client.force_authenticate(user=expected_owners[0])
 
-        response = self.client.get(url, format='json')
+            response = self.client.get(url, format='json')
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['count'], expected_count)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(response.data['count'], len(expected_ids))
 
-        # there should be more than 1 owners as we are not filtering
-        # by user
-        self.assertEqual(
-            set([r['owner'] for r in response.data['results']]),
-            {o.pk for o in expected_owners}
-        )
-        if expected_count > api_settings.PAGE_SIZE:
-            self.assertNotEqual(response.data['next'], None)
+            self.assertListEqual(
+                sorted([t['id'] for t in response.data['results']]),
+                sorted(expected_ids)
+            )
 
-    def _get_list(self, prison, status=None):
+    def _get_list_url(self, prison, status=None):
         url = reverse(
             'transaction-prison-list', kwargs={
                 'prison_id': prison.pk
             }
         )
 
+        params = {
+            'limit': 10000
+        }
         if status:
-            url = '{url}?status={status}'.format(
-                url=url, status=status
-            )
-        return url
+            params['status'] = status
+
+        return '{url}?{params}'.format(
+            url=url, params=urllib.parse.urlencode(params)
+        )
 
     def test_all(self):
         """
         GET without params should return all transactions linked
         to that prison.
         """
-        prisons_n_counters = self.calculate_prison_transaction_counts(
-            lambda t: t.prison
-        )
-        self.assertNotEqual(len(prisons_n_counters), 0)
-
-        for prison, count in prisons_n_counters.items():
-            self._request_and_assert(prison, count)
+        self._request_and_assert()
 
     def test_with_pending_status(self):
-        prisons_n_counters = self.calculate_prison_transaction_counts(
-            lambda t: t.prison and t.owner and not t.credited
+        self._request_and_assert(
+            status_param=TRANSACTION_STATUS.PENDING
         )
-        self.assertNotEqual(len(prisons_n_counters), 0)
-
-        for prison, count in prisons_n_counters.items():
-            self._request_and_assert(
-                prison, count, status_param=TRANSACTION_STATUS.PENDING
-            )
 
     def test_with_available_status(self):
-        prisons_n_counters = self.calculate_prison_transaction_counts(
-            lambda t: t.prison and not t.owner and not t.credited
+        self._request_and_assert(
+            status_param=TRANSACTION_STATUS.AVAILABLE
         )
-        self.assertNotEqual(len(prisons_n_counters), 0)
-
-        for prison, count in prisons_n_counters.items():
-            self._request_and_assert(
-                prison, count, status_param=TRANSACTION_STATUS.AVAILABLE
-            )
 
     def test_with_credited_status(self):
-        prisons_n_counters = self.calculate_prison_transaction_counts(
-            lambda t: t.prison and t.owner and t.credited
+        self._request_and_assert(
+            status_param=TRANSACTION_STATUS.CREDITED
         )
-        self.assertNotEqual(len(prisons_n_counters), 0)
-
-        for prison, count in prisons_n_counters.items():
-            self._request_and_assert(
-                prison, count, status_param=TRANSACTION_STATUS.CREDITED
-            )
 
 
 class TransactionsByPrisonAndUserEndpointTestCase(BaseTransactionViewTestCase):
 
-    def _request_and_assert(self, owner, expected_count, status_param=None):
-        self.client.force_authenticate(user=owner)
+    def _request_and_assert(self, status_param=None):
+        for owner in self.owners:
+            self.client.force_authenticate(user=owner)
 
-        prisons = get_prisons_for_user(owner)
+            prisons = get_prisons_for_user(owner)
 
-        results = []
-        count = 0
-        for prison in prisons:
-            url = self._get_list(owner, prison, status=status_param)
+            for prison in prisons:
+                expected_ids = [
+                    t.pk for t in self.transactions if
+                        t.prison == prison and
+                        t.owner == owner and
+                        self.STATUS_FILTERS[status_param](t)
+                ]
+                url = self._get_list_url(owner, prison, status=status_param)
 
-            response = self.client.get(url, format='json')
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
+                response = self.client.get(url, format='json')
 
-            results += response.data['results']
-            count += response.data['count']
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                self.assertEqual(response.data['count'], len(expected_ids))
 
-        self.assertEqual(count, expected_count)
+                self.assertListEqual(
+                    sorted([t['id'] for t in response.data['results']]),
+                    sorted(expected_ids)
+                )
 
-    def _get_list(self, owner, prison, status=None):
+    def _get_list_url(self, owner, prison, status=None):
         url = reverse(
-            'transaction-prison-user-take', kwargs={
+            'transaction-prison-user-list', kwargs={
                 'user_id': owner.pk,
                 'prison_id': prison.pk
             }
         )
 
+        params = {
+            'limit': 10000
+        }
         if status:
-            url = '{url}?status={status}'.format(
-                url=url, status=status
-            )
-        return url
+            params['status'] = status
+
+        return '{url}?{params}'.format(
+            url=url, params=urllib.parse.urlencode(params)
+        )
 
     def test_all(self):
-        """
-        """
-        owners_n_counters = self.calculate_owner_transaction_counts(
-            lambda t: t.owner
-        )
-        for owner, count in owners_n_counters.items():
-            self._request_and_assert(owner, count)
+        self._request_and_assert()
 
     def test_with_pending_status(self):
-        owners_n_counters = self.calculate_owner_transaction_counts(
-            lambda t: t.owner and not t.credited
+        self._request_and_assert(
+            status_param=TRANSACTION_STATUS.PENDING
         )
-        for owner, count in owners_n_counters.items():
-            self._request_and_assert(
-                owner, count, status_param=TRANSACTION_STATUS.PENDING
-            )
 
     def test_with_available_status(self):
-        owners = [m.user for m in PrisonUserMapping.objects.all()]
-        for owner in owners:
-            self._request_and_assert(
-                owner, 0, status_param=TRANSACTION_STATUS.AVAILABLE
-            )
+        self._request_and_assert(
+            status_param=TRANSACTION_STATUS.AVAILABLE
+        )
 
     def test_with_credited_status(self):
-        owners_n_counters = self.calculate_owner_transaction_counts(
-            lambda t: t.owner and t.credited
+        self._request_and_assert(
+            status_param=TRANSACTION_STATUS.CREDITED
         )
-        for owner, count in owners_n_counters.items():
-            self._request_and_assert(
-                owner, count, status_param=TRANSACTION_STATUS.CREDITED
-            )

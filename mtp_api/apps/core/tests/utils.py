@@ -5,9 +5,12 @@ from prison.models import Prison
 
 
 def make_test_users(users_per_prison=1):
+    users = []
     for prison in Prison.objects.all():
         for index in range(users_per_prison):
-            create_prison_user_mapping(prison)
+            pu = create_prison_user_mapping(prison)
+            users.append(pu.user)
+    return users
 
 
 def make_test_oauth_applications():

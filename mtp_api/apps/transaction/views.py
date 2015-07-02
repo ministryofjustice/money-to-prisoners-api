@@ -2,11 +2,7 @@ from django.db import transaction
 from django.forms import Form
 from django.http import HttpResponseRedirect
 
-from rest_framework import mixins
-from rest_framework import viewsets
-from rest_framework import filters
-from rest_framework import status
-
+from rest_framework import mixins, viewsets, filters, status, exceptions
 from django_filters import FilterSet
 
 from .models import Transaction
@@ -19,27 +15,6 @@ from rest_framework_extensions.bulk_operations.mixins import \
 from .serializers import TransactionSerializer, \
     CreditedOnlyTransactionSerializer
 
-
-class TransactionFilterForm(Form):
-
-    def clean_upload_counter(self):
-        upload_counter = self.cleaned_data.get('upload_counter')
-        if upload_counter == None:
-            # get the latest if 'upload_counter' param not specified
-            try:
-                transaction = Transaction.objects.latest('upload_counter')
-                upload_counter = transaction.upload_counter
-            except Transaction.DoesNotExist:
-                pass
-        return upload_counter
-
-
-class TransactionFilter(FilterSet):
-
-    class Meta:
-        model = Transaction
-        form = TransactionFilterForm
-        fields = ['upload_counter']
 
 
 class OwnPrisonListModelMixin(object):
@@ -65,7 +40,6 @@ class TransactionView(
         filters.DjangoFilterBackend,
         filters.OrderingFilter,
     )
-    filter_class = TransactionFilter
     ordering = ('received_at',)
 
     def get_queryset(self, filtering=True):
@@ -73,14 +47,17 @@ class TransactionView(
 
         if not filtering:
             return qs
+        prison_id = self.kwargs.get('prison_id')
+        user_id = self.kwargs.get('user_id')
 
-        if 'prison_id' in self.kwargs:
-            prison_id = self.kwargs['prison_id']
+        if prison_id:
             qs = qs.filter(prison_id=prison_id)
 
-        if 'user_id' in self.kwargs:
-            user_id = int(self.kwargs['user_id'])
+        if user_id:
             qs = qs.filter(owner__id=user_id)
+
+        if not (prison_id or user_id):
+            raise exceptions.NotFound()
         return qs
 
 
