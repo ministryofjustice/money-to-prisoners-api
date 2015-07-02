@@ -38,7 +38,7 @@ class BaseTransactionViewTestCase(APITestCase):
         super(BaseTransactionViewTestCase, self).setUp()
         self.owners = make_test_users(users_per_prison=2)
         self.transactions = generate_transactions(
-            uploads=1, transaction_batch=101
+            uploads=2, transaction_batch=50
         )
         self.prisons = Prison.objects.all()
         make_test_oauth_applications()

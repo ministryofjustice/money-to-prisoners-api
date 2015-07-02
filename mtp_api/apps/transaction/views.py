@@ -7,11 +7,14 @@ import django_filters
 from .models import Transaction
 from mtp_auth.models import PrisonUserMapping
 from prison.models import Prison
+from rest_framework.decorators import permission_classes
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from .serializers import TransactionSerializer, \
     CreditedOnlyTransactionSerializer
-from transaction.constants import TRANSACTION_STATUS
+from transaction.constants import TRANSACTION_STATUS, TAKE_LIMIT
+from transaction.permissions import IsOwner
 
 
 class StatusChoiceFilter(django_filters.ChoiceFilter):
@@ -86,10 +89,8 @@ class TransactionView(
         return qs
 
     def take(self, request, *args, **kwargs):
-        # TODO: move to settings
-        MAX_SLICE_SIZE = 20
-        DEFAULT_SLICE_SIZE = 20
-        slice_size = min(MAX_SLICE_SIZE, int(request.query_params.get('count', DEFAULT_SLICE_SIZE)))
+        slice_size = self.get_slice_limit(request)
+
         with transaction.atomic():
             pending = self.get_queryset(filtering=False).pending().select_for_update()
             slice_pks = pending[:slice_size].values_list('pk', flat=True)
@@ -98,32 +99,46 @@ class TransactionView(
             queryset.update(owner=request.user)
             return HttpResponseRedirect(reverse('transaction-prison-user-list', kwargs=kwargs), status=status.HTTP_303_SEE_OTHER)
 
+    def get_slice_limit(self, request):
+        # TODO: move to settings
+        DEFAULT_SLICE_SIZE = 20
+
+        slice_size = min(
+            TAKE_LIMIT,
+            max(0, TAKE_LIMIT - self.queryset().filter(owner=request.user, credited=False).count()),
+            int(request.query_params.get('count', DEFAULT_SLICE_SIZE))
+        )
+        return slice_size
+
+    @permission_classes((IsAuthenticated, IsOwner,))
     def release(self, request, *args, **kwargs):
         transaction_ids = request.data.get('transaction_ids', [])
         with transaction.atomic():
-            self.get_queryset().filter(pk__in=transaction_ids).select_for_update().update(owner=None)
+            self.get_queryset().filter(pk__in=transaction_ids, owner=request.user).select_for_update().update(owner=None)
 
         return HttpResponseRedirect(reverse('transaction-prison-user-list', kwargs=kwargs), status=status.HTTP_303_SEE_OTHER)
 
+    @permission_classes((IsAuthenticated, IsOwner,))
     def patch(self, request, *args, **kwargs):
         """
+        Update the credited/not credited status of list of owned transactions
 
         ---
         serializer: transaction.serializers.CreditedOnlyTransactionSerializer
         """
-        if not request.user.id == self.kwargs['user_id']:
-            raise exceptions.PermissionDenied()
-
         # This is a bit manual :(
         deserialized = CreditedOnlyTransactionSerializer(data=request.data, many=True)
         if not deserialized.is_valid():
             return Response(deserialized.errors)
 
         with transaction.atomic():
-            to_update = self.get_queryset().filter(pk__in=[x['id'] for x in deserialized.data]).select_for_update()
-            for item in deserialized.data:
-                obj = to_update.get(pk=item['id'])
-                obj.credited = item['credited']
-                obj.save(update_fields=['credited'])
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            try:
+                to_update = self.get_queryset().filter(owner=request.user, pk__in=[x['id'] for x in deserialized.data]).select_for_update()
+                for item in deserialized.data:
+                    obj = to_update.get(pk=item['id'])
+                    obj.credited = item['credited']
+                    obj.save(update_fields=['credited'])
+                return Response(status=status.HTTP_204_NO_CONTENT)
+            except Transaction.DoesNotExist:
+                return Response(status=status.HTTP_404_NOT_FOUND)
 
