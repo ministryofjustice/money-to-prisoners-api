@@ -47,6 +47,7 @@ class TransactionView(
 
         if not filtering:
             return qs
+
         prison_id = self.kwargs.get('prison_id')
         user_id = self.kwargs.get('user_id')
 
@@ -88,6 +89,8 @@ class TransactionView(
         ---
         serializer: transaction.serializers.CreditedOnlyTransactionSerializer
         """
+        if not request.user.id == self.kwargs['user_id']:
+            raise exceptions.PermissionDenied()
 
         # This is a bit manual :(
         deserialized = CreditedOnlyTransactionSerializer(data=request.data, many=True)
