@@ -1,20 +1,41 @@
 from django.db import transaction
-from django.forms import Form
 from django.http import HttpResponseRedirect
 
 from rest_framework import mixins, viewsets, filters, status, exceptions
-from django_filters import FilterSet
+import django_filters
 
 from .models import Transaction
 from mtp_auth.models import PrisonUserMapping
 from prison.models import Prison
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
-from rest_framework_extensions.bulk_operations.mixins import \
-    ListUpdateModelMixin
 from .serializers import TransactionSerializer, \
     CreditedOnlyTransactionSerializer
+from transaction.constants import TRANSACTION_STATUS
 
+
+class StatusChoiceFilter(django_filters.ChoiceFilter):
+
+    def filter(self, qs, value):
+        filter_lookup = {
+            TRANSACTION_STATUS.PENDING:   {'owner__isnull': False, 'credited': False},
+            TRANSACTION_STATUS.AVAILABLE: {'owner__isnull': True, 'credited': False},
+            TRANSACTION_STATUS.CREDITED:  {'owner__isnull': False, 'credited': True}
+        }
+
+        if value in ([], (), {}, None, ''):
+            return qs
+
+        qs = qs.filter(**filter_lookup[value.lower()])
+        return qs
+
+class TransactionStatusFilter(django_filters.FilterSet):
+
+    status = StatusChoiceFilter(choices=TRANSACTION_STATUS.choices)
+
+    class Meta:
+        model = Transaction
+        fields = ['status']
 
 
 class OwnPrisonListModelMixin(object):
@@ -40,6 +61,9 @@ class TransactionView(
         filters.DjangoFilterBackend,
         filters.OrderingFilter,
     )
+
+    filter_class = TransactionStatusFilter
+
     ordering = ('received_at',)
 
     def get_queryset(self, filtering=True):
@@ -60,7 +84,6 @@ class TransactionView(
         if not (prison_id or user_id):
             raise exceptions.NotFound()
         return qs
-
 
     def take(self, request, *args, **kwargs):
         # TODO: move to settings
