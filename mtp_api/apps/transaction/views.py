@@ -62,8 +62,10 @@ class TransactionView(
 
 
     def take(self, request, *args, **kwargs):
+        # TODO: move to settings
+        MAX_SLICE_SIZE = 20
         DEFAULT_SLICE_SIZE = 20
-        slice_size = int(request.query_params.get('count', DEFAULT_SLICE_SIZE))
+        slice_size = min(MAX_SLICE_SIZE, int(request.query_params.get('count', DEFAULT_SLICE_SIZE)))
 
         with transaction.atomic():
             pending = self.get_queryset(filtering=False).pending().select_for_update()
