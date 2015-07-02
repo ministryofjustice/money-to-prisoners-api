@@ -3,7 +3,7 @@ from django.contrib import admin
 
 from django.views.generic.base import TemplateView
 
-from core.router import TransactionRouter
+from transaction.routers import TransactionRouter
 
 router = TransactionRouter()
 
