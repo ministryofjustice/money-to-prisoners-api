@@ -4,12 +4,19 @@ from django.db.models import Q
 from model_utils.models import TimeStampedModel
 
 from prison.models import Prison
+from transaction.constants import TRANSACTION_STATUS
 
 
 class TransactionQuerySet(models.QuerySet):
 
+    def available(self):
+        return self.filter(**self.model.STATUS_LOOKUP[TRANSACTION_STATUS.AVAILABLE])
+
     def pending(self):
-        return self.filter(Q(owner=None) & Q(credited=False))
+        return self.filter(**self.model.STATUS_LOOKUP[TRANSACTION_STATUS.PENDING])
+
+    def credited(self):
+        return self.filter(**self.model.STATUS_LOOKUP[TRANSACTION_STATUS.CREDITED])
 
     def locked_by(self, user):
         return self.filter(owner=user)
@@ -36,6 +43,13 @@ class Transaction(TimeStampedModel):
 
     owner = models.ForeignKey('auth.User', null=True, blank=True)
     credited = models.BooleanField(default=False)
+
+
+    STATUS_LOOKUP = {
+        TRANSACTION_STATUS.PENDING:   {'owner__isnull': False, 'credited': False},
+        TRANSACTION_STATUS.AVAILABLE: {'owner__isnull': True, 'credited': False},
+        TRANSACTION_STATUS.CREDITED:  {'owner__isnull': False, 'credited': True}
+    }
 
     objects = TransactionQuerySet.as_manager()
 

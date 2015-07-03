@@ -80,7 +80,7 @@ class TransactionsEndpointTestCase(BaseTransactionViewTestCase):
         self.client.force_authenticate(user=user)
 
         response = self.client.get(url, format='json')
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
 class TransactionsByPrisonEndpointTestCase(BaseTransactionViewTestCase):
@@ -552,7 +552,7 @@ class TransactionsReleaseTestCase(BaseTransactionViewTestCase):
         )
 
         self.assertEqual(
-            self._get_credited_transactions_qs(logged_in_user, prison).count(),
+            self._get_credited_transactions_qs(transactions_owner, prison).count(),
             len(credited_transactions)
         )
 
@@ -593,7 +593,158 @@ class TransactionsPathTestCase(BaseTransactionViewTestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_cannot_path_non_pending_transactions(self):
-        pass
+        prison = self.prisons[0]
+        user = get_users_for_prison(prison)[0]
 
-    def test_can_path_pending_transaction(self):
-        pass
+        pending_transactions = list(
+            self._get_pending_transactions_qs(prison, user)
+        )
+
+        available_transactions = list(
+            self._get_available_transactions_qs(prison)
+        )
+
+        # if this starts failing, we need to iterate over users and get the
+        # first user with pending transactions.
+        self.assertTrue(len(pending_transactions) > 0)
+        self.assertTrue(len(available_transactions) > 0)
+
+        transactions_to_credit = pending_transactions + available_transactions[:1]
+
+        # request
+        self.client.force_authenticate(user=user)
+
+        url = self._get_url(user, prison)
+        response = self.client.patch(url, {
+            'transaction_ids': [t.id for t in transactions_to_credit]
+        }, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # check nothing changed in the db
+        self.assertEqual(
+            self._get_pending_transactions_qs(prison, user).count(),
+            len(pending_transactions)
+        )
+
+        self.assertEqual(
+            self._get_available_transactions_qs(prison).count(),
+            len(available_transactions)
+        )
+
+    def test_mark_pending_transaction_as_credited(self):
+        prison = self.prisons[0]
+        user = get_users_for_prison(prison)[0]
+
+        pending_transactions = list(
+            self._get_pending_transactions_qs(prison, user)
+        )
+
+        credited_transactions = list(
+            self._get_credited_transactions_qs(user, prison)
+        )
+
+        # if this starts failing, we need to iterate over users and get the
+        # first user with pending transactions.
+        self.assertTrue(len(pending_transactions) > 0)
+
+        # how many transactions should we credit?
+        to_credit = random.randint(1, len(pending_transactions))
+        transactions_to_credit = pending_transactions[:to_credit]
+
+        # request
+        self.client.force_authenticate(user=user)
+
+        url = self._get_url(user, prison)
+        data = [
+            {
+                'id': t.id,
+                'credited': True
+            } for t in transactions_to_credit
+        ]
+        response = self.client.patch(url, data=data, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        # check changes in db
+        self.assertEqual(
+            self._get_pending_transactions_qs(prison, user).count(),
+            len(pending_transactions) - to_credit
+        )
+
+        self.assertEqual(
+            self._get_credited_transactions_qs(user, prison).filter(id__in=[
+                t.id for t in transactions_to_credit
+            ]).count(),
+            to_credit
+        )
+
+        self.assertEqual(
+            self._get_credited_transactions_qs(user, prison).count(),
+            len(credited_transactions) + to_credit
+        )
+
+    def test_invalid_data(self):
+        prison = self.prisons[0]
+        user = get_users_for_prison(prison)[0]
+
+        pending_transactions = list(
+            self._get_pending_transactions_qs(prison, user)
+        )
+
+        # if this starts failing, we need to iterate over users and get the
+        # first user with pending transactions.
+        self.assertTrue(len(pending_transactions) > 0)
+
+        # how many transactions should we credit?
+        to_credit = random.randint(1, len(pending_transactions))
+        transactions_to_credit = pending_transactions[:to_credit]
+
+        # request
+        self.client.force_authenticate(user=user)
+
+        url = self._get_url(user, prison)
+
+        # invalid data format
+        invalid_data_list = [
+            # invalid data format, should be a list not a dict
+            {
+                'msg': 'Invalid data format, dict instead of list',
+                'data': {
+                    'something': [
+                        {
+                            'id': t.id,
+                            'credited': True
+                        } for t in transactions_to_credit
+                    ]
+                },
+            },
+
+            # missing ids
+            {
+                'msg': 'Missing ids',
+                'data': [
+                    {
+                        'credited': True
+                    } for t in transactions_to_credit
+                ],
+            },
+
+            # misspelt credited
+            {
+                'msg': 'Misspelt credited',
+                'data': [
+                    {
+                        'id': t.id,
+                        'credit': True
+                    } for t in transactions_to_credit
+                ]
+            }
+        ]
+        for data in invalid_data_list:
+            response = self.client.patch(url, data=data['data'], format='json')
+            self.assertEqual(
+                response.status_code,
+                status.HTTP_400_BAD_REQUEST,
+                'Should fail because: {msg}'.format(msg=data['msg'])
+            )

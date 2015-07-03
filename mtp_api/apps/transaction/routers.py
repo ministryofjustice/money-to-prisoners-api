@@ -21,7 +21,7 @@ class TransactionRouter(DefaultRouter):
                 url=r'^{prefix}/(?P<prison_id>\w+)/(?P<user_id>[0-9]+){trailing_slash}$',
                 mapping={
                     'get': 'list',
-                    'patch': 'patch'
+                    'patch': 'patch_credited'
                 },
                 initkwargs={'suffix': 'List'},
                 name='{basename}-prison-user-list'

@@ -3,7 +3,9 @@ from rest_framework import serializers
 from .models import Transaction
 
 class CreditedOnlyTransactionSerializer(serializers.ModelSerializer):
-    id = serializers.IntegerField()
+    id = serializers.IntegerField(required=True)
+    credited = serializers.BooleanField(required=True)
+
     class Meta:
         model = Transaction
         fields = (
