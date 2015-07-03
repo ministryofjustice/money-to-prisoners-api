@@ -70,7 +70,7 @@ class TransactionsEndpointTestCase(BaseTransactionViewTestCase):
 
     def test_cant_access(self):
         """
-        GET on transactions endpoint should 404.
+        GET on transactions endpoint should 403.
         """
         url = reverse('transaction-list')
 
@@ -125,6 +125,10 @@ class TransactionsByPrisonEndpointTestCase(BaseTransactionViewTestCase):
         )
 
     def test_fails_with_logged_in_managing_different_prison(self):
+        """
+        Tests that users managing a prison cannot access any
+        transactions belonging to other prisons.
+        """
         logged_in_user_prison = self.prisons[0]
         other_prison = self.prisons[1]
 
@@ -207,6 +211,10 @@ class TransactionsByPrisonAndUserEndpointTestCase(BaseTransactionViewTestCase):
         )
 
     def test_fails_with_logged_in_managing_different_prison(self):
+        """
+        Tests that users managing a prison cannot access any
+        transactions belonging to other prisons.
+        """
         logged_in_user_prison = self.prisons[0]
         other_prison = self.prisons[1]
 
@@ -256,6 +264,10 @@ class TransactionsTakeTestCase(BaseTransactionViewTestCase):
         return url
 
     def test_take_within_limit(self):
+        """
+        Tests that requesting n transactions with n <= TAKE_LIMIT
+        should work.
+        """
         prison = self.prisons[0]
         owner = get_users_for_prison(prison)[0]
 
@@ -286,17 +298,15 @@ class TransactionsTakeTestCase(BaseTransactionViewTestCase):
 
     def test_nobody_else_can_take_transactions_for_others(self):
         """
-        Anybody managing a prison should be able to take transactions
-        on behalf of other users within the same prison.
+        Tests that nobody managing a prison should be able to
+        take transactions on behalf of other users.
         """
         prison = self.prisons[0]
         users = get_users_for_prison(prison)
         self.assertTrue(len(users) >= 2)
 
         # We need 2 users as we want to test that logged_in_user
-        # can take transactions on behalf of transactions_owner.
-        # As result, the transactions.owner should be transactions_owner
-        # and not logged_in_user
+        # cannot take transactions on behalf of transactions_owner.
         logged_in_user = users[0]
         transactions_owner = users[1]
 
@@ -317,7 +327,7 @@ class TransactionsTakeTestCase(BaseTransactionViewTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-        # check 5 taken transactions in db
+        # check no taken transactions in db as the request failed
         self.assertEqual(
             self._get_pending_transactions_qs(prison, transactions_owner).count(),
             0
@@ -382,7 +392,7 @@ class TransactionsReleaseTestCase(BaseTransactionViewTestCase):
     def test_cannot_release_somebody_else_s_transactions_in_different_prison(self):
         """
         Tests that logged_in_user managing prison1 cannot release any
-        transactions for prison2
+        transactions for prison2.
         """
         prison1 = self.prisons[0]
         prison2 = self.prisons[1]
@@ -411,7 +421,7 @@ class TransactionsReleaseTestCase(BaseTransactionViewTestCase):
     def test_can_release_somebody_else_s_transactions(self):
         """
         Tests that anybody managing the same prison can release
-        somebody's pending transactions.
+        somebody else's pending transactions.
         """
         # We need 2 users as we want to test that logged_in_user
         # can release transactions on behalf of transactions_owner.
@@ -460,8 +470,8 @@ class TransactionsReleaseTestCase(BaseTransactionViewTestCase):
 
     def test_cannot_release_transactions_with_mismatched_url(self):
         """
-        Tests that if we try to release all transactions_owner
-        taken transactions + a logged_in_user transaction
+        Tests that if we try to release all transactions_owner's
+        taken transactions + a logged_in_user taken transaction
         =>
         it fails
         """
@@ -510,10 +520,10 @@ class TransactionsReleaseTestCase(BaseTransactionViewTestCase):
 
     def test_cannot_release_credited_transactions(self):
         """
-        Tests that if we tray to release all pending transactions +
-        a credited transactions
+        Tests that if we try to release all pending transactions +
+        a credited transaction
         =>
-        if fails
+        it fails
         """
         prison = self.prisons[0]
         users = get_users_for_prison(prison)
@@ -568,6 +578,10 @@ class TransactionsPathTestCase(BaseTransactionViewTestCase):
         )
 
     def test_cannot_path_somebody_else_s_transactions(self):
+        """
+        Tests that only the owner of a transaction (who loked it)
+        can patch it.
+        """
         prison = self.prisons[0]
         users = get_users_for_prison(prison)
 
@@ -593,6 +607,9 @@ class TransactionsPathTestCase(BaseTransactionViewTestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_cannot_path_non_pending_transactions(self):
+        """
+        Tests that non-pending transactions cannot be marked as credited.
+        """
         prison = self.prisons[0]
         user = get_users_for_prison(prison)[0]
 
@@ -633,6 +650,10 @@ class TransactionsPathTestCase(BaseTransactionViewTestCase):
         )
 
     def test_mark_pending_transaction_as_credited(self):
+        """
+        Tests that pending owned transactions can be marked as
+        credited.
+        """
         prison = self.prisons[0]
         user = get_users_for_prison(prison)[0]
 
@@ -685,6 +706,11 @@ class TransactionsPathTestCase(BaseTransactionViewTestCase):
         )
 
     def test_invalid_data(self):
+        """
+        Tests that if the data passed to the patch endpoint is invalid
+        =>
+        it fails
+        """
         prison = self.prisons[0]
         user = get_users_for_prison(prison)[0]
 
