@@ -2,6 +2,7 @@ import random
 import urllib.parse
 
 from django.core.urlresolvers import reverse
+from django.utils.six.moves.urllib.parse import urlsplit
 
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -289,6 +290,15 @@ class TransactionsTakeTestCase(BaseTransactionViewTestCase):
         response = self.client.post(url, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_303_SEE_OTHER)
+        self.assertEqual(
+            urlsplit(response['Location']).path,
+            reverse(
+                'transaction-prison-user-list', kwargs={
+                    'user_id': owner.pk,
+                    'prison_id': prison.pk
+                }
+            )
+        )
 
         # check 5 taken transactions in db
         self.assertEqual(
@@ -455,6 +465,15 @@ class TransactionsReleaseTestCase(BaseTransactionViewTestCase):
         }, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_303_SEE_OTHER)
+        self.assertEqual(
+            urlsplit(response['Location']).path,
+            reverse(
+                'transaction-prison-user-list', kwargs={
+                    'user_id': transactions_owner.pk,
+                    'prison_id': prison.pk
+                }
+            )
+        )
 
         # check pending transactions == -to_release
         self.assertEqual(
