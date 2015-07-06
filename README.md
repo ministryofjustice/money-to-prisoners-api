@@ -33,7 +33,16 @@ django_1 | Running migrations:
 django_1 |   No migrations to apply.
 ```
 
-you should be able to point your browser at
+#### Using Make
+
+For convenience you can run this using the Makefile provided:
+
+```shell
+$ make build # initialise the server
+$ make # run the server
+```
+
+You should be able to point your browser at
 [http://localhost:8000](http://localhost:8000)
 if you're using *boot2docker* then it'll be at the IP of the boot2docker virtual machine.
 You can find it by typing `boot2docker ip` in a terminal. Then visit http://**boot2docker ip**:8000/
