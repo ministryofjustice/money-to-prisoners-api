@@ -1,37 +1,39 @@
-from django.forms import Form
+from django.db import transaction
+from django.http import HttpResponseRedirect
 
-from rest_framework import mixins
-from rest_framework import viewsets
-from rest_framework import filters
+import django_filters
+from rest_framework import mixins, viewsets, filters, status, exceptions
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.reverse import reverse
 
-from django_filters import FilterSet
-
-from .models import Transaction
 from mtp_auth.models import PrisonUserMapping
 from prison.models import Prison
-from .serializers import TransactionSerializer
+from .models import Transaction
+from .serializers import TransactionSerializer, \
+    CreditedOnlyTransactionSerializer
+from .constants import TRANSACTION_STATUS, TAKE_LIMIT, \
+    DEFAULT_SLICE_SIZE
+from .permissions import IsOwner, IsOwnPrison
 
 
-class TransactionFilterForm(Form):
+class StatusChoiceFilter(django_filters.ChoiceFilter):
 
-    def clean_upload_counter(self):
-        upload_counter = self.cleaned_data.get('upload_counter')
-        if upload_counter == None:
-            # get the latest if 'upload_counter' param not specified
-            try:
-                transaction = Transaction.objects.latest('upload_counter')
-                upload_counter = transaction.upload_counter
-            except Transaction.DoesNotExist:
-                pass
-        return upload_counter
+    def filter(self, qs, value):
 
+        if value in ([], (), {}, None, ''):
+            return qs
 
-class TransactionFilter(FilterSet):
+        qs = qs.filter(**qs.model.STATUS_LOOKUP[value.lower()])
+        return qs
+
+class TransactionStatusFilter(django_filters.FilterSet):
+
+    status = StatusChoiceFilter(choices=TRANSACTION_STATUS.choices)
 
     class Meta:
         model = Transaction
-        form = TransactionFilterForm
-        fields = ['upload_counter']
+        fields = ['status']
 
 
 class OwnPrisonListModelMixin(object):
@@ -52,9 +54,87 @@ class TransactionView(
 ):
     queryset = Transaction.objects.all()
     serializer_class = TransactionSerializer
+    patch_serializer_class = CreditedOnlyTransactionSerializer
     filter_backends = (
         filters.DjangoFilterBackend,
         filters.OrderingFilter,
     )
-    filter_class = TransactionFilter
+
+    filter_class = TransactionStatusFilter
+
     ordering = ('received_at',)
+    permission_classes = (IsAuthenticated, IsOwnPrison,)
+
+    def get_queryset(self, filter_by_user=True, filter_by_prison=True):
+        qs = super(TransactionView, self).get_queryset()
+
+        prison_id = self.kwargs.get('prison_id')
+        user_id = self.kwargs.get('user_id')
+
+        if prison_id and filter_by_prison:
+            qs = qs.filter(prison_id=prison_id)
+
+        if user_id and filter_by_user:
+            qs = qs.filter(owner__id=user_id)
+
+        return qs
+
+    def take(self, request, *args, **kwargs):
+        self.permission_classes = list(self.permission_classes) + [IsOwner]
+        self.check_permissions(request)
+
+        slice_size = self.get_slice_limit(request)
+
+        with transaction.atomic():
+            pending = self.get_queryset(filter_by_user=False).available().select_for_update()
+            slice_pks = pending.values_list('pk', flat=True)[:slice_size]
+
+            queryset = self.get_queryset(filter_by_user=False).filter(pk__in=slice_pks)
+            queryset.update(owner=request.user)
+            return HttpResponseRedirect(reverse('transaction-prison-user-list', kwargs=kwargs), status=status.HTTP_303_SEE_OTHER)
+
+    def get_slice_limit(self, request):
+        slice_size = int(request.query_params.get('count', DEFAULT_SLICE_SIZE))
+        available_to_take = max(0, TAKE_LIMIT - self.queryset.pending().filter(owner=request.user).count())
+        if available_to_take < slice_size:
+            raise exceptions.ParseError(detail='Can\'t take more than %s transactions.' % TAKE_LIMIT)
+
+        return slice_size
+
+    def release(self, request, *args, **kwargs):
+
+        transaction_ids = request.data.get('transaction_ids', [])
+        with transaction.atomic():
+            to_update = self.get_queryset().pending().filter(pk__in=transaction_ids).select_for_update()
+            if len(to_update) != len(transaction_ids):
+                return Response(data={'transaction_ids': ['Some transactions could not be released.']}, status=status.HTTP_400_BAD_REQUEST)
+            to_update.update(owner=None)
+
+        return HttpResponseRedirect(reverse('transaction-prison-user-list', kwargs=kwargs), status=status.HTTP_303_SEE_OTHER)
+
+    def patch_credited(self, request, *args, **kwargs):
+        """
+        Update the credited/not credited status of list of owned transactions
+
+        ---
+        serializer: transaction.serializers.CreditedOnlyTransactionSerializer
+        """
+        self.permission_classes = list(self.permission_classes) + [IsOwner]
+        self.check_permissions(request)
+
+        # This is a bit manual :(
+        deserialized = CreditedOnlyTransactionSerializer(data=request.data, many=True)
+        if not deserialized.is_valid():
+            return Response(deserialized.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            try:
+                to_update = self.get_queryset().filter(owner=request.user, pk__in=[x['id'] for x in deserialized.data]).select_for_update()
+                for item in deserialized.data:
+                    obj = to_update.get(pk=item['id'])
+                    obj.credited = item['credited']
+                    obj.save(update_fields=['credited'])
+                return Response(status=status.HTTP_204_NO_CONTENT)
+            except Transaction.DoesNotExist:
+                return Response(status=status.HTTP_404_NOT_FOUND)
+

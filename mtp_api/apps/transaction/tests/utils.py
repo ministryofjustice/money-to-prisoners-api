@@ -6,7 +6,9 @@ from django.utils import timezone
 from django.utils.crypto import get_random_string
 
 from prison.models import Prison
-from ..models import Transaction
+
+from transaction.models import Transaction
+from transaction.constants import TRANSACTION_STATUS
 
 
 def random_dob():
@@ -38,6 +40,38 @@ def random_reference(prisoner_number=None, prisoner_dob=None):
 def generate_transactions(uploads=2, transaction_batch=30):
     transactions = []
 
+    class PrisonChooser(object):
+
+        def __init__(self):
+            self.prisons = Prison.objects.all()
+            self.users_per_prison = {}
+            for prison in self.prisons:
+                self.users_per_prison[prison.pk] = {
+                    'users': prison.prisonusermapping_set.values_list('user', flat=True),
+                    'index': 0
+                }
+            self.index = 0
+
+        def _choose(self, l, index):
+            item = l[index]
+            index += 1
+            if index >= len(l):
+                index = 0
+            return (item, index)
+
+        def choose_prison(self):
+            prison, index = self._choose(self.prisons, self.index)
+            self.index = index
+            return prison
+
+        def choose_user(self, prison):
+            data = self.users_per_prison[prison.pk]
+            user, index = self._choose(data['users'], data['index'])
+            data['index'] = index
+            return user
+
+    prison_chooser = PrisonChooser()
+
     for upload_counter in range(1, uploads+1):
         for transaction_counter in range(1, transaction_batch+1):
             # Records might not have prisoner data and/or might not
@@ -58,11 +92,32 @@ def generate_transactions(uploads=2, transaction_batch=30):
             }
 
             if include_prisoner_info:
+                prison = prison_chooser.choose_prison()
                 data.update({
-                    'prison': Prison.objects.order_by('?').first(),
+                    'prison': prison,
                     'prisoner_number': random_prison_number(),
                     'prisoner_dob': random_dob()
                 })
+
+                # randomly choose the state of the transaction
+                status, _ = random.choice(TRANSACTION_STATUS)
+
+                if status == TRANSACTION_STATUS.PENDING:
+                    data.update({
+                        'owner_id': prison_chooser.choose_user(prison),
+                        'credited': False
+                    })
+                elif status == TRANSACTION_STATUS.AVAILABLE:
+                    data.update({
+                        'owner': None,
+                        'credited': False
+                    })
+                elif status == TRANSACTION_STATUS.CREDITED:
+                    data.update({
+                        'owner_id': prison_chooser.choose_user(prison),
+                        'credited': True
+                    })
+
             if include_sender_info:
                 data.update({
                     'sender_bank_reference': get_random_string(),
