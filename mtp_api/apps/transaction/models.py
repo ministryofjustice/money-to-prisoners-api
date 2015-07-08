@@ -1,25 +1,16 @@
 from django.db import models
-from django.db.models import Q
+from django.db.models.signals import post_save
+from django.conf import settings
+from django.dispatch import receiver
 
 from model_utils.models import TimeStampedModel
 
 from prison.models import Prison
-from transaction.constants import TRANSACTION_STATUS
 
-
-class TransactionQuerySet(models.QuerySet):
-
-    def available(self):
-        return self.filter(**self.model.STATUS_LOOKUP[TRANSACTION_STATUS.AVAILABLE])
-
-    def pending(self):
-        return self.filter(**self.model.STATUS_LOOKUP[TRANSACTION_STATUS.PENDING])
-
-    def credited(self):
-        return self.filter(**self.model.STATUS_LOOKUP[TRANSACTION_STATUS.CREDITED])
-
-    def locked_by(self, user):
-        return self.filter(owner=user)
+from .constants import TRANSACTION_STATUS, LOG_ACTIONS
+from .managers import TransactionQuerySet, LogManager
+from .signals import transaction_taken, transaction_released, \
+    transaction_credited
 
 
 class Transaction(TimeStampedModel):
@@ -40,10 +31,8 @@ class Transaction(TimeStampedModel):
     reference = models.TextField(blank=True)
     received_at = models.DateTimeField(auto_now=False)
 
-
-    owner = models.ForeignKey('auth.User', null=True, blank=True)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True)
     credited = models.BooleanField(default=False)
-
 
     STATUS_LOOKUP = {
         TRANSACTION_STATUS.PENDING:   {'owner__isnull': False, 'credited': False},
@@ -53,5 +42,67 @@ class Transaction(TimeStampedModel):
 
     objects = TransactionQuerySet.as_manager()
 
+    def take(self, by_user):
+        self.owner = by_user
+        self.save()
+
+        transaction_taken.send(
+            sender=self.__class__, transaction=self, by_user=by_user
+        )
+
+    def release(self, by_user):
+        self.owner = None
+        self.save()
+
+        transaction_released.send(
+            sender=self.__class__, transaction=self, by_user=by_user
+        )
+
+    def credit(self, credited, by_user):
+        self.credited = credited
+        self.save()
+
+        transaction_credited.send(
+            sender=self.__class__, transaction=self, by_user=by_user
+        )
+
     class Meta:
         ordering = ('received_at',)
+
+
+class Log(TimeStampedModel):
+    transaction = models.ForeignKey(Transaction)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True)
+    action = models.CharField(max_length=50, choices=LOG_ACTIONS)
+
+    objects = LogManager()
+
+    def __str__(self):
+        return 'Transaction {id} {action} by {user}'.format(
+            id=self.transaction.pk,
+            user=self.user.username,
+            action=self.action
+        )
+
+
+# SIGNALS
+
+@receiver(post_save, sender=Transaction)
+def transaction_created_receiver(sender, instance, created, **kwargs):
+    if created:
+        Log.objects.transaction_created(instance)
+
+
+@receiver(transaction_taken)
+def transaction_taken_receiver(sender, transaction, by_user, **kwargs):
+    Log.objects.transaction_taken(transaction, by_user)
+
+
+@receiver(transaction_released)
+def transaction_released_receiver(sender, transaction, by_user, **kwargs):
+    Log.objects.transaction_released(transaction, by_user)
+
+
+@receiver(transaction_credited)
+def transaction_credited_receiver(sender, transaction, by_user, **kwargs):
+    Log.objects.transaction_credited(transaction, by_user)
