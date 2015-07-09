@@ -80,7 +80,7 @@ class Log(TimeStampedModel):
     def __str__(self):
         return 'Transaction {id} {action} by {user}'.format(
             id=self.transaction.pk,
-            user=self.user.username,
+            user='<None>' if not self.user else self.user.username,
             action=self.action
         )
 
