@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 from model_utils.models import TimeStampedModel
@@ -9,3 +10,21 @@ class Prison(TimeStampedModel):
 
     def __str__(self):
         return self.name
+
+
+class PrisonerLocation(TimeStampedModel):
+    upload_counter = models.PositiveIntegerField()
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL)
+
+    prisoner_number = models.CharField(max_length=250)
+    prisoner_dob = models.DateField()
+
+    prison = models.ForeignKey(Prison)
+
+    def __str__(self):
+        return 'location record {upload_counter} ' \
+            'for prisoner {prisoner_number} / {prisoner_dob}'.format(
+                upload_counter=self.upload_counter,
+                prisoner_number=self.prisoner_number,
+                prisoner_dob=self.prisoner_dob
+            )
