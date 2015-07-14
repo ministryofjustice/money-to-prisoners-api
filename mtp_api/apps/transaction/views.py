@@ -90,8 +90,13 @@ class TransactionView(
             slice_pks = pending.values_list('pk', flat=True)[:slice_size]
 
             queryset = self.get_queryset(filter_by_user=False).filter(pk__in=slice_pks)
-            queryset.update(owner=request.user)
-            return HttpResponseRedirect(reverse('transaction-prison-user-list', kwargs=kwargs), status=status.HTTP_303_SEE_OTHER)
+            for t in queryset:
+                t.take(by_user=request.user)
+
+            return HttpResponseRedirect(
+                reverse('transaction-prison-user-list', kwargs=kwargs),
+                status=status.HTTP_303_SEE_OTHER
+            )
 
     def get_slice_limit(self, request):
         slice_size = int(request.query_params.get('count', DEFAULT_SLICE_SIZE))
@@ -107,8 +112,12 @@ class TransactionView(
         with transaction.atomic():
             to_update = self.get_queryset().pending().filter(pk__in=transaction_ids).select_for_update()
             if len(to_update) != len(transaction_ids):
-                return Response(data={'transaction_ids': ['Some transactions could not be released.']}, status=status.HTTP_400_BAD_REQUEST)
-            to_update.update(owner=None)
+                return Response(
+                    data={'transaction_ids': ['Some transactions could not be released.']},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            for t in to_update:
+                t.release(by_user=request.user)
 
         return HttpResponseRedirect(reverse('transaction-prison-user-list', kwargs=kwargs), status=status.HTTP_303_SEE_OTHER)
 
@@ -125,16 +134,22 @@ class TransactionView(
         # This is a bit manual :(
         deserialized = CreditedOnlyTransactionSerializer(data=request.data, many=True)
         if not deserialized.is_valid():
-            return Response(deserialized.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                deserialized.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         with transaction.atomic():
             try:
-                to_update = self.get_queryset().filter(owner=request.user, pk__in=[x['id'] for x in deserialized.data]).select_for_update()
+                to_update = self.get_queryset().filter(
+                    owner=request.user,
+                    pk__in=[x['id'] for x in deserialized.data]
+                ).select_for_update()
+
                 for item in deserialized.data:
                     obj = to_update.get(pk=item['id'])
-                    obj.credited = item['credited']
-                    obj.save(update_fields=['credited'])
+
+                    obj.credit(credited=item['credited'], by_user=request.user)
                 return Response(status=status.HTTP_204_NO_CONTENT)
             except Transaction.DoesNotExist:
                 return Response(status=status.HTTP_404_NOT_FOUND)
-

@@ -17,3 +17,11 @@ TRANSACTION_STATUS = Choices(
 # this only refers to pending transactions
 TAKE_LIMIT = 20
 DEFAULT_SLICE_SIZE = TAKE_LIMIT
+
+
+LOG_ACTIONS = Choices(
+    ('CREATED', 'created', 'Created'),
+    ('TAKEN', 'taken', 'Taken'),
+    ('RELEASED', 'released', 'Released'),
+    ('CREDITED', 'credited', 'Credited'),
+)

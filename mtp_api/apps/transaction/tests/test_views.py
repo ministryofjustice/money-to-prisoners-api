@@ -12,8 +12,8 @@ from mtp_auth.models import PrisonUserMapping
 
 from prison.models import Prison
 
-from transaction.models import Transaction
-from transaction.constants import TRANSACTION_STATUS, TAKE_LIMIT
+from transaction.models import Transaction, Log
+from transaction.constants import TRANSACTION_STATUS, TAKE_LIMIT, LOG_ACTIONS
 
 from .utils import generate_transactions
 
@@ -596,7 +596,7 @@ class TransactionsPathTestCase(BaseTransactionViewTestCase):
             }
         )
 
-    def test_cannot_path_somebody_else_s_transactions(self):
+    def test_cannot_patch_somebody_else_s_transactions(self):
         """
         Tests that only the owner of a transaction (who loked it)
         can patch it.
@@ -793,3 +793,132 @@ class TransactionsPathTestCase(BaseTransactionViewTestCase):
                 status.HTTP_400_BAD_REQUEST,
                 'Should fail because: {msg}'.format(msg=data['msg'])
             )
+
+
+class TransactionsLogsTestCase(BaseTransactionViewTestCase):
+
+    def test_transaction_created(self):
+        # check that logs 'transaction created' exist for
+        # generated transactions
+        self.assertEqual(Log.objects.count(), len(self.transactions))
+
+    def test_transaction_taken(self):
+        prison = self.prisons[0]
+        owner = get_users_for_prison(prison)[0]
+
+        taken_count = 2
+
+        # delete pending transactions just to clean things up
+        self._get_pending_transactions_qs(prison, owner).delete()
+
+        # login
+        self.client.force_authenticate(user=owner)
+
+        # take some
+        url = '{base_url}?count={count}'.format(
+            base_url=reverse(
+                'transaction-prison-user-take', kwargs={
+                    'user_id': owner.pk,
+                    'prison_id': prison.pk
+                }
+            ),
+            count=taken_count
+        )
+        response = self.client.post(url, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_303_SEE_OTHER)
+        taken_transactions = self._get_pending_transactions_qs(prison, owner)
+
+        self.assertEqual(
+            Log.objects.filter(
+                user=owner,
+                action=LOG_ACTIONS.TAKEN,
+                transaction__id__in=taken_transactions.values_list('id', flat=True)
+            ).count(),
+            taken_count
+        )
+
+    def test_transaction_released(self):
+        prison = self.prisons[0]
+        owner = get_users_for_prison(prison)[0]
+
+        pending_transactions = list(
+            self._get_pending_transactions_qs(prison, owner)
+        )
+
+        # if this starts failing, we need to iterate over users and get the
+        # first user with pending transactions.
+        self.assertTrue(len(pending_transactions) > 0)
+
+        # how many transactions should we release?
+        to_release = random.randint(1, len(pending_transactions))
+        transactions_to_release = pending_transactions[:to_release]
+
+        # login
+        self.client.force_authenticate(user=owner)
+
+        # release some
+        url = reverse(
+            'transaction-prison-user-release', kwargs={
+                'user_id': owner.pk,
+                'prison_id': prison.pk
+            }
+        )
+        response = self.client.post(url, {
+            'transaction_ids': [t.id for t in transactions_to_release]
+        }, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_303_SEE_OTHER)
+
+        self.assertEqual(
+            Log.objects.filter(
+                user=owner, action=LOG_ACTIONS.RELEASED,
+                transaction__id__in=[t.id for t in transactions_to_release]
+            ).count(),
+            to_release
+        )
+
+    def test_transaction_credited(self):
+        prison = self.prisons[0]
+        user = get_users_for_prison(prison)[0]
+
+        pending_transactions = list(
+            self._get_pending_transactions_qs(prison, user)
+        )
+
+        # if this starts failing, we need to iterate over users and get the
+        # first user with pending transactions.
+        self.assertTrue(len(pending_transactions) > 0)
+
+        # how many transactions should we credit?
+        to_credit = random.randint(1, len(pending_transactions))
+        transactions_to_credit = pending_transactions[:to_credit]
+
+        # login
+        self.client.force_authenticate(user=user)
+
+        # credit some
+        url = reverse(
+            'transaction-prison-user-list', kwargs={
+                'user_id': user.pk,
+                'prison_id': prison.pk
+            }
+        )
+        data = [
+            {
+                'id': t.id,
+                'credited': True
+            } for t in transactions_to_credit
+        ]
+        response = self.client.patch(url, data=data, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        # check changes in db
+        self.assertEqual(
+            Log.objects.filter(
+                user=user, action=LOG_ACTIONS.CREDITED,
+                transaction__id__in=[t.id for t in transactions_to_credit]
+            ).count(),
+            to_credit
+        )
