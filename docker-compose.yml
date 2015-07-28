@@ -1,5 +1,5 @@
 db:
-  build: docker/postgres
+  image: postgres
   links:
     - dbdata
   volumes_from:
@@ -10,7 +10,7 @@ db:
 
 dbdata:
   image: busybox
-  command: /bin/sh
+  command: tail -f /dev/null
   volumes:
     - /var/lib/postgresql/data
 
