@@ -27,7 +27,10 @@ def get_prisons_for_user(user):
 
 
 class BaseTransactionViewTestCase(APITestCase):
-    fixtures = ['test_prisons.json']
+    fixtures = [
+        'initial_groups.json',
+        'test_prisons.json'
+    ]
     STATUS_FILTERS = {
         None: lambda t: True,
         TRANSACTION_STATUS.PENDING: lambda t: t.owner and not t.credited,
@@ -143,6 +146,25 @@ class TransactionsByPrisonEndpointTestCase(BaseTransactionViewTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_fails_without_permissions(self):
+        """
+        Tests that logged-in user has to have the right permissions
+        to access the endpoint.
+        """
+        prison = self.prisons[0]
+        user = get_users_for_prison(prison)[0]
+
+        # delete user from groups
+        user.groups.all().delete()
+
+        url = self._get_list_url(prison)
+
+        self.client.force_authenticate(user=user)
+
+        response = self.client.get(url, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
     def test_all(self):
         """
         GET without params should return all transactions linked
@@ -230,6 +252,25 @@ class TransactionsByPrisonAndUserEndpointTestCase(BaseTransactionViewTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_fails_without_permissions(self):
+        """
+        Tests that logged-in user has to have the right permissions
+        to access the endpoint.
+        """
+        prison = self.prisons[0]
+        user = get_users_for_prison(prison)[0]
+
+        # delete user from groups
+        user.groups.all().delete()
+
+        url = self._get_list_url(user, prison)
+
+        self.client.force_authenticate(user=user)
+
+        response = self.client.get(url, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
     def test_all(self):
         self._request_and_assert()
 
@@ -263,6 +304,25 @@ class TransactionsTakeTestCase(BaseTransactionViewTestCase):
             url += '?count={count}'.format(count=count)
 
         return url
+
+    def test_fails_without_permissions(self):
+        """
+        Tests that logged-in user has to have the right permissions
+        to access the endpoint.
+        """
+        prison = self.prisons[0]
+        user = get_users_for_prison(prison)[0]
+
+        # delete user from groups
+        user.groups.all().delete()
+
+        url = self._get_url(user, prison)
+
+        self.client.force_authenticate(user=user)
+
+        response = self.client.get(url, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_take_within_limit(self):
         """
@@ -398,6 +458,25 @@ class TransactionsReleaseTestCase(BaseTransactionViewTestCase):
                 'prison_id': prison.pk
             }
         )
+
+    def test_fails_without_permissions(self):
+        """
+        Tests that logged-in user has to have the right permissions
+        to access the endpoint.
+        """
+        prison = self.prisons[0]
+        user = get_users_for_prison(prison)[0]
+
+        # delete user from groups
+        user.groups.all().delete()
+
+        url = self._get_url(user, prison)
+
+        self.client.force_authenticate(user=user)
+
+        response = self.client.get(url, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_cannot_release_somebody_else_s_transactions_in_different_prison(self):
         """
@@ -586,7 +665,7 @@ class TransactionsReleaseTestCase(BaseTransactionViewTestCase):
         )
 
 
-class TransactionsPathTestCase(BaseTransactionViewTestCase):
+class TransactionsPatchTestCase(BaseTransactionViewTestCase):
 
     def _get_url(self, user, prison):
         return reverse(
@@ -595,6 +674,25 @@ class TransactionsPathTestCase(BaseTransactionViewTestCase):
                 'prison_id': prison.pk
             }
         )
+
+    def test_fails_without_permissions(self):
+        """
+        Tests that logged-in user has to have the right permissions
+        to access the endpoint.
+        """
+        prison = self.prisons[0]
+        user = get_users_for_prison(prison)[0]
+
+        # delete user from groups
+        user.groups.all().delete()
+
+        url = self._get_url(user, prison)
+
+        self.client.force_authenticate(user=user)
+
+        response = self.client.get(url, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_cannot_patch_somebody_else_s_transactions(self):
         """

@@ -68,6 +68,7 @@ class Transaction(TimeStampedModel):
 
     class Meta:
         ordering = ('received_at',)
+        permissions = (("view_transaction", "Can view transaction"),)
 
 
 class Log(TimeStampedModel):

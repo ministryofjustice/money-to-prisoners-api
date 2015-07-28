@@ -9,7 +9,10 @@ from prison.models import Prison
 
 
 class UserViewTestCase(APITestCase):
-    fixtures = ['test_prisons.json']
+    fixtures = [
+        'initial_groups.json',
+        'test_prisons.json'
+    ]
 
     def setUp(self):
         super(UserViewTestCase, self).setUp()

@@ -2,7 +2,7 @@ from model_mommy import timezone
 from model_mommy.mommy import make
 from model_mommy.recipe import Recipe, foreign_key
 
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from django.utils.text import slugify
 from django.utils.crypto import get_random_string
 
@@ -23,6 +23,7 @@ prison_user_mapping = Recipe(PrisonUserMapping,
 
 
 def create_prison_user_mapping(prison):
+    prison_clerk_group = Group.objects.get(name='PrisonClerk')
     name_and_password = 'test_' + slugify(prison).replace('-', '_')
 
     # if first user
@@ -41,4 +42,5 @@ def create_prison_user_mapping(prison):
     )
     pu.user.set_password(name_and_password)
     pu.user.save()
+    pu.user.groups.add(prison_clerk_group)
     return pu
