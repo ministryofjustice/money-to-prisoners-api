@@ -24,7 +24,20 @@ and if you're planning to deploy then you'll need the [deployment repository](ht
 
 In a terminal `cd` into the directory you checked this project out into, then
 ```
-$ docker-compose build && docker-compose up
+$ docker-compose build
+```
+Create the database:
+```
+$ docker-compose run db /bin/bash
+$ ./docker-entrypoint.sh postgres &
+$ su postgres
+$ createdb mtp_api;
+$ exit
+$ exit
+```
+Start the containers:
+```
+$ docker-compose up
 ```
 
 Wait while Docker does it's stuff and you'll soon see something like:
