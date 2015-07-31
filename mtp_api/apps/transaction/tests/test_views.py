@@ -70,7 +70,7 @@ class BaseTransactionViewTestCase(APITestCase):
         )
 
 
-class TransactionPermissionTestMixin(object):
+class TransactionRejectsRequestsWithoutPermissionTestMixin(object):
 
     """
     Mixin for permission checks on the endpoint.
@@ -118,7 +118,7 @@ class TransactionsEndpointTestCase(BaseTransactionViewTestCase):
 
 
 class TransactionsByPrisonEndpointTestCase(
-    TransactionPermissionTestMixin, BaseTransactionViewTestCase
+    TransactionRejectsRequestsWithoutPermissionTestMixin, BaseTransactionViewTestCase
 ):
 
     def _request_and_assert(self, status_param=None):
@@ -203,7 +203,7 @@ class TransactionsByPrisonEndpointTestCase(
 
 
 class TransactionsByPrisonAndUserEndpointTestCase(
-    TransactionPermissionTestMixin, BaseTransactionViewTestCase
+    TransactionRejectsRequestsWithoutPermissionTestMixin, BaseTransactionViewTestCase
 ):
 
     def _request_and_assert(self, status_param=None):
@@ -288,7 +288,7 @@ class TransactionsByPrisonAndUserEndpointTestCase(
 
 
 class TransactionsTakeTestCase(
-    TransactionPermissionTestMixin, BaseTransactionViewTestCase
+    TransactionRejectsRequestsWithoutPermissionTestMixin, BaseTransactionViewTestCase
 ):
     ENDPOINT_VERB = 'post'
 
@@ -431,7 +431,7 @@ class TransactionsTakeTestCase(
 
 
 class TransactionsReleaseTestCase(
-    TransactionPermissionTestMixin, BaseTransactionViewTestCase
+    TransactionRejectsRequestsWithoutPermissionTestMixin, BaseTransactionViewTestCase
 ):
     ENDPOINT_VERB = 'post'
 
@@ -631,7 +631,7 @@ class TransactionsReleaseTestCase(
 
 
 class TransactionsPatchTestCase(
-    TransactionPermissionTestMixin, BaseTransactionViewTestCase
+    TransactionRejectsRequestsWithoutPermissionTestMixin, BaseTransactionViewTestCase
 ):
     ENDPOINT_VERB = 'patch'
 
