@@ -1,14 +1,17 @@
+import django_filters
+
 from django.db import transaction
 from django.http import HttpResponseRedirect
 
-import django_filters
 from rest_framework import mixins, viewsets, filters, status, exceptions
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 
+from core.permissions import FullDjangoModelPermissions
 from mtp_auth.models import PrisonUserMapping
 from prison.models import Prison
+
 from .models import Transaction
 from .serializers import TransactionSerializer, \
     CreditedOnlyTransactionSerializer
@@ -26,6 +29,7 @@ class StatusChoiceFilter(django_filters.ChoiceFilter):
 
         qs = qs.filter(**qs.model.STATUS_LOOKUP[value.lower()])
         return qs
+
 
 class TransactionStatusFilter(django_filters.FilterSet):
 
@@ -63,7 +67,9 @@ class TransactionView(
     filter_class = TransactionStatusFilter
 
     ordering = ('received_at',)
-    permission_classes = (IsAuthenticated, IsOwnPrison,)
+    permission_classes = (
+        IsAuthenticated, IsOwnPrison, FullDjangoModelPermissions
+    )
 
     def get_queryset(self, filter_by_user=True, filter_by_prison=True):
         qs = super(TransactionView, self).get_queryset()

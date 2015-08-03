@@ -27,7 +27,10 @@ def get_prisons_for_user(user):
 
 
 class BaseTransactionViewTestCase(APITestCase):
-    fixtures = ['test_prisons.json']
+    fixtures = [
+        'initial_groups.json',
+        'test_prisons.json'
+    ]
     STATUS_FILTERS = {
         None: lambda t: True,
         TRANSACTION_STATUS.PENDING: lambda t: t.owner and not t.credited,
@@ -67,6 +70,36 @@ class BaseTransactionViewTestCase(APITestCase):
         )
 
 
+class TransactionRejectsRequestsWithoutPermissionTestMixin(object):
+
+    """
+    Mixin for permission checks on the endpoint.
+
+    It expects a `_get_url(user, prison)` instance method defined.
+    """
+    ENDPOINT_VERB = 'get'
+
+    def test_fails_without_permissions(self):
+        """
+        Tests that logged-in user has to have the right permissions
+        to access the endpoint.
+        """
+        prison = self.prisons[0]
+        user = get_users_for_prison(prison)[0]
+
+        # delete user from groups
+        user.groups.all().delete()
+
+        url = self._get_url(user, prison)
+
+        self.client.force_authenticate(user=user)
+
+        verb_callable = getattr(self.client, self.ENDPOINT_VERB)
+        response = verb_callable(url, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
 class TransactionsEndpointTestCase(BaseTransactionViewTestCase):
 
     def test_cant_access(self):
@@ -84,7 +117,9 @@ class TransactionsEndpointTestCase(BaseTransactionViewTestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
-class TransactionsByPrisonEndpointTestCase(BaseTransactionViewTestCase):
+class TransactionsByPrisonEndpointTestCase(
+    TransactionRejectsRequestsWithoutPermissionTestMixin, BaseTransactionViewTestCase
+):
 
     def _request_and_assert(self, status_param=None):
         for prison in self.prisons:
@@ -93,11 +128,12 @@ class TransactionsByPrisonEndpointTestCase(BaseTransactionViewTestCase):
                     t.prison == prison and
                     self.STATUS_FILTERS[status_param](t)
             ]
-            url = self._get_list_url(prison, status=status_param)
 
             expected_owners = get_users_for_prison(prison)
-            self.client.force_authenticate(user=expected_owners[0])
+            user = expected_owners[0]
+            self.client.force_authenticate(user=user)
 
+            url = self._get_url(user, prison, status=status_param)
             response = self.client.get(url, format='json')
 
             self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -108,7 +144,7 @@ class TransactionsByPrisonEndpointTestCase(BaseTransactionViewTestCase):
                 sorted(expected_ids)
             )
 
-    def _get_list_url(self, prison, status=None):
+    def _get_url(self, user, prison, status=None):
         url = reverse(
             'transaction-prison-list', kwargs={
                 'prison_id': prison.pk
@@ -135,7 +171,7 @@ class TransactionsByPrisonEndpointTestCase(BaseTransactionViewTestCase):
 
         logged_in_user = get_users_for_prison(logged_in_user_prison)[0]
 
-        url = self._get_list_url(other_prison)
+        url = self._get_url(logged_in_user, other_prison)
 
         self.client.force_authenticate(user=logged_in_user)
 
@@ -166,7 +202,9 @@ class TransactionsByPrisonEndpointTestCase(BaseTransactionViewTestCase):
         )
 
 
-class TransactionsByPrisonAndUserEndpointTestCase(BaseTransactionViewTestCase):
+class TransactionsByPrisonAndUserEndpointTestCase(
+    TransactionRejectsRequestsWithoutPermissionTestMixin, BaseTransactionViewTestCase
+):
 
     def _request_and_assert(self, status_param=None):
         for owner in self.owners:
@@ -181,7 +219,7 @@ class TransactionsByPrisonAndUserEndpointTestCase(BaseTransactionViewTestCase):
                         t.owner == owner and
                         self.STATUS_FILTERS[status_param](t)
                 ]
-                url = self._get_list_url(owner, prison, status=status_param)
+                url = self._get_url(owner, prison, status=status_param)
 
                 response = self.client.get(url, format='json')
 
@@ -193,10 +231,10 @@ class TransactionsByPrisonAndUserEndpointTestCase(BaseTransactionViewTestCase):
                     sorted(expected_ids)
                 )
 
-    def _get_list_url(self, owner, prison, status=None):
+    def _get_url(self, user, prison, status=None):
         url = reverse(
             'transaction-prison-user-list', kwargs={
-                'user_id': owner.pk,
+                'user_id': user.pk,
                 'prison_id': prison.pk
             }
         )
@@ -222,7 +260,7 @@ class TransactionsByPrisonAndUserEndpointTestCase(BaseTransactionViewTestCase):
         logged_in_user = get_users_for_prison(logged_in_user_prison)[0]
         other_user = get_users_for_prison(other_prison)[0]
 
-        url = self._get_list_url(other_user, other_prison)
+        url = self._get_url(other_user, other_prison)
 
         self.client.force_authenticate(user=logged_in_user)
 
@@ -249,7 +287,10 @@ class TransactionsByPrisonAndUserEndpointTestCase(BaseTransactionViewTestCase):
         )
 
 
-class TransactionsTakeTestCase(BaseTransactionViewTestCase):
+class TransactionsTakeTestCase(
+    TransactionRejectsRequestsWithoutPermissionTestMixin, BaseTransactionViewTestCase
+):
+    ENDPOINT_VERB = 'post'
 
     def _get_url(self, user, prison, count=None):
         url = reverse(
@@ -389,7 +430,10 @@ class TransactionsTakeTestCase(BaseTransactionViewTestCase):
         )
 
 
-class TransactionsReleaseTestCase(BaseTransactionViewTestCase):
+class TransactionsReleaseTestCase(
+    TransactionRejectsRequestsWithoutPermissionTestMixin, BaseTransactionViewTestCase
+):
+    ENDPOINT_VERB = 'post'
 
     def _get_url(self, user, prison):
         return reverse(
@@ -586,7 +630,10 @@ class TransactionsReleaseTestCase(BaseTransactionViewTestCase):
         )
 
 
-class TransactionsPathTestCase(BaseTransactionViewTestCase):
+class TransactionsPatchTestCase(
+    TransactionRejectsRequestsWithoutPermissionTestMixin, BaseTransactionViewTestCase
+):
+    ENDPOINT_VERB = 'patch'
 
     def _get_url(self, user, prison):
         return reverse(

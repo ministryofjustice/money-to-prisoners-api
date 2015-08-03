@@ -20,7 +20,11 @@
   "pk": 3,
   "fields": {
     "name": "PrisonClerk",
-    "permissions": []
+    "permissions": [
+      ["view_transaction", "transaction", "transaction"],
+      ["add_transaction", "transaction", "transaction"],
+      ["change_transaction", "transaction", "transaction"]
+    ]
   }
 }
 ]
