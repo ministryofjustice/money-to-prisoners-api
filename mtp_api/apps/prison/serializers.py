@@ -1,4 +1,5 @@
 from django.db.models import Max
+from django.db import transaction
 
 from rest_framework import serializers
 
@@ -7,18 +8,14 @@ from .models import PrisonerLocation
 
 class PrisonerLocationListSerializer(serializers.ListSerializer):
 
-    def get_latest_upload_counter(self):
-        result = PrisonerLocation.objects.all().aggregate(max=Max('upload_counter'))
-        return result['max'] or 0
-
+    @transaction.atomic
     def create(self, validated_data):
-        # NOTE: this can cause race conditions and can be fixed but do we care?
-        # Not likely to happen
-        next_upload_counter = self.get_latest_upload_counter() + 1
-
         locations = [
-            PrisonerLocation(upload_counter=next_upload_counter, **item) for item in validated_data
+            PrisonerLocation(**item) for item in validated_data
         ]
+
+        # delete all current records and insert new batch
+        PrisonerLocation.objects.all().delete()
         return PrisonerLocation.objects.bulk_create(locations)
 
 

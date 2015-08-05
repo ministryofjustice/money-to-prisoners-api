@@ -13,7 +13,6 @@ class Prison(TimeStampedModel):
 
 
 class PrisonerLocation(TimeStampedModel):
-    upload_counter = models.PositiveIntegerField()
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL)
 
     prisoner_number = models.CharField(max_length=250)
@@ -22,9 +21,8 @@ class PrisonerLocation(TimeStampedModel):
     prison = models.ForeignKey(Prison)
 
     def __str__(self):
-        return 'location record {upload_counter} ' \
+        return 'location record ' \
             'for prisoner {prisoner_number} / {prisoner_dob}'.format(
-                upload_counter=self.upload_counter,
                 prisoner_number=self.prisoner_number,
                 prisoner_dob=self.prisoner_dob
             )

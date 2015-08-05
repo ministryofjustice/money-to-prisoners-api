@@ -35,10 +35,14 @@ class PrisonerLocationViewTestCase(APITestCase):
     def test_create(self):
         user = self.users[0]
 
-        # create one PrisonerLocation so that we test the upload_counter
-        # increment
-        mommy.make(PrisonerLocation, upload_counter=1)
-        self.assertEqual(PrisonerLocation.objects.count(), 1)
+        repeated_p_num_1 = random_prisoner_number()
+        repeated_p_num_2 = random_prisoner_number()
+        # create two pre-existing PrisonerLocations so that we test the overwrite
+        mommy.make(PrisonerLocation, prisoner_number=repeated_p_num_1, 
+            prison=self.prisons[0])
+        mommy.make(PrisonerLocation, prisoner_number=repeated_p_num_2, 
+            prison=self.prisons[0])
+        self.assertEqual(PrisonerLocation.objects.count(), 2)
 
         self.client.force_authenticate(user=user)
 
@@ -49,7 +53,12 @@ class PrisonerLocationViewTestCase(APITestCase):
                 'prison': self.prisons[0].pk
             },
             {
-                'prisoner_number': random_prisoner_number(),
+                'prisoner_number': repeated_p_num_1,
+                'prisoner_dob': random_prisoner_dob(),
+                'prison': self.prisons[1].pk
+            },
+            {
+                'prisoner_number': repeated_p_num_2,
                 'prisoner_dob': random_prisoner_dob(),
                 'prison': self.prisons[1].pk
             },
@@ -59,8 +68,8 @@ class PrisonerLocationViewTestCase(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        # test that 2 prisoner location records got created
-        latest_created = PrisonerLocation.objects.filter(upload_counter=2)
+        # test that total prisoner location records is now 3
+        latest_created = PrisonerLocation.objects.all()
         self.assertEqual(latest_created.count(), len(data))
         for item in data:
             self.assertEqual(latest_created.filter(**item).count(), 1)
