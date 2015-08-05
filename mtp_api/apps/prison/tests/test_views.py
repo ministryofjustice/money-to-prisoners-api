@@ -14,7 +14,7 @@ from prison.tests.utils import random_prisoner_number, random_prisoner_dob
 
 
 class PrisonerLocationViewTestCase(APITestCase):
-    fixtures = ['test_prisons.json']
+    fixtures = ['test_prisons.json', 'initial_groups.json']
 
     def setUp(self):
         super(PrisonerLocationViewTestCase, self).setUp()
