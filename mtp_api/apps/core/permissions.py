@@ -1,3 +1,5 @@
+from django.core.exceptions import ImproperlyConfigured
+
 from rest_framework.compat import get_model_name
 from rest_framework.permissions import BasePermission
 
@@ -24,6 +26,8 @@ class ActionsBasedPermissions(BasePermission):
     as it's based on actions instead of methods.
     A `POST` that creates a resource and one that makes an action on a resource
     usually have different permissions so they should be treated differently.
+
+    NOTE: This is only meant to work with ViewSets.
     """
 
     # Map methods into required permission codes.
@@ -56,6 +60,10 @@ class ActionsBasedPermissions(BasePermission):
         return [perm % kwargs for perm in self.actions_perms_map[action]]
 
     def has_permission(self, request, view):
+        if not hasattr(view, 'action'):
+            msg = ("Can only use %s on a ViewSet")
+            raise ImproperlyConfigured(msg % self.__class__.__name__)
+
         # Workaround to ensure DjangoModelPermissions are not applied
         # to the root view when using DefaultRouter.
         if getattr(view, '_ignore_model_permissions', False):
