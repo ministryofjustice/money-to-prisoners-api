@@ -16,14 +16,11 @@ class IsOwnPrison(BasePermission):
 
 
 class TransactionPermissions(ActionsBasedPermissions):
-    actions_perms_map = {
-        'create': ['%(app_label)s.add_%(model_name)s'],
+    actions_perms_map = ActionsBasedPermissions.actions_perms_map.copy()
+    actions_perms_map.update({
         'list': ['%(app_label)s.view_%(model_name)s'],
         'retrieve': ['%(app_label)s.view_%(model_name)s'],
-        'update': ['%(app_label)s.change_%(model_name)s'],
-        'partial_update': ['%(app_label)s.change_%(model_name)s'],
-        'destroy': ['%(app_label)s.delete_%(model_name)s'],
         'take': ['%(app_label)s.take_%(model_name)s'],
         'release': ['%(app_label)s.release_%(model_name)s'],
         'patch_credited': ['%(app_label)s.patch_credited_%(model_name)s']
-    }
+    })
