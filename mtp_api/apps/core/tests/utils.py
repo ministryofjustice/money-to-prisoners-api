@@ -26,10 +26,10 @@ def make_test_oauth_applications():
     )
 
     Application.objects.get_or_create(
-        client_id='noms-admin',
+        client_id='prisoner-location-admin',
         client_type='confidential',
         authorization_grant_type='password',
-        client_secret='noms-admin',
-        name='noms-admin',
+        client_secret='prisoner-location-admin',
+        name='prisoner-location-admin',
         user=User.objects.first()
     )
