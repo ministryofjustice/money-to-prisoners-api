@@ -8,7 +8,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 
-from core.permissions import FullDjangoModelPermissions
 from mtp_auth.models import PrisonUserMapping
 from prison.models import Prison
 
@@ -17,7 +16,7 @@ from .serializers import TransactionSerializer, \
     CreditedOnlyTransactionSerializer
 from .constants import TRANSACTION_STATUS, TAKE_LIMIT, \
     DEFAULT_SLICE_SIZE
-from .permissions import IsOwner, IsOwnPrison
+from .permissions import IsOwner, IsOwnPrison, TransactionPermissions
 
 
 class StatusChoiceFilter(django_filters.ChoiceFilter):
@@ -68,7 +67,7 @@ class TransactionView(
 
     ordering = ('received_at',)
     permission_classes = (
-        IsAuthenticated, IsOwnPrison, FullDjangoModelPermissions
+        IsAuthenticated, IsOwnPrison, TransactionPermissions
     )
 
     def get_queryset(self, filter_by_user=True, filter_by_prison=True):
