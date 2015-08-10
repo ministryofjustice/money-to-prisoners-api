@@ -19,10 +19,3 @@ class PrisonerLocation(TimeStampedModel):
     prisoner_dob = models.DateField()
 
     prison = models.ForeignKey(Prison)
-
-    def __str__(self):
-        return 'location record ' \
-            'for prisoner {prisoner_number} / {prisoner_dob}'.format(
-                prisoner_number=self.prisoner_number,
-                prisoner_dob=self.prisoner_dob
-            )
