@@ -38,9 +38,9 @@ class PrisonerLocationViewTestCase(APITestCase):
         repeated_p_num_1 = random_prisoner_number()
         repeated_p_num_2 = random_prisoner_number()
         # create two pre-existing PrisonerLocations so that we test the overwrite
-        mommy.make(PrisonerLocation, prisoner_number=repeated_p_num_1, 
+        mommy.make(PrisonerLocation, prisoner_number=repeated_p_num_1,
             prison=self.prisons[0])
-        mommy.make(PrisonerLocation, prisoner_number=repeated_p_num_2, 
+        mommy.make(PrisonerLocation, prisoner_number=repeated_p_num_2,
             prison=self.prisons[0])
         self.assertEqual(PrisonerLocation.objects.count(), 2)
 
@@ -74,60 +74,49 @@ class PrisonerLocationViewTestCase(APITestCase):
         for item in data:
             self.assertEqual(latest_created.filter(**item).count(), 1)
 
-    def test_create_validation_error(self):
-        user = self.users[0]
+    def _test_validation_error(self, data, assert_error_msg):
+        self.client.force_authenticate(user=self.users[0])
+        response = self.client.post(
+            self.list_url, data=data, format='json'
+        )
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+            'Should fail because: {msg}'.format(msg=assert_error_msg)
+        )
 
-        invalid_data_list = [
-            {
-                'data': {},
-                'msg': 'Should fail because invalid format (dict instead of list)'
-            },
-            {
-                'data': [
-                    {}
-                ],
-                'msg': 'Should fail because empty data'
-            },
-            {
-                'data': [
-                    {
-                        'prisoner_number': '*'*1000,
-                        'prisoner_dob': random_prisoner_dob(),
-                        'prison': self.prisons[0].pk
-                    }
-                ],
-                'msg': 'Should fail because empty data'
-            },
-            {
-                'data': [
-                    {
-                        'prisoner_number': random_prisoner_number(),
-                        'prisoner_dob': '01//02//2015',
-                        'prison': self.prisons[0].pk
-                    }
-                ],
-                'msg': 'Should fail because invalid data format'
-            },
-            {
-                'data': [
-                    {
-                        'prisoner_number': random_prisoner_number(),
-                        'prisoner_dob': random_prisoner_dob(),
-                        'prison': 'invalid'
-                    }
-                ],
-                'msg': 'Should fail because invalid prison'
-            },
-        ]
+    def test_create_error_invalid_format(self):
+        self._test_validation_error(
+            data={},
+            assert_error_msg='Should fail because invalid format (dict instead of list)'
+        )
 
-        self.client.force_authenticate(user=user)
+    def test_create_error_empty_list(self):
+        self._test_validation_error(
+            data=[{}],
+            assert_error_msg='Should fail because empty data'
+        )
 
-        for data in invalid_data_list:
-            response = self.client.post(
-                self.list_url, data=data['data'], format='json'
-            )
-            self.assertEqual(
-                response.status_code,
-                status.HTTP_400_BAD_REQUEST,
-                'Should fail because: {msg}'.format(msg=data['msg'])
-            )
+    def test_create_error_invalid_dob(self):
+        self._test_validation_error(
+            data=[
+                {
+                    'prisoner_number': random_prisoner_number(),
+                    'prisoner_dob': '01//02//2015',
+                    'prison': self.prisons[0].pk
+                }
+            ],
+            assert_error_msg='Should fail because invalid dob'
+        )
+
+    def test_create_error_invalid_prison(self):
+        self._test_validation_error(
+            data=[
+                {
+                    'prisoner_number': random_prisoner_number(),
+                    'prisoner_dob': random_prisoner_dob(),
+                    'prison': 'invalid'
+                }
+            ],
+            assert_error_msg='Should fail because invalid prison'
+        )
