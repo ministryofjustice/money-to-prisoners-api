@@ -1,6 +1,5 @@
 import datetime
 import random
-import string
 
 from django.utils import timezone
 from django.utils.crypto import get_random_string
@@ -11,21 +10,7 @@ from transaction.models import Transaction
 from transaction.constants import TRANSACTION_STATUS
 
 
-def random_dob():
-    return datetime.date(
-        day=random.randint(1, 28),
-        month=random.randint(1, 12),
-        year=random.randint(1930, 1990)
-    )
-
-
-def random_prison_number():
-    # format: [A-Z]\d{4}[A-Z]{2}
-    return '%s%s%s' % (
-        get_random_string(allowed_chars=string.ascii_uppercase, length=1),
-        get_random_string(allowed_chars=string.digits, length=4),
-        get_random_string(allowed_chars=string.ascii_uppercase, length=2)
-    )
+from prison.tests.utils import random_prisoner_number, random_prisoner_dob
 
 
 def random_reference(prisoner_number=None, prisoner_dob=None):
@@ -95,8 +80,8 @@ def generate_transactions(uploads=2, transaction_batch=30):
                 prison = prison_chooser.choose_prison()
                 data.update({
                     'prison': prison,
-                    'prisoner_number': random_prison_number(),
-                    'prisoner_dob': random_dob()
+                    'prisoner_number': random_prisoner_number(),
+                    'prisoner_dob': random_prisoner_dob()
                 })
 
                 # randomly choose the state of the transaction

@@ -6,12 +6,14 @@ from django.views.generic.base import TemplateView
 from rest_framework import routers
 
 from mtp_auth.views import UserViewSet
+from prison.views import PrisonerLocationView
 from transaction.routers import TransactionRouter
 
 transaction_router = TransactionRouter()
 
 router = routers.DefaultRouter()
 router.register(r'users', UserViewSet)
+router.register(r'prisoner-locations', PrisonerLocationView)
 
 urlpatterns = patterns(
     '',
