@@ -3,8 +3,10 @@
   "model": "auth.group",
   "pk": 1,
   "fields": {
-    "name": "NOMSFinance",
-    "permissions": []
+    "name": "PrisonerLocationAdmin",
+    "permissions": [
+      ["add_prisonerlocation", "prison", "prisonerlocation"]
+    ]
   }
 },
 {

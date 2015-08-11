@@ -40,7 +40,7 @@ class BaseTransactionViewTestCase(APITestCase):
 
     def setUp(self):
         super(BaseTransactionViewTestCase, self).setUp()
-        self.owners = make_test_users(users_per_prison=2)
+        self.owners, _ = make_test_users(users_per_prison=2)
         self.transactions = generate_transactions(
             uploads=2, transaction_batch=50
         )

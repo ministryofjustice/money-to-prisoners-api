@@ -18,13 +18,25 @@ class PrisonerLocationViewTestCase(APITestCase):
 
     def setUp(self):
         super(PrisonerLocationViewTestCase, self).setUp()
-        self.users = make_test_users()
+        self.prison_clerks, self.users = make_test_users()
         self.prisons = Prison.objects.all()
         make_test_oauth_applications()
 
     @property
     def list_url(self):
         return reverse('prisonerlocation-list')
+
+    def test_fails_without_permissions(self):
+        unauthorised_user = self.prison_clerks[0]
+
+        self.client.force_authenticate(user=unauthorised_user)
+        response = self.client.post(
+            self.list_url, data={}, format='json'
+        )
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN
+        )
 
     def test_cannot_create_if_not_logged_in(self):
         response = self.client.post(
