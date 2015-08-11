@@ -1,10 +1,13 @@
 from oauth2_provider.models import Application
 
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 
 from prison.models import Prison
 from mtp_auth.tests.mommy_recipes import create_prison_user_mapping, \
     create_prisoner_location_admins
+
+
+User = get_user_model()
 
 
 def make_test_users(users_per_prison=1):
