@@ -2,12 +2,14 @@ from model_mommy import timezone
 from model_mommy.mommy import make, make_recipe
 from model_mommy.recipe import Recipe, foreign_key
 
-from django.contrib.auth.models import User, Group
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.utils.text import slugify
 from django.utils.crypto import get_random_string
 
 from mtp_auth.models import PrisonUserMapping
 
+User = get_user_model()
 
 NOW = lambda: timezone.now()
 basic_user = Recipe(
