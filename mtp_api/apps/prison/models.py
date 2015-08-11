@@ -19,3 +19,8 @@ class PrisonerLocation(TimeStampedModel):
     prisoner_dob = models.DateField()
 
     prison = models.ForeignKey(Prison)
+
+    class Meta:
+        index_together = [
+            ["prisoner_number", "prisoner_dob"],
+        ]
