@@ -1,5 +1,5 @@
 from model_mommy import timezone
-from model_mommy.mommy import make
+from model_mommy.mommy import make, make_recipe
 from model_mommy.recipe import Recipe, foreign_key
 
 from django.contrib.auth.models import User, Group
@@ -10,16 +10,17 @@ from mtp_auth.models import PrisonUserMapping
 
 
 NOW = lambda: timezone.now()
-prison_user = Recipe(User,
-                     email=None,
-                     is_staff=False,
-                     is_active=True,
-                     is_superuser=False,
-                     last_login=NOW,
-                     created=NOW)
+basic_user = Recipe(
+    User,
+    is_staff=False,
+    is_active=True,
+    is_superuser=False,
+    last_login=NOW
+)
 
-prison_user_mapping = Recipe(PrisonUserMapping,
-                             user=foreign_key(prison_user))
+prison_user_mapping = Recipe(
+    PrisonUserMapping, user=foreign_key(basic_user)
+)
 
 
 def create_prison_user_mapping(prison):
@@ -44,3 +45,17 @@ def create_prison_user_mapping(prison):
     pu.user.save()
     pu.user.groups.add(prison_clerk_group)
     return pu
+
+
+def create_prisoner_location_admins():
+    name_and_password = 'prisoner_location_admin'
+
+    prisoner_location_admin_group = Group.objects.get(name='PrisonerLocationAdmin')
+    plu = basic_user.make(
+        username=name_and_password
+    )
+    plu.set_password(name_and_password)
+    plu.save()
+    plu.groups.add(prisoner_location_admin_group)
+
+    return [plu]

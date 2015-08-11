@@ -115,4 +115,3 @@ def generate_transactions(uploads=2, transaction_batch=30):
             trans = Transaction.objects.create(**data)
             transactions.append(trans)
     return transactions
-
