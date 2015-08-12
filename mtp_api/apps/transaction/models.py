@@ -14,6 +14,7 @@ from .signals import transaction_taken, transaction_released, \
 
 
 class Transaction(TimeStampedModel):
+    # TODO, not sure we need this, we might decide to delete it
     upload_counter = models.PositiveIntegerField()
 
     prison = models.ForeignKey(Prison, blank=True, null=True)
@@ -22,16 +23,23 @@ class Transaction(TimeStampedModel):
     prisoner_dob = models.DateField(blank=True, null=True)
 
     amount = models.PositiveIntegerField()
-    sender_bank_reference = models.CharField(
-        blank=True, max_length=250
-    )
-    sender_customer_reference = models.CharField(
-        blank=True, max_length=250
-    )
+
+    # cannot be empty otherwise we can't send the money back
+    sender_sort_code = models.CharField(max_length=50)
+    sender_account_number = models.CharField(max_length=50)
+    sender_name = models.CharField(max_length=250)
+
+    # used by building societies to identify the account nr
+    sender_roll_number = models.CharField(blank=True, max_length=50)
+
+    # original reference
     reference = models.TextField(blank=True)
+
     received_at = models.DateTimeField(auto_now=False)
 
+    # set when a transaction is taken and unset if it gets released.
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True)
+
     credited = models.BooleanField(default=False)
 
     STATUS_LOOKUP = {

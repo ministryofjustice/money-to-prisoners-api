@@ -5,6 +5,8 @@ from django.contrib.auth.models import User
 from core.tests.utils import make_test_users, \
     make_test_oauth_applications
 
+from transaction.tests.utils import generate_transactions
+
 
 class Command(BaseCommand):
 
@@ -12,7 +14,6 @@ class Command(BaseCommand):
         call_command(
             'loaddata',
             'test_prisons.json',
-            'test_transactions.json',
             'initial_groups.json'
         )
 
@@ -20,3 +21,7 @@ class Command(BaseCommand):
         make_test_users()
 
         make_test_oauth_applications()
+
+        generate_transactions(
+            uploads=2, transaction_batch=100
+        )

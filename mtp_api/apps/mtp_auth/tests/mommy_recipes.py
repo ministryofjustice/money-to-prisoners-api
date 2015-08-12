@@ -1,5 +1,5 @@
 from model_mommy import timezone
-from model_mommy.mommy import make, make_recipe
+from model_mommy.mommy import make
 from model_mommy.recipe import Recipe, foreign_key
 
 from django.contrib.auth.models import User, Group
