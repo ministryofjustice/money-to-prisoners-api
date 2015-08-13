@@ -60,12 +60,15 @@ def generate_transactions(uploads=2, transaction_batch=30):
     for upload_counter in range(1, uploads+1):
         for transaction_counter in range(1, transaction_batch+1):
             # Records might not have prisoner data and/or might not
-            # have sender data.
-            # Atm, we set the probability of it having either of them
+            # have building society roll numbers.
+            # Atm, we set the probability of it having prisoner info
             # to 80% which is an arbitrary high value as we expect
             # records to have correct data most of the time.
+            # The probability of transactions coming from building
+            # societies is instead low, set here to 10%,
+            # which is again arbitrary.
             include_prisoner_info = random.randint(0, 100) < 80
-            include_sender_info = random.randint(0, 100) < 80
+            include_sender_roll_number = random.randint(0, 100) < 10
 
             data = {
                 'upload_counter': upload_counter,
@@ -74,6 +77,9 @@ def generate_transactions(uploads=2, transaction_batch=30):
                 'received_at': timezone.now() - datetime.timedelta(
                     minutes=random.randint(0, 10000)
                 ),
+                'sender_sort_code': get_random_string(6, '1234567890'),
+                'sender_account_number': get_random_string(8, '1234567890'),
+                'sender_name': get_random_string(10)
             }
 
             if include_prisoner_info:
@@ -103,10 +109,9 @@ def generate_transactions(uploads=2, transaction_batch=30):
                         'credited': True
                     })
 
-            if include_sender_info:
+            if include_sender_roll_number:
                 data.update({
-                    'sender_bank_reference': get_random_string(),
-                    'sender_customer_reference': get_random_string()
+                    'sender_roll_number': get_random_string(15, '1234567890')
                 })
 
             data['reference'] = random_reference(
