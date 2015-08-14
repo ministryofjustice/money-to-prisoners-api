@@ -3,22 +3,12 @@ from django.contrib import admin
 
 from django.views.generic.base import TemplateView
 
-from rest_framework import routers
-
-from mtp_auth.views import UserViewSet
-from prison.views import PrisonerLocationView
-from transaction.routers import TransactionRouter
-
-transaction_router = TransactionRouter()
-
-router = routers.DefaultRouter()
-router.register(r'users', UserViewSet)
-router.register(r'prisoner-locations', PrisonerLocationView)
 
 urlpatterns = patterns(
     '',
-    url(r'^', include(router.urls)),
-    url(r'^', include(transaction_router.urls)),
+    url(r'^', include('prison.urls')),
+    url(r'^', include('mtp_auth.urls')),
+    url(r'^', include('transaction.urls')),
 
     url(r'^$', TemplateView.as_view(template_name='core/index.html')),
     url(r'^oauth2/', include('oauth2_provider.urls', namespace='oauth2_provider')),

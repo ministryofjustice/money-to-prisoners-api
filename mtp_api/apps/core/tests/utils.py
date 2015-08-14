@@ -4,20 +4,23 @@ from django.contrib.auth.models import User
 
 from prison.models import Prison
 from mtp_auth.tests.mommy_recipes import create_prison_user_mapping, \
-    create_prisoner_location_admins
+    create_prisoner_location_admins, create_bank_admins
 
 
-def make_test_users(users_per_prison=1):
+def make_test_users(clerks_per_prison=1):
     # prison clerks
     prison_clerks = []
     for prison in Prison.objects.all():
-        for index in range(users_per_prison):
+        for index in range(clerks_per_prison):
             pu = create_prison_user_mapping(prison)
             prison_clerks.append(pu.user)
 
     # prisoner location admin
     prisoner_location_admins = create_prisoner_location_admins()
-    return (prison_clerks, prisoner_location_admins)
+
+    # bank admin
+    bank_admins = create_bank_admins()
+    return (prison_clerks, prisoner_location_admins, bank_admins)
 
 
 def make_test_oauth_applications():

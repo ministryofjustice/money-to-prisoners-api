@@ -14,8 +14,9 @@ from prison.models import Prison
 
 from transaction.models import Transaction, Log
 from transaction.constants import TRANSACTION_STATUS, TAKE_LIMIT, LOG_ACTIONS
+from transaction.views import AdminTransactionView
 
-from .utils import generate_transactions
+from .utils import generate_transactions_data, generate_transactions
 
 
 def get_users_for_prison(prison):
@@ -40,7 +41,10 @@ class BaseTransactionViewTestCase(APITestCase):
 
     def setUp(self):
         super(BaseTransactionViewTestCase, self).setUp()
-        self.owners, _ = make_test_users(users_per_prison=2)
+        (
+            self.prison_clerks, self.prisoner_location_admins, self.bank_admins
+        ) = make_test_users(clerks_per_prison=2)
+
         self.transactions = generate_transactions(
             uploads=2, transaction_batch=50
         )
@@ -79,13 +83,17 @@ class TransactionRejectsRequestsWithoutPermissionTestMixin(object):
     """
     ENDPOINT_VERB = 'get'
 
+    def get_user_and_prison(self):
+        prison = self.prisons[0]
+        user = get_users_for_prison(prison)[0]
+        return user, prison
+
     def test_fails_without_permissions(self):
         """
         Tests that logged-in user has to have the right permissions
         to access the endpoint.
         """
-        prison = self.prisons[0]
-        user = get_users_for_prison(prison)[0]
+        user, prison = self.get_user_and_prison()
 
         # delete user from groups
         user.groups.all().delete()
@@ -100,7 +108,7 @@ class TransactionRejectsRequestsWithoutPermissionTestMixin(object):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
-class TransactionsEndpointTestCase(BaseTransactionViewTestCase):
+class TransactionListEndpointTestCase(BaseTransactionViewTestCase):
 
     def test_cant_access(self):
         """
@@ -117,7 +125,7 @@ class TransactionsEndpointTestCase(BaseTransactionViewTestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
-class TransactionsByPrisonEndpointTestCase(
+class TransactionListByPrisonEndpointTestCase(
     TransactionRejectsRequestsWithoutPermissionTestMixin, BaseTransactionViewTestCase
 ):
 
@@ -202,12 +210,12 @@ class TransactionsByPrisonEndpointTestCase(
         )
 
 
-class TransactionsByPrisonAndUserEndpointTestCase(
+class TransactionListByPrisonAndUserEndpointTestCase(
     TransactionRejectsRequestsWithoutPermissionTestMixin, BaseTransactionViewTestCase
 ):
 
     def _request_and_assert(self, status_param=None):
-        for owner in self.owners:
+        for owner in self.prison_clerks:
             self.client.force_authenticate(user=owner)
 
             prisons = get_prisons_for_user(owner)
@@ -342,8 +350,16 @@ class TransactionsTakeTestCase(
         )
 
         # check 5 taken transactions in db
+        taken_transactions = self._get_pending_transactions_qs(prison, owner)
+        self.assertEqual(taken_transactions.count(), count)
+
+        # check logs
         self.assertEqual(
-            self._get_pending_transactions_qs(prison, owner).count(),
+            Log.objects.filter(
+                user=owner,
+                action=LOG_ACTIONS.TAKEN,
+                transaction__id__in=taken_transactions.values_list('id', flat=True)
+            ).count(),
             count
         )
 
@@ -388,7 +404,7 @@ class TransactionsTakeTestCase(
         """
         Tests that fails when trying to take more than TAKE_LIMIT.
         """
-        user = self.owners[0]
+        user = self.prison_clerks[0]
         prison = get_prisons_for_user(user)[0]
 
         # clean things up
@@ -529,6 +545,15 @@ class TransactionsReleaseTestCase(
         self.assertEqual(
             self._get_available_transactions_qs(prison).count(),
             currently_available + to_release
+        )
+
+        # check logs
+        self.assertEqual(
+            Log.objects.filter(
+                user=logged_in_user, action=LOG_ACTIONS.RELEASED,
+                transaction__id__in=[t.id for t in transactions_to_release]
+            ).count(),
+            to_release
         )
 
     def test_cannot_release_transactions_with_mismatched_url(self):
@@ -771,6 +796,15 @@ class TransactionsPatchTestCase(
             len(credited_transactions) + to_credit
         )
 
+        # check logs
+        self.assertEqual(
+            Log.objects.filter(
+                user=user, action=LOG_ACTIONS.CREDITED,
+                transaction__id__in=[t.id for t in transactions_to_credit]
+            ).count(),
+            to_credit
+        )
+
     def test_invalid_data(self):
         """
         Tests that if the data passed to the patch endpoint is invalid
@@ -842,130 +876,66 @@ class TransactionsPatchTestCase(
             )
 
 
-class TransactionsLogsTestCase(BaseTransactionViewTestCase):
+class AdminCreateTransactionsTestCase(
+    TransactionRejectsRequestsWithoutPermissionTestMixin, BaseTransactionViewTestCase
+):
+    ENDPOINT_VERB = 'post'
 
-    def test_transaction_created(self):
-        # check that logs 'transaction created' exist for
-        # generated transactions
-        self.assertEqual(Log.objects.count(), len(self.transactions))
+    def setUp(self):
+        super(AdminCreateTransactionsTestCase, self).setUp()
 
-    def test_transaction_taken(self):
-        prison = self.prisons[0]
-        owner = get_users_for_prison(prison)[0]
+        # delete all transactions and logs
+        Transaction.objects.all().delete()
+        Log.objects.all().delete()
 
-        taken_count = 2
-
-        # delete pending transactions just to clean things up
-        self._get_pending_transactions_qs(prison, owner).delete()
-
-        # login
-        self.client.force_authenticate(user=owner)
-
-        # take some
-        url = '{base_url}?count={count}'.format(
-            base_url=reverse(
-                'transaction-prison-user-take', kwargs={
-                    'user_id': owner.pk,
-                    'prison_id': prison.pk
-                }
-            ),
-            count=taken_count
-        )
-        response = self.client.post(url, format='json')
-
-        self.assertEqual(response.status_code, status.HTTP_303_SEE_OTHER)
-        taken_transactions = self._get_pending_transactions_qs(prison, owner)
-
-        self.assertEqual(
-            Log.objects.filter(
-                user=owner,
-                action=LOG_ACTIONS.TAKEN,
-                transaction__id__in=taken_transactions.values_list('id', flat=True)
-            ).count(),
-            taken_count
+    def _get_transactions_data(self, tot=30):
+        data_list = generate_transactions_data(
+            uploads=1,
+            transaction_batch=tot,
+            status=TRANSACTION_STATUS.AVAILABLE
         )
 
-    def test_transaction_released(self):
-        prison = self.prisons[0]
-        owner = get_users_for_prison(prison)[0]
+        create_serializer = AdminTransactionView.create_serializer_class()
+        keys = create_serializer.get_fields().keys()
 
-        pending_transactions = list(
-            self._get_pending_transactions_qs(prison, owner)
-        )
+        return [
+            {k: data[k] for k in keys if k in data}
+            for data in data_list
+        ]
 
-        # if this starts failing, we need to iterate over users and get the
-        # first user with pending transactions.
-        self.assertTrue(len(pending_transactions) > 0)
+    def _get_url(self, user=None, prison=None, status=None):
+        return reverse('bank-admin:transaction-list')
 
-        # how many transactions should we release?
-        to_release = random.randint(1, len(pending_transactions))
-        transactions_to_release = pending_transactions[:to_release]
+    def test_create_list(self):
+        """
+        POST on transactions endpoint should create list of transactions.
+        """
 
-        # login
-        self.client.force_authenticate(user=owner)
+        url = self._get_url()
+        data_list = self._get_transactions_data()
 
-        # release some
-        url = reverse(
-            'transaction-prison-user-release', kwargs={
-                'user_id': owner.pk,
-                'prison_id': prison.pk
-            }
-        )
-        response = self.client.post(url, {
-            'transaction_ids': [t.id for t in transactions_to_release]
-        }, format='json')
-
-        self.assertEqual(response.status_code, status.HTTP_303_SEE_OTHER)
-
-        self.assertEqual(
-            Log.objects.filter(
-                user=owner, action=LOG_ACTIONS.RELEASED,
-                transaction__id__in=[t.id for t in transactions_to_release]
-            ).count(),
-            to_release
-        )
-
-    def test_transaction_credited(self):
-        prison = self.prisons[0]
-        user = get_users_for_prison(prison)[0]
-
-        pending_transactions = list(
-            self._get_pending_transactions_qs(prison, user)
-        )
-
-        # if this starts failing, we need to iterate over users and get the
-        # first user with pending transactions.
-        self.assertTrue(len(pending_transactions) > 0)
-
-        # how many transactions should we credit?
-        to_credit = random.randint(1, len(pending_transactions))
-        transactions_to_credit = pending_transactions[:to_credit]
-
-        # login
+        user = self.bank_admins[0]
         self.client.force_authenticate(user=user)
 
-        # credit some
-        url = reverse(
-            'transaction-prison-user-list', kwargs={
-                'user_id': user.pk,
-                'prison_id': prison.pk
-            }
-        )
-        data = [
-            {
-                'id': t.id,
-                'credited': True
-            } for t in transactions_to_credit
-        ]
-        response = self.client.patch(url, data=data, format='json')
-
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        response = self.client.post(url, data=data_list, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         # check changes in db
+        self.assertEqual(len(data_list), Transaction.objects.count())
+        for data in data_list:
+            self.assertEqual(
+                Transaction.objects.filter(**data).count(), 1
+            )
+
+        # check logs
         self.assertEqual(
             Log.objects.filter(
-                user=user, action=LOG_ACTIONS.CREDITED,
-                transaction__id__in=[t.id for t in transactions_to_credit]
+                user=user,
+                action=LOG_ACTIONS.CREATED,
+                transaction__id__in=Transaction.objects.all().values_list('id', flat=True)
             ).count(),
-            to_credit
+            len(data_list)
         )
+
+    def get_user_and_prison(self):
+        return self.bank_admins[0], None

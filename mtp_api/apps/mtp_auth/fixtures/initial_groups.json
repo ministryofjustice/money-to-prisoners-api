@@ -14,7 +14,9 @@
   "pk": 2,
   "fields": {
     "name": "BankAdmin",
-    "permissions": []
+    "permissions": [
+      ["add_transaction", "transaction", "transaction"]
+    ]
   }
 },
 {

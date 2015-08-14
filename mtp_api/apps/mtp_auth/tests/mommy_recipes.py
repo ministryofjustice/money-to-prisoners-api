@@ -59,3 +59,17 @@ def create_prisoner_location_admins():
     plu.groups.add(prisoner_location_admin_group)
 
     return [plu]
+
+
+def create_bank_admins():
+    name_and_password = 'bank_admin'
+
+    bank_admin_group = Group.objects.get(name='BankAdmin')
+    ba = basic_user.make(
+        username=name_and_password
+    )
+    ba.set_password(name_and_password)
+    ba.save()
+    ba.groups.add(bank_admin_group)
+
+    return [ba]
