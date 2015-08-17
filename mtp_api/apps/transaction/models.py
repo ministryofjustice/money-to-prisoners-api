@@ -1,5 +1,4 @@
 from django.db import models
-from django.db.models.signals import post_save
 from django.conf import settings
 from django.dispatch import receiver
 
@@ -9,8 +8,8 @@ from prison.models import Prison
 
 from .constants import TRANSACTION_STATUS, LOG_ACTIONS
 from .managers import TransactionQuerySet, LogManager
-from .signals import transaction_taken, transaction_released, \
-    transaction_credited
+from .signals import transaction_created, transaction_taken, \
+    transaction_released, transaction_credited
 
 
 class Transaction(TimeStampedModel):
@@ -82,6 +81,9 @@ class Transaction(TimeStampedModel):
             ("release_transaction", "Can release transaction"),
             ("patch_credited_transaction", "Can patch credited transaction"),
         )
+        index_together = [
+            ["prisoner_number", "prisoner_dob"],
+        ]
 
 
 class Log(TimeStampedModel):
@@ -101,10 +103,9 @@ class Log(TimeStampedModel):
 
 # SIGNALS
 
-@receiver(post_save, sender=Transaction)
-def transaction_created_receiver(sender, instance, created, **kwargs):
-    if created:
-        Log.objects.transaction_created(instance)
+@receiver(transaction_created)
+def transaction_created_receiver(sender, transaction, by_user, **kwargs):
+    Log.objects.transaction_created(transaction, by_user)
 
 
 @receiver(transaction_taken)

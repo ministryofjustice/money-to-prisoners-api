@@ -16,7 +16,7 @@ class UserViewTestCase(APITestCase):
 
     def setUp(self):
         super(UserViewTestCase, self).setUp()
-        self.users, _ = make_test_users(users_per_prison=2)
+        self.users, _, _ = make_test_users(clerks_per_prison=2)
         self.prisons = Prison.objects.all()
         make_test_oauth_applications()
 

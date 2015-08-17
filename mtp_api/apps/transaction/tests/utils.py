@@ -22,16 +22,16 @@ def random_reference(prisoner_number=None, prisoner_dob=None):
     )
 
 
-def generate_transactions(uploads=2, transaction_batch=30):
-    transactions = []
+def generate_transactions_data(uploads=2, transaction_batch=30, status=None):
+    data_list = []
 
     class PrisonChooser(object):
 
         def __init__(self):
             self.prisons = Prison.objects.all()
-            self.users_per_prison = {}
+            self.clerks_per_prison = {}
             for prison in self.prisons:
-                self.users_per_prison[prison.pk] = {
+                self.clerks_per_prison[prison.pk] = {
                     'users': prison.prisonusermapping_set.values_list('user', flat=True),
                     'index': 0
                 }
@@ -50,12 +50,14 @@ def generate_transactions(uploads=2, transaction_batch=30):
             return prison
 
         def choose_user(self, prison):
-            data = self.users_per_prison[prison.pk]
+            data = self.clerks_per_prison[prison.pk]
             user, index = self._choose(data['users'], data['index'])
             data['index'] = index
             return user
 
     prison_chooser = PrisonChooser()
+
+    now = timezone.now().replace(microsecond=0)
 
     for upload_counter in range(1, uploads+1):
         for transaction_counter in range(1, transaction_batch+1):
@@ -74,7 +76,7 @@ def generate_transactions(uploads=2, transaction_batch=30):
                 'upload_counter': upload_counter,
                 'amount': random.randint(1000, 30000),
                 'prison': None,
-                'received_at': timezone.now() - datetime.timedelta(
+                'received_at': now - datetime.timedelta(
                     minutes=random.randint(0, 10000)
                 ),
                 'sender_sort_code': get_random_string(6, '1234567890'),
@@ -91,19 +93,21 @@ def generate_transactions(uploads=2, transaction_batch=30):
                 })
 
                 # randomly choose the state of the transaction
-                status, _ = random.choice(TRANSACTION_STATUS)
+                trans_status = status
+                if not trans_status:
+                    trans_status, _ = random.choice(TRANSACTION_STATUS)
 
-                if status == TRANSACTION_STATUS.PENDING:
+                if trans_status == TRANSACTION_STATUS.PENDING:
                     data.update({
                         'owner_id': prison_chooser.choose_user(prison),
                         'credited': False
                     })
-                elif status == TRANSACTION_STATUS.AVAILABLE:
+                elif trans_status == TRANSACTION_STATUS.AVAILABLE:
                     data.update({
                         'owner': None,
                         'credited': False
                     })
-                elif status == TRANSACTION_STATUS.CREDITED:
+                elif trans_status == TRANSACTION_STATUS.CREDITED:
                     data.update({
                         'owner_id': prison_chooser.choose_user(prison),
                         'credited': True
@@ -117,6 +121,18 @@ def generate_transactions(uploads=2, transaction_batch=30):
             data['reference'] = random_reference(
                 data.get('prisoner_number'), data.get('prisoner_dob')
             )
-            trans = Transaction.objects.create(**data)
-            transactions.append(trans)
+            data_list.append(data)
+    return data_list
+
+
+def generate_transactions(uploads=2, transaction_batch=30):
+    data_list = generate_transactions_data(
+        uploads=uploads, transaction_batch=transaction_batch
+    )
+
+    transactions = []
+    for data in data_list:
+        transactions.append(
+            Transaction.objects.create(**data)
+        )
     return transactions
