@@ -8,12 +8,14 @@ from rest_framework.test import APITestCase
 from core.tests.utils import make_test_users, \
     make_test_oauth_applications
 
+from mtp_auth.tests.utils import AuthTestCaseMixin
+
 from prison.models import Prison, PrisonerLocation
 
 from prison.tests.utils import random_prisoner_number, random_prisoner_dob
 
 
-class PrisonerLocationViewTestCase(APITestCase):
+class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
     fixtures = ['test_prisons.json', 'initial_groups.json']
 
     def setUp(self):
@@ -29,9 +31,9 @@ class PrisonerLocationViewTestCase(APITestCase):
     def test_fails_without_permissions(self):
         unauthorised_user = self.prison_clerks[0]
 
-        self.client.force_authenticate(user=unauthorised_user)
         response = self.client.post(
-            self.list_url, data={}, format='json'
+            self.list_url, data={}, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(unauthorised_user)
         )
         self.assertEqual(
             response.status_code,
@@ -56,8 +58,6 @@ class PrisonerLocationViewTestCase(APITestCase):
             prison=self.prisons[0])
         self.assertEqual(PrisonerLocation.objects.count(), 2)
 
-        self.client.force_authenticate(user=user)
-
         data = [
             {
                 'prisoner_number': random_prisoner_number(),
@@ -76,7 +76,8 @@ class PrisonerLocationViewTestCase(APITestCase):
             },
         ]
         response = self.client.post(
-            self.list_url, data=data, format='json'
+            self.list_url, data=data, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
@@ -87,9 +88,9 @@ class PrisonerLocationViewTestCase(APITestCase):
             self.assertEqual(latest_created.filter(**item).count(), 1)
 
     def _test_validation_error(self, data, assert_error_msg):
-        self.client.force_authenticate(user=self.users[0])
         response = self.client.post(
-            self.list_url, data=data, format='json'
+            self.list_url, data=data, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.users[0])
         )
         self.assertEqual(
             response.status_code,
