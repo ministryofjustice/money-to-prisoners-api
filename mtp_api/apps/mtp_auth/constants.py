@@ -1,0 +1,3 @@
+CASHBOOK_OAUTH_CLIENT_ID = 'cashbook'
+BANK_ADMIN_OAUTH_CLIENT_ID = 'bank-admin'
+PRISONER_LOCATION_OAUTH_CLIENT_ID = 'prisoner-locations'

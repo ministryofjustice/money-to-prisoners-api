@@ -5,6 +5,8 @@ from django.contrib.auth.models import User
 from prison.models import Prison
 from mtp_auth.tests.mommy_recipes import create_prison_user_mapping, \
     create_prisoner_location_admins, create_bank_admins
+from mtp_auth.constants import CASHBOOK_OAUTH_CLIENT_ID, \
+    BANK_ADMIN_OAUTH_CLIENT_ID, PRISONER_LOCATION_OAUTH_CLIENT_ID
 
 
 def make_test_users(clerks_per_prison=1):
@@ -24,20 +26,22 @@ def make_test_users(clerks_per_prison=1):
 
 
 def make_test_oauth_applications():
-    Application.objects.get_or_create(
-        client_id='cashbook',
-        client_type='confidential',
-        authorization_grant_type='password',
-        client_secret='cashbook',
-        name='cashbook',
-        user=User.objects.first()
-    )
+    """
+    Creates test oauth clients with secret == client id
+    for test purposes.
+    """
+    user = User.objects.first()
 
-    Application.objects.get_or_create(
-        client_id='prisoner-location-admin',
-        client_type='confidential',
-        authorization_grant_type='password',
-        client_secret='prisoner-location-admin',
-        name='prisoner-location-admin',
-        user=User.objects.first()
-    )
+    for client_id in [
+        CASHBOOK_OAUTH_CLIENT_ID,
+        BANK_ADMIN_OAUTH_CLIENT_ID,
+        PRISONER_LOCATION_OAUTH_CLIENT_ID
+    ]:
+        Application.objects.get_or_create(
+            client_id=client_id,
+            client_type='confidential',
+            authorization_grant_type='password',
+            client_secret=client_id,
+            name=client_id,
+            user=user
+        )
