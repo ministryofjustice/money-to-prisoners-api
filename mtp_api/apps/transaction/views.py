@@ -9,6 +9,8 @@ from rest_framework.response import Response
 from rest_framework.reverse import reverse
 
 from mtp_auth.models import PrisonUserMapping
+from mtp_auth.permissions import CashbookClientIDPermissions, \
+    BankAdminClientIDPermissions
 from prison.models import Prison
 
 from .models import Transaction
@@ -68,7 +70,8 @@ class TransactionView(
 
     ordering = ('received_at',)
     permission_classes = (
-        IsAuthenticated, IsOwnPrison, TransactionPermissions
+        IsAuthenticated, CashbookClientIDPermissions,
+        IsOwnPrison, TransactionPermissions
     )
 
     def get_queryset(self, filter_by_user=True, filter_by_prison=True):
@@ -167,7 +170,8 @@ class AdminTransactionView(
     queryset = Transaction.objects.all()
 
     permission_classes = (
-        IsAuthenticated, ActionsBasedPermissions
+        IsAuthenticated, BankAdminClientIDPermissions,
+        ActionsBasedPermissions
     )
     create_serializer_class = CreateTransactionSerializer
 

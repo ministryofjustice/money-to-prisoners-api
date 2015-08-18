@@ -28,8 +28,31 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
     def list_url(self):
         return reverse('prisonerlocation-list')
 
-    def test_fails_without_permissions(self):
-        unauthorised_user = self.prison_clerks[0]
+    def test_fails_without_application_permissions(self):
+        """
+        Tests that if the user logs in via a different application,
+        they won't be able to access the API.
+        """
+        for unauthorised_user in [
+            self.prison_clerks[0], self.bank_admins[0]
+        ]:
+            response = self.client.post(
+                self.list_url, data={}, format='json',
+                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(unauthorised_user)
+            )
+            self.assertEqual(
+                response.status_code,
+                status.HTTP_403_FORBIDDEN
+            )
+
+    def test_fails_without_action_permissions(self):
+        """
+        Tests that if the user does not have permissions to create
+        transactions, they won't be able to access the API.
+        """
+        unauthorised_user = self.users[0]
+
+        unauthorised_user.groups.first().permissions.all().delete()
 
         response = self.client.post(
             self.list_url, data={}, format='json',

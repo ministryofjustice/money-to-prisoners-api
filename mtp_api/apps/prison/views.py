@@ -3,6 +3,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from core.permissions import ActionsBasedPermissions
+from mtp_auth.permissions import PrisonerLocationClientIDPermissions
 
 from .models import PrisonerLocation
 from .serializers import PrisonerLocationSerializer
@@ -14,7 +15,8 @@ class PrisonerLocationView(
     queryset = PrisonerLocation.objects.all()
 
     permission_classes = (
-        IsAuthenticated, ActionsBasedPermissions
+        IsAuthenticated, PrisonerLocationClientIDPermissions,
+        ActionsBasedPermissions
     )
     serializer_class = PrisonerLocationSerializer
 

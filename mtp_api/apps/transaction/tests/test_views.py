@@ -80,21 +80,47 @@ class TransactionRejectsRequestsWithoutPermissionTestMixin(object):
     """
     Mixin for permission checks on the endpoint.
 
-    It expects a `_get_url(user, prison)` instance method defined.
+    It expects `_get_url(user, prison)` and `_get_unauthorised_application_users()`
+    instance methods defined.
     """
     ENDPOINT_VERB = 'get'
 
-    def get_user_and_prison(self):
-        return self.bank_admins[0], self.prisons[0]
+    def _get_url(self, user, prison, status=None):
+        raise NotImplementedError()
 
-    def test_fails_without_permissions(self):
-        """
-        Tests that logged-in user has to have the right permissions
-        to access the endpoint.
-        """
-        user, prison = self.get_user_and_prison()
+    def _get_unauthorised_application_users(self):
+        raise NotImplementedError()
 
-        url = self._get_url(user, prison)
+    def _get_authorised_user(self):
+        raise NotImplementedError()
+
+    def test_fails_without_application_permissions(self):
+        """
+        Tests that if the user logs in via a different application,
+        they won't be able to access the API.
+        """
+        prison = self.prisons[0]
+        for user in self._get_unauthorised_application_users():
+            url = self._get_url(user, prison)
+
+            verb_callable = getattr(self.client, self.ENDPOINT_VERB)
+            response = verb_callable(
+                url, format='json',
+                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+            )
+
+            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_fails_without_action_permissions(self):
+        """
+        Tests that if the user does not have permissions to create
+        transactions, they won't be able to access the API.
+        """
+        user = self._get_authorised_user()
+
+        user.groups.first().permissions.all().delete()
+
+        url = self._get_url(user, self.prisons[0])
 
         verb_callable = getattr(self.client, self.ENDPOINT_VERB)
         response = verb_callable(
@@ -103,6 +129,19 @@ class TransactionRejectsRequestsWithoutPermissionTestMixin(object):
         )
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class CashbookTransactionRejectsRequestsWithoutPermissionTestMixin(
+    TransactionRejectsRequestsWithoutPermissionTestMixin
+):
+
+    def _get_unauthorised_application_users(self):
+        return [
+            self.bank_admins[0], self.prisoner_location_admins[0]
+        ]
+
+    def _get_authorised_user(self):
+        return self.prison_clerks[0]
 
 
 class TransactionListEndpointTestCase(BaseTransactionViewTestCase):
@@ -127,7 +166,8 @@ class TransactionListEndpointTestCase(BaseTransactionViewTestCase):
 
 
 class TransactionListByPrisonEndpointTestCase(
-    TransactionRejectsRequestsWithoutPermissionTestMixin, BaseTransactionViewTestCase
+    CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
+    BaseTransactionViewTestCase
 ):
 
     def _request_and_assert(self, status_param=None):
@@ -215,7 +255,8 @@ class TransactionListByPrisonEndpointTestCase(
 
 
 class TransactionListByPrisonAndUserEndpointTestCase(
-    TransactionRejectsRequestsWithoutPermissionTestMixin, BaseTransactionViewTestCase
+    CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
+    BaseTransactionViewTestCase
 ):
 
     def _request_and_assert(self, status_param=None):
@@ -302,7 +343,8 @@ class TransactionListByPrisonAndUserEndpointTestCase(
 
 
 class TransactionsTakeTestCase(
-    TransactionRejectsRequestsWithoutPermissionTestMixin, BaseTransactionViewTestCase
+    CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
+    BaseTransactionViewTestCase
 ):
     ENDPOINT_VERB = 'post'
 
@@ -462,7 +504,8 @@ class TransactionsTakeTestCase(
 
 
 class TransactionsReleaseTestCase(
-    TransactionRejectsRequestsWithoutPermissionTestMixin, BaseTransactionViewTestCase
+    CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
+    BaseTransactionViewTestCase
 ):
     ENDPOINT_VERB = 'post'
 
@@ -675,7 +718,8 @@ class TransactionsReleaseTestCase(
 
 
 class TransactionsPatchTestCase(
-    TransactionRejectsRequestsWithoutPermissionTestMixin, BaseTransactionViewTestCase
+    CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
+    BaseTransactionViewTestCase
 ):
     ENDPOINT_VERB = 'patch'
 
@@ -900,7 +944,8 @@ class TransactionsPatchTestCase(
 
 
 class AdminCreateTransactionsTestCase(
-    TransactionRejectsRequestsWithoutPermissionTestMixin, BaseTransactionViewTestCase
+    TransactionRejectsRequestsWithoutPermissionTestMixin,
+    BaseTransactionViewTestCase
 ):
     ENDPOINT_VERB = 'post'
 
@@ -910,6 +955,17 @@ class AdminCreateTransactionsTestCase(
         # delete all transactions and logs
         Transaction.objects.all().delete()
         Log.objects.all().delete()
+
+    def _get_unauthorised_application_users(self):
+        return [
+            self.prison_clerks[0], self.prisoner_location_admins[0]
+        ]
+
+    def _get_authorised_user(self):
+        return self.bank_admins[0]
+
+    def _get_url(self, user=None, prison=None, status=None):
+        return reverse('bank-admin:transaction-list')
 
     def _get_transactions_data(self, tot=30):
         data_list = generate_transactions_data(
@@ -925,9 +981,6 @@ class AdminCreateTransactionsTestCase(
             {k: data[k] for k in keys if k in data}
             for data in data_list
         ]
-
-    def _get_url(self, user=None, prison=None, status=None):
-        return reverse('bank-admin:transaction-list')
 
     def test_create_list(self):
         """
@@ -961,6 +1014,3 @@ class AdminCreateTransactionsTestCase(
             ).count(),
             len(data_list)
         )
-
-    def get_user_and_prison(self):
-        return self.prison_clerks[0], None
