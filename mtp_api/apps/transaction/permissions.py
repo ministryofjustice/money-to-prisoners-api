@@ -22,7 +22,7 @@ class IsOwnPrison(BasePermission):
         return prison_user_mapping.prisons.filter(pk=view.kwargs.get('prison_id')).exists()
 
 
-class TransactionPermissions(ActionsBasedPermissions):
+class CashbookTransactionPermissions(ActionsBasedPermissions):
     actions_perms_map = ActionsBasedPermissions.actions_perms_map.copy()
     actions_perms_map.update({
         'list': ['%(app_label)s.view_%(model_name)s'],

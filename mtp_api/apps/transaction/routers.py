@@ -1,15 +1,10 @@
 from rest_framework.routers import DefaultRouter, Route
-from transaction.views import TransactionView
 
 
-class TransactionRouter(DefaultRouter):
-
-    def __init__(self):
-        super(TransactionRouter, self).__init__()
-        self.register(r'transactions', TransactionView)
+class CashbookTransactionRouter(DefaultRouter):
 
     def get_routes(self, viewset):
-        simple_routes = super(TransactionRouter, self).get_routes(viewset)
+        simple_routes = super(CashbookTransactionRouter, self).get_routes(viewset)
         extra_routes = [
             Route(
                 url=r'^{prefix}/(?P<prison_id>\w+){trailing_slash}$',

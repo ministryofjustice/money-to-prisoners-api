@@ -17,7 +17,7 @@ from prison.models import Prison
 
 from transaction.models import Transaction, Log
 from transaction.constants import TRANSACTION_STATUS, TAKE_LIMIT, LOG_ACTIONS
-from transaction.views import AdminTransactionView
+from transaction.views import BankAdminTransactionView
 
 from .utils import generate_transactions_data, generate_transactions
 
@@ -168,13 +168,13 @@ class CashbookTransactionRejectsRequestsWithoutPermissionTestMixin(
         return self.prison_clerks[0]
 
 
-class TransactionListEndpointTestCase(BaseTransactionViewTestCase):
+class CashbookTransactionListEndpointTestCase(BaseTransactionViewTestCase):
 
     def test_cant_access(self):
         """
         GET on transactions endpoint should 403.
         """
-        url = reverse('transaction-list')
+        url = reverse('cashbook:transaction-list')
 
         # authenticate, just in case
         prison = [t.prison for t in self.transactions if t.prison][0]
@@ -189,7 +189,7 @@ class TransactionListEndpointTestCase(BaseTransactionViewTestCase):
         )
 
 
-class TransactionListByPrisonEndpointTestCase(
+class CashbookTransactionListByPrisonEndpointTestCase(
     CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
     BaseTransactionViewTestCase
 ):
@@ -221,7 +221,7 @@ class TransactionListByPrisonEndpointTestCase(
 
     def _get_url(self, user, prison, status=None):
         url = reverse(
-            'transaction-prison-list', kwargs={
+            'cashbook:transaction-prison-list', kwargs={
                 'prison_id': prison.pk
             }
         )
@@ -278,7 +278,7 @@ class TransactionListByPrisonEndpointTestCase(
         )
 
 
-class TransactionListByPrisonAndUserEndpointTestCase(
+class CashbookTransactionListByPrisonAndUserEndpointTestCase(
     CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
     BaseTransactionViewTestCase
 ):
@@ -311,7 +311,7 @@ class TransactionListByPrisonAndUserEndpointTestCase(
 
     def _get_url(self, user, prison, status=None):
         url = reverse(
-            'transaction-prison-user-list', kwargs={
+            'cashbook:transaction-prison-user-list', kwargs={
                 'user_id': user.pk,
                 'prison_id': prison.pk
             }
@@ -366,7 +366,7 @@ class TransactionListByPrisonAndUserEndpointTestCase(
         )
 
 
-class TransactionsTakeTestCase(
+class CashbookTransactionsTakeTestCase(
     CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
     BaseTransactionViewTestCase
 ):
@@ -374,7 +374,7 @@ class TransactionsTakeTestCase(
 
     def _get_url(self, user, prison, count=None):
         url = reverse(
-            'transaction-prison-user-take', kwargs={
+            'cashbook:transaction-prison-user-take', kwargs={
                 'user_id': user.pk,
                 'prison_id': prison.pk
             }
@@ -415,7 +415,7 @@ class TransactionsTakeTestCase(
         self.assertEqual(
             urlsplit(response['Location']).path,
             reverse(
-                'transaction-prison-user-list', kwargs={
+                'cashbook:transaction-prison-user-list', kwargs={
                     'user_id': owner.pk,
                     'prison_id': prison.pk
                 }
@@ -527,7 +527,7 @@ class TransactionsTakeTestCase(
         )
 
 
-class TransactionsReleaseTestCase(
+class CashbookTransactionsReleaseTestCase(
     CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
     BaseTransactionViewTestCase
 ):
@@ -535,7 +535,7 @@ class TransactionsReleaseTestCase(
 
     def _get_url(self, user, prison):
         return reverse(
-            'transaction-prison-user-release', kwargs={
+            'cashbook:transaction-prison-user-release', kwargs={
                 'user_id': user.pk,
                 'prison_id': prison.pk
             }
@@ -612,7 +612,7 @@ class TransactionsReleaseTestCase(
         self.assertEqual(
             urlsplit(response['Location']).path,
             reverse(
-                'transaction-prison-user-list', kwargs={
+                'cashbook:transaction-prison-user-list', kwargs={
                     'user_id': transactions_owner.pk,
                     'prison_id': prison.pk
                 }
@@ -741,7 +741,7 @@ class TransactionsReleaseTestCase(
         )
 
 
-class TransactionsPatchTestCase(
+class CashbookTransactionsPatchTestCase(
     CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
     BaseTransactionViewTestCase
 ):
@@ -749,7 +749,7 @@ class TransactionsPatchTestCase(
 
     def _get_url(self, user, prison):
         return reverse(
-            'transaction-prison-user-list', kwargs={
+            'cashbook:transaction-prison-user-list', kwargs={
                 'user_id': user.pk,
                 'prison_id': prison.pk
             }
@@ -967,14 +967,14 @@ class TransactionsPatchTestCase(
             )
 
 
-class AdminCreateTransactionsTestCase(
+class BankAdminCreateTransactionsTestCase(
     TransactionRejectsRequestsWithoutPermissionTestMixin,
     BaseTransactionViewTestCase
 ):
     ENDPOINT_VERB = 'post'
 
     def setUp(self):
-        super(AdminCreateTransactionsTestCase, self).setUp()
+        super(BankAdminCreateTransactionsTestCase, self).setUp()
 
         # delete all transactions and logs
         Transaction.objects.all().delete()
@@ -998,7 +998,7 @@ class AdminCreateTransactionsTestCase(
             status=TRANSACTION_STATUS.AVAILABLE
         )
 
-        create_serializer = AdminTransactionView.create_serializer_class()
+        create_serializer = BankAdminTransactionView.create_serializer_class()
         keys = create_serializer.get_fields().keys()
 
         return [
