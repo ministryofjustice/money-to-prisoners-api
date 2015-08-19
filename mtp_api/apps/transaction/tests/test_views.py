@@ -1,6 +1,8 @@
 import random
 import urllib.parse
 
+from oauth2_provider.models import AccessToken
+
 from django.core.urlresolvers import reverse
 from django.utils.six.moves.urllib.parse import urlsplit
 
@@ -9,6 +11,7 @@ from rest_framework.test import APITestCase
 
 from core.tests.utils import make_test_users, make_test_oauth_applications
 from mtp_auth.models import PrisonUserMapping
+from mtp_auth.tests.utils import AuthTestCaseMixin
 
 from prison.models import Prison
 
@@ -27,7 +30,7 @@ def get_prisons_for_user(user):
     return PrisonUserMapping.objects.get(user=user).prisons.all()
 
 
-class BaseTransactionViewTestCase(APITestCase):
+class BaseTransactionViewTestCase(AuthTestCaseMixin, APITestCase):
     fixtures = [
         'initial_groups.json',
         'test_prisons.json'
@@ -79,33 +82,90 @@ class TransactionRejectsRequestsWithoutPermissionTestMixin(object):
     """
     Mixin for permission checks on the endpoint.
 
-    It expects a `_get_url(user, prison)` instance method defined.
+    It expects `_get_url(user, prison)`, `_get_unauthorised_application_users()`
+    and `_get_authorised_user()` instance methods defined.
     """
     ENDPOINT_VERB = 'get'
 
-    def get_user_and_prison(self):
+    def _get_url(self, user, prison, status=None):
+        raise NotImplementedError()
+
+    def _get_unauthorised_application_users(self):
+        raise NotImplementedError()
+
+    def _get_authorised_user(self):
+        raise NotImplementedError()
+
+    def test_fails_without_application_permissions(self):
+        """
+        Tests that if the user logs in via a different application,
+        they won't be able to access the API.
+        """
         prison = self.prisons[0]
-        user = get_users_for_prison(prison)[0]
-        return user, prison
 
-    def test_fails_without_permissions(self):
+        # constructing list of unauthorised users+application
+        unauthorised_users = self._get_unauthorised_application_users()
+        users_data = [
+            (user, self.get_http_authorization_for_user(user))
+            for user in unauthorised_users
+        ]
+
+        # + valid user logged in using a different oauth application
+        authorised_user = self._get_authorised_user()
+
+        invalid_client_id = AccessToken.objects.filter(
+            user=unauthorised_users[0]
+        ).first().application.client_id
+
+        users_data.append(
+            (
+                authorised_user,
+                self.get_http_authorization_for_user(authorised_user, invalid_client_id)
+            )
+        )
+
+        for user, http_auth_header in users_data:
+            url = self._get_url(user, prison)
+
+            verb_callable = getattr(self.client, self.ENDPOINT_VERB)
+            response = verb_callable(
+                url, format='json',
+                HTTP_AUTHORIZATION=http_auth_header
+            )
+
+            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_fails_without_action_permissions(self):
         """
-        Tests that logged-in user has to have the right permissions
-        to access the endpoint.
+        Tests that if the user does not have permissions to create
+        transactions, they won't be able to access the API.
         """
-        user, prison = self.get_user_and_prison()
+        user = self._get_authorised_user()
 
-        # delete user from groups
-        user.groups.all().delete()
+        user.groups.first().permissions.all().delete()
 
-        url = self._get_url(user, prison)
-
-        self.client.force_authenticate(user=user)
+        url = self._get_url(user, self.prisons[0])
 
         verb_callable = getattr(self.client, self.ENDPOINT_VERB)
-        response = verb_callable(url, format='json')
+        response = verb_callable(
+            url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class CashbookTransactionRejectsRequestsWithoutPermissionTestMixin(
+    TransactionRejectsRequestsWithoutPermissionTestMixin
+):
+
+    def _get_unauthorised_application_users(self):
+        return [
+            self.bank_admins[0], self.prisoner_location_admins[0]
+        ]
+
+    def _get_authorised_user(self):
+        return self.prison_clerks[0]
 
 
 class TransactionListEndpointTestCase(BaseTransactionViewTestCase):
@@ -119,14 +179,19 @@ class TransactionListEndpointTestCase(BaseTransactionViewTestCase):
         # authenticate, just in case
         prison = [t.prison for t in self.transactions if t.prison][0]
         user = get_users_for_prison(prison)[0]
-        self.client.force_authenticate(user=user)
 
-        response = self.client.get(url, format='json')
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        response = self.client.get(
+            url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(
+            response.status_code, status.HTTP_403_FORBIDDEN
+        )
 
 
 class TransactionListByPrisonEndpointTestCase(
-    TransactionRejectsRequestsWithoutPermissionTestMixin, BaseTransactionViewTestCase
+    CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
+    BaseTransactionViewTestCase
 ):
 
     def _request_and_assert(self, status_param=None):
@@ -139,10 +204,12 @@ class TransactionListByPrisonEndpointTestCase(
 
             expected_owners = get_users_for_prison(prison)
             user = expected_owners[0]
-            self.client.force_authenticate(user=user)
 
             url = self._get_url(user, prison, status=status_param)
-            response = self.client.get(url, format='json')
+            response = self.client.get(
+                url, format='json',
+                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+            )
 
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(response.data['count'], len(expected_ids))
@@ -181,9 +248,10 @@ class TransactionListByPrisonEndpointTestCase(
 
         url = self._get_url(logged_in_user, other_prison)
 
-        self.client.force_authenticate(user=logged_in_user)
-
-        response = self.client.get(url, format='json')
+        response = self.client.get(
+            url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -211,13 +279,12 @@ class TransactionListByPrisonEndpointTestCase(
 
 
 class TransactionListByPrisonAndUserEndpointTestCase(
-    TransactionRejectsRequestsWithoutPermissionTestMixin, BaseTransactionViewTestCase
+    CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
+    BaseTransactionViewTestCase
 ):
 
     def _request_and_assert(self, status_param=None):
         for owner in self.prison_clerks:
-            self.client.force_authenticate(user=owner)
-
             prisons = get_prisons_for_user(owner)
 
             for prison in prisons:
@@ -229,7 +296,10 @@ class TransactionListByPrisonAndUserEndpointTestCase(
                 ]
                 url = self._get_url(owner, prison, status=status_param)
 
-                response = self.client.get(url, format='json')
+                response = self.client.get(
+                    url, format='json',
+                    HTTP_AUTHORIZATION=self.get_http_authorization_for_user(owner)
+                )
 
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
                 self.assertEqual(response.data['count'], len(expected_ids))
@@ -270,9 +340,10 @@ class TransactionListByPrisonAndUserEndpointTestCase(
 
         url = self._get_url(other_user, other_prison)
 
-        self.client.force_authenticate(user=logged_in_user)
-
-        response = self.client.get(url, format='json')
+        response = self.client.get(
+            url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -296,7 +367,8 @@ class TransactionListByPrisonAndUserEndpointTestCase(
 
 
 class TransactionsTakeTestCase(
-    TransactionRejectsRequestsWithoutPermissionTestMixin, BaseTransactionViewTestCase
+    CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
+    BaseTransactionViewTestCase
 ):
     ENDPOINT_VERB = 'post'
 
@@ -333,10 +405,11 @@ class TransactionsTakeTestCase(
         )
 
         # request
-        self.client.force_authenticate(user=owner)
-
         url = self._get_url(owner, prison, count)
-        response = self.client.post(url, format='json')
+        response = self.client.post(
+            url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(owner)
+        )
 
         self.assertEqual(response.status_code, status.HTTP_303_SEE_OTHER)
         self.assertEqual(
@@ -387,10 +460,11 @@ class TransactionsTakeTestCase(
         )
 
         # request
-        self.client.force_authenticate(user=logged_in_user)
-
         url = self._get_url(transactions_owner, prison, 1)
-        response = self.client.post(url, format='json')
+        response = self.client.post(
+            url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -420,12 +494,16 @@ class TransactionsTakeTestCase(
             self._get_pending_transactions_qs(prison, user).count(), 0
         )
 
+        http_authorization_header = self.get_http_authorization_for_user(user)
+
         # request TAKE_LIMIT-1
         count = TAKE_LIMIT-1
-        self.client.force_authenticate(user=user)
 
         url = self._get_url(user, prison, count)
-        response = self.client.post(url, format='json')
+        response = self.client.post(
+            url, format='json',
+            HTTP_AUTHORIZATION=http_authorization_header
+        )
 
         self.assertEqual(response.status_code, status.HTTP_303_SEE_OTHER)
 
@@ -436,7 +514,10 @@ class TransactionsTakeTestCase(
 
         # request 2 more => should fail
         url = self._get_url(user, prison, 2)
-        response = self.client.post(url, format='json')
+        response = self.client.post(
+            url, format='json',
+            HTTP_AUTHORIZATION=http_authorization_header
+        )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -447,7 +528,8 @@ class TransactionsTakeTestCase(
 
 
 class TransactionsReleaseTestCase(
-    TransactionRejectsRequestsWithoutPermissionTestMixin, BaseTransactionViewTestCase
+    CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
+    BaseTransactionViewTestCase
 ):
     ENDPOINT_VERB = 'post'
 
@@ -479,12 +561,13 @@ class TransactionsReleaseTestCase(
         self.assertTrue(len(pending_transactions) > 0)
 
         # request
-        self.client.force_authenticate(user=logged_in_user)
-
         url = self._get_url(transactions_owner, prison2)
-        response = self.client.post(url, {
-            'transaction_ids': [t.id for t in pending_transactions]
-        }, format='json')
+        response = self.client.post(
+            url,
+            {'transaction_ids': [t.id for t in pending_transactions]},
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -517,12 +600,13 @@ class TransactionsReleaseTestCase(
         currently_available = self._get_available_transactions_qs(prison).count()
 
         # request
-        self.client.force_authenticate(user=logged_in_user)
-
         url = self._get_url(transactions_owner, prison)
-        response = self.client.post(url, {
-            'transaction_ids': [t.id for t in transactions_to_release]
-        }, format='json')
+        response = self.client.post(
+            url,
+            {'transaction_ids': [t.id for t in transactions_to_release]},
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
 
         self.assertEqual(response.status_code, status.HTTP_303_SEE_OTHER)
         self.assertEqual(
@@ -586,12 +670,13 @@ class TransactionsReleaseTestCase(
 
         transactions_to_release = pending_transactions_owner + pending_transactions_logged_in[:1]
 
-        self.client.force_authenticate(user=logged_in_user)
-
         url = self._get_url(transactions_owner, prison)
-        response = self.client.post(url, {
-            'transaction_ids': [t.id for t in transactions_to_release]
-        }, format='json')
+        response = self.client.post(
+            url,
+            {'transaction_ids': [t.id for t in transactions_to_release]},
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -634,12 +719,13 @@ class TransactionsReleaseTestCase(
 
         transactions_to_release = pending_transactions + credited_transactions[:1]
 
-        self.client.force_authenticate(user=logged_in_user)
-
         url = self._get_url(transactions_owner, prison)
-        response = self.client.post(url, {
-            'transaction_ids': [t.id for t in transactions_to_release]
-        }, format='json')
+        response = self.client.post(
+            url,
+            {'transaction_ids': [t.id for t in transactions_to_release]},
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -656,7 +742,8 @@ class TransactionsReleaseTestCase(
 
 
 class TransactionsPatchTestCase(
-    TransactionRejectsRequestsWithoutPermissionTestMixin, BaseTransactionViewTestCase
+    CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
+    BaseTransactionViewTestCase
 ):
     ENDPOINT_VERB = 'patch'
 
@@ -688,12 +775,13 @@ class TransactionsPatchTestCase(
         self.assertTrue(len(pending_transactions) > 0)
 
         # request
-        self.client.force_authenticate(user=logged_in_user)
-
         url = self._get_url(transactions_owner, prison)
-        response = self.client.patch(url, {
-            'transaction_ids': [t.id for t in pending_transactions]
-        }, format='json')
+        response = self.client.patch(
+            url,
+            {'transaction_ids': [t.id for t in pending_transactions]},
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -720,12 +808,13 @@ class TransactionsPatchTestCase(
         transactions_to_credit = pending_transactions + available_transactions[:1]
 
         # request
-        self.client.force_authenticate(user=user)
-
         url = self._get_url(user, prison)
-        response = self.client.patch(url, {
-            'transaction_ids': [t.id for t in transactions_to_credit]
-        }, format='json')
+        response = self.client.patch(
+            url,
+            {'transaction_ids': [t.id for t in transactions_to_credit]},
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -765,8 +854,6 @@ class TransactionsPatchTestCase(
         transactions_to_credit = pending_transactions[:to_credit]
 
         # request
-        self.client.force_authenticate(user=user)
-
         url = self._get_url(user, prison)
         data = [
             {
@@ -774,7 +861,10 @@ class TransactionsPatchTestCase(
                 'credited': True
             } for t in transactions_to_credit
         ]
-        response = self.client.patch(url, data=data, format='json')
+        response = self.client.patch(
+            url, data=data, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
@@ -827,8 +917,6 @@ class TransactionsPatchTestCase(
         transactions_to_credit = pending_transactions[:to_credit]
 
         # request
-        self.client.force_authenticate(user=user)
-
         url = self._get_url(user, prison)
 
         # invalid data format
@@ -868,7 +956,10 @@ class TransactionsPatchTestCase(
             }
         ]
         for data in invalid_data_list:
-            response = self.client.patch(url, data=data['data'], format='json')
+            response = self.client.patch(
+                url, data=data['data'], format='json',
+                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+            )
             self.assertEqual(
                 response.status_code,
                 status.HTTP_400_BAD_REQUEST,
@@ -877,7 +968,8 @@ class TransactionsPatchTestCase(
 
 
 class AdminCreateTransactionsTestCase(
-    TransactionRejectsRequestsWithoutPermissionTestMixin, BaseTransactionViewTestCase
+    TransactionRejectsRequestsWithoutPermissionTestMixin,
+    BaseTransactionViewTestCase
 ):
     ENDPOINT_VERB = 'post'
 
@@ -887,6 +979,17 @@ class AdminCreateTransactionsTestCase(
         # delete all transactions and logs
         Transaction.objects.all().delete()
         Log.objects.all().delete()
+
+    def _get_unauthorised_application_users(self):
+        return [
+            self.prison_clerks[0], self.prisoner_location_admins[0]
+        ]
+
+    def _get_authorised_user(self):
+        return self.bank_admins[0]
+
+    def _get_url(self, user=None, prison=None, status=None):
+        return reverse('bank-admin:transaction-list')
 
     def _get_transactions_data(self, tot=30):
         data_list = generate_transactions_data(
@@ -903,9 +1006,6 @@ class AdminCreateTransactionsTestCase(
             for data in data_list
         ]
 
-    def _get_url(self, user=None, prison=None, status=None):
-        return reverse('bank-admin:transaction-list')
-
     def test_create_list(self):
         """
         POST on transactions endpoint should create list of transactions.
@@ -915,9 +1015,11 @@ class AdminCreateTransactionsTestCase(
         data_list = self._get_transactions_data()
 
         user = self.bank_admins[0]
-        self.client.force_authenticate(user=user)
 
-        response = self.client.post(url, data=data_list, format='json')
+        response = self.client.post(
+            url, data=data_list, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         # check changes in db
@@ -936,6 +1038,3 @@ class AdminCreateTransactionsTestCase(
             ).count(),
             len(data_list)
         )
-
-    def get_user_and_prison(self):
-        return self.bank_admins[0], None

@@ -8,12 +8,15 @@ from rest_framework.test import APITestCase
 from core.tests.utils import make_test_users, \
     make_test_oauth_applications
 
+from mtp_auth.tests.utils import AuthTestCaseMixin
+from mtp_auth.constants import CASHBOOK_OAUTH_CLIENT_ID
+
 from prison.models import Prison, PrisonerLocation
 
 from prison.tests.utils import random_prisoner_number, random_prisoner_dob
 
 
-class PrisonerLocationViewTestCase(APITestCase):
+class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
     fixtures = ['test_prisons.json', 'initial_groups.json']
 
     def setUp(self):
@@ -26,12 +29,45 @@ class PrisonerLocationViewTestCase(APITestCase):
     def list_url(self):
         return reverse('prisonerlocation-list')
 
-    def test_fails_without_permissions(self):
-        unauthorised_user = self.prison_clerks[0]
+    def test_fails_without_application_permissions(self):
+        """
+        Tests that if the user logs in via a different application,
+        they won't be able to access the API.
+        """
+        users_data = [
+            (
+                self.prison_clerks[0],
+                self.get_http_authorization_for_user(self.prison_clerks[0])
+            ),
+            (
+                self.bank_admins[0],
+                self.get_http_authorization_for_user(self.bank_admins[0])
+            ),
+            (
+                self.users[0],
+                self.get_http_authorization_for_user(self.users[0], client_id=CASHBOOK_OAUTH_CLIENT_ID)
+            ),
+        ]
 
-        self.client.force_authenticate(user=unauthorised_user)
+        for user, http_auth_header in users_data:
+            response = self.client.post(
+                self.list_url, data={}, format='json',
+                HTTP_AUTHORIZATION=http_auth_header
+            )
+            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_fails_without_action_permissions(self):
+        """
+        Tests that if the user does not have permissions to create
+        transactions, they won't be able to access the API.
+        """
+        unauthorised_user = self.users[0]
+
+        unauthorised_user.groups.first().permissions.all().delete()
+
         response = self.client.post(
-            self.list_url, data={}, format='json'
+            self.list_url, data={}, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(unauthorised_user)
         )
         self.assertEqual(
             response.status_code,
@@ -56,8 +92,6 @@ class PrisonerLocationViewTestCase(APITestCase):
             prison=self.prisons[0])
         self.assertEqual(PrisonerLocation.objects.count(), 2)
 
-        self.client.force_authenticate(user=user)
-
         data = [
             {
                 'prisoner_number': random_prisoner_number(),
@@ -76,7 +110,8 @@ class PrisonerLocationViewTestCase(APITestCase):
             },
         ]
         response = self.client.post(
-            self.list_url, data=data, format='json'
+            self.list_url, data=data, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
@@ -87,9 +122,9 @@ class PrisonerLocationViewTestCase(APITestCase):
             self.assertEqual(latest_created.filter(**item).count(), 1)
 
     def _test_validation_error(self, data, assert_error_msg):
-        self.client.force_authenticate(user=self.users[0])
         response = self.client.post(
-            self.list_url, data=data, format='json'
+            self.list_url, data=data, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.users[0])
         )
         self.assertEqual(
             response.status_code,
