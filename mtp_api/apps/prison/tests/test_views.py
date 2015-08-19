@@ -9,6 +9,7 @@ from core.tests.utils import make_test_users, \
     make_test_oauth_applications
 
 from mtp_auth.tests.utils import AuthTestCaseMixin
+from mtp_auth.constants import CASHBOOK_OAUTH_CLIENT_ID
 
 from prison.models import Prison, PrisonerLocation
 
@@ -33,17 +34,27 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
         Tests that if the user logs in via a different application,
         they won't be able to access the API.
         """
-        for unauthorised_user in [
-            self.prison_clerks[0], self.bank_admins[0]
-        ]:
+        users_data = [
+            (
+                self.prison_clerks[0],
+                self.get_http_authorization_for_user(self.prison_clerks[0])
+            ),
+            (
+                self.bank_admins[0],
+                self.get_http_authorization_for_user(self.bank_admins[0])
+            ),
+            (
+                self.users[0],
+                self.get_http_authorization_for_user(self.users[0], client_id=CASHBOOK_OAUTH_CLIENT_ID)
+            ),
+        ]
+
+        for user, http_auth_header in users_data:
             response = self.client.post(
                 self.list_url, data={}, format='json',
-                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(unauthorised_user)
+                HTTP_AUTHORIZATION=http_auth_header
             )
-            self.assertEqual(
-                response.status_code,
-                status.HTTP_403_FORBIDDEN
-            )
+            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_fails_without_action_permissions(self):
         """

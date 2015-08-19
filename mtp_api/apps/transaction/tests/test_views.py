@@ -1,6 +1,8 @@
 import random
 import urllib.parse
 
+from oauth2_provider.models import AccessToken
+
 from django.core.urlresolvers import reverse
 from django.utils.six.moves.urllib.parse import urlsplit
 
@@ -80,8 +82,8 @@ class TransactionRejectsRequestsWithoutPermissionTestMixin(object):
     """
     Mixin for permission checks on the endpoint.
 
-    It expects `_get_url(user, prison)` and `_get_unauthorised_application_users()`
-    instance methods defined.
+    It expects `_get_url(user, prison)`, `_get_unauthorised_application_users()`
+    and `_get_authorised_user()` instance methods defined.
     """
     ENDPOINT_VERB = 'get'
 
@@ -100,13 +102,35 @@ class TransactionRejectsRequestsWithoutPermissionTestMixin(object):
         they won't be able to access the API.
         """
         prison = self.prisons[0]
-        for user in self._get_unauthorised_application_users():
+
+        # constructing list of unauthorised users+application
+        unauthorised_users = self._get_unauthorised_application_users()
+        users_data = [
+            (user, self.get_http_authorization_for_user(user))
+            for user in unauthorised_users
+        ]
+
+        # + valid user logged in using a different oauth application
+        authorised_user = self._get_authorised_user()
+
+        invalid_client_id = AccessToken.objects.filter(
+            user=unauthorised_users[0]
+        ).first().application.client_id
+
+        users_data.append(
+            (
+                authorised_user,
+                self.get_http_authorization_for_user(authorised_user, invalid_client_id)
+            )
+        )
+
+        for user, http_auth_header in users_data:
             url = self._get_url(user, prison)
 
             verb_callable = getattr(self.client, self.ENDPOINT_VERB)
             response = verb_callable(
                 url, format='json',
-                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+                HTTP_AUTHORIZATION=http_auth_header
             )
 
             self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

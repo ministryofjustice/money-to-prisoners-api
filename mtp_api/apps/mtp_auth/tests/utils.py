@@ -14,11 +14,12 @@ class AuthTestCaseMixin(object):
         'PrisonClerk': CASHBOOK_OAUTH_CLIENT_ID
     }
 
-    def _get_http_authorization_token_for_user(self, user):
-        group = user.groups.first()
-        if not group:
-            return None
-        client_id = self.APPLICATION_ID_MAP.get(group.name)
+    def _get_http_authorization_token_for_user(self, user, client_id=None):
+        if not client_id:
+            group = user.groups.first()
+            if not group:
+                return None
+            client_id = self.APPLICATION_ID_MAP.get(group.name)
         application = Application.objects.get(client_id=client_id)
 
         token = get_random_string()
@@ -30,6 +31,8 @@ class AuthTestCaseMixin(object):
         )
         return token
 
-    def get_http_authorization_for_user(self, user):
-        token = self._get_http_authorization_token_for_user(user)
+    def get_http_authorization_for_user(self, user, client_id=None):
+        token = self._get_http_authorization_token_for_user(
+            user, client_id=client_id
+        )
         return "Bearer {0}".format(token)
