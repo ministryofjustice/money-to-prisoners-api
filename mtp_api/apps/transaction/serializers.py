@@ -7,7 +7,7 @@ from .signals import transaction_created
 from .models import Transaction
 
 
-class CreditedOnlyTransactionSerializer(serializers.ModelSerializer):
+class CashbookCreditedOnlyTransactionSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(required=True)
     credited = serializers.BooleanField(required=True)
 
@@ -19,7 +19,7 @@ class CreditedOnlyTransactionSerializer(serializers.ModelSerializer):
         )
 
 
-class DefaultTransactionSerializer(serializers.ModelSerializer):
+class CashbookTransactionSerializer(serializers.ModelSerializer):
     sender = serializers.CharField(source='sender_name')
 
     class Meta:
@@ -37,7 +37,7 @@ class DefaultTransactionSerializer(serializers.ModelSerializer):
         )
 
 
-class CreateTransactionListSerializer(serializers.ListSerializer):
+class BankAdminCreateTransactionListSerializer(serializers.ListSerializer):
 
     @transaction.atomic
     def create(self, validated_data):
@@ -64,11 +64,11 @@ class CreateTransactionListSerializer(serializers.ListSerializer):
         return transactions
 
 
-class CreateTransactionSerializer(serializers.ModelSerializer):
+class BankAdminCreateTransactionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Transaction
-        list_serializer_class = CreateTransactionListSerializer
+        list_serializer_class = BankAdminCreateTransactionListSerializer
         fields = (
             'prisoner_number',
             'prisoner_dob',

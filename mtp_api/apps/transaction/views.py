@@ -14,12 +14,12 @@ from mtp_auth.permissions import CashbookClientIDPermissions, \
 from prison.models import Prison
 
 from .models import Transaction
-from .serializers import DefaultTransactionSerializer, \
-    CreateTransactionSerializer, CreditedOnlyTransactionSerializer
+from .serializers import CashbookTransactionSerializer, \
+    BankAdminCreateTransactionSerializer, CashbookCreditedOnlyTransactionSerializer
 from .constants import TRANSACTION_STATUS, TAKE_LIMIT, \
     DEFAULT_SLICE_SIZE
 from .permissions import IsOwner, IsOwnPrison, ActionsBasedPermissions, \
-    TransactionPermissions
+    CashbookTransactionPermissions
 
 
 class StatusChoiceFilter(django_filters.ChoiceFilter):
@@ -55,12 +55,12 @@ class OwnPrisonListModelMixin(object):
         return qs.filter(prison__in=self.get_prison_set_for_user())
 
 
-class TransactionView(
+class CashbookTransactionView(
     OwnPrisonListModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet,
 ):
     queryset = Transaction.objects.all()
-    serializer_class = DefaultTransactionSerializer
-    patch_serializer_class = CreditedOnlyTransactionSerializer
+    serializer_class = CashbookTransactionSerializer
+    patch_serializer_class = CashbookCreditedOnlyTransactionSerializer
     filter_backends = (
         filters.DjangoFilterBackend,
         filters.OrderingFilter,
@@ -71,11 +71,11 @@ class TransactionView(
     ordering = ('received_at',)
     permission_classes = (
         IsAuthenticated, CashbookClientIDPermissions,
-        IsOwnPrison, TransactionPermissions
+        IsOwnPrison, CashbookTransactionPermissions
     )
 
     def get_queryset(self, filter_by_user=True, filter_by_prison=True):
-        qs = super(TransactionView, self).get_queryset()
+        qs = super(CashbookTransactionView, self).get_queryset()
 
         prison_id = self.kwargs.get('prison_id')
         user_id = self.kwargs.get('user_id')
@@ -103,7 +103,7 @@ class TransactionView(
                 t.take(by_user=request.user)
 
             return HttpResponseRedirect(
-                reverse('transaction-prison-user-list', kwargs=kwargs),
+                reverse('cashbook:transaction-prison-user-list', kwargs=kwargs),
                 status=status.HTTP_303_SEE_OTHER
             )
 
@@ -128,20 +128,23 @@ class TransactionView(
             for t in to_update:
                 t.release(by_user=request.user)
 
-        return HttpResponseRedirect(reverse('transaction-prison-user-list', kwargs=kwargs), status=status.HTTP_303_SEE_OTHER)
+        return HttpResponseRedirect(
+            reverse('cashbook:transaction-prison-user-list', kwargs=kwargs),
+            status=status.HTTP_303_SEE_OTHER
+        )
 
     def patch_credited(self, request, *args, **kwargs):
         """
         Update the credited/not credited status of list of owned transactions
 
         ---
-        serializer: transaction.serializers.CreditedOnlyTransactionSerializer
+        serializer: transaction.serializers.CashbookCreditedOnlyTransactionSerializer
         """
         self.permission_classes = list(self.permission_classes) + [IsOwner]
         self.check_permissions(request)
 
         # This is a bit manual :(
-        deserialized = CreditedOnlyTransactionSerializer(data=request.data, many=True)
+        deserialized = CashbookCreditedOnlyTransactionSerializer(data=request.data, many=True)
         if not deserialized.is_valid():
             return Response(
                 deserialized.errors,
@@ -164,7 +167,7 @@ class TransactionView(
                 return Response(status=status.HTTP_404_NOT_FOUND)
 
 
-class AdminTransactionView(
+class BankAdminTransactionView(
     mixins.CreateModelMixin, viewsets.GenericViewSet
 ):
     queryset = Transaction.objects.all()
@@ -173,7 +176,7 @@ class AdminTransactionView(
         IsAuthenticated, BankAdminClientIDPermissions,
         ActionsBasedPermissions
     )
-    create_serializer_class = CreateTransactionSerializer
+    create_serializer_class = BankAdminCreateTransactionSerializer
 
     def get_create_serializer(self, *args, **kwargs):
         kwargs['context'] = self.get_serializer_context()
