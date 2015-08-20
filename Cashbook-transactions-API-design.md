@@ -65,9 +65,14 @@ List of:
 
 ## /transactions/actions/lock/  -- POST
 
-Locks some transactions. There's no way to specify which transactions have to be locked as the user doesn't care which one they lock.
+Locks some transactions.
 
 No data has to be specified.
+
+*Note:*
+
+- There's no way to specify which transactions have to be locked as the user doesn't care which one they lock
+- There's no way to filter out transactions by prisons as this is not necessary at the moment
 
 ### Params
 
@@ -77,14 +82,6 @@ Number of transactions to be locked.
 
 Default: *min(20, 20-count(locked-transactions))*. This is to make sure that the user can only lock max 20 transactions at any given time.
 
-**prison (mandatory)**
-
-Id of the prison to be used when locking transactions. It has to be one of the prisons that the user can manage otherwise it will error.
-
-Default: no defaults.
-
-*Note*:
-- returns 403 if the specified `prison` is not one of the prisons that the user can manage.
 
 **for_user** - *we don't need this for now so maybe we don't need to implement it?*
 
