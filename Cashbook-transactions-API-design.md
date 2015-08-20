@@ -2,8 +2,8 @@
 
 List of cashbook transactions api:
 - /cashbook/transactions/
-- /cashbook/transactions/actions/taken/
-- /cashbook/transactions/actions/release/
+- /cashbook/transactions/actions/lock/
+- /cashbook/transactions/actions/unlock/
 
 
 ## /cashbook/transactions/  -- GET
@@ -19,8 +19,8 @@ Filters by the status of the transactions.
 Default: no status => all transactions
 
 Possible values:
-- *available*: returns list of transactions that have not been taken by anyone
-- *pending*: returns list of transactions taken
+- *available*: returns list of transactions that have not been locked by anyone
+- *locked*: returns list of locked transactions
 - *credited*: returns list of transactions credited
 
 **prison**
@@ -41,7 +41,7 @@ Default:
 - all users managing the related prisons if `prison` is passed in
 
 *Note:*
-- if `status` is not passed in, the `user`filter does not make sense at all and it won't do anything.
+- if `status` is not passed in, the `user` filter does not make sense at all and it won't do anything.
 - if `status=available`, the `user` filter does not make sense at all and it won't do anything.
 - if `user` is passed in but not `prison` and the specified user can't manage the prisons of the overall query, the endpoint will return an empty list.
 - if `user` and `prison` are passed in but the the specified user can't manage the specified prison, the endpoint will return an empty list.
@@ -59,13 +59,13 @@ List of:
 - *credited*: `True` if the transactions has to be marked as credited, `False` otherwise
 
 *Note:*
-- returns 403 if at least one of the transactions have been taken by a different user. Only the user that took a transaction can mark/unmark it as credited.
-- returns 400 if at least one of the transactions is not taken. Transactions have to be taken before being able to get changed.
+- returns 403 if at least one of the transactions have been locked by a different user. Only the user that locked a transaction can mark/unmark it as credited.
+- returns 400 if at least one of the transactions is not locked. Transactions have to be locked before being able to get changed.
 
 
-## /transactions/actions/take/  -- POST
+## /transactions/actions/lock/  -- POST
 
-Takes (meaning locks) some transactions. There's no way to specify which transactions have to be taken as the user doesn't care which one they take.
+Locks some transactions. There's no way to specify which transactions have to be locked as the user doesn't care which one they lock.
 
 No data has to be specified.
 
@@ -73,13 +73,13 @@ No data has to be specified.
 
 **count**
 
-Number of transactions to be taken.
+Number of transactions to be locked.
 
-Default: *min(20, 20-count(taken transactions))*. This is to make sure that the user can only take max 20 transactions at any given time.
+Default: *min(20, 20-count(locked-transactions))*. This is to make sure that the user can only lock max 20 transactions at any given time.
 
 **prison (mandatory)**
 
-Id of the prison to be used when taking transactions. It has to be one of the prisons that the user can manage otherwise it will error.
+Id of the prison to be used when locking transactions. It has to be one of the prisons that the user can manage otherwise it will error.
 
 Default: no defaults.
 
@@ -96,17 +96,17 @@ Default: logged-in user
 
 - returns 403 if `for_user` is passed in but the logged-in user and the specified user do not belong to the same specified prison.
 
-## /transactions/actions/release/  -- POST
+## /transactions/actions/unlock/  -- POST
 
-Releases (meaning unlocks) some transactions.
+Unlocks some transactions.
 
 ## Data
 
 **transaction_ids (mandatory)**
 
-List of transactions to be released.
+List of transactions to be unlocked.
 
 *Note:*
 
 - returns 403 if at least one of the transactions belongs to a prison not managed by the logged-in user
-- returns 400 if at least one of the transactions is credited. Available (meaning non-taken) transactions can be released without any problems as their state does not change anyway.
+- returns 400 if at least one of the transactions is credited. Available transactions can be unlocked without any problems as their state will not change anyway.
