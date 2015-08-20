@@ -83,16 +83,6 @@ Number of transactions to be locked.
 Default: *min(20, 20-count(locked-transactions))*. This is to make sure that the user can only lock max 20 transactions at any given time.
 
 
-**for_user** - *we don't need this for now so maybe we don't need to implement it?*
-
-User the transactions will be assigned to.
-
-Default: logged-in user
-
-*Note:*
-
-- returns 403 if `for_user` is passed in but the logged-in user and the specified user do not belong to the same specified prison.
-
 ## /transactions/actions/unlock/  -- POST
 
 Unlocks some transactions.
