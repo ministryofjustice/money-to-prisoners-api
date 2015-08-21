@@ -65,7 +65,7 @@ List of:
 
 ## /transactions/actions/lock/  -- POST
 
-Locks some transactions.
+Locks up to 20 transactions in total. If some transactions have already been locked, additional (up to 20 in total) might get locked after this call. There's no way a user can lock more than 20 transactions at any given time.
 
 No data has to be specified.
 
@@ -73,14 +73,6 @@ No data has to be specified.
 
 - There's no way to specify which transactions have to be locked as the user doesn't care which one they lock
 - There's no way to filter out transactions by prisons as this is not necessary at the moment
-
-### Params
-
-**count**
-
-Number of transactions to be locked.
-
-Default: *min(20, 20-count(locked-transactions))*. This is to make sure that the user can only lock max 20 transactions at any given time.
 
 
 ## /transactions/actions/unlock/  -- POST
