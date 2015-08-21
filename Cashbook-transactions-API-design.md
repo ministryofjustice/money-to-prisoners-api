@@ -22,6 +22,8 @@ Possible values:
 - *available*: returns list of transactions that have not been locked by anyone
 - *locked*: returns list of locked transactions
 - *credited*: returns list of transactions credited
+- *refunded* (*not implemented yet*): returns list of transactions refunded
+- *refund_pending* (*not implemented yet*): returns list of transactions in pending refund
 
 **prison**
 
@@ -34,7 +36,7 @@ Default: all prison that the user can manage.
 
 **user**
 
-Filters by single user, list of users not allowed (to keep things simple).
+Filters by single user, *list of users not implemented yet*.
 
 Default:
 - all users that can manage the prisons that the logged-in user can manage if `prison` is not passed in
@@ -42,7 +44,7 @@ Default:
 
 *Note:*
 - if `status` is not passed in, the `user` filter does not make sense at all and it won't do anything.
-- if `status=available`, the `user` filter does not make sense at all and it won't do anything.
+- if `status=available`, the `user` filter won't do anything as the returning transactions are not attached to any user.
 - if `user` is passed in but not `prison` and the specified user can't manage the prisons of the overall query, the endpoint will return an empty list.
 - if `user` and `prison` are passed in but the the specified user can't manage the specified prison, the endpoint will return an empty list.
 - if `user` and `prison` are passed in, the specified user can manage the specified prison but the logged-in user can't manage the specified prison, the endpoint will return an empty list.
