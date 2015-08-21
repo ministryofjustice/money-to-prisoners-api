@@ -59,9 +59,8 @@ List of:
 - *credited*: `True` if the transactions has to be marked as credited, `False` otherwise
 
 *Note:*
-- returns 403 if at least one of the transactions have been locked by a different user. Only the user that locked a transaction can mark/unmark it as credited.
-- returns 400 if at least one of the transactions is not locked. Transactions have to be locked before being able to get changed.
-
+- returns 403 if at least one of the transactions belongs to a prison not managed by the logged-in user
+- returns 409 if at least one of the transactions cannot be credited
 
 ## /transactions/actions/lock/  -- POST
 
@@ -88,4 +87,4 @@ List of transactions to be unlocked.
 *Note:*
 
 - returns 403 if at least one of the transactions belongs to a prison not managed by the logged-in user
-- returns 400 if at least one of the transactions is credited. Available transactions can be unlocked without any problems as their state will not change anyway.
+- returns 409 if at least one of the transactions cannot be unlocked
