@@ -9,17 +9,16 @@ from rest_framework.response import Response
 from rest_framework.reverse import reverse
 
 from mtp_auth.models import PrisonUserMapping
-from mtp_auth.permissions import CashbookClientIDPermissions, \
-    BankAdminClientIDPermissions
+from mtp_auth.permissions import CashbookClientIDPermissions
 from prison.models import Prison
 
-from .models import Transaction
-from .serializers import CashbookTransactionSerializer, \
-    BankAdminCreateTransactionSerializer, CashbookCreditedOnlyTransactionSerializer
-from .constants import TRANSACTION_STATUS, TAKE_LIMIT, \
+from transaction.models import Transaction
+from transaction.constants import TRANSACTION_STATUS, TAKE_LIMIT, \
     DEFAULT_SLICE_SIZE
-from .permissions import IsOwner, IsOwnPrison, ActionsBasedPermissions, \
-    CashbookTransactionPermissions
+
+from .serializers import CashbookTransactionSerializer, \
+    CashbookCreditedOnlyTransactionSerializer
+from .permissions import IsOwner, IsOwnPrison, CashbookTransactionPermissions
 
 
 class StatusChoiceFilter(django_filters.ChoiceFilter):
@@ -165,29 +164,3 @@ class CashbookTransactionView(
                 return Response(status=status.HTTP_204_NO_CONTENT)
             except Transaction.DoesNotExist:
                 return Response(status=status.HTTP_404_NOT_FOUND)
-
-
-class BankAdminTransactionView(
-    mixins.CreateModelMixin, viewsets.GenericViewSet
-):
-    queryset = Transaction.objects.all()
-
-    permission_classes = (
-        IsAuthenticated, BankAdminClientIDPermissions,
-        ActionsBasedPermissions
-    )
-    create_serializer_class = BankAdminCreateTransactionSerializer
-
-    def get_create_serializer(self, *args, **kwargs):
-        kwargs['context'] = self.get_serializer_context()
-        return self.create_serializer_class(*args, **kwargs)
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_create_serializer(data=request.data, many=True)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-
-        return Response(
-            serializer.data, status=status.HTTP_201_CREATED, headers=headers
-        )
