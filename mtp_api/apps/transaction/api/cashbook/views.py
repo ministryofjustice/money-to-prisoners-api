@@ -9,17 +9,16 @@ from rest_framework.response import Response
 from rest_framework.reverse import reverse
 
 from mtp_auth.models import PrisonUserMapping
-from mtp_auth.permissions import CashbookClientIDPermissions, \
-    BankAdminClientIDPermissions
+from mtp_auth.permissions import CashbookClientIDPermissions
 from prison.models import Prison
 
-from .models import Transaction
-from .serializers import CashbookTransactionSerializer, \
-    BankAdminCreateTransactionSerializer, CashbookCreditedOnlyTransactionSerializer
-from .constants import TRANSACTION_STATUS, TAKE_LIMIT, \
+from transaction.models import Transaction
+from transaction.constants import TRANSACTION_STATUS, TAKE_LIMIT, \
     DEFAULT_SLICE_SIZE
-from .permissions import IsOwner, IsOwnPrison, ActionsBasedPermissions, \
-    CashbookTransactionPermissions
+
+from .serializers import TransactionSerializer, \
+    CreditedOnlyTransactionSerializer
+from .permissions import IsOwner, IsOwnPrison, TransactionPermissions
 
 
 class StatusChoiceFilter(django_filters.ChoiceFilter):
@@ -55,12 +54,12 @@ class OwnPrisonListModelMixin(object):
         return qs.filter(prison__in=self.get_prison_set_for_user())
 
 
-class CashbookTransactionView(
+class TransactionView(
     OwnPrisonListModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet,
 ):
     queryset = Transaction.objects.all()
-    serializer_class = CashbookTransactionSerializer
-    patch_serializer_class = CashbookCreditedOnlyTransactionSerializer
+    serializer_class = TransactionSerializer
+    patch_serializer_class = CreditedOnlyTransactionSerializer
     filter_backends = (
         filters.DjangoFilterBackend,
         filters.OrderingFilter,
@@ -71,11 +70,11 @@ class CashbookTransactionView(
     ordering = ('received_at',)
     permission_classes = (
         IsAuthenticated, CashbookClientIDPermissions,
-        IsOwnPrison, CashbookTransactionPermissions
+        IsOwnPrison, TransactionPermissions
     )
 
     def get_queryset(self, filter_by_user=True, filter_by_prison=True):
-        qs = super(CashbookTransactionView, self).get_queryset()
+        qs = super(TransactionView, self).get_queryset()
 
         prison_id = self.kwargs.get('prison_id')
         user_id = self.kwargs.get('user_id')
@@ -138,13 +137,13 @@ class CashbookTransactionView(
         Update the credited/not credited status of list of owned transactions
 
         ---
-        serializer: transaction.serializers.CashbookCreditedOnlyTransactionSerializer
+        serializer: transaction.serializers.CreditedOnlyTransactionSerializer
         """
         self.permission_classes = list(self.permission_classes) + [IsOwner]
         self.check_permissions(request)
 
         # This is a bit manual :(
-        deserialized = CashbookCreditedOnlyTransactionSerializer(data=request.data, many=True)
+        deserialized = CreditedOnlyTransactionSerializer(data=request.data, many=True)
         if not deserialized.is_valid():
             return Response(
                 deserialized.errors,
@@ -165,29 +164,3 @@ class CashbookTransactionView(
                 return Response(status=status.HTTP_204_NO_CONTENT)
             except Transaction.DoesNotExist:
                 return Response(status=status.HTTP_404_NOT_FOUND)
-
-
-class BankAdminTransactionView(
-    mixins.CreateModelMixin, viewsets.GenericViewSet
-):
-    queryset = Transaction.objects.all()
-
-    permission_classes = (
-        IsAuthenticated, BankAdminClientIDPermissions,
-        ActionsBasedPermissions
-    )
-    create_serializer_class = BankAdminCreateTransactionSerializer
-
-    def get_create_serializer(self, *args, **kwargs):
-        kwargs['context'] = self.get_serializer_context()
-        return self.create_serializer_class(*args, **kwargs)
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_create_serializer(data=request.data, many=True)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-
-        return Response(
-            serializer.data, status=status.HTTP_201_CREATED, headers=headers
-        )
