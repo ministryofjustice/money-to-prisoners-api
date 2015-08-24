@@ -1,25 +1,4 @@
-from rest_framework.permissions import BasePermission
-
-from mtp_auth.models import PrisonUserMapping
-
 from core.permissions import ActionsBasedPermissions
-
-
-class IsOwner(BasePermission):
-
-    def has_permission(self, request, view):
-        return str(request.user.id) == view.kwargs.get('user_id')
-
-
-class IsOwnPrison(BasePermission):
-
-    def has_permission(self, request, view):
-        try:
-            prison_user_mapping = request.user.prisonusermapping
-        except PrisonUserMapping.DoesNotExist:
-            return False
-
-        return prison_user_mapping.prisons.filter(pk=view.kwargs.get('prison_id')).exists()
 
 
 class TransactionPermissions(ActionsBasedPermissions):

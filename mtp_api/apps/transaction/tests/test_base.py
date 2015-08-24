@@ -71,7 +71,7 @@ class TransactionRejectsRequestsWithoutPermissionTestMixin(object):
     """
     ENDPOINT_VERB = 'get'
 
-    def _get_url(self, user, prison, status=None):
+    def _get_url(self, *args, **kwargs):
         raise NotImplementedError()
 
     def _get_unauthorised_application_users(self):
@@ -85,8 +85,6 @@ class TransactionRejectsRequestsWithoutPermissionTestMixin(object):
         Tests that if the user logs in via a different application,
         they won't be able to access the API.
         """
-        prison = self.prisons[0]
-
         # constructing list of unauthorised users+application
         unauthorised_users = self._get_unauthorised_application_users()
         users_data = [
@@ -108,9 +106,8 @@ class TransactionRejectsRequestsWithoutPermissionTestMixin(object):
             )
         )
 
+        url = self._get_url()
         for user, http_auth_header in users_data:
-            url = self._get_url(user, prison)
-
             verb_callable = getattr(self.client, self.ENDPOINT_VERB)
             response = verb_callable(
                 url, format='json',
@@ -128,7 +125,7 @@ class TransactionRejectsRequestsWithoutPermissionTestMixin(object):
 
         user.groups.first().permissions.all().delete()
 
-        url = self._get_url(user, self.prisons[0])
+        url = self._get_url()
 
         verb_callable = getattr(self.client, self.ENDPOINT_VERB)
         response = verb_callable(
