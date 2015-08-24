@@ -37,7 +37,7 @@ List of transaction elements, which must consist of the following two values:
 - *id*: id of the transaction to be changed
 - *refunded*: `True` if the transaction has been refunded, `False` otherwise
 
-## /bank_admin/transactions/ - PUT
+## /bank_admin/transactions/ - POST
 
 Create new transactions
 
