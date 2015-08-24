@@ -16,9 +16,9 @@ from transaction.models import Transaction
 from transaction.constants import TRANSACTION_STATUS, TAKE_LIMIT, \
     DEFAULT_SLICE_SIZE
 
-from .serializers import CashbookTransactionSerializer, \
-    CashbookCreditedOnlyTransactionSerializer
-from .permissions import IsOwner, IsOwnPrison, CashbookTransactionPermissions
+from .serializers import TransactionSerializer, \
+    CreditedOnlyTransactionSerializer
+from .permissions import IsOwner, IsOwnPrison, TransactionPermissions
 
 
 class StatusChoiceFilter(django_filters.ChoiceFilter):
@@ -54,12 +54,12 @@ class OwnPrisonListModelMixin(object):
         return qs.filter(prison__in=self.get_prison_set_for_user())
 
 
-class CashbookTransactionView(
+class TransactionView(
     OwnPrisonListModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet,
 ):
     queryset = Transaction.objects.all()
-    serializer_class = CashbookTransactionSerializer
-    patch_serializer_class = CashbookCreditedOnlyTransactionSerializer
+    serializer_class = TransactionSerializer
+    patch_serializer_class = CreditedOnlyTransactionSerializer
     filter_backends = (
         filters.DjangoFilterBackend,
         filters.OrderingFilter,
@@ -70,11 +70,11 @@ class CashbookTransactionView(
     ordering = ('received_at',)
     permission_classes = (
         IsAuthenticated, CashbookClientIDPermissions,
-        IsOwnPrison, CashbookTransactionPermissions
+        IsOwnPrison, TransactionPermissions
     )
 
     def get_queryset(self, filter_by_user=True, filter_by_prison=True):
-        qs = super(CashbookTransactionView, self).get_queryset()
+        qs = super(TransactionView, self).get_queryset()
 
         prison_id = self.kwargs.get('prison_id')
         user_id = self.kwargs.get('user_id')
@@ -137,13 +137,13 @@ class CashbookTransactionView(
         Update the credited/not credited status of list of owned transactions
 
         ---
-        serializer: transaction.serializers.CashbookCreditedOnlyTransactionSerializer
+        serializer: transaction.serializers.CreditedOnlyTransactionSerializer
         """
         self.permission_classes = list(self.permission_classes) + [IsOwner]
         self.check_permissions(request)
 
         # This is a bit manual :(
-        deserialized = CashbookCreditedOnlyTransactionSerializer(data=request.data, many=True)
+        deserialized = CreditedOnlyTransactionSerializer(data=request.data, many=True)
         if not deserialized.is_valid():
             return Response(
                 deserialized.errors,

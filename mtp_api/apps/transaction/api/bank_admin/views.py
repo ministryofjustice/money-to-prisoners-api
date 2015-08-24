@@ -8,10 +8,10 @@ from core.permissions import ActionsBasedPermissions
 
 from transaction.models import Transaction
 
-from .serializers import BankAdminCreateTransactionSerializer
+from .serializers import CreateTransactionSerializer
 
 
-class BankAdminTransactionView(
+class TransactionView(
     mixins.CreateModelMixin, viewsets.GenericViewSet
 ):
     queryset = Transaction.objects.all()
@@ -20,7 +20,7 @@ class BankAdminTransactionView(
         IsAuthenticated, BankAdminClientIDPermissions,
         ActionsBasedPermissions
     )
-    create_serializer_class = BankAdminCreateTransactionSerializer
+    create_serializer_class = CreateTransactionSerializer
 
     def get_create_serializer(self, *args, **kwargs):
         kwargs['context'] = self.get_serializer_context()

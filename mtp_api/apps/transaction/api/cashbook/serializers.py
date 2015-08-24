@@ -3,7 +3,7 @@ from rest_framework import serializers
 from transaction.models import Transaction
 
 
-class CashbookCreditedOnlyTransactionSerializer(serializers.ModelSerializer):
+class CreditedOnlyTransactionSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(required=True)
     credited = serializers.BooleanField(required=True)
 
@@ -15,7 +15,7 @@ class CashbookCreditedOnlyTransactionSerializer(serializers.ModelSerializer):
         )
 
 
-class CashbookTransactionSerializer(serializers.ModelSerializer):
+class TransactionSerializer(serializers.ModelSerializer):
     sender = serializers.CharField(source='sender_name')
 
     class Meta:

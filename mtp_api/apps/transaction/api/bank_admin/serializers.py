@@ -7,7 +7,7 @@ from transaction.signals import transaction_created
 from transaction.models import Transaction
 
 
-class BankAdminCreateTransactionListSerializer(serializers.ListSerializer):
+class CreateTransactionListSerializer(serializers.ListSerializer):
 
     @transaction.atomic
     def create(self, validated_data):
@@ -34,11 +34,11 @@ class BankAdminCreateTransactionListSerializer(serializers.ListSerializer):
         return transactions
 
 
-class BankAdminCreateTransactionSerializer(serializers.ModelSerializer):
+class CreateTransactionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Transaction
-        list_serializer_class = BankAdminCreateTransactionListSerializer
+        list_serializer_class = CreateTransactionListSerializer
         fields = (
             'prisoner_number',
             'prisoner_dob',

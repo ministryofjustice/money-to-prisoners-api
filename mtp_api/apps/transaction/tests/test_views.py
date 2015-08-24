@@ -17,7 +17,8 @@ from prison.models import Prison
 
 from transaction.models import Transaction, Log
 from transaction.constants import TRANSACTION_STATUS, TAKE_LIMIT, LOG_ACTIONS
-from transaction.api.bank_admin.views import BankAdminTransactionView
+from transaction.api.bank_admin.views import \
+    TransactionView as BankAdminTransactionView
 
 from .utils import generate_transactions_data, generate_transactions
 
