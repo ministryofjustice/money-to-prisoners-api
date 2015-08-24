@@ -1,26 +1,18 @@
 import random
 import urllib.parse
 
-from oauth2_provider.models import AccessToken
-
 from django.core.urlresolvers import reverse
 from django.utils.six.moves.urllib.parse import urlsplit
 
 from rest_framework import status
-from rest_framework.test import APITestCase
 
-from core.tests.utils import make_test_users, make_test_oauth_applications
 from mtp_auth.models import PrisonUserMapping
-from mtp_auth.tests.utils import AuthTestCaseMixin
 
-from prison.models import Prison
-
-from transaction.models import Transaction, Log
+from transaction.models import Log
 from transaction.constants import TRANSACTION_STATUS, TAKE_LIMIT, LOG_ACTIONS
-from transaction.api.bank_admin.views import \
-    TransactionView as BankAdminTransactionView
 
-from .utils import generate_transactions_data, generate_transactions
+from .test_base import BaseTransactionViewTestCase, \
+    TransactionRejectsRequestsWithoutPermissionTestMixin
 
 
 def get_users_for_prison(prison):
@@ -29,131 +21,6 @@ def get_users_for_prison(prison):
 
 def get_prisons_for_user(user):
     return PrisonUserMapping.objects.get(user=user).prisons.all()
-
-
-class BaseTransactionViewTestCase(AuthTestCaseMixin, APITestCase):
-    fixtures = [
-        'initial_groups.json',
-        'test_prisons.json'
-    ]
-    STATUS_FILTERS = {
-        None: lambda t: True,
-        TRANSACTION_STATUS.PENDING: lambda t: t.owner and not t.credited,
-        TRANSACTION_STATUS.AVAILABLE: lambda t: not t.owner and not t.credited,
-        TRANSACTION_STATUS.CREDITED: lambda t: t.owner and t.credited
-    }
-
-    def setUp(self):
-        super(BaseTransactionViewTestCase, self).setUp()
-        (
-            self.prison_clerks, self.prisoner_location_admins, self.bank_admins
-        ) = make_test_users(clerks_per_prison=2)
-
-        self.transactions = generate_transactions(
-            uploads=2, transaction_batch=50
-        )
-        self.prisons = Prison.objects.all()
-        make_test_oauth_applications()
-
-    def _get_pending_transactions_qs(self, prison, user=None):
-        params = {
-            'credited': False,
-            'prison': prison
-        }
-        if user:
-            params['owner'] = user
-        else:
-            params['owner__isnull'] = False
-
-        return Transaction.objects.filter(**params)
-
-    def _get_available_transactions_qs(self, prison):
-        return Transaction.objects.filter(
-            owner__isnull=True, credited=False, prison=prison
-        )
-
-    def _get_credited_transactions_qs(self, user, prison):
-        return Transaction.objects.filter(
-            owner=user, credited=True, prison=prison
-        )
-
-
-class TransactionRejectsRequestsWithoutPermissionTestMixin(object):
-
-    """
-    Mixin for permission checks on the endpoint.
-
-    It expects `_get_url(user, prison)`, `_get_unauthorised_application_users()`
-    and `_get_authorised_user()` instance methods defined.
-    """
-    ENDPOINT_VERB = 'get'
-
-    def _get_url(self, user, prison, status=None):
-        raise NotImplementedError()
-
-    def _get_unauthorised_application_users(self):
-        raise NotImplementedError()
-
-    def _get_authorised_user(self):
-        raise NotImplementedError()
-
-    def test_fails_without_application_permissions(self):
-        """
-        Tests that if the user logs in via a different application,
-        they won't be able to access the API.
-        """
-        prison = self.prisons[0]
-
-        # constructing list of unauthorised users+application
-        unauthorised_users = self._get_unauthorised_application_users()
-        users_data = [
-            (user, self.get_http_authorization_for_user(user))
-            for user in unauthorised_users
-        ]
-
-        # + valid user logged in using a different oauth application
-        authorised_user = self._get_authorised_user()
-
-        invalid_client_id = AccessToken.objects.filter(
-            user=unauthorised_users[0]
-        ).first().application.client_id
-
-        users_data.append(
-            (
-                authorised_user,
-                self.get_http_authorization_for_user(authorised_user, invalid_client_id)
-            )
-        )
-
-        for user, http_auth_header in users_data:
-            url = self._get_url(user, prison)
-
-            verb_callable = getattr(self.client, self.ENDPOINT_VERB)
-            response = verb_callable(
-                url, format='json',
-                HTTP_AUTHORIZATION=http_auth_header
-            )
-
-            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
-    def test_fails_without_action_permissions(self):
-        """
-        Tests that if the user does not have permissions to create
-        transactions, they won't be able to access the API.
-        """
-        user = self._get_authorised_user()
-
-        user.groups.first().permissions.all().delete()
-
-        url = self._get_url(user, self.prisons[0])
-
-        verb_callable = getattr(self.client, self.ENDPOINT_VERB)
-        response = verb_callable(
-            url, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
 class CashbookTransactionRejectsRequestsWithoutPermissionTestMixin(
@@ -169,7 +36,7 @@ class CashbookTransactionRejectsRequestsWithoutPermissionTestMixin(
         return self.prison_clerks[0]
 
 
-class CashbookTransactionListEndpointTestCase(BaseTransactionViewTestCase):
+class TransactionListTestCase(BaseTransactionViewTestCase):
 
     def test_cant_access(self):
         """
@@ -190,7 +57,7 @@ class CashbookTransactionListEndpointTestCase(BaseTransactionViewTestCase):
         )
 
 
-class CashbookTransactionListByPrisonEndpointTestCase(
+class TransactionListByPrisonTestCase(
     CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
     BaseTransactionViewTestCase
 ):
@@ -279,7 +146,7 @@ class CashbookTransactionListByPrisonEndpointTestCase(
         )
 
 
-class CashbookTransactionListByPrisonAndUserEndpointTestCase(
+class TransactionListByPrisonAndUserTestCase(
     CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
     BaseTransactionViewTestCase
 ):
@@ -367,7 +234,7 @@ class CashbookTransactionListByPrisonAndUserEndpointTestCase(
         )
 
 
-class CashbookTransactionsTakeTestCase(
+class TransactionsTakeTestCase(
     CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
     BaseTransactionViewTestCase
 ):
@@ -528,7 +395,7 @@ class CashbookTransactionsTakeTestCase(
         )
 
 
-class CashbookTransactionsReleaseTestCase(
+class TransactionsReleaseTestCase(
     CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
     BaseTransactionViewTestCase
 ):
@@ -742,7 +609,7 @@ class CashbookTransactionsReleaseTestCase(
         )
 
 
-class CashbookTransactionsPatchTestCase(
+class TransactionsPatchTestCase(
     CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
     BaseTransactionViewTestCase
 ):
@@ -966,76 +833,3 @@ class CashbookTransactionsPatchTestCase(
                 status.HTTP_400_BAD_REQUEST,
                 'Should fail because: {msg}'.format(msg=data['msg'])
             )
-
-
-class BankAdminCreateTransactionsTestCase(
-    TransactionRejectsRequestsWithoutPermissionTestMixin,
-    BaseTransactionViewTestCase
-):
-    ENDPOINT_VERB = 'post'
-
-    def setUp(self):
-        super(BankAdminCreateTransactionsTestCase, self).setUp()
-
-        # delete all transactions and logs
-        Transaction.objects.all().delete()
-        Log.objects.all().delete()
-
-    def _get_unauthorised_application_users(self):
-        return [
-            self.prison_clerks[0], self.prisoner_location_admins[0]
-        ]
-
-    def _get_authorised_user(self):
-        return self.bank_admins[0]
-
-    def _get_url(self, user=None, prison=None, status=None):
-        return reverse('bank-admin:transaction-list')
-
-    def _get_transactions_data(self, tot=30):
-        data_list = generate_transactions_data(
-            uploads=1,
-            transaction_batch=tot,
-            status=TRANSACTION_STATUS.AVAILABLE
-        )
-
-        create_serializer = BankAdminTransactionView.create_serializer_class()
-        keys = create_serializer.get_fields().keys()
-
-        return [
-            {k: data[k] for k in keys if k in data}
-            for data in data_list
-        ]
-
-    def test_create_list(self):
-        """
-        POST on transactions endpoint should create list of transactions.
-        """
-
-        url = self._get_url()
-        data_list = self._get_transactions_data()
-
-        user = self.bank_admins[0]
-
-        response = self.client.post(
-            url, data=data_list, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
-        )
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-
-        # check changes in db
-        self.assertEqual(len(data_list), Transaction.objects.count())
-        for data in data_list:
-            self.assertEqual(
-                Transaction.objects.filter(**data).count(), 1
-            )
-
-        # check logs
-        self.assertEqual(
-            Log.objects.filter(
-                user=user,
-                action=LOG_ACTIONS.CREATED,
-                transaction__id__in=Transaction.objects.all().values_list('id', flat=True)
-            ).count(),
-            len(data_list)
-        )
