@@ -8,8 +8,8 @@ Returns a list of all recent transactions
 
 **status**
 
-Filters by the status of the transactions, accepts multiple values which will be 
-OR'd.
+Filters by the status of the transactions, accepts a comma separated list
+of values which will be OR'd.
 
 Possible values:
 - *available*: returns list of transactions that have not been locked by anyone
@@ -20,7 +20,7 @@ Possible values:
 
 For ADI file generation, this will likely be:
 
-?status=credited&status=refunded
+?status=credited,refunded
 
 For refund CSV generation, this will likely be:
 
