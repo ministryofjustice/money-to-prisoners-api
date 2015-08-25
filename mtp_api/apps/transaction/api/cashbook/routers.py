@@ -22,16 +22,16 @@ class TransactionRouter(DefaultRouter):
                 name='{basename}-prison-user-list'
             ),
             Route(
-                url=r'^{prefix}/(?P<prison_id>\w+)/(?P<user_id>[0-9]+)/take{trailing_slash}$',
-                mapping={'post': 'take'},
-                initkwargs={'suffix': 'Take'},
-                name='{basename}-prison-user-take'
+                url=r'^{prefix}/(?P<prison_id>\w+)/(?P<user_id>[0-9]+)/lock{trailing_slash}$',
+                mapping={'post': 'lock'},
+                initkwargs={'suffix': 'Lock'},
+                name='{basename}-prison-user-lock'
             ),
             Route(
-                url=r'^{prefix}/(?P<prison_id>\w+)/(?P<user_id>[0-9]+)/release{trailing_slash}$',
-                mapping={'post': 'release'},
-                initkwargs={'suffix': 'Release'},
-                name='{basename}-prison-user-release'
+                url=r'^{prefix}/(?P<prison_id>\w+)/(?P<user_id>[0-9]+)/unlock{trailing_slash}$',
+                mapping={'post': 'unlock'},
+                initkwargs={'suffix': 'Unlock'},
+                name='{basename}-prison-user-unlock'
             ),
         ]
 

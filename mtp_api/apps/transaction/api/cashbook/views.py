@@ -13,7 +13,7 @@ from mtp_auth.permissions import CashbookClientIDPermissions
 from prison.models import Prison
 
 from transaction.models import Transaction
-from transaction.constants import TRANSACTION_STATUS, TAKE_LIMIT, \
+from transaction.constants import TRANSACTION_STATUS, LOCK_LIMIT, \
     DEFAULT_SLICE_SIZE
 
 from .serializers import TransactionSerializer, \
@@ -87,19 +87,19 @@ class TransactionView(
 
         return qs
 
-    def take(self, request, *args, **kwargs):
+    def lock(self, request, *args, **kwargs):
         self.permission_classes = list(self.permission_classes) + [IsOwner]
         self.check_permissions(request)
 
         slice_size = self.get_slice_limit(request)
 
         with transaction.atomic():
-            pending = self.get_queryset(filter_by_user=False).available().select_for_update()
-            slice_pks = pending.values_list('pk', flat=True)[:slice_size]
+            locked = self.get_queryset(filter_by_user=False).available().select_for_update()
+            slice_pks = locked.values_list('pk', flat=True)[:slice_size]
 
             queryset = self.get_queryset(filter_by_user=False).filter(pk__in=slice_pks)
             for t in queryset:
-                t.take(by_user=request.user)
+                t.lock(by_user=request.user)
 
             return HttpResponseRedirect(
                 reverse('cashbook:transaction-prison-user-list', kwargs=kwargs),
@@ -108,24 +108,24 @@ class TransactionView(
 
     def get_slice_limit(self, request):
         slice_size = int(request.query_params.get('count', DEFAULT_SLICE_SIZE))
-        available_to_take = max(0, TAKE_LIMIT - self.queryset.pending().filter(owner=request.user).count())
-        if available_to_take < slice_size:
-            raise exceptions.ParseError(detail='Can\'t take more than %s transactions.' % TAKE_LIMIT)
+        available_to_lock = max(0, LOCK_LIMIT - self.queryset.locked().filter(owner=request.user).count())
+        if available_to_lock < slice_size:
+            raise exceptions.ParseError(detail='Can\'t lock more than %s transactions.' % LOCK_LIMIT)
 
         return slice_size
 
-    def release(self, request, *args, **kwargs):
+    def unlock(self, request, *args, **kwargs):
 
         transaction_ids = request.data.get('transaction_ids', [])
         with transaction.atomic():
-            to_update = self.get_queryset().pending().filter(pk__in=transaction_ids).select_for_update()
+            to_update = self.get_queryset().locked().filter(pk__in=transaction_ids).select_for_update()
             if len(to_update) != len(transaction_ids):
                 return Response(
-                    data={'transaction_ids': ['Some transactions could not be released.']},
+                    data={'transaction_ids': ['Some transactions could not be unlocked.']},
                     status=status.HTTP_400_BAD_REQUEST
                 )
             for t in to_update:
-                t.release(by_user=request.user)
+                t.unlock(by_user=request.user)
 
         return HttpResponseRedirect(
             reverse('cashbook:transaction-prison-user-list', kwargs=kwargs),

@@ -21,7 +21,7 @@ class BaseTransactionViewTestCase(AuthTestCaseMixin, APITestCase):
     ]
     STATUS_FILTERS = {
         None: lambda t: True,
-        TRANSACTION_STATUS.PENDING: lambda t: t.owner and not t.credited,
+        TRANSACTION_STATUS.LOCKED: lambda t: t.owner and not t.credited,
         TRANSACTION_STATUS.AVAILABLE: lambda t: not t.owner and not t.credited,
         TRANSACTION_STATUS.CREDITED: lambda t: t.owner and t.credited
     }
@@ -38,7 +38,7 @@ class BaseTransactionViewTestCase(AuthTestCaseMixin, APITestCase):
         self.prisons = Prison.objects.all()
         make_test_oauth_applications()
 
-    def _get_pending_transactions_qs(self, prison, user=None):
+    def _get_locked_transactions_qs(self, prison, user=None):
         params = {
             'credited': False,
             'prison': prison
