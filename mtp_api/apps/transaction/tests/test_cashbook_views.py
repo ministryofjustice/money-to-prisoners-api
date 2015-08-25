@@ -8,8 +8,9 @@ from mtp_auth.models import PrisonUserMapping
 
 from prison.models import Prison
 
-from transaction.models import Transaction
-from transaction.constants import TRANSACTION_STATUS
+from transaction.models import Transaction, Log
+from transaction.constants import TRANSACTION_STATUS, LOCK_LIMIT, LOG_ACTIONS
+
 
 from .test_base import BaseTransactionViewTestCase, \
     TransactionRejectsRequestsWithoutPermissionTestMixin
@@ -38,7 +39,7 @@ class TransactionListTestCase(
 ):
 
     def _get_url(self, **filters):
-        url = reverse('cashbook:transaction-prison-list')
+        url = reverse('cashbook:transaction-list')
 
         filters['limit'] = 1000
         return '{url}?{filters}'.format(
@@ -287,3 +288,80 @@ class TransactionListTestCase(
             sorted([t['id'] for t in response.data['results']]),
             sorted(expected_ids)
         )
+
+
+class LockTransactionTestCase(
+    CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
+    BaseTransactionViewTestCase
+):
+    ENDPOINT_VERB = 'post'
+    transaction_batch = 200
+
+    def _get_url(self):
+        return reverse('cashbook:transaction-lock')
+
+    def setUp(self):
+        super(LockTransactionTestCase, self).setUp()
+
+        self.logged_in_user = self.prison_clerks[0]
+        self.logged_in_user.prisonusermapping.prisons.add(*self.prisons)
+
+    def _test_lock(self, already_locked_count, available_count=LOCK_LIMIT):
+        locked_qs = self._get_locked_transactions_qs(self.prisons, self.logged_in_user)
+        available_qs = self._get_available_transactions_qs(self.prisons)
+
+        # set nr of transactions locked by logged-in user to 'already_locked'
+        locked = locked_qs.values_list('pk', flat=True)
+        Transaction.objects.filter(
+            pk__in=[-1]+list(locked[:locked.count() - already_locked_count])
+        ).delete()
+
+        self.assertEqual(locked_qs.count(), already_locked_count)
+
+        # set nr of transactions available to 'available'
+        available = available_qs.values_list('pk', flat=True)
+        Transaction.objects.filter(
+            pk__in=[-1]+list(available[:available.count() - available_count])
+        ).delete()
+
+        self.assertEqual(available_qs.count(), available_count)
+
+        expected_locked = min(
+            already_locked_count + available_qs.count(),
+            LOCK_LIMIT
+        )
+
+        # make lock request
+        url = self._get_url()
+        response = self.client.post(
+            url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.logged_in_user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_303_SEE_OTHER)
+
+        # check that expected_locked got locked
+        self.assertEqual(locked_qs.count(), expected_locked)
+
+        return locked_qs
+
+    def test_lock_with_none_locked_already(self):
+        locked_transactions = self._test_lock(already_locked_count=0)
+
+        # check logs
+        self.assertEqual(
+            Log.objects.filter(
+                user=self.logged_in_user,
+                action=LOG_ACTIONS.LOCKED,
+                transaction__id__in=locked_transactions.values_list('id', flat=True)
+            ).count(),
+            locked_transactions.count()
+        )
+
+    def test_lock_with_max_locked_already(self):
+        self._test_lock(already_locked_count=LOCK_LIMIT)
+
+    def test_lock_with_some_locked_already(self):
+        self._test_lock(already_locked_count=(LOCK_LIMIT/2))
+
+    def test_lock_with_some_locked_already_but_none_available(self):
+        self._test_lock(already_locked_count=(LOCK_LIMIT/2), available_count=0)

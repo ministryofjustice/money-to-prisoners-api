@@ -15,7 +15,6 @@ TRANSACTION_STATUS = Choices(
 
 # max number of transactions a user can lock at any time
 LOCK_LIMIT = 20
-DEFAULT_SLICE_SIZE = LOCK_LIMIT
 
 
 LOG_ACTIONS = Choices(

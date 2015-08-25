@@ -25,6 +25,8 @@ class BaseTransactionViewTestCase(AuthTestCaseMixin, APITestCase):
         TRANSACTION_STATUS.AVAILABLE: lambda t: not t.owner and not t.credited,
         TRANSACTION_STATUS.CREDITED: lambda t: t.owner and t.credited
     }
+    transaction_uploads = 2
+    transaction_batch = 50
 
     def setUp(self):
         super(BaseTransactionViewTestCase, self).setUp()
@@ -33,15 +35,16 @@ class BaseTransactionViewTestCase(AuthTestCaseMixin, APITestCase):
         ) = make_test_users(clerks_per_prison=2)
 
         self.transactions = generate_transactions(
-            uploads=2, transaction_batch=50
+            uploads=self.transaction_uploads,
+            transaction_batch=self.transaction_batch
         )
         self.prisons = Prison.objects.all()
         make_test_oauth_applications()
 
-    def _get_locked_transactions_qs(self, prison, user=None):
+    def _get_locked_transactions_qs(self, prisons, user=None):
         params = {
             'credited': False,
-            'prison': prison
+            'prison__in': prisons
         }
         if user:
             params['owner'] = user
@@ -50,14 +53,14 @@ class BaseTransactionViewTestCase(AuthTestCaseMixin, APITestCase):
 
         return Transaction.objects.filter(**params)
 
-    def _get_available_transactions_qs(self, prison):
+    def _get_available_transactions_qs(self, prisons):
         return Transaction.objects.filter(
-            owner__isnull=True, credited=False, prison=prison
+            owner__isnull=True, credited=False, prison__in=prisons
         )
 
-    def _get_credited_transactions_qs(self, user, prison):
+    def _get_credited_transactions_qs(self, prisons, user=None):
         return Transaction.objects.filter(
-            owner=user, credited=True, prison=prison
+            owner=user, credited=True, prison__in=prisons
         )
 
 
