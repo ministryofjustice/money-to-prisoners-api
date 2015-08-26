@@ -1,6 +1,7 @@
 import urllib.parse
 
 from django.core.urlresolvers import reverse
+from django.utils.six.moves.urllib.parse import urlsplit
 
 from rest_framework import status
 
@@ -365,3 +366,88 @@ class LockTransactionTestCase(
 
     def test_lock_with_some_locked_already_but_none_available(self):
         self._test_lock(already_locked_count=(LOCK_LIMIT/2), available_count=0)
+
+
+class UnlockTransactionTestCase(
+    CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
+    BaseTransactionViewTestCase
+):
+    ENDPOINT_VERB = 'post'
+    # transaction_batch = 200
+
+    def _get_url(self):
+        return reverse('cashbook:transaction-unlock')
+
+    def test_can_unlock_somebody_else_s_transactions(self):
+        logged_in_user = self.prison_clerks[0]
+        logged_in_user.prisonusermapping.prisons.add(*self.prisons)
+        locked_qs = self._get_locked_transactions_qs(self.prisons)
+
+        to_unlock = list(locked_qs.values_list('id', flat=True))
+        response = self.client.post(
+            self._get_url(),
+            {'transaction_ids': to_unlock},
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_303_SEE_OTHER)
+        self.assertEqual(
+            urlsplit(response['Location']).path,
+            reverse('cashbook:transaction-list')
+        )
+
+        self.assertEqual(locked_qs.count(), 0)
+
+        # check logs
+        self.assertEqual(
+            Log.objects.filter(
+                user=logged_in_user,
+                action=LOG_ACTIONS.UNLOCKED,
+                transaction__id__in=to_unlock
+            ).count(),
+            len(to_unlock)
+        )
+
+    def test_cannot_unlock_somebody_else_s_transactions_in_different_prison(self):
+        # logged-in user managing prison #0
+        logged_in_user = self.prison_clerks[0]
+        logged_in_user.prisonusermapping.prisons.clear()
+        logged_in_user.prisonusermapping.prisons.add(self.prisons[0])
+
+        # other user managing prison #1
+        other_user = self.prison_clerks[1]
+        other_user.prisonusermapping.prisons.add(self.prisons[1])
+
+        locked_qs = self._get_locked_transactions_qs(self.prisons, other_user)
+        locked_qs.update(prison=self.prisons[1])
+
+        to_unlock = locked_qs.values_list('id', flat=True)
+        response = self.client.post(
+            self._get_url(),
+            {'transaction_ids': to_unlock},
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+
+    def test_cannot_unlock_credited_transactions(self):
+        logged_in_user = self.prison_clerks[0]
+        managing_prisons = list(get_prisons_for_user(logged_in_user))
+
+        locked_qs = self._get_locked_transactions_qs(managing_prisons, user=logged_in_user)
+        credited_qs = self._get_credited_transactions_qs(managing_prisons, user=logged_in_user)
+
+        to_unlock = (
+            list(locked_qs.values_list('id', flat=True)) +
+            list(credited_qs.values_list('id', flat=True)[:1])
+        )
+        response = self.client.post(
+            self._get_url(),
+            {'transaction_ids': to_unlock},
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)

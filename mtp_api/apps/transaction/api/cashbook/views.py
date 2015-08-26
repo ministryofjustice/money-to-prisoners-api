@@ -7,6 +7,7 @@ from django.http import HttpResponseRedirect
 from rest_framework import generics, filters, status as drf_status
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from rest_framework.reverse import reverse
 
 from mtp_auth.models import PrisonUserMapping
@@ -91,3 +92,31 @@ class LockTransactions(TransactionViewMixin, APIView):
                 status=TRANSACTION_STATUS.LOCKED
             )
             return HttpResponseRedirect(redirect_url, status=drf_status.HTTP_303_SEE_OTHER)
+
+
+class UnlockTransactions(TransactionViewMixin, APIView):
+    action = 'unlock'
+
+    permission_classes = (
+        IsAuthenticated, CashbookClientIDPermissions,
+        TransactionPermissions
+    )
+
+    def post(self, request, format=None):
+        transaction_ids = request.data.get('transaction_ids', [])
+        with transaction.atomic():
+            to_update = self.get_queryset().locked().filter(pk__in=transaction_ids).select_for_update()
+            if len(to_update) != len(transaction_ids):
+                return Response(
+                    data={'transaction_ids': ['Some transactions could not be unlocked.']},
+                    status=drf_status.HTTP_409_CONFLICT
+                )
+            for t in to_update:
+                t.unlock(by_user=request.user)
+
+        redirect_url = '{url}?user={user}&status={status}'.format(
+            url=reverse('cashbook:transaction-list'),
+            user=request.user.pk,
+            status=TRANSACTION_STATUS.AVAILABLE
+        )
+        return HttpResponseRedirect(redirect_url, status=drf_status.HTTP_303_SEE_OTHER)
