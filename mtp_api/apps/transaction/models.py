@@ -41,10 +41,19 @@ class Transaction(TimeStampedModel):
 
     credited = models.BooleanField(default=False)
 
+    refunded = models.BooleanField(default=False)
+
     STATUS_LOOKUP = {
-        TRANSACTION_STATUS.LOCKED:   {'owner__isnull': False, 'credited': False},
-        TRANSACTION_STATUS.AVAILABLE: {'owner__isnull': True, 'credited': False},
-        TRANSACTION_STATUS.CREDITED:  {'owner__isnull': False, 'credited': True}
+        TRANSACTION_STATUS.LOCKED:
+            {'owner__isnull': False, 'credited': False, 'refunded': False},
+        TRANSACTION_STATUS.AVAILABLE:
+            {'owner__isnull': True, 'credited': False, 'refunded': False},
+        TRANSACTION_STATUS.CREDITED:
+            {'credited': True},
+        TRANSACTION_STATUS.REFUNDED:
+            {'refunded': True},
+        TRANSACTION_STATUS.REFUND_PENDING:
+            {'prisoner_number__isnull': True, 'refunded': False}
     }
 
     objects = TransactionQuerySet.as_manager()

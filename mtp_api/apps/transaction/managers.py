@@ -14,6 +14,12 @@ class TransactionQuerySet(models.QuerySet):
     def credited(self):
         return self.filter(**self.model.STATUS_LOOKUP[TRANSACTION_STATUS.CREDITED])
 
+    def refunded(self):
+        return self.filter(**self.model.STATUS_LOOKUP[TRANSACTION_STATUS.REFUNDED])
+
+    def refund_pending(self):
+        return self.filter(**self.model.STATUS_LOOKUP[TRANSACTION_STATUS.REFUND_PENDING])
+
     def locked_by(self, user):
         return self.filter(owner=user)
 
