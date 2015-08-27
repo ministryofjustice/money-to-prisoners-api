@@ -54,3 +54,10 @@ class LogManager(models.Manager):
             action=action,
             user=by_user
         )
+
+    def transaction_refunded(self, transaction, by_user):
+        self.create(
+            transaction=transaction,
+            action=LOG_ACTIONS.REFUNDED,
+            user=by_user
+        )

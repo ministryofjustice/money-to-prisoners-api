@@ -29,4 +29,5 @@ LOG_ACTIONS = Choices(
     ('UNLOCKED', 'unlocked', 'Unlocked'),
     ('CREDITED', 'credited', 'Credited'),
     ('UNCREDITED', 'uncredited', 'Uncredited'),
+    ('REFUNDED', 'refunded', 'Refunded'),
 )
