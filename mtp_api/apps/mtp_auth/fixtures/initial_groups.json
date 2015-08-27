@@ -15,7 +15,9 @@
   "fields": {
     "name": "BankAdmin",
     "permissions": [
-      ["add_transaction", "transaction", "transaction"]
+      ["add_transaction", "transaction", "transaction"],
+      ["view_transaction", "transaction", "transaction"],
+      ["patch_refunded_transaction", "transaction", "transaction"]
     ]
   }
 },
