@@ -41,9 +41,10 @@ class LogManager(models.Manager):
             user=by_user
         )
 
-    def transaction_credited(self, transaction, by_user):
+    def transaction_credited(self, transaction, by_user, credited=True):
+        action = LOG_ACTIONS.CREDITED if credited else LOG_ACTIONS.UNCREDITED
         self.create(
             transaction=transaction,
-            action=LOG_ACTIONS.CREDITED,
+            action=action,
             user=by_user
         )

@@ -3,6 +3,7 @@ import django_filters
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.http import HttpResponseRedirect
+from django.views.generic import View
 
 from rest_framework import generics, filters, status as drf_status
 from rest_framework.views import APIView
@@ -17,7 +18,8 @@ from prison.models import Prison
 from transaction.constants import TRANSACTION_STATUS, LOCK_LIMIT
 from transaction.models import Transaction
 
-from .serializers import TransactionSerializer
+from .serializers import TransactionSerializer, \
+    CreditedOnlyTransactionSerializer
 from .permissions import TransactionPermissions
 
 
@@ -54,7 +56,7 @@ class TransactionViewMixin(object):
         return Transaction.objects.filter(prison__in=self.get_prison_set_for_user())
 
 
-class TransactionList(TransactionViewMixin, generics.ListAPIView):
+class GetTransactions(TransactionViewMixin, generics.ListAPIView):
     serializer_class = TransactionSerializer
     filter_backends = (filters.DjangoFilterBackend,)
     filter_class = TransactionListFilter
@@ -64,6 +66,65 @@ class TransactionList(TransactionViewMixin, generics.ListAPIView):
         IsAuthenticated, CashbookClientIDPermissions,
         TransactionPermissions
     )
+
+
+class CreditTransactions(TransactionViewMixin, generics.GenericAPIView):
+    serializer_class = CreditedOnlyTransactionSerializer
+    action = 'patch_credited'
+
+    permission_classes = (
+        IsAuthenticated, CashbookClientIDPermissions,
+        TransactionPermissions
+    )
+
+    def get_serializer(self, *args, **kwargs):
+        kwargs['context'] = {
+            'request': self.request,
+            'format': self.format_kwarg,
+            'view': self
+        }
+        return self.serializer_class(*args, **kwargs)
+
+    def patch(self, request, format=None):
+        deserialized = self.get_serializer(data=request.data, many=True)
+        deserialized.is_valid(raise_exception=True)
+
+        try:
+            with transaction.atomic():
+                to_update = self.get_queryset().filter(
+                    owner=request.user,
+                    pk__in=[x['id'] for x in deserialized.data]
+                ).select_for_update()
+
+                for item in deserialized.data:
+                    obj = to_update.get(pk=item['id'])
+
+                    obj.credit(credited=item['credited'], by_user=request.user)
+                return Response(status=drf_status.HTTP_204_NO_CONTENT)
+        except Transaction.DoesNotExist:
+            return Response(
+                data={'id': ['Some transactions cannot be credited.']},
+                status=drf_status.HTTP_409_CONFLICT
+            )
+
+
+class TransactionList(View):
+    """
+    Dispatcher View that dispatches to GetTransactions or CreditTransactions
+    depending on the method.
+
+    The standard logic would not work in this case as:
+    - the two endpoints need to do something quite different so better if
+        they belong to different classes
+    - we need specific permissions for the two endpoints so it's cleaner to
+        use the same TransactionPermissions for all the views
+    """
+
+    def get(self, request, *args, **kwargs):
+        return GetTransactions.as_view()(request, *args, **kwargs)
+
+    def patch(self, request, *args, **kwargs):
+        return CreditTransactions.as_view()(request, *args, **kwargs)
 
 
 class LockTransactions(TransactionViewMixin, APIView):
@@ -108,7 +169,7 @@ class UnlockTransactions(TransactionViewMixin, APIView):
             to_update = self.get_queryset().locked().filter(pk__in=transaction_ids).select_for_update()
             if len(to_update) != len(transaction_ids):
                 return Response(
-                    data={'transaction_ids': ['Some transactions could not be unlocked.']},
+                    data={'transaction_ids': ['Some transactions cannot be unlocked.']},
                     status=drf_status.HTTP_409_CONFLICT
                 )
             for t in to_update:

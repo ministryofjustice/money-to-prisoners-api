@@ -373,7 +373,6 @@ class UnlockTransactionTestCase(
     BaseTransactionViewTestCase
 ):
     ENDPOINT_VERB = 'post'
-    # transaction_batch = 200
 
     def _get_url(self):
         return reverse('cashbook:transaction-unlock')
@@ -451,3 +450,168 @@ class UnlockTransactionTestCase(
         )
 
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+
+
+class CreditTransactionTestCase(
+    CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
+    BaseTransactionViewTestCase
+):
+    ENDPOINT_VERB = 'patch'
+
+    def _get_url(self, **filters):
+        return reverse('cashbook:transaction-list')
+
+    def test_credit_uncredit_transactions(self):
+        logged_in_user = self.prison_clerks[0]
+        managing_prisons = list(get_prisons_for_user(logged_in_user))
+
+        locked_qs = self._get_locked_transactions_qs(managing_prisons, logged_in_user)
+        credited_qs = self._get_credited_transactions_qs(managing_prisons, logged_in_user)
+
+        self.assertTrue(locked_qs.count() > 0)
+        self.assertTrue(credited_qs.count() > 0)
+
+        to_credit = list(locked_qs.values_list('id', flat=True))
+        to_uncredit = list(credited_qs.values_list('id', flat=True))
+
+        data = [
+            {'id': t_id, 'credited': True} for t_id in to_credit
+        ] + [
+            {'id': t_id, 'credited': False} for t_id in to_uncredit
+        ]
+
+        response = self.client.patch(
+            self._get_url(), data=data,
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        # check db
+        self.assertEqual(
+            credited_qs.filter(id__in=to_credit).count(), len(to_credit)
+        )
+        self.assertEqual(
+            locked_qs.filter(id__in=to_uncredit).count(), len(to_uncredit)
+        )
+
+        # check logs
+        self.assertEqual(
+            Log.objects.filter(
+                user=logged_in_user,
+                action=LOG_ACTIONS.CREDITED,
+                transaction__id__in=to_credit
+            ).count(),
+            len(to_credit)
+        )
+
+        self.assertEqual(
+            Log.objects.filter(
+                user=logged_in_user,
+                action=LOG_ACTIONS.UNCREDITED,
+                transaction__id__in=to_uncredit
+            ).count(),
+            len(to_uncredit)
+        )
+
+    def test_cannot_credit_somebody_else_s_transactions(self):
+        logged_in_user = self.prison_clerks[0]
+        other_user = self.prison_clerks[1]
+
+        locked_qs = self._get_locked_transactions_qs(self.prisons, logged_in_user)
+        credited_qs = self._get_credited_transactions_qs(self.prisons, logged_in_user)
+        locked_by_other_user_qs = self._get_locked_transactions_qs(self.prisons, other_user)
+
+        credited = credited_qs.count()
+
+        data = [
+            {'id': t_id, 'credited': True}
+            for t_id in locked_qs.values_list('id', flat=True)
+        ] + [
+            {'id': t_id, 'credited': True}
+            for t_id in locked_by_other_user_qs.values_list('id', flat=True)
+        ]
+
+        response = self.client.patch(
+            self._get_url(), data=data,
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+
+        # nothing changed in db
+        self.assertEqual(credited_qs.count(), credited)
+
+    def test_cannot_credit_non_locked_transactions(self):
+        logged_in_user = self.prison_clerks[0]
+        managing_prisons = list(get_prisons_for_user(logged_in_user))
+
+        locked_qs = self._get_locked_transactions_qs(managing_prisons, logged_in_user)
+        credited_qs = self._get_credited_transactions_qs(self.prisons, logged_in_user)
+        available_qs = self._get_available_transactions_qs(managing_prisons)
+
+        credited = credited_qs.count()
+
+        data = [
+            {'id': t_id, 'credited': True}
+            for t_id in locked_qs.values_list('id', flat=True)
+        ] + [
+            {'id': t_id, 'credited': True}
+            for t_id in available_qs.values_list('id', flat=True)
+        ]
+
+        response = self.client.patch(
+            self._get_url(), data=data,
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+
+        # nothing changed in db
+        self.assertEqual(credited_qs.count(), credited)
+
+    def test_invalid_format(self):
+        logged_in_user = self.prison_clerks[0]
+
+        response = self.client.patch(
+            self._get_url(), data={},
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_missing_ids(self):
+        logged_in_user = self.prison_clerks[0]
+
+        response = self.client.patch(
+            self._get_url(), data=[
+                {'credited': True}
+            ],
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_misspelt_credit(self):
+        logged_in_user = self.prison_clerks[0]
+        managing_prisons = list(get_prisons_for_user(logged_in_user))
+
+        locked_qs = self._get_locked_transactions_qs(managing_prisons, logged_in_user)
+
+        data = [
+            {'id': t_id, 'credted': True}
+            for t_id in locked_qs.values_list('id', flat=True)
+        ]
+
+        response = self.client.patch(
+            self._get_url(), data=data,
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

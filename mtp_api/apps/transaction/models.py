@@ -70,7 +70,8 @@ class Transaction(TimeStampedModel):
         self.save()
 
         transaction_credited.send(
-            sender=self.__class__, transaction=self, by_user=by_user
+            sender=self.__class__, transaction=self, by_user=by_user,
+            credited=credited
         )
 
     class Meta:
@@ -119,5 +120,5 @@ def transaction_unlocked_receiver(sender, transaction, by_user, **kwargs):
 
 
 @receiver(transaction_credited)
-def transaction_credited_receiver(sender, transaction, by_user, **kwargs):
-    Log.objects.transaction_credited(transaction, by_user)
+def transaction_credited_receiver(sender, transaction, by_user, credited=True, **kwargs):
+    Log.objects.transaction_credited(transaction, by_user, credited=credited)
