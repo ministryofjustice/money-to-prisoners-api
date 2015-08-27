@@ -87,6 +87,7 @@ class Transaction(TimeStampedModel):
         ordering = ('received_at',)
         permissions = (
             ("view_transaction", "Can view transaction"),
+            ("view_bank_details_transaction", "Can view bank details of transaction"),
             ("lock_transaction", "Can lock transaction"),
             ("unlock_transaction", "Can unlock transaction"),
             ("patch_credited_transaction", "Can patch credited transaction"),

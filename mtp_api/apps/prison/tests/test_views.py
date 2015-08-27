@@ -21,7 +21,7 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
 
     def setUp(self):
         super(PrisonerLocationViewTestCase, self).setUp()
-        self.prison_clerks, self.users, self.bank_admins = make_test_users()
+        self.prison_clerks, self.users, self.bank_admins, _ = make_test_users()
         self.prisons = Prison.objects.all()
         make_test_oauth_applications()
 

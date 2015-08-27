@@ -73,3 +73,20 @@ def create_bank_admins():
     ba.groups.add(bank_admin_group)
 
     return [ba]
+
+
+def create_refund_bank_admins():
+
+    name_and_password = 'refund_bank_admin'
+
+    bank_admin_group = Group.objects.get(name='BankAdmin')
+    refund_bank_admin_group = Group.objects.get(name='RefundBankAdmin')
+    rba = basic_user.make(
+        username=name_and_password
+    )
+    rba.set_password(name_and_password)
+    rba.save()
+    rba.groups.add(refund_bank_admin_group)
+    rba.groups.add(bank_admin_group)
+
+    return [rba]

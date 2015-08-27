@@ -7,7 +7,8 @@ from mtp_auth.permissions import BankAdminClientIDPermissions
 from transaction.models import Transaction
 from .permissions import TransactionPermissions
 from .serializers import CreateTransactionSerializer, \
-    UpdateRefundedTransactionSerializer, TransactionSerializer
+    UpdateRefundedTransactionSerializer, TransactionSerializer, \
+    ReconcileTransactionSerializer
 
 
 class TransactionView(mixins.CreateModelMixin, mixins.UpdateModelMixin,
@@ -35,11 +36,17 @@ class TransactionView(mixins.CreateModelMixin, mixins.UpdateModelMixin,
         return queryset
 
     @list_route(methods=['patch'])
-    def patch(self, request, *args, **kwargs):
+    def patch_refunded(self, request, *args, **kwargs):
         try:
             return self.partial_update(request, *args, **kwargs)
-        except Transaction.DoesNotExist:
-            return Response(status=status.HTTP_409_CONFLICT)
+        except Transaction.DoesNotExist as e:
+            return Response(
+                data={
+                    'error': ['Some transactions could not be refunded'],
+                    'conflicted': e
+                },
+                status=status.HTTP_409_CONFLICT
+            )
 
     def get_serializer(self, *args, **kwargs):
         many = kwargs.pop('many', True)
@@ -56,4 +63,8 @@ class TransactionView(mixins.CreateModelMixin, mixins.UpdateModelMixin,
         elif self.request.method == 'PATCH':
             return UpdateRefundedTransactionSerializer
         elif self.request.method == 'GET':
-            return TransactionSerializer
+            if self.request.user.has_perm(
+                    'transaction.view_bank_details_transaction'):
+                return TransactionSerializer
+            else:
+                return ReconcileTransactionSerializer

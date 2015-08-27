@@ -59,18 +59,18 @@ class UpdateRefundedTransactionListSerializer(serializers.ListSerializer):
     def update(self, instance, validated_data):
         user = self.context['request'].user
 
-        refunded = [t['id'] for t in validated_data if t['refunded']]
-        not_refunded = [t['id'] for t in validated_data if not t['refunded']]
+        to_refund = [t['id'] for t in validated_data if t['refunded']]
 
         update_set = Transaction.objects.filter(
-            pk__in=refunded + not_refunded).select_for_update()
-        if len(update_set) != len(validated_data):
-            raise Transaction.DoesNotExist
+            pk__in=to_refund,
+            **Transaction.STATUS_LOOKUP['refund_pending']).select_for_update()
+        if len(update_set) != len(to_refund):
+            raise Transaction.DoesNotExist(
+                set(to_refund) - {t.id for t in update_set}
+            )
 
-        Transaction.objects.filter(id__in=refunded).update(refunded=True)
-        Transaction.objects.filter(id__in=not_refunded).update(refunded=False)
-
-        for t_id in refunded:
+        update_set.update(refunded=True)
+        for t_id in to_refund:
             transaction = Transaction()
             transaction.id = t_id
             transaction_refunded.send(
@@ -100,12 +100,26 @@ class TransactionSerializer(serializers.ModelSerializer):
         model = Transaction
         fields = (
             'id',
+            'prison',
             'amount',
             'sender_sort_code',
             'sender_account_number',
             'sender_name',
             'sender_roll_number',
             'reference',
+            'credited',
+            'refunded'
+        )
+
+
+class ReconcileTransactionSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Transaction
+        fields = (
+            'id',
+            'prison',
+            'amount',
             'credited',
             'refunded'
         )
