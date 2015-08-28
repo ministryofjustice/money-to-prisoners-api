@@ -89,23 +89,34 @@ class CreditTransactions(TransactionViewMixin, generics.GenericAPIView):
         deserialized = self.get_serializer(data=request.data, many=True)
         deserialized.is_valid(raise_exception=True)
 
-        try:
-            with transaction.atomic():
-                to_update = self.get_queryset().filter(
-                    owner=request.user,
-                    pk__in=[x['id'] for x in deserialized.data]
-                ).select_for_update()
+        transaction_ids = [x['id'] for x in deserialized.data]
+        with transaction.atomic():
+            to_update = self.get_queryset().filter(
+                owner=request.user,
+                pk__in=transaction_ids
+            ).select_for_update()
 
-                for item in deserialized.data:
-                    obj = to_update.get(pk=item['id'])
+            ids_to_update = [t.id for t in to_update]
+            conflict_ids = set(transaction_ids) - set(ids_to_update)
 
-                    obj.credit(credited=item['credited'], by_user=request.user)
-                return Response(status=drf_status.HTTP_204_NO_CONTENT)
-        except Transaction.DoesNotExist:
-            return Response(
-                data={'id': ['Some transactions cannot be credited.']},
-                status=drf_status.HTTP_409_CONFLICT
-            )
+            if conflict_ids:
+                return Response(
+                    data={
+                        'errors': [
+                            {
+                                'msg': 'Some transactions could not be credited.',
+                                'ids': sorted([str(t_id) for t_id in conflict_ids])
+                            }
+                        ]
+                    },
+                    status=drf_status.HTTP_409_CONFLICT
+                )
+
+            for item in deserialized.data:
+                obj = to_update.get(pk=item['id'])
+                obj.credit(credited=item['credited'], by_user=request.user)
+
+        return Response(status=drf_status.HTTP_204_NO_CONTENT)
 
 
 class TransactionList(View):
@@ -167,9 +178,20 @@ class UnlockTransactions(TransactionViewMixin, APIView):
         transaction_ids = request.data.get('transaction_ids', [])
         with transaction.atomic():
             to_update = self.get_queryset().locked().filter(pk__in=transaction_ids).select_for_update()
-            if len(to_update) != len(transaction_ids):
+
+            ids_to_update = [t.id for t in to_update]
+            conflict_ids = set(transaction_ids) - set(ids_to_update)
+
+            if conflict_ids:
                 return Response(
-                    data={'transaction_ids': ['Some transactions cannot be unlocked.']},
+                    data={
+                        'errors': [
+                            {
+                                'msg': 'Some transactions could not be unlocked.',
+                                'ids': sorted([str(t_id) for t_id in conflict_ids])
+                            }
+                        ]
+                    },
                     status=drf_status.HTTP_409_CONFLICT
                 )
             for t in to_update:

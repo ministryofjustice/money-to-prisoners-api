@@ -430,6 +430,10 @@ class UnlockTransactionTestCase(
         )
 
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        errors = response.data['errors']
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0]['msg'], 'Some transactions could not be unlocked.')
+        self.assertEqual(errors[0]['ids'], sorted([str(t_id) for t_id in to_unlock]))
 
     def test_cannot_unlock_credited_transactions(self):
         logged_in_user = self.prison_clerks[0]
@@ -438,18 +442,21 @@ class UnlockTransactionTestCase(
         locked_qs = self._get_locked_transactions_qs(managing_prisons, user=logged_in_user)
         credited_qs = self._get_credited_transactions_qs(managing_prisons, user=logged_in_user)
 
-        to_unlock = (
-            list(locked_qs.values_list('id', flat=True)) +
-            list(credited_qs.values_list('id', flat=True)[:1])
-        )
+        locked_ids = list(locked_qs.values_list('id', flat=True))
+        credited_ids = list(credited_qs.values_list('id', flat=True)[:1])
+
         response = self.client.post(
             self._get_url(),
-            {'transaction_ids': to_unlock},
+            {'transaction_ids': locked_ids + credited_ids},
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
         )
 
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        errors = response.data['errors']
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0]['msg'], 'Some transactions could not be unlocked.')
+        self.assertEqual(errors[0]['ids'], sorted([str(t_id) for t_id in credited_ids]))
 
 
 class CreditTransactionTestCase(
@@ -525,12 +532,13 @@ class CreditTransactionTestCase(
 
         credited = credited_qs.count()
 
+        locked_by_other_user_ids = list(locked_by_other_user_qs.values_list('id', flat=True))
         data = [
             {'id': t_id, 'credited': True}
             for t_id in locked_qs.values_list('id', flat=True)
         ] + [
             {'id': t_id, 'credited': True}
-            for t_id in locked_by_other_user_qs.values_list('id', flat=True)
+            for t_id in locked_by_other_user_ids
         ]
 
         response = self.client.patch(
@@ -540,6 +548,10 @@ class CreditTransactionTestCase(
         )
 
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        errors = response.data['errors']
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0]['msg'], 'Some transactions could not be credited.')
+        self.assertEqual(errors[0]['ids'], sorted([str(t_id) for t_id in locked_by_other_user_ids]))
 
         # nothing changed in db
         self.assertEqual(credited_qs.count(), credited)
@@ -554,12 +566,13 @@ class CreditTransactionTestCase(
 
         credited = credited_qs.count()
 
+        available_ids = available_qs.values_list('id', flat=True)
         data = [
             {'id': t_id, 'credited': True}
             for t_id in locked_qs.values_list('id', flat=True)
         ] + [
             {'id': t_id, 'credited': True}
-            for t_id in available_qs.values_list('id', flat=True)
+            for t_id in available_ids
         ]
 
         response = self.client.patch(
@@ -569,6 +582,10 @@ class CreditTransactionTestCase(
         )
 
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        errors = response.data['errors']
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0]['msg'], 'Some transactions could not be credited.')
+        self.assertEqual(errors[0]['ids'], sorted([str(t_id) for t_id in available_ids]))
 
         # nothing changed in db
         self.assertEqual(credited_qs.count(), credited)
