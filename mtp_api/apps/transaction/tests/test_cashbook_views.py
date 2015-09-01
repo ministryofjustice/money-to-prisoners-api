@@ -83,93 +83,204 @@ class TransactionListTestCase(
             sorted(expected_ids)
         )
 
-    def test_DEFAULT_status_AND_prison_AND_user(self):
+
+class TransactionListWithDefaultsTestCase(TransactionListTestCase):
+
+    def test_returns_all_transactions(self):
+        """
+        Returns all transactions attached to all the prisons that
+        the logged-in user can manage.
+        """
         self._test_response_with_filters(filters={})
 
-    def test_WITH_status_available_DEFAULT_prison_AND_user(self):
+
+class TransactionListWithDefaultPrisonAndUserTestCase(TransactionListTestCase):
+
+    def test_filter_by_status_available(self):
+        """
+        Returns available transactions attached to all the prisons
+        that the logged-in user can manage.
+        """
         self._test_response_with_filters(filters={
             'status': TRANSACTION_STATUS.AVAILABLE
         })
 
-    def test_WITH_status_locked_DEFAULT_prison_AND_user(self):
+    def test_filter_by_status_locked(self):
+        """
+        Returns locked transactions attached to all the prisons
+        that the logged-in user can manage.
+        """
         self._test_response_with_filters(filters={
             'status': TRANSACTION_STATUS.LOCKED
         })
 
-    def test_WITH_status_credited_DEFAULT_prison_AND_user(self):
+    def test_filter_by_status_credited(self):
+        """
+        Returns credited transactions attached to all the prisons
+        that the logged-in user can manage.
+        """
         self._test_response_with_filters(filters={
             'status': TRANSACTION_STATUS.CREDITED
         })
 
-    def test_WITH_status_available_AND_prison_DEFAULT_user(self):
+
+class TransactionListWithDefaultUserTestCase(TransactionListTestCase):
+
+    def test_filter_by_status_available_and_prison(self):
+        """
+        Returns available transactions attached to the passed-in prison.
+        """
         self._test_response_with_filters(filters={
             'prison': self.prisons[0].pk
         })
 
-    def test_WITH_status_locked_AND_prison_DEFAULT_user(self):
+    def test_filter_by_status_locked_and_prison(self):
+        """
+        Returns locked transactions attached to the passed-in prison.
+        """
         self._test_response_with_filters(filters={
             'status': TRANSACTION_STATUS.LOCKED,
             'prison': self.prisons[0].pk
         })
 
-    def test_WITH_status_credited_AND_prison_DEFAULT_user(self):
+    def test_filter_by_status_credited_prison(self):
+        """
+        Returns crdited transactions attached to the passed-in prison.
+        """
         self._test_response_with_filters(filters={
             'status': TRANSACTION_STATUS.CREDITED,
             'prison': self.prisons[0].pk
         })
 
-    def test_WITH_status_available_AND_user_DEFAULT_prison(self):
+
+class TransactionListWithDefaultPrisonTestCase(TransactionListTestCase):
+
+    def test_filter_by_status_available_and_user(self):
+        """
+        Returns available transactions attached to all the prisons
+        that the passed-in user can manage.
+        """
         self._test_response_with_filters(filters={
             'user': self.prison_clerks[1].pk
         })
 
-    def test_WITH_status_locked_AND_user_DEFAULT_prison(self):
+    def test_filter_by_status_locked_and_user(self):
+        """
+        Returns transactions locked by the passed-in user.
+        """
         self._test_response_with_filters(filters={
             'status': TRANSACTION_STATUS.LOCKED,
             'user': self.prison_clerks[1].pk
         })
 
-    def test_WITH_status_credited_AND_user_DEFAULT_prison(self):
+    def test_filter_by_status_credited_and_user(self):
+        """
+        Returns transactions credited by the passed-in user.
+        """
         self._test_response_with_filters(filters={
             'status': TRANSACTION_STATUS.CREDITED,
             'user': self.prison_clerks[1].pk
         })
 
-    def test_WITH_status_available_AND_prison_AND_user(self):
+
+class TransactionListWithoutDefaultsTestCase(TransactionListTestCase):
+
+    def test_filter_by_status_available_and_prison_and_user(self):
+        """
+        Returns available transactions attached to the passed-in prison.
+        """
         self._test_response_with_filters(filters={
             'prison': self.prisons[0].pk,
             'user': self.prison_clerks[1].pk
         })
 
-    def test_WITH_status_locked_AND_prison_AND_user(self):
+    def test_filter_by_status_locked_and_prison_and_user(self):
+        """
+        Returns transactions locked by the passed-in user and
+        attached to the passed-in prison.
+        """
         self._test_response_with_filters(filters={
             'status': TRANSACTION_STATUS.LOCKED,
             'prison': self.prisons[0].pk,
             'user': self.prison_clerks[1].pk
         })
 
-    def test_WITH_status_credited_AND_prison_AND_user(self):
+    def test_filter_by_status_credited_and_prison_and_user(self):
+        """
+        Returns transactions credited by the passed-in user and
+        attached to the passed-in prison.
+        """
         self._test_response_with_filters(filters={
             'status': TRANSACTION_STATUS.CREDITED,
             'prison': self.prisons[0].pk,
             'user': self.prison_clerks[1].pk
         })
 
-    def test_WITH_prison_DEFAULT_status_user(self):
+
+class TransactionListWithDefaultStatusAndUserTestCase(TransactionListTestCase):
+
+    def test_filter_by_prison(self):
+        """
+        Returns all transactions attached to the passed-in prison.
+        """
         self._test_response_with_filters(filters={
             'prison': self.prisons[0].pk
         })
 
-    def test_WITH_prison_AND_user_DEFAULT_status(self):
+    def test_filter_by_multiple_prisons(self):
+        """
+        Returns all transactions attached to the passed-in prisons.
+        """
+
+        # logged-in user managing all the prisons
+        logged_in_user = self.prison_clerks[0]
+        logged_in_user.prisonusermapping.prisons.add(*self.prisons)
+        managing_prisons = list(get_prisons_for_user(logged_in_user))
+
+        url = self._get_url(**{
+            'prison[]': [p.pk for p in self.prisons]
+        })
+        response = self.client.get(
+            url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        expected_ids = [
+            t.pk for t in self.transactions if
+                t.prison in managing_prisons
+        ]
+        self.assertEqual(response.data['count'], len(expected_ids))
+        self.assertListEqual(
+            sorted([t['id'] for t in response.data['results']]),
+            sorted(expected_ids)
+        )
+
+
+class TransactionListWithDefaultStatusTestCase(TransactionListTestCase):
+
+    def test_filter_by_prison_and_user(self):
+        """
+        Returns all transactions attached to the passed-in prison.
+        """
         self._test_response_with_filters(filters={
             'prison': self.prisons[0].pk,
             'user': self.prison_clerks[1].pk
         })
 
-    def test_WITH_user_DEFAULT_status_prison(self):
+
+class TransactionListWithDefaultStatusAndPrisonTestCase(TransactionListTestCase):
+
+    def test_filter_by_user(self):
+        """
+        Returns all transactions managed by the passed-in user
+        """
         self._test_response_with_filters(filters={
             'user': self.prison_clerks[1].pk
         })
+
+
+class TransactionListInvalidValuesTestCase(TransactionListTestCase):
 
     def test_invalid_status_filter(self):
         logged_in_user = self.prison_clerks[0]
@@ -264,31 +375,6 @@ class TransactionListTestCase(
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count'], 0)
-
-    def test_multiple_prisons_passed_in(self):
-        # logged-in user managing all the prisons
-        logged_in_user = self.prison_clerks[0]
-        logged_in_user.prisonusermapping.prisons.add(*self.prisons)
-        managing_prisons = list(get_prisons_for_user(logged_in_user))
-
-        url = self._get_url(**{
-            'prison[]': [p.pk for p in self.prisons]
-        })
-        response = self.client.get(
-            url, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        expected_ids = [
-            t.pk for t in self.transactions if
-                t.prison in managing_prisons
-        ]
-        self.assertEqual(response.data['count'], len(expected_ids))
-        self.assertListEqual(
-            sorted([t['id'] for t in response.data['results']]),
-            sorted(expected_ids)
-        )
 
 
 class LockTransactionTestCase(
