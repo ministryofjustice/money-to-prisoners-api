@@ -46,8 +46,12 @@ class TransactionView(mixins.CreateModelMixin, mixins.UpdateModelMixin,
         except Transaction.DoesNotExist as e:
             return Response(
                 data={
-                    'error': ['Some transactions could not be refunded'],
-                    'conflicted': e.args[0]
+                    'errors': [
+                        {
+                            'msg': 'Some transactions could not be refunded',
+                            'ids': sorted([str(t_id) for t_id in e.args[0]])
+                        }
+                    ]
                 },
                 status=status.HTTP_409_CONFLICT
             )
