@@ -2,6 +2,7 @@ from rest_framework import mixins, viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.decorators import list_route
+from rest_framework.exceptions import ParseError
 
 from mtp_auth.permissions import BankAdminClientIDPermissions
 from transaction.models import Transaction
@@ -27,11 +28,14 @@ class TransactionView(mixins.CreateModelMixin, mixins.UpdateModelMixin,
             values = [v.lower() for v in status.split(',')]
 
             if len(values) > 0:
-                queryset = Transaction.objects.filter(
-                    **Transaction.STATUS_LOOKUP[values[0]])
-                for value in values[1:]:
-                    queryset = queryset | Transaction.objects.filter(
-                        **Transaction.STATUS_LOOKUP[value])
+                try:
+                    queryset = Transaction.objects.filter(
+                        **Transaction.STATUS_LOOKUP[values[0]])
+                    for value in values[1:]:
+                        queryset = queryset | Transaction.objects.filter(
+                            **Transaction.STATUS_LOOKUP[value])
+                except KeyError:
+                    raise ParseError()
 
         return queryset
 
@@ -43,7 +47,7 @@ class TransactionView(mixins.CreateModelMixin, mixins.UpdateModelMixin,
             return Response(
                 data={
                     'error': ['Some transactions could not be refunded'],
-                    'conflicted': e
+                    'conflicted': e.args[0]
                 },
                 status=status.HTTP_409_CONFLICT
             )

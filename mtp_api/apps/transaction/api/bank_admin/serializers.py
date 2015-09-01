@@ -66,7 +66,7 @@ class UpdateRefundedTransactionListSerializer(serializers.ListSerializer):
             **Transaction.STATUS_LOOKUP['refund_pending']).select_for_update()
         if len(update_set) != len(to_refund):
             raise Transaction.DoesNotExist(
-                set(to_refund) - {t.id for t in update_set}
+                list(set(to_refund) - {t.id for t in update_set})
             )
 
         update_set.update(refunded=True)

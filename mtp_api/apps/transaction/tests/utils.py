@@ -22,7 +22,7 @@ def random_reference(prisoner_number=None, prisoner_dob=None):
     )
 
 
-def generate_transactions_data(uploads=2, transaction_batch=30, status=None):
+def generate_transactions_data(uploads=2, transaction_batch=50, status=None):
     data_list = []
 
     class PrisonChooser(object):
@@ -95,7 +95,13 @@ def generate_transactions_data(uploads=2, transaction_batch=30, status=None):
                 # randomly choose the state of the transaction
                 trans_status = status
                 if not trans_status:
-                    trans_status, _ = random.choice(TRANSACTION_STATUS)
+                    trans_status = random.choice(
+                        [
+                            TRANSACTION_STATUS.LOCKED,
+                            TRANSACTION_STATUS.AVAILABLE,
+                            TRANSACTION_STATUS.CREDITED
+                        ]
+                    )
 
                 if trans_status == TRANSACTION_STATUS.LOCKED:
                     data.update({
