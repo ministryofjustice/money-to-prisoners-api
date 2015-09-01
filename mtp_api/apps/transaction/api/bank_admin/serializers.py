@@ -69,17 +69,18 @@ class UpdateRefundedTransactionListSerializer(serializers.ListSerializer):
                 list(set(to_refund) - {t.id for t in update_set})
             )
 
+        updated_transactions = list(update_set)
         update_set.update(refunded=True)
-        for t_id in to_refund:
-            transaction = Transaction()
-            transaction.id = t_id
+
+        for transaction in updated_transactions:
+            transaction.refunded = True
             transaction_refunded.send(
                 sender=Transaction,
                 transaction=transaction,
                 by_user=user
             )
 
-        return update_set
+        return updated_transactions
 
 
 class UpdateRefundedTransactionSerializer(serializers.ModelSerializer):
