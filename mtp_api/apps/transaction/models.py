@@ -8,8 +8,8 @@ from prison.models import Prison
 
 from .constants import TRANSACTION_STATUS, LOG_ACTIONS
 from .managers import TransactionQuerySet, LogManager
-from .signals import transaction_created, transaction_taken, \
-    transaction_released, transaction_credited
+from .signals import transaction_created, transaction_locked, \
+    transaction_unlocked, transaction_credited
 
 
 class Transaction(TimeStampedModel):
@@ -36,32 +36,32 @@ class Transaction(TimeStampedModel):
 
     received_at = models.DateTimeField(auto_now=False)
 
-    # set when a transaction is taken and unset if it gets released.
+    # set when a transaction is locked and unset if it gets unlocked.
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True)
 
     credited = models.BooleanField(default=False)
 
     STATUS_LOOKUP = {
-        TRANSACTION_STATUS.PENDING:   {'owner__isnull': False, 'credited': False},
+        TRANSACTION_STATUS.LOCKED:   {'owner__isnull': False, 'credited': False},
         TRANSACTION_STATUS.AVAILABLE: {'owner__isnull': True, 'credited': False},
         TRANSACTION_STATUS.CREDITED:  {'owner__isnull': False, 'credited': True}
     }
 
     objects = TransactionQuerySet.as_manager()
 
-    def take(self, by_user):
+    def lock(self, by_user):
         self.owner = by_user
         self.save()
 
-        transaction_taken.send(
+        transaction_locked.send(
             sender=self.__class__, transaction=self, by_user=by_user
         )
 
-    def release(self, by_user):
+    def unlock(self, by_user):
         self.owner = None
         self.save()
 
-        transaction_released.send(
+        transaction_unlocked.send(
             sender=self.__class__, transaction=self, by_user=by_user
         )
 
@@ -70,15 +70,16 @@ class Transaction(TimeStampedModel):
         self.save()
 
         transaction_credited.send(
-            sender=self.__class__, transaction=self, by_user=by_user
+            sender=self.__class__, transaction=self, by_user=by_user,
+            credited=credited
         )
 
     class Meta:
         ordering = ('received_at',)
         permissions = (
             ("view_transaction", "Can view transaction"),
-            ("take_transaction", "Can take transaction"),
-            ("release_transaction", "Can release transaction"),
+            ("lock_transaction", "Can lock transaction"),
+            ("unlock_transaction", "Can unlock transaction"),
             ("patch_credited_transaction", "Can patch credited transaction"),
         )
         index_together = [
@@ -108,16 +109,16 @@ def transaction_created_receiver(sender, transaction, by_user, **kwargs):
     Log.objects.transaction_created(transaction, by_user)
 
 
-@receiver(transaction_taken)
-def transaction_taken_receiver(sender, transaction, by_user, **kwargs):
-    Log.objects.transaction_taken(transaction, by_user)
+@receiver(transaction_locked)
+def transaction_locked_receiver(sender, transaction, by_user, **kwargs):
+    Log.objects.transaction_locked(transaction, by_user)
 
 
-@receiver(transaction_released)
-def transaction_released_receiver(sender, transaction, by_user, **kwargs):
-    Log.objects.transaction_released(transaction, by_user)
+@receiver(transaction_unlocked)
+def transaction_unlocked_receiver(sender, transaction, by_user, **kwargs):
+    Log.objects.transaction_unlocked(transaction, by_user)
 
 
 @receiver(transaction_credited)
-def transaction_credited_receiver(sender, transaction, by_user, **kwargs):
-    Log.objects.transaction_credited(transaction, by_user)
+def transaction_credited_receiver(sender, transaction, by_user, credited=True, **kwargs):
+    Log.objects.transaction_credited(transaction, by_user, credited=credited)

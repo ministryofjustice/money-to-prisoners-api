@@ -97,7 +97,7 @@ def generate_transactions_data(uploads=2, transaction_batch=30, status=None):
                 if not trans_status:
                     trans_status, _ = random.choice(TRANSACTION_STATUS)
 
-                if trans_status == TRANSACTION_STATUS.PENDING:
+                if trans_status == TRANSACTION_STATUS.LOCKED:
                     data.update({
                         'owner_id': prison_chooser.choose_user(prison),
                         'credited': False

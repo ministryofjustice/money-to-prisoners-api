@@ -1,4 +1,3 @@
-import random
 import urllib.parse
 
 from django.core.urlresolvers import reverse
@@ -8,15 +7,14 @@ from rest_framework import status
 
 from mtp_auth.models import PrisonUserMapping
 
-from transaction.models import Log
-from transaction.constants import TRANSACTION_STATUS, TAKE_LIMIT, LOG_ACTIONS
+from prison.models import Prison
+
+from transaction.models import Transaction, Log
+from transaction.constants import TRANSACTION_STATUS, LOCK_LIMIT, LOG_ACTIONS
+
 
 from .test_base import BaseTransactionViewTestCase, \
     TransactionRejectsRequestsWithoutPermissionTestMixin
-
-
-def get_users_for_prison(prison):
-    return [m.user for m in PrisonUserMapping.objects.filter(prisons=prison)]
 
 
 def get_prisons_for_user(user):
@@ -36,442 +34,444 @@ class CashbookTransactionRejectsRequestsWithoutPermissionTestMixin(
         return self.prison_clerks[0]
 
 
-class TransactionListTestCase(BaseTransactionViewTestCase):
+class TransactionListTestCase(
+    CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
+    BaseTransactionViewTestCase
+):
 
-    def test_cant_access(self):
-        """
-        GET on transactions endpoint should 403.
-        """
+    def _get_url(self, **filters):
         url = reverse('cashbook:transaction-list')
 
-        # authenticate, just in case
-        prison = [t.prison for t in self.transactions if t.prison][0]
-        user = get_users_for_prison(prison)[0]
+        filters['limit'] = 1000
+        return '{url}?{filters}'.format(
+            url=url, filters=urllib.parse.urlencode(filters)
+        )
 
+    def _test_response_with_filters(self, filters={}):
+        logged_in_user = self.prison_clerks[0]
+        logged_in_user.prisonusermapping.prisons.add(*self.prisons)
+        managing_prisons = list(get_prisons_for_user(logged_in_user))
+
+        url = self._get_url(**filters)
         response = self.client.get(
             url, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
         )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # check expected result
+        status_checker = self.STATUS_FILTERS[filters.get('status', None)]
+        if filters.get('prison'):
+            prison_checker = lambda t: t.prison and t.prison.pk in filters['prison'].split(',')
+        else:
+            prison_checker = lambda t: True
+        if filters.get('user'):
+            user_checker = lambda t: t.owner and t.owner.pk == filters['user']
+        else:
+            user_checker = lambda t: True
+
+        expected_ids = [
+            t.pk for t in self.transactions if
+                t.prison in managing_prisons and
+                status_checker(t) and
+                prison_checker(t) and
+                user_checker(t)
+        ]
+        self.assertEqual(response.data['count'], len(expected_ids))
+        self.assertListEqual(
+            sorted([t['id'] for t in response.data['results']]),
+            sorted(expected_ids)
+        )
+
+
+class TransactionListWithDefaultsTestCase(TransactionListTestCase):
+
+    def test_returns_all_transactions(self):
+        """
+        Returns all transactions attached to all the prisons that
+        the logged-in user can manage.
+        """
+        self._test_response_with_filters(filters={})
+
+
+class TransactionListWithDefaultPrisonAndUserTestCase(TransactionListTestCase):
+
+    def test_filter_by_status_available(self):
+        """
+        Returns available transactions attached to all the prisons
+        that the logged-in user can manage.
+        """
+        self._test_response_with_filters(filters={
+            'status': TRANSACTION_STATUS.AVAILABLE
+        })
+
+    def test_filter_by_status_locked(self):
+        """
+        Returns locked transactions attached to all the prisons
+        that the logged-in user can manage.
+        """
+        self._test_response_with_filters(filters={
+            'status': TRANSACTION_STATUS.LOCKED
+        })
+
+    def test_filter_by_status_credited(self):
+        """
+        Returns credited transactions attached to all the prisons
+        that the logged-in user can manage.
+        """
+        self._test_response_with_filters(filters={
+            'status': TRANSACTION_STATUS.CREDITED
+        })
+
+
+class TransactionListWithDefaultUserTestCase(TransactionListTestCase):
+
+    def test_filter_by_status_available_and_prison(self):
+        """
+        Returns available transactions attached to the passed-in prison.
+        """
+        self._test_response_with_filters(filters={
+            'prison': self.prisons[0].pk
+        })
+
+    def test_filter_by_status_locked_and_prison(self):
+        """
+        Returns locked transactions attached to the passed-in prison.
+        """
+        self._test_response_with_filters(filters={
+            'status': TRANSACTION_STATUS.LOCKED,
+            'prison': self.prisons[0].pk
+        })
+
+    def test_filter_by_status_credited_prison(self):
+        """
+        Returns crdited transactions attached to the passed-in prison.
+        """
+        self._test_response_with_filters(filters={
+            'status': TRANSACTION_STATUS.CREDITED,
+            'prison': self.prisons[0].pk
+        })
+
+
+class TransactionListWithDefaultPrisonTestCase(TransactionListTestCase):
+
+    def test_filter_by_status_available_and_user(self):
+        """
+        Returns available transactions attached to all the prisons
+        that the passed-in user can manage.
+        """
+        self._test_response_with_filters(filters={
+            'user': self.prison_clerks[1].pk
+        })
+
+    def test_filter_by_status_locked_and_user(self):
+        """
+        Returns transactions locked by the passed-in user.
+        """
+        self._test_response_with_filters(filters={
+            'status': TRANSACTION_STATUS.LOCKED,
+            'user': self.prison_clerks[1].pk
+        })
+
+    def test_filter_by_status_credited_and_user(self):
+        """
+        Returns transactions credited by the passed-in user.
+        """
+        self._test_response_with_filters(filters={
+            'status': TRANSACTION_STATUS.CREDITED,
+            'user': self.prison_clerks[1].pk
+        })
+
+
+class TransactionListWithoutDefaultsTestCase(TransactionListTestCase):
+
+    def test_filter_by_status_available_and_prison_and_user(self):
+        """
+        Returns available transactions attached to the passed-in prison.
+        """
+        self._test_response_with_filters(filters={
+            'prison': self.prisons[0].pk,
+            'user': self.prison_clerks[1].pk
+        })
+
+    def test_filter_by_status_locked_and_prison_and_user(self):
+        """
+        Returns transactions locked by the passed-in user and
+        attached to the passed-in prison.
+        """
+        self._test_response_with_filters(filters={
+            'status': TRANSACTION_STATUS.LOCKED,
+            'prison': self.prisons[0].pk,
+            'user': self.prison_clerks[1].pk
+        })
+
+    def test_filter_by_status_credited_and_prison_and_user(self):
+        """
+        Returns transactions credited by the passed-in user and
+        attached to the passed-in prison.
+        """
+        self._test_response_with_filters(filters={
+            'status': TRANSACTION_STATUS.CREDITED,
+            'prison': self.prisons[0].pk,
+            'user': self.prison_clerks[1].pk
+        })
+
+
+class TransactionListWithDefaultStatusAndUserTestCase(TransactionListTestCase):
+
+    def test_filter_by_prison(self):
+        """
+        Returns all transactions attached to the passed-in prison.
+        """
+        self._test_response_with_filters(filters={
+            'prison': self.prisons[0].pk
+        })
+
+    def test_filter_by_multiple_prisons(self):
+        """
+        Returns all transactions attached to the passed-in prisons.
+        """
+
+        # logged-in user managing all the prisons
+        logged_in_user = self.prison_clerks[0]
+        logged_in_user.prisonusermapping.prisons.add(*self.prisons)
+        managing_prisons = list(get_prisons_for_user(logged_in_user))
+
+        url = self._get_url(**{
+            'prison[]': [p.pk for p in self.prisons]
+        })
+        response = self.client.get(
+            url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        expected_ids = [
+            t.pk for t in self.transactions if
+                t.prison in managing_prisons
+        ]
+        self.assertEqual(response.data['count'], len(expected_ids))
+        self.assertListEqual(
+            sorted([t['id'] for t in response.data['results']]),
+            sorted(expected_ids)
+        )
+
+
+class TransactionListWithDefaultStatusTestCase(TransactionListTestCase):
+
+    def test_filter_by_prison_and_user(self):
+        """
+        Returns all transactions attached to the passed-in prison.
+        """
+        self._test_response_with_filters(filters={
+            'prison': self.prisons[0].pk,
+            'user': self.prison_clerks[1].pk
+        })
+
+
+class TransactionListWithDefaultStatusAndPrisonTestCase(TransactionListTestCase):
+
+    def test_filter_by_user(self):
+        """
+        Returns all transactions managed by the passed-in user
+        """
+        self._test_response_with_filters(filters={
+            'user': self.prison_clerks[1].pk
+        })
+
+
+class TransactionListInvalidValuesTestCase(TransactionListTestCase):
+
+    def test_invalid_status_filter(self):
+        logged_in_user = self.prison_clerks[0]
+        url = self._get_url(status='invalid')
+        response = self.client.get(
+            url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 0)
+
+    def test_invalid_user_filter(self):
+        logged_in_user = self.prison_clerks[0]
+        url = self._get_url(user='invalid')
+        response = self.client.get(
+            url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 0)
+
+    def test_invalid_prison_filter(self):
+        logged_in_user = self.prison_clerks[0]
+        url = self._get_url(prison='invalid')
+        response = self.client.get(
+            url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 0)
+
+    def test_prison_not_managed_by_loggedin_user(self):
+        logged_in_user = self.prison_clerks[0]
+        managing_prison_ids = get_prisons_for_user(logged_in_user).values_list('pk', flat=True)
+        non_managing_prisons = Prison.objects.exclude(pk__in=managing_prison_ids)
+
+        self.assertTrue(len(non_managing_prisons) > 0)
+
+        url = self._get_url(prison=non_managing_prisons[0].pk)
+        response = self.client.get(
+            url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 0)
+
+    def test_prison_not_managed_by_passed_in_user(self):
+        # logged-in user managing all the prisons
+        logged_in_user = self.prison_clerks[0]
+        logged_in_user.prisonusermapping.prisons.add(*self.prisons)
+
+        # passed-in user managing only prison #1
+        passed_in_user = self.prison_clerks[1]
+        passed_in_user.prisonusermapping.prisons.clear()
+        Transaction.objects.filter(
+            owner=passed_in_user, prison__isnull=False
+        ).update(prison=self.prisons[1])
+        passed_in_user.prisonusermapping.prisons.add(self.prisons[1])
+
+        # filtering by prison #0, passed-in user doesn't manage that one so it should
+        # return an empty list
+        url = self._get_url(
+            user=passed_in_user.pk,
+            prison=self.prisons[0].pk
+        )
+        response = self.client.get(
+            url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 0)
+
+    def test_logged_in_user_not_managing_prison(self):
+        # logged-in user managing only prison #1
+        logged_in_user = self.prison_clerks[0]
+        logged_in_user.prisonusermapping.prisons.clear()
+        logged_in_user.prisonusermapping.prisons.add(self.prisons[1])
+
+        # passed-in user managing all the prisons
+        passed_in_user = self.prison_clerks[1]
+        passed_in_user.prisonusermapping.prisons.add(*self.prisons)
+
+        # filtering by prison #0, logged-in user doesn't manage that one so it should
+        # return an empty list
+        url = self._get_url(
+            user=passed_in_user.pk,
+            prison=self.prisons[0].pk
+        )
+        response = self.client.get(
+            url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 0)
+
+
+class LockTransactionTestCase(
+    CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
+    BaseTransactionViewTestCase
+):
+    ENDPOINT_VERB = 'post'
+    transaction_batch = 200
+
+    def _get_url(self):
+        return reverse('cashbook:transaction-lock')
+
+    def setUp(self):
+        super(LockTransactionTestCase, self).setUp()
+
+        self.logged_in_user = self.prison_clerks[0]
+        self.logged_in_user.prisonusermapping.prisons.add(*self.prisons)
+
+    def _test_lock(self, already_locked_count, available_count=LOCK_LIMIT):
+        locked_qs = self._get_locked_transactions_qs(self.prisons, self.logged_in_user)
+        available_qs = self._get_available_transactions_qs(self.prisons)
+
+        # set nr of transactions locked by logged-in user to 'already_locked'
+        locked = locked_qs.values_list('pk', flat=True)
+        Transaction.objects.filter(
+            pk__in=[-1]+list(locked[:locked.count() - already_locked_count])
+        ).delete()
+
+        self.assertEqual(locked_qs.count(), already_locked_count)
+
+        # set nr of transactions available to 'available'
+        available = available_qs.values_list('pk', flat=True)
+        Transaction.objects.filter(
+            pk__in=[-1]+list(available[:available.count() - available_count])
+        ).delete()
+
+        self.assertEqual(available_qs.count(), available_count)
+
+        expected_locked = min(
+            already_locked_count + available_qs.count(),
+            LOCK_LIMIT
+        )
+
+        # make lock request
+        url = self._get_url()
+        response = self.client.post(
+            url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.logged_in_user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_303_SEE_OTHER)
+
+        # check that expected_locked got locked
+        self.assertEqual(locked_qs.count(), expected_locked)
+
+        return locked_qs
+
+    def test_lock_with_none_locked_already(self):
+        locked_transactions = self._test_lock(already_locked_count=0)
+
+        # check logs
         self.assertEqual(
-            response.status_code, status.HTTP_403_FORBIDDEN
+            Log.objects.filter(
+                user=self.logged_in_user,
+                action=LOG_ACTIONS.LOCKED,
+                transaction__id__in=locked_transactions.values_list('id', flat=True)
+            ).count(),
+            locked_transactions.count()
         )
 
+    def test_lock_with_max_locked_already(self):
+        self._test_lock(already_locked_count=LOCK_LIMIT)
 
-class TransactionListByPrisonTestCase(
-    CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
-    BaseTransactionViewTestCase
-):
+    def test_lock_with_some_locked_already(self):
+        self._test_lock(already_locked_count=(LOCK_LIMIT/2))
 
-    def _request_and_assert(self, status_param=None):
-        for prison in self.prisons:
-            expected_ids = [
-                t.pk for t in self.transactions if
-                    t.prison == prison and
-                    self.STATUS_FILTERS[status_param](t)
-            ]
-
-            expected_owners = get_users_for_prison(prison)
-            user = expected_owners[0]
-
-            url = self._get_url(user, prison, status=status_param)
-            response = self.client.get(
-                url, format='json',
-                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
-            )
-
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(response.data['count'], len(expected_ids))
-
-            self.assertListEqual(
-                sorted([t['id'] for t in response.data['results']]),
-                sorted(expected_ids)
-            )
-
-    def _get_url(self, user, prison, status=None):
-        url = reverse(
-            'cashbook:transaction-prison-list', kwargs={
-                'prison_id': prison.pk
-            }
-        )
-
-        params = {
-            'limit': 10000
-        }
-        if status:
-            params['status'] = status
-
-        return '{url}?{params}'.format(
-            url=url, params=urllib.parse.urlencode(params)
-        )
-
-    def test_fails_with_logged_in_managing_different_prison(self):
-        """
-        Tests that users managing a prison cannot access any
-        transactions belonging to other prisons.
-        """
-        logged_in_user_prison = self.prisons[0]
-        other_prison = self.prisons[1]
-
-        logged_in_user = get_users_for_prison(logged_in_user_prison)[0]
-
-        url = self._get_url(logged_in_user, other_prison)
-
-        response = self.client.get(
-            url, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
-    def test_all(self):
-        """
-        GET without params should return all transactions linked
-        to that prison.
-        """
-        self._request_and_assert()
-
-    def test_with_pending_status(self):
-        self._request_and_assert(
-            status_param=TRANSACTION_STATUS.PENDING
-        )
-
-    def test_with_available_status(self):
-        self._request_and_assert(
-            status_param=TRANSACTION_STATUS.AVAILABLE
-        )
-
-    def test_with_credited_status(self):
-        self._request_and_assert(
-            status_param=TRANSACTION_STATUS.CREDITED
-        )
+    def test_lock_with_some_locked_already_but_none_available(self):
+        self._test_lock(already_locked_count=(LOCK_LIMIT/2), available_count=0)
 
 
-class TransactionListByPrisonAndUserTestCase(
-    CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
-    BaseTransactionViewTestCase
-):
-
-    def _request_and_assert(self, status_param=None):
-        for owner in self.prison_clerks:
-            prisons = get_prisons_for_user(owner)
-
-            for prison in prisons:
-                expected_ids = [
-                    t.pk for t in self.transactions if
-                        t.prison == prison and
-                        t.owner == owner and
-                        self.STATUS_FILTERS[status_param](t)
-                ]
-                url = self._get_url(owner, prison, status=status_param)
-
-                response = self.client.get(
-                    url, format='json',
-                    HTTP_AUTHORIZATION=self.get_http_authorization_for_user(owner)
-                )
-
-                self.assertEqual(response.status_code, status.HTTP_200_OK)
-                self.assertEqual(response.data['count'], len(expected_ids))
-
-                self.assertListEqual(
-                    sorted([t['id'] for t in response.data['results']]),
-                    sorted(expected_ids)
-                )
-
-    def _get_url(self, user, prison, status=None):
-        url = reverse(
-            'cashbook:transaction-prison-user-list', kwargs={
-                'user_id': user.pk,
-                'prison_id': prison.pk
-            }
-        )
-
-        params = {
-            'limit': 10000
-        }
-        if status:
-            params['status'] = status
-
-        return '{url}?{params}'.format(
-            url=url, params=urllib.parse.urlencode(params)
-        )
-
-    def test_fails_with_logged_in_managing_different_prison(self):
-        """
-        Tests that users managing a prison cannot access any
-        transactions belonging to other prisons.
-        """
-        logged_in_user_prison = self.prisons[0]
-        other_prison = self.prisons[1]
-
-        logged_in_user = get_users_for_prison(logged_in_user_prison)[0]
-        other_user = get_users_for_prison(other_prison)[0]
-
-        url = self._get_url(other_user, other_prison)
-
-        response = self.client.get(
-            url, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
-    def test_all(self):
-        self._request_and_assert()
-
-    def test_with_pending_status(self):
-        self._request_and_assert(
-            status_param=TRANSACTION_STATUS.PENDING
-        )
-
-    def test_with_available_status(self):
-        self._request_and_assert(
-            status_param=TRANSACTION_STATUS.AVAILABLE
-        )
-
-    def test_with_credited_status(self):
-        self._request_and_assert(
-            status_param=TRANSACTION_STATUS.CREDITED
-        )
-
-
-class TransactionsTakeTestCase(
+class UnlockTransactionTestCase(
     CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
     BaseTransactionViewTestCase
 ):
     ENDPOINT_VERB = 'post'
 
-    def _get_url(self, user, prison, count=None):
-        url = reverse(
-            'cashbook:transaction-prison-user-take', kwargs={
-                'user_id': user.pk,
-                'prison_id': prison.pk
-            }
-        )
+    def _get_url(self):
+        return reverse('cashbook:transaction-unlock')
 
-        if count:
-            url += '?count={count}'.format(count=count)
+    def test_can_unlock_somebody_else_s_transactions(self):
+        logged_in_user = self.prison_clerks[0]
+        logged_in_user.prisonusermapping.prisons.add(*self.prisons)
+        locked_qs = self._get_locked_transactions_qs(self.prisons)
 
-        return url
-
-    def test_take_within_limit(self):
-        """
-        Tests that requesting n transactions with n <= TAKE_LIMIT
-        should work.
-        """
-        prison = self.prisons[0]
-        owner = get_users_for_prison(prison)[0]
-
-        count = 1
-
-        # delete pending transactions just to clean things up
-        self._get_pending_transactions_qs(prison, owner).delete()
-
-        # check no taken transactions in db
-        self.assertEqual(
-            self._get_pending_transactions_qs(prison, owner).count(),
-            0
-        )
-
-        # request
-        url = self._get_url(owner, prison, count)
+        to_unlock = list(locked_qs.values_list('id', flat=True))
         response = self.client.post(
-            url, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(owner)
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_303_SEE_OTHER)
-        self.assertEqual(
-            urlsplit(response['Location']).path,
-            reverse(
-                'cashbook:transaction-prison-user-list', kwargs={
-                    'user_id': owner.pk,
-                    'prison_id': prison.pk
-                }
-            )
-        )
-
-        # check 5 taken transactions in db
-        taken_transactions = self._get_pending_transactions_qs(prison, owner)
-        self.assertEqual(taken_transactions.count(), count)
-
-        # check logs
-        self.assertEqual(
-            Log.objects.filter(
-                user=owner,
-                action=LOG_ACTIONS.TAKEN,
-                transaction__id__in=taken_transactions.values_list('id', flat=True)
-            ).count(),
-            count
-        )
-
-    def test_nobody_else_can_take_transactions_for_others(self):
-        """
-        Tests that nobody managing a prison should be able to
-        take transactions on behalf of other users.
-        """
-        prison = self.prisons[0]
-        users = get_users_for_prison(prison)
-        self.assertTrue(len(users) >= 2)
-
-        # We need 2 users as we want to test that logged_in_user
-        # cannot take transactions on behalf of transactions_owner.
-        logged_in_user = users[0]
-        transactions_owner = users[1]
-
-        # delete pending transactions just to clean things up
-        self._get_pending_transactions_qs(prison, transactions_owner).delete()
-
-        # check no taken transactions in db
-        self.assertEqual(
-            self._get_pending_transactions_qs(prison, transactions_owner).count(),
-            0
-        )
-
-        # request
-        url = self._get_url(transactions_owner, prison, 1)
-        response = self.client.post(
-            url, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
-        # check no taken transactions in db as the request failed
-        self.assertEqual(
-            self._get_pending_transactions_qs(prison, transactions_owner).count(),
-            0
-        )
-
-    def test_fails_when_taking_too_many(self):
-        """
-        Tests that fails when trying to take more than TAKE_LIMIT.
-        """
-        user = self.prison_clerks[0]
-        prison = get_prisons_for_user(user)[0]
-
-        # clean things up
-        self._get_pending_transactions_qs(prison).update(owner=None)
-
-        # make sure we have enough available transactions
-        self.assertTrue(
-            self._get_available_transactions_qs(prison).count() > TAKE_LIMIT
-        )
-
-        # check no taken transactions in db
-        self.assertEqual(
-            self._get_pending_transactions_qs(prison, user).count(), 0
-        )
-
-        http_authorization_header = self.get_http_authorization_for_user(user)
-
-        # request TAKE_LIMIT-1
-        count = TAKE_LIMIT-1
-
-        url = self._get_url(user, prison, count)
-        response = self.client.post(
-            url, format='json',
-            HTTP_AUTHORIZATION=http_authorization_header
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_303_SEE_OTHER)
-
-        # check TAKE_LIMIT-1 taken transactions in db
-        self.assertEqual(
-            self._get_pending_transactions_qs(prison, user).count(), count
-        )
-
-        # request 2 more => should fail
-        url = self._get_url(user, prison, 2)
-        response = self.client.post(
-            url, format='json',
-            HTTP_AUTHORIZATION=http_authorization_header
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-        # check still TAKE_LIMIT-1 taken transactions in db
-        self.assertEqual(
-            self._get_pending_transactions_qs(prison, user).count(), count
-        )
-
-
-class TransactionsReleaseTestCase(
-    CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
-    BaseTransactionViewTestCase
-):
-    ENDPOINT_VERB = 'post'
-
-    def _get_url(self, user, prison):
-        return reverse(
-            'cashbook:transaction-prison-user-release', kwargs={
-                'user_id': user.pk,
-                'prison_id': prison.pk
-            }
-        )
-
-    def test_cannot_release_somebody_else_s_transactions_in_different_prison(self):
-        """
-        Tests that logged_in_user managing prison1 cannot release any
-        transactions for prison2.
-        """
-        prison1 = self.prisons[0]
-        prison2 = self.prisons[1]
-
-        logged_in_user = get_users_for_prison(prison1)[0]
-        transactions_owner = get_users_for_prison(prison2)[0]
-
-        pending_transactions = list(
-            self._get_pending_transactions_qs(prison2, transactions_owner)
-        )
-
-        # if this starts failing, we need to iterate over users and get the
-        # first user with pending transactions.
-        self.assertTrue(len(pending_transactions) > 0)
-
-        # request
-        url = self._get_url(transactions_owner, prison2)
-        response = self.client.post(
-            url,
-            {'transaction_ids': [t.id for t in pending_transactions]},
-            format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
-    def test_can_release_somebody_else_s_transactions(self):
-        """
-        Tests that anybody managing the same prison can release
-        somebody else's pending transactions.
-        """
-        # We need 2 users as we want to test that logged_in_user
-        # can release transactions on behalf of transactions_owner.
-        prison = self.prisons[0]
-        users = get_users_for_prison(prison)
-        self.assertTrue(len(users) >= 2)
-
-        logged_in_user = users[0]
-        transactions_owner = users[1]
-
-        pending_transactions = list(
-            self._get_pending_transactions_qs(prison, transactions_owner)
-        )
-
-        # if this starts failing, we need to iterate over users and get the
-        # first user with pending transactions.
-        self.assertTrue(len(pending_transactions) > 0)
-
-        # how many transactions should we release?
-        to_release = random.randint(1, len(pending_transactions))
-        transactions_to_release = pending_transactions[:to_release]
-
-        currently_available = self._get_available_transactions_qs(prison).count()
-
-        # request
-        url = self._get_url(transactions_owner, prison)
-        response = self.client.post(
-            url,
-            {'transaction_ids': [t.id for t in transactions_to_release]},
+            self._get_url(),
+            {'transaction_ids': to_unlock},
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
         )
@@ -479,357 +479,242 @@ class TransactionsReleaseTestCase(
         self.assertEqual(response.status_code, status.HTTP_303_SEE_OTHER)
         self.assertEqual(
             urlsplit(response['Location']).path,
-            reverse(
-                'cashbook:transaction-prison-user-list', kwargs={
-                    'user_id': transactions_owner.pk,
-                    'prison_id': prison.pk
-                }
-            )
+            reverse('cashbook:transaction-list')
         )
 
-        # check pending transactions == -to_release
-        self.assertEqual(
-            self._get_pending_transactions_qs(prison, transactions_owner).count(),
-            len(pending_transactions) - to_release
-        )
-
-        # check that available transactions == +to_release
-        self.assertEqual(
-            self._get_available_transactions_qs(prison).count(),
-            currently_available + to_release
-        )
+        self.assertEqual(locked_qs.count(), 0)
 
         # check logs
         self.assertEqual(
             Log.objects.filter(
-                user=logged_in_user, action=LOG_ACTIONS.RELEASED,
-                transaction__id__in=[t.id for t in transactions_to_release]
+                user=logged_in_user,
+                action=LOG_ACTIONS.UNLOCKED,
+                transaction__id__in=to_unlock
             ).count(),
-            to_release
+            len(to_unlock)
         )
 
-    def test_cannot_release_transactions_with_mismatched_url(self):
-        """
-        Tests that if we try to release all transactions_owner's
-        taken transactions + a logged_in_user taken transaction
-        =>
-        it fails
-        """
-        prison = self.prisons[0]
-        users = get_users_for_prison(prison)
-        self.assertTrue(len(users) >= 2)
+    def test_cannot_unlock_somebody_else_s_transactions_in_different_prison(self):
+        # logged-in user managing prison #0
+        logged_in_user = self.prison_clerks[0]
+        logged_in_user.prisonusermapping.prisons.clear()
+        logged_in_user.prisonusermapping.prisons.add(self.prisons[0])
 
-        logged_in_user = users[0]
-        transactions_owner = users[1]
+        # other user managing prison #1
+        other_user = self.prison_clerks[1]
+        other_user.prisonusermapping.prisons.add(self.prisons[1])
 
-        prison = get_prisons_for_user(transactions_owner)[0]
+        locked_qs = self._get_locked_transactions_qs(self.prisons, other_user)
+        locked_qs.update(prison=self.prisons[1])
 
-        pending_transactions_owner = list(
-            self._get_pending_transactions_qs(prison, transactions_owner)
-        )
-        pending_transactions_logged_in = list(
-            self._get_pending_transactions_qs(prison, logged_in_user)
-        )
-
-        # if this starts failing, we need to iterate over users and get the
-        # first user with pending transactions.
-        self.assertTrue(len(pending_transactions_owner) > 0)
-        self.assertTrue(len(pending_transactions_logged_in) > 0)
-
-        transactions_to_release = pending_transactions_owner + pending_transactions_logged_in[:1]
-
-        url = self._get_url(transactions_owner, prison)
+        to_unlock = locked_qs.values_list('id', flat=True)
         response = self.client.post(
-            url,
-            {'transaction_ids': [t.id for t in transactions_to_release]},
+            self._get_url(),
+            {'transaction_ids': to_unlock},
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
         )
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        errors = response.data['errors']
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0]['msg'], 'Some transactions could not be unlocked.')
+        self.assertEqual(errors[0]['ids'], sorted([str(t_id) for t_id in to_unlock]))
 
-        # check nothing changed in the db
-        self.assertEqual(
-            self._get_pending_transactions_qs(prison, transactions_owner).count(),
-            len(pending_transactions_owner)
-        )
+    def test_cannot_unlock_credited_transactions(self):
+        logged_in_user = self.prison_clerks[0]
+        managing_prisons = list(get_prisons_for_user(logged_in_user))
 
-        self.assertEqual(
-            self._get_pending_transactions_qs(prison, logged_in_user).count(),
-            len(pending_transactions_logged_in)
-        )
+        locked_qs = self._get_locked_transactions_qs(managing_prisons, user=logged_in_user)
+        credited_qs = self._get_credited_transactions_qs(managing_prisons, user=logged_in_user)
 
-    def test_cannot_release_credited_transactions(self):
-        """
-        Tests that if we try to release all pending transactions +
-        a credited transaction
-        =>
-        it fails
-        """
-        prison = self.prisons[0]
-        users = get_users_for_prison(prison)
-        self.assertTrue(len(users) >= 2)
+        locked_ids = list(locked_qs.values_list('id', flat=True))
+        credited_ids = list(credited_qs.values_list('id', flat=True)[:1])
 
-        logged_in_user = users[0]
-        transactions_owner = users[1]
-
-        pending_transactions = list(
-            self._get_pending_transactions_qs(prison, transactions_owner)
-        )
-        credited_transactions = list(
-            self._get_credited_transactions_qs(transactions_owner, prison)
-        )
-
-        # if this starts failing, we need to iterate over users and get the
-        # first user with pending transactions.
-        self.assertTrue(len(pending_transactions) > 0)
-        self.assertTrue(len(credited_transactions) > 0)
-
-        transactions_to_release = pending_transactions + credited_transactions[:1]
-
-        url = self._get_url(transactions_owner, prison)
         response = self.client.post(
-            url,
-            {'transaction_ids': [t.id for t in transactions_to_release]},
+            self._get_url(),
+            {'transaction_ids': locked_ids + credited_ids},
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
         )
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-        # check nothing changed in the db
-        self.assertEqual(
-            self._get_pending_transactions_qs(prison, transactions_owner).count(),
-            len(pending_transactions)
-        )
-
-        self.assertEqual(
-            self._get_credited_transactions_qs(transactions_owner, prison).count(),
-            len(credited_transactions)
-        )
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        errors = response.data['errors']
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0]['msg'], 'Some transactions could not be unlocked.')
+        self.assertEqual(errors[0]['ids'], sorted([str(t_id) for t_id in credited_ids]))
 
 
-class TransactionsPatchTestCase(
+class CreditTransactionTestCase(
     CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
     BaseTransactionViewTestCase
 ):
     ENDPOINT_VERB = 'patch'
 
-    def _get_url(self, user, prison):
-        return reverse(
-            'cashbook:transaction-prison-user-list', kwargs={
-                'user_id': user.pk,
-                'prison_id': prison.pk
-            }
-        )
+    def _get_url(self, **filters):
+        return reverse('cashbook:transaction-list')
 
-    def test_cannot_patch_somebody_else_s_transactions(self):
-        """
-        Tests that only the owner of a transaction (who loked it)
-        can patch it.
-        """
-        prison = self.prisons[0]
-        users = get_users_for_prison(prison)
+    def test_credit_uncredit_transactions(self):
+        logged_in_user = self.prison_clerks[0]
+        managing_prisons = list(get_prisons_for_user(logged_in_user))
 
-        logged_in_user = users[0]
-        transactions_owner = users[1]
+        locked_qs = self._get_locked_transactions_qs(managing_prisons, logged_in_user)
+        credited_qs = self._get_credited_transactions_qs(managing_prisons, logged_in_user)
 
-        pending_transactions = list(
-            self._get_pending_transactions_qs(prison, transactions_owner)
-        )
+        self.assertTrue(locked_qs.count() > 0)
+        self.assertTrue(credited_qs.count() > 0)
 
-        # if this starts failing, we need to iterate over users and get the
-        # first user with pending transactions.
-        self.assertTrue(len(pending_transactions) > 0)
+        to_credit = list(locked_qs.values_list('id', flat=True))
+        to_uncredit = list(credited_qs.values_list('id', flat=True))
 
-        # request
-        url = self._get_url(transactions_owner, prison)
+        data = [
+            {'id': t_id, 'credited': True} for t_id in to_credit
+        ] + [
+            {'id': t_id, 'credited': False} for t_id in to_uncredit
+        ]
+
         response = self.client.patch(
-            url,
-            {'transaction_ids': [t.id for t in pending_transactions]},
+            self._get_url(), data=data,
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
         )
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
-    def test_cannot_path_non_pending_transactions(self):
-        """
-        Tests that non-pending transactions cannot be marked as credited.
-        """
-        prison = self.prisons[0]
-        user = get_users_for_prison(prison)[0]
-
-        pending_transactions = list(
-            self._get_pending_transactions_qs(prison, user)
-        )
-
-        available_transactions = list(
-            self._get_available_transactions_qs(prison)
-        )
-
-        # if this starts failing, we need to iterate over users and get the
-        # first user with pending transactions.
-        self.assertTrue(len(pending_transactions) > 0)
-        self.assertTrue(len(available_transactions) > 0)
-
-        transactions_to_credit = pending_transactions + available_transactions[:1]
-
-        # request
-        url = self._get_url(user, prison)
-        response = self.client.patch(
-            url,
-            {'transaction_ids': [t.id for t in transactions_to_credit]},
-            format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-        # check nothing changed in the db
-        self.assertEqual(
-            self._get_pending_transactions_qs(prison, user).count(),
-            len(pending_transactions)
-        )
-
-        self.assertEqual(
-            self._get_available_transactions_qs(prison).count(),
-            len(available_transactions)
-        )
-
-    def test_mark_pending_transaction_as_credited(self):
-        """
-        Tests that pending owned transactions can be marked as
-        credited.
-        """
-        prison = self.prisons[0]
-        user = get_users_for_prison(prison)[0]
-
-        pending_transactions = list(
-            self._get_pending_transactions_qs(prison, user)
-        )
-
-        credited_transactions = list(
-            self._get_credited_transactions_qs(user, prison)
-        )
-
-        # if this starts failing, we need to iterate over users and get the
-        # first user with pending transactions.
-        self.assertTrue(len(pending_transactions) > 0)
-
-        # how many transactions should we credit?
-        to_credit = random.randint(1, len(pending_transactions))
-        transactions_to_credit = pending_transactions[:to_credit]
-
-        # request
-        url = self._get_url(user, prison)
-        data = [
-            {
-                'id': t.id,
-                'credited': True
-            } for t in transactions_to_credit
-        ]
-        response = self.client.patch(
-            url, data=data, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
-        )
-
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
-        # check changes in db
+        # check db
         self.assertEqual(
-            self._get_pending_transactions_qs(prison, user).count(),
-            len(pending_transactions) - to_credit
+            credited_qs.filter(id__in=to_credit).count(), len(to_credit)
         )
-
         self.assertEqual(
-            self._get_credited_transactions_qs(user, prison).filter(id__in=[
-                t.id for t in transactions_to_credit
-            ]).count(),
-            to_credit
-        )
-
-        self.assertEqual(
-            self._get_credited_transactions_qs(user, prison).count(),
-            len(credited_transactions) + to_credit
+            locked_qs.filter(id__in=to_uncredit).count(), len(to_uncredit)
         )
 
         # check logs
         self.assertEqual(
             Log.objects.filter(
-                user=user, action=LOG_ACTIONS.CREDITED,
-                transaction__id__in=[t.id for t in transactions_to_credit]
+                user=logged_in_user,
+                action=LOG_ACTIONS.CREDITED,
+                transaction__id__in=to_credit
             ).count(),
-            to_credit
+            len(to_credit)
         )
 
-    def test_invalid_data(self):
-        """
-        Tests that if the data passed to the patch endpoint is invalid
-        =>
-        it fails
-        """
-        prison = self.prisons[0]
-        user = get_users_for_prison(prison)[0]
-
-        pending_transactions = list(
-            self._get_pending_transactions_qs(prison, user)
+        self.assertEqual(
+            Log.objects.filter(
+                user=logged_in_user,
+                action=LOG_ACTIONS.UNCREDITED,
+                transaction__id__in=to_uncredit
+            ).count(),
+            len(to_uncredit)
         )
 
-        # if this starts failing, we need to iterate over users and get the
-        # first user with pending transactions.
-        self.assertTrue(len(pending_transactions) > 0)
+    def test_cannot_credit_somebody_else_s_transactions(self):
+        logged_in_user = self.prison_clerks[0]
+        other_user = self.prison_clerks[1]
 
-        # how many transactions should we credit?
-        to_credit = random.randint(1, len(pending_transactions))
-        transactions_to_credit = pending_transactions[:to_credit]
+        locked_qs = self._get_locked_transactions_qs(self.prisons, logged_in_user)
+        credited_qs = self._get_credited_transactions_qs(self.prisons, logged_in_user)
+        locked_by_other_user_qs = self._get_locked_transactions_qs(self.prisons, other_user)
 
-        # request
-        url = self._get_url(user, prison)
+        credited = credited_qs.count()
 
-        # invalid data format
-        invalid_data_list = [
-            # invalid data format, should be a list not a dict
-            {
-                'msg': 'Invalid data format, dict instead of list',
-                'data': {
-                    'something': [
-                        {
-                            'id': t.id,
-                            'credited': True
-                        } for t in transactions_to_credit
-                    ]
-                },
-            },
-
-            # missing ids
-            {
-                'msg': 'Missing ids',
-                'data': [
-                    {
-                        'credited': True
-                    } for t in transactions_to_credit
-                ],
-            },
-
-            # misspelt credited
-            {
-                'msg': 'Misspelt credited',
-                'data': [
-                    {
-                        'id': t.id,
-                        'credit': True
-                    } for t in transactions_to_credit
-                ]
-            }
+        locked_by_other_user_ids = list(locked_by_other_user_qs.values_list('id', flat=True))
+        data = [
+            {'id': t_id, 'credited': True}
+            for t_id in locked_qs.values_list('id', flat=True)
+        ] + [
+            {'id': t_id, 'credited': True}
+            for t_id in locked_by_other_user_ids
         ]
-        for data in invalid_data_list:
-            response = self.client.patch(
-                url, data=data['data'], format='json',
-                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
-            )
-            self.assertEqual(
-                response.status_code,
-                status.HTTP_400_BAD_REQUEST,
-                'Should fail because: {msg}'.format(msg=data['msg'])
-            )
+
+        response = self.client.patch(
+            self._get_url(), data=data,
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        errors = response.data['errors']
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0]['msg'], 'Some transactions could not be credited.')
+        self.assertEqual(errors[0]['ids'], sorted([str(t_id) for t_id in locked_by_other_user_ids]))
+
+        # nothing changed in db
+        self.assertEqual(credited_qs.count(), credited)
+
+    def test_cannot_credit_non_locked_transactions(self):
+        logged_in_user = self.prison_clerks[0]
+        managing_prisons = list(get_prisons_for_user(logged_in_user))
+
+        locked_qs = self._get_locked_transactions_qs(managing_prisons, logged_in_user)
+        credited_qs = self._get_credited_transactions_qs(self.prisons, logged_in_user)
+        available_qs = self._get_available_transactions_qs(managing_prisons)
+
+        credited = credited_qs.count()
+
+        available_ids = available_qs.values_list('id', flat=True)
+        data = [
+            {'id': t_id, 'credited': True}
+            for t_id in locked_qs.values_list('id', flat=True)
+        ] + [
+            {'id': t_id, 'credited': True}
+            for t_id in available_ids
+        ]
+
+        response = self.client.patch(
+            self._get_url(), data=data,
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        errors = response.data['errors']
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0]['msg'], 'Some transactions could not be credited.')
+        self.assertEqual(errors[0]['ids'], sorted([str(t_id) for t_id in available_ids]))
+
+        # nothing changed in db
+        self.assertEqual(credited_qs.count(), credited)
+
+    def test_invalid_format(self):
+        logged_in_user = self.prison_clerks[0]
+
+        response = self.client.patch(
+            self._get_url(), data={},
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_missing_ids(self):
+        logged_in_user = self.prison_clerks[0]
+
+        response = self.client.patch(
+            self._get_url(), data=[
+                {'credited': True}
+            ],
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_misspelt_credit(self):
+        logged_in_user = self.prison_clerks[0]
+        managing_prisons = list(get_prisons_for_user(logged_in_user))
+
+        locked_qs = self._get_locked_transactions_qs(managing_prisons, logged_in_user)
+
+        data = [
+            {'id': t_id, 'credted': True}
+            for t_id in locked_qs.values_list('id', flat=True)
+        ]
+
+        response = self.client.patch(
+            self._get_url(), data=data,
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

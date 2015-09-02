@@ -1,9 +1,12 @@
 import django_filters
 
+from django.contrib.auth.models import User
 from django.db import transaction
 from django.http import HttpResponseRedirect
+from django.views.generic import View
 
-from rest_framework import mixins, viewsets, filters, status, exceptions
+from rest_framework import generics, filters, status as drf_status
+from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
@@ -12,13 +15,12 @@ from mtp_auth.models import PrisonUserMapping
 from mtp_auth.permissions import CashbookClientIDPermissions
 from prison.models import Prison
 
+from transaction.constants import TRANSACTION_STATUS, LOCK_LIMIT
 from transaction.models import Transaction
-from transaction.constants import TRANSACTION_STATUS, TAKE_LIMIT, \
-    DEFAULT_SLICE_SIZE
 
 from .serializers import TransactionSerializer, \
     CreditedOnlyTransactionSerializer
-from .permissions import IsOwner, IsOwnPrison, TransactionPermissions
+from .permissions import TransactionPermissions
 
 
 class StatusChoiceFilter(django_filters.ChoiceFilter):
@@ -32,16 +34,17 @@ class StatusChoiceFilter(django_filters.ChoiceFilter):
         return qs
 
 
-class TransactionStatusFilter(django_filters.FilterSet):
+class TransactionListFilter(django_filters.FilterSet):
 
     status = StatusChoiceFilter(choices=TRANSACTION_STATUS.choices)
+    prison = django_filters.ModelMultipleChoiceFilter(queryset=Prison.objects.all())
+    user = django_filters.ModelChoiceFilter(name='owner', queryset=User.objects.all())
 
     class Meta:
         model = Transaction
-        fields = ['status']
 
 
-class OwnPrisonListModelMixin(object):
+class TransactionViewMixin(object):
 
     def get_prison_set_for_user(self):
         try:
@@ -50,117 +53,153 @@ class OwnPrisonListModelMixin(object):
             return Prison.objects.none()
 
     def get_queryset(self):
-        qs = super(OwnPrisonListModelMixin, self).get_queryset()
-        return qs.filter(prison__in=self.get_prison_set_for_user())
+        return Transaction.objects.filter(prison__in=self.get_prison_set_for_user())
 
 
-class TransactionView(
-    OwnPrisonListModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet,
-):
-    queryset = Transaction.objects.all()
+class GetTransactions(TransactionViewMixin, generics.ListAPIView):
     serializer_class = TransactionSerializer
-    patch_serializer_class = CreditedOnlyTransactionSerializer
-    filter_backends = (
-        filters.DjangoFilterBackend,
-        filters.OrderingFilter,
-    )
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_class = TransactionListFilter
+    action = 'list'
 
-    filter_class = TransactionStatusFilter
-
-    ordering = ('received_at',)
     permission_classes = (
         IsAuthenticated, CashbookClientIDPermissions,
-        IsOwnPrison, TransactionPermissions
+        TransactionPermissions
     )
 
-    def get_queryset(self, filter_by_user=True, filter_by_prison=True):
-        qs = super(TransactionView, self).get_queryset()
 
-        prison_id = self.kwargs.get('prison_id')
-        user_id = self.kwargs.get('user_id')
+class CreditTransactions(TransactionViewMixin, generics.GenericAPIView):
+    serializer_class = CreditedOnlyTransactionSerializer
+    action = 'patch_credited'
 
-        if prison_id and filter_by_prison:
-            qs = qs.filter(prison_id=prison_id)
+    permission_classes = (
+        IsAuthenticated, CashbookClientIDPermissions,
+        TransactionPermissions
+    )
 
-        if user_id and filter_by_user:
-            qs = qs.filter(owner__id=user_id)
+    def get_serializer(self, *args, **kwargs):
+        kwargs['context'] = {
+            'request': self.request,
+            'format': self.format_kwarg,
+            'view': self
+        }
+        return self.serializer_class(*args, **kwargs)
 
-        return qs
+    def patch(self, request, format=None):
+        deserialized = self.get_serializer(data=request.data, many=True)
+        deserialized.is_valid(raise_exception=True)
 
-    def take(self, request, *args, **kwargs):
-        self.permission_classes = list(self.permission_classes) + [IsOwner]
-        self.check_permissions(request)
-
-        slice_size = self.get_slice_limit(request)
-
+        transaction_ids = [x['id'] for x in deserialized.data]
         with transaction.atomic():
-            pending = self.get_queryset(filter_by_user=False).available().select_for_update()
-            slice_pks = pending.values_list('pk', flat=True)[:slice_size]
+            to_update = self.get_queryset().filter(
+                owner=request.user,
+                pk__in=transaction_ids
+            ).select_for_update()
 
-            queryset = self.get_queryset(filter_by_user=False).filter(pk__in=slice_pks)
-            for t in queryset:
-                t.take(by_user=request.user)
+            ids_to_update = [t.id for t in to_update]
+            conflict_ids = set(transaction_ids) - set(ids_to_update)
 
-            return HttpResponseRedirect(
-                reverse('cashbook:transaction-prison-user-list', kwargs=kwargs),
-                status=status.HTTP_303_SEE_OTHER
+            if conflict_ids:
+                return Response(
+                    data={
+                        'errors': [
+                            {
+                                'msg': 'Some transactions could not be credited.',
+                                'ids': sorted([str(t_id) for t_id in conflict_ids])
+                            }
+                        ]
+                    },
+                    status=drf_status.HTTP_409_CONFLICT
+                )
+
+            for item in deserialized.data:
+                obj = to_update.get(pk=item['id'])
+                obj.credit(credited=item['credited'], by_user=request.user)
+
+        return Response(status=drf_status.HTTP_204_NO_CONTENT)
+
+
+class TransactionList(View):
+    """
+    Dispatcher View that dispatches to GetTransactions or CreditTransactions
+    depending on the method.
+
+    The standard logic would not work in this case as:
+    - the two endpoints need to do something quite different so better if
+        they belong to different classes
+    - we need specific permissions for the two endpoints so it's cleaner to
+        use the same TransactionPermissions for all the views
+    """
+
+    def get(self, request, *args, **kwargs):
+        return GetTransactions.as_view()(request, *args, **kwargs)
+
+    def patch(self, request, *args, **kwargs):
+        return CreditTransactions.as_view()(request, *args, **kwargs)
+
+
+class LockTransactions(TransactionViewMixin, APIView):
+    action = 'lock'
+
+    permission_classes = (
+        IsAuthenticated, CashbookClientIDPermissions,
+        TransactionPermissions
+    )
+
+    def post(self, request, format=None):
+        with transaction.atomic():
+            locked_count = self.get_queryset().locked().filter(owner=self.request.user).count()
+            if locked_count < LOCK_LIMIT:
+                slice_size = LOCK_LIMIT-locked_count
+                to_lock = self.get_queryset().available().select_for_update()
+                slice_pks = to_lock.values_list('pk', flat=True)[:slice_size]
+
+                queryset = self.get_queryset().filter(pk__in=slice_pks)
+                for t in queryset:
+                    t.lock(by_user=request.user)
+
+            redirect_url = '{url}?user={user}&status={status}'.format(
+                url=reverse('cashbook:transaction-list'),
+                user=request.user.pk,
+                status=TRANSACTION_STATUS.LOCKED
             )
+            return HttpResponseRedirect(redirect_url, status=drf_status.HTTP_303_SEE_OTHER)
 
-    def get_slice_limit(self, request):
-        slice_size = int(request.query_params.get('count', DEFAULT_SLICE_SIZE))
-        available_to_take = max(0, TAKE_LIMIT - self.queryset.pending().filter(owner=request.user).count())
-        if available_to_take < slice_size:
-            raise exceptions.ParseError(detail='Can\'t take more than %s transactions.' % TAKE_LIMIT)
 
-        return slice_size
+class UnlockTransactions(TransactionViewMixin, APIView):
+    action = 'unlock'
 
-    def release(self, request, *args, **kwargs):
+    permission_classes = (
+        IsAuthenticated, CashbookClientIDPermissions,
+        TransactionPermissions
+    )
 
+    def post(self, request, format=None):
         transaction_ids = request.data.get('transaction_ids', [])
         with transaction.atomic():
-            to_update = self.get_queryset().pending().filter(pk__in=transaction_ids).select_for_update()
-            if len(to_update) != len(transaction_ids):
+            to_update = self.get_queryset().locked().filter(pk__in=transaction_ids).select_for_update()
+
+            ids_to_update = [t.id for t in to_update]
+            conflict_ids = set(transaction_ids) - set(ids_to_update)
+
+            if conflict_ids:
                 return Response(
-                    data={'transaction_ids': ['Some transactions could not be released.']},
-                    status=status.HTTP_400_BAD_REQUEST
+                    data={
+                        'errors': [
+                            {
+                                'msg': 'Some transactions could not be unlocked.',
+                                'ids': sorted([str(t_id) for t_id in conflict_ids])
+                            }
+                        ]
+                    },
+                    status=drf_status.HTTP_409_CONFLICT
                 )
             for t in to_update:
-                t.release(by_user=request.user)
+                t.unlock(by_user=request.user)
 
-        return HttpResponseRedirect(
-            reverse('cashbook:transaction-prison-user-list', kwargs=kwargs),
-            status=status.HTTP_303_SEE_OTHER
+        redirect_url = '{url}?user={user}&status={status}'.format(
+            url=reverse('cashbook:transaction-list'),
+            user=request.user.pk,
+            status=TRANSACTION_STATUS.AVAILABLE
         )
-
-    def patch_credited(self, request, *args, **kwargs):
-        """
-        Update the credited/not credited status of list of owned transactions
-
-        ---
-        serializer: transaction.serializers.CreditedOnlyTransactionSerializer
-        """
-        self.permission_classes = list(self.permission_classes) + [IsOwner]
-        self.check_permissions(request)
-
-        # This is a bit manual :(
-        deserialized = CreditedOnlyTransactionSerializer(data=request.data, many=True)
-        if not deserialized.is_valid():
-            return Response(
-                deserialized.errors,
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        with transaction.atomic():
-            try:
-                to_update = self.get_queryset().filter(
-                    owner=request.user,
-                    pk__in=[x['id'] for x in deserialized.data]
-                ).select_for_update()
-
-                for item in deserialized.data:
-                    obj = to_update.get(pk=item['id'])
-
-                    obj.credit(credited=item['credited'], by_user=request.user)
-                return Response(status=status.HTTP_204_NO_CONTENT)
-            except Transaction.DoesNotExist:
-                return Response(status=status.HTTP_404_NOT_FOUND)
+        return HttpResponseRedirect(redirect_url, status=drf_status.HTTP_303_SEE_OTHER)

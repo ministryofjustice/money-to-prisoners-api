@@ -21,10 +21,12 @@ class BaseTransactionViewTestCase(AuthTestCaseMixin, APITestCase):
     ]
     STATUS_FILTERS = {
         None: lambda t: True,
-        TRANSACTION_STATUS.PENDING: lambda t: t.owner and not t.credited,
+        TRANSACTION_STATUS.LOCKED: lambda t: t.owner and not t.credited,
         TRANSACTION_STATUS.AVAILABLE: lambda t: not t.owner and not t.credited,
         TRANSACTION_STATUS.CREDITED: lambda t: t.owner and t.credited
     }
+    transaction_uploads = 2
+    transaction_batch = 50
 
     def setUp(self):
         super(BaseTransactionViewTestCase, self).setUp()
@@ -33,15 +35,16 @@ class BaseTransactionViewTestCase(AuthTestCaseMixin, APITestCase):
         ) = make_test_users(clerks_per_prison=2)
 
         self.transactions = generate_transactions(
-            uploads=2, transaction_batch=50
+            uploads=self.transaction_uploads,
+            transaction_batch=self.transaction_batch
         )
         self.prisons = Prison.objects.all()
         make_test_oauth_applications()
 
-    def _get_pending_transactions_qs(self, prison, user=None):
+    def _get_locked_transactions_qs(self, prisons, user=None):
         params = {
             'credited': False,
-            'prison': prison
+            'prison__in': prisons
         }
         if user:
             params['owner'] = user
@@ -50,14 +53,14 @@ class BaseTransactionViewTestCase(AuthTestCaseMixin, APITestCase):
 
         return Transaction.objects.filter(**params)
 
-    def _get_available_transactions_qs(self, prison):
+    def _get_available_transactions_qs(self, prisons):
         return Transaction.objects.filter(
-            owner__isnull=True, credited=False, prison=prison
+            owner__isnull=True, credited=False, prison__in=prisons
         )
 
-    def _get_credited_transactions_qs(self, user, prison):
+    def _get_credited_transactions_qs(self, prisons, user=None):
         return Transaction.objects.filter(
-            owner=user, credited=True, prison=prison
+            owner=user, credited=True, prison__in=prisons
         )
 
 
@@ -71,7 +74,7 @@ class TransactionRejectsRequestsWithoutPermissionTestMixin(object):
     """
     ENDPOINT_VERB = 'get'
 
-    def _get_url(self, user, prison, status=None):
+    def _get_url(self, *args, **kwargs):
         raise NotImplementedError()
 
     def _get_unauthorised_application_users(self):
@@ -85,8 +88,6 @@ class TransactionRejectsRequestsWithoutPermissionTestMixin(object):
         Tests that if the user logs in via a different application,
         they won't be able to access the API.
         """
-        prison = self.prisons[0]
-
         # constructing list of unauthorised users+application
         unauthorised_users = self._get_unauthorised_application_users()
         users_data = [
@@ -108,9 +109,8 @@ class TransactionRejectsRequestsWithoutPermissionTestMixin(object):
             )
         )
 
+        url = self._get_url()
         for user, http_auth_header in users_data:
-            url = self._get_url(user, prison)
-
             verb_callable = getattr(self.client, self.ENDPOINT_VERB)
             response = verb_callable(
                 url, format='json',
@@ -128,7 +128,7 @@ class TransactionRejectsRequestsWithoutPermissionTestMixin(object):
 
         user.groups.first().permissions.all().delete()
 
-        url = self._get_url(user, self.prisons[0])
+        url = self._get_url()
 
         verb_callable = getattr(self.client, self.ENDPOINT_VERB)
         response = verb_callable(

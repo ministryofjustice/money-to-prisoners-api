@@ -8,8 +8,8 @@ class TransactionQuerySet(models.QuerySet):
     def available(self):
         return self.filter(**self.model.STATUS_LOOKUP[TRANSACTION_STATUS.AVAILABLE])
 
-    def pending(self):
-        return self.filter(**self.model.STATUS_LOOKUP[TRANSACTION_STATUS.PENDING])
+    def locked(self):
+        return self.filter(**self.model.STATUS_LOOKUP[TRANSACTION_STATUS.LOCKED])
 
     def credited(self):
         return self.filter(**self.model.STATUS_LOOKUP[TRANSACTION_STATUS.CREDITED])
@@ -27,23 +27,24 @@ class LogManager(models.Manager):
             user=by_user
         )
 
-    def transaction_taken(self, transaction, by_user):
+    def transaction_locked(self, transaction, by_user):
         self.create(
             transaction=transaction,
-            action=LOG_ACTIONS.TAKEN,
+            action=LOG_ACTIONS.LOCKED,
             user=by_user
         )
 
-    def transaction_released(self, transaction, by_user):
+    def transaction_unlocked(self, transaction, by_user):
         self.create(
             transaction=transaction,
-            action=LOG_ACTIONS.RELEASED,
+            action=LOG_ACTIONS.UNLOCKED,
             user=by_user
         )
 
-    def transaction_credited(self, transaction, by_user):
+    def transaction_credited(self, transaction, by_user, credited=True):
+        action = LOG_ACTIONS.CREDITED if credited else LOG_ACTIONS.UNCREDITED
         self.create(
             transaction=transaction,
-            action=LOG_ACTIONS.CREDITED,
+            action=action,
             user=by_user
         )

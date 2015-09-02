@@ -26,8 +26,8 @@
     "name": "PrisonClerk",
     "permissions": [
       ["view_transaction", "transaction", "transaction"],
-      ["take_transaction", "transaction", "transaction"],
-      ["release_transaction", "transaction", "transaction"],
+      ["lock_transaction", "transaction", "transaction"],
+      ["unlock_transaction", "transaction", "transaction"],
       ["patch_credited_transaction", "transaction", "transaction"]
     ]
   }
