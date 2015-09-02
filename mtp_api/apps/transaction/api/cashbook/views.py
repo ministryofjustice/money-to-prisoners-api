@@ -19,7 +19,8 @@ from transaction.constants import TRANSACTION_STATUS, LOCK_LIMIT
 from transaction.models import Transaction
 
 from .serializers import TransactionSerializer, \
-    CreditedOnlyTransactionSerializer
+    CreditedOnlyTransactionSerializer, \
+    IdsTransactionSerializer
 from .permissions import TransactionPermissions
 
 
@@ -105,7 +106,7 @@ class CreditTransactions(TransactionViewMixin, generics.GenericAPIView):
                         'errors': [
                             {
                                 'msg': 'Some transactions could not be credited.',
-                                'ids': sorted([str(t_id) for t_id in conflict_ids])
+                                'ids': sorted(conflict_ids)
                             }
                         ]
                     },
@@ -167,6 +168,7 @@ class LockTransactions(TransactionViewMixin, APIView):
 
 
 class UnlockTransactions(TransactionViewMixin, APIView):
+    serializer_class = IdsTransactionSerializer
     action = 'unlock'
 
     permission_classes = (
@@ -174,8 +176,19 @@ class UnlockTransactions(TransactionViewMixin, APIView):
         TransactionPermissions
     )
 
+    def get_serializer(self, *args, **kwargs):
+        kwargs['context'] = {
+            'request': self.request,
+            'format': self.format_kwarg,
+            'view': self
+        }
+        return self.serializer_class(*args, **kwargs)
+
     def post(self, request, format=None):
-        transaction_ids = request.data.get('transaction_ids', [])
+        deserialized = self.get_serializer(data=request.data)
+        deserialized.is_valid(raise_exception=True)
+
+        transaction_ids = deserialized.data.get('transaction_ids', [])
         with transaction.atomic():
             to_update = self.get_queryset().locked().filter(pk__in=transaction_ids).select_for_update()
 
@@ -188,7 +201,7 @@ class UnlockTransactions(TransactionViewMixin, APIView):
                         'errors': [
                             {
                                 'msg': 'Some transactions could not be unlocked.',
-                                'ids': sorted([str(t_id) for t_id in conflict_ids])
+                                'ids': sorted(conflict_ids)
                             }
                         ]
                     },

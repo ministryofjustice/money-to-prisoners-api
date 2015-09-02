@@ -15,6 +15,12 @@ class CreditedOnlyTransactionSerializer(serializers.ModelSerializer):
         )
 
 
+class IdsTransactionSerializer(serializers.Serializer):
+    transaction_ids = serializers.ListField(
+       child=serializers.IntegerField()
+    )
+
+
 class TransactionSerializer(serializers.ModelSerializer):
     sender = serializers.CharField(source='sender_name')
 

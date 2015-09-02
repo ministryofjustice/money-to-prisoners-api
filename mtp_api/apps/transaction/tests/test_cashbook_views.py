@@ -519,7 +519,7 @@ class UnlockTransactionTestCase(
         errors = response.data['errors']
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0]['msg'], 'Some transactions could not be unlocked.')
-        self.assertEqual(errors[0]['ids'], sorted([str(t_id) for t_id in to_unlock]))
+        self.assertEqual(errors[0]['ids'], sorted(to_unlock))
 
     def test_cannot_unlock_credited_transactions(self):
         logged_in_user = self.prison_clerks[0]
@@ -542,7 +542,7 @@ class UnlockTransactionTestCase(
         errors = response.data['errors']
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0]['msg'], 'Some transactions could not be unlocked.')
-        self.assertEqual(errors[0]['ids'], sorted([str(t_id) for t_id in credited_ids]))
+        self.assertEqual(errors[0]['ids'], sorted(credited_ids))
 
 
 class CreditTransactionTestCase(
@@ -637,7 +637,7 @@ class CreditTransactionTestCase(
         errors = response.data['errors']
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0]['msg'], 'Some transactions could not be credited.')
-        self.assertEqual(errors[0]['ids'], sorted([str(t_id) for t_id in locked_by_other_user_ids]))
+        self.assertEqual(errors[0]['ids'], sorted(locked_by_other_user_ids))
 
         # nothing changed in db
         self.assertEqual(credited_qs.count(), credited)
@@ -671,7 +671,7 @@ class CreditTransactionTestCase(
         errors = response.data['errors']
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0]['msg'], 'Some transactions could not be credited.')
-        self.assertEqual(errors[0]['ids'], sorted([str(t_id) for t_id in available_ids]))
+        self.assertEqual(errors[0]['ids'], sorted(available_ids))
 
         # nothing changed in db
         self.assertEqual(credited_qs.count(), credited)
