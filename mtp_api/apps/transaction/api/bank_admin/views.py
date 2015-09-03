@@ -49,7 +49,7 @@ class TransactionView(mixins.CreateModelMixin, mixins.UpdateModelMixin,
                     'errors': [
                         {
                             'msg': 'Some transactions could not be refunded',
-                            'ids': sorted([str(t_id) for t_id in e.args[0]])
+                            'ids': sorted(e.args[0])
                         }
                     ]
                 },
