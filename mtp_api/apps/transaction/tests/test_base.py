@@ -31,7 +31,8 @@ class BaseTransactionViewTestCase(AuthTestCaseMixin, APITestCase):
     def setUp(self):
         super(BaseTransactionViewTestCase, self).setUp()
         (
-            self.prison_clerks, self.prisoner_location_admins, self.bank_admins
+            self.prison_clerks, self.prisoner_location_admins, self.bank_admins,
+            self.refund_bank_admins
         ) = make_test_users(clerks_per_prison=2)
 
         self.transactions = generate_transactions(
@@ -80,6 +81,11 @@ class TransactionRejectsRequestsWithoutPermissionTestMixin(object):
     def _get_unauthorised_application_users(self):
         raise NotImplementedError()
 
+    def _get_unauthorised_user(self):
+        user = self._get_authorised_user()
+        user.groups.first().permissions.all().delete()
+        return user
+
     def _get_authorised_user(self):
         raise NotImplementedError()
 
@@ -124,9 +130,7 @@ class TransactionRejectsRequestsWithoutPermissionTestMixin(object):
         Tests that if the user does not have permissions to create
         transactions, they won't be able to access the API.
         """
-        user = self._get_authorised_user()
-
-        user.groups.first().permissions.all().delete()
+        user = self._get_unauthorised_user()
 
         url = self._get_url()
 

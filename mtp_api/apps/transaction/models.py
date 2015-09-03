@@ -9,7 +9,7 @@ from prison.models import Prison
 from .constants import TRANSACTION_STATUS, LOG_ACTIONS
 from .managers import TransactionQuerySet, LogManager
 from .signals import transaction_created, transaction_locked, \
-    transaction_unlocked, transaction_credited
+    transaction_unlocked, transaction_credited, transaction_refunded
 
 
 class Transaction(TimeStampedModel):
@@ -41,10 +41,19 @@ class Transaction(TimeStampedModel):
 
     credited = models.BooleanField(default=False)
 
+    refunded = models.BooleanField(default=False)
+
     STATUS_LOOKUP = {
-        TRANSACTION_STATUS.LOCKED:   {'owner__isnull': False, 'credited': False},
-        TRANSACTION_STATUS.AVAILABLE: {'owner__isnull': True, 'credited': False},
-        TRANSACTION_STATUS.CREDITED:  {'owner__isnull': False, 'credited': True}
+        TRANSACTION_STATUS.LOCKED:
+            {'owner__isnull': False, 'credited': False, 'refunded': False},
+        TRANSACTION_STATUS.AVAILABLE:
+            {'owner__isnull': True, 'credited': False, 'refunded': False},
+        TRANSACTION_STATUS.CREDITED:
+            {'credited': True},
+        TRANSACTION_STATUS.REFUNDED:
+            {'refunded': True},
+        TRANSACTION_STATUS.REFUND_PENDING:
+            {'prisoner_number': '', 'refunded': False}
     }
 
     objects = TransactionQuerySet.as_manager()
@@ -78,9 +87,11 @@ class Transaction(TimeStampedModel):
         ordering = ('received_at',)
         permissions = (
             ("view_transaction", "Can view transaction"),
+            ("view_bank_details_transaction", "Can view bank details of transaction"),
             ("lock_transaction", "Can lock transaction"),
             ("unlock_transaction", "Can unlock transaction"),
             ("patch_credited_transaction", "Can patch credited transaction"),
+            ("patch_refunded_transaction", "Can patch refunded transaction"),
         )
         index_together = [
             ["prisoner_number", "prisoner_dob"],
@@ -122,3 +133,8 @@ def transaction_unlocked_receiver(sender, transaction, by_user, **kwargs):
 @receiver(transaction_credited)
 def transaction_credited_receiver(sender, transaction, by_user, credited=True, **kwargs):
     Log.objects.transaction_credited(transaction, by_user, credited=credited)
+
+
+@receiver(transaction_refunded)
+def transaction_refunded_receiver(sender, transaction, by_user, **kwargs):
+    Log.objects.transaction_refunded(transaction, by_user)

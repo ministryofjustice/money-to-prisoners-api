@@ -22,7 +22,7 @@ def random_reference(prisoner_number=None, prisoner_dob=None):
     )
 
 
-def generate_transactions_data(uploads=2, transaction_batch=30, status=None):
+def generate_transactions_data(uploads=2, transaction_batch=50, status=None):
     data_list = []
 
     class PrisonChooser(object):
@@ -69,8 +69,8 @@ def generate_transactions_data(uploads=2, transaction_batch=30, status=None):
             # The probability of transactions coming from building
             # societies is instead low, set here to 10%,
             # which is again arbitrary.
-            include_prisoner_info = random.randint(0, 100) < 80
-            include_sender_roll_number = random.randint(0, 100) < 10
+            include_prisoner_info = transaction_counter % 5 != 0
+            include_sender_roll_number = transaction_counter % 10 == 0
 
             data = {
                 'upload_counter': upload_counter,
@@ -95,7 +95,13 @@ def generate_transactions_data(uploads=2, transaction_batch=30, status=None):
                 # randomly choose the state of the transaction
                 trans_status = status
                 if not trans_status:
-                    trans_status, _ = random.choice(TRANSACTION_STATUS)
+                    trans_status = random.choice(
+                        [
+                            TRANSACTION_STATUS.LOCKED,
+                            TRANSACTION_STATUS.AVAILABLE,
+                            TRANSACTION_STATUS.CREDITED
+                        ]
+                    )
 
                 if trans_status == TRANSACTION_STATUS.LOCKED:
                     data.update({
@@ -112,6 +118,11 @@ def generate_transactions_data(uploads=2, transaction_batch=30, status=None):
                         'owner_id': prison_chooser.choose_user(prison),
                         'credited': True
                     })
+            else:
+                if transaction_counter % 2 == 0:
+                    data.update({'refunded': True})
+                else:
+                    data.update({'refunded': False})
 
             if include_sender_roll_number:
                 data.update({

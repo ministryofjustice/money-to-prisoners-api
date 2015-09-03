@@ -15,7 +15,8 @@
   "fields": {
     "name": "BankAdmin",
     "permissions": [
-      ["add_transaction", "transaction", "transaction"]
+      ["add_transaction", "transaction", "transaction"],
+      ["view_transaction", "transaction", "transaction"]
     ]
   }
 },
@@ -29,6 +30,17 @@
       ["lock_transaction", "transaction", "transaction"],
       ["unlock_transaction", "transaction", "transaction"],
       ["patch_credited_transaction", "transaction", "transaction"]
+    ]
+  }
+},
+{
+  "model": "auth.group",
+  "pk": 4,
+  "fields": {
+    "name": "RefundBankAdmin",
+    "permissions": [
+      ["view_bank_details_transaction", "transaction", "transaction"],
+      ["patch_refunded_transaction", "transaction", "transaction"]
     ]
   }
 }
