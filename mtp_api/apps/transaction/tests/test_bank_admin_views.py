@@ -40,7 +40,6 @@ class CreateTransactionsTestCase(
 
     def _get_transactions_data(self, tot=30):
         data_list = generate_transactions_data(
-            uploads=1,
             transaction_batch=tot,
             status=TRANSACTION_STATUS.AVAILABLE
         )
