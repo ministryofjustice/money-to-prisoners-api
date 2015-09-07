@@ -25,7 +25,6 @@ class BaseTransactionViewTestCase(AuthTestCaseMixin, APITestCase):
         TRANSACTION_STATUS.AVAILABLE: lambda t: not t.owner and not t.credited,
         TRANSACTION_STATUS.CREDITED: lambda t: t.owner and t.credited
     }
-    transaction_uploads = 2
     transaction_batch = 50
 
     def setUp(self):
@@ -36,7 +35,6 @@ class BaseTransactionViewTestCase(AuthTestCaseMixin, APITestCase):
         ) = make_test_users(clerks_per_prison=2)
 
         self.transactions = generate_transactions(
-            uploads=self.transaction_uploads,
             transaction_batch=self.transaction_batch
         )
         self.prisons = Prison.objects.all()

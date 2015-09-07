@@ -13,9 +13,6 @@ from .signals import transaction_created, transaction_locked, \
 
 
 class Transaction(TimeStampedModel):
-    # TODO, not sure we need this, we might decide to delete it
-    upload_counter = models.PositiveIntegerField()
-
     prison = models.ForeignKey(Prison, blank=True, null=True)
 
     prisoner_number = models.CharField(blank=True, max_length=250)

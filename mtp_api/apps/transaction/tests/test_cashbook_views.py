@@ -382,7 +382,7 @@ class LockTransactionTestCase(
     BaseTransactionViewTestCase
 ):
     ENDPOINT_VERB = 'post'
-    transaction_batch = 200
+    transaction_batch = 500
 
     def _get_url(self):
         return reverse('cashbook:transaction-lock')

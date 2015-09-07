@@ -22,6 +22,4 @@ class Command(BaseCommand):
 
         make_test_oauth_applications()
 
-        generate_transactions(
-            uploads=2, transaction_batch=100
-        )
+        generate_transactions(transaction_batch=100)

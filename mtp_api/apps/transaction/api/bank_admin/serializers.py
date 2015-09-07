@@ -1,5 +1,4 @@
 from django.db import transaction
-from django.db.models import Max
 
 from rest_framework import serializers
 from rest_framework.fields import IntegerField
@@ -12,17 +11,11 @@ class CreateTransactionListSerializer(serializers.ListSerializer):
 
     @transaction.atomic
     def create(self, validated_data):
-        upload_counter = Transaction.objects.all().aggregate(
-            Max('upload_counter')
-        )['upload_counter__max'] or 1
-
         transactions = []
         user = self.context['request'].user
 
         for data in validated_data:
-            transaction = Transaction.objects.create(
-                upload_counter=upload_counter, **data
-            )
+            transaction = Transaction.objects.create(**data)
 
             transaction_created.send(
                 sender=Transaction,
