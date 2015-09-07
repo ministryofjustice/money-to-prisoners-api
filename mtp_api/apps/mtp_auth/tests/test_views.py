@@ -7,6 +7,8 @@ from core.tests.utils import make_test_users, make_test_oauth_applications
 
 from prison.models import Prison
 
+from mtp_auth.models import PrisonUserMapping
+
 
 class UserViewTestCase(APITestCase):
     fixtures = [
@@ -16,7 +18,11 @@ class UserViewTestCase(APITestCase):
 
     def setUp(self):
         super(UserViewTestCase, self).setUp()
-        self.users, _, _, _ = make_test_users(clerks_per_prison=2)
+        (
+            self.prison_clerks, self.prisoner_location_admins,
+            self.bank_admins, self.refund_bank_admins
+        ) = make_test_users(clerks_per_prison=2)
+
         self.prisons = Prison.objects.all()
         make_test_oauth_applications()
 
@@ -35,16 +41,16 @@ class UserViewTestCase(APITestCase):
         404 because we don't want to leak anything about our
         db.
         """
-        logged_in_user = self.users[0]
+        logged_in_user = self.prison_clerks[0]
         self.client.force_authenticate(user=logged_in_user)
 
-        for user in self.users[1:]:
+        for user in self.prison_clerks[1:]:
             url = self._get_url(user.username)
             response = self.client.get(url, format='json')
             self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_can_access_my_data(self):
-        for user in self.users:
+    def test_can_access_my_data_including_managing_prisons(self):
+        for user in self.prison_clerks:
             self.client.force_authenticate(user=user)
 
             url = self._get_url(user.username)
@@ -52,7 +58,20 @@ class UserViewTestCase(APITestCase):
             self.assertEqual(response.status_code, status.HTTP_200_OK)
 
             self.assertEqual(response.data['pk'], user.pk)
-            self.assertEqual(
-                response.data['prisons'],
-                [prison.pk for prison in user.prisonusermapping.prisons.all()]
-            )
+            prison_ids = list(user.prisonusermapping.prisons.values_list('pk', flat=True))
+            self.assertEqual(response.data['prisons'], prison_ids)
+
+    def test_my_data_with_empty_prisons(self):
+        users = \
+            self.prisoner_location_admins + \
+            self.bank_admins + self.refund_bank_admins
+
+        for user in users:
+            self.client.force_authenticate(user=user)
+
+            url = self._get_url(user.username)
+            response = self.client.get(url, format='json')
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+            self.assertEqual(response.data['pk'], user.pk)
+            self.assertEqual(response.data['prisons'], [])
