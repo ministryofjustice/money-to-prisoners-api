@@ -3,6 +3,7 @@ import random
 
 from django.utils import timezone
 from django.utils.crypto import get_random_string
+from django.contrib.auth.models import User
 
 from prison.models import Prison
 
@@ -11,6 +12,38 @@ from transaction.constants import TRANSACTION_STATUS
 
 
 from prison.tests.utils import random_prisoner_number, random_prisoner_dob
+
+
+class PrisonChooser(object):
+
+    def __init__(self):
+        self.prisons = Prison.objects.all()
+        self.clerks_per_prison = {}
+        for prison in self.prisons:
+            user_ids = prison.prisonusermapping_set.values_list('user', flat=True)
+            self.clerks_per_prison[prison.pk] = {
+                'users': User.objects.filter(id__in=user_ids),
+                'index': 0
+            }
+        self.index = 0
+
+    def _choose(self, l, index):
+        item = l[index]
+        index += 1
+        if index >= len(l):
+            index = 0
+        return (item, index)
+
+    def choose_prison(self):
+        prison, index = self._choose(self.prisons, self.index)
+        self.index = index
+        return prison
+
+    def choose_user(self, prison):
+        data = self.clerks_per_prison[prison.pk]
+        user, index = self._choose(data['users'], data['index'])
+        data['index'] = index
+        return user
 
 
 def random_reference(prisoner_number=None, prisoner_dob=None):
@@ -22,44 +55,13 @@ def random_reference(prisoner_number=None, prisoner_dob=None):
     )
 
 
-def generate_transactions_data(transaction_batch=50, status=None):
+def generate_initial_transactions_data(tot=50):
     data_list = []
 
-    class PrisonChooser(object):
-
-        def __init__(self):
-            self.prisons = Prison.objects.all()
-            self.clerks_per_prison = {}
-            for prison in self.prisons:
-                self.clerks_per_prison[prison.pk] = {
-                    'users': prison.prisonusermapping_set.values_list('user', flat=True),
-                    'index': 0
-                }
-            self.index = 0
-
-        def _choose(self, l, index):
-            item = l[index]
-            index += 1
-            if index >= len(l):
-                index = 0
-            return (item, index)
-
-        def choose_prison(self):
-            prison, index = self._choose(self.prisons, self.index)
-            self.index = index
-            return prison
-
-        def choose_user(self, prison):
-            data = self.clerks_per_prison[prison.pk]
-            user, index = self._choose(data['users'], data['index'])
-            data['index'] = index
-            return user
-
     prison_chooser = PrisonChooser()
-
     now = timezone.now().replace(microsecond=0)
 
-    for transaction_counter in range(1, transaction_batch+1):
+    for transaction_counter in range(1, tot+1):
         # Records might not have prisoner data and/or might not
         # have building society roll numbers.
         # Atm, we set the probability of it having prisoner info
@@ -79,7 +81,10 @@ def generate_transactions_data(transaction_batch=50, status=None):
             ),
             'sender_sort_code': get_random_string(6, '1234567890'),
             'sender_account_number': get_random_string(8, '1234567890'),
-            'sender_name': get_random_string(10)
+            'sender_name': get_random_string(10),
+            'owner': None,
+            'credited': False,
+            'refunded': False
         }
 
         if include_prisoner_info:
@@ -90,38 +95,6 @@ def generate_transactions_data(transaction_batch=50, status=None):
                 'prisoner_dob': random_prisoner_dob()
             })
 
-            # randomly choose the state of the transaction
-            trans_status = status
-            if not trans_status:
-                trans_status = random.choice(
-                    [
-                        TRANSACTION_STATUS.LOCKED,
-                        TRANSACTION_STATUS.AVAILABLE,
-                        TRANSACTION_STATUS.CREDITED
-                    ]
-                )
-
-            if trans_status == TRANSACTION_STATUS.LOCKED:
-                data.update({
-                    'owner_id': prison_chooser.choose_user(prison),
-                    'credited': False
-                })
-            elif trans_status == TRANSACTION_STATUS.AVAILABLE:
-                data.update({
-                    'owner': None,
-                    'credited': False
-                })
-            elif trans_status == TRANSACTION_STATUS.CREDITED:
-                data.update({
-                    'owner_id': prison_chooser.choose_user(prison),
-                    'credited': True
-                })
-        else:
-            if transaction_counter % 2 == 0:
-                data.update({'refunded': True})
-            else:
-                data.update({'refunded': False})
-
         if include_sender_roll_number:
             data.update({
                 'sender_roll_number': get_random_string(15, '1234567890')
@@ -131,6 +104,50 @@ def generate_transactions_data(transaction_batch=50, status=None):
             data.get('prisoner_number'), data.get('prisoner_dob')
         )
         data_list.append(data)
+    return data_list
+
+
+def generate_transactions_data(transaction_batch=50):
+    data_list = generate_initial_transactions_data(
+        tot=transaction_batch
+    )
+
+    prison_chooser = PrisonChooser()
+
+    for transaction_counter, data in enumerate(data_list, start=1):
+        prison = data['prison']
+
+        if prison:
+            # randomly choose the state of the transaction
+            trans_status = random.choice(
+                [
+                    TRANSACTION_STATUS.LOCKED,
+                    TRANSACTION_STATUS.AVAILABLE,
+                    TRANSACTION_STATUS.CREDITED
+                ]
+            )
+
+            if trans_status == TRANSACTION_STATUS.LOCKED:
+                data.update({
+                    'owner': prison_chooser.choose_user(prison),
+                    'credited': False
+                })
+            elif trans_status == TRANSACTION_STATUS.AVAILABLE:
+                data.update({
+                    'owner': None,
+                    'credited': False
+                })
+            elif trans_status == TRANSACTION_STATUS.CREDITED:
+                data.update({
+                    'owner': prison_chooser.choose_user(prison),
+                    'credited': True
+                })
+        else:
+            if transaction_counter % 2 == 0:
+                data.update({'refunded': True})
+            else:
+                data.update({'refunded': False})
+
     return data_list
 
 

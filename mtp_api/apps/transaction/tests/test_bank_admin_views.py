@@ -1,4 +1,5 @@
 import mock
+
 from django.core.urlresolvers import reverse
 from rest_framework import status as http_status
 
@@ -6,7 +7,7 @@ from transaction.models import Transaction, Log
 from transaction.constants import TRANSACTION_STATUS, LOG_ACTIONS
 from transaction.api.bank_admin.serializers import CreateTransactionSerializer
 
-from .utils import generate_transactions_data, generate_transactions
+from .utils import generate_initial_transactions_data, generate_transactions
 from .test_base import BaseTransactionViewTestCase, \
     TransactionRejectsRequestsWithoutPermissionTestMixin
 
@@ -36,10 +37,7 @@ class CreateTransactionsTestCase(
         return reverse('bank_admin:transaction-list')
 
     def _get_transactions_data(self, tot=30):
-        data_list = generate_transactions_data(
-            transaction_batch=tot,
-            status=TRANSACTION_STATUS.AVAILABLE
-        )
+        data_list = generate_initial_transactions_data(tot=tot)
 
         serializer = CreateTransactionSerializer()
         keys = serializer.get_fields().keys()
