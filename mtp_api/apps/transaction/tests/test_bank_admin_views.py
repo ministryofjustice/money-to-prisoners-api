@@ -339,6 +339,9 @@ class GetTransactionsAsBankAdminTestCase(
                             'amount' in t and
                             'credited' in t and
                             'refunded' in t)
+            if t['prison'] is not None:
+                self.assertTrue('nomis_id' in t['prison'] and
+                                'name' in t['prison'])
 
     def _assert_hidden_fields_absent(self, results):
         for t in results:

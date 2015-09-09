@@ -5,6 +5,7 @@ from rest_framework.fields import IntegerField
 
 from transaction.signals import transaction_created, transaction_refunded
 from transaction.models import Transaction
+from prison.models import Prison
 
 
 class CreateTransactionListSerializer(serializers.ListSerializer):
@@ -88,7 +89,18 @@ class UpdateRefundedTransactionSerializer(serializers.ModelSerializer):
         )
 
 
+class PrisonSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Prison
+        fields = (
+            'nomis_id',
+            'name'
+        )
+
+
 class TransactionSerializer(serializers.ModelSerializer):
+    prison = PrisonSerializer(required=False)
 
     class Meta:
         model = Transaction
@@ -107,6 +119,7 @@ class TransactionSerializer(serializers.ModelSerializer):
 
 
 class ReconcileTransactionSerializer(serializers.ModelSerializer):
+    prison = PrisonSerializer(required=False)
 
     class Meta:
         model = Transaction
