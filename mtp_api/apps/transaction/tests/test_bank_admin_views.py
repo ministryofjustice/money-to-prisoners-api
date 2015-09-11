@@ -151,7 +151,7 @@ class UpdateTransactionsTestCase(
         return self.refund_bank_admins[0]
 
     def _get_url(self, *args, **kwargs):
-        return reverse('bank_admin:transaction-patch-refunded')
+        return reverse('bank_admin:transaction-list')
 
     def _get_transactions(self, tot=30):
         transactions = generate_transactions(transaction_batch=tot)
