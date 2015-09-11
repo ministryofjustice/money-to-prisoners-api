@@ -1,7 +1,6 @@
 from rest_framework import mixins, viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.decorators import list_route
 from rest_framework.exceptions import ParseError
 
 from mtp_auth.permissions import BankAdminClientIDPermissions
@@ -39,7 +38,6 @@ class TransactionView(mixins.CreateModelMixin, mixins.UpdateModelMixin,
 
         return queryset
 
-    @list_route(methods=['patch'])
     def patch_refunded(self, request, *args, **kwargs):
         try:
             return self.partial_update(request, *args, **kwargs)
