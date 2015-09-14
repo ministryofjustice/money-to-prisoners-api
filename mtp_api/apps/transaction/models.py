@@ -44,13 +44,13 @@ class Transaction(TimeStampedModel):
         TRANSACTION_STATUS.LOCKED:
             {'owner__isnull': False, 'credited': False, 'refunded': False},
         TRANSACTION_STATUS.AVAILABLE:
-            {'owner__isnull': True, 'credited': False, 'refunded': False},
+            {'prison__isnull': False, 'owner__isnull': True, 'credited': False, 'refunded': False},
         TRANSACTION_STATUS.CREDITED:
             {'credited': True},
         TRANSACTION_STATUS.REFUNDED:
             {'refunded': True},
         TRANSACTION_STATUS.REFUND_PENDING:
-            {'prisoner_number': '', 'refunded': False}
+            {'prison__isnull': True, 'owner__isnull': True, 'credited': False, 'refunded': False},
     }
 
     objects = TransactionQuerySet.as_manager()
