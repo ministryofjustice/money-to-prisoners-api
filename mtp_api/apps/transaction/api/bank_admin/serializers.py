@@ -3,7 +3,8 @@ from django.db import transaction
 from rest_framework import serializers
 from rest_framework.fields import IntegerField
 
-from transaction.signals import transaction_created, transaction_refunded
+from transaction.signals import transaction_created, transaction_refunded, \
+    transaction_prisons_need_updating
 from transaction.models import Transaction
 from prison.models import Prison
 
@@ -25,6 +26,8 @@ class CreateTransactionListSerializer(serializers.ListSerializer):
             )
 
             transactions.append(transaction)
+
+        transaction_prisons_need_updating.send(sender=Transaction)
 
         return transactions
 

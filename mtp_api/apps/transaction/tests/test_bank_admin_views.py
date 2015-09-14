@@ -1,13 +1,10 @@
-import json
-
+import mock
 from django.core.urlresolvers import reverse
 from rest_framework import status as http_status
 
 from transaction.models import Transaction, Log
 from transaction.constants import TRANSACTION_STATUS, LOG_ACTIONS
-from transaction.api.bank_admin.views import TransactionView
-from transaction.api.bank_admin.serializers import CreateTransactionSerializer, \
-    UpdateRefundedTransactionSerializer
+from transaction.api.bank_admin.serializers import CreateTransactionSerializer
 
 from .utils import generate_transactions_data, generate_transactions
 from .test_base import BaseTransactionViewTestCase, \
@@ -123,6 +120,20 @@ class CreateTransactionsTestCase(
         self.assertEqual(response.status_code, http_status.HTTP_400_BAD_REQUEST)
         # check no change in db
         self.assertEqual(current_count, Transaction.objects.count())
+
+    @mock.patch('transaction.api.bank_admin.serializers.transaction_prisons_need_updating')
+    def test_create_sends_transaction_prisons_need_updating_signal(
+        self, mocked_transaction_prisons_need_updating
+    ):
+        user = self.bank_admins[0]
+
+        response = self.client.post(
+            self._get_url(), data=self._get_transactions_data(), format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_201_CREATED)
+
+        mocked_transaction_prisons_need_updating.send.assert_called_with(sender=Transaction)
 
 
 class UpdateTransactionsTestCase(

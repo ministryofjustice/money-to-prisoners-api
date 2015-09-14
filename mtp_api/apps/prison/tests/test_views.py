@@ -1,3 +1,4 @@
+import mock
 from model_mommy import mommy
 
 from django.core.urlresolvers import reverse
@@ -167,3 +168,24 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
             ],
             assert_error_msg='Should fail because invalid prison'
         )
+
+    @mock.patch('prison.serializers.transaction_prisons_need_updating')
+    def test_create_sends_transaction_prisons_need_updating_signal(
+        self, mocked_transaction_prisons_need_updating
+    ):
+        user = self.users[0]
+
+        data = [
+            {
+                'prisoner_number': random_prisoner_number(),
+                'prisoner_dob': random_prisoner_dob(),
+                'prison': self.prisons[0].pk
+            }
+        ]
+        response = self.client.post(
+            self.list_url, data=data, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        mocked_transaction_prisons_need_updating.send.assert_called_with(sender=PrisonerLocation)
