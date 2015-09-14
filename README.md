@@ -61,7 +61,7 @@ pip install virtualenv
 Create and activate a new environment:
 
 ```
-virtualenv venv
+virtualenv --python=python3 venv
 source venv/bin/activate
 ```
 
