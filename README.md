@@ -47,6 +47,60 @@ You should be able to point your browser at
 if you're using *boot2docker* then it'll be at the IP of the boot2docker virtual machine.
 You can find it by typing `boot2docker ip` in a terminal. Then visit http://**boot2docker ip**:8000/
 
+
+#### Without Docker
+
+If you don't want to use Docker, follow these steps to set up your environment:
+
+Install `virtualenv`:
+
+```
+pip install virtualenv
+```
+
+Create and activate a new environment:
+
+```
+virtualenv venv
+source venv/bin/activate
+```
+
+Install dependencies:
+
+```
+pip install -r requirements/dev.txt
+```
+
+Install postgres, connect to it and run:
+
+```
+create database mtp_api;
+```
+
+By default the project uses the 'postgres' user with no password. This can be 
+overridden by setting the `DB_USERNAME` and `DB_PASSWORD` environment variables
+and creating a new user as follows:
+
+```
+create user <whatever> with password '<whatever else>';
+alter database mtp_api owner to <whatever>;
+alter user <whatever> with superuser;
+```
+
+To set up the database with sample data:
+
+```
+python manage.py migrate
+python manage.py load_test_data
+```
+
+Start the dev server, listening on port 8000:
+
+```
+python manage.py runserver 8000
+```
+
+
 ### Using the API
 #### Getting an access token
 ```
