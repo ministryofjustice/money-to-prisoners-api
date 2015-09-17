@@ -9,7 +9,8 @@ from prison.models import Prison
 from .constants import TRANSACTION_STATUS, LOG_ACTIONS
 from .managers import TransactionQuerySet, LogManager
 from .signals import transaction_created, transaction_locked, \
-    transaction_unlocked, transaction_credited, transaction_refunded
+    transaction_unlocked, transaction_credited, transaction_refunded, \
+    transaction_prisons_need_updating
 
 
 class Transaction(TimeStampedModel):
@@ -44,13 +45,13 @@ class Transaction(TimeStampedModel):
         TRANSACTION_STATUS.LOCKED:
             {'owner__isnull': False, 'credited': False, 'refunded': False},
         TRANSACTION_STATUS.AVAILABLE:
-            {'owner__isnull': True, 'credited': False, 'refunded': False},
+            {'prison__isnull': False, 'owner__isnull': True, 'credited': False, 'refunded': False},
         TRANSACTION_STATUS.CREDITED:
             {'credited': True},
         TRANSACTION_STATUS.REFUNDED:
             {'refunded': True},
         TRANSACTION_STATUS.REFUND_PENDING:
-            {'prisoner_number': '', 'refunded': False}
+            {'prison__isnull': True, 'owner__isnull': True, 'credited': False, 'refunded': False},
     }
 
     objects = TransactionQuerySet.as_manager()
@@ -135,3 +136,8 @@ def transaction_credited_receiver(sender, transaction, by_user, credited=True, *
 @receiver(transaction_refunded)
 def transaction_refunded_receiver(sender, transaction, by_user, **kwargs):
     Log.objects.transaction_refunded(transaction, by_user)
+
+
+@receiver(transaction_prisons_need_updating)
+def update_transaction_prisons(*args, **kwargs):
+    Transaction.objects.update_prisons()

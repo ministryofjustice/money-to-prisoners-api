@@ -1,3 +1,4 @@
+import mock
 import urllib.parse
 
 from django.core.urlresolvers import reverse
@@ -543,6 +544,25 @@ class UnlockTransactionTestCase(
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0]['msg'], 'Some transactions could not be unlocked.')
         self.assertEqual(errors[0]['ids'], sorted(credited_ids))
+
+    @mock.patch('transaction.api.cashbook.views.transaction_prisons_need_updating')
+    def test_unlock_sends_transaction_prisons_need_updating_signal(
+        self, mocked_transaction_prisons_need_updating
+    ):
+        logged_in_user = self.prison_clerks[0]
+        logged_in_user.prisonusermapping.prisons.add(*self.prisons)
+        locked_qs = self._get_locked_transactions_qs(self.prisons)
+
+        response = self.client.post(
+            self._get_url(),
+            {'transaction_ids': list(locked_qs.values_list('id', flat=True))},
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_303_SEE_OTHER)
+
+        mocked_transaction_prisons_need_updating.send.assert_called_with(sender=Transaction)
 
 
 class CreditTransactionTestCase(

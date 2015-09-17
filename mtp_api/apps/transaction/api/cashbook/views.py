@@ -17,6 +17,7 @@ from prison.models import Prison
 
 from transaction.constants import TRANSACTION_STATUS, LOCK_LIMIT
 from transaction.models import Transaction
+from transaction.signals import transaction_prisons_need_updating
 
 from .serializers import TransactionSerializer, \
     CreditedOnlyTransactionSerializer, \
@@ -209,6 +210,8 @@ class UnlockTransactions(TransactionViewMixin, APIView):
                 )
             for t in to_update:
                 t.unlock(by_user=request.user)
+
+        transaction_prisons_need_updating.send(sender=Transaction)
 
         redirect_url = '{url}?user={user}&status={status}'.format(
             url=reverse('cashbook:transaction-list'),
