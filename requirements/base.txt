@@ -8,3 +8,4 @@ django-oauth-toolkit==0.8.1
 drf-extensions==0.2.7
 django-rest-swagger==0.3.2
 django-extended-choices==1.0.4
+model-mommy==1.2.4
