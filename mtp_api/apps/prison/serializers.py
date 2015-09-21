@@ -4,7 +4,18 @@ from rest_framework import serializers
 
 from transaction.signals import transaction_prisons_need_updating
 
-from .models import PrisonerLocation
+from .models import PrisonerLocation, Prison
+
+
+class PrisonSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Prison
+        fields = (
+            'nomis_id',
+            'general_ledger_code',
+            'name'
+        )
 
 
 class PrisonerLocationListSerializer(serializers.ListSerializer):
