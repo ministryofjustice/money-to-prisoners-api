@@ -6,6 +6,7 @@ from model_utils.models import TimeStampedModel
 
 class Prison(TimeStampedModel):
     nomis_id = models.CharField(max_length=3, primary_key=True)
+    general_ledger_code = models.CharField(max_length=3)
     name = models.CharField(max_length=500)
 
     def __str__(self):
