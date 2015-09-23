@@ -22,6 +22,10 @@ class UserViewTestCase(APITestCase):
             self.prison_clerks, self.prisoner_location_admins,
             self.bank_admins, self.refund_bank_admins
         ) = make_test_users(clerks_per_prison=2)
+        self.test_users = (
+            self.prison_clerks + self.prisoner_location_admins +
+            self.bank_admins + self.refund_bank_admins
+        )
 
         self.prisons = Prison.objects.all()
         make_test_oauth_applications()
@@ -60,6 +64,16 @@ class UserViewTestCase(APITestCase):
             self.assertEqual(response.data['pk'], user.pk)
             prison_ids = list(user.prisonusermapping.prisons.values_list('pk', flat=True))
             self.assertEqual(response.data['prisons'], prison_ids)
+
+    def test_correct_permissions_returned(self):
+        for user in self.test_users:
+            self.client.force_authenticate(user=user)
+
+            url = self._get_url(user.username)
+            response = self.client.get(url, format='json')
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+            self.assertEqual(response.data['permissions'], user.get_all_permissions())
 
     def test_my_data_with_empty_prisons(self):
         users = \
