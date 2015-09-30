@@ -1,11 +1,11 @@
 run:
-	boot2docker up
-	eval "$(boot2docker shellinit)"
+	docker-machine start default
+	eval "$(docker-machine env default)"
 	docker-compose up
 
 build:
-	boot2docker up
-	eval "$(boot2docker shellinit)"
+	docker-machine start default
+	eval "$(docker-machine env default)"
 	docker-compose build
 
 .PHONY: run build
