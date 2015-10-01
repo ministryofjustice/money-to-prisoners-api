@@ -15,6 +15,7 @@ from .signals import transaction_created, transaction_locked, \
 
 class Transaction(TimeStampedModel):
     prison = models.ForeignKey(Prison, blank=True, null=True)
+    prisoner_name = models.CharField(blank=True, null=True, max_length=250)
 
     prisoner_number = models.CharField(blank=True, max_length=250)
     prisoner_dob = models.DateField(blank=True, null=True)

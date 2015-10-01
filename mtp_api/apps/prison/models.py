@@ -16,6 +16,7 @@ class Prison(TimeStampedModel):
 class PrisonerLocation(TimeStampedModel):
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL)
 
+    prisoner_name = models.CharField(blank=True, max_length=250)
     prisoner_number = models.CharField(max_length=250)
     prisoner_dob = models.DateField()
 

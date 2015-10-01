@@ -33,7 +33,7 @@ class TransactionSerializer(serializers.ModelSerializer):
             'sender',
             'received_at',
             'prison',
-
+            'prisoner_name',
             'owner',
             'credited',
         )

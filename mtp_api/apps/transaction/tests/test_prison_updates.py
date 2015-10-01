@@ -5,7 +5,8 @@ from django.utils import timezone
 from core.tests.utils import make_test_users
 
 from prison.models import Prison, PrisonerLocation
-from prison.tests.utils import random_prisoner_number, random_prisoner_dob
+from prison.tests.utils import random_prisoner_number, random_prisoner_dob,\
+    random_prisoner_name
 
 from transaction.models import Transaction
 from transaction.signals import transaction_prisons_need_updating
@@ -63,9 +64,11 @@ class UpdatePrisonsOnAvailableTransactionsTestCase(BaseUpdatePrisonsTestCase):
 
         existing_prison = self.transaction.prison
         new_prison = Prison.objects.exclude(pk=existing_prison.pk).first()
+        prisoner_name = random_prisoner_name()
 
         PrisonerLocation.objects.create(
             created_by=User.objects.first(),
+            prisoner_name=prisoner_name,
             prisoner_number=self.transaction.prisoner_number,
             prisoner_dob=self.transaction.prisoner_dob,
             prison=new_prison
@@ -75,6 +78,7 @@ class UpdatePrisonsOnAvailableTransactionsTestCase(BaseUpdatePrisonsTestCase):
 
         self.transaction.refresh_from_db()
         self.assertEqual(self.transaction.prison.pk, new_prison.pk)
+        self.assertEqual(self.transaction.prisoner_name, prisoner_name)
 
 
 class UpdatePrisonsOnLockedTransactionsTestCase(BaseUpdatePrisonsTestCase):
@@ -83,6 +87,7 @@ class UpdatePrisonsOnLockedTransactionsTestCase(BaseUpdatePrisonsTestCase):
         data = super(UpdatePrisonsOnLockedTransactionsTestCase, self)._get_transaction_data()
         data.update({
             'prison': Prison.objects.first(),
+            'prisoner_name': random_prisoner_name(),
             'prisoner_number': random_prisoner_number(),
             'prisoner_dob': random_prisoner_dob(),
             'owner': User.objects.first(),
@@ -96,9 +101,11 @@ class UpdatePrisonsOnLockedTransactionsTestCase(BaseUpdatePrisonsTestCase):
 
         existing_prison = self.transaction.prison
         other_prison = Prison.objects.exclude(pk=existing_prison.pk).first()
+        new_prisoner_name = random_prisoner_name()
 
         PrisonerLocation.objects.create(
             created_by=User.objects.first(),
+            prisoner_name=new_prisoner_name,
             prisoner_number=self.transaction.prisoner_number,
             prisoner_dob=self.transaction.prisoner_dob,
             prison=other_prison
@@ -108,6 +115,7 @@ class UpdatePrisonsOnLockedTransactionsTestCase(BaseUpdatePrisonsTestCase):
 
         self.transaction.refresh_from_db()
         self.assertEqual(self.transaction.prison.pk, existing_prison.pk)
+        self.assertNotEqual(self.transaction.prisoner_name, new_prisoner_name)
 
 
 class UpdatePrisonsOnCreditedTransactionsTestcase(BaseUpdatePrisonsTestCase):
@@ -116,6 +124,7 @@ class UpdatePrisonsOnCreditedTransactionsTestcase(BaseUpdatePrisonsTestCase):
         data = super(UpdatePrisonsOnCreditedTransactionsTestcase, self)._get_transaction_data()
         data.update({
             'prison': Prison.objects.first(),
+            'prisoner_name': random_prisoner_name(),
             'prisoner_number': random_prisoner_number(),
             'prisoner_dob': random_prisoner_dob(),
             'owner': User.objects.first(),
@@ -129,9 +138,11 @@ class UpdatePrisonsOnCreditedTransactionsTestcase(BaseUpdatePrisonsTestCase):
 
         existing_prison = self.transaction.prison
         other_prison = Prison.objects.exclude(pk=existing_prison.pk).first()
+        new_prisoner_name = random_prisoner_name()
 
         PrisonerLocation.objects.create(
             created_by=User.objects.first(),
+            prisoner_name=new_prisoner_name,
             prisoner_number=self.transaction.prisoner_number,
             prisoner_dob=self.transaction.prisoner_dob,
             prison=other_prison
@@ -140,6 +151,7 @@ class UpdatePrisonsOnCreditedTransactionsTestcase(BaseUpdatePrisonsTestCase):
         transaction_prisons_need_updating.send(sender=None)
 
         self.transaction.refresh_from_db()
+        self.assertNotEqual(self.transaction.prisoner_name, new_prisoner_name)
         self.assertEqual(self.transaction.prison.pk, existing_prison.pk)
 
 
@@ -162,9 +174,11 @@ class UpdatePrisonsOnRefundedTransactionsTestcase(BaseUpdatePrisonsTestCase):
         self.assertTrue(self.transaction.refunded)
 
         prison = Prison.objects.first()
+        prisoner_name = random_prisoner_name()
 
         PrisonerLocation.objects.create(
             created_by=User.objects.first(),
+            prisoner_name=prisoner_name,
             prisoner_number=self.transaction.prisoner_number,
             prisoner_dob=self.transaction.prisoner_dob,
             prison=prison
@@ -174,6 +188,7 @@ class UpdatePrisonsOnRefundedTransactionsTestcase(BaseUpdatePrisonsTestCase):
 
         self.transaction.refresh_from_db()
         self.assertEqual(self.transaction.prison, None)
+        self.assertEqual(self.transaction.prisoner_name, None)
         self.assertTrue(self.transaction.refunded)
 
 
@@ -203,9 +218,11 @@ class UpdatePrisonsOnRefundPendingTransactionsTestcase(BaseUpdatePrisonsTestCase
         self.assertEqual(self.transaction.prison, None)
 
         prison = Prison.objects.first()
+        prisoner_name = random_prisoner_name()
 
         PrisonerLocation.objects.create(
             created_by=User.objects.first(),
+            prisoner_name=prisoner_name,
             prisoner_number=self.transaction.prisoner_number,
             prisoner_dob=self.transaction.prisoner_dob,
             prison=prison
@@ -215,3 +232,4 @@ class UpdatePrisonsOnRefundPendingTransactionsTestcase(BaseUpdatePrisonsTestCase
 
         self.transaction.refresh_from_db()
         self.assertEqual(self.transaction.prison.pk, prison.pk)
+        self.assertEqual(self.transaction.prisoner_name, prisoner_name)
