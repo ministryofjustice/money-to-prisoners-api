@@ -3,23 +3,24 @@ The API Server for the Money to Prisoners Project
 
 ## Dependencies
 ### Docker
-To run this project locally you need to have
+To run this project locally on a Mac you need to have
+[Virtualbox](https://www.virtualbox.org/wiki/Downloads)
 [Docker](http://docs.docker.com/installation/mac/) and
 [Docker Compose](https://docs.docker.com/compose/install/) installed.
 
 ### Other Repositories
-Alongside this repository might need the [Cashbook UI](https://github.com/ministryofjustice/money-to-prisoners-cashbook)
+Alongside this repository you might need the [Cashbook UI](https://github.com/ministryofjustice/money-to-prisoners-cashbook)
 and if you're planning to deploy then you'll need the [deployment repository](https://github.com/ministryofjustice/money-to-prisoners-deploy)
 
 ## Developing
 ### Development Server
-#### Boot2Docker
+#### docker-machine
 > If you're developing on a Mac then Docker won't run natively, you'll be running
 > a single VM with linux installed where your Docker containers run. To start the vm
 > run the following first before continuing:
 > ```
-> $ boot2docker up
-> $ eval "$(boot2docker shellinit)"
+> $ docker-machine create -d virtualbox dev
+> $ eval "$(docker-machine env default)"
 > ```
 
 In a terminal `cd` into the directory you checked this project out into, then
@@ -42,17 +43,16 @@ $ make build # initialise the server
 $ make # run the server
 ```
 
-You should be able to point your browser at
-[http://localhost:8000](http://localhost:8000)
-if you're using *boot2docker* then it'll be at the IP of the boot2docker virtual machine.
-You can find it by typing `boot2docker ip` in a terminal. Then visit http://**boot2docker ip**:8000/
+You should be able to point your browser at the VM's url
+You can find it by typing `docker-machine ip` in a terminal. Then visit http://**docker-machine ip**:8000/.
+You should see an `HTTP 401 Unauthorized` page.
 
 ### Using the API
 #### Getting an access token
 ```
 curl -X POST -d "grant_type=password&username=<user_name>&password=<password>&client_id=<client_id>&client_secret=<client_secret>" http://localhost:8000/oauth2/token/
 ```
-If you have executed the `./manage.py load_test_data` command then you'll have 
+If you have executed the `./manage.py load_test_data` command then you'll have
 some users and a test oauth2 application already created. In which case execute the following command:
 ```
 curl -X POST -d "grant_type=password&username=test_prison_1&password=test_prison_1&client_id=cashbook&client_secret=cashbook" http://localhost:8000/oauth2/token/
