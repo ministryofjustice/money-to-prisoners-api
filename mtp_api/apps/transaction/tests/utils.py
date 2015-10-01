@@ -12,7 +12,7 @@ from transaction.models import Transaction
 from transaction.constants import TRANSACTION_STATUS
 
 from prison.tests.utils import random_prisoner_number, random_prisoner_dob, \
-    get_prisoner_location_creator
+    get_prisoner_location_creator, random_prisoner_name
 
 
 def random_reference(prisoner_number=None, prisoner_dob=None):
@@ -56,6 +56,7 @@ def generate_initial_transactions_data(tot=50):
 
         if include_prisoner_info:
             data.update({
+                'prisoner_name': random_prisoner_name(),
                 'prisoner_number': random_prisoner_number(),
                 'prisoner_dob': random_prisoner_dob()
             })
@@ -101,7 +102,8 @@ def generate_transactions(transaction_batch=50):
     transactions = []
     for transaction_counter, data in enumerate(data_list, start=1):
         is_valid, prisoner_location = location_creator(
-            data.get('prisoner_number'), data.get('prisoner_dob')
+            data.get('prisoner_name'), data.get('prisoner_number'),
+            data.get('prisoner_dob')
         )
         if is_valid:
             # randomly choose the state of the transaction

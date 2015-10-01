@@ -26,6 +26,15 @@ def random_prisoner_number():
     )
 
 
+def random_prisoner_name():
+    return '%s%s %s%s' % (
+        get_random_string(allowed_chars=string.ascii_uppercase, length=1),
+        get_random_string(allowed_chars=string.ascii_lowercase, length=4),
+        get_random_string(allowed_chars=string.ascii_uppercase, length=1),
+        get_random_string(allowed_chars=string.ascii_lowercase, length=4),
+    )
+
+
 def get_prisoner_location_creator():
     """
     Returns a function(prisoner_number, prisoner_dob) which when called returns:
@@ -36,7 +45,7 @@ def get_prisoner_location_creator():
 
     created_by = User.objects.all()[0]
 
-    def make_prisoner_location(prisoner_number, prisoner_dob):
+    def make_prisoner_location(prisoner_name, prisoner_number, prisoner_dob):
         if not prisoner_number or not prisoner_dob:
             return (False, None)
 
@@ -45,6 +54,7 @@ def get_prisoner_location_creator():
 
         data = {
             'created_by': created_by,
+            'prisoner_name': prisoner_name,
             'prisoner_number': prisoner_number,
             'prisoner_dob': prisoner_dob,
             'prison': next(prisons)

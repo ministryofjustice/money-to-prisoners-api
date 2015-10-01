@@ -27,7 +27,8 @@ class TransactionQuerySet(models.QuerySet):
         cursor = connection.cursor()
 
         cursor.execute(
-            "UPDATE transaction_transaction SET prison_id = pl.prison_id "
+            "UPDATE transaction_transaction "
+            "SET prison_id = pl.prison_id, prisoner_name = pl.prisoner_name "
             "FROM transaction_transaction AS t LEFT OUTER JOIN prison_prisonerlocation AS pl "
             "ON t.prisoner_number = pl.prisoner_number AND t.prisoner_dob = pl.prisoner_dob "
             "WHERE t.owner_id IS NULL AND t.credited is False AND t.refunded is False "
