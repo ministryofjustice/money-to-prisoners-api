@@ -9,7 +9,7 @@ from mtp_auth.constants import CASHBOOK_OAUTH_CLIENT_ID, \
     BANK_ADMIN_OAUTH_CLIENT_ID, PRISONER_LOCATION_OAUTH_CLIENT_ID
 
 
-def make_test_users(clerks_per_prison=1):
+def make_test_users(clerks_per_prison=2):
     # prison clerks
     prison_clerks = []
     for prison in Prison.objects.all():
