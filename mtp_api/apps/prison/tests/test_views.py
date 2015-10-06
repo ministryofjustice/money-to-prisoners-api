@@ -6,8 +6,7 @@ from django.core.urlresolvers import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from core.tests.utils import make_test_users, \
-    make_test_oauth_applications
+from core.tests.utils import make_test_users
 
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from mtp_auth.constants import CASHBOOK_OAUTH_CLIENT_ID
@@ -24,7 +23,6 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
         super(PrisonerLocationViewTestCase, self).setUp()
         self.prison_clerks, self.users, self.bank_admins, _ = make_test_users()
         self.prisons = Prison.objects.all()
-        make_test_oauth_applications()
 
     @property
     def list_url(self):

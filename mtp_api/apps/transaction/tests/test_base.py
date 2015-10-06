@@ -3,7 +3,7 @@ from oauth2_provider.models import AccessToken
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from core.tests.utils import make_test_users, make_test_oauth_applications
+from core.tests.utils import make_test_users
 from mtp_auth.tests.utils import AuthTestCaseMixin
 
 from prison.models import Prison
@@ -38,7 +38,6 @@ class BaseTransactionViewTestCase(AuthTestCaseMixin, APITestCase):
             transaction_batch=self.transaction_batch
         )
         self.prisons = Prison.objects.all()
-        make_test_oauth_applications()
 
     def _get_locked_transactions_qs(self, prisons, user=None):
         params = {
