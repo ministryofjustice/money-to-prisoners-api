@@ -2,6 +2,7 @@ from oauth2_provider.models import Application
 
 from django.contrib.auth.models import User
 
+from mtp_auth.models import ApplicationUserMapping
 from prison.models import Prison
 from mtp_auth.tests.mommy_recipes import create_prison_user_mapping, \
     create_prisoner_location_admins, create_bank_admins, create_refund_bank_admins
@@ -23,14 +24,8 @@ def make_test_users(clerks_per_prison=2):
     # bank admin
     bank_admins = create_bank_admins()
     refund_bank_admins = create_refund_bank_admins()
-    return (prison_clerks, prisoner_location_admins, bank_admins, refund_bank_admins)
 
-
-def make_test_oauth_applications():
-    """
-    Creates test oauth clients with secret == client id
-    for test purposes.
-    """
+    # create test oauth applications
     user = User.objects.first()
 
     for client_id in [
@@ -46,3 +41,17 @@ def make_test_oauth_applications():
             name=client_id,
             user=user
         )
+
+    def link_users_with_client(users, client_id):
+        for user in users:
+            ApplicationUserMapping.objects.get_or_create(
+                user=user,
+                application=Application.objects.get(client_id=client_id)
+            )
+
+    link_users_with_client(prison_clerks, CASHBOOK_OAUTH_CLIENT_ID)
+    link_users_with_client(prisoner_location_admins, PRISONER_LOCATION_OAUTH_CLIENT_ID)
+    link_users_with_client(bank_admins, BANK_ADMIN_OAUTH_CLIENT_ID)
+    link_users_with_client(refund_bank_admins, BANK_ADMIN_OAUTH_CLIENT_ID)
+
+    return (prison_clerks, prisoner_location_admins, bank_admins, refund_bank_admins)

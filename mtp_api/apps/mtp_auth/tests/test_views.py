@@ -3,11 +3,9 @@ from django.core.urlresolvers import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from core.tests.utils import make_test_users, make_test_oauth_applications
-
+from core.tests.utils import make_test_users
+from mtp_auth.constants import BANK_ADMIN_OAUTH_CLIENT_ID, CASHBOOK_OAUTH_CLIENT_ID
 from prison.models import Prison
-
-from mtp_auth.models import PrisonUserMapping
 
 
 class UserViewTestCase(APITestCase):
@@ -28,7 +26,6 @@ class UserViewTestCase(APITestCase):
         )
 
         self.prisons = Prison.objects.all()
-        make_test_oauth_applications()
 
     def _get_url(self, username):
         return reverse('user-detail', kwargs={'username': username})
@@ -89,3 +86,63 @@ class UserViewTestCase(APITestCase):
 
             self.assertEqual(response.data['pk'], user.pk)
             self.assertEqual(response.data['prisons'], [])
+
+
+class UserApplicationValidationTestCase(APITestCase):
+    fixtures = ['test_prisons.json', 'initial_groups.json']
+
+    def setUp(self):
+        super(UserApplicationValidationTestCase, self).setUp()
+        self.prison_clerks, self.users, self.bank_admins, _ = make_test_users()
+
+    def test_prison_clerk_can_log_in_to_cashbook(self):
+        response = self.client.post(
+            reverse('oauth2_provider:token'),
+            {
+                'grant_type': 'password',
+                'username': self.prison_clerks[0].username,
+                'password': self.prison_clerks[0].username,
+                'client_id': CASHBOOK_OAUTH_CLIENT_ID,
+                'client_secret': CASHBOOK_OAUTH_CLIENT_ID,
+            }
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_bank_admin_can_log_in_to_bank_admin(self):
+        response = self.client.post(
+            reverse('oauth2_provider:token'),
+            {
+                'grant_type': 'password',
+                'username': self.bank_admins[0].username,
+                'password': self.bank_admins[0].username,
+                'client_id': BANK_ADMIN_OAUTH_CLIENT_ID,
+                'client_secret': BANK_ADMIN_OAUTH_CLIENT_ID,
+            }
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_prison_clerk_cannot_login_to_bank_admin(self):
+        response = self.client.post(
+            reverse('oauth2_provider:token'),
+            {
+                'grant_type': 'password',
+                'username': self.prison_clerks[0].username,
+                'password': self.prison_clerks[0].username,
+                'client_id': BANK_ADMIN_OAUTH_CLIENT_ID,
+                'client_secret': BANK_ADMIN_OAUTH_CLIENT_ID,
+            }
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_bank_admin_cannot_login_to_cashbook(self):
+        response = self.client.post(
+            reverse('oauth2_provider:token'),
+            {
+                'grant_type': 'password',
+                'username': self.bank_admins[0].username,
+                'password': self.bank_admins[0].username,
+                'client_id': CASHBOOK_OAUTH_CLIENT_ID,
+                'client_secret': CASHBOOK_OAUTH_CLIENT_ID,
+            }
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)

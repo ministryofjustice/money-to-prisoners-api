@@ -163,8 +163,10 @@ OAUTH2_PROVIDER = {
     'SCOPES': {
         'read': 'Read scope',
         'write': 'Write scope',
-    }
+    },
+    'OAUTH2_VALIDATOR_CLASS': 'mtp_auth.validators.ApplicationRequestValidator'
 }
+OAUTH2_PROVIDER_APPLICATION_MODEL = 'oauth2_provider.Application'
 
 try:
     from .local import *

@@ -10,3 +10,9 @@ class PrisonUserMapping(TimeStampedModel):
 
     def __str__(self):
         return self.user.username
+
+
+class ApplicationUserMapping(TimeStampedModel):
+
+    user = models.ForeignKey('auth.User')
+    application = models.ForeignKey('oauth2_provider.Application')
