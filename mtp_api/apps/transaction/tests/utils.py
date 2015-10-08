@@ -8,8 +8,8 @@ from django.contrib.auth.models import User
 
 from prison.models import Prison
 
-from transaction.models import Transaction
-from transaction.constants import TRANSACTION_STATUS
+from transaction.models import Transaction, Log
+from transaction.constants import TRANSACTION_STATUS, LOG_ACTIONS
 
 from prison.tests.utils import random_prisoner_number, random_prisoner_dob, \
     get_prisoner_location_creator, random_prisoner_name
@@ -41,17 +41,21 @@ def generate_initial_transactions_data(tot=50):
         include_prisoner_info = transaction_counter % 5 != 0
         include_sender_roll_number = transaction_counter % 10 == 0
 
+        random_date = now - datetime.timedelta(
+            minutes=random.randint(0, 10000)
+        )
+
         data = {
             'amount': random.randint(1000, 30000),
-            'received_at': now - datetime.timedelta(
-                minutes=random.randint(0, 10000)
-            ),
+            'received_at': random_date,
             'sender_sort_code': get_random_string(6, '1234567890'),
             'sender_account_number': get_random_string(8, '1234567890'),
             'sender_name': get_random_string(10),
             'owner': None,
             'credited': False,
-            'refunded': False
+            'refunded': False,
+            'created': random_date,
+            'modified': random_date,
         }
 
         if include_prisoner_info:
@@ -97,7 +101,8 @@ def generate_transactions(transaction_batch=50):
     )
 
     location_creator = get_prisoner_location_creator()
-    onwer_status_chooser = get_owner_and_status_chooser()
+    owner_status_chooser = get_owner_and_status_chooser()
+    is_reconciled = cycle([True, False, False])
 
     transactions = []
     for transaction_counter, data in enumerate(data_list, start=1):
@@ -105,10 +110,11 @@ def generate_transactions(transaction_batch=50):
             data.get('prisoner_name'), data.get('prisoner_number'),
             data.get('prisoner_dob')
         )
+
         if is_valid:
             # randomly choose the state of the transaction
             prison = prisoner_location.prison
-            owner, t_status = onwer_status_chooser(prison)
+            owner, t_status = owner_status_chooser(prison)
 
             data['prison'] = prison
             if t_status == TRANSACTION_STATUS.LOCKED:
@@ -132,8 +138,28 @@ def generate_transactions(transaction_batch=50):
             else:
                 data.update({'refunded': False})
 
-        transactions.append(
-            Transaction.objects.create(**data)
-        )
+        if (data['credited'] or data['refunded']):
+            data['reconciled'] = next(is_reconciled)
+
+        new_transaction = Transaction.objects.create(**data)
+
+        log_data = {
+            'transaction': new_transaction,
+            'user': new_transaction.owner,
+            'created': new_transaction.modified
+        }
+
+        if new_transaction.credited:
+            log_data['action'] = LOG_ACTIONS.CREDITED
+            Log.objects.create(**log_data)
+        elif new_transaction.refunded:
+            log_data['action'] = LOG_ACTIONS.REFUNDED
+            Log.objects.create(**log_data)
+
+        if new_transaction.reconciled:
+            log_data['action'] = LOG_ACTIONS.RECONCILED
+            Log.objects.create(**log_data)
+
+        transactions.append(new_transaction)
 
     return transactions
