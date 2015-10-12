@@ -13,7 +13,7 @@ from mtp_auth.constants import CASHBOOK_OAUTH_CLIENT_ID
 
 from prison.models import Prison, PrisonerLocation
 
-from prison.tests.utils import random_prisoner_number, random_prisoner_dob
+from prison.tests.utils import random_prisoner_name, random_prisoner_number, random_prisoner_dob
 
 
 class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
@@ -93,16 +93,19 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
 
         data = [
             {
+                'prisoner_name': random_prisoner_name(),
                 'prisoner_number': random_prisoner_number(),
                 'prisoner_dob': random_prisoner_dob(),
                 'prison': self.prisons[0].pk
             },
             {
+                'prisoner_name': random_prisoner_name(),
                 'prisoner_number': repeated_p_num_1,
                 'prisoner_dob': random_prisoner_dob(),
                 'prison': self.prisons[1].pk
             },
             {
+                'prisoner_name': random_prisoner_name(),
                 'prisoner_number': repeated_p_num_2,
                 'prisoner_dob': random_prisoner_dob(),
                 'prison': self.prisons[1].pk
@@ -147,6 +150,7 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
         self._test_validation_error(
             data=[
                 {
+                    'prisoner_name': random_prisoner_name(),
                     'prisoner_number': random_prisoner_number(),
                     'prisoner_dob': '01//02//2015',
                     'prison': self.prisons[0].pk
@@ -159,6 +163,7 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
         self._test_validation_error(
             data=[
                 {
+                    'prisoner_name': random_prisoner_name(),
                     'prisoner_number': random_prisoner_number(),
                     'prisoner_dob': random_prisoner_dob(),
                     'prison': 'invalid'
@@ -175,6 +180,7 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
 
         data = [
             {
+                'prisoner_name': random_prisoner_name(),
                 'prisoner_number': random_prisoner_number(),
                 'prisoner_dob': random_prisoner_dob(),
                 'prison': self.prisons[0].pk

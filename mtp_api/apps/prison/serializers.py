@@ -41,6 +41,7 @@ class PrisonerLocationSerializer(serializers.ModelSerializer):
         model = PrisonerLocation
         list_serializer_class = PrisonerLocationListSerializer
         fields = (
+            'prisoner_name',
             'prisoner_number',
             'prisoner_dob',
             'prison',
