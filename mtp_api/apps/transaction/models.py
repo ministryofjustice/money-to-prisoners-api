@@ -85,6 +85,10 @@ class Transaction(TimeStampedModel):
             credited=credited
         )
 
+    @property
+    def owner_name(self):
+        return self.owner.get_full_name() if self.owner else None
+
     class Meta:
         ordering = ('received_at',)
         permissions = (
