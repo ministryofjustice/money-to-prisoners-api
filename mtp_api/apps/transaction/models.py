@@ -89,6 +89,22 @@ class Transaction(TimeStampedModel):
     def owner_name(self):
         return self.owner.get_full_name() if self.owner else None
 
+    @property
+    def credited_at(self):
+        if not self.credited:
+            return None
+        log_action = self.log_set.filter(action=LOG_ACTIONS.CREDITED) \
+            .order_by('-created').first()
+        return log_action.created
+
+    @property
+    def refunded_at(self):
+        if not self.refunded:
+            return None
+        log_action = self.log_set.filter(action=LOG_ACTIONS.REFUNDED) \
+            .order_by('-created').first()
+        return log_action.created
+
     class Meta:
         ordering = ('received_at',)
         permissions = (

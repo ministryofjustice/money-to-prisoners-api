@@ -24,6 +24,8 @@ class IdsTransactionSerializer(serializers.Serializer):
 class TransactionSerializer(serializers.ModelSerializer):
     sender = serializers.CharField(source='sender_name')
     owner_name = serializers.CharField(read_only=True)
+    credited_at = serializers.DateTimeField(read_only=True)
+    refunded_at = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = Transaction
@@ -38,4 +40,7 @@ class TransactionSerializer(serializers.ModelSerializer):
             'owner',
             'owner_name',
             'credited',
+            'credited_at',
+            'refunded',
+            'refunded_at',
         )
