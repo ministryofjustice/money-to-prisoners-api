@@ -1,7 +1,12 @@
+import datetime
+from functools import reduce
+
 import django_filters
 
+from django import forms
 from django.contrib.auth.models import User
-from django.db import transaction
+from django.db import models, transaction
+from django_filters.widgets import RangeWidget
 from django.http import HttpResponseRedirect
 from django.views.generic import View
 
@@ -36,11 +41,57 @@ class StatusChoiceFilter(django_filters.ChoiceFilter):
         return qs
 
 
+class DateRangeField(forms.MultiValueField):
+    widget = RangeWidget
+
+    def __init__(self, *args, **kwargs):
+        fields = (
+            forms.DateTimeField(),
+            forms.DateTimeField(),
+        )
+        super().__init__(fields, *args, **kwargs)
+
+    def compress(self, data_list):
+        if data_list:
+            start, end = data_list
+            if end:
+                end += datetime.timedelta(days=1)
+            return slice(start, end)
+        return None
+
+
+class DateRangeFilter(django_filters.RangeFilter):
+    field_class = DateRangeField
+
+
+class MultiFieldSearchFilter(django_filters.CharFilter):
+    def __init__(self, fields, **kwargs):
+        self.fields = fields
+        super().__init__(**kwargs)
+
+    def filter(self, qs, value):
+        if not value:
+            return qs
+
+        def get_field_filter(field):
+            return models.Q(**{'%s__icontains' % field: value})
+
+        qs = qs.filter(
+            reduce(
+                lambda a, b: a | b,
+                map(get_field_filter, self.fields)
+            )
+        )
+        return qs
+
+
 class TransactionListFilter(django_filters.FilterSet):
 
     status = StatusChoiceFilter(choices=TRANSACTION_STATUS.choices)
     prison = django_filters.ModelMultipleChoiceFilter(queryset=Prison.objects.all())
     user = django_filters.ModelChoiceFilter(name='owner', queryset=User.objects.all())
+    received_at = DateRangeFilter()
+    search = MultiFieldSearchFilter(fields=['prisoner_name', 'prisoner_number', 'sender_name'])
 
     class Meta:
         model = Transaction
