@@ -1,7 +1,8 @@
-from rest_framework import mixins, viewsets, status
+from rest_framework import mixins, viewsets, status, filters
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.exceptions import ParseError
+import django_filters
 
 from mtp_auth.permissions import BankAdminClientIDPermissions
 from transaction.models import Transaction
@@ -11,32 +12,41 @@ from .serializers import CreateTransactionSerializer, \
     ReconcileTransactionSerializer
 
 
+class TransactionListFilter(django_filters.FilterSet):
+    status = django_filters.MethodFilter(action='filter_status')
+    reconciled = django_filters.BooleanFilter()
+
+    class Meta:
+        model = Transaction
+        fields = ['status', 'reconciled']
+
+    def filter_status(self, queryset, value):
+        if value:
+            values = [v.lower() for v in value.split(',')]
+
+            if len(values) > 0:
+                try:
+                    status_set = queryset.filter(
+                        **Transaction.STATUS_LOOKUP[values[0]])
+                    for value in values[1:]:
+                        status_set = status_set | queryset.filter(
+                            **Transaction.STATUS_LOOKUP[value])
+                    queryset = status_set
+                except KeyError:
+                    raise ParseError()
+        return queryset
+
+
 class TransactionView(mixins.CreateModelMixin, mixins.UpdateModelMixin,
                       mixins.ListModelMixin, viewsets.GenericViewSet):
 
+    queryset = Transaction.objects.all()
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_class = TransactionListFilter
     permission_classes = (
         IsAuthenticated, BankAdminClientIDPermissions,
         TransactionPermissions
     )
-
-    def get_queryset(self):
-        queryset = Transaction.objects.all()
-
-        status = self.request.query_params.get('status', None)
-        if status:
-            values = [v.lower() for v in status.split(',')]
-
-            if len(values) > 0:
-                try:
-                    queryset = Transaction.objects.filter(
-                        **Transaction.STATUS_LOOKUP[values[0]])
-                    for value in values[1:]:
-                        queryset = queryset | Transaction.objects.filter(
-                            **Transaction.STATUS_LOOKUP[value])
-                except KeyError:
-                    raise ParseError()
-
-        return queryset
 
     def patch_refunded(self, request, *args, **kwargs):
         try:

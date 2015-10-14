@@ -73,3 +73,10 @@ class LogManager(models.Manager):
             action=LOG_ACTIONS.REFUNDED,
             user=by_user
         )
+
+    def transaction_reconciled(self, transaction, by_user):
+        self.create(
+            transaction=transaction,
+            action=LOG_ACTIONS.RECONCILED,
+            user=by_user
+        )

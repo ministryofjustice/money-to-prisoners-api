@@ -1,4 +1,5 @@
 import mock
+from datetime import datetime, date, timedelta, timezone
 
 from django.core.urlresolvers import reverse
 from rest_framework import status as http_status
@@ -134,7 +135,7 @@ class CreateTransactionsTestCase(
         mocked_transaction_prisons_need_updating.send.assert_called_with(sender=Transaction)
 
 
-class UpdateTransactionsTestCase(
+class UpdateRefundTransactionsTestCase(
     TransactionRejectsRequestsWithoutPermissionTestMixin,
     BaseTransactionViewTestCase
 ):
@@ -142,7 +143,7 @@ class UpdateTransactionsTestCase(
     ENDPOINT_VERB = 'patch'
 
     def setUp(self):
-        super(UpdateTransactionsTestCase, self).setUp()
+        super(UpdateRefundTransactionsTestCase, self).setUp()
 
         # delete all transactions and logs
         Transaction.objects.all().delete()
@@ -176,7 +177,7 @@ class UpdateTransactionsTestCase(
         return data_list
 
     def test_patch_refunded(self):
-        """PATCH on endpoint should update refunded status of given transactions"""
+        """PATCH on endpoint should update status of given transactions"""
 
         url = self._get_url()
         data_list = self._get_transactions()
@@ -249,7 +250,7 @@ class UpdateTransactionsTestCase(
                 )
 
     def test_patch_cannot_update_disallowed_fields(self):
-        """ PATCH should not update fields other than refunded """
+        """ PATCH should not update fields other than refunded and reconciled """
 
         url = self._get_url()
         data_list = self._get_transactions()
@@ -271,6 +272,121 @@ class UpdateTransactionsTestCase(
             )
 
 
+class UpdateReconcileTransactionsTestCase(
+    TransactionRejectsRequestsWithoutPermissionTestMixin,
+    BaseTransactionViewTestCase
+):
+
+    ENDPOINT_VERB = 'patch'
+
+    def setUp(self):
+        super(UpdateReconcileTransactionsTestCase, self).setUp()
+
+        # delete all transactions and logs
+        Transaction.objects.all().delete()
+        Log.objects.all().delete()
+
+    def _get_unauthorised_application_users(self):
+        return [
+            self.prison_clerks[0], self.prisoner_location_admins[0]
+        ]
+
+    def _get_unauthorised_user(self):
+        return self.bank_admins[0]
+
+    def _get_authorised_user(self):
+        return self.refund_bank_admins[0]
+
+    def _get_url(self, *args, **kwargs):
+        return reverse('bank_admin:transaction-list')
+
+    def _get_transactions(self, tot=30):
+        transactions = generate_transactions(transaction_batch=tot)
+
+        data_list = []
+        for i, trans in enumerate(transactions):
+            trans.save()
+            reconcile = False
+            if (trans.credited or trans.refunded) and not trans.reconciled:
+                reconcile = True
+            data_list.append({'id': trans.id, 'reconciled': reconcile})
+
+        return data_list
+
+    def test_patch_reconciled(self):
+        """PATCH on endpoint should update status of given transactions"""
+
+        url = self._get_url()
+        data_list = self._get_transactions()
+
+        user = self._get_authorised_user()
+
+        response = self.client.patch(
+            url, data=data_list, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+
+        # check changes in db
+        for data in data_list:
+            if data['reconciled']:
+                self.assertTrue(Transaction.objects.get(id=data['id']).reconciled)
+
+        # check logs
+        refunded_data_list = [t['id'] for t in data_list if t['reconciled']]
+        self.assertEqual(
+            Log.objects.filter(
+                user=user,
+                action=LOG_ACTIONS.RECONCILED,
+                transaction__id__in=Transaction.objects.all().values_list('id', flat=True)
+            ).count(),
+            len(refunded_data_list)
+        )
+
+    def _patch_reconciled_with_invalid_status(self, valid_data_list, status):
+        url = self._get_url()
+        user = self._get_authorised_user()
+
+        invalid_transactions = Transaction.objects.filter(
+            **Transaction.STATUS_LOOKUP[status])
+        invalid_data_list = (
+            [{'id': t.id, 'reconciled': True} for t in invalid_transactions]
+        )
+
+        return self.client.patch(
+            url, data=valid_data_list + invalid_data_list, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+
+    def test_patch_refund_pending_creates_conflict(self):
+        valid_data_list = self._get_transactions()
+        response = self._patch_reconciled_with_invalid_status(
+            valid_data_list, 'refund_pending')
+
+        self.assertEqual(response.status_code, http_status.HTTP_409_CONFLICT)
+
+        # check that entire update failed
+        for data in valid_data_list:
+            if data['reconciled']:
+                self.assertFalse(
+                    Transaction.objects.get(id=data['id']).reconciled
+                )
+
+    def test_patch_locked_creates_conflict(self):
+        valid_data_list = self._get_transactions()
+        response = self._patch_reconciled_with_invalid_status(
+            valid_data_list, 'locked')
+
+        self.assertEqual(response.status_code, http_status.HTTP_409_CONFLICT)
+
+        # check that entire update failed
+        for data in valid_data_list:
+            if data['reconciled']:
+                self.assertFalse(
+                    Transaction.objects.get(id=data['id']).reconciled
+                )
+
+
 class GetTransactionsAsBankAdminTestCase(
     TransactionRejectsRequestsWithoutPermissionTestMixin,
     BaseTransactionViewTestCase
@@ -284,7 +400,7 @@ class GetTransactionsAsBankAdminTestCase(
         Transaction.objects.all().delete()
         Log.objects.all().delete()
 
-        data_list = self._populate_transactions()
+        self._populate_transactions()
 
     def _get_unauthorised_application_users(self):
         return [
@@ -294,11 +410,14 @@ class GetTransactionsAsBankAdminTestCase(
     def _get_url(self, *args, **kwargs):
         return reverse('bank_admin:transaction-list')
 
-    def _populate_transactions(self, tot=10):
+    def _populate_transactions(self, tot=20):
         transactions = generate_transactions(transaction_batch=tot)
 
-        for i, trans in enumerate(transactions):
+        for trans in transactions:
             trans.save()
+
+    def _get_authorised_user(self):
+        return self.bank_admins[0]
 
     def _get_with_status(self, user, status_arg):
         url = self._get_url()
@@ -338,9 +457,6 @@ class GetTransactionsAsBankAdminTestCase(
             self.assertTrue(matches_one)
 
         return data['results']
-
-    def _get_authorised_user(self):
-        return self.bank_admins[0]
 
     def _assert_required_fields_present(self, results):
         for t in results:
@@ -396,6 +512,37 @@ class GetTransactionsAsBankAdminTestCase(
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
         self.assertEqual(response.status_code, http_status.HTTP_400_BAD_REQUEST)
+
+    def test_get_list_affected_by_reconciled(self):
+        url = self._get_url()
+
+        response = self.client.get(
+            url, {'status': 'credited',
+                  'reconciled': True,
+                  'limit': 1000}, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self._get_authorised_user())
+        )
+        reconciled_results = response.data['results']
+
+        for r in reconciled_results:
+            self.assertTrue(r['credited'])
+            t = Transaction.objects.get(pk=r['id'])
+            self.assertTrue(t.reconciled)
+
+        response = self.client.get(
+            url, {'status': 'credited',
+                  'reconciled': False,
+                  'limit': 1000}, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self._get_authorised_user())
+        )
+        non_reconciled_results = response.data['results']
+
+        for r in non_reconciled_results:
+            self.assertTrue(r['credited'])
+            t = Transaction.objects.get(pk=r['id'])
+            self.assertFalse(t.reconciled)
+
+        self.assertNotEqual(reconciled_results, non_reconciled_results)
 
 
 class GetTransactionsAsRefundBankAdminTestCase(GetTransactionsAsBankAdminTestCase):
