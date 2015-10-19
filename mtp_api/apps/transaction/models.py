@@ -93,7 +93,7 @@ class Transaction(TimeStampedModel):
             ("lock_transaction", "Can lock transaction"),
             ("unlock_transaction", "Can unlock transaction"),
             ("patch_credited_transaction", "Can patch credited transaction"),
-            ("patch_refunded_transaction", "Can patch refunded transaction"),
+            ("patch_processed_transaction", "Can patch processed transaction"),
         )
         index_together = [
             ["prisoner_number", "prisoner_dob"],
