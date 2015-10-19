@@ -48,7 +48,7 @@ class TransactionView(mixins.CreateModelMixin, mixins.UpdateModelMixin,
         TransactionPermissions
     )
 
-    def patch_refunded(self, request, *args, **kwargs):
+    def patch_processed(self, request, *args, **kwargs):
         try:
             return self.partial_update(request, *args, **kwargs)
         except Transaction.DoesNotExist as e:
@@ -56,7 +56,7 @@ class TransactionView(mixins.CreateModelMixin, mixins.UpdateModelMixin,
                 data={
                     'errors': [
                         {
-                            'msg': 'Some transactions could not be refunded',
+                            'msg': 'Some transactions could not be updated',
                             'ids': sorted(e.args[0])
                         }
                     ]

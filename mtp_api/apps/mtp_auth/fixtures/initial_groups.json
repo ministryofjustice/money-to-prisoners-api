@@ -16,7 +16,8 @@
     "name": "BankAdmin",
     "permissions": [
       ["add_transaction", "transaction", "transaction"],
-      ["view_transaction", "transaction", "transaction"]
+      ["view_transaction", "transaction", "transaction"],
+      ["patch_processed_transaction", "transaction", "transaction"]
     ]
   }
 },
@@ -39,8 +40,7 @@
   "fields": {
     "name": "RefundBankAdmin",
     "permissions": [
-      ["view_bank_details_transaction", "transaction", "transaction"],
-      ["patch_refunded_transaction", "transaction", "transaction"]
+      ["view_bank_details_transaction", "transaction", "transaction"]
     ]
   }
 }

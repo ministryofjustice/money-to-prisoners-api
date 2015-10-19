@@ -155,7 +155,7 @@ class UpdateRefundTransactionsTestCase(
         ]
 
     def _get_unauthorised_user(self):
-        return self.bank_admins[0]
+        return self.prison_clerks[0]
 
     def _get_authorised_user(self):
         return self.refund_bank_admins[0]
@@ -292,10 +292,10 @@ class UpdateReconcileTransactionsTestCase(
         ]
 
     def _get_unauthorised_user(self):
-        return self.bank_admins[0]
+        return self.prison_clerks[0]
 
     def _get_authorised_user(self):
-        return self.refund_bank_admins[0]
+        return self.bank_admins[0]
 
     def _get_url(self, *args, **kwargs):
         return reverse('bank_admin:transaction-list')
