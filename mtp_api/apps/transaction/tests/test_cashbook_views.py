@@ -126,7 +126,7 @@ class TransactionListTestCase(
             return lambda t: any(
                 search_phrase in getattr(t, field).lower()
                 for field in search_fields
-            )
+            ) or (search_phrase in '£%0.2f' % (t.amount / 100))
         return noop_checker
 
 
@@ -392,6 +392,16 @@ class TransactionListWithSearchTestCase(TransactionListTestCase):
         """
         transaction = random.choice(self.transactions)
         search_phrase = transaction.sender_name[:2]
+        self._test_response_with_filters(filters={
+            'search': search_phrase
+        })
+
+    def test_filter_search_for_amount(self):
+        """
+        Search for a payment amount
+        """
+        transaction = random.choice(self.transactions)
+        search_phrase = '£%0.2f' % (transaction.amount / 100)
         self._test_response_with_filters(filters={
             'search': search_phrase
         })

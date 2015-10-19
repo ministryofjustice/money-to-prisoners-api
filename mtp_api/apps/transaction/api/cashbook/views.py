@@ -1,5 +1,6 @@
 import datetime
 from functools import reduce
+import re
 
 import django_filters
 
@@ -74,6 +75,10 @@ class MultiFieldSearchFilter(django_filters.CharFilter):
             return qs
 
         def get_field_filter(field):
+            if field == 'amount':
+                # convert formatted currency values into integer pence so that amount field can be searched
+                value_converted = re.sub(r'£(\d+(?:\.\d\d)?)', lambda v: '%0.0f' % (float(v.group(1)) * 100), value)
+                return models.Q(amount__icontains=value_converted)
             return models.Q(**{'%s__icontains' % field: value})
 
         qs = qs.filter(
@@ -91,7 +96,7 @@ class TransactionListFilter(django_filters.FilterSet):
     prison = django_filters.ModelMultipleChoiceFilter(queryset=Prison.objects.all())
     user = django_filters.ModelChoiceFilter(name='owner', queryset=User.objects.all())
     received_at = DateRangeFilter()
-    search = MultiFieldSearchFilter(fields=['prisoner_name', 'prisoner_number', 'sender_name'])
+    search = MultiFieldSearchFilter(fields=['prisoner_name', 'prisoner_number', 'sender_name', 'amount'])
 
     class Meta:
         model = Transaction
