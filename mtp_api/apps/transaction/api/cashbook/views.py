@@ -1,12 +1,10 @@
 import datetime
-from functools import reduce
-import re
 
 import django_filters
 
 from django import forms
 from django.contrib.auth.models import User
-from django.db import models, transaction
+from django.db import transaction
 from django_filters.widgets import RangeWidget
 from django.http import HttpResponseRedirect
 from django.views.generic import View
@@ -65,27 +63,25 @@ class DateRangeFilter(django_filters.RangeFilter):
     field_class = DateRangeField
 
 
-class MultiFieldSearchFilter(django_filters.CharFilter):
-    def __init__(self, fields, **kwargs):
-        self.fields = fields
-        super().__init__(**kwargs)
-
+class TransactionTextSearchFilter(django_filters.CharFilter):
     def filter(self, qs, value):
         if not value:
             return qs
 
-        def get_field_filter(field):
-            if field == 'amount':
-                # convert formatted currency values into integer pence so that amount field can be searched
-                value_converted = re.sub(r'£(\d+(?:\.\d\d)?)', lambda v: '%0.0f' % (float(v.group(1)) * 100), value)
-                return models.Q(amount__icontains=value_converted)
-            return models.Q(**{'%s__icontains' % field: value})
-
-        qs = qs.filter(
-            reduce(
-                lambda a, b: a | b,
-                map(get_field_filter, self.fields)
-            )
+        fields = [
+            # NB: these must be SQL-safe
+            '"prisoner_name"',
+            '"prisoner_number"',
+            '"sender_name"',
+            '''CONCAT('£', ROUND("amount" / 100.0, 2)::text)''',
+        ]
+        where_clauses = ' OR '.join(
+            '''UPPER({}::text) LIKE CONCAT('%%', UPPER(%s), '%%')'''.format(field)
+            for field in fields
+        )
+        qs = qs.extra(
+            where=[where_clauses],
+            params=[value] * len(fields),
         )
         return qs
 
@@ -96,7 +92,7 @@ class TransactionListFilter(django_filters.FilterSet):
     prison = django_filters.ModelMultipleChoiceFilter(queryset=Prison.objects.all())
     user = django_filters.ModelChoiceFilter(name='owner', queryset=User.objects.all())
     received_at = DateRangeFilter()
-    search = MultiFieldSearchFilter(fields=['prisoner_name', 'prisoner_number', 'sender_name', 'amount'])
+    search = TransactionTextSearchFilter()
 
     class Meta:
         model = Transaction
