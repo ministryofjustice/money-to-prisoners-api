@@ -1,6 +1,6 @@
 from model_mommy import timezone
 from model_mommy.mommy import make
-from model_mommy.recipe import Recipe, foreign_key
+from model_mommy.recipe import Recipe, foreign_key, seq
 
 from django.contrib.auth.models import User, Group
 from django.utils.text import slugify
@@ -9,13 +9,15 @@ from django.utils.crypto import get_random_string
 from mtp_auth.models import PrisonUserMapping
 
 
-NOW = lambda: timezone.now()
 basic_user = Recipe(
     User,
     is_staff=False,
     is_active=True,
     is_superuser=False,
-    last_login=NOW
+    last_login=timezone.now,
+    first_name=seq('First '),
+    last_name=seq('Last '),
+    email=seq('email@domain'),
 )
 
 prison_user_mapping = Recipe(
@@ -39,7 +41,10 @@ def create_prison_user_mapping(prison):
     pu = make(
         'PrisonUserMapping',
         user__username=name_and_password,
-        prisons=[prison]
+        user__first_name=name_and_password,
+        user__last_name='Clerk',
+        user__email=name_and_password + '@domain',
+        prisons=[prison],
     )
     pu.user.set_password(name_and_password)
     pu.user.save()

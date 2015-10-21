@@ -1,7 +1,13 @@
+import datetime
+from functools import reduce
+import re
+
 import django_filters
 
+from django import forms
 from django.contrib.auth.models import User
-from django.db import transaction
+from django.db import models, transaction
+from django_filters.widgets import RangeWidget
 from django.http import HttpResponseRedirect
 from django.views.generic import View
 
@@ -36,11 +42,77 @@ class StatusChoiceFilter(django_filters.ChoiceFilter):
         return qs
 
 
+class DateRangeField(forms.MultiValueField):
+    widget = RangeWidget
+
+    def __init__(self, *args, **kwargs):
+        fields = (
+            forms.DateTimeField(),
+            forms.DateTimeField(),
+        )
+        super().__init__(fields, *args, **kwargs)
+
+    def compress(self, data_list):
+        if data_list:
+            start, end = data_list
+            if end:
+                end += datetime.timedelta(days=1)
+            return slice(start, end)
+        return None
+
+
+class DateRangeFilter(django_filters.RangeFilter):
+    field_class = DateRangeField
+
+
+class TransactionTextSearchFilter(django_filters.CharFilter):
+    """
+    Filters transactions using a text search.
+    Works by splitting the input into words and matches any transactions
+    that have *all* of these words in *any* of these fields:
+    - prisoner_name
+    - prisoner_number
+    - sender_name
+    - amount (input is expected as £nn.nn but is reformatted for search)
+    """
+    fields = ['prisoner_name', 'prisoner_number', 'sender_name', 'amount']
+
+    def filter(self, qs, value):
+        if not value:
+            return qs
+
+        re_amount = re.compile(r'^£?(\d+(?:\.\d\d)?)$')
+
+        for word in value.split():
+            def get_field_filter(field):
+                if field == 'amount':
+                    # for amount fields, only do a search if the input looks
+                    # like a currency value (£n.nn), this is reformatted by
+                    # stripping the £ and . to turn it into integer pence
+                    matches = re_amount.match(word)
+                    if not matches:
+                        return None
+                    amount = matches.group(1).replace('.', '')
+                    return models.Q(**{'%s__startswith' % field: amount})
+
+                return models.Q(**{'%s__icontains' % field: word})
+
+            qs = qs.filter(
+                reduce(
+                    lambda a, b: a | b,
+                    filter(bool, map(get_field_filter, self.fields))
+                )
+            )
+        return qs
+
+
 class TransactionListFilter(django_filters.FilterSet):
 
     status = StatusChoiceFilter(choices=TRANSACTION_STATUS.choices)
     prison = django_filters.ModelMultipleChoiceFilter(queryset=Prison.objects.all())
     user = django_filters.ModelChoiceFilter(name='owner', queryset=User.objects.all())
+    received_at = DateRangeFilter()
+    search = TransactionTextSearchFilter()
 
     class Meta:
         model = Transaction

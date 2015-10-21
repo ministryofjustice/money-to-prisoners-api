@@ -1,7 +1,13 @@
+import datetime
 import mock
+import random
 import urllib.parse
 
+from django.conf import settings
 from django.core.urlresolvers import reverse
+from django.utils import timezone
+from django.utils.crypto import get_random_string
+from django.utils.dateformat import format as format_date
 from django.utils.six.moves.urllib.parse import urlsplit
 
 from rest_framework import status
@@ -61,28 +67,67 @@ class TransactionListTestCase(
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # check expected result
+        noop_checker = lambda t: True
         status_checker = self.STATUS_FILTERS[filters.get('status', None)]
         if filters.get('prison'):
             prison_checker = lambda t: t.prison and t.prison.pk in filters['prison'].split(',')
         else:
-            prison_checker = lambda t: True
+            prison_checker = noop_checker
         if filters.get('user'):
             user_checker = lambda t: t.owner and t.owner.pk == filters['user']
         else:
-            user_checker = lambda t: True
+            user_checker = noop_checker
+        received_at_checker = self._get_received_at_checker(filters, noop_checker)
+        search_checker = self._get_search_checker(filters, noop_checker)
 
         expected_ids = [
             t.pk for t in self.transactions if
                 t.prison in managing_prisons and
                 status_checker(t) and
                 prison_checker(t) and
-                user_checker(t)
+                user_checker(t) and
+                received_at_checker(t) and
+                search_checker(t)
         ]
         self.assertEqual(response.data['count'], len(expected_ids))
         self.assertListEqual(
             sorted([t['id'] for t in response.data['results']]),
             sorted(expected_ids)
         )
+        return response
+
+    def _get_received_at_checker(self, filters, noop_checker):
+        def parse_date(date):
+            for date_format in settings.DATE_INPUT_FORMATS:
+                try:
+                    date = datetime.datetime.strptime(date, date_format)
+                    return date.replace(tzinfo=timezone.get_current_timezone())
+                except (ValueError, TypeError):
+                    continue
+            raise ValueError('Cannot parse date %s' % date)
+
+        received_at_0, received_at_1 = filters.get('received_at_0'), filters.get('received_at_1')
+        received_at_0 = parse_date(received_at_0) if received_at_0 else None
+        received_at_1 = (parse_date(received_at_1) + datetime.timedelta(days=1)) if received_at_1 else None
+
+        if received_at_0 and received_at_1:
+            return lambda t: received_at_0 <= t.received_at < received_at_1
+        elif received_at_0:
+            return lambda t: received_at_0 <= t.received_at
+        elif received_at_1:
+            return lambda t: t.received_at < received_at_1
+        return noop_checker
+
+    def _get_search_checker(self, filters, noop_checker):
+        if filters.get('search'):
+            search_phrase = filters['search'].lower()
+            search_fields = ['prisoner_name', 'prisoner_number', 'sender_name']
+
+            return lambda t: any(
+                search_phrase in getattr(t, field).lower()
+                for field in search_fields
+            ) or (search_phrase in '£%0.2f' % (t.amount / 100))
+        return noop_checker
 
 
 class TransactionListWithDefaultsTestCase(TransactionListTestCase):
@@ -279,6 +324,107 @@ class TransactionListWithDefaultStatusAndPrisonTestCase(TransactionListTestCase)
         self._test_response_with_filters(filters={
             'user': self.prison_clerks[1].pk
         })
+
+
+class TransactionListWithReceivedAtFilterTestCase(TransactionListTestCase):
+    def _format_date(self, date):
+        return format_date(date, 'Y-m-d')
+
+    def test_filter_received_at_today(self):
+        """
+        Returns all transactions received today
+        """
+        today = timezone.now().date()
+        self._test_response_with_filters(filters={
+            'received_at_0': self._format_date(today),
+            'received_at_1': self._format_date(today),
+        })
+
+    def test_filter_received_since_five_days_ago(self):
+        """
+        Returns all transactions received since 5 days ago
+        """
+        five_days_ago = timezone.now().date() - datetime.timedelta(days=5)
+        self._test_response_with_filters(filters={
+            'received_at_0': self._format_date(five_days_ago),
+        })
+
+    def test_filter_received_until_five_days_ago(self):
+        """
+        Returns all transactions received until 5 days ago
+        """
+        five_days_ago = timezone.now().date() - datetime.timedelta(days=5)
+        self._test_response_with_filters(filters={
+            'received_at_1': self._format_date(five_days_ago),
+        })
+
+
+class TransactionListWithSearchTestCase(TransactionListTestCase):
+    def test_filter_search_for_prisoner_number(self):
+        """
+        Search for a prisoner number
+        """
+        while True:
+            transaction = random.choice(self.transactions)
+            if transaction.prisoner_number:
+                break
+        search_phrase = transaction.prisoner_number
+        self._test_response_with_filters(filters={
+            'search': search_phrase
+        })
+
+    def test_filter_search_for_prisoner_name(self):
+        """
+        Search for a prisoner first name
+        """
+        while True:
+            transaction = random.choice(self.transactions)
+            if transaction.prisoner_name:
+                break
+        search_phrase = transaction.prisoner_name.split()[0]
+        self._test_response_with_filters(filters={
+            'search': search_phrase
+        })
+
+    def test_filter_search_for_sender_name(self):
+        """
+        Search for a partial sender name
+        """
+        transaction = random.choice(self.transactions)
+        search_phrase = transaction.sender_name[:2]
+        self._test_response_with_filters(filters={
+            'search': search_phrase
+        })
+
+    def test_filter_search_for_amount(self):
+        """
+        Search for a payment amount
+        """
+        transaction = random.choice(self.transactions)
+        search_phrase = '£%0.2f' % (transaction.amount / 100)
+        self._test_response_with_filters(filters={
+            'search': search_phrase
+        })
+
+    def test_empty_search(self):
+        """
+        Empty search causes no errors
+        """
+        self._test_response_with_filters(filters={
+            'search': ''
+        })
+
+    def test_search_with_no_results(self):
+        """
+        Search for a value that cannot exist in generated transactions
+        """
+        response = self._test_response_with_filters(filters={
+            'search': get_random_string(
+                length=20,  # too long for generated sender names
+                allowed_chars='§±@£$#{}[];:<>',  # includes characters not used in generation
+            )
+        })
+        self.assertFalse(response.data['results'])
 
 
 class TransactionListInvalidValuesTestCase(TransactionListTestCase):
