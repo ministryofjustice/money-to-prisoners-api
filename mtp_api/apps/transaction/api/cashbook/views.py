@@ -1,10 +1,12 @@
 import datetime
+from functools import reduce
+import re
 
 import django_filters
 
 from django import forms
 from django.contrib.auth.models import User
-from django.db import transaction
+from django.db import models, transaction
 from django_filters.widgets import RangeWidget
 from django.http import HttpResponseRedirect
 from django.views.generic import View
@@ -64,25 +66,43 @@ class DateRangeFilter(django_filters.RangeFilter):
 
 
 class TransactionTextSearchFilter(django_filters.CharFilter):
+    """
+    Filters transactions using a text search.
+    Works by splitting the input into words and matches any transactions
+    that have *all* of these words in *any* of these fields:
+    - prisoner_name
+    - prisoner_number
+    - sender_name
+    - amount (input is expected as £nn.nn but is reformatted for search)
+    """
+    fields = ['prisoner_name', 'prisoner_number', 'sender_name', 'amount']
+
     def filter(self, qs, value):
         if not value:
             return qs
 
-        fields = [
-            # NB: these must be SQL-safe
-            '"prisoner_name"',
-            '"prisoner_number"',
-            '"sender_name"',
-            '''CONCAT('£', ROUND("amount" / 100.0, 2)::text)''',
-        ]
-        where_clauses = ' OR '.join(
-            '''UPPER({}::text) LIKE CONCAT('%%', UPPER(%s), '%%')'''.format(field)
-            for field in fields
-        )
-        qs = qs.extra(
-            where=[where_clauses],
-            params=[value] * len(fields),
-        )
+        re_amount = re.compile(r'^£?(\d+(?:\.\d\d)?)$')
+
+        for word in value.split():
+            def get_field_filter(field):
+                if field == 'amount':
+                    # for amount fields, only do a search if the input looks
+                    # like a currency value (£n.nn), this is reformatted by
+                    # stripping the £ and . to turn it into integer pence
+                    matches = re_amount.match(word)
+                    if not matches:
+                        return None
+                    amount = matches.group(1).replace('.', '')
+                    return models.Q(**{'%s__startswith' % field: amount})
+
+                return models.Q(**{'%s__icontains' % field: word})
+
+            qs = qs.filter(
+                reduce(
+                    lambda a, b: a | b,
+                    filter(bool, map(get_field_filter, self.fields))
+                )
+            )
         return qs
 
 
