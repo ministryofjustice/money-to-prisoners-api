@@ -1,15 +1,26 @@
-{% extends "base.html" %}
+{% extends "admin/index.html" %}
+{% load i18n %}
 
-{% block title %}Yo{% endblock title %}
+{% block sidebar %}
 
-{% block content %}
-<div class="row">
-  <div class="small-12 columns moj-wrapper">
-    <h1>
-      Yo MoJ API!&nbsp;
-      <a href="//github.com/mixxorz/generator-moj-django/"><i class="fa fa-github"></i></a>
-    </h1>
-    <p>Welcome to your MoJ Django app.</p>
-  </div>
-</div>
-{% endblock content %}
+  {{ block.super }}
+
+  {% if ENVIRONMENT != 'prod' and user.is_superuser %}
+    <div class="module" id="test-data-module" style="clear:left">
+      <h2>{% trans 'Testing' %}</h2>
+      <table>
+        <tbody>
+          <tr>
+            <th>{% trans 'Delete and recreate sample data for user testing' %}</th>
+            <td>
+              <a href="{% url 'mtp-admin:recreate_test_data' %}" class="deletelink" title="{% trans 'This cannot be undone!' %}">
+                {% trans 'Recreate' %}
+              </a>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+
+{% endblock %}
