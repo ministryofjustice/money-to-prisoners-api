@@ -5,6 +5,7 @@ from itertools import cycle
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.contrib.auth.models import User
+from faker import Faker
 
 from prison.models import Prison
 
@@ -13,6 +14,12 @@ from transaction.constants import TRANSACTION_STATUS, LOG_ACTIONS
 
 from prison.tests.utils import random_prisoner_number, random_prisoner_dob, \
     get_prisoner_location_creator, random_prisoner_name
+
+fake = Faker(locale='en_GB')
+
+
+def random_sender_name():
+    return fake.name()
 
 
 def random_reference(prisoner_number=None, prisoner_dob=None):
@@ -50,7 +57,7 @@ def generate_initial_transactions_data(tot=50):
             'received_at': random_date,
             'sender_sort_code': get_random_string(6, '1234567890'),
             'sender_account_number': get_random_string(8, '1234567890'),
-            'sender_name': get_random_string(10),
+            'sender_name': random_sender_name(),
             'owner': None,
             'credited': False,
             'refunded': False,
@@ -93,7 +100,7 @@ def generate_transactions(transaction_batch=50):
 
         def internal_function(prison):
             user, status = clerks_per_prison[prison.pk]
-            return (next(user), next(status))
+            return next(user), next(status)
         return internal_function
 
     data_list = generate_initial_transactions_data(
@@ -138,7 +145,7 @@ def generate_transactions(transaction_batch=50):
             else:
                 data.update({'refunded': False})
 
-        if (data['credited'] or data['refunded']):
+        if data['credited'] or data['refunded']:
             data['reconciled'] = next(is_reconciled)
 
         new_transaction = Transaction.objects.create(**data)
