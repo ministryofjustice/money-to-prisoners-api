@@ -37,29 +37,34 @@ class RecreateTestDataView(FormView):
         return context
 
     def form_valid(self, form):
-        protect_transactions = form.cleaned_data.get(
-            'protect_transactions',
-            False,
-        )
-        generate_transactions = form.cleaned_data.get(
-            'generate_transactions',
-            'none',
-        )
+        scenario = form.cleaned_data['scenario']
 
-        command_output = StringIO()
-        call_command(
-            'load_test_data',
-            protect_superusers=True,
-            protect_transactions=protect_transactions,
-            generate_transactions=generate_transactions,
+        output = StringIO()
+        options = {
+            'protect_superusers': True,
+            'protect_transactions': False,
+            'clerks_per_prison': 4,
 
-            no_color=True,
-            stdout=command_output,
-            stderr=command_output,
-        )
-        command_output.seek(0)
+            'no_color': True,
+            'stdout': output,
+            'stderr': output,
+        }
+
+        if scenario == 'random':
+            options.update({
+                'prisons': ['sample'],
+                'transactions': 'random',
+            })
+        elif scenario == 'cashbook':
+            options.update({
+                'prisons': ['nomis'],
+                'transactions': 'nomis',
+            })
+
+        call_command('load_test_data', **options)
+        output.seek(0)
 
         return self.render_to_response(self.get_context_data(
             form=form,
-            command_output=command_output.read(),
+            command_output=output.read(),
         ))

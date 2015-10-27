@@ -1,6 +1,6 @@
 import datetime
+from itertools import cycle, repeat
 import random
-from itertools import cycle
 
 from django.utils import timezone
 from django.utils.crypto import get_random_string
@@ -13,7 +13,8 @@ from transaction.models import Transaction, Log
 from transaction.constants import TRANSACTION_STATUS, LOG_ACTIONS
 
 from prison.tests.utils import random_prisoner_number, random_prisoner_dob, \
-    get_prisoner_location_creator, random_prisoner_name
+    random_prisoner_name, get_prisoner_location_creator, \
+    load_nomis_prisoner_locations
 
 fake = Faker(locale='en_GB')
 
@@ -31,12 +32,12 @@ def random_reference(prisoner_number=None, prisoner_dob=None):
     )
 
 
-def generate_initial_transactions_data(tot=50):
+def generate_initial_transactions_data(tot=50, prisoner_location_generator=None):
     data_list = []
 
     now = timezone.now().replace(microsecond=0)
 
-    for transaction_counter in range(1, tot+1):
+    for transaction_counter in range(1, tot + 1):
         # Records might not have prisoner data and/or might not
         # have building society roll numbers.
         # Atm, we set the probability of it having prisoner info
@@ -66,11 +67,14 @@ def generate_initial_transactions_data(tot=50):
         }
 
         if include_prisoner_info:
-            data.update({
-                'prisoner_name': random_prisoner_name(),
-                'prisoner_number': random_prisoner_number(),
-                'prisoner_dob': random_prisoner_dob()
-            })
+            if prisoner_location_generator:
+                data.update(next(prisoner_location_generator))
+            else:
+                data.update({
+                    'prisoner_name': random_prisoner_name(),
+                    'prisoner_number': random_prisoner_number(),
+                    'prisoner_dob': random_prisoner_dob(),
+                })
 
         if include_sender_roll_number:
             data.update({
@@ -84,57 +88,74 @@ def generate_initial_transactions_data(tot=50):
     return data_list
 
 
-def generate_transactions(transaction_batch=50):
-    def get_owner_and_status_chooser():
-        clerks_per_prison = {}
-        for prison in Prison.objects.all():
-            user_ids = prison.prisonusermapping_set.values_list('user', flat=True)
-            clerks_per_prison[prison.pk] = (
-                cycle(list(User.objects.filter(id__in=user_ids))),
-                cycle([
-                    TRANSACTION_STATUS.LOCKED,
-                    TRANSACTION_STATUS.AVAILABLE,
-                    TRANSACTION_STATUS.CREDITED
-                ])
-            )
+def get_owner_and_status_chooser():
+    clerks_per_prison = {}
+    for p in Prison.objects.all():
+        user_ids = p.prisonusermapping_set.values_list('user', flat=True)
+        clerks_per_prison[p.pk] = (
+            cycle(list(User.objects.filter(id__in=user_ids))),
+            cycle([
+                TRANSACTION_STATUS.LOCKED,
+                TRANSACTION_STATUS.AVAILABLE,
+                TRANSACTION_STATUS.CREDITED
+            ])
+        )
 
-        def internal_function(prison):
-            user, status = clerks_per_prison[prison.pk]
-            return next(user), next(status)
-        return internal_function
+    def internal_function(prison):
+        user, status = clerks_per_prison[prison.pk]
+        return next(user), next(status)
 
+    return internal_function
+
+
+def generate_transactions(
+    transaction_batch=50,
+    use_test_nomis_prisoners=False,
+    only_new_transactions=False,
+):
+    if use_test_nomis_prisoners:
+        prisoner_location_generator = cycle(load_nomis_prisoner_locations())
+    else:
+        prisoner_location_generator = None
     data_list = generate_initial_transactions_data(
-        tot=transaction_batch
+        tot=transaction_batch,
+        prisoner_location_generator=prisoner_location_generator,
     )
 
     location_creator = get_prisoner_location_creator()
-    owner_status_chooser = get_owner_and_status_chooser()
-    is_reconciled = cycle([True, False, False])
+    if only_new_transactions:
+        def owner_status_chooser(*args):
+            return None, TRANSACTION_STATUS.AVAILABLE
+
+        is_reconciled = repeat(False)
+    else:
+        owner_status_chooser = get_owner_and_status_chooser()
+        is_reconciled = cycle([True, False, False])
 
     transactions = []
     for transaction_counter, data in enumerate(data_list, start=1):
         is_valid, prisoner_location = location_creator(
             data.get('prisoner_name'), data.get('prisoner_number'),
-            data.get('prisoner_dob')
+            data.get('prisoner_dob'), data.get('prison'),
         )
 
         if is_valid:
             # randomly choose the state of the transaction
             prison = prisoner_location.prison
-            owner, t_status = owner_status_chooser(prison)
+            owner, status = owner_status_chooser(prison)
 
             data['prison'] = prison
-            if t_status == TRANSACTION_STATUS.LOCKED:
+            if status == TRANSACTION_STATUS.LOCKED:
                 data.update({
                     'owner': owner,
                     'credited': False
                 })
-            elif t_status == TRANSACTION_STATUS.AVAILABLE:
+            elif status == TRANSACTION_STATUS.AVAILABLE:
                 data.update({
                     'owner': None,
                     'credited': False
                 })
-            elif t_status == TRANSACTION_STATUS.CREDITED:
+            elif status == TRANSACTION_STATUS.CREDITED:
                 data.update({
                     'owner': owner,
                     'credited': True

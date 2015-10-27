@@ -1,10 +1,13 @@
+import csv
 import datetime
 from itertools import cycle
+import os
 import string
 import random
 
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.utils.crypto import get_random_string
+from django.utils.dateparse import parse_date
 from faker import Faker
 
 from prison.models import Prison, PrisonerLocation
@@ -30,29 +33,55 @@ def random_prisoner_name():
                       fake.last_name())
 
 
+def load_nomis_prisoner_locations():
+    """
+    Load prisoner locations matching test NOMIS data
+    """
+    csv_path = os.path.join(os.path.dirname(__file__),
+                            '..', 'fixtures', 'test_nomis_prisoner_locations.csv')
+    with open(csv_path) as f:
+        csv_reader = csv.DictReader(f)
+        prisoner_locations = list(csv_reader)
+    for prisoner_location in prisoner_locations:
+        prisoner_location['prisoner_dob'] = parse_date(prisoner_location['prisoner_dob'])
+    return prisoner_locations
+
+
 def get_prisoner_location_creator():
     """
-    Returns a function(prisoner_number, prisoner_dob) which when called returns:
+    Returns a function(prisoner_name, prisoner_number, prisoner_dob) which when called returns:
         (is_valid, PrisonerLocation instance)
     """
     prisons = cycle(list(Prison.objects.all()))
     # index = cycle(range(1, 11))
 
-    created_by = User.objects.all()[0]
+    created_by = get_user_model().objects.first()
 
-    def make_prisoner_location(prisoner_name, prisoner_number, prisoner_dob):
+    def make_prisoner_location(prisoner_name, prisoner_number, prisoner_dob, prison=None):
         if not prisoner_number or not prisoner_dob:
             return False, None
 
-        # is_invalid = next(index) % 10 == 0  # 10% invalid (not implemented yet)
+        try:
+            # if a prisoner with given number exists, then return known instance
+            # this happens when using the sample set of NOMIS data
+            return True, PrisonerLocation.objects.get(prisoner_number=prisoner_number)
+        except PrisonerLocation.DoesNotExist:
+            pass
+
+        # is_invalid = next(index) % 10 == 0  # 10% invalid (TODO: not implemented yet)
         is_invalid = False
+
+        if isinstance(prison, str):
+            prison = Prison.objects.get(nomis_id=prison)
+        elif not isinstance(prison, Prison):
+            prison = next(prisons)
 
         data = {
             'created_by': created_by,
             'prisoner_name': prisoner_name,
             'prisoner_number': prisoner_number,
             'prisoner_dob': prisoner_dob,
-            'prison': next(prisons)
+            'prison': prison,
         }
 
         if is_invalid:
