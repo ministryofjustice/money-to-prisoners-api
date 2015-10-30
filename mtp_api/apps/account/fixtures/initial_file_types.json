@@ -1,0 +1,30 @@
+[
+{
+  "model": "account.filetype",
+  "pk": 1,
+  "fields": {
+    "name": "AccessPay Refund"
+  }
+},
+{
+  "model": "account.filetype",
+  "pk": 2,
+  "fields": {
+    "name": "ADI Journal - Refund"
+  }
+},
+{
+  "model": "account.filetype",
+  "pk": 3,
+  "fields": {
+    "name": "ADI Journal - Payment"
+  }
+},
+{
+  "model": "account.filetype",
+  "pk": 4,
+  "fields": {
+    "name": "BAI2 Bank Statement"
+  }
+}
+]

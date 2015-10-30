@@ -8,6 +8,7 @@ urlpatterns = patterns(
     url(r'^', include('prison.urls')),
     url(r'^', include('mtp_auth.urls')),
     url(r'^', include('transaction.urls')),
+    url(r'^', include('account.urls')),
 
     url(r'^oauth2/', include('oauth2_provider.urls', namespace='oauth2_provider')),
     url(r'^docs/', include('rest_framework_swagger.urls')),

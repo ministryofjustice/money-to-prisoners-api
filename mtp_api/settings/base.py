@@ -50,6 +50,7 @@ PROJECT_APPS = (
     'prison',
     'transaction',
     'mtp_auth',
+    'account',
 )
 
 INSTALLED_APPS += PROJECT_APPS
