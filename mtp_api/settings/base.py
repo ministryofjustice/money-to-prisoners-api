@@ -25,6 +25,7 @@ DEBUG = True
 
 TEMPLATE_DEBUG = True
 
+ENVIRONMENT = os.environ.get('ENV', 'local')
 
 SECRET_KEY = 'CHANGE_ME'
 
@@ -133,7 +134,7 @@ LOGGING = {
 }
 
 TEMPLATE_CONTEXT_PROCESSORS = global_settings.TEMPLATE_CONTEXT_PROCESSORS + (
-    'mtp_api.apps.core.context_processors.debug',
+    'mtp_api.apps.core.context_processors.app_environment',
 )
 
 DATABASES = {

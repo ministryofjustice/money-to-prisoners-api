@@ -15,8 +15,8 @@ from .signals import transaction_created, transaction_locked, \
 
 class Transaction(TimeStampedModel):
     prison = models.ForeignKey(Prison, blank=True, null=True)
-    prisoner_name = models.CharField(blank=True, null=True, max_length=250)
 
+    prisoner_name = models.CharField(blank=True, null=True, max_length=250)
     prisoner_number = models.CharField(blank=True, max_length=250)
     prisoner_dob = models.DateField(blank=True, null=True)
 
@@ -59,6 +59,28 @@ class Transaction(TimeStampedModel):
     }
 
     objects = TransactionQuerySet.as_manager()
+
+    class Meta:
+        ordering = ('received_at',)
+        permissions = (
+            ('view_transaction', 'Can view transaction'),
+            ('view_bank_details_transaction', 'Can view bank details of transaction'),
+            ('lock_transaction', 'Can lock transaction'),
+            ('unlock_transaction', 'Can unlock transaction'),
+            ('patch_credited_transaction', 'Can patch credited transaction'),
+            ('patch_processed_transaction', 'Can patch processed transaction'),
+        )
+        index_together = (
+            ('prisoner_number', 'prisoner_dob'),
+        )
+
+    def __str__(self):
+        return 'Transaction {id}, £{amount:.2f} {sender_name} > {prisoner_name}'.format(
+            id=self.pk,
+            amount=self.amount / 100,
+            sender_name=self.sender_name,
+            prisoner_name=self.prisoner_name,
+        )
 
     def lock(self, by_user):
         self.owner = by_user
@@ -104,20 +126,6 @@ class Transaction(TimeStampedModel):
         log_action = self.log_set.filter(action=LOG_ACTIONS.REFUNDED) \
             .order_by('-created').first()
         return log_action.created
-
-    class Meta:
-        ordering = ('received_at',)
-        permissions = (
-            ("view_transaction", "Can view transaction"),
-            ("view_bank_details_transaction", "Can view bank details of transaction"),
-            ("lock_transaction", "Can lock transaction"),
-            ("unlock_transaction", "Can unlock transaction"),
-            ("patch_credited_transaction", "Can patch credited transaction"),
-            ("patch_processed_transaction", "Can patch processed transaction"),
-        )
-        index_together = [
-            ["prisoner_number", "prisoner_dob"],
-        ]
 
 
 class Log(TimeStampedModel):

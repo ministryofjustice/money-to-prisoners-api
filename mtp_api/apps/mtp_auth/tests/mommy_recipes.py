@@ -1,54 +1,67 @@
-from model_mommy import timezone
-from model_mommy.mommy import make
-from model_mommy.recipe import Recipe, foreign_key, seq
+from itertools import count
+import string
 
 from django.contrib.auth.models import User, Group
 from django.utils.text import slugify
-from django.utils.crypto import get_random_string
+from faker import Faker
+from model_mommy import timezone
+from model_mommy.mommy import make
+from model_mommy.recipe import Recipe
 
-from mtp_auth.models import PrisonUserMapping
-
+fake = Faker(locale='en_GB')
 
 basic_user = Recipe(
     User,
+    username=fake.user_name,
+    email=fake.safe_email,
     is_staff=False,
     is_active=True,
     is_superuser=False,
     last_login=timezone.now,
-    first_name=seq('First '),
-    last_name=seq('Last '),
-    email=seq('email@domain'),
+    first_name=fake.first_name,
+    last_name=fake.last_name,
 )
 
-prison_user_mapping = Recipe(
-    PrisonUserMapping, user=foreign_key(basic_user)
-)
+
+def create_basic_user(name_and_password, groups=()):
+    user = basic_user.make(
+        username=name_and_password,
+        email=name_and_password + '@mtp.local',
+    )
+    user.set_password(name_and_password)
+    user.save()
+    for group in groups:
+        user.groups.add(group)
+    return user
+
+
+def name_generator(name):
+    def suffixes(bases):
+        for base in bases:
+            for letter in string.ascii_lowercase:
+                yield base + letter
+
+    for n in count():
+        gen = suffixes([name + '_'])
+        for _ in range(n):
+            gen = suffixes(gen)
+        yield from gen
 
 
 def create_prison_user_mapping(prison):
     prison_clerk_group = Group.objects.get(name='PrisonClerk')
+
     name_and_password = 'test_' + slugify(prison).replace('-', '_')
+    names = name_generator(name_and_password)
+    while User.objects.filter(username=name_and_password).exists():
+        name_and_password = next(names)
 
-    # if first user
-    #   username/password == test_<prison_name>.replace('-', '_')
-    # else:
-    #   username/password == test_<prison_name>.replace('-', '_')_<random_string>
-    suffix = ''
-    if User.objects.filter(username=name_and_password).exists():
-        suffix = '_%s' % get_random_string(length=5)
-    name_and_password += suffix
-
+    user = create_basic_user(name_and_password, [prison_clerk_group])
     pu = make(
-        'PrisonUserMapping',
-        user__username=name_and_password,
-        user__first_name=name_and_password,
-        user__last_name='Clerk',
-        user__email=name_and_password + '@domain',
+        'mtp_auth.PrisonUserMapping',
+        user=user,
         prisons=[prison],
     )
-    pu.user.set_password(name_and_password)
-    pu.user.save()
-    pu.user.groups.add(prison_clerk_group)
     return pu
 
 
@@ -56,12 +69,7 @@ def create_prisoner_location_admins():
     name_and_password = 'prisoner_location_admin'
 
     prisoner_location_admin_group = Group.objects.get(name='PrisonerLocationAdmin')
-    plu = basic_user.make(
-        username=name_and_password
-    )
-    plu.set_password(name_and_password)
-    plu.save()
-    plu.groups.add(prisoner_location_admin_group)
+    plu = create_basic_user(name_and_password, [prisoner_location_admin_group])
 
     return [plu]
 
@@ -70,28 +78,17 @@ def create_bank_admins():
     name_and_password = 'bank_admin'
 
     bank_admin_group = Group.objects.get(name='BankAdmin')
-    ba = basic_user.make(
-        username=name_and_password
-    )
-    ba.set_password(name_and_password)
-    ba.save()
-    ba.groups.add(bank_admin_group)
+    ba = create_basic_user(name_and_password, [bank_admin_group])
 
     return [ba]
 
 
 def create_refund_bank_admins():
-
     name_and_password = 'refund_bank_admin'
 
     bank_admin_group = Group.objects.get(name='BankAdmin')
     refund_bank_admin_group = Group.objects.get(name='RefundBankAdmin')
-    rba = basic_user.make(
-        username=name_and_password
-    )
-    rba.set_password(name_and_password)
-    rba.save()
-    rba.groups.add(refund_bank_admin_group)
-    rba.groups.add(bank_admin_group)
+    rba = create_basic_user(name_and_password,
+                            [refund_bank_admin_group, bank_admin_group])
 
     return [rba]

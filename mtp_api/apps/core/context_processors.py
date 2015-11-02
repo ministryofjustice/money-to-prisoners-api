@@ -1,5 +1,8 @@
 from django.conf import settings
 
 
-def debug(request):
-    return {'DEBUG': settings.DEBUG}
+def app_environment(request):
+    return {
+        'ENVIRONMENT': settings.ENVIRONMENT,
+        'DEBUG': settings.DEBUG,
+    }

@@ -1,0 +1,52 @@
+[
+  {
+    "model": "prison.prison",
+    "pk": "ALI",
+    "fields": {
+      "name": "HMP ALBANY",
+      "general_ledger_code": "137",
+      "created": "2015-10-28T12:00:00Z",
+      "modified": "2015-10-28T12:00:00Z"
+    }
+  },
+  {
+    "model": "prison.prison",
+    "pk": "BMI",
+    "fields": {
+      "name": "HMP BIRMINGHAM",
+      "general_ledger_code": "???",
+      "created": "2015-10-28T12:00:00Z",
+      "modified": "2015-10-28T12:00:00Z"
+    }
+  },
+  {
+    "model": "prison.prison",
+    "pk": "BXI",
+    "fields": {
+      "name": "HMP BRIXTON",
+      "general_ledger_code": "014",
+      "created": "2015-10-28T12:00:00Z",
+      "modified": "2015-10-28T12:00:00Z"
+    }
+  },
+  {
+    "model": "prison.prison",
+    "pk": "ISI",
+    "fields": {
+      "name": "HMP/YOI ISIS",
+      "general_ledger_code": "138",
+      "created": "2015-10-28T12:00:00Z",
+      "modified": "2015-10-28T12:00:00Z"
+    }
+  },
+  {
+    "model": "prison.prison",
+    "pk": "LEI",
+    "fields": {
+      "name": "HMP LEEDS",
+      "general_ledger_code": "071",
+      "created": "2015-10-28T12:00:00Z",
+      "modified": "2015-10-28T12:00:00Z"
+    }
+  }
+]

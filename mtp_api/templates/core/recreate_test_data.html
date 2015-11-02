@@ -1,0 +1,33 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% url 'mtp-admin:recreate_test_data' as this_url %}
+
+{% block content %}
+
+<div id="content-main">
+  {% if form.is_valid %}
+
+    <p><a href="{{ this_url }}">{% trans 'Run again' %}</a></p>
+
+    <h3>{% trans 'Output log' %}</h3>
+    <code style="white-space:pre-line">{{ command_output }}</code>
+
+  {% else %}
+
+    <p class="errornote">
+      {% trans 'These actions will delete and recreate sample data. They cannot be undone.' %}
+    </p>
+    <form action="{{ this_url }}" method="post">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <p>
+        <input type="submit" value="{% trans 'Recreate' %}">
+      </p>
+
+    </form>
+
+  {% endif %}
+</div>
+
+{% endblock %}
