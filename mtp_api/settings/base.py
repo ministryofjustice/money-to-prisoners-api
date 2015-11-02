@@ -60,12 +60,20 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.security.SecurityMiddleware',
 )
 
 ROOT_URLCONF = 'mtp_api.urls'
 
 WSGI_APPLICATION = 'mtp_api.wsgi.application'
 
+# security tightening
+# some overridden in prod/docker settings where SSL is ensured
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SECURE = False
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.7/topics/i18n/
