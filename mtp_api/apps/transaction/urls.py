@@ -1,10 +1,9 @@
-from django.conf.urls import patterns, url, include
+from django.conf.urls import include, url
 
 from .api.cashbook import urls as cashbook_urls
 from .api.bank_admin import urls as bank_admin_urls
 
-
-urlpatterns = patterns('',
+urlpatterns = [
     url(r'^bank_admin/', include(bank_admin_urls, namespace='bank_admin')),
     url(r'^cashbook/', include(cashbook_urls, namespace='cashbook')),
-)
+]

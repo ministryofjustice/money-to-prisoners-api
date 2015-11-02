@@ -23,8 +23,6 @@ sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-TEMPLATE_DEBUG = True
-
 ENVIRONMENT = os.environ.get('ENV', 'local')
 
 SECRET_KEY = 'CHANGE_ME'
@@ -42,7 +40,6 @@ INSTALLED_APPS = (
     'rest_framework',
     'django_filters',
     'rest_framework_swagger',
-
 )
 
 PROJECT_APPS = (
@@ -92,8 +89,23 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'assets')
 ]
 
-TEMPLATE_DIRS = [
-    os.path.join(BASE_DIR, 'templates')
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [
+            os.path.join(BASE_DIR, 'templates')
+        ],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+                'core.context_processors.app_environment',
+            ],
+        },
+    },
 ]
 
 # Sane logging defaults
@@ -133,10 +145,6 @@ LOGGING = {
     }
 }
 
-TEMPLATE_CONTEXT_PROCESSORS = global_settings.TEMPLATE_CONTEXT_PROCESSORS + (
-    'mtp_api.apps.core.context_processors.app_environment',
-)
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
@@ -147,7 +155,6 @@ DATABASES = {
         'PORT': os.environ.get('DB_PORT', ''),                      # Set to empty string for default.
     }
 }
-
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (

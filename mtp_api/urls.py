@@ -1,10 +1,9 @@
-from django.conf.urls import patterns, include, url
+from django.conf.urls import include, url
 from django.contrib import admin
 
 admin.site.index_template = 'core/index.html'
 
-urlpatterns = patterns(
-    '',
+urlpatterns = [
     url(r'^', include('prison.urls')),
     url(r'^', include('mtp_auth.urls')),
     url(r'^', include('transaction.urls')),
@@ -13,4 +12,4 @@ urlpatterns = patterns(
     url(r'^docs/', include('rest_framework_swagger.urls')),
     url(r'^admin/core/', include('core.urls', namespace='mtp-admin')),
     url(r'^admin/', include(admin.site.urls)),
-)
+]
