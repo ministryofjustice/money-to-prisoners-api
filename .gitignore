@@ -1,7 +1,7 @@
 *.pyc
 include/
 lib/
-staticfiles/
+static/
 media/
 .build
 
