@@ -21,7 +21,7 @@ class CreateFileViewTestCase(AuthTestCaseMixin, APITestCase):
         tid_list = [t.id for t in test_transactions]
 
         new_file = {
-            'file_type': 4,
+            'file_type': 'BAI2',
             'transactions': tid_list
         }
 
@@ -38,7 +38,7 @@ class CreateFileViewTestCase(AuthTestCaseMixin, APITestCase):
         tid_list = [t.id for t in test_transactions]
 
         new_file = {
-            'file_type': 4,
+            'file_type': 'BAI2',
             'transactions': tid_list,
             'balance': {
                 'opening_balance': 100,
@@ -55,7 +55,7 @@ class CreateFileViewTestCase(AuthTestCaseMixin, APITestCase):
 
         files = File.objects.all()
         self.assertEqual(len(files), 1)
-        self.assertEqual(files[0].file_type, FileType.objects.get(pk=4))
+        self.assertEqual(files[0].file_type, FileType.objects.get(pk='BAI2'))
         self.assertEqual(files[0].balance.opening_balance, 100)
         self.assertEqual(files[0].balance.closing_balance, 200)
         self.assertEqual(len(files[0].transactions.all()), len(test_transactions))
@@ -68,7 +68,7 @@ class CreateFileViewTestCase(AuthTestCaseMixin, APITestCase):
         tid_list = [t.id for t in test_transactions]
 
         new_file = {
-            'file_type': 4,
+            'file_type': 'BAI2',
             'transactions': tid_list
         }
 
@@ -81,7 +81,7 @@ class CreateFileViewTestCase(AuthTestCaseMixin, APITestCase):
 
         files = File.objects.all()
         self.assertEqual(len(files), 1)
-        self.assertEqual(files[0].file_type, FileType.objects.get(pk=4))
+        self.assertEqual(files[0].file_type, FileType.objects.get(pk='BAI2'))
         self.assertEqual(len(files[0].transactions.all()), len(test_transactions))
         for transaction in files[0].transactions.all():
             self.assertTrue(transaction in test_transactions)
@@ -113,7 +113,7 @@ class CreateFileViewTestCase(AuthTestCaseMixin, APITestCase):
         user = self.bank_admins[0]
 
         new_file = {
-            'file_type': 4,
+            'file_type': 'BAI2',
             'transactions': []
         }
 

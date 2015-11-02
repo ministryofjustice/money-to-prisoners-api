@@ -5,10 +5,11 @@ from transaction.models import Transaction
 
 
 class FileType(models.Model):
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=15, primary_key=True)
+    description = models.CharField(max_length=255, null=True)
 
     def __str__(self):
-        return self.name
+        return self.description
 
 
 class File(TimeStampedModel):
