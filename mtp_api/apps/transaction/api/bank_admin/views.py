@@ -14,10 +14,18 @@ from .serializers import CreateTransactionSerializer, \
 
 class TransactionListFilter(django_filters.FilterSet):
     status = django_filters.MethodFilter(action='filter_status')
+    file = django_filters.MethodFilter(action='filter_file')
+    exclude_file_type = django_filters.MethodFilter(action='filter_exclude_file_type')
 
     class Meta:
         model = Transaction
-        fields = ['status']
+        fields = ['status', 'file', 'exclude_file_type']
+
+    def filter_file(self, queryset, value):
+        return queryset.filter(file__id=value)
+
+    def filter_exclude_file_type(self, queryset, value):
+        return queryset.exclude(file__file_type_id=value)
 
     def filter_status(self, queryset, value):
         if value:

@@ -17,6 +17,7 @@ from .utils import generate_transactions
 class BaseTransactionViewTestCase(AuthTestCaseMixin, APITestCase):
     fixtures = [
         'initial_groups.json',
+        'initial_file_types.json',
         'test_prisons.json'
     ]
     STATUS_FILTERS = {
