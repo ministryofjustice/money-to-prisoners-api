@@ -23,10 +23,11 @@ basic_user = Recipe(
 )
 
 
-def create_basic_user(name_and_password, groups=()):
+def create_basic_user(name_and_password, groups=(), **user_attributes):
     user = basic_user.make(
         username=name_and_password,
         email=name_and_password + '@mtp.local',
+        **user_attributes
     )
     user.set_password(name_and_password)
     user.save()
@@ -56,7 +57,12 @@ def create_prison_user_mapping(prison):
     while User.objects.filter(username=name_and_password).exists():
         name_and_password = next(names)
 
-    user = create_basic_user(name_and_password, [prison_clerk_group])
+    user = create_basic_user(
+        name_and_password,
+        [prison_clerk_group],
+        first_name=prison.name,
+        last_name='Clerk',
+    )
     pu = make(
         'mtp_auth.PrisonUserMapping',
         user=user,
@@ -69,7 +75,12 @@ def create_prisoner_location_admins():
     name_and_password = 'prisoner_location_admin'
 
     prisoner_location_admin_group = Group.objects.get(name='PrisonerLocationAdmin')
-    plu = create_basic_user(name_and_password, [prisoner_location_admin_group])
+    plu = create_basic_user(
+        name_and_password,
+        [prisoner_location_admin_group],
+        first_name='Prisoner Location',
+        last_name='Admin',
+    )
 
     return [plu]
 
@@ -78,7 +89,12 @@ def create_bank_admins():
     name_and_password = 'bank_admin'
 
     bank_admin_group = Group.objects.get(name='BankAdmin')
-    ba = create_basic_user(name_and_password, [bank_admin_group])
+    ba = create_basic_user(
+        name_and_password,
+        [bank_admin_group],
+        first_name='Bank',
+        last_name='Admin',
+    )
 
     return [ba]
 
@@ -88,7 +104,11 @@ def create_refund_bank_admins():
 
     bank_admin_group = Group.objects.get(name='BankAdmin')
     refund_bank_admin_group = Group.objects.get(name='RefundBankAdmin')
-    rba = create_basic_user(name_and_password,
-                            [refund_bank_admin_group, bank_admin_group])
+    rba = create_basic_user(
+        name_and_password,
+        [refund_bank_admin_group, bank_admin_group],
+        first_name='Refund',
+        last_name='Admin',
+    )
 
     return [rba]
