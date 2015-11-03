@@ -14,11 +14,10 @@ from .serializers import CreateTransactionSerializer, \
 
 class TransactionListFilter(django_filters.FilterSet):
     status = django_filters.MethodFilter(action='filter_status')
-    reconciled = django_filters.BooleanFilter()
 
     class Meta:
         model = Transaction
-        fields = ['status', 'reconciled']
+        fields = ['status']
 
     def filter_status(self, queryset, value):
         if value:
