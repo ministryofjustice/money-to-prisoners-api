@@ -19,6 +19,8 @@ RUN pip3 install -r requirements/prod.txt
 
 ADD . /app
 
+RUN ./manage.py collectstatic --noinput
+
 ADD ./docker_entrypoint.sh /app/docker_entrypoint.sh
 RUN chmod 777 /app/docker_entrypoint.sh
 

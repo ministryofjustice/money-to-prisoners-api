@@ -1,7 +1,7 @@
 *.pyc
 include/
 lib/
-staticfiles/
+static/
 media/
 .build
 
@@ -27,5 +27,3 @@ venv/
 
 # Node Stuff
 node_modules
-
-assets-src/bower
