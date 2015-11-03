@@ -1,4 +1,4 @@
-from rest_framework import mixins, viewsets
+from rest_framework import mixins, viewsets, filters
 from rest_framework.permissions import IsAuthenticated
 
 from core.permissions import ActionsBasedPermissions
@@ -14,8 +14,10 @@ class FileTypeView(mixins.ListModelMixin, viewsets.GenericViewSet):
 class FileView(
     mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet
 ):
-    queryset = File.objects.all()
+    queryset = File.objects.all().order_by('-created')
     serializer_class = FileSerializer
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_fields = ('file_type',)
 
     permission_classes = (
         IsAuthenticated, ActionsBasedPermissions

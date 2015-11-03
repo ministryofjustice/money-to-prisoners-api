@@ -124,3 +124,73 @@ class CreateFileViewTestCase(AuthTestCaseMixin, APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(File.objects.count(), 0)
+
+
+class ListFileViewTestCase(AuthTestCaseMixin, APITestCase):
+
+    fixtures = ['test_prisons.json', 'initial_file_types.json', 'initial_groups.json']
+
+    def setUp(self):
+        super().setUp()
+        self.prison_clerks, _, self.bank_admins, _ = make_test_users()
+
+    def test_get_file_by_type(self):
+        user = self.bank_admins[0]
+
+        # bai2 file
+        test_transactions = generate_transactions(5)
+
+        bai2_file = File()
+        bai2_file.file_type = FileType.objects.get(pk='BAI2')
+        bai2_file.save()
+        bai2_file.transactions = test_transactions
+        bai2_file.save()
+
+        # ADIREFUND file
+        test_transactions = generate_transactions(5)
+
+        adi_file = File()
+        adi_file.file_type = FileType.objects.get(pk='ADIREFUND')
+        adi_file.save()
+        adi_file.transactions = test_transactions
+        adi_file.save()
+
+        response = self.client.get(
+            reverse('file-list'), {'file_type': 'ADIREFUND'}, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+
+        results = response.data['results']
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]['id'], adi_file.id)
+
+    def test_get_file_is_ordered_by_date_desc(self):
+        user = self.bank_admins[0]
+
+        # first ADIREFUND file
+        test_transactions = generate_transactions(5)
+
+        adi_file1 = File()
+        adi_file1.file_type = FileType.objects.get(pk='ADIREFUND')
+        adi_file1.save()
+        adi_file1.transactions = test_transactions
+        adi_file1.save()
+
+        # second ADIREFUND file
+        test_transactions = generate_transactions(5)
+
+        adi_file2 = File()
+        adi_file2.file_type = FileType.objects.get(pk='ADIREFUND')
+        adi_file2.save()
+        adi_file2.transactions = test_transactions
+        adi_file2.save()
+
+        response = self.client.get(
+            reverse('file-list'), format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+
+        results = response.data['results']
+        self.assertEqual(len(results), 2)
+        self.assertEqual(results[0]['id'], adi_file2.id)
+        self.assertEqual(results[1]['id'], adi_file1.id)
