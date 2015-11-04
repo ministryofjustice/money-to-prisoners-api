@@ -24,11 +24,13 @@ and if you're planning to deploy then you'll need the [deployment repository](ht
 > ```
 
 In a terminal `cd` into the directory you checked this project out into, then
+
 ```
 $ docker-compose build && docker-compose up
 ```
 
 Wait while Docker does it's stuff and you'll soon see something like:
+
 ```
 django_1 | Running migrations:
 django_1 |   No migrations to apply.
@@ -100,6 +102,13 @@ Start the dev server, listening on port 8000:
 python manage.py runserver 8000
 ```
 
+### Sample data generation
+As well as the management command mentioned above (`python manage.py load_test_data`), the entire data set can also be regenerated from the Django admin tool (found at http://[api-host-domain]/admin/). Currently there are 2 scenarios:
+
+* Random transaction – the standard scenario for integration testing and development (the `load_test_data` command does this by default)
+* User testing the Cashbook – generates random uncredited transactions using offender names and locations from test NOMIS
+
+These scenarios create a different set of test users for the client applications – see the user list in the Django admin tool.
 
 ### Using the API
 #### Getting an access token
@@ -108,10 +117,12 @@ curl -X POST -d "grant_type=password&username=<user_name>&password=<password>&cl
 ```
 If you have executed the `./manage.py load_test_data` command then you'll have
 some users and a test oauth2 application already created. In which case execute the following command:
+
 ```
 curl -X POST -d "grant_type=password&username=test_prison_1&password=test_prison_1&client_id=cashbook&client_secret=cashbook" http://localhost:8000/oauth2/token/
 ```
 Which will return something like:
+
 ```
 {
     "expires_in": 36000,
@@ -129,6 +140,7 @@ curl -H "Authorization: Bearer R6mYyIzZQ03Kj95iEoD53FbLPGkL7Y" http://localhost:
 ```
 
 The response will be something like this:
+
 ```
 {
     "count": 6,
