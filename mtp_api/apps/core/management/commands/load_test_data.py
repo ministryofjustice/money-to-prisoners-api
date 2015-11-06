@@ -57,7 +57,7 @@ class Command(BaseCommand):
         print_message('Deleting all prisons')
         Prison.objects.all().delete()
 
-        fixtures = ['initial_groups.json', 'initial_file_types.json']
+        fixtures = ['initial_groups.json']
         if 'sample' in prisons:
             fixtures.append('test_prisons.json')
         if 'nomis' in prisons:
@@ -87,5 +87,4 @@ class Command(BaseCommand):
             'This action only does the bare minimum in the production environment'
         ))
         verbosity = options.get('verbosity', 1)
-        call_command('loaddata', 'initial_groups.json',
-                     'initial_file_types.json', verbosity=verbosity)
+        call_command('loaddata', 'initial_groups.json', verbosity=verbosity)

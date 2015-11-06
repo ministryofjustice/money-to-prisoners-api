@@ -4,7 +4,7 @@ from datetime import datetime, date, timedelta, timezone
 from django.core.urlresolvers import reverse
 from rest_framework import status as http_status
 
-from account.models import File, FileType
+from account.models import Batch
 
 from transaction.models import Transaction, Log
 from transaction.constants import TRANSACTION_STATUS, LOG_ACTIONS
@@ -417,14 +417,14 @@ class GetTransactionsAsRefundBankAdminTestCase(GetTransactionsAsBankAdminTestCas
         pass
 
 
-class GetTransactionsRelatedToFilesTestCase(
+class GetTransactionsRelatedToBatchesTestCase(
     TransactionRejectsRequestsWithoutPermissionTestMixin,
     BaseTransactionViewTestCase
 ):
     ENDPOINT_VERB = 'get'
 
     def setUp(self):
-        super(GetTransactionsRelatedToFilesTestCase, self).setUp()
+        super(GetTransactionsRelatedToBatchesTestCase, self).setUp()
 
         # delete all transactions and logs
         Transaction.objects.all().delete()
@@ -449,50 +449,50 @@ class GetTransactionsRelatedToFilesTestCase(
     def _get_authorised_user(self):
         return self.bank_admins[0]
 
-    def test_get_list_for_file(self):
+    def test_get_list_for_batch(self):
         url = self._get_url()
         user = self._get_authorised_user()
 
-        adi_file = File()
-        adi_file.file_type = FileType.objects.get(pk='ADIREFUND')
-        adi_file.save()
+        adi_batch = Batch()
+        adi_batch.label = 'ADIREFUND'
+        adi_batch.save()
 
-        adi_file.transactions = list(Transaction.objects.filter(
+        adi_batch.transactions = list(Transaction.objects.filter(
             **Transaction.STATUS_LOOKUP['refunded']))
-        adi_file.save()
+        adi_batch.save()
 
         response = self.client.get(
-            url, {'file': adi_file.id, 'limit': 1000}, format='json',
+            url, {'batch': adi_batch.id, 'limit': 1000}, format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
         self.assertEqual(response.status_code, http_status.HTTP_200_OK)
 
         results = response.data['results']
-        self.assertEqual(len(results), len(adi_file.transactions.all()))
+        self.assertEqual(len(results), len(adi_batch.transactions.all()))
         for trans in results:
-            self.assertTrue(trans['id'] in [t.id for t in adi_file.transactions.all()])
+            self.assertTrue(trans['id'] in [t.id for t in adi_batch.transactions.all()])
 
-    def get_list_for_invalid_file_fails(self):
+    def get_list_for_invalid_batch_fails(self):
         url = self._get_url()
         user = self._get_authorised_user()
 
         response = self.client.get(
-            url, {'file': 3, 'limit': 1000}, format='json',
+            url, {'batch': 3, 'limit': 1000}, format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
         self.assertEqual(response.status_code, http_status.HTTP_400_BAD_REQUEST)
 
-    def test_get_list_excluding_file_type(self):
+    def test_get_list_excluding_label(self):
         """
-        Tests that only transactions not attached to a file of the given type
+        Tests that only transactions not attached to a batch of the given type
         will be returned.
         """
         url = self._get_url()
         user = self._get_authorised_user()
 
-        adi_file = File()
-        adi_file.file_type = FileType.objects.get(pk='ADIREFUND')
-        adi_file.save()
+        adi_batch = Batch()
+        adi_batch.label = 'ADIREFUND'
+        adi_batch.save()
 
         refunded_trans = list(Transaction.objects.filter(
             **Transaction.STATUS_LOOKUP['refunded']))
@@ -501,12 +501,12 @@ class GetTransactionsRelatedToFilesTestCase(
         self.assertTrue(len(attached) >= 1)
         self.assertTrue(len(unattached) >= 1)
 
-        adi_file.transactions = attached
-        adi_file.save()
+        adi_batch.transactions = attached
+        adi_batch.save()
 
         response = self.client.get(
             url, {'status': 'refunded',
-                  'exclude_file_type': 'ADIREFUND',
+                  'exclude_batch_label': 'ADIREFUND',
                   'limit': 1000}, format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
@@ -521,25 +521,25 @@ class GetTransactionsRelatedToFilesTestCase(
             self.assertTrue(trans['id'] not in attached_ids)
             self.assertTrue(trans['id'] in unattached_ids)
 
-    def test_get_list_excluding_invalid_file_type_includes_all(self):
+    def test_get_list_excluding_invalid_label_includes_all(self):
         url = self._get_url()
         user = self._get_authorised_user()
 
-        adi_file = File()
-        adi_file.file_type = FileType.objects.get(pk='ADIREFUND')
-        adi_file.save()
+        adi_batch = Batch()
+        adi_batch.label = 'ADIREFUND'
+        adi_batch.save()
 
         refunded_trans = list(Transaction.objects.filter(
             **Transaction.STATUS_LOOKUP['refunded']))
         attached = [a for (i, a) in enumerate(refunded_trans) if i % 2]
         self.assertTrue(len(attached) >= 1)
 
-        adi_file.transactions = attached
-        adi_file.save()
+        adi_batch.transactions = attached
+        adi_batch.save()
 
         response = self.client.get(
             url, {'status': 'refunded',
-                  'exclude_file_type': 'WIBBLE',
+                  'exclude_batch_label': 'WIBBLE',
                   'limit': 1000}, format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
