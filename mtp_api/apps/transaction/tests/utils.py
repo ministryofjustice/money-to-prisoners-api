@@ -27,8 +27,8 @@ def random_reference(prisoner_number=None, prisoner_dob=None):
     if not prisoner_number or not prisoner_dob:
         return get_random_string(length=15)
     return '%s %s' % (
-        prisoner_number.lower(),
-        prisoner_dob.strftime('%d%b%Y').lower()
+        prisoner_number.upper(),
+        prisoner_dob.strftime('%d/%m/%Y'),
     )
 
 
