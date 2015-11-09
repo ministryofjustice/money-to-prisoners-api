@@ -175,11 +175,8 @@ def generate_transactions(
     if only_new_transactions:
         def owner_status_chooser(*args):
             return None, TRANSACTION_STATUS.AVAILABLE
-
-        is_reconciled = repeat(False)
     else:
         owner_status_chooser = get_owner_and_status_chooser()
-        is_reconciled = cycle([True, False, False])
 
     transactions = []
     for transaction_counter, data in enumerate(data_list, start=1):
@@ -215,9 +212,6 @@ def generate_transactions(
             else:
                 data.update({'refunded': False})
 
-        if data['credited'] or data['refunded']:
-            data['reconciled'] = next(is_reconciled)
-
         new_transaction = Transaction.objects.create(**data)
 
         log_data = {
@@ -231,10 +225,6 @@ def generate_transactions(
             Log.objects.create(**log_data)
         elif new_transaction.refunded:
             log_data['action'] = LOG_ACTIONS.REFUNDED
-            Log.objects.create(**log_data)
-
-        if new_transaction.reconciled:
-            log_data['action'] = LOG_ACTIONS.RECONCILED
             Log.objects.create(**log_data)
 
         transactions.append(new_transaction)

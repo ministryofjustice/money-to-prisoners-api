@@ -14,11 +14,18 @@ from .serializers import CreateTransactionSerializer, \
 
 class TransactionListFilter(django_filters.FilterSet):
     status = django_filters.MethodFilter(action='filter_status')
-    reconciled = django_filters.BooleanFilter()
+    batch = django_filters.MethodFilter(action='filter_batch')
+    exclude_batch_label = django_filters.MethodFilter(action='filter_exclude_batch_label')
 
     class Meta:
         model = Transaction
-        fields = ['status', 'reconciled']
+        fields = ['status', 'batch', 'exclude_batch_label']
+
+    def filter_batch(self, queryset, value):
+        return queryset.filter(batch__id=value)
+
+    def filter_exclude_batch_label(self, queryset, value):
+        return queryset.exclude(batch__label=value)
 
     def filter_status(self, queryset, value):
         if value:

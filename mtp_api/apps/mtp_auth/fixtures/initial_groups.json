@@ -18,7 +18,7 @@
       ["add_transaction", "transaction", "transaction"],
       ["view_transaction", "transaction", "transaction"],
       ["patch_processed_transaction", "transaction", "transaction"],
-      ["add_file", "account", "file"]
+      ["add_batch", "account", "batch"]
     ]
   }
 },

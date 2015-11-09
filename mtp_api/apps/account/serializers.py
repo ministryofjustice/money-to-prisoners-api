@@ -1,12 +1,6 @@
 from rest_framework import serializers
 
-from .models import File, FileType, Balance
-
-
-class FileTypeSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = FileType
+from .models import Batch, Balance
 
 
 class BalanceSerializer(serializers.ModelSerializer):
@@ -16,30 +10,30 @@ class BalanceSerializer(serializers.ModelSerializer):
         fields = ('opening_balance', 'closing_balance')
 
 
-class FileSerializer(serializers.ModelSerializer):
+class BatchSerializer(serializers.ModelSerializer):
     balance = BalanceSerializer(required=False)
 
     def validate(self, data):
-        file_type_set = File.objects.filter(file_type=data['file_type'])
-        queryset = File.objects.none()
+        label_batch_set = Batch.objects.filter(label=data['label'])
+        queryset = Batch.objects.none()
         for transaction in data['transactions']:
-            queryset = queryset | file_type_set.filter(
+            queryset = queryset | label_batch_set.filter(
                 transactions=transaction)
         if queryset.exists():
             raise serializers.ValidationError(
-                "Some transactions have already been used in a %s file"
-                % data['file_type'])
+                "Some transactions have already been used in a %s batch"
+                % data['label'])
         return data
 
     def create(self, validated_data):
         balance_data = validated_data.pop('balance', None)
         transactions = validated_data.pop('transactions')
-        file = File.objects.create(**validated_data)
+        batch = Batch.objects.create(**validated_data)
         for transaction in transactions:
-            file.transactions.add(transaction)
+            batch.transactions.add(transaction)
         if balance_data:
-            Balance.objects.create(file=file, **balance_data)
-        return file
+            Balance.objects.create(batch=batch, **balance_data)
+        return batch
 
     class Meta:
-        model = File
+        model = Batch

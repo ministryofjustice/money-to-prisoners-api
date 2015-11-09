@@ -4,6 +4,8 @@ from datetime import datetime, date, timedelta, timezone
 from django.core.urlresolvers import reverse
 from rest_framework import status as http_status
 
+from account.models import Batch
+
 from transaction.models import Transaction, Log
 from transaction.constants import TRANSACTION_STATUS, LOG_ACTIONS
 from transaction.api.bank_admin.serializers import CreateTransactionSerializer
@@ -250,7 +252,7 @@ class UpdateRefundTransactionsTestCase(
                 )
 
     def test_patch_cannot_update_disallowed_fields(self):
-        """ PATCH should not update fields other than refunded and reconciled """
+        """ PATCH should not update fields other than refunded """
 
         url = self._get_url()
         data_list = self._get_transactions()
@@ -270,121 +272,6 @@ class UpdateRefundTransactionsTestCase(
             self.assertNotEqual(
                 Transaction.objects.get(id=data['id']).prisoner_number, data['prisoner_number']
             )
-
-
-class UpdateReconcileTransactionsTestCase(
-    TransactionRejectsRequestsWithoutPermissionTestMixin,
-    BaseTransactionViewTestCase
-):
-
-    ENDPOINT_VERB = 'patch'
-
-    def setUp(self):
-        super(UpdateReconcileTransactionsTestCase, self).setUp()
-
-        # delete all transactions and logs
-        Transaction.objects.all().delete()
-        Log.objects.all().delete()
-
-    def _get_unauthorised_application_users(self):
-        return [
-            self.prison_clerks[0], self.prisoner_location_admins[0]
-        ]
-
-    def _get_unauthorised_user(self):
-        return self.prison_clerks[0]
-
-    def _get_authorised_user(self):
-        return self.bank_admins[0]
-
-    def _get_url(self, *args, **kwargs):
-        return reverse('bank_admin:transaction-list')
-
-    def _get_transactions(self, tot=30):
-        transactions = generate_transactions(transaction_batch=tot)
-
-        data_list = []
-        for i, trans in enumerate(transactions):
-            trans.save()
-            reconcile = False
-            if (trans.credited or trans.refunded) and not trans.reconciled:
-                reconcile = True
-            data_list.append({'id': trans.id, 'reconciled': reconcile})
-
-        return data_list
-
-    def test_patch_reconciled(self):
-        """PATCH on endpoint should update status of given transactions"""
-
-        url = self._get_url()
-        data_list = self._get_transactions()
-
-        user = self._get_authorised_user()
-
-        response = self.client.patch(
-            url, data=data_list, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
-        )
-        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
-
-        # check changes in db
-        for data in data_list:
-            if data['reconciled']:
-                self.assertTrue(Transaction.objects.get(id=data['id']).reconciled)
-
-        # check logs
-        refunded_data_list = [t['id'] for t in data_list if t['reconciled']]
-        self.assertEqual(
-            Log.objects.filter(
-                user=user,
-                action=LOG_ACTIONS.RECONCILED,
-                transaction__id__in=Transaction.objects.all().values_list('id', flat=True)
-            ).count(),
-            len(refunded_data_list)
-        )
-
-    def _patch_reconciled_with_invalid_status(self, valid_data_list, status):
-        url = self._get_url()
-        user = self._get_authorised_user()
-
-        invalid_transactions = Transaction.objects.filter(
-            **Transaction.STATUS_LOOKUP[status])
-        invalid_data_list = (
-            [{'id': t.id, 'reconciled': True} for t in invalid_transactions]
-        )
-
-        return self.client.patch(
-            url, data=valid_data_list + invalid_data_list, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
-        )
-
-    def test_patch_refund_pending_creates_conflict(self):
-        valid_data_list = self._get_transactions()
-        response = self._patch_reconciled_with_invalid_status(
-            valid_data_list, 'refund_pending')
-
-        self.assertEqual(response.status_code, http_status.HTTP_409_CONFLICT)
-
-        # check that entire update failed
-        for data in valid_data_list:
-            if data['reconciled']:
-                self.assertFalse(
-                    Transaction.objects.get(id=data['id']).reconciled
-                )
-
-    def test_patch_locked_creates_conflict(self):
-        valid_data_list = self._get_transactions()
-        response = self._patch_reconciled_with_invalid_status(
-            valid_data_list, 'locked')
-
-        self.assertEqual(response.status_code, http_status.HTTP_409_CONFLICT)
-
-        # check that entire update failed
-        for data in valid_data_list:
-            if data['reconciled']:
-                self.assertFalse(
-                    Transaction.objects.get(id=data['id']).reconciled
-                )
 
 
 class GetTransactionsAsBankAdminTestCase(
@@ -513,37 +400,6 @@ class GetTransactionsAsBankAdminTestCase(
         )
         self.assertEqual(response.status_code, http_status.HTTP_400_BAD_REQUEST)
 
-    def test_get_list_affected_by_reconciled(self):
-        url = self._get_url()
-
-        response = self.client.get(
-            url, {'status': 'credited',
-                  'reconciled': True,
-                  'limit': 1000}, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self._get_authorised_user())
-        )
-        reconciled_results = response.data['results']
-
-        for r in reconciled_results:
-            self.assertTrue(r['credited'])
-            t = Transaction.objects.get(pk=r['id'])
-            self.assertTrue(t.reconciled)
-
-        response = self.client.get(
-            url, {'status': 'credited',
-                  'reconciled': False,
-                  'limit': 1000}, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self._get_authorised_user())
-        )
-        non_reconciled_results = response.data['results']
-
-        for r in non_reconciled_results:
-            self.assertTrue(r['credited'])
-            t = Transaction.objects.get(pk=r['id'])
-            self.assertFalse(t.reconciled)
-
-        self.assertNotEqual(reconciled_results, non_reconciled_results)
-
 
 class GetTransactionsAsRefundBankAdminTestCase(GetTransactionsAsBankAdminTestCase):
 
@@ -559,3 +415,139 @@ class GetTransactionsAsRefundBankAdminTestCase(GetTransactionsAsBankAdminTestCas
 
     def _assert_hidden_fields_absent(self, results):
         pass
+
+
+class GetTransactionsRelatedToBatchesTestCase(
+    TransactionRejectsRequestsWithoutPermissionTestMixin,
+    BaseTransactionViewTestCase
+):
+    ENDPOINT_VERB = 'get'
+
+    def setUp(self):
+        super(GetTransactionsRelatedToBatchesTestCase, self).setUp()
+
+        # delete all transactions and logs
+        Transaction.objects.all().delete()
+        Log.objects.all().delete()
+
+        self._populate_transactions()
+
+    def _get_unauthorised_application_users(self):
+        return [
+            self.prison_clerks[0], self.prisoner_location_admins[0]
+        ]
+
+    def _get_url(self, *args, **kwargs):
+        return reverse('bank_admin:transaction-list')
+
+    def _populate_transactions(self, tot=40):
+        transactions = generate_transactions(transaction_batch=tot)
+
+        for trans in transactions:
+            trans.save()
+
+    def _get_authorised_user(self):
+        return self.bank_admins[0]
+
+    def test_get_list_for_batch(self):
+        url = self._get_url()
+        user = self._get_authorised_user()
+
+        adi_batch = Batch()
+        adi_batch.label = 'ADIREFUND'
+        adi_batch.save()
+
+        adi_batch.transactions = list(Transaction.objects.filter(
+            **Transaction.STATUS_LOOKUP['refunded']))
+        adi_batch.save()
+
+        response = self.client.get(
+            url, {'batch': adi_batch.id, 'limit': 1000}, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+
+        results = response.data['results']
+        self.assertEqual(len(results), len(adi_batch.transactions.all()))
+        for trans in results:
+            self.assertTrue(trans['id'] in [t.id for t in adi_batch.transactions.all()])
+
+    def get_list_for_invalid_batch_fails(self):
+        url = self._get_url()
+        user = self._get_authorised_user()
+
+        response = self.client.get(
+            url, {'batch': 3, 'limit': 1000}, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_400_BAD_REQUEST)
+
+    def test_get_list_excluding_label(self):
+        """
+        Tests that only transactions not attached to a batch of the given type
+        will be returned.
+        """
+        url = self._get_url()
+        user = self._get_authorised_user()
+
+        adi_batch = Batch()
+        adi_batch.label = 'ADIREFUND'
+        adi_batch.save()
+
+        refunded_trans = list(Transaction.objects.filter(
+            **Transaction.STATUS_LOOKUP['refunded']))
+        attached = [a for (i, a) in enumerate(refunded_trans) if i % 2]
+        unattached = [a for (i, a) in enumerate(refunded_trans) if not i % 2]
+        self.assertTrue(len(attached) >= 1)
+        self.assertTrue(len(unattached) >= 1)
+
+        adi_batch.transactions = attached
+        adi_batch.save()
+
+        response = self.client.get(
+            url, {'status': 'refunded',
+                  'exclude_batch_label': 'ADIREFUND',
+                  'limit': 1000}, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+
+        results = response.data['results']
+        self.assertEqual(len(results), len(unattached))
+
+        attached_ids = [t.id for t in attached]
+        unattached_ids = [t.id for t in unattached]
+        for trans in results:
+            self.assertTrue(trans['id'] not in attached_ids)
+            self.assertTrue(trans['id'] in unattached_ids)
+
+    def test_get_list_excluding_invalid_label_includes_all(self):
+        url = self._get_url()
+        user = self._get_authorised_user()
+
+        adi_batch = Batch()
+        adi_batch.label = 'ADIREFUND'
+        adi_batch.save()
+
+        refunded_trans = list(Transaction.objects.filter(
+            **Transaction.STATUS_LOOKUP['refunded']))
+        attached = [a for (i, a) in enumerate(refunded_trans) if i % 2]
+        self.assertTrue(len(attached) >= 1)
+
+        adi_batch.transactions = attached
+        adi_batch.save()
+
+        response = self.client.get(
+            url, {'status': 'refunded',
+                  'exclude_batch_label': 'WIBBLE',
+                  'limit': 1000}, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+
+        results = response.data['results']
+        self.assertEqual(len(results), len(refunded_trans))
+
+        result_ids = [t['id'] for t in results]
+        for trans in refunded_trans:
+            self.assertTrue(trans.id in result_ids)

@@ -4,7 +4,7 @@ from rest_framework import serializers
 from rest_framework.fields import IntegerField
 
 from transaction.signals import transaction_created, transaction_refunded, \
-    transaction_prisons_need_updating, transaction_reconciled
+    transaction_prisons_need_updating
 from transaction.models import Transaction
 from prison.serializers import PrisonSerializer
 
@@ -57,13 +57,10 @@ class UpdateTransactionListSerializer(serializers.ListSerializer):
         user = self.context['request'].user
 
         to_refund = [t['id'] for t in validated_data if t.get('refunded', False)]
-        to_reconcile = [t['id'] for t in validated_data if t.get('reconciled', False)]
 
         updated_transactions = []
         if to_refund:
             updated_transactions += self.refund(user, to_refund)
-        if to_reconcile:
-            updated_transactions += self.reconcile(user, to_reconcile)
 
         return updated_transactions
 
@@ -89,34 +86,6 @@ class UpdateTransactionListSerializer(serializers.ListSerializer):
 
         return updated_transactions
 
-    def reconcile(self, user, to_reconcile):
-        update_set = Transaction.objects.filter(
-            pk__in=to_reconcile,
-            reconciled=False,
-            **Transaction.STATUS_LOOKUP['refunded']).select_for_update()
-        update_set = update_set | Transaction.objects.filter(
-            pk__in=to_reconcile,
-            reconciled=False,
-            **Transaction.STATUS_LOOKUP['credited']).select_for_update()
-
-        if len(update_set) != len(to_reconcile):
-            raise Transaction.DoesNotExist(
-                list(set(to_reconcile) - {t.id for t in update_set})
-            )
-
-        updated_transactions = list(update_set)
-        update_set.update(reconciled=True)
-
-        for transaction in updated_transactions:
-            transaction.reconciled = True
-            transaction_reconciled.send(
-                sender=Transaction,
-                transaction=transaction,
-                by_user=user
-            )
-
-        return updated_transactions
-
 
 class UpdateRefundedTransactionSerializer(serializers.ModelSerializer):
     id = IntegerField(read_only=False)
@@ -126,8 +95,7 @@ class UpdateRefundedTransactionSerializer(serializers.ModelSerializer):
         list_serializer_class = UpdateTransactionListSerializer
         fields = (
             'id',
-            'refunded',
-            'reconciled'
+            'refunded'
         )
 
 
