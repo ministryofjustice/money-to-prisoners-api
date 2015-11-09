@@ -110,12 +110,13 @@ def generate_predetermined_transactions_data():
 
     now = timezone.now().replace(microsecond=0)
     over_a_week_ago = now - datetime.timedelta(days=8)
+    a_week_ago = over_a_week_ago + datetime.timedelta(days=1)
     data = {
         'received_at': over_a_week_ago,
         'created': over_a_week_ago,
-        'modified': over_a_week_ago,
+        'modified': a_week_ago,
         'owner': None,
-        'credited': False,
+        'credited': True,
         'refunded': False,
 
         'sender_name': 'Mary Stevenson',
@@ -222,7 +223,7 @@ def generate_transactions(
             transactions.append(new_transaction)
 
     for new_transaction in transactions:
-        with MockModelTimestamps(new_transaction.created, new_transaction.modified):
+        with MockModelTimestamps(new_transaction.modified, new_transaction.modified):
             log_data = {
                 'transaction': new_transaction,
                 'user': new_transaction.owner,
