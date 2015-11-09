@@ -1,5 +1,5 @@
 import datetime
-from itertools import cycle, repeat
+from itertools import cycle
 import random
 import warnings
 
@@ -8,14 +8,13 @@ from django.utils.crypto import get_random_string
 from django.contrib.auth.models import User
 from faker import Faker
 
+from core.tests.utils import MockModelTimestamps
 from prison.models import Prison, PrisonerLocation
-
-from transaction.models import Transaction, Log
-from transaction.constants import TRANSACTION_STATUS, LOG_ACTIONS
-
 from prison.tests.utils import random_prisoner_number, random_prisoner_dob, \
     random_prisoner_name, get_prisoner_location_creator, \
     load_nomis_prisoner_locations
+from transaction.models import Transaction, Log
+from transaction.constants import TRANSACTION_STATUS, LOG_ACTIONS
 
 fake = Faker(locale='en_GB')
 
@@ -212,26 +211,28 @@ def generate_transactions(
             else:
                 data.update({'refunded': False})
 
-        new_transaction = Transaction.objects.create(**data)
-
-        log_data = {
-            'transaction': new_transaction,
-            'user': new_transaction.owner,
-            'created': new_transaction.modified
-        }
-
-        if new_transaction.credited:
-            log_data['action'] = LOG_ACTIONS.CREDITED
-            Log.objects.create(**log_data)
-        elif new_transaction.refunded:
-            log_data['action'] = LOG_ACTIONS.REFUNDED
-            Log.objects.create(**log_data)
-
+        with MockModelTimestamps(data['created'], data['modified']):
+            new_transaction = Transaction.objects.create(**data)
         transactions.append(new_transaction)
 
     if predetermined_transactions:
         for data in generate_predetermined_transactions_data():
-            new_transaction = Transaction.objects.create(**data)
+            with MockModelTimestamps(data['created'], data['modified']):
+                new_transaction = Transaction.objects.create(**data)
             transactions.append(new_transaction)
+
+    for new_transaction in transactions:
+        with MockModelTimestamps(new_transaction.created, new_transaction.modified):
+            log_data = {
+                'transaction': new_transaction,
+                'user': new_transaction.owner,
+            }
+
+            if new_transaction.credited:
+                log_data['action'] = LOG_ACTIONS.CREDITED
+                Log.objects.create(**log_data)
+            elif new_transaction.refunded:
+                log_data['action'] = LOG_ACTIONS.REFUNDED
+                Log.objects.create(**log_data)
 
     return transactions

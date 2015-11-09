@@ -1,3 +1,5 @@
+import mock
+
 from django.contrib.auth import get_user_model
 from oauth2_provider.models import Application
 
@@ -7,6 +9,34 @@ from mtp_auth.models import ApplicationUserMapping, PrisonUserMapping
 from mtp_auth.tests.mommy_recipes import create_prison_user_mapping, \
     create_prisoner_location_admins, create_bank_admins, create_refund_bank_admins
 from prison.models import Prison
+
+
+class MockModelTimestamps:
+    """
+    Context manager to allow specifying the created and modified
+    datetimes when saving models extending TimeStampedModel
+    """
+
+    def __init__(self, created=None, modified=None):
+        self.patches = []
+        if created:
+            self.patches.append(
+                mock.patch('model_utils.fields.AutoCreatedField.get_default',
+                           return_value=created)
+            )
+        if modified:
+            self.patches.append(
+                mock.patch('model_utils.fields.now',
+                           return_value=modified)
+            )
+
+    def __enter__(self):
+        for patch in self.patches:
+            patch.start()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        for patch in self.patches:
+            patch.stop()
 
 
 def make_applications():
