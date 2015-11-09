@@ -1,13 +1,14 @@
 import datetime
 from itertools import cycle, repeat
 import random
+import warnings
 
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.contrib.auth.models import User
 from faker import Faker
 
-from prison.models import Prison
+from prison.models import Prison, PrisonerLocation
 
 from transaction.models import Transaction, Log
 from transaction.constants import TRANSACTION_STATUS, LOG_ACTIONS
@@ -27,8 +28,8 @@ def random_reference(prisoner_number=None, prisoner_dob=None):
     if not prisoner_number or not prisoner_dob:
         return get_random_string(length=15)
     return '%s %s' % (
-        prisoner_number.lower(),
-        prisoner_dob.strftime('%d%b%Y').lower()
+        prisoner_number.upper(),
+        prisoner_dob.strftime('%d/%m/%Y'),
     )
 
 
@@ -88,6 +89,53 @@ def generate_initial_transactions_data(tot=50, prisoner_location_generator=None)
     return data_list
 
 
+def generate_predetermined_transactions_data():
+    """
+    Uses test NOMIS prisoner locations to create some transactions
+    that are pre-determined for user testing with specific scenarios
+
+    Currently, only one transaction is created:
+        NICHOLAS FINNEY (A1450AE, dob. 30/12/1986) @ HMP BIRMINGHAM
+        Mary Stevenson sent £72.30, 8 days ago
+        Payment is still uncredited
+    """
+    prisoner_number = 'A1450AE'
+    try:
+        prisoner_location = PrisonerLocation.objects.get(
+            prisoner_number=prisoner_number
+        )
+    except PrisonerLocation.DoesNotExist:
+        warnings.warn('Could not find prisoner %s, '
+                      'was test NOMIS data loaded?' % prisoner_number)
+        return []
+
+    now = timezone.now().replace(microsecond=0)
+    over_a_week_ago = now - datetime.timedelta(days=8)
+    data = {
+        'received_at': over_a_week_ago,
+        'created': over_a_week_ago,
+        'modified': over_a_week_ago,
+        'owner': None,
+        'credited': False,
+        'refunded': False,
+
+        'sender_name': 'Mary Stevenson',
+        'amount': 7230,
+        'sender_sort_code': '680966',
+        'sender_account_number': '75823963',
+
+        'prison': prisoner_location.prison,
+        'prisoner_name': prisoner_location.prisoner_name,
+        'prisoner_number': prisoner_location.prisoner_number,
+        'prisoner_dob': prisoner_location.prisoner_dob,
+    }
+    data['reference'] = random_reference(
+        data.get('prisoner_number'), data.get('prisoner_dob')
+    )
+    data_list = [data]
+    return data_list
+
+
 def get_owner_and_status_chooser():
     clerks_per_prison = {}
     for p in Prison.objects.all():
@@ -111,6 +159,7 @@ def get_owner_and_status_chooser():
 def generate_transactions(
     transaction_batch=50,
     use_test_nomis_prisoners=False,
+    predetermined_transactions=False,
     only_new_transactions=False,
 ):
     if use_test_nomis_prisoners:
@@ -189,5 +238,10 @@ def generate_transactions(
             Log.objects.create(**log_data)
 
         transactions.append(new_transaction)
+
+    if predetermined_transactions:
+        for data in generate_predetermined_transactions_data():
+            new_transaction = Transaction.objects.create(**data)
+            transactions.append(new_transaction)
 
     return transactions

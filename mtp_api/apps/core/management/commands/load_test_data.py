@@ -79,6 +79,7 @@ class Command(BaseCommand):
             generate_transactions(
                 transaction_batch=100,
                 use_test_nomis_prisoners=True,
+                predetermined_transactions=True,
                 only_new_transactions=True,
             )
 
