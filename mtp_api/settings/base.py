@@ -179,6 +179,8 @@ OAUTH2_PROVIDER = {
     'OAUTH2_VALIDATOR_CLASS': 'mtp_auth.validators.ApplicationRequestValidator'
 }
 OAUTH2_PROVIDER_APPLICATION_MODEL = 'oauth2_provider.Application'
+MTP_AUTH_LOCKOUT_COUNT = 5  # 5 times
+MTP_AUTH_LOCKOUT_LOCKOUT_PERIOD = 30 * 60  # 30 minutes
 
 try:
     from .local import *

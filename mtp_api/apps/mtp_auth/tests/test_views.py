@@ -1,10 +1,17 @@
-from django.core.urlresolvers import reverse
+import datetime
+import mock
 
+from django.conf import settings
+from django.core.urlresolvers import reverse
+from django.utils.timezone import now
+from oauth2_provider.models import Application
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from core.tests.utils import make_test_users
-from mtp_auth.constants import BANK_ADMIN_OAUTH_CLIENT_ID, CASHBOOK_OAUTH_CLIENT_ID
+from mtp_auth.constants import BANK_ADMIN_OAUTH_CLIENT_ID, CASHBOOK_OAUTH_CLIENT_ID, \
+    PRISONER_LOCATION_OAUTH_CLIENT_ID
+from mtp_auth.models import FailedLoginAttempt
 from prison.models import Prison
 
 
@@ -146,3 +153,111 @@ class UserApplicationValidationTestCase(APITestCase):
             }
         )
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class AccountLockoutTestCase(APITestCase):
+    fixtures = ['test_prisons.json', 'initial_groups.json']
+
+    def setUp(self):
+        super().setUp()
+        self.prison_clerks = make_test_users()[0]
+
+    def pass_login(self, user, client):
+        response = self.client.post(
+            reverse('oauth2_provider:token'),
+            {
+                'grant_type': 'password',
+                'username': user.username,
+                'password': user.username,
+                'client_id': client.client_id,
+                'client_secret': client.client_secret,
+            }
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def fail_login(self, user, client):
+        response = self.client.post(
+            reverse('oauth2_provider:token'),
+            {
+                'grant_type': 'password',
+                'username': user.username,
+                'password': 'incorrect-password',
+                'client_id': client.client_id,
+                'client_secret': client.client_secret,
+            }
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_account_lockout_on_too_many_attempts(self):
+        prison_clerk = self.prison_clerks[0]
+        cashbook_client = Application.objects.get(client_id=CASHBOOK_OAUTH_CLIENT_ID)
+
+        for _ in range(settings.MTP_AUTH_LOCKOUT_COUNT):
+            self.assertFalse(FailedLoginAttempt.objects.is_locked_out(prison_clerk, cashbook_client))
+            self.fail_login(prison_clerk, cashbook_client)
+
+        self.assertTrue(FailedLoginAttempt.objects.is_locked_out(prison_clerk, cashbook_client))
+        self.fail_login(prison_clerk, cashbook_client)
+
+    def test_account_lockout_only_applies_for_a_period_of_time(self):
+        prison_clerk = self.prison_clerks[0]
+        cashbook_client = Application.objects.get(client_id=CASHBOOK_OAUTH_CLIENT_ID)
+
+        for _ in range(settings.MTP_AUTH_LOCKOUT_COUNT):
+            self.fail_login(prison_clerk, cashbook_client)
+
+        self.assertTrue(FailedLoginAttempt.objects.is_locked_out(prison_clerk, cashbook_client))
+
+        future = now() + datetime.timedelta(seconds=settings.MTP_AUTH_LOCKOUT_LOCKOUT_PERIOD) \
+            + datetime.timedelta(seconds=1)
+        with mock.patch('mtp_auth.models.now') as mocked_now:
+            mocked_now.return_value = future
+            self.assertFalse(FailedLoginAttempt.objects.is_locked_out(prison_clerk, cashbook_client))
+            self.pass_login(prison_clerk, cashbook_client)
+
+    def test_account_lockout_removed_on_successful_login(self):
+        if not settings.MTP_AUTH_LOCKOUT_COUNT:
+            return
+
+        prison_clerk = self.prison_clerks[0]
+        cashbook_client = Application.objects.get(client_id=CASHBOOK_OAUTH_CLIENT_ID)
+
+        for _ in range(settings.MTP_AUTH_LOCKOUT_COUNT - 1):
+            self.assertFalse(FailedLoginAttempt.objects.is_locked_out(prison_clerk, cashbook_client))
+            self.fail_login(prison_clerk, cashbook_client)
+
+        self.assertFalse(FailedLoginAttempt.objects.is_locked_out(prison_clerk, cashbook_client))
+        self.pass_login(prison_clerk, cashbook_client)
+        self.assertFalse(FailedLoginAttempt.objects.is_locked_out(prison_clerk, cashbook_client))
+        self.assertEqual(FailedLoginAttempt.objects.filter(
+            user=prison_clerk,
+            application=cashbook_client,
+        ).count(), 0)
+
+    def test_account_lockout_only_applies_to_current_application(self):
+        prison_clerk = self.prison_clerks[0]
+        cashbook_client = Application.objects.get(client_id=CASHBOOK_OAUTH_CLIENT_ID)
+        bank_admin_client = Application.objects.get(client_id=BANK_ADMIN_OAUTH_CLIENT_ID)
+        prisoner_location_admin_client = Application.objects.get(client_id=PRISONER_LOCATION_OAUTH_CLIENT_ID)
+
+        for _ in range(settings.MTP_AUTH_LOCKOUT_COUNT):
+            self.assertFalse(FailedLoginAttempt.objects.is_locked_out(prison_clerk, cashbook_client))
+            self.fail_login(prison_clerk, cashbook_client)
+            self.fail_login(prison_clerk, bank_admin_client)
+
+        self.assertTrue(FailedLoginAttempt.objects.is_locked_out(prison_clerk, cashbook_client))
+        self.assertTrue(FailedLoginAttempt.objects.is_locked_out(prison_clerk, bank_admin_client))
+        self.assertFalse(FailedLoginAttempt.objects.is_locked_out(prison_clerk, prisoner_location_admin_client))
+
+    def test_account_lockout_remains_if_successful_login_in_other_application(self):
+        prison_clerk = self.prison_clerks[0]
+        cashbook_client = Application.objects.get(client_id=CASHBOOK_OAUTH_CLIENT_ID)
+        bank_admin_client = Application.objects.get(client_id=BANK_ADMIN_OAUTH_CLIENT_ID)
+
+        for _ in range(settings.MTP_AUTH_LOCKOUT_COUNT):
+            self.fail_login(prison_clerk, bank_admin_client)
+
+        self.pass_login(prison_clerk, cashbook_client)
+
+        self.assertTrue(FailedLoginAttempt.objects.is_locked_out(prison_clerk, bank_admin_client))
+        self.assertFalse(FailedLoginAttempt.objects.is_locked_out(prison_clerk, cashbook_client))
