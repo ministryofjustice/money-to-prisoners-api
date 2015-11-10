@@ -5,7 +5,7 @@ from transaction.models import Transaction
 
 
 class Batch(TimeStampedModel):
-    label = models.CharField(max_length=15, db_index=True)
+    label = models.CharField(max_length=30, db_index=True)
     transactions = models.ManyToManyField(Transaction)
 
     def __str__(self):
