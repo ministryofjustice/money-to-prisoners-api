@@ -16,4 +16,8 @@ class Migration(migrations.Migration):
             name='label',
             field=models.CharField(max_length=30, db_index=True),
         ),
+        migrations.AlterModelOptions(
+            name='batch',
+            options={'verbose_name_plural': 'batches'},
+        ),
     ]
