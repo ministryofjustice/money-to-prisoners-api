@@ -1,4 +1,5 @@
-import mock
+from unittest import mock
+
 from django.test import TestCase
 
 from mtp_auth.permissions import ClientIDPermissions

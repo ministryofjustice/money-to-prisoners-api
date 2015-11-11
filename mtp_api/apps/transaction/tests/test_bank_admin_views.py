@@ -1,5 +1,5 @@
-import mock
 from datetime import datetime, date, timedelta, timezone
+from unittest import mock
 
 from django.core.urlresolvers import reverse
 from rest_framework import status as http_status

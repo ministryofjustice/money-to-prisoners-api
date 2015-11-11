@@ -1,6 +1,6 @@
 import datetime
-import mock
 import random
+from unittest import mock
 import urllib.parse
 
 from django.conf import settings
