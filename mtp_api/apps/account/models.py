@@ -8,6 +8,9 @@ class Batch(TimeStampedModel):
     label = models.CharField(max_length=30, db_index=True)
     transactions = models.ManyToManyField(Transaction)
 
+    class Meta:
+        verbose_name_plural = 'batches'
+
     def __str__(self):
         return '%s %s' % (self.label, self.created)
 
