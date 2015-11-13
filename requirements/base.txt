@@ -1,5 +1,4 @@
-# Place your base dependencies here
-Django==1.8.3
+Django==1.8.6
 psycopg2==2.6
 djangorestframework==3.2.3
 django-model-utils==2.2
@@ -10,3 +9,4 @@ django-rest-swagger==0.3.2
 django-extended-choices==1.0.4
 fake-factory>=0.5,<0.6
 model-mommy==1.2.4
+pytz>=2015.7
