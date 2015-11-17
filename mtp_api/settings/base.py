@@ -169,6 +169,10 @@ OAUTH2_PROVIDER_APPLICATION_MODEL = 'oauth2_provider.Application'
 MTP_AUTH_LOCKOUT_COUNT = 5  # 5 times
 MTP_AUTH_LOCKOUT_LOCKOUT_PERIOD = 30 * 60  # 30 minutes
 
+
+RUN_CLEANUP_TASKS = os.environ.get('RUN_CLEANUP_TASKS') == 'True'
+
+
 try:
     from .local import *
 except ImportError:
