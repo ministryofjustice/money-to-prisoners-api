@@ -56,6 +56,7 @@ class CreateBatchViewTestCase(AuthTestCaseMixin, APITestCase):
         batches = Batch.objects.all()
         self.assertEqual(len(batches), 1)
         self.assertEqual(batches[0].label, 'BAI2')
+        self.assertEqual(batches[0].user, user)
         self.assertEqual(batches[0].balance.opening_balance, 100)
         self.assertEqual(batches[0].balance.closing_balance, 200)
         self.assertEqual(len(batches[0].transactions.all()), len(test_transactions))
@@ -82,6 +83,7 @@ class CreateBatchViewTestCase(AuthTestCaseMixin, APITestCase):
         batches = Batch.objects.all()
         self.assertEqual(len(batches), 1)
         self.assertEqual(batches[0].label, 'BAI2')
+        self.assertEqual(batches[0].user, user)
         self.assertEqual(len(batches[0].transactions.all()), len(test_transactions))
         for transaction in batches[0].transactions.all():
             self.assertTrue(transaction in test_transactions)
@@ -142,6 +144,7 @@ class ListBatchViewTestCase(AuthTestCaseMixin, APITestCase):
 
         bai2_batch = Batch()
         bai2_batch.label = 'BAI2'
+        bai2_batch.user = user
         bai2_batch.save()
         bai2_batch.transactions = test_transactions
         bai2_batch.save()
@@ -151,6 +154,7 @@ class ListBatchViewTestCase(AuthTestCaseMixin, APITestCase):
 
         adi_batch = Batch()
         adi_batch.label = 'ADIREFUND'
+        bai2_batch.user = user
         adi_batch.save()
         adi_batch.transactions = test_transactions
         adi_batch.save()
@@ -172,6 +176,7 @@ class ListBatchViewTestCase(AuthTestCaseMixin, APITestCase):
 
         adi_batch1 = Batch()
         adi_batch1.label = 'ADIREFUND'
+        adi_batch1.user = user
         adi_batch1.save()
         adi_batch1.transactions = test_transactions
         adi_batch1.save()
@@ -181,6 +186,7 @@ class ListBatchViewTestCase(AuthTestCaseMixin, APITestCase):
 
         adi_batch2 = Batch()
         adi_batch2.label = 'ADIREFUND'
+        adi_batch2.user = user
         adi_batch2.save()
         adi_batch2.transactions = test_transactions
         adi_batch2.save()

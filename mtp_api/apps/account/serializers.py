@@ -26,9 +26,11 @@ class BatchSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
+        user = self.context['request'].user
+
         balance_data = validated_data.pop('balance', None)
         transactions = validated_data.pop('transactions')
-        batch = Batch.objects.create(**validated_data)
+        batch = Batch.objects.create(user=user, **validated_data)
         for transaction in transactions:
             batch.transactions.add(transaction)
         if balance_data:
