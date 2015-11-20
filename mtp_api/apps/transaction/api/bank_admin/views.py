@@ -19,13 +19,7 @@ class TransactionListFilter(django_filters.FilterSet):
 
     class Meta:
         model = Transaction
-        fields = ['status', 'batch', 'exclude_batch_label']
-
-    def filter_batch(self, queryset, value):
-        return queryset.filter(batch__id=value)
-
-    def filter_exclude_batch_label(self, queryset, value):
-        return queryset.exclude(batch__label=value)
+        fields = {'received_at': ['lt', 'gte']}
 
     def filter_status(self, queryset, value):
         if value:
@@ -42,6 +36,12 @@ class TransactionListFilter(django_filters.FilterSet):
                 except KeyError:
                     raise ParseError()
         return queryset
+
+    def filter_batch(self, queryset, value):
+        return queryset.filter(batch__id=value)
+
+    def filter_exclude_batch_label(self, queryset, value):
+        return queryset.exclude(batch__label=value)
 
 
 class TransactionView(mixins.CreateModelMixin, mixins.UpdateModelMixin,
