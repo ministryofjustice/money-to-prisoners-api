@@ -39,37 +39,6 @@ class CreateBatchViewTestCase(AuthTestCaseMixin, APITestCase):
 
         new_batch = {
             'label': 'BAI2',
-            'transactions': tid_list,
-            'balance': {
-                'opening_balance': 100,
-                'closing_balance': 200
-            }
-        }
-
-        response = self.client.post(
-            reverse('batch-list'), data=new_batch, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-
-        batches = Batch.objects.all()
-        self.assertEqual(len(batches), 1)
-        self.assertEqual(batches[0].label, 'BAI2')
-        self.assertEqual(batches[0].user, user)
-        self.assertEqual(batches[0].balance.opening_balance, 100)
-        self.assertEqual(batches[0].balance.closing_balance, 200)
-        self.assertEqual(len(batches[0].transactions.all()), len(test_transactions))
-        for transaction in batches[0].transactions.all():
-            self.assertTrue(transaction in test_transactions)
-
-    def test_create_batch_without_balance_succeeds(self):
-        user = self.bank_admins[0]
-        test_transactions = generate_transactions(5)
-        tid_list = [t.id for t in test_transactions]
-
-        new_batch = {
-            'label': 'BAI2',
             'transactions': tid_list
         }
 
@@ -87,12 +56,6 @@ class CreateBatchViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(len(batches[0].transactions.all()), len(test_transactions))
         for transaction in batches[0].transactions.all():
             self.assertTrue(transaction in test_transactions)
-
-        try:
-            batches[0].balance
-            self.fail()
-        except Batch.balance.RelatedObjectDoesNotExist:
-            pass
 
     def test_create_batch_without_label_fails(self):
         user = self.bank_admins[0]

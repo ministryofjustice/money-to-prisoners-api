@@ -15,9 +15,3 @@ class Batch(TimeStampedModel):
 
     def __str__(self):
         return '%s %s' % (self.label, self.created)
-
-
-class Balance(TimeStampedModel):
-    opening_balance = models.IntegerField()
-    closing_balance = models.IntegerField()
-    batch = models.OneToOneField(Batch)

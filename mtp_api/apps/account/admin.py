@@ -1,6 +1,5 @@
 from django.contrib import admin
 
-from .models import Batch, Balance
+from .models import Batch
 
 admin.site.register(Batch)
-admin.site.register(Balance)

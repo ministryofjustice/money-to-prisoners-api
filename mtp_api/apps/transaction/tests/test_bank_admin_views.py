@@ -1,15 +1,14 @@
-from datetime import datetime, date, timedelta, timezone
+from datetime import datetime, date, timedelta, time
 from unittest import mock
 
+from django.utils import timezone
 from django.core.urlresolvers import reverse
 from rest_framework import status as http_status
 
 from account.models import Batch
-
 from transaction.models import Transaction, Log
 from transaction.constants import TRANSACTION_STATUS, LOG_ACTIONS
 from transaction.api.bank_admin.serializers import CreateTransactionSerializer
-
 from .utils import generate_initial_transactions_data, generate_transactions
 from .test_base import BaseTransactionViewTestCase, \
     TransactionRejectsRequestsWithoutPermissionTestMixin
@@ -170,7 +169,6 @@ class UpdateRefundTransactionsTestCase(
 
         data_list = []
         for i, trans in enumerate(transactions):
-            trans.save()
             refund = False
             if not trans.prisoner_number and not trans.refunded:
                 refund = True
@@ -299,9 +297,6 @@ class GetTransactionsAsBankAdminTestCase(
 
     def _populate_transactions(self, tot=20):
         transactions = generate_transactions(transaction_batch=tot)
-
-        for trans in transactions:
-            trans.save()
 
     def _get_authorised_user(self):
         return self.bank_admins[0]
@@ -443,9 +438,6 @@ class GetTransactionsRelatedToBatchesTestCase(
     def _populate_transactions(self, tot=40):
         transactions = generate_transactions(transaction_batch=tot)
 
-        for trans in transactions:
-            trans.save()
-
     def _get_authorised_user(self):
         return self.bank_admins[0]
 
@@ -550,4 +542,59 @@ class GetTransactionsRelatedToBatchesTestCase(
 
         result_ids = [t['id'] for t in results]
         for trans in refunded_trans:
+            self.assertTrue(trans.id in result_ids)
+
+
+class GetTransactionsFilteredByDateTestCase(
+    TransactionRejectsRequestsWithoutPermissionTestMixin,
+    BaseTransactionViewTestCase
+):
+    ENDPOINT_VERB = 'get'
+
+    def setUp(self):
+        super().setUp()
+
+        # delete all transactions and logs
+        Transaction.objects.all().delete()
+        Log.objects.all().delete()
+
+        self._populate_transactions()
+
+    def _get_unauthorised_application_users(self):
+        return [
+            self.prison_clerks[0], self.prisoner_location_admins[0]
+        ]
+
+    def _get_url(self, *args, **kwargs):
+        return reverse('bank_admin:transaction-list')
+
+    def _populate_transactions(self, tot=80):
+        transactions = generate_transactions(transaction_batch=tot)
+
+    def _get_authorised_user(self):
+        return self.bank_admins[0]
+
+    def test_get_list_received_between_dates(self):
+        url = self._get_url()
+        user = self._get_authorised_user()
+
+        response = self.client.get(
+            url, {'received_at__lt': date.today(),
+                  'received_at__gte': date.today() - timedelta(days=2),
+                  'limit': 1000}, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+
+        results = response.data['results']
+        result_ids = [t['id'] for t in results]
+        today = datetime.combine(date.today(), time.min).replace(
+            tzinfo=timezone.get_current_timezone())
+        received_between_dates = Transaction.objects.filter(
+            received_at__lt=today,
+            received_at__gte=(today - timedelta(days=2))
+        )
+        self.assertEquals(len(result_ids), len(received_between_dates))
+
+        for trans in received_between_dates:
             self.assertTrue(trans.id in result_ids)
