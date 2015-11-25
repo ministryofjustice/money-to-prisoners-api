@@ -32,7 +32,7 @@ class TransactionQuerySet(models.QuerySet):
             "FROM transaction_transaction AS t LEFT OUTER JOIN prison_prisonerlocation AS pl "
             "ON t.prisoner_number = pl.prisoner_number AND t.prisoner_dob = pl.prisoner_dob "
             "WHERE t.owner_id IS NULL AND t.credited is False AND t.refunded is False "
-            "AND transaction_transaction.id = t.id "
+            "AND t.reconciled is False AND transaction_transaction.id = t.id "
         )
 
 
@@ -71,5 +71,12 @@ class LogManager(models.Manager):
         self.create(
             transaction=transaction,
             action=LOG_ACTIONS.REFUNDED,
+            user=by_user
+        )
+
+    def transaction_reconciled(self, transaction, by_user):
+        self.create(
+            transaction=transaction,
+            action=LOG_ACTIONS.RECONCILED,
             user=by_user
         )

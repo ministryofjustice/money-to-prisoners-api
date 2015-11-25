@@ -233,3 +233,39 @@ class UpdatePrisonsOnRefundPendingTransactionsTestcase(BaseUpdatePrisonsTestCase
         self.transaction.refresh_from_db()
         self.assertEqual(self.transaction.prison.pk, prison.pk)
         self.assertEqual(self.transaction.prisoner_name, prisoner_name)
+
+
+class UpdatePrisonsOnReconciledTransactionsTestcase(BaseUpdatePrisonsTestCase):
+
+    def _get_transaction_data(self):
+        data = super(UpdatePrisonsOnReconciledTransactionsTestcase, self)._get_transaction_data()
+        data.update({
+            'prison': Prison.objects.first(),
+            'prisoner_name': random_prisoner_name(),
+            'prisoner_number': random_prisoner_number(),
+            'prisoner_dob': random_prisoner_dob(),
+            'owner': None,
+            'credited': False,
+            'refunded': False,
+            'reconciled': True
+        })
+        return data
+
+    def test_prisoner_location_doesnt_update_transaction(self):
+        existing_prison = self.transaction.prison
+        other_prison = Prison.objects.exclude(pk=existing_prison.pk).first()
+        new_prisoner_name = random_prisoner_name()
+
+        PrisonerLocation.objects.create(
+            created_by=User.objects.first(),
+            prisoner_name=new_prisoner_name,
+            prisoner_number=self.transaction.prisoner_number,
+            prisoner_dob=self.transaction.prisoner_dob,
+            prison=other_prison
+        )
+
+        transaction_prisons_need_updating.send(sender=None)
+
+        self.transaction.refresh_from_db()
+        self.assertNotEqual(self.transaction.prisoner_name, new_prisoner_name)
+        self.assertEqual(self.transaction.prison.pk, existing_prison.pk)

@@ -1,4 +1,8 @@
-from rest_framework import mixins, viewsets, status, filters
+from datetime import datetime, timedelta
+
+from django.utils import timezone
+from django.utils.translation import ugettext_lazy as _
+from rest_framework import mixins, viewsets, status, filters, generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.exceptions import ParseError
@@ -6,6 +10,7 @@ import django_filters
 
 from mtp_auth.permissions import BankAdminClientIDPermissions
 from transaction.models import Transaction
+from transaction.signals import transaction_reconciled
 from .permissions import TransactionPermissions
 from .serializers import CreateTransactionSerializer, \
     UpdateRefundedTransactionSerializer, TransactionSerializer, \
@@ -91,3 +96,44 @@ class TransactionView(mixins.CreateModelMixin, mixins.UpdateModelMixin,
                 return TransactionSerializer
             else:
                 return ReconcileTransactionSerializer
+
+
+class ReconcileTransactionsView(generics.GenericAPIView):
+    queryset = Transaction.objects.all()
+    action = 'patch_processed'
+
+    permission_classes = (
+        IsAuthenticated, BankAdminClientIDPermissions,
+        TransactionPermissions
+    )
+
+    def post(self, request, format=None):
+        date = request.data.get('date')
+        if not date:
+            return Response(data={'errors': _("'date' field is required")},
+                            status=400)
+
+        try:
+            parsed_date = datetime.strptime(date, '%Y-%m-%d').replace(
+                tzinfo=timezone.get_current_timezone())
+        except ValueError:
+            return Response(data={'errors': _("Invalid date format")},
+                            status=400)
+
+        update_set = self.queryset.filter(
+            received_at__gte=parsed_date,
+            received_at__lt=(parsed_date + timedelta(days=1))
+        ).select_for_update()
+
+        updated_transactions = list(update_set)
+        update_set.update(reconciled=True)
+
+        for transaction in updated_transactions:
+            transaction.reconciled = True
+            transaction_reconciled.send(
+                sender=Transaction,
+                transaction=transaction,
+                by_user=request.user
+            )
+
+        return Response(status=204)
