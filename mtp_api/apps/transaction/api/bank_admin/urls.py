@@ -7,5 +7,7 @@ urlpatterns = [
         'get': 'list',
         'post': 'create',
         'patch': 'patch_processed'
-    }), name='transaction-list'),
+        }), name='transaction-list'),
+    url(r'^transactions/reconcile/$', views.ReconcileTransactionsView.as_view(),
+        name='reconcile-transactions')
 ]

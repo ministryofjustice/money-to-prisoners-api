@@ -598,3 +598,73 @@ class GetTransactionsFilteredByDateTestCase(
 
         for trans in received_between_dates:
             self.assertTrue(trans.id in result_ids)
+
+class ReconcileTransactionsTestCase(
+    TransactionRejectsRequestsWithoutPermissionTestMixin,
+    BaseTransactionViewTestCase
+):
+
+    ENDPOINT_VERB = 'post'
+
+    def setUp(self):
+        super().setUp()
+
+        # delete all transactions and logs
+        Transaction.objects.all().delete()
+        Log.objects.all().delete()
+
+        self._populate_transactions()
+
+    def _get_unauthorised_application_users(self):
+        return [
+            self.prison_clerks[0], self.prisoner_location_admins[0]
+        ]
+
+    def _get_url(self, *args, **kwargs):
+        return reverse('bank_admin:reconcile-transactions')
+
+    def _populate_transactions(self, tot=80):
+        transactions = generate_transactions(transaction_batch=tot)
+
+    def _get_authorised_user(self):
+        return self.bank_admins[0]
+
+    def test_reconcile_transactions(self):
+        url = self._get_url()
+        user = self._get_authorised_user()
+
+        response = self.client.post(
+            url, {'date': date.today().strftime('%Y-%m-%d')}, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_204_NO_CONTENT)
+
+        today = datetime.combine(date.today(), time.min).replace(
+            tzinfo=timezone.get_current_timezone())
+        transactions_today = Transaction.objects.filter(
+            received_at__lt=today + timedelta(days=1),
+            received_at__gte=today
+        )
+
+        for transaction in transactions_today:
+            self.assertTrue(transaction.reconciled)
+
+    def test_no_date_returns_bad_request(self):
+        url = self._get_url()
+        user = self._get_authorised_user()
+
+        response = self.client.post(
+            url, {}, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_400_BAD_REQUEST)
+
+    def test_invalid_date_returns_bad_request(self):
+        url = self._get_url()
+        user = self._get_authorised_user()
+
+        response = self.client.post(
+            url, {'date': 'bleh'}, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_400_BAD_REQUEST)

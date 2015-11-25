@@ -10,7 +10,7 @@ from .constants import TRANSACTION_STATUS, LOG_ACTIONS
 from .managers import TransactionQuerySet, LogManager
 from .signals import transaction_created, transaction_locked, \
     transaction_unlocked, transaction_credited, transaction_refunded, \
-    transaction_prisons_need_updating
+    transaction_prisons_need_updating, transaction_reconciled
 
 
 class Transaction(TimeStampedModel):
@@ -41,6 +41,8 @@ class Transaction(TimeStampedModel):
     credited = models.BooleanField(default=False)
 
     refunded = models.BooleanField(default=False)
+
+    reconciled = models.BooleanField(default=False)
 
     STATUS_LOOKUP = {
         TRANSACTION_STATUS.LOCKED:
@@ -165,6 +167,11 @@ def transaction_credited_receiver(sender, transaction, by_user, credited=True, *
 @receiver(transaction_refunded)
 def transaction_refunded_receiver(sender, transaction, by_user, **kwargs):
     Log.objects.transaction_refunded(transaction, by_user)
+
+
+@receiver(transaction_reconciled)
+def transaction_reconciled_receiver(sender, transaction, by_user, **kwargs):
+    Log.objects.transaction_reconciled(transaction, by_user)
 
 
 @receiver(transaction_prisons_need_updating)
