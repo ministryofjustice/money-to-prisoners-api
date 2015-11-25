@@ -4,6 +4,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management import BaseCommand, call_command
 
+from account.models import Batch
 from core.tests.utils import make_test_users, give_superusers_full_access
 from prison.models import Prison
 from transaction.models import Transaction
@@ -46,6 +47,7 @@ class Command(BaseCommand):
 
         if not protect_transactions:
             print_message('Deleting all transactions')
+            Batch.objects.all().delete()
             Transaction.objects.all().delete()
 
         user_set = get_user_model().objects.all()
