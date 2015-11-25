@@ -7,5 +7,6 @@ class RecreateTestDataForm(forms.Form):
         choices=(
             ('cashbook', _('User testing the Cashbook service')),
             ('random', _('Random set of transactions')),
+            ('delete-locations-transactions', _('Delete prisoner location and transaction data')),
         ),
     )
