@@ -41,27 +41,37 @@ class RecreateTestDataView(FormView):
 
         output = StringIO()
         options = {
-            'protect_superusers': True,
-            'protect_transactions': False,
-            'clerks_per_prison': 4,
-
             'no_color': True,
             'stdout': output,
             'stderr': output,
         }
 
-        if scenario == 'random':
+        if scenario in ('random', 'cashbook'):
             options.update({
-                'prisons': ['sample'],
-                'transactions': 'random',
+                'protect_superusers': True,
+                'protect_transactions': False,
+                'clerks_per_prison': 4,
             })
-        elif scenario == 'cashbook':
+            if scenario == 'random':
+                options.update({
+                    'prisons': ['sample'],
+                    'transactions': 'random',
+                })
+            elif scenario == 'cashbook':
+                options.update({
+                    'prisons': ['nomis'],
+                    'transactions': 'nomis',
+                })
+            call_command('load_test_data', **options)
+        elif scenario == 'delete-locations-transactions':
             options.update({
-                'prisons': ['nomis'],
-                'transactions': 'nomis',
+                'protect_users': 'all',
+                'protect_prisons': True,
+                'protect_prisoner_locations': False,
+                'protect_transactions': False,
             })
+            call_command('delete_all_data', **options)
 
-        call_command('load_test_data', **options)
         output.seek(0)
 
         return self.render_to_response(self.get_context_data(
