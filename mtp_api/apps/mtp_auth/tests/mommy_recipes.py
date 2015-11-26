@@ -43,7 +43,7 @@ def name_generator(name):
                 yield base + letter
 
     for n in count():
-        gen = suffixes([name + '_'])
+        gen = suffixes([name + '-'])
         for _ in range(n):
             gen = suffixes(gen)
         yield from gen
@@ -52,7 +52,7 @@ def name_generator(name):
 def create_prison_user_mapping(prison):
     prison_clerk_group = Group.objects.get(name='PrisonClerk')
 
-    name_and_password = 'test_' + slugify(prison).replace('-', '_')
+    name_and_password = 'test-' + slugify(prison)
     names = name_generator(name_and_password)
     while User.objects.filter(username=name_and_password).exists():
         name_and_password = next(names)
@@ -72,7 +72,7 @@ def create_prison_user_mapping(prison):
 
 
 def create_prisoner_location_admins():
-    name_and_password = 'prisoner_location_admin'
+    name_and_password = 'prisoner-location-admin'
 
     prisoner_location_admin_group = Group.objects.get(name='PrisonerLocationAdmin')
     plu = create_basic_user(
@@ -86,7 +86,7 @@ def create_prisoner_location_admins():
 
 
 def create_bank_admins():
-    name_and_password = 'bank_admin'
+    name_and_password = 'bank-admin'
 
     bank_admin_group = Group.objects.get(name='BankAdmin')
     ba = create_basic_user(
@@ -100,7 +100,7 @@ def create_bank_admins():
 
 
 def create_refund_bank_admins():
-    name_and_password = 'refund_bank_admin'
+    name_and_password = 'refund-bank-admin'
 
     bank_admin_group = Group.objects.get(name='BankAdmin')
     refund_bank_admin_group = Group.objects.get(name='RefundBankAdmin')

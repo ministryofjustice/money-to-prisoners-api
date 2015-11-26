@@ -33,8 +33,8 @@ class RecreateTestDataViewTestCase(TestCase):
     def test_unauthorised_access_denied(self):
         call_command('load_test_data', transactions=None, verbosity=0)
         self.assertTrue(self.client.login(
-            username='test_prison_1',
-            password='test_prison_1',
+            username='test-prison-1',
+            password='test-prison-1',
         ))
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 302)
