@@ -44,3 +44,14 @@ class TransactionSerializer(serializers.ModelSerializer):
             'refunded',
             'refunded_at',
         )
+
+
+class LockedTransactionSerializer(TransactionSerializer):
+    locked = serializers.BooleanField(read_only=True)
+    locked_at = serializers.DateTimeField(read_only=True)
+
+    class Meta(TransactionSerializer.Meta):
+        fields = TransactionSerializer.Meta.fields + (
+            'locked',
+            'locked_at',
+        )

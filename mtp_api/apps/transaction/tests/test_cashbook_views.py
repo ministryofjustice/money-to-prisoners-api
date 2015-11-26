@@ -524,6 +524,43 @@ class TransactionListInvalidValuesTestCase(TransactionListTestCase):
         self.assertEqual(response.data['count'], 0)
 
 
+class LockedTransactionListTestCase(TransactionListTestCase):
+    def _get_url(self, **filters):
+        url = reverse('cashbook:transaction-locked')
+
+        filters['limit'] = 1000
+        return '{url}?{filters}'.format(
+            url=url, filters=urllib.parse.urlencode(filters)
+        )
+
+    def test_locked_transactions_returns_same_ones_as_filtered_list(self):
+        logged_in_user = self.prison_clerks[0]
+        logged_in_user.prisonusermapping.prisons.add(*self.prisons)
+        # managing_prisons = list(get_prisons_for_user(logged_in_user))
+
+        url_list = super()._get_url(status=TRANSACTION_STATUS.LOCKED)
+        response_list = self.client.get(
+            url_list, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+        self.assertTrue(response_list.data['count'])  # ensure some transactions exist!
+
+        url_locked = self._get_url()
+        response_locked = self.client.get(
+            url_locked, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+
+        self.assertEqual(response_locked.status_code, status.HTTP_200_OK)
+        self.assertEqual(response_locked.data['count'], response_list.data['count'])
+        self.assertListEqual(
+            list(sorted(transaction['id'] for transaction in response_locked.data['results'])),
+            list(sorted(transaction['id'] for transaction in response_list.data['results'])),
+        )
+        self.assertTrue(all(transaction['locked'] for transaction in response_locked.data['results']))
+        self.assertTrue(all('locked_at' in transaction for transaction in response_locked.data['results']))
+
+
 class LockTransactionTestCase(
     CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
     BaseTransactionViewTestCase

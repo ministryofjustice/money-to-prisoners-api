@@ -1,3 +1,5 @@
+import warnings
+
 from django.db import models
 from django.conf import settings
 from django.dispatch import receiver
@@ -44,6 +46,7 @@ class Transaction(TimeStampedModel):
 
     reconciled = models.BooleanField(default=False)
 
+    # NB: there are matching boolean fields or properties on the model instance for each
     STATUS_LOOKUP = {
         TRANSACTION_STATUS.LOCKED:
             {'owner__isnull': False, 'credited': False, 'refunded': False},
@@ -81,6 +84,21 @@ class Transaction(TimeStampedModel):
             prisoner_name=self.prisoner_name,
         )
 
+    @property
+    def available(self):
+        return self.prison is not None and self.owner is None and \
+               not (self.credited or self.refunded)
+
+    @property
+    def locked(self):
+        return self.owner is not None and \
+               not (self.credited or self.refunded)
+
+    @property
+    def refund_pending(self):
+        return self.prison is None and self.owner is None and \
+               not (self.credited or self.refunded)
+
     def lock(self, by_user):
         self.owner = by_user
         self.save()
@@ -116,6 +134,9 @@ class Transaction(TimeStampedModel):
             return None
         log_action = self.log_set.filter(action=LOG_ACTIONS.CREDITED) \
             .order_by('-created').first()
+        if not log_action:
+            warnings.warn('Transaction model %s is missing a credited log' % self.pk)
+            return None
         return log_action.created
 
     @property
@@ -124,6 +145,31 @@ class Transaction(TimeStampedModel):
             return None
         log_action = self.log_set.filter(action=LOG_ACTIONS.REFUNDED) \
             .order_by('-created').first()
+        if not log_action:
+            warnings.warn('Transaction model %s is missing a refunded log' % self.pk)
+            return None
+        return log_action.created
+
+    @property
+    def reconciled_at(self):
+        if not self.reconciled:
+            return None
+        log_action = self.log_set.filter(action=LOG_ACTIONS.RECONCILED) \
+            .order_by('-created').first()
+        if not log_action:
+            warnings.warn('Transaction model %s is missing a reconciled log' % self.pk)
+            return None
+        return log_action.created
+
+    @property
+    def locked_at(self):
+        if not self.locked:
+            return None
+        log_action = self.log_set.filter(action=LOG_ACTIONS.LOCKED) \
+            .order_by('-created').first()
+        if not log_action:
+            warnings.warn('Transaction model %s is missing a locked log' % self.pk)
+            return None
         return log_action.created
 
 
