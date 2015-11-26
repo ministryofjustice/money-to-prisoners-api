@@ -135,6 +135,21 @@ class CreateTransactionsTestCase(
 
         mocked_transaction_prisons_need_updating.send.assert_called_with(sender=Transaction)
 
+    def test_create_with_debit_category(self):
+        user = self.bank_admins[0]
+        data_list = self._get_transactions_data()
+        data_list[0]['category'] = 'debit'
+
+        response = self.client.post(
+            self._get_url(), data=data_list, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_201_CREATED)
+
+        self.assertEqual(
+            Transaction.objects.filter(**data_list[0]).count(), 1
+        )
+
 
 class UpdateRefundTransactionsTestCase(
     TransactionRejectsRequestsWithoutPermissionTestMixin,

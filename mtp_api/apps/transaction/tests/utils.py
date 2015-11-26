@@ -14,7 +14,7 @@ from prison.tests.utils import random_prisoner_number, random_prisoner_dob, \
     random_prisoner_name, get_prisoner_location_creator, \
     load_nomis_prisoner_locations
 from transaction.models import Transaction, Log
-from transaction.constants import TRANSACTION_STATUS, LOG_ACTIONS
+from transaction.constants import TRANSACTION_STATUS, LOG_ACTIONS, TRANSACTION_CATEGORY
 
 fake = Faker(locale='en_GB')
 
@@ -55,6 +55,7 @@ def generate_initial_transactions_data(tot=50, prisoner_location_generator=None)
 
         data = {
             'amount': random.randint(1000, 30000),
+            'category': TRANSACTION_CATEGORY.CREDIT,
             'received_at': random_date,
             'sender_sort_code': get_random_string(6, '1234567890'),
             'sender_account_number': get_random_string(8, '1234567890'),
@@ -121,6 +122,7 @@ def generate_predetermined_transactions_data():
 
         'sender_name': 'Mary Stevenson',
         'amount': 7230,
+        'category': TRANSACTION_CATEGORY.CREDIT,
         'sender_sort_code': '680966',
         'sender_account_number': '75823963',
 
