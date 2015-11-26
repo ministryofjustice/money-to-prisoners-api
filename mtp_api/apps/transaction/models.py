@@ -37,6 +37,9 @@ class Transaction(TimeStampedModel):
     reference = models.TextField(blank=True)
     received_at = models.DateTimeField(auto_now=False)
 
+    # 6-digit reference code for reconciliation
+    ref_code = models.CharField(max_length=12, null=True)
+
     # set when a transaction is locked and unset if it gets unlocked.
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True)
 
