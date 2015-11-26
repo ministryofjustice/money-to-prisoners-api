@@ -235,5 +235,8 @@ def generate_transactions(
             elif new_transaction.refunded:
                 log_data['action'] = LOG_ACTIONS.REFUNDED
                 Log.objects.create(**log_data)
+            elif new_transaction.locked:
+                log_data['action'] = LOG_ACTIONS.LOCKED
+                Log.objects.create(**log_data)
 
     return transactions
