@@ -27,7 +27,7 @@ from transaction.signals import transaction_prisons_need_updating
 
 from .serializers import TransactionSerializer, \
     CreditedOnlyTransactionSerializer, \
-    IdsTransactionSerializer
+    IdsTransactionSerializer, LockedTransactionSerializer
 from .permissions import TransactionPermissions
 
 
@@ -210,6 +210,16 @@ class TransactionList(View):
 
     def patch(self, request, *args, **kwargs):
         return CreditTransactions.as_view()(request, *args, **kwargs)
+
+
+class LockedTransactionList(GetTransactions):
+    serializer_class = LockedTransactionSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        return queryset.filter(
+            **Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.LOCKED]
+        )
 
 
 class LockTransactions(TransactionViewMixin, APIView):
