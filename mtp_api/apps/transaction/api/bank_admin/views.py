@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 
+from django.db.transaction import atomic
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import mixins, viewsets, status, filters, generics
@@ -107,6 +108,7 @@ class ReconcileTransactionsView(generics.GenericAPIView):
         TransactionPermissions
     )
 
+    @atomic
     def post(self, request, format=None):
         date = request.data.get('date')
         if not date:
