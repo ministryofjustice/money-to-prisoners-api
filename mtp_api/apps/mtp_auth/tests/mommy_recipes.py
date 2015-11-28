@@ -52,16 +52,17 @@ def name_generator(name):
 def create_prison_user_mapping(prison):
     prison_clerk_group = Group.objects.get(name='PrisonClerk')
 
-    name_and_password = 'test-' + slugify(prison)
+    name_and_password = base_clerk_name = 'test-' + slugify(prison)
     names = name_generator(name_and_password)
     while User.objects.filter(username=name_and_password).exists():
         name_and_password = next(names)
 
+    name_suffix = name_and_password[len(base_clerk_name):].split('-')[-1]
     user = create_basic_user(
         name_and_password,
         [prison_clerk_group],
         first_name=prison.name,
-        last_name='Clerk',
+        last_name='Clerk %s' % name_suffix.upper() if name_suffix else 'Clerk',
     )
     pu = make(
         'mtp_auth.PrisonUserMapping',
