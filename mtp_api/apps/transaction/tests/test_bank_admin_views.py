@@ -649,7 +649,7 @@ class ReconcileTransactionsTestCase(
         user = self._get_authorised_user()
 
         response = self.client.post(
-            url, {'date': date.today().strftime('%Y-%m-%d')}, format='json',
+            url, {'date': date.today().isoformat()}, format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
         self.assertEqual(response.status_code, http_status.HTTP_204_NO_CONTENT)
