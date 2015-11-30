@@ -49,6 +49,7 @@ class RecreateTestDataView(FormView):
         if scenario in ('random', 'cashbook'):
             options.update({
                 'protect_superusers': True,
+                'protect_usernames': ['transaction-uploader'],
                 'protect_transactions': False,
                 'clerks_per_prison': 4,
             })

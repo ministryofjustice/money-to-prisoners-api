@@ -18,7 +18,9 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('--protect-users', default='none',
                             choices=['all', 'superusers', 'none'],
-                            help='Prevents users from being deleted')
+                            help='Prevents user types from being deleted')
+        parser.add_argument('--protect-usernames', nargs='*',
+                            help='Prevents specific usernames being deleted')
         parser.add_argument('--protect-prisons', action='store_true',
                             help='Prevents prisons from being deleted')
         parser.add_argument('--protect-prisoner-locations', action='store_true',
@@ -32,6 +34,7 @@ class Command(BaseCommand):
 
         verbosity = options['verbosity']
         protect_users = options['protect_users']
+        protect_usernames = options['protect_usernames']
         protect_prisons = options['protect_prisons']
         protect_prisoner_locations = options['protect_prisoner_locations']
         protect_transactions = options['protect_transactions']
@@ -48,7 +51,7 @@ class Command(BaseCommand):
             PrisonerLocation.objects.all().delete()
 
         if protect_users != 'all':
-            user_set = get_user_model().objects.all()
+            user_set = get_user_model().objects.exclude(username__in=protect_usernames or [])
             if protect_users == 'superusers':
                 user_set = user_set.exclude(is_superuser=True)
             print_message('Deleting %d users' % user_set.count())
