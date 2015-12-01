@@ -46,7 +46,9 @@ class CreateTransactionSerializer(serializers.ModelSerializer):
             'sender_name',
             'sender_roll_number',
             'reference',
-            'received_at'
+            'received_at',
+            'category',
+            'ref_code'
         )
 
 
@@ -114,7 +116,9 @@ class TransactionSerializer(serializers.ModelSerializer):
             'sender_roll_number',
             'reference',
             'credited',
-            'refunded'
+            'refunded',
+            'category',
+            'ref_code'
         )
 
 
@@ -128,5 +132,7 @@ class ReconcileTransactionSerializer(serializers.ModelSerializer):
             'prison',
             'amount',
             'credited',
-            'refunded'
+            'refunded',
+            'category',
+            'ref_code'
         )

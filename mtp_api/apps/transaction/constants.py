@@ -3,10 +3,10 @@ from extended_choices import Choices
 
 TRANSACTION_STATUS = Choices(
     # transactions with owner == None & credited == False & refunded == False
-    ('AVAILABLE',   'available', 'Available'),
+    ('AVAILABLE', 'available', 'Available'),
 
     # transactions with owner != None & credited == False & refunded == False
-    ('LOCKED',  'locked', 'Locked'),
+    ('LOCKED', 'locked', 'Locked'),
 
     # transactions with credited == True
     ('CREDITED', 'credited', 'Credited'),
@@ -16,6 +16,12 @@ TRANSACTION_STATUS = Choices(
 
     # transactions with prisoner_number == None & refunded == False
     ('REFUND_PENDING', 'refund_pending', 'Refund Pending')
+)
+
+
+TRANSACTION_CATEGORY = Choices(
+    ('DEBIT', 'debit', 'Debit'),
+    ('CREDIT', 'credit', 'Credit')
 )
 
 
