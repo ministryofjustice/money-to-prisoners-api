@@ -216,12 +216,14 @@ def generate_transactions(
 
         with MockModelTimestamps(data['created'], data['modified']):
             new_transaction = Transaction.objects.create(**data)
+            new_transaction.populate_ref_code()
         transactions.append(new_transaction)
 
     if predetermined_transactions:
         for data in generate_predetermined_transactions_data():
             with MockModelTimestamps(data['created'], data['modified']):
                 new_transaction = Transaction.objects.create(**data)
+                new_transaction.populate_ref_code()
             transactions.append(new_transaction)
 
     for new_transaction in transactions:

@@ -3,11 +3,12 @@ from unittest import mock
 
 from django.utils import timezone
 from django.core.urlresolvers import reverse
+from django.conf import settings
 from rest_framework import status as http_status
 
 from account.models import Batch
 from transaction.models import Transaction, Log
-from transaction.constants import TRANSACTION_STATUS, LOG_ACTIONS
+from transaction.constants import TRANSACTION_STATUS, LOG_ACTIONS, TRANSACTION_CATEGORY
 from transaction.api.bank_admin.serializers import CreateTransactionSerializer
 from .utils import generate_initial_transactions_data, generate_transactions
 from .test_base import BaseTransactionViewTestCase, \
@@ -138,7 +139,7 @@ class CreateTransactionsTestCase(
     def test_create_with_debit_category(self):
         user = self.bank_admins[0]
         data_list = self._get_transactions_data()
-        data_list[0]['category'] = 'debit'
+        data_list[0]['category'] = TRANSACTION_CATEGORY.DEBIT
 
         response = self.client.post(
             self._get_url(), data=data_list, format='json',
@@ -149,6 +150,42 @@ class CreateTransactionsTestCase(
         self.assertEqual(
             Transaction.objects.filter(**data_list[0]).count(), 1
         )
+
+    def test_create_populates_ref_code(self):
+        user = self.bank_admins[0]
+        data_list = self._get_transactions_data()
+        for i, item in enumerate(data_list):
+            if i % 5 == 0:
+                # ref_code numbering should skip debits
+                item['category'] == TRANSACTION_CATEGORY.DEBIT
+
+        response = self.client.post(
+            self._get_url(), data=data_list, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_201_CREATED)
+
+        qs = Transaction.objects.filter(category=TRANSACTION_CATEGORY.DEBIT)
+        for trans in qs:
+            self.assertNone(trans.ref_code)
+
+        qs = Transaction.objects.filter(category=TRANSACTION_CATEGORY.CREDIT)
+        grouped = sorted(qs, key=lambda t: t.received_at.date())
+        results = []
+        last_date = None
+        for transaction in grouped:
+            if transaction.received_at.date() == last_date:
+                results[-1].append(transaction)
+            else:
+                last_date = transaction.received_at.date()
+                results.append([transaction])
+        grouped_trans = map(lambda l: sorted(l, key=lambda t: t.id), results)
+
+        for group in grouped_trans:
+            expected_ref_code = settings.REF_CODE_BASE
+            for trans in group:
+                self.assertEqual(trans.ref_code, str(expected_ref_code))
+                expected_ref_code += 1
 
 
 class UpdateRefundTransactionsTestCase(

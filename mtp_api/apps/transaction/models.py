@@ -1,13 +1,12 @@
+from datetime import timedelta
 import warnings
 
 from django.db import models
 from django.conf import settings
 from django.dispatch import receiver
-
 from model_utils.models import TimeStampedModel
 
 from prison.models import Prison
-
 from .constants import TRANSACTION_STATUS, LOG_ACTIONS, TRANSACTION_CATEGORY
 from .managers import TransactionQuerySet, LogManager
 from .signals import transaction_created, transaction_locked, \
@@ -38,7 +37,7 @@ class Transaction(TimeStampedModel):
     received_at = models.DateTimeField(auto_now=False)
 
     # 6-digit reference code for reconciliation
-    ref_code = models.CharField(max_length=12, null=True)
+    ref_code = models.PositiveIntegerField(null=True)
 
     # set when a transaction is locked and unset if it gets unlocked.
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True)
@@ -194,6 +193,23 @@ class Transaction(TimeStampedModel):
             return None
         return log_action.created
 
+    def populate_ref_code(self):
+        if self.category == TRANSACTION_CATEGORY.CREDIT:
+            code_date = self.received_at.replace(hour=0, minute=0,
+                                                 second=0, microsecond=0)
+            qs = Transaction.objects.filter(
+                received_at__gte=code_date,
+                received_at__lt=code_date + timedelta(days=1),
+                ref_code__isnull=False,
+                category=TRANSACTION_CATEGORY.CREDIT
+            ).aggregate(models.Max('ref_code'))
+
+            if qs and qs.get('ref_code__max'):
+                self.ref_code = int(qs['ref_code__max']) + 1
+            else:
+                self.ref_code = settings.REF_CODE_BASE
+            self.save()
+
 
 class Log(TimeStampedModel):
     transaction = models.ForeignKey(Transaction)
@@ -215,6 +231,7 @@ class Log(TimeStampedModel):
 @receiver(transaction_created)
 def transaction_created_receiver(sender, transaction, by_user, **kwargs):
     Log.objects.transaction_created(transaction, by_user)
+    transaction.populate_ref_code()
 
 
 @receiver(transaction_locked)
