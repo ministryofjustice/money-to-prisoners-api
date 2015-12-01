@@ -21,6 +21,8 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('--protect-superusers', action='store_true',
                             help='Prevents superusers from being deleted')
+        parser.add_argument('--protect-usernames', nargs='*',
+                            help='Prevents specific usernames being deleted')
         parser.add_argument('--protect-transactions', action='store_true',
                             help='Prevents existing transactions from being deleted')
         parser.add_argument('--prisons', nargs='*', default=['sample'],
@@ -38,6 +40,7 @@ class Command(BaseCommand):
 
         verbosity = options.get('verbosity', 1)
         protect_superusers = options['protect_superusers']
+        protect_usernames = options['protect_usernames']
         protect_transactions = options['protect_transactions']
         prisons = options['prisons']
         clerks_per_prison = options['clerks_per_prison']
@@ -50,7 +53,7 @@ class Command(BaseCommand):
             Batch.objects.all().delete()
             Transaction.objects.all().delete()
 
-        user_set = get_user_model().objects.all()
+        user_set = get_user_model().objects.exclude(username__in=protect_usernames or [])
         if protect_superusers:
             user_set = user_set.exclude(is_superuser=True)
         print_message('Deleting %d users' % user_set.count())
