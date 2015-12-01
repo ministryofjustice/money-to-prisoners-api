@@ -15,3 +15,11 @@ class Batch(TimeStampedModel):
 
     def __str__(self):
         return '%s %s' % (self.label, self.created)
+
+
+class Balance(TimeStampedModel):
+    closing_balance = models.IntegerField()
+    date = models.DateField()
+
+    def __str__(self):
+        return '%s %s' % (self.date.isoformat(), self.closing_balance)

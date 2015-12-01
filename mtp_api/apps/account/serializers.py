@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Batch
+from .models import Batch, Balance
 
 
 class BatchSerializer(serializers.ModelSerializer):
@@ -16,3 +16,16 @@ class BatchSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Batch
+
+
+class BalanceSerializer(serializers.ModelSerializer):
+
+    def validate(self, data):
+        previous_balance = Balance.objects.filter(date=data['date'])
+        if previous_balance.exists():
+            raise serializers.ValidationError('Balance exists for date %s' %
+                                              data['date'])
+        return data
+
+    class Meta:
+        model = Balance
