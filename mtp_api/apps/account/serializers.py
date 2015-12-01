@@ -5,18 +5,6 @@ from .models import Batch
 
 class BatchSerializer(serializers.ModelSerializer):
 
-    def validate(self, data):
-        label_batch_set = Batch.objects.filter(label=data['label'])
-        queryset = Batch.objects.none()
-        for transaction in data['transactions']:
-            queryset = queryset | label_batch_set.filter(
-                transactions=transaction)
-        if queryset.exists():
-            raise serializers.ValidationError(
-                "Some transactions have already been used in a %s batch"
-                % data['label'])
-        return data
-
     def create(self, validated_data):
         user = self.context['request'].user
 
