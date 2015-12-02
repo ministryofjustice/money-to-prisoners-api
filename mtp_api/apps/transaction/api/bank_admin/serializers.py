@@ -117,6 +117,7 @@ class TransactionSerializer(serializers.ModelSerializer):
             'reference',
             'credited',
             'refunded',
+            'received_at',
             'category',
             'ref_code'
         )
@@ -133,6 +134,7 @@ class ReconcileTransactionSerializer(serializers.ModelSerializer):
             'amount',
             'credited',
             'refunded',
+            'received_at',
             'category',
             'ref_code'
         )
