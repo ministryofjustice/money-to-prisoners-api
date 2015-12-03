@@ -27,7 +27,7 @@ class Transaction(TimeStampedModel):
     # cannot be empty otherwise we can't send the money back
     sender_sort_code = models.CharField(max_length=50)
     sender_account_number = models.CharField(max_length=50)
-    sender_name = models.CharField(max_length=250)
+    sender_name = models.CharField(max_length=250, blank=True)
 
     # used by building societies to identify the account nr
     sender_roll_number = models.CharField(blank=True, max_length=50)
@@ -37,7 +37,7 @@ class Transaction(TimeStampedModel):
     received_at = models.DateTimeField(auto_now=False)
 
     # 6-digit reference code for reconciliation
-    ref_code = models.PositiveIntegerField(null=True)
+    ref_code = models.CharField(max_length=12, null=True)
 
     # set when a transaction is locked and unset if it gets unlocked.
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True)
