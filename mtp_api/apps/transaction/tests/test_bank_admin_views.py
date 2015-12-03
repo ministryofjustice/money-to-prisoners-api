@@ -651,6 +651,26 @@ class GetTransactionsFilteredByDateTestCase(
         for trans in received_between_dates:
             self.assertTrue(trans.id in result_ids)
 
+    def test_get_list_ordered_by_date(self):
+        url = self._get_url()
+        user = self._get_authorised_user()
+
+        response = self.client.get(
+            url, {'ordering': '-received_at',
+                  'limit': 1000}, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+
+        results = response.data['results']
+        db_transactions = Transaction.objects.all().order_by('-received_at')
+        self.assertEquals(len(results), len(db_transactions))
+
+        prev_date = None
+        for db_trans, response_trans in zip(db_transactions, results):
+            self.assertEqual(db_trans.id, response_trans['id'])
+
+
 class ReconcileTransactionsTestCase(
     TransactionRejectsRequestsWithoutPermissionTestMixin,
     BaseTransactionViewTestCase

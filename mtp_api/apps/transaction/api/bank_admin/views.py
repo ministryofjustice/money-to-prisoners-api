@@ -54,8 +54,9 @@ class TransactionView(mixins.CreateModelMixin, mixins.UpdateModelMixin,
                       mixins.ListModelMixin, viewsets.GenericViewSet):
 
     queryset = Transaction.objects.all()
-    filter_backends = (filters.DjangoFilterBackend,)
+    filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter)
     filter_class = TransactionListFilter
+    ordering_fields = ('received_at',)
     permission_classes = (
         IsAuthenticated, BankAdminClientIDPermissions,
         TransactionPermissions
