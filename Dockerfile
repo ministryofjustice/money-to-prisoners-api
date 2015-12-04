@@ -1,12 +1,15 @@
 FROM ubuntu:trusty
 
+RUN locale-gen "en_GB.UTF-8"
+ENV LC_CTYPE=en_GB.UTF-8
+
 RUN apt-get update && \
     apt-get install -y software-properties-common python-software-properties
 
 RUN apt-get update && \
     apt-get install -y \
         build-essential git python3-all python3-all-dev python3-setuptools \
-        curl libpq-dev ntp python3-pip python-pip
+        curl libpq-dev ntp libpcre3-dev python3-pip python-pip
 
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 10
 
