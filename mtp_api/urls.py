@@ -1,6 +1,8 @@
 from django.conf.urls import include, url
 from django.contrib import admin
 
+from moj_utils.views import PingJsonView
+
 admin.site.index_template = 'core/index.html'
 
 urlpatterns = [
@@ -13,4 +15,10 @@ urlpatterns = [
     url(r'^docs/', include('rest_framework_swagger.urls')),
     url(r'^admin/core/', include('core.urls', namespace='mtp-admin')),
     url(r'^admin/', include(admin.site.urls)),
+
+    url(r'^ping.json$', PingJsonView.as_view(
+        build_date_key='APP_BUILD_DATE',
+        commit_id_key='APP_GIT_COMMIT',
+        version_number_key='APP_BUILD_TAG',
+    ), name='ping_json'),
 ]
