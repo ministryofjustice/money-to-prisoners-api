@@ -131,7 +131,11 @@ LOGGING = {
         'mail_admins': {
             'level': 'ERROR',
             'class': 'django.utils.log.AdminEmailHandler'
-        }
+        },
+        'sentry': {
+            'level': 'ERROR',
+            'class': 'raven.contrib.django.raven_compat.handlers.SentryHandler'
+        },
     },
     'loggers': {
         'django': {
@@ -146,6 +150,14 @@ LOGGING = {
         }
     }
 }
+
+# sentry exception handling
+if os.environ.get('SENTRY_DSN'):
+    INSTALLED_APPS = ('raven.contrib.django.raven_compat',) + INSTALLED_APPS
+    RAVEN_CONFIG = {
+        'dsn': os.environ['SENTRY_DSN'],
+        'release': os.environ.get('APP_GIT_COMMIT', 'unknown'),
+    }
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
