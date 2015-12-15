@@ -154,10 +154,6 @@ class CreateTransactionsTestCase(
     def test_create_populates_ref_code(self):
         user = self.bank_admins[0]
         data_list = self._get_transactions_data()
-        for i, item in enumerate(data_list):
-            if i % 5 == 0:
-                # ref_code numbering should skip debits
-                item['category'] == TRANSACTION_CATEGORY.DEBIT
 
         response = self.client.post(
             self._get_url(), data=data_list, format='json',
@@ -167,7 +163,7 @@ class CreateTransactionsTestCase(
 
         qs = Transaction.objects.filter(category=TRANSACTION_CATEGORY.DEBIT)
         for trans in qs:
-            self.assertNone(trans.ref_code)
+            self.assertEqual(trans.ref_code, None)
 
         qs = Transaction.objects.filter(category=TRANSACTION_CATEGORY.CREDIT)
         grouped = sorted(qs, key=lambda t: t.received_at.date())
@@ -222,7 +218,7 @@ class UpdateRefundTransactionsTestCase(
         data_list = []
         for i, trans in enumerate(transactions):
             refund = False
-            if not trans.prisoner_number and not trans.refunded:
+            if trans.refund_pending:
                 refund = True
             data_list.append({'id': trans.id, 'refunded': refund})
 
@@ -418,9 +414,11 @@ class GetTransactionsAsBankAdminTestCase(
         self._assert_hidden_fields_absent(results)
 
     def test_get_list_all(self):
-        results = self._test_get_list_with_status_verify_fields(
-            '',
-            TRANSACTION_STATUS.values.keys())
+        data = self._get_with_status(self._get_authorised_user(), '')
+
+        self.assertEqual(len(data['results']), len(Transaction.objects.all()))
+        self._assert_required_fields_present(data['results'])
+        self._assert_hidden_fields_absent(data['results'])
 
     def test_get_list_refund_pending(self):
         results = self._test_get_list_with_status_verify_fields(

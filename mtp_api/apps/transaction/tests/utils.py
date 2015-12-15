@@ -48,6 +48,7 @@ def generate_initial_transactions_data(tot=50, prisoner_location_generator=None)
         # which is again arbitrary.
         include_prisoner_info = transaction_counter % 5 != 0
         include_sender_roll_number = transaction_counter % 10 == 0
+        make_debit_transaction = (transaction_counter + 1) % 5 == 0
 
         random_date = now - datetime.timedelta(
             minutes=random.randint(0, 10000)
@@ -55,7 +56,6 @@ def generate_initial_transactions_data(tot=50, prisoner_location_generator=None)
 
         data = {
             'amount': random.randint(1000, 30000),
-            'category': TRANSACTION_CATEGORY.CREDIT,
             'received_at': random_date,
             'sender_sort_code': get_random_string(6, '1234567890'),
             'sender_account_number': get_random_string(8, '1234567890'),
@@ -67,24 +67,30 @@ def generate_initial_transactions_data(tot=50, prisoner_location_generator=None)
             'modified': random_date,
         }
 
-        if include_prisoner_info:
-            if prisoner_location_generator:
-                data.update(next(prisoner_location_generator))
-            else:
+        if make_debit_transaction:
+            data['category'] = TRANSACTION_CATEGORY.DEBIT
+            data['reference'] = 'Payment refunded'
+        else:
+            data['category'] = TRANSACTION_CATEGORY.CREDIT
+
+            if include_prisoner_info:
+                if prisoner_location_generator:
+                    data.update(next(prisoner_location_generator))
+                else:
+                    data.update({
+                        'prisoner_name': random_prisoner_name(),
+                        'prisoner_number': random_prisoner_number(),
+                        'prisoner_dob': random_prisoner_dob(),
+                    })
+
+            if include_sender_roll_number:
                 data.update({
-                    'prisoner_name': random_prisoner_name(),
-                    'prisoner_number': random_prisoner_number(),
-                    'prisoner_dob': random_prisoner_dob(),
+                    'sender_roll_number': get_random_string(15, '1234567890')
                 })
 
-        if include_sender_roll_number:
-            data.update({
-                'sender_roll_number': get_random_string(15, '1234567890')
-            })
-
-        data['reference'] = random_reference(
-            data.get('prisoner_number'), data.get('prisoner_dob')
-        )
+            data['reference'] = random_reference(
+                data.get('prisoner_number'), data.get('prisoner_dob')
+            )
         data_list.append(data)
     return data_list
 
@@ -182,37 +188,38 @@ def generate_transactions(
 
     transactions = []
     for transaction_counter, data in enumerate(data_list, start=1):
-        is_valid, prisoner_location = location_creator(
-            data.get('prisoner_name'), data.get('prisoner_number'),
-            data.get('prisoner_dob'), data.get('prison'),
-        )
+        if data['category'] == TRANSACTION_CATEGORY.CREDIT:
+            is_valid, prisoner_location = location_creator(
+                data.get('prisoner_name'), data.get('prisoner_number'),
+                data.get('prisoner_dob'), data.get('prison'),
+            )
 
-        if is_valid:
-            # randomly choose the state of the transaction
-            prison = prisoner_location.prison
-            owner, status = owner_status_chooser(prison)
+            if is_valid:
+                # randomly choose the state of the transaction
+                prison = prisoner_location.prison
+                owner, status = owner_status_chooser(prison)
 
-            data['prison'] = prison
-            if status == TRANSACTION_STATUS.LOCKED:
-                data.update({
-                    'owner': owner,
-                    'credited': False
-                })
-            elif status == TRANSACTION_STATUS.AVAILABLE:
-                data.update({
-                    'owner': None,
-                    'credited': False
-                })
-            elif status == TRANSACTION_STATUS.CREDITED:
-                data.update({
-                    'owner': owner,
-                    'credited': True
-                })
-        else:
-            if transaction_counter % 2 == 0:
-                data.update({'refunded': True})
+                data['prison'] = prison
+                if status == TRANSACTION_STATUS.LOCKED:
+                    data.update({
+                        'owner': owner,
+                        'credited': False
+                    })
+                elif status == TRANSACTION_STATUS.AVAILABLE:
+                    data.update({
+                        'owner': None,
+                        'credited': False
+                    })
+                elif status == TRANSACTION_STATUS.CREDITED:
+                    data.update({
+                        'owner': owner,
+                        'credited': True
+                    })
             else:
-                data.update({'refunded': False})
+                if transaction_counter % 2 == 0:
+                    data.update({'refunded': True})
+                else:
+                    data.update({'refunded': False})
 
         with MockModelTimestamps(data['created'], data['modified']):
             new_transaction = Transaction.objects.create(**data)
