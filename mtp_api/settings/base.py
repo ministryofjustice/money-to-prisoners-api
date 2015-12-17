@@ -56,6 +56,8 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.security.SecurityMiddleware',
 )
 
+HEALTHCHECKS = ['moj_irat.healthchecks.database_healthcheck']
+AUTODISCOVER_HEALTHCHECKS = False
 
 # security tightening
 # some overridden in prod/docker settings where SSL is ensured
