@@ -52,6 +52,8 @@ class UserViewTestCase(APITestCase):
         logged_in_user = self.prison_clerks[0]
         self.client.force_authenticate(user=logged_in_user)
 
+        self.notamethod()
+
         for user in self.prison_clerks[1:]:
             url = self._get_url(user.username)
             response = self.client.get(url, format='json')
