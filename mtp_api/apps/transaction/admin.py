@@ -26,10 +26,15 @@ class TransactionAdmin(admin.ModelAdmin):
     inlines = (LogAdminInline,)
     list_filter = ('credited', 'refunded', 'prison',
                    ('received_at', DateRangeFilter))
+    actions = ['display_total_amount']
 
     @classmethod
     def formatted_amount(cls, instance):
         return '£%0.2f' % (instance.amount / 100)
+
+    def display_total_amount(self, request, queryset):
+        total = sum(map(lambda t: t.amount, queryset))
+        self.message_user(request, 'Total: £%0.2f' % (total / 100))
 
 
 admin.site.register(Transaction, TransactionAdmin)
