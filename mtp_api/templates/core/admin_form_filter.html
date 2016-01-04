@@ -12,8 +12,8 @@
       {% for field, value in choice.saved_params.items %}
       <input type="hidden" name="{{ field }}" value="{{ value }}" />
       {% endfor %}
-      {% for field, value in choice.query_params.items %}
-      <input type="text" name="{{ field }}" value="{{ value }}" />
+      {% for label, field, value in choice.query_params %}
+      <input type="text" name="{{ field }}" placeholder="{{ label }}" value="{{ value }}" />
       {% endfor %}
       <input type="submit" value="{{ choice.display }}" />
     </form>
