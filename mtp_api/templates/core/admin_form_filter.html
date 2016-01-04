@@ -1,0 +1,23 @@
+{% load i18n %}
+<h3>{% blocktrans with filter_title=title %} By {{ filter_title }} {% endblocktrans %}</h3>
+<ul>
+  {% for choice in choices %}
+  {% if choice.query_string %}
+  <li{% if choice.selected %} class="selected"{% endif %}>
+    <a href="{{ choice.query_string|iriencode }}">{{ choice.display }}</a>
+  </li>
+  {% else %}
+  <li{% if choice.selected %} class="selected"{% endif %}>
+    <form action="" method="get">
+      {% for field, value in choice.saved_params.items %}
+      <input type="hidden" name="{{ field }}" value="{{ value }}" />
+      {% endfor %}
+      {% for field, value in choice.query_params.items %}
+      <input type="text" name="{{ field }}" value="{{ value }}" />
+      {% endfor %}
+      <input type="submit" value="{{ choice.display }}" />
+    </form>
+  </li>
+  {% endif %}
+  {% endfor %}
+</ul>

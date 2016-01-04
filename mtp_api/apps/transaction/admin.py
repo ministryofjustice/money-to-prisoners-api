@@ -1,5 +1,6 @@
 from django.contrib import admin
 
+from core.admin import DateRangeFilter
 from .models import Transaction, Log
 
 
@@ -23,7 +24,8 @@ class TransactionAdmin(admin.ModelAdmin):
     ordering = ('-received_at',)
     readonly_fields = ('credited', 'refunded')
     inlines = (LogAdminInline,)
-    list_filter = ('credited', 'refunded', 'prison')
+    list_filter = ('credited', 'refunded', 'prison',
+                   ('received_at', DateRangeFilter))
 
     @classmethod
     def formatted_amount(cls, instance):
