@@ -23,6 +23,7 @@ class TransactionAdmin(admin.ModelAdmin):
     ordering = ('-received_at',)
     readonly_fields = ('credited', 'refunded')
     inlines = (LogAdminInline,)
+    list_filter = ('credited', 'refunded', 'prison')
 
     @classmethod
     def formatted_amount(cls, instance):
