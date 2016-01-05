@@ -27,7 +27,8 @@ class DateRangeFilter(admin.FieldListFilter):
         for k in cl.params:
             if not k.startswith(self.field_generic):
                 fields_to_render.append(
-                    (k, forms.CharField(initial=cl.params[k], hidden=True))
+                    (k, forms.CharField(initial=cl.params[k],
+                                        widget=forms.HiddenInput()))
                 )
 
         for label, param in self.form_fields:
