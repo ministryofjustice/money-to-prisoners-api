@@ -1,5 +1,8 @@
 from django.contrib import admin
 from django.utils.translation import ugettext_lazy as _
+from django import forms
+
+from .forms import AdminFilterForm, SidebarDateWidget
 
 
 class DateRangeFilter(admin.FieldListFilter):
@@ -10,7 +13,7 @@ class DateRangeFilter(admin.FieldListFilter):
 
         self.form_fields = [
             (_('Start date'), '%s__gte' % field_path),
-            (_('End date (less than)'), '%s__lt' % field_path)
+            (_('End date'), '%s__lt' % field_path)
         ]
         super().__init__(field, request, params, model, model_admin, field_path)
 
@@ -18,21 +21,26 @@ class DateRangeFilter(admin.FieldListFilter):
         return ['%sgte' % self.field_generic, '%slt' % self.field_generic]
 
     def choices(self, cl):
-        saved_params = cl.params.copy()
-
         query_active = False
-        query_params = []
-        # display last entered values of query params if present
+
+        fields_to_render = []
+        for k in cl.params:
+            if not k.startswith(self.field_generic):
+                fields_to_render.append(
+                    (k, forms.CharField(initial=cl.params[k], hidden=True))
+                )
+
         for label, param in self.form_fields:
             initial = ''
-            if param in saved_params:
+            if param in cl.params:
                 query_active = True
-                initial = saved_params[param]
-            query_params.append((label, param, initial))
+                initial = cl.params[param]
+            fields_to_render.append(
+                (param, forms.DateField(widget=SidebarDateWidget(
+                    attrs={'placeholder': label}), initial=initial))
+            )
 
-        for k in list(saved_params):
-            if k.startswith(self.field_generic):
-                del saved_params[k]
+        form = AdminFilterForm(extra_fields=fields_to_render)
 
         return [
             {
@@ -42,8 +50,7 @@ class DateRangeFilter(admin.FieldListFilter):
             },
             {
                 'selected': query_active,
-                'saved_params': saved_params,
-                'query_params': query_params,
+                'form': form,
                 'display': _('Date in range')
             },
         ]

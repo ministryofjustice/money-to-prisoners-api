@@ -8,12 +8,10 @@
   </li>
   {% else %}
   <li{% if choice.selected %} class="selected"{% endif %}>
+    {{ choice.form.media }}
     <form action="" method="get">
-      {% for field, value in choice.saved_params.items %}
-      <input type="hidden" name="{{ field }}" value="{{ value }}" />
-      {% endfor %}
-      {% for label, field, value in choice.query_params %}
-      <input type="text" name="{{ field }}" placeholder="{{ label }}" value="{{ value }}" />
+      {% for field in choice.form %}
+      {{ field }}
       {% endfor %}
       <input type="submit" value="{{ choice.display }}" />
     </form>
