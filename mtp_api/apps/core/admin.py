@@ -82,6 +82,17 @@ class DateRangeFilter(FormFilter):
         return _('Date in range')
 
 
+class ExactSearchFilter(FormFilter):
+
+    def get_form_fields(self):
+        return [
+            (self.field_path, forms.CharField())
+        ]
+
+    def get_submit_label(self):
+        return _('Exact %(fieldname)s') % {'fieldname': self.title}
+
+
 class RelatedAnyFieldListFilter(admin.RelatedFieldListFilter):
 
     def choices(self, cl):

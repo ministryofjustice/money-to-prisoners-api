@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.db.models import Sum
 
-from core.admin import DateRangeFilter, RelatedAnyFieldListFilter
+from core.admin import DateRangeFilter, RelatedAnyFieldListFilter, ExactSearchFilter
 from .models import Transaction, Log
 
 
@@ -27,7 +27,8 @@ class TransactionAdmin(admin.ModelAdmin):
     inlines = (LogAdminInline,)
     list_filter = ('credited', 'refunded', 'reconciled',
                    ('prison', RelatedAnyFieldListFilter),
-                   ('received_at', DateRangeFilter))
+                   ('received_at', DateRangeFilter),
+                   ('owner__username', ExactSearchFilter))
     actions = ['display_total_amount', 'display_reference_validity']
 
     @classmethod
