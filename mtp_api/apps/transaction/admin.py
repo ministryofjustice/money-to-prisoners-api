@@ -27,7 +27,7 @@ class TransactionAdmin(admin.ModelAdmin):
     list_filter = ('credited', 'refunded',
                    ('prison', RelatedAnyFieldListFilter),
                    ('received_at', DateRangeFilter))
-    actions = ['display_total_amount']
+    actions = ['display_total_amount', 'display_reference_validity']
 
     @classmethod
     def formatted_amount(cls, instance):
@@ -36,6 +36,23 @@ class TransactionAdmin(admin.ModelAdmin):
     def display_total_amount(self, request, queryset):
         total = sum(map(lambda t: t.amount, queryset))
         self.message_user(request, 'Total: £%0.2f' % (total / 100))
+
+    def display_reference_validity(self, request, queryset):
+        invalid_ref_count = len(list(filter(lambda t: t.prison is None, queryset)))
+        invalid_percent = (invalid_ref_count / len(queryset)) * 100
+
+        valid_ref_count = len(queryset) - invalid_ref_count
+        valid_percent = 100 - invalid_percent
+
+        self.message_user(
+            request,
+            'Of %(total)s transactions: '
+            '%(valid_count)s (%(valid_percent)0.2f%%) of references are valid, '
+            '%(invalid_count)s (%(invalid_percent)0.2f%%) of references are invalid.'
+            % {'total': len(queryset), 'invalid_count': invalid_ref_count,
+               'invalid_percent': invalid_percent, 'valid_count': valid_ref_count,
+               'valid_percent': valid_percent}
+        )
 
 
 admin.site.register(Transaction, TransactionAdmin)
