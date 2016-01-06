@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from core.admin import DateRangeFilter
+from core.admin import DateRangeFilter, RelatedAnyFieldListFilter
 from .models import Transaction, Log
 
 
@@ -24,7 +24,8 @@ class TransactionAdmin(admin.ModelAdmin):
     ordering = ('-received_at',)
     readonly_fields = ('credited', 'refunded')
     inlines = (LogAdminInline,)
-    list_filter = ('credited', 'refunded', 'prison',
+    list_filter = ('credited', 'refunded',
+                   ('prison', RelatedAnyFieldListFilter),
                    ('received_at', DateRangeFilter))
     actions = ['display_total_amount']
 

@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.contrib.admin.utils import prepare_lookup_value
 from django.utils.translation import ugettext_lazy as _
 from django import forms
 
@@ -55,3 +56,33 @@ class DateRangeFilter(admin.FieldListFilter):
                 'display': _('Date in range')
             },
         ]
+
+
+class RelatedAnyFieldListFilter(admin.RelatedFieldListFilter):
+
+    def choices(self, cl):
+        from django.contrib.admin.views.main import EMPTY_CHANGELIST_VALUE
+        for c in super().choices(cl):
+            # alter 'selected' test for empty option as default implementation
+            # does not check actual value of the argument
+            if c['display'] == EMPTY_CHANGELIST_VALUE:
+                c['selected'] = (
+                    self.lookup_val_isnull is not None and
+                    prepare_lookup_value(
+                        self.lookup_kwarg_isnull, self.lookup_val_isnull
+                    )
+                )
+
+                # list 'any' option before 'none'
+                yield {
+                    'selected': (
+                        self.lookup_val_isnull is not None and
+                        not c['selected']
+                    ),
+                    'query_string': cl.get_query_string(
+                        {self.lookup_kwarg_isnull: 'False'},
+                        [self.lookup_kwarg, self.lookup_kwarg_isnull]
+                    ),
+                    'display': _('Any'),
+                }
+            yield c
