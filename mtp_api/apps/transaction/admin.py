@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.db.models import Sum
 
 from core.admin import DateRangeFilter, RelatedAnyFieldListFilter
 from .models import Transaction, Log
@@ -34,14 +35,14 @@ class TransactionAdmin(admin.ModelAdmin):
         return '£%0.2f' % (instance.amount / 100)
 
     def display_total_amount(self, request, queryset):
-        total = sum(map(lambda t: t.amount, queryset))
+        total = queryset.aggregate(Sum('amount'))['amount__sum']
         self.message_user(request, 'Total: £%0.2f' % (total / 100))
 
     def display_reference_validity(self, request, queryset):
-        invalid_ref_count = len(list(filter(lambda t: t.prison is None, queryset)))
-        invalid_percent = (invalid_ref_count / len(queryset)) * 100
+        invalid_ref_count = queryset.filter(prison__isnull=True).count()
+        invalid_percent = (invalid_ref_count / queryset.count()) * 100
 
-        valid_ref_count = len(queryset) - invalid_ref_count
+        valid_ref_count = queryset.count() - invalid_ref_count
         valid_percent = 100 - invalid_percent
 
         self.message_user(
