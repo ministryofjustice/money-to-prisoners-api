@@ -22,9 +22,9 @@ class TransactionAdmin(admin.ModelAdmin):
     list_display = ('prisoner_name', 'prisoner_number', 'formatted_amount', 'sender_name',
                     'received_at', 'credited_at', 'refunded_at')
     ordering = ('-received_at',)
-    readonly_fields = ('credited', 'refunded')
+    readonly_fields = ('credited', 'refunded', 'reconciled')
     inlines = (LogAdminInline,)
-    list_filter = ('credited', 'refunded',
+    list_filter = ('credited', 'refunded', 'reconciled',
                    ('prison', RelatedAnyFieldListFilter),
                    ('received_at', DateRangeFilter))
     actions = ['display_total_amount', 'display_reference_validity']
