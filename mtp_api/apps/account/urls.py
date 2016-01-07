@@ -1,4 +1,4 @@
-from django.conf.urls import patterns, url, include
+from django.conf.urls import url, include
 
 from rest_framework import routers
 
@@ -8,6 +8,6 @@ router = routers.DefaultRouter()
 router.register(r'batches', views.BatchView)
 router.register(r'balances', views.BalanceView)
 
-urlpatterns = patterns('',
+urlpatterns = [
     url(r'^', include(router.urls)),
-)
+]
