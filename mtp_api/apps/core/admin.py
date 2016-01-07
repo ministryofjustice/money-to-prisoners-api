@@ -70,10 +70,10 @@ class DateRangeFilter(FormFilter):
 
     def get_form_fields(self):
         return [
-            ('%s__gte' % self.field_path, forms.DateField(
+            ('%s__date__gte' % self.field_path, forms.DateField(
                 widget=SidebarDateWidget(attrs={'placeholder': _('Start date')})
             )),
-            ('%s__lt' % self.field_path, forms.DateField(
+            ('%s__date__lte' % self.field_path, forms.DateField(
                 widget=SidebarDateWidget(attrs={'placeholder': _('End date')})
             ))
         ]
