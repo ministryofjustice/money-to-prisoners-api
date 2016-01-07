@@ -20,8 +20,8 @@ class LogAdminInline(admin.TabularInline):
 
 
 class TransactionAdmin(admin.ModelAdmin):
-    list_display = ('prisoner_name', 'prisoner_number', 'formatted_amount', 'sender_name',
-                    'received_at', 'credited_at', 'refunded_at')
+    list_display = ('prisoner_name', 'prisoner_number', 'prison', 'formatted_amount',
+                    'sender_name', 'received_at', 'credited_at', 'refunded_at')
     ordering = ('-received_at',)
     readonly_fields = ('credited', 'refunded', 'reconciled')
     inlines = (LogAdminInline,)
