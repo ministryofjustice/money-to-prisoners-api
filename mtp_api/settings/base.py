@@ -115,41 +115,31 @@ TEMPLATES = [
     },
 ]
 
-# Sane logging defaults
+# logging settings
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
-        'verbose': {
-            'format': '%(levelname)s %(asctime)s %(module)s %(process)d %(thread)d %(message)s'
-        },
         'simple': {
-            'format': '%(levelname)s %(message)s'
+            'format': '%(asctime)s [%(levelname)s] %(message)s',
+            'datefmt': '%Y-%m-%dT%H:%M:%S',
         },
     },
     'handlers': {
         'console': {
-            'level': 'WARN',
+            'level': 'DEBUG',
             'class': 'logging.StreamHandler',
-            'formatter': 'verbose'
+            'formatter': 'simple',
         },
         'mail_admins': {
             'level': 'ERROR',
-            'class': 'django.utils.log.AdminEmailHandler'
+            'class': 'django.utils.log.AdminEmailHandler',
         },
     },
-    'loggers': {
-        'django': {
-            'handlers': ['console'],
-            'propagate': True,
-            'level': 'WARN',
-        },
-        'django.request': {
-            'handlers': ['console'],
-            'level': 'ERROR',
-            'propagate': False,
-        }
-    }
+    'root': {
+        'level': 'WARNING' if ENVIRONMENT == 'prod' else 'INFO',
+        'handlers': ['console'],
+    },
 }
 
 # sentry exception handling
@@ -163,6 +153,7 @@ if os.environ.get('SENTRY_DSN'):
         'level': 'ERROR',
         'class': 'raven.contrib.django.raven_compat.handlers.SentryHandler'
     }
+    LOGGING['root']['handlers'].append('sentry')
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
