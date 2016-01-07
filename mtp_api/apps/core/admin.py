@@ -85,11 +85,10 @@ class DateRangeFilter(FormFilter):
 class RelatedAnyFieldListFilter(admin.RelatedFieldListFilter):
 
     def choices(self, cl):
-        from django.contrib.admin.views.main import EMPTY_CHANGELIST_VALUE
         for c in super().choices(cl):
             # alter 'selected' test for empty option as default implementation
             # does not check actual value of the argument
-            if c['display'] == EMPTY_CHANGELIST_VALUE:
+            if c['display'] == self.empty_value_display:
                 c['selected'] = (
                     self.lookup_val_isnull is not None and
                     prepare_lookup_value(
