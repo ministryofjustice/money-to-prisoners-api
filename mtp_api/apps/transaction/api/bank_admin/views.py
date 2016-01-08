@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import logging
 
 from django.db.transaction import atomic
 from django.utils import timezone
@@ -16,6 +17,8 @@ from .permissions import TransactionPermissions
 from .serializers import CreateTransactionSerializer, \
     UpdateRefundedTransactionSerializer, TransactionSerializer, \
     ReconcileTransactionSerializer
+
+logger = logging.getLogger()
 
 
 class TransactionListFilter(django_filters.FilterSet):
@@ -66,12 +69,15 @@ class TransactionView(mixins.CreateModelMixin, mixins.UpdateModelMixin,
         try:
             return self.partial_update(request, *args, **kwargs)
         except Transaction.DoesNotExist as e:
+            transaction_ids = sorted(e.args[0])
+            logger.warn('Some transactions failed to update: [%s]' %
+                        ', '.join(map(str, transaction_ids)))
             return Response(
                 data={
                     'errors': [
                         {
                             'msg': 'Some transactions could not be updated',
-                            'ids': sorted(e.args[0])
+                            'ids': transaction_ids,
                         }
                     ]
                 },

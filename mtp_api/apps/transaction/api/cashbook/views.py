@@ -1,5 +1,6 @@
 import datetime
 from functools import reduce
+import logging
 import re
 
 import django_filters
@@ -29,6 +30,8 @@ from .serializers import TransactionSerializer, \
     CreditedOnlyTransactionSerializer, \
     IdsTransactionSerializer, LockedTransactionSerializer
 from .permissions import TransactionPermissions
+
+logger = logging.getLogger()
 
 
 class StatusChoiceFilter(django_filters.ChoiceFilter):
@@ -174,12 +177,15 @@ class CreditTransactions(TransactionViewMixin, generics.GenericAPIView):
             conflict_ids = set(transaction_ids) - set(ids_to_update)
 
             if conflict_ids:
+                conflict_ids = sorted(conflict_ids)
+                logger.warn('Some transactions were not credited: [%s]' %
+                            ', '.join(map(str, conflict_ids)))
                 return Response(
                     data={
                         'errors': [
                             {
                                 'msg': 'Some transactions could not be credited.',
-                                'ids': sorted(conflict_ids)
+                                'ids': conflict_ids,
                             }
                         ]
                     },
@@ -279,12 +285,15 @@ class UnlockTransactions(TransactionViewMixin, APIView):
             conflict_ids = set(transaction_ids) - set(ids_to_update)
 
             if conflict_ids:
+                conflict_ids = sorted(conflict_ids)
+                logger.warn('Some transactions were not unlocked: [%s]' %
+                            ', '.join(map(str, conflict_ids)))
                 return Response(
                     data={
                         'errors': [
                             {
                                 'msg': 'Some transactions could not be unlocked.',
-                                'ids': sorted(conflict_ids)
+                                'ids': conflict_ids,
                             }
                         ]
                     },

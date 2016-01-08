@@ -1,4 +1,5 @@
 from io import StringIO
+import logging
 
 from django.conf import settings
 from django.contrib.admin import site
@@ -11,6 +12,8 @@ from django.utils.translation import gettext_lazy as _
 from django.views.generic import FormView
 
 from .forms import RecreateTestDataForm
+
+logger = logging.getLogger()
 
 
 class RecreateTestDataView(FormView):
@@ -74,8 +77,15 @@ class RecreateTestDataView(FormView):
             call_command('delete_all_data', **options)
 
         output.seek(0)
+        command_output = output.read()
+
+        logger.info('User "%(username)s" reset data for testing using "%(scenario)s" scenario' % {
+            'username': self.request.user.username,
+            'scenario': scenario,
+        })
+        logger.debug(command_output)
 
         return self.render_to_response(self.get_context_data(
             form=form,
-            command_output=output.read(),
+            command_output=command_output,
         ))
