@@ -83,45 +83,6 @@ class CreateTransactionsTestCase(
             len(data_list)
         )
 
-    def _create_list_with_null_field(self, null_field):
-        url = self._get_url()
-        data_list = self._get_transactions_data()
-
-        user = self.bank_admins[0]
-        data_list[0][null_field] = None
-
-        return self.client.post(
-            url, data=data_list, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
-        )
-
-    def test_create_list_null_account_number_fails(self):
-        current_count = Transaction.objects.count()
-
-        response = self._create_list_with_null_field('sender_account_number')
-
-        self.assertEqual(response.status_code, http_status.HTTP_400_BAD_REQUEST)
-        # check no change in db
-        self.assertEqual(current_count, Transaction.objects.count())
-
-    def test_create_list_null_sort_code_fails(self):
-        current_count = Transaction.objects.count()
-
-        response = self._create_list_with_null_field('sender_sort_code')
-
-        self.assertEqual(response.status_code, http_status.HTTP_400_BAD_REQUEST)
-        # check no change in db
-        self.assertEqual(current_count, Transaction.objects.count())
-
-    def test_create_list_null_amount_fails(self):
-        current_count = Transaction.objects.count()
-
-        response = self._create_list_with_null_field('amount')
-
-        self.assertEqual(response.status_code, http_status.HTTP_400_BAD_REQUEST)
-        # check no change in db
-        self.assertEqual(current_count, Transaction.objects.count())
-
     @mock.patch('transaction.api.bank_admin.serializers.transaction_prisons_need_updating')
     def test_create_sends_transaction_prisons_need_updating_signal(
         self, mocked_transaction_prisons_need_updating
@@ -182,6 +143,110 @@ class CreateTransactionsTestCase(
             for trans in group:
                 self.assertEqual(trans.ref_code, str(expected_ref_code))
                 expected_ref_code += 1
+
+
+class CreateIncompleteTransactionsTestCase(
+    TransactionRejectsRequestsWithoutPermissionTestMixin,
+    BaseTransactionViewTestCase
+):
+    ENDPOINT_VERB = 'post'
+
+    def setUp(self):
+        super().setUp()
+
+        # delete all transactions and logs
+        Transaction.objects.all().delete()
+        Log.objects.all().delete()
+
+    def _get_unauthorised_application_users(self):
+        return [
+            self.prison_clerks[0], self.prisoner_location_admins[0]
+        ]
+
+    def _get_authorised_user(self):
+        return self.bank_admins[0]
+
+    def _get_url(self, *args, **kwargs):
+        return reverse('bank_admin:transaction-list')
+
+    def _get_transactions_data(self, tot=30):
+        data_list = generate_initial_transactions_data(tot=tot)
+
+        serializer = CreateTransactionSerializer()
+        keys = serializer.get_fields().keys()
+
+        return [
+            {k: data[k] for k in keys if k in data}
+            for data in data_list
+        ]
+
+    def _create_list_with_null_field(self, null_field):
+        url = self._get_url()
+        data_list = self._get_transactions_data()
+
+        user = self.bank_admins[0]
+        data_list[0][null_field] = None
+
+        return self.client.post(
+            url, data=data_list, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+
+    def test_create_list_null_account_number_fails(self):
+        current_count = Transaction.objects.count()
+
+        response = self._create_list_with_null_field('sender_account_number')
+
+        self.assertEqual(response.status_code, http_status.HTTP_400_BAD_REQUEST)
+        # check no change in db
+        self.assertEqual(current_count, Transaction.objects.count())
+
+    def test_create_list_null_sort_code_fails(self):
+        current_count = Transaction.objects.count()
+
+        response = self._create_list_with_null_field('sender_sort_code')
+
+        self.assertEqual(response.status_code, http_status.HTTP_400_BAD_REQUEST)
+        # check no change in db
+        self.assertEqual(current_count, Transaction.objects.count())
+
+    def test_create_list_null_amount_fails(self):
+        current_count = Transaction.objects.count()
+
+        response = self._create_list_with_null_field('amount')
+
+        self.assertEqual(response.status_code, http_status.HTTP_400_BAD_REQUEST)
+        # check no change in db
+        self.assertEqual(current_count, Transaction.objects.count())
+
+    def _create_list_with_missing_field(self, null_field):
+        url = self._get_url()
+        data_list = self._get_transactions_data()
+
+        user = self.bank_admins[0]
+        del data_list[0][null_field]
+
+        return self.client.post(
+            url, data=data_list, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+
+    def test_create_list_missing_account_number_succeeds(self):
+        response = self._create_list_with_missing_field('sender_account_number')
+        self.assertEqual(response.status_code, http_status.HTTP_201_CREATED)
+
+    def test_create_list_missing_sort_code_succeeds(self):
+        response = self._create_list_with_missing_field('sender_sort_code')
+        self.assertEqual(response.status_code, http_status.HTTP_201_CREATED)
+
+    def test_create_list_missing_amount_fails(self):
+        current_count = Transaction.objects.count()
+
+        response = self._create_list_with_missing_field('amount')
+
+        self.assertEqual(response.status_code, http_status.HTTP_400_BAD_REQUEST)
+        # check no change in db
+        self.assertEqual(current_count, Transaction.objects.count())
 
 
 class UpdateRefundTransactionsTestCase(

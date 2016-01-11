@@ -18,15 +18,14 @@ class Transaction(TimeStampedModel):
     prison = models.ForeignKey(Prison, blank=True, null=True)
 
     prisoner_name = models.CharField(blank=True, null=True, max_length=250)
-    prisoner_number = models.CharField(blank=True, max_length=250)
+    prisoner_number = models.CharField(blank=True, null=True, max_length=250)
     prisoner_dob = models.DateField(blank=True, null=True)
 
     amount = models.PositiveIntegerField()
     category = models.CharField(max_length=50, choices=TRANSACTION_CATEGORY)
 
-    # cannot be empty otherwise we can't send the money back
-    sender_sort_code = models.CharField(max_length=50)
-    sender_account_number = models.CharField(max_length=50)
+    sender_sort_code = models.CharField(max_length=50, blank=True)
+    sender_account_number = models.CharField(max_length=50, blank=True)
     sender_name = models.CharField(max_length=250, blank=True)
 
     # used by building societies to identify the account nr
