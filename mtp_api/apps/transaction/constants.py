@@ -21,7 +21,8 @@ TRANSACTION_STATUS = Choices(
 
 TRANSACTION_CATEGORY = Choices(
     ('DEBIT', 'debit', 'Debit'),
-    ('CREDIT', 'credit', 'Credit')
+    ('CREDIT', 'credit', 'Credit'),
+    ('NON_PAYMENT_CREDIT', 'non-payment-credit', 'Non-payment credit')
 )
 
 

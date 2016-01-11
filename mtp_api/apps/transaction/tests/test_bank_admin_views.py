@@ -112,6 +112,21 @@ class CreateTransactionsTestCase(
             Transaction.objects.filter(**data_list[0]).count(), 1
         )
 
+    def test_create_with_non_payment_credit_category(self):
+        user = self.bank_admins[0]
+        data_list = self._get_transactions_data()
+        data_list[0]['category'] = TRANSACTION_CATEGORY.NON_PAYMENT_CREDIT
+
+        response = self.client.post(
+            self._get_url(), data=data_list, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_201_CREATED)
+
+        self.assertEqual(
+            Transaction.objects.filter(**data_list[0]).count(), 1
+        )
+
     def test_create_populates_ref_code(self):
         user = self.bank_admins[0]
         data_list = self._get_transactions_data()
