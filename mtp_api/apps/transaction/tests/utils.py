@@ -49,6 +49,7 @@ def generate_initial_transactions_data(tot=50, prisoner_location_generator=None)
         include_prisoner_info = transaction_counter % 5 != 0
         include_sender_roll_number = transaction_counter % 10 == 0
         make_debit_transaction = (transaction_counter + 1) % 5 == 0
+        make_non_payment_credit_transaction = transaction_counter % 17 == 0
 
         random_date = now - datetime.timedelta(
             minutes=random.randint(0, 10000)
@@ -67,7 +68,11 @@ def generate_initial_transactions_data(tot=50, prisoner_location_generator=None)
             'modified': random_date,
         }
 
-        if make_debit_transaction:
+        if make_non_payment_credit_transaction:
+            data['category'] = TRANSACTION_CATEGORY.NON_PAYMENT_CREDIT
+            del data['sender_sort_code']
+            del data['sender_account_number']
+        elif make_debit_transaction:
             data['category'] = TRANSACTION_CATEGORY.DEBIT
             data['reference'] = 'Payment refunded'
         else:
