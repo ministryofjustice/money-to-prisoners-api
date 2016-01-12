@@ -54,10 +54,13 @@ def generate_initial_transactions_data(tot=50, prisoner_location_generator=None)
         random_date = now - datetime.timedelta(
             minutes=random.randint(0, 10000)
         )
+        midnight_random_date = datetime.datetime.combine(
+            random_date.date(), datetime.time.min
+        ).replace(tzinfo=timezone.get_current_timezone())
 
         data = {
             'amount': random.randint(1000, 30000),
-            'received_at': random_date,
+            'received_at': midnight_random_date,
             'sender_sort_code': get_random_string(6, '1234567890'),
             'sender_account_number': get_random_string(8, '1234567890'),
             'sender_name': random_sender_name(),
