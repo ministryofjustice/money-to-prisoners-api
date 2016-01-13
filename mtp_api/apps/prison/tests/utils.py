@@ -37,8 +37,8 @@ def load_nomis_prisoner_locations():
     """
     Load prisoner locations matching test NOMIS data
     """
-    csv_path = os.path.join(os.path.dirname(__file__),
-                            '..', 'fixtures', 'test_nomis_prisoner_locations.csv')
+    csv_path = os.path.join(os.path.dirname(__file__), os.path.pardir,
+                            'fixtures', 'test_nomis_prisoner_locations.csv')
     with open(csv_path) as f:
         csv_reader = csv.DictReader(f)
         prisoner_locations = list(csv_reader)
@@ -52,7 +52,7 @@ def get_prisoner_location_creator():
     Returns a function(prisoner_name, prisoner_number, prisoner_dob) which when called returns:
         (is_valid, PrisonerLocation instance)
     """
-    prisons = cycle(list(Prison.objects.all()))
+    prisons = cycle(Prison.objects.all())
     # index = cycle(range(1, 11))
 
     created_by = get_user_model().objects.first()
@@ -90,3 +90,35 @@ def get_prisoner_location_creator():
         return not is_invalid, PrisonerLocation.objects.create(**data)
 
     return make_prisoner_location
+
+
+def generate_predefined_prisoner_locations():
+    """
+    Used to make known prisoner locations for the "random transaction" scenario
+    such that automated testing can be performed on them. Currently, doesn't
+    link any transactions to them. NB: prisons themselves may not be stable
+    """
+    created_by = get_user_model().objects.first()
+    prisons = cycle(Prison.objects.all())
+    predefined_prisoner_locations = [
+        {
+            'prisoner_name': 'James Halls',
+            'prisoner_number': 'A1409AE',
+            'prisoner_dob': datetime.date(1989, 1, 21),
+            'prison': next(prisons),
+        },
+        {
+            'prisoner_name': 'Rickie Rippin',
+            'prisoner_number': 'P7617FY',
+            'prisoner_dob': datetime.date(1975, 6, 30),
+            'prison': next(prisons),
+        },
+    ]
+
+    def mapper(_location):
+        _location['created_by'] = created_by
+        return _location
+
+    predefined_prisoner_locations = map(mapper, predefined_prisoner_locations)
+    for predefined_prisoner_location in predefined_prisoner_locations:
+        PrisonerLocation.objects.create(**predefined_prisoner_location)

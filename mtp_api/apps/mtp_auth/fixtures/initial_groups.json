@@ -45,5 +45,13 @@
       ["view_bank_details_transaction", "transaction", "transaction"]
     ]
   }
+},
+{
+  "model": "auth.group",
+  "pk": 5,
+  "fields": {
+    "name": "SendMoney",
+    "permissions": []
+  }
 }
 ]

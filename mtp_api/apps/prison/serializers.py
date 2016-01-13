@@ -46,3 +46,12 @@ class PrisonerLocationSerializer(serializers.ModelSerializer):
             'prisoner_dob',
             'prison',
         )
+
+
+class PrisonerValiditySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PrisonerLocation
+        fields = (
+            'prisoner_number',
+            'prisoner_dob',
+        )
