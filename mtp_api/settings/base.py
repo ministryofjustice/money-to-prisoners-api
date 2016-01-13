@@ -2,7 +2,7 @@
 Django settings for mtp_api project.
 
 For the full list of settings and their values, see
-https://docs.djangoproject.com/en/1.8/ref/settings/
+https://docs.djangoproject.com/en/1.9/ref/settings/
 """
 import os
 import sys
@@ -10,7 +10,7 @@ import sys
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
 
-
+APP = 'api'
 ENVIRONMENT = os.environ.get('ENV', 'local')
 
 
@@ -93,7 +93,7 @@ USE_TZ = True
 STATIC_ROOT = 'static'
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'assets')
+    os.path.join(BASE_DIR, 'assets'),
 ]
 
 TEMPLATES = [
