@@ -51,7 +51,7 @@ class UpdatePrisonsOnAvailableTransactionsTestCase(BaseUpdatePrisonsTestCase):
         })
         return data
 
-    def test_without_prisoner_locations_sets_prison_to_None(self):
+    def test_without_prisoner_locations_sets_prison_to_none(self):
         self.assertNotEqual(self.transaction.prison, None)
 
         transaction_prisons_need_updating.send(sender=None)

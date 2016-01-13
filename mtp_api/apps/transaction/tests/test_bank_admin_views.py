@@ -8,7 +8,7 @@ from rest_framework import status as http_status
 
 from account.models import Batch
 from transaction.models import Transaction, Log
-from transaction.constants import TRANSACTION_STATUS, LOG_ACTIONS, TRANSACTION_CATEGORY
+from transaction.constants import LOG_ACTIONS, TRANSACTION_CATEGORY
 from transaction.api.bank_admin.serializers import CreateTransactionSerializer
 from .utils import generate_initial_transactions_data, generate_transactions
 from .test_base import BaseTransactionViewTestCase, \
@@ -424,7 +424,7 @@ class GetTransactionsAsBankAdminTestCase(
         return reverse('bank_admin:transaction-list')
 
     def _populate_transactions(self, tot=20):
-        transactions = generate_transactions(transaction_batch=tot)
+        return generate_transactions(transaction_batch=tot)
 
     def _get_authorised_user(self):
         return self.bank_admins[0]
@@ -457,7 +457,7 @@ class GetTransactionsAsBankAdminTestCase(
             matches_one = False
             for status in statuses:
                 try:
-                    trans = Transaction.objects.get(
+                    Transaction.objects.get(
                         id=t['id'],
                         **Transaction.STATUS_LOOKUP[status])
                     matches_one = True
@@ -501,17 +501,17 @@ class GetTransactionsAsBankAdminTestCase(
         self._assert_hidden_fields_absent(data['results'])
 
     def test_get_list_refund_pending(self):
-        results = self._test_get_list_with_status_verify_fields(
+        self._test_get_list_with_status_verify_fields(
             'refund_pending',
             ['refund_pending'])
 
     def test_get_list_credit_refunded(self):
-        results = self._test_get_list_with_status_verify_fields(
+        self._test_get_list_with_status_verify_fields(
             'credited,refunded',
             ['credited', 'refunded'])
 
     def test_get_list_credit_refunded_refund_pending(self):
-        results = self._test_get_list_with_status_verify_fields(
+        self._test_get_list_with_status_verify_fields(
             'credited,refunded,refund_pending',
             ['credited', 'refunded', 'refund_pending'])
 
@@ -566,7 +566,7 @@ class GetTransactionsRelatedToBatchesTestCase(
         return reverse('bank_admin:transaction-list')
 
     def _populate_transactions(self, tot=40):
-        transactions = generate_transactions(transaction_batch=tot)
+        return generate_transactions(transaction_batch=tot)
 
     def _get_authorised_user(self):
         return self.bank_admins[0]
@@ -699,7 +699,7 @@ class GetTransactionsFilteredByDateTestCase(
         return reverse('bank_admin:transaction-list')
 
     def _populate_transactions(self, tot=80):
-        transactions = generate_transactions(transaction_batch=tot)
+        return generate_transactions(transaction_batch=tot)
 
     def _get_authorised_user(self):
         return self.bank_admins[0]
@@ -744,7 +744,6 @@ class GetTransactionsFilteredByDateTestCase(
         db_transactions = Transaction.objects.all().order_by('-received_at')
         self.assertEquals(len(results), len(db_transactions))
 
-        prev_date = None
         for db_trans, response_trans in zip(db_transactions, results):
             self.assertEqual(db_trans.id, response_trans['id'])
 
@@ -774,7 +773,7 @@ class ReconcileTransactionsTestCase(
         return reverse('bank_admin:reconcile-transactions')
 
     def _populate_transactions(self, tot=80):
-        transactions = generate_transactions(transaction_batch=tot)
+        return generate_transactions(transaction_batch=tot)
 
     def _get_authorised_user(self):
         return self.bank_admins[0]

@@ -75,8 +75,8 @@ DATABASES = {
         'NAME': os.environ.get('DB_NAME', 'mtp_api'),
         'USER': os.environ.get('DB_USERNAME', 'postgres'),
         'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-        'HOST': os.environ.get('DB_HOST', ''),  # Empty for localhost through domain sockets or '127.0.0.1' for localhost through TCP.
-        'PORT': os.environ.get('DB_PORT', ''),  # Set to empty string for default.
+        'HOST': os.environ.get('DB_HOST', ''),
+        'PORT': os.environ.get('DB_PORT', ''),
     }
 }
 
@@ -183,6 +183,6 @@ REF_CODE_BASE = 900001
 
 
 try:
-    from .local import *
+    from .local import *  # noqa
 except ImportError:
     pass
