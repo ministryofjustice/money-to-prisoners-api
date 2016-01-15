@@ -1,7 +1,8 @@
 from rest_framework.permissions import BasePermission
 
 from .constants import CASHBOOK_OAUTH_CLIENT_ID, \
-    BANK_ADMIN_OAUTH_CLIENT_ID, PRISONER_LOCATION_OAUTH_CLIENT_ID
+    BANK_ADMIN_OAUTH_CLIENT_ID, PRISONER_LOCATION_OAUTH_CLIENT_ID, \
+    SEND_MONEY_CLIENT_ID
 
 
 class ClientIDPermissions(BasePermission):
@@ -27,3 +28,7 @@ class BankAdminClientIDPermissions(ClientIDPermissions):
 
 class PrisonerLocationClientIDPermissions(ClientIDPermissions):
     client_id = PRISONER_LOCATION_OAUTH_CLIENT_ID
+
+
+class SendMoneyClientIDPermissions(ClientIDPermissions):
+    client_id = SEND_MONEY_CLIENT_ID

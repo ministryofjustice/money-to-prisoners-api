@@ -7,6 +7,7 @@ from django.core.management import BaseCommand, call_command
 from account.models import Batch
 from core.tests.utils import make_test_users, give_superusers_full_access
 from prison.models import Prison
+from prison.tests.utils import generate_predefined_prisoner_locations
 from transaction.models import Transaction
 from transaction.tests.utils import generate_transactions
 
@@ -77,6 +78,9 @@ class Command(BaseCommand):
         make_test_users(clerks_per_prison=clerks_per_prison)
 
         if transactions == 'random':
+            print_message('Generating pre-defined prisoner locations')
+            # to allow for automated testing
+            generate_predefined_prisoner_locations()
             print_message('Generating random prisoner locations and transactions')
             generate_transactions(transaction_batch=100)
         elif transactions == 'nomis':

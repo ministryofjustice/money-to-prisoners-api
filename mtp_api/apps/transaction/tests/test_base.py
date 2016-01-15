@@ -30,8 +30,9 @@ class BaseTransactionViewTestCase(AuthTestCaseMixin, APITestCase):
     def setUp(self):
         super(BaseTransactionViewTestCase, self).setUp()
         (
-            self.prison_clerks, self.prisoner_location_admins, self.bank_admins,
-            self.refund_bank_admins
+            self.prison_clerks, self.prisoner_location_admins,
+            self.bank_admins, self.refund_bank_admins,
+            self.send_money_users,
         ) = make_test_users(clerks_per_prison=2)
 
         self.transactions = generate_transactions(

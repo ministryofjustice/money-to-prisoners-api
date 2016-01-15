@@ -113,3 +113,15 @@ def create_refund_bank_admins():
     )
 
     return [rba]
+
+
+def create_send_money_shared_users():
+    name_and_password = 'send-money'
+    send_money_group = Group.objects.get(name='SendMoney')
+    user = create_basic_user(
+        name_and_password,
+        [send_money_group],
+        first_name='Send Money',
+        last_name='Shared',
+    )
+    return [user]

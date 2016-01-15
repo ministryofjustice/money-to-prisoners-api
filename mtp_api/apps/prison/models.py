@@ -17,15 +17,15 @@ class PrisonerLocation(TimeStampedModel):
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL)
 
     prisoner_name = models.CharField(blank=True, max_length=250)
-    prisoner_number = models.CharField(max_length=250)
+    prisoner_number = models.CharField(max_length=250)  # TODO: shouldn't this be unique?
     prisoner_dob = models.DateField()
 
     prison = models.ForeignKey(Prison)
 
     class Meta:
-        index_together = [
-            ["prisoner_number", "prisoner_dob"],
-        ]
+        index_together = (
+            ('prisoner_number', 'prisoner_dob'),
+        )
 
     def __str__(self):
         return '%s (%s)' % (self.prisoner_name, self.prisoner_number)

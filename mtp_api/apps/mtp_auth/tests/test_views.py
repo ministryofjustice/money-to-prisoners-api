@@ -25,7 +25,8 @@ class UserViewTestCase(APITestCase):
         super(UserViewTestCase, self).setUp()
         (
             self.prison_clerks, self.prisoner_location_admins,
-            self.bank_admins, self.refund_bank_admins
+            self.bank_admins, self.refund_bank_admins,
+            self.send_money_users,
         ) = make_test_users(clerks_per_prison=2)
         self.test_users = (
             self.prison_clerks + self.prisoner_location_admins +
@@ -100,7 +101,7 @@ class UserApplicationValidationTestCase(APITestCase):
 
     def setUp(self):
         super(UserApplicationValidationTestCase, self).setUp()
-        self.prison_clerks, self.users, self.bank_admins, _ = make_test_users()
+        self.prison_clerks, self.users, self.bank_admins, _, _ = make_test_users()
 
     def test_prison_clerk_can_log_in_to_cashbook(self):
         response = self.client.post(
