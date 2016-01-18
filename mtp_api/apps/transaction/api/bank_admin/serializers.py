@@ -1,4 +1,4 @@
-from django.db import transaction
+from django.db import transaction as db_transaction
 
 from rest_framework import serializers
 from rest_framework.fields import IntegerField
@@ -11,7 +11,7 @@ from prison.serializers import PrisonSerializer
 
 class CreateTransactionListSerializer(serializers.ListSerializer):
 
-    @transaction.atomic
+    @db_transaction.atomic
     def create(self, validated_data):
         transactions = []
         user = self.context['request'].user
@@ -54,7 +54,7 @@ class CreateTransactionSerializer(serializers.ModelSerializer):
 
 class UpdateTransactionListSerializer(serializers.ListSerializer):
 
-    @transaction.atomic
+    @db_transaction.atomic
     def update(self, instance, validated_data):
         user = self.context['request'].user
 

@@ -67,27 +67,32 @@ class TransactionListTestCase(
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # check expected result
-        noop_checker = lambda t: True
+        def noop_checker(t):
+            return True
+
         status_checker = self.STATUS_FILTERS[filters.get('status', None)]
         if filters.get('prison'):
-            prison_checker = lambda t: t.prison and t.prison.pk in filters['prison'].split(',')
+            def prison_checker(t):
+                return t.prison and t.prison.pk in filters['prison'].split(',')
         else:
             prison_checker = noop_checker
         if filters.get('user'):
-            user_checker = lambda t: t.owner and t.owner.pk == filters['user']
+            def user_checker(t):
+                return t.owner and t.owner.pk == filters['user']
         else:
             user_checker = noop_checker
         received_at_checker = self._get_received_at_checker(filters, noop_checker)
         search_checker = self._get_search_checker(filters, noop_checker)
 
         expected_ids = [
-            t.pk for t in self.transactions if
-                t.prison in managing_prisons and
-                status_checker(t) and
-                prison_checker(t) and
-                user_checker(t) and
-                received_at_checker(t) and
-                search_checker(t)
+            t.pk
+            for t in self.transactions
+            if t.prison in managing_prisons and
+            status_checker(t) and
+            prison_checker(t) and
+            user_checker(t) and
+            received_at_checker(t) and
+            search_checker(t)
         ]
         self.assertEqual(response.data['count'], len(expected_ids))
         self.assertListEqual(
@@ -293,8 +298,9 @@ class TransactionListWithDefaultStatusAndUserTestCase(TransactionListTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         expected_ids = [
-            t.pk for t in self.transactions if
-                t.prison in managing_prisons
+            t.pk
+            for t in self.transactions
+            if t.prison in managing_prisons
         ]
         self.assertEqual(response.data['count'], len(expected_ids))
         self.assertListEqual(

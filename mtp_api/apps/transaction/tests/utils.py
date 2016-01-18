@@ -1,4 +1,5 @@
 import datetime
+from functools import partial
 from itertools import cycle
 import random
 import warnings
@@ -195,43 +196,9 @@ def generate_transactions(
         owner_status_chooser = get_owner_and_status_chooser()
 
     transactions = []
+    gen_transaction = partial(generate_transaction, location_creator, owner_status_chooser)
     for transaction_counter, data in enumerate(data_list, start=1):
-        if data['category'] == TRANSACTION_CATEGORY.CREDIT:
-            is_valid, prisoner_location = location_creator(
-                data.get('prisoner_name'), data.get('prisoner_number'),
-                data.get('prisoner_dob'), data.get('prison'),
-            )
-
-            if is_valid:
-                # randomly choose the state of the transaction
-                prison = prisoner_location.prison
-                owner, status = owner_status_chooser(prison)
-
-                data['prison'] = prison
-                if status == TRANSACTION_STATUS.LOCKED:
-                    data.update({
-                        'owner': owner,
-                        'credited': False
-                    })
-                elif status == TRANSACTION_STATUS.AVAILABLE:
-                    data.update({
-                        'owner': None,
-                        'credited': False
-                    })
-                elif status == TRANSACTION_STATUS.CREDITED:
-                    data.update({
-                        'owner': owner,
-                        'credited': True
-                    })
-            else:
-                if transaction_counter % 2 == 0:
-                    data.update({'refunded': True})
-                else:
-                    data.update({'refunded': False})
-
-        with MockModelTimestamps(data['created'], data['modified']):
-            new_transaction = Transaction.objects.create(**data)
-            new_transaction.populate_ref_code()
+        new_transaction = gen_transaction(transaction_counter, data)
         transactions.append(new_transaction)
 
     if predetermined_transactions:
@@ -241,6 +208,54 @@ def generate_transactions(
                 new_transaction.populate_ref_code()
             transactions.append(new_transaction)
 
+    generate_transaction_logs(transactions)
+
+    return transactions
+
+
+def generate_transaction(location_creator, owner_status_chooser,
+                         transaction_counter, data):
+    if data['category'] == TRANSACTION_CATEGORY.CREDIT:
+        is_valid, prisoner_location = location_creator(
+            data.get('prisoner_name'), data.get('prisoner_number'),
+            data.get('prisoner_dob'), data.get('prison'),
+        )
+
+        if is_valid:
+            # randomly choose the state of the transaction
+            prison = prisoner_location.prison
+            owner, status = owner_status_chooser(prison)
+
+            data['prison'] = prison
+            if status == TRANSACTION_STATUS.LOCKED:
+                data.update({
+                    'owner': owner,
+                    'credited': False
+                })
+            elif status == TRANSACTION_STATUS.AVAILABLE:
+                data.update({
+                    'owner': None,
+                    'credited': False
+                })
+            elif status == TRANSACTION_STATUS.CREDITED:
+                data.update({
+                    'owner': owner,
+                    'credited': True
+                })
+        else:
+            if transaction_counter % 2 == 0:
+                data.update({'refunded': True})
+            else:
+                data.update({'refunded': False})
+
+    with MockModelTimestamps(data['created'], data['modified']):
+        new_transaction = Transaction.objects.create(**data)
+        new_transaction.populate_ref_code()
+
+    return new_transaction
+
+
+def generate_transaction_logs(transactions):
     for new_transaction in transactions:
         with MockModelTimestamps(new_transaction.modified, new_transaction.modified):
             log_data = {
@@ -257,5 +272,3 @@ def generate_transactions(
             elif new_transaction.locked:
                 log_data['action'] = LOG_ACTIONS.LOCKED
                 Log.objects.create(**log_data)
-
-    return transactions

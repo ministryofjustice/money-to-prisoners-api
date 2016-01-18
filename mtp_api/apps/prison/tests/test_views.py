@@ -96,9 +96,9 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
         repeated_p_num_2 = random_prisoner_number()
         # create two pre-existing PrisonerLocations so that we test the overwrite
         mommy.make(PrisonerLocation, prisoner_number=repeated_p_num_1,
-            prison=self.prisons[0])
+                   prison=self.prisons[0])
         mommy.make(PrisonerLocation, prisoner_number=repeated_p_num_2,
-            prison=self.prisons[0])
+                   prison=self.prisons[0])
         self.assertEqual(PrisonerLocation.objects.count(), 2)
 
         data = [
