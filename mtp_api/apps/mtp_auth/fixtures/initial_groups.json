@@ -51,7 +51,10 @@
   "pk": 5,
   "fields": {
     "name": "SendMoney",
-    "permissions": []
+    "permissions": [
+      ["add_transaction", "transaction", "transaction"],
+      ["change_transaction", "transaction", "transaction"]
+    ]
   }
 }
 ]

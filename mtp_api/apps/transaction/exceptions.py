@@ -1,0 +1,2 @@
+class InvalidStateForUpdateException(Exception):
+    pass

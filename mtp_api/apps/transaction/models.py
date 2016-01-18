@@ -7,11 +7,16 @@ from django.dispatch import receiver
 from model_utils.models import TimeStampedModel
 
 from prison.models import Prison
-from .constants import TRANSACTION_STATUS, LOG_ACTIONS, TRANSACTION_CATEGORY
+from .constants import (
+    TRANSACTION_STATUS, LOG_ACTIONS, TRANSACTION_CATEGORY, PAYMENT_OUTCOME
+)
 from .managers import TransactionQuerySet, LogManager
-from .signals import transaction_created, transaction_locked, \
-    transaction_unlocked, transaction_credited, transaction_refunded, \
-    transaction_prisons_need_updating, transaction_reconciled
+from .signals import (
+    transaction_created, transaction_locked,
+    transaction_unlocked, transaction_credited, transaction_refunded,
+    transaction_prisons_need_updating, transaction_reconciled,
+    transaction_payment_taken, transaction_payment_failed
+)
 
 
 class Transaction(TimeStampedModel):
@@ -45,24 +50,37 @@ class Transaction(TimeStampedModel):
     refunded = models.BooleanField(default=False)
     reconciled = models.BooleanField(default=False)
 
+    payment_outcome = models.CharField(max_length=50, choices=PAYMENT_OUTCOME,
+                                       default=PAYMENT_OUTCOME.TAKEN)
+
     # NB: there are matching boolean fields or properties on the model instance for each
     STATUS_LOOKUP = {
         TRANSACTION_STATUS.LOCKED: {
             'owner__isnull': False,
             'credited': False,
             'refunded': False,
-            'category': TRANSACTION_CATEGORY.CREDIT
+            'category__in': [
+                TRANSACTION_CATEGORY.CREDIT,
+                TRANSACTION_CATEGORY.ONLINE_CREDIT
+            ],
         },
         TRANSACTION_STATUS.AVAILABLE: {
             'prison__isnull': False,
             'owner__isnull': True,
             'credited': False,
             'refunded': False,
-            'category': TRANSACTION_CATEGORY.CREDIT
+            'category__in': [
+                TRANSACTION_CATEGORY.CREDIT,
+                TRANSACTION_CATEGORY.ONLINE_CREDIT
+            ],
+            'payment_outcome': PAYMENT_OUTCOME.TAKEN
         },
         TRANSACTION_STATUS.CREDITED: {
             'credited': True,
-            'category': TRANSACTION_CATEGORY.CREDIT
+            'category__in': [
+                TRANSACTION_CATEGORY.CREDIT,
+                TRANSACTION_CATEGORY.ONLINE_CREDIT
+            ],
         },
         TRANSACTION_STATUS.REFUNDED: {
             'refunded': True,
@@ -73,6 +91,7 @@ class Transaction(TimeStampedModel):
             'owner__isnull': True,
             'credited': False,
             'refunded': False,
+            'payment_outcome': PAYMENT_OUTCOME.TAKEN,
             'category': TRANSACTION_CATEGORY.CREDIT
         },
     }
@@ -88,6 +107,7 @@ class Transaction(TimeStampedModel):
             ('unlock_transaction', 'Can unlock transaction'),
             ('patch_credited_transaction', 'Can patch credited transaction'),
             ('patch_processed_transaction', 'Can patch processed transaction'),
+            ('patch_completed_transaction', 'Can patch completed transaction'),
         )
         index_together = (
             ('prisoner_number', 'prisoner_dob'),
@@ -256,6 +276,16 @@ def transaction_refunded_receiver(sender, transaction, by_user, **kwargs):
 @receiver(transaction_reconciled)
 def transaction_reconciled_receiver(sender, transaction, by_user, **kwargs):
     Log.objects.transaction_reconciled(transaction, by_user)
+
+
+@receiver(transaction_payment_taken)
+def transaction_payment_taken_receiver(sender, transaction, by_user, **kwargs):
+    Log.objects.transaction_payment_taken(transaction, by_user)
+
+
+@receiver(transaction_payment_failed)
+def transaction_payment_failed_receiver(sender, transaction, by_user, **kwargs):
+    Log.objects.transaction_payment_failed(transaction, by_user)
 
 
 @receiver(transaction_prisons_need_updating)

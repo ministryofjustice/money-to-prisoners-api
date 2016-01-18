@@ -22,7 +22,15 @@ TRANSACTION_STATUS = Choices(
 TRANSACTION_CATEGORY = Choices(
     ('DEBIT', 'debit', 'Debit'),
     ('CREDIT', 'credit', 'Credit'),
-    ('NON_PAYMENT_CREDIT', 'non-payment-credit', 'Non-payment credit')
+    ('NON_PAYMENT_CREDIT', 'non_payment_credit', 'Non-payment credit'),
+    ('ONLINE_CREDIT', 'online_credit', 'Online credit')
+)
+
+
+PAYMENT_OUTCOME = Choices(
+    ('PENDING', 'pending', 'Pending'),
+    ('FAILED', 'failed', 'Failed'),
+    ('TAKEN', 'taken', 'Taken')
 )
 
 
@@ -38,4 +46,6 @@ LOG_ACTIONS = Choices(
     ('UNCREDITED', 'uncredited', 'Uncredited'),
     ('REFUNDED', 'refunded', 'Refunded'),
     ('RECONCILED', 'reconciled', 'Reconciled'),
+    ('PAYMENT_TAKEN', 'payment_taken', 'Payment Taken'),
+    ('PAYMENT_FAILED', 'payment_failed', 'Payment Failed'),
 )

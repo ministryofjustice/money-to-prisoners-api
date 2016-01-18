@@ -80,3 +80,17 @@ class LogManager(models.Manager):
             action=LOG_ACTIONS.RECONCILED,
             user=by_user
         )
+
+    def transaction_payment_taken(self, transaction, by_user):
+        self.create(
+            transaction=transaction,
+            action=LOG_ACTIONS.PAYMENT_TAKEN,
+            user=by_user
+        )
+
+    def transaction_payment_failed(self, transaction, by_user):
+        self.create(
+            transaction=transaction,
+            action=LOG_ACTIONS.PAYMENT_FAILED,
+            user=by_user
+        )
