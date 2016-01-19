@@ -1,8 +1,8 @@
 # Place development dependencies here
 -r base.txt
-django-extensions==1.5.0
+django-extensions==1.6.1
 django-template-i18n-lint==1.2.1
 flake8==2.5.1
 pep8-naming==0.3.3
 six==1.10.0
-Werkzeug==0.10.4
+Werkzeug==0.11.3

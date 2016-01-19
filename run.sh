@@ -49,20 +49,14 @@ choose_port() {
 
 start_server() {
   choose_port $1
-  # run server in foreground
+  # run server
   python -W default manage.py runserver 0:${PORT}
 }
 
 start_test_server() {
   choose_port $1
-  load_test_data
-  # run test server in foreground
-  python -W default manage.py testserver --noinput --addrport 0:${PORT} test_prisons initial_groups
-}
-
-load_test_data() {
-  # load test data in the background after a delay allowing test server to create the db
-  PYTHONPATH=`pwd` DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE} ./devtools/load_test_data.py &
+  # run test server
+  python -W default manage.py testserver --noinput --addrport 0:${PORT} initial_groups test_prisons
 }
 
 run_tests() {
