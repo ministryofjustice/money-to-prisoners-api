@@ -1,0 +1,5 @@
+# Place your docker dependencies here
+-r base.txt
+
+uWSGI==2.0.12
+raven==5.10.0

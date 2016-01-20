@@ -105,7 +105,7 @@ class Command(TestServerCommand):
         self.stdout.write(self.style.SUCCESS('Model creation finished'))
 
     def start_controller(self, controller_port):
-        self.controller = socketserver.TCPServer(('localhost', controller_port), self.controller_request)
+        self.controller = socketserver.TCPServer(('0', controller_port), self.controller_request)
         self.controller.serve_forever()
 
     def controller_request(self, request, client_address, server):

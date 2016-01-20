@@ -15,18 +15,15 @@ RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 10
 
 WORKDIR /app
 
-ADD ./conf/uwsgi /etc/uwsgi
+RUN pip3 install -U setuptools pip wheel virtualenv
+RUN virtualenv -p python3.4 venv
 
-ADD ./requirements/ /app/requirements/
-RUN pip3 install -r requirements/prod.txt
+# cache python packages, unless requirements change
+ADD ./requirements /app/requirements
+RUN venv/bin/pip install -r requirements/docker.txt
 
 ADD . /app
-
-RUN ./manage.py collectstatic --noinput
-
-ADD ./docker_entrypoint.sh /app/docker_entrypoint.sh
-RUN chmod 777 /app/docker_entrypoint.sh
+RUN PYTHON_REQUIREMENTS=requirements/docker.txt ./run.sh update
 
 EXPOSE 8080
-
-CMD /app/docker_entrypoint.sh
+CMD ./run.sh uwsgi

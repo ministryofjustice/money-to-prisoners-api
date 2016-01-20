@@ -7,6 +7,7 @@ print_usage() {
   echo "- serve [port]: run the api server on ${DEFAULT_PORT} or [port]"
   echo "- testserve [port]: run the api server in test mode on ${DEFAULT_PORT} or [port]"
   echo "- test [tests]: run the tests"
+  # there's also a hidden 'uwsgi' action
   echo "- update: update the virtual environment"
   exit 1
 }
@@ -15,6 +16,7 @@ load_defaults() {
   # all constants and default values should be defined here
   DEFAULT_PORT=8000
   DEFAULT_DJANGO_SETTINGS_MODULE=mtp_api.settings
+  DEFAULT_PYTHON_REQUIREMENTS=requirements/dev.txt
 }
 
 make_venv() {
@@ -31,7 +33,11 @@ update_venv() {
   make_venv
   activate_venv
   pip install -U setuptools pip wheel ipython ipdb
-  pip install -r requirements/dev.txt
+  [ -z ${PYTHON_REQUIREMENTS} ] && {
+    PYTHON_REQUIREMENTS=${DEFAULT_PYTHON_REQUIREMENTS}
+  }
+  echo $PYTHON_REQUIREMENTS
+  pip install -r ${PYTHON_REQUIREMENTS}
 }
 
 choose_django_settings() {
@@ -47,6 +53,14 @@ choose_port() {
   }
 }
 
+migrate_db() {
+  python -W default manage.py migrate $@
+}
+
+static_assets() {
+  python -W default manage.py collectstatic $@
+}
+
 start_server() {
   choose_port $1
   # run server
@@ -57,6 +71,10 @@ start_test_server() {
   choose_port $1
   # run test server
   python -W default manage.py testserver --noinput --addrport 0:${PORT} initial_groups test_prisons
+}
+
+start_uwsgi() {
+  uwsgi --ini conf/uwsgi/api.ini $@
 }
 
 run_tests() {
@@ -81,6 +99,14 @@ main() {
     activate_venv
     choose_django_settings
     start_test_server $@
+    ;;
+
+    uwsgi)
+    activate_venv
+    choose_django_settings
+    migrate_db --noinput
+    static_assets --noinput
+    start_uwsgi
     ;;
 
     test)
