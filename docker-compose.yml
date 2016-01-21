@@ -19,7 +19,7 @@ db:
 
 django:
   build: .
-  command: ./run.sh testserve
+  command: make testserve
   volumes:
     # - .:app
     - /tmp/pip_download_cache:/root/.cache/pip
