@@ -15,7 +15,9 @@ from prison.tests.utils import random_prisoner_number, random_prisoner_dob, \
     random_prisoner_name, get_prisoner_location_creator, \
     load_nomis_prisoner_locations
 from transaction.models import Transaction, Log
-from transaction.constants import TRANSACTION_STATUS, LOG_ACTIONS, TRANSACTION_CATEGORY
+from transaction.constants import (
+    TRANSACTION_STATUS, LOG_ACTIONS, TRANSACTION_CATEGORY, PAYMENT_OUTCOME
+)
 
 fake = Faker(locale='en_GB')
 
@@ -48,9 +50,10 @@ def generate_initial_transactions_data(tot=50, prisoner_location_generator=None)
         # societies is instead low, set here to 10%,
         # which is again arbitrary.
         include_prisoner_info = transaction_counter % 5 != 0
-        include_sender_roll_number = transaction_counter % 10 == 0
+        include_sender_roll_number = transaction_counter % 29 == 0
         make_debit_transaction = (transaction_counter + 1) % 5 == 0
         make_non_payment_credit_transaction = transaction_counter % 17 == 0
+        debit_card_payment = transaction_counter % 13 == 0
 
         random_date = now - datetime.timedelta(
             minutes=random.randint(0, 10000)
@@ -72,7 +75,18 @@ def generate_initial_transactions_data(tot=50, prisoner_location_generator=None)
             'modified': random_date,
         }
 
-        if make_non_payment_credit_transaction:
+        if debit_card_payment:
+            data['category'] = TRANSACTION_CATEGORY.ONLINE_CREDIT
+            del data['sender_sort_code']
+            del data['sender_account_number']
+
+            if transaction_counter % 2 == 0:
+                data['payment_outcome'] = PAYMENT_OUTCOME.TAKEN
+            elif transaction_counter % 3 == 0:
+                data['payment_outcome'] = PAYMENT_OUTCOME.PENDING
+            else:
+                data['payment_outcome'] = PAYMENT_OUTCOME.FAILED
+        elif make_non_payment_credit_transaction:
             data['category'] = TRANSACTION_CATEGORY.NON_PAYMENT_CREDIT
             del data['sender_sort_code']
             del data['sender_account_number']
