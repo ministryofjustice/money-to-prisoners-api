@@ -400,14 +400,14 @@ class UpdateRefundTransactionsTestCase(
             )
 
 
-class GetTransactionsAsBankAdminTestCase(
+class GetTransactionsBaseTestCase(
     TransactionRejectsRequestsWithoutPermissionTestMixin,
     BaseTransactionViewTestCase
 ):
     ENDPOINT_VERB = 'get'
 
     def setUp(self):
-        super(GetTransactionsAsBankAdminTestCase, self).setUp()
+        super().setUp()
 
         # delete all transactions and logs
         Transaction.objects.all().delete()
@@ -423,11 +423,14 @@ class GetTransactionsAsBankAdminTestCase(
     def _get_url(self, *args, **kwargs):
         return reverse('bank_admin:transaction-list')
 
-    def _populate_transactions(self, tot=20):
+    def _populate_transactions(self, tot=80):
         return generate_transactions(transaction_batch=tot)
 
     def _get_authorised_user(self):
         return self.bank_admins[0]
+
+
+class GetTransactionsAsBankAdminTestCase(GetTransactionsBaseTestCase):
 
     def _get_with_status(self, user, status_arg):
         url = self._get_url()
@@ -542,34 +545,7 @@ class GetTransactionsAsRefundBankAdminTestCase(GetTransactionsAsBankAdminTestCas
         pass
 
 
-class GetTransactionsRelatedToBatchesTestCase(
-    TransactionRejectsRequestsWithoutPermissionTestMixin,
-    BaseTransactionViewTestCase
-):
-    ENDPOINT_VERB = 'get'
-
-    def setUp(self):
-        super(GetTransactionsRelatedToBatchesTestCase, self).setUp()
-
-        # delete all transactions and logs
-        Transaction.objects.all().delete()
-        Log.objects.all().delete()
-
-        self._populate_transactions()
-
-    def _get_unauthorised_application_users(self):
-        return [
-            self.prison_clerks[0], self.prisoner_location_admins[0]
-        ]
-
-    def _get_url(self, *args, **kwargs):
-        return reverse('bank_admin:transaction-list')
-
-    def _populate_transactions(self, tot=40):
-        return generate_transactions(transaction_batch=tot)
-
-    def _get_authorised_user(self):
-        return self.bank_admins[0]
+class GetTransactionsRelatedToBatchesTestCase(GetTransactionsBaseTestCase):
 
     def test_get_list_for_batch(self):
         url = self._get_url()
@@ -675,34 +651,7 @@ class GetTransactionsRelatedToBatchesTestCase(
             self.assertTrue(trans.id in result_ids)
 
 
-class GetTransactionsFilteredByDateTestCase(
-    TransactionRejectsRequestsWithoutPermissionTestMixin,
-    BaseTransactionViewTestCase
-):
-    ENDPOINT_VERB = 'get'
-
-    def setUp(self):
-        super().setUp()
-
-        # delete all transactions and logs
-        Transaction.objects.all().delete()
-        Log.objects.all().delete()
-
-        self._populate_transactions()
-
-    def _get_unauthorised_application_users(self):
-        return [
-            self.prison_clerks[0], self.prisoner_location_admins[0]
-        ]
-
-    def _get_url(self, *args, **kwargs):
-        return reverse('bank_admin:transaction-list')
-
-    def _populate_transactions(self, tot=80):
-        return generate_transactions(transaction_batch=tot)
-
-    def _get_authorised_user(self):
-        return self.bank_admins[0]
+class GetTransactionsFilteredByDateTestCase(GetTransactionsBaseTestCase):
 
     def test_get_list_received_between_dates(self):
         url = self._get_url()
