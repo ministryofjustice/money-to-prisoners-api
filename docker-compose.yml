@@ -3,19 +3,9 @@
 
 db:
   image: postgres
-  # links:
-  #   - dbdata
-  # volumes_from:
-  #   - dbdata
   environment:
     POSTGRES_USER: postgres
     POSTGRES_PASSWORD: postgres
-
-# dbdata:
-#   image: busybox
-#   command: tail -f /dev/null
-#   volumes:
-#     - /var/lib/postgresql/data
 
 django:
   build: .
