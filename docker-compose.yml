@@ -20,9 +20,6 @@ db:
 django:
   build: .
   command: make testserve
-  volumes:
-    # - .:app
-    - /tmp/pip_download_cache:/root/.cache/pip
   ports:
     - "8000:8000"
     - "8800:8800"
