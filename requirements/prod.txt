@@ -1,5 +1,0 @@
-# Place your production dependencies here
--r base.txt
-
-uWSGI==2.0.10
-raven==5.9.0

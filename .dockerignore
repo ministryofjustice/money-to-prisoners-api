@@ -1,0 +1,16 @@
+# general
+*.DS_Store
+*.py?
+*~
+__pycache__
+
+# editors
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# project
+mtp_api/settings/local.py
+mtp_api/assets/
+static/
+venv/

@@ -1,41 +1,27 @@
+# NB: this is only used for local development
+# see Dockerfile for deployed version
+
 db:
   image: postgres
-  links:
-    - dbdata
-  volumes_from:
-    - dbdata
   environment:
     POSTGRES_USER: postgres
     POSTGRES_PASSWORD: postgres
-  ports:
-    - "5432"
-
-dbdata:
-  image: busybox
-  command: tail -f /dev/null
-  volumes:
-    - /var/lib/postgresql/data
 
 django:
   build: .
-  command: >
-    /bin/bash -c
-    "pip3 install -r requirements/dev.txt &&
-    python manage.py migrate --noinput &&
-    python manage.py load_test_data &&
-    python manage.py runserver 0.0.0.0:8000"
-  volumes:
-    - .:/app
-    - /tmp/pip_download_cache:/tmp/pip_download_cache
+  command: make testserve
   ports:
     - "8000:8000"
+    - "8800:8800"
   links:
     - db
   environment:
-    DB_NAME: postgres
+    ENV: local
+    DEBUG: "True"
+    DJANGO_SECRET_KEY: CHANGE_ME
+    DJANGO_SETTINGS_MODULE: mtp_api.settings.docker
+    DB_NAME: mtp_api
     DB_USERNAME: postgres
     DB_PASSWORD: postgres
-    DB_HOST: db_1
+    DB_HOST: db
     DB_PORT: 5432
-    PIP_DOWNLOAD_CACHE: /tmp/pip_download_cache/
-
