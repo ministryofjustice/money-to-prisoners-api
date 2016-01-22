@@ -78,6 +78,10 @@ update: venv/bin/pip
 	@venv/bin/pip install -U setuptools pip wheel ipython ipdb >$(TASK_OUTPUT_REDIRECTION)
 	@venv/bin/pip install -r $(python_requirements) >$(TASK_OUTPUT_REDIRECTION)
 
+# update environment and collect static files
+.PHONY: build
+build: update static_assets
+
 ##########################
 #### INTERNAL RECIPES ####
 ##########################
