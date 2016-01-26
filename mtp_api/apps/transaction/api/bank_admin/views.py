@@ -18,7 +18,7 @@ from .serializers import CreateTransactionSerializer, \
     UpdateRefundedTransactionSerializer, TransactionSerializer, \
     ReconcileTransactionSerializer
 
-logger = logging.getLogger()
+logger = logging.getLogger('mtp')
 
 
 class TransactionListFilter(django_filters.FilterSet):
