@@ -13,7 +13,7 @@ from django.views.generic import FormView
 
 from .forms import RecreateTestDataForm
 
-logger = logging.getLogger()
+logger = logging.getLogger('mtp')
 
 
 class RecreateTestDataView(FormView):

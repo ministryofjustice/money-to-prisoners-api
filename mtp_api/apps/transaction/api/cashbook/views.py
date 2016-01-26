@@ -31,7 +31,7 @@ from .serializers import TransactionSerializer, \
     IdsTransactionSerializer, LockedTransactionSerializer
 from .permissions import TransactionPermissions
 
-logger = logging.getLogger()
+logger = logging.getLogger('mtp')
 
 
 class StatusChoiceFilter(django_filters.ChoiceFilter):

@@ -5,7 +5,7 @@ from oauth2_provider.oauth2_validators import OAuth2Validator
 
 from .models import ApplicationUserMapping, FailedLoginAttempt
 
-logger = logging.getLogger()
+logger = logging.getLogger('mtp')
 
 
 class LockedOut(Exception):
