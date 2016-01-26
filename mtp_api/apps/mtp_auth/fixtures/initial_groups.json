@@ -52,8 +52,9 @@
   "fields": {
     "name": "SendMoney",
     "permissions": [
-      ["add_transaction", "transaction", "transaction"],
-      ["change_transaction", "transaction", "transaction"]
+      ["view_payment", "payment", "payment"],
+      ["add_payment", "payment", "payment"],
+      ["change_payment", "payment", "payment"]
     ]
   }
 }

@@ -39,6 +39,7 @@ PROJECT_APPS = (
     'transaction',
     'mtp_auth',
     'account',
+    'payment'
 )
 INSTALLED_APPS += PROJECT_APPS
 
