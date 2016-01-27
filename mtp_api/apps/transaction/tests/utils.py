@@ -16,7 +16,7 @@ from prison.tests.utils import random_prisoner_number, random_prisoner_dob, \
     load_nomis_prisoner_locations
 from transaction.models import Transaction, Log
 from transaction.constants import (
-    TRANSACTION_STATUS, LOG_ACTIONS, TRANSACTION_CATEGORY, PAYMENT_OUTCOME
+    TRANSACTION_STATUS, LOG_ACTIONS, TRANSACTION_CATEGORY
 )
 
 fake = Faker(locale='en_GB')
@@ -79,13 +79,6 @@ def generate_initial_transactions_data(tot=50, prisoner_location_generator=None)
             data['category'] = TRANSACTION_CATEGORY.ONLINE_CREDIT
             del data['sender_sort_code']
             del data['sender_account_number']
-
-            if transaction_counter % 2 == 0:
-                data['payment_outcome'] = PAYMENT_OUTCOME.TAKEN
-            elif transaction_counter % 3 == 0:
-                data['payment_outcome'] = PAYMENT_OUTCOME.PENDING
-            else:
-                data['payment_outcome'] = PAYMENT_OUTCOME.FAILED
         elif make_non_payment_credit_transaction:
             data['category'] = TRANSACTION_CATEGORY.NON_PAYMENT_CREDIT
             del data['sender_sort_code']

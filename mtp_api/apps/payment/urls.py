@@ -5,7 +5,7 @@ from rest_framework import routers
 from . import views
 
 router = routers.DefaultRouter()
-router.register(r'transactions', views.TransactionView)
+router.register(r'payments', views.PaymentView)
 
 urlpatterns = [
     url(r'^', include(router.urls)),

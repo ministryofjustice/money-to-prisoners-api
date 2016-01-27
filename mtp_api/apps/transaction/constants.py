@@ -27,13 +27,6 @@ TRANSACTION_CATEGORY = Choices(
 )
 
 
-PAYMENT_OUTCOME = Choices(
-    ('PENDING', 'pending', 'Pending'),
-    ('FAILED', 'failed', 'Failed'),
-    ('TAKEN', 'taken', 'Taken')
-)
-
-
 # max number of transactions a user can lock at any time
 LOCK_LIMIT = 20
 
@@ -46,6 +39,4 @@ LOG_ACTIONS = Choices(
     ('UNCREDITED', 'uncredited', 'Uncredited'),
     ('REFUNDED', 'refunded', 'Refunded'),
     ('RECONCILED', 'reconciled', 'Reconciled'),
-    ('PAYMENT_TAKEN', 'payment_taken', 'Payment Taken'),
-    ('PAYMENT_FAILED', 'payment_failed', 'Payment Failed'),
 )
