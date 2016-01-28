@@ -26,6 +26,9 @@ class Payment(TimeStampedModel):
             ('view_payment', 'Can view payment'),
         )
 
+    def __str__(self):
+        return self.uuid
+
 
 @receiver(pre_save, sender=Payment, dispatch_uid='create_transction_for_payment')
 def create_transaction_for_payment(sender, instance, **kwargs):
