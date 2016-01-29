@@ -8,7 +8,7 @@ from model_utils.models import TimeStampedModel
 
 from prison.models import Prison
 from .constants import (
-    TRANSACTION_STATUS, LOG_ACTIONS, TRANSACTION_CATEGORY
+    TRANSACTION_STATUS, LOG_ACTIONS, TRANSACTION_CATEGORY, TRANSACTION_SOURCE
 )
 from .managers import TransactionQuerySet, LogManager
 from .signals import (
@@ -27,6 +27,7 @@ class Transaction(TimeStampedModel):
 
     amount = models.PositiveIntegerField()
     category = models.CharField(max_length=50, choices=TRANSACTION_CATEGORY)
+    source = models.CharField(max_length=50, choices=TRANSACTION_SOURCE)
 
     sender_sort_code = models.CharField(max_length=50, blank=True)
     sender_account_number = models.CharField(max_length=50, blank=True)
@@ -55,38 +56,43 @@ class Transaction(TimeStampedModel):
             'owner__isnull': False,
             'credited': False,
             'refunded': False,
-            'category__in': [
-                TRANSACTION_CATEGORY.CREDIT,
-                TRANSACTION_CATEGORY.ONLINE_CREDIT
-            ],
+            'category': TRANSACTION_CATEGORY.CREDIT,
+            'source__in': [
+                TRANSACTION_SOURCE.BANK_TRANSFER,
+                TRANSACTION_SOURCE.ONLINE
+            ]
         },
         TRANSACTION_STATUS.AVAILABLE: {
             'prison__isnull': False,
             'owner__isnull': True,
             'credited': False,
             'refunded': False,
-            'category__in': [
-                TRANSACTION_CATEGORY.CREDIT,
-                TRANSACTION_CATEGORY.ONLINE_CREDIT
-            ],
+            'category': TRANSACTION_CATEGORY.CREDIT,
+            'source__in': [
+                TRANSACTION_SOURCE.BANK_TRANSFER,
+                TRANSACTION_SOURCE.ONLINE
+            ]
         },
         TRANSACTION_STATUS.CREDITED: {
             'credited': True,
-            'category__in': [
-                TRANSACTION_CATEGORY.CREDIT,
-                TRANSACTION_CATEGORY.ONLINE_CREDIT
-            ],
+            'category': TRANSACTION_CATEGORY.CREDIT,
+            'source__in': [
+                TRANSACTION_SOURCE.BANK_TRANSFER,
+                TRANSACTION_SOURCE.ONLINE
+            ]
         },
         TRANSACTION_STATUS.REFUNDED: {
             'refunded': True,
-            'category': TRANSACTION_CATEGORY.CREDIT
+            'category': TRANSACTION_CATEGORY.CREDIT,
+            'source': TRANSACTION_SOURCE.BANK_TRANSFER
         },
         TRANSACTION_STATUS.REFUND_PENDING: {
             'prison__isnull': True,
             'owner__isnull': True,
             'credited': False,
             'refunded': False,
-            'category': TRANSACTION_CATEGORY.CREDIT
+            'category': TRANSACTION_CATEGORY.CREDIT,
+            'source': TRANSACTION_SOURCE.BANK_TRANSFER
         },
     }
 
@@ -118,19 +124,28 @@ class Transaction(TimeStampedModel):
     def available(self):
         return (self.prison is not None and self.owner is None and
                 not (self.credited or self.refunded) and
-                self.category == TRANSACTION_CATEGORY.CREDIT)
+                self.category == TRANSACTION_CATEGORY.CREDIT and
+                self.source in [
+                    TRANSACTION_SOURCE.BANK_TRANSFER,
+                    TRANSACTION_SOURCE.ONLINE
+                ])
 
     @property
     def locked(self):
         return (self.owner is not None and
                 not (self.credited or self.refunded) and
-                self.category == TRANSACTION_CATEGORY.CREDIT)
+                self.category == TRANSACTION_CATEGORY.CREDIT and
+                self.source in [
+                    TRANSACTION_SOURCE.BANK_TRANSFER,
+                    TRANSACTION_SOURCE.ONLINE
+                ])
 
     @property
     def refund_pending(self):
         return (self.prison is None and self.owner is None and
                 not (self.credited or self.refunded) and
-                self.category == TRANSACTION_CATEGORY.CREDIT)
+                self.category == TRANSACTION_CATEGORY.CREDIT and
+                self.source == TRANSACTION_SOURCE.BANK_TRANSFER)
 
     def lock(self, by_user):
         self.owner = by_user

@@ -16,7 +16,7 @@ from prison.tests.utils import random_prisoner_number, random_prisoner_dob, \
     load_nomis_prisoner_locations
 from transaction.models import Transaction, Log
 from transaction.constants import (
-    TRANSACTION_STATUS, LOG_ACTIONS, TRANSACTION_CATEGORY
+    TRANSACTION_STATUS, LOG_ACTIONS, TRANSACTION_CATEGORY, TRANSACTION_SOURCE
 )
 
 fake = Faker(locale='en_GB')
@@ -63,6 +63,7 @@ def generate_initial_transactions_data(tot=50, prisoner_location_generator=None)
         ).replace(tzinfo=timezone.get_current_timezone())
 
         data = {
+            'category': TRANSACTION_CATEGORY.CREDIT,
             'amount': random.randint(1000, 30000),
             'received_at': midnight_random_date,
             'sender_sort_code': get_random_string(6, '1234567890'),
@@ -76,18 +77,19 @@ def generate_initial_transactions_data(tot=50, prisoner_location_generator=None)
         }
 
         if debit_card_payment:
-            data['category'] = TRANSACTION_CATEGORY.ONLINE_CREDIT
+            data['source'] = TRANSACTION_SOURCE.ONLINE
             del data['sender_sort_code']
             del data['sender_account_number']
         elif make_non_payment_credit_transaction:
-            data['category'] = TRANSACTION_CATEGORY.NON_PAYMENT_CREDIT
+            data['source'] = TRANSACTION_SOURCE.ADMINISTRATIVE
             del data['sender_sort_code']
             del data['sender_account_number']
         elif make_debit_transaction:
+            data['source'] = TRANSACTION_SOURCE.ADMINISTRATIVE
             data['category'] = TRANSACTION_CATEGORY.DEBIT
             data['reference'] = 'Payment refunded'
         else:
-            data['category'] = TRANSACTION_CATEGORY.CREDIT
+            data['source'] = TRANSACTION_SOURCE.BANK_TRANSFER
 
             if include_prisoner_info:
                 if prisoner_location_generator:

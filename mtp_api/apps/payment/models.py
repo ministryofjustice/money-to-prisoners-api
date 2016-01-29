@@ -6,7 +6,7 @@ from django.dispatch import receiver
 from model_utils.models import TimeStampedModel
 
 from transaction.models import Transaction
-from transaction.constants import TRANSACTION_CATEGORY
+from transaction.constants import TRANSACTION_CATEGORY, TRANSACTION_SOURCE
 from transaction.signals import transaction_created, transaction_prisons_need_updating
 from .constants import PAYMENT_STATUS
 
@@ -26,6 +26,9 @@ class Payment(TimeStampedModel):
             ('view_payment', 'Can view payment'),
         )
 
+    def __str__(self):
+        return self.uuid
+
 
 @receiver(pre_save, sender=Payment, dispatch_uid='create_transction_for_payment')
 def create_transaction_for_payment(sender, instance, **kwargs):
@@ -34,7 +37,8 @@ def create_transaction_for_payment(sender, instance, **kwargs):
         transaction.prisoner_number = instance.prisoner_number
         transaction.prisoner_dob = instance.prisoner_dob
         transaction.amount = instance.amount
-        transaction.category = TRANSACTION_CATEGORY.ONLINE_CREDIT
+        transaction.category = TRANSACTION_CATEGORY.CREDIT
+        transaction.source = TRANSACTION_SOURCE.ONLINE
         transaction.received_at = instance.modified
         transaction.save()
 

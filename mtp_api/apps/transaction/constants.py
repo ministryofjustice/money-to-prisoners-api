@@ -21,9 +21,13 @@ TRANSACTION_STATUS = Choices(
 
 TRANSACTION_CATEGORY = Choices(
     ('DEBIT', 'debit', 'Debit'),
-    ('CREDIT', 'credit', 'Credit'),
-    ('NON_PAYMENT_CREDIT', 'non_payment_credit', 'Non-payment credit'),
-    ('ONLINE_CREDIT', 'online_credit', 'Online credit')
+    ('CREDIT', 'credit', 'Credit')
+)
+
+TRANSACTION_SOURCE = Choices(
+    ('BANK_TRANSFER', 'bank_transfer', 'Bank transfer'),
+    ('ADMINISTRATIVE', 'administrative', 'Administrative'),
+    ('ONLINE', 'online', 'Online')
 )
 
 

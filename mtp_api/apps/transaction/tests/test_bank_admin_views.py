@@ -8,7 +8,7 @@ from rest_framework import status as http_status
 
 from account.models import Batch
 from transaction.models import Transaction, Log
-from transaction.constants import LOG_ACTIONS, TRANSACTION_CATEGORY
+from transaction.constants import LOG_ACTIONS, TRANSACTION_CATEGORY, TRANSACTION_SOURCE
 from transaction.api.bank_admin.serializers import CreateTransactionSerializer
 from .utils import generate_initial_transactions_data, generate_transactions
 from .test_base import BaseTransactionViewTestCase, \
@@ -112,10 +112,10 @@ class CreateTransactionsTestCase(
             Transaction.objects.filter(**data_list[0]).count(), 1
         )
 
-    def test_create_with_non_payment_credit_category(self):
+    def test_create_with_administrative_source(self):
         user = self.bank_admins[0]
         data_list = self._get_transactions_data()
-        data_list[0]['category'] = TRANSACTION_CATEGORY.NON_PAYMENT_CREDIT
+        data_list[0]['source'] = TRANSACTION_SOURCE.ADMINISTRATIVE
 
         response = self.client.post(
             self._get_url(), data=data_list, format='json',
