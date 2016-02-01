@@ -221,14 +221,16 @@ class Transaction(TimeStampedModel):
         return log_action.created
 
     def populate_ref_code(self):
-        if self.category == TRANSACTION_CATEGORY.CREDIT:
+        if (self.category == TRANSACTION_CATEGORY.CREDIT and
+                self.source == TRANSACTION_SOURCE.BANK_TRANSFER):
             code_date = self.received_at.replace(hour=0, minute=0,
                                                  second=0, microsecond=0)
             qs = Transaction.objects.filter(
                 received_at__gte=code_date,
                 received_at__lt=code_date + timedelta(days=1),
                 ref_code__isnull=False,
-                category=TRANSACTION_CATEGORY.CREDIT
+                category=TRANSACTION_CATEGORY.CREDIT,
+                source=TRANSACTION_SOURCE.BANK_TRANSFER
             ).aggregate(models.Max('ref_code'))
 
             if qs and qs.get('ref_code__max'):
