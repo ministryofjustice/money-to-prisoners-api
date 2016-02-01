@@ -141,7 +141,10 @@ class CreateTransactionsTestCase(
         for trans in qs:
             self.assertEqual(trans.ref_code, None)
 
-        qs = Transaction.objects.filter(category=TRANSACTION_CATEGORY.CREDIT)
+        qs = Transaction.objects.filter(
+            category=TRANSACTION_CATEGORY.CREDIT,
+            source=TRANSACTION_SOURCE.BANK_TRANSFER
+        )
         grouped = sorted(qs, key=lambda t: t.received_at.date())
         results = []
         last_date = None
