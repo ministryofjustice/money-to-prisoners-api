@@ -28,10 +28,16 @@ class TransactionAdmin(admin.ModelAdmin):
     ordering = ('-received_at',)
     readonly_fields = ('credited', 'refunded', 'reconciled')
     inlines = (LogAdminInline,)
-    list_filter = ('credited', 'refunded', 'reconciled',
-                   ('prison', RelatedAnyFieldListFilter),
-                   ('received_at', DateRangeFilter),
-                   ('owner__username', ExactSearchFilter))
+    list_filter = (
+        'credited',
+        'refunded',
+        'reconciled',
+        ('prison', RelatedAnyFieldListFilter),
+        'category',
+        'source',
+        ('received_at', DateRangeFilter),
+        ('owner__username', ExactSearchFilter)
+    )
     actions = [
         'display_total_amount', 'display_reference_validity',
         'display_resolution_time'

@@ -1,4 +1,4 @@
-from datetime import datetime, date, timedelta, time
+from datetime import datetime, timedelta, time
 from unittest import mock
 
 from django.utils import timezone
@@ -661,8 +661,8 @@ class GetTransactionsFilteredByDateTestCase(GetTransactionsBaseTestCase):
         user = self._get_authorised_user()
 
         response = self.client.get(
-            url, {'received_at__lt': date.today(),
-                  'received_at__gte': date.today() - timedelta(days=2),
+            url, {'received_at__lt': self._get_latest_date(),
+                  'received_at__gte': self._get_latest_date() - timedelta(days=2),
                   'limit': 1000}, format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
@@ -670,11 +670,11 @@ class GetTransactionsFilteredByDateTestCase(GetTransactionsBaseTestCase):
 
         results = response.data['results']
         result_ids = [t['id'] for t in results]
-        today = datetime.combine(date.today(), time.min).replace(
+        yesterday = datetime.combine(self._get_latest_date(), time.min).replace(
             tzinfo=timezone.get_current_timezone())
         received_between_dates = Transaction.objects.filter(
-            received_at__lt=today,
-            received_at__gte=(today - timedelta(days=2))
+            received_at__lt=yesterday,
+            received_at__gte=(yesterday - timedelta(days=2))
         )
         self.assertEquals(len(result_ids), len(received_between_dates))
 
@@ -735,19 +735,19 @@ class ReconcileTransactionsTestCase(
         user = self._get_authorised_user()
 
         response = self.client.post(
-            url, {'date': date.today().isoformat()}, format='json',
+            url, {'date': self._get_latest_date().isoformat()}, format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
         self.assertEqual(response.status_code, http_status.HTTP_204_NO_CONTENT)
 
-        today = datetime.combine(date.today(), time.min).replace(
+        yesterday = datetime.combine(self._get_latest_date(), time.min).replace(
             tzinfo=timezone.get_current_timezone())
-        transactions_today = Transaction.objects.filter(
-            received_at__lt=today + timedelta(days=1),
-            received_at__gte=today
+        transactions_yesterday = Transaction.objects.filter(
+            received_at__lt=yesterday + timedelta(days=1),
+            received_at__gte=yesterday
         )
 
-        for transaction in transactions_today:
+        for transaction in transactions_yesterday:
             self.assertTrue(transaction.reconciled)
 
     def test_no_date_returns_bad_request(self):

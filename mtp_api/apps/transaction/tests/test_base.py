@@ -11,7 +11,7 @@ from prison.models import Prison
 from transaction.models import Transaction
 from transaction.constants import TRANSACTION_STATUS
 
-from .utils import generate_transactions
+from .utils import generate_transactions, latest_transaction_date
 
 
 class BaseTransactionViewTestCase(AuthTestCaseMixin, APITestCase):
@@ -35,6 +35,7 @@ class BaseTransactionViewTestCase(AuthTestCaseMixin, APITestCase):
             self.send_money_users,
         ) = make_test_users(clerks_per_prison=2)
 
+        self.latest_transaction_date = latest_transaction_date()
         self.transactions = generate_transactions(
             transaction_batch=self.transaction_batch
         )
@@ -61,6 +62,9 @@ class BaseTransactionViewTestCase(AuthTestCaseMixin, APITestCase):
         return Transaction.objects.filter(
             owner=user, credited=True, prison__in=prisons
         )
+
+    def _get_latest_date(self):
+        return self.latest_transaction_date.date()
 
 
 class TransactionRejectsRequestsWithoutPermissionTestMixin(object):

@@ -90,6 +90,10 @@ class Command(BaseCommand):
                 use_test_nomis_prisoners=True,
                 predetermined_transactions=True,
                 only_new_transactions=True,
+                consistent_history=True,
+                include_debits=False,
+                include_administrative_credits=False,
+                include_online_payments=False
             )
 
     def handle_prod(self, **options):
