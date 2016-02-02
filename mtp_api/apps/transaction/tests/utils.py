@@ -35,10 +35,20 @@ def random_reference(prisoner_number=None, prisoner_dob=None):
     )
 
 
-def generate_initial_transactions_data(tot=50, prisoner_location_generator=None):
-    data_list = []
+def latest_transaction_date():
+    latest_transaction_date = timezone.now().replace(microsecond=0) - datetime.timedelta(days=1)
+    while latest_transaction_date.weekday() > 4:
+        latest_transaction_date = latest_transaction_date - datetime.timedelta(days=1)
+    return latest_transaction_date
 
-    now = timezone.now().replace(microsecond=0)
+
+def generate_initial_transactions_data(
+        tot=50,
+        prisoner_location_generator=None,
+        include_debits=True,
+        include_administrative_credits=True,
+        include_online_payments=True):
+    data_list = []
 
     for transaction_counter in range(1, tot + 1):
         # Records might not have prisoner data and/or might not
@@ -51,11 +61,17 @@ def generate_initial_transactions_data(tot=50, prisoner_location_generator=None)
         # which is again arbitrary.
         include_prisoner_info = transaction_counter % 5 != 0
         include_sender_roll_number = transaction_counter % 29 == 0
-        make_debit_transaction = (transaction_counter + 1) % 5 == 0
-        make_non_payment_credit_transaction = transaction_counter % 17 == 0
-        debit_card_payment = transaction_counter % 13 == 0
+        make_debit_transaction = (
+            include_debits and (transaction_counter + 1) % 5 == 0
+        )
+        make_administrative_credit_transaction = (
+            include_administrative_credits and transaction_counter % 17 == 0
+        )
+        make_online_payment = (
+            include_online_payments and transaction_counter % 13 == 0
+        )
 
-        random_date = now - datetime.timedelta(
+        random_date = latest_transaction_date() - datetime.timedelta(
             minutes=random.randint(0, 10000)
         )
         midnight_random_date = datetime.datetime.combine(
@@ -76,11 +92,11 @@ def generate_initial_transactions_data(tot=50, prisoner_location_generator=None)
             'modified': random_date,
         }
 
-        if debit_card_payment:
+        if make_online_payment:
             data['source'] = TRANSACTION_SOURCE.ONLINE
             del data['sender_sort_code']
             del data['sender_account_number']
-        elif make_non_payment_credit_transaction:
+        elif make_administrative_credit_transaction:
             data['source'] = TRANSACTION_SOURCE.ADMINISTRATIVE
             del data['sender_sort_code']
             del data['sender_account_number']
@@ -187,6 +203,10 @@ def generate_transactions(
     use_test_nomis_prisoners=False,
     predetermined_transactions=False,
     only_new_transactions=False,
+    consistent_history=False,
+    include_debits=True,
+    include_administrative_credits=True,
+    include_online_payments=True
 ):
     if use_test_nomis_prisoners:
         prisoner_location_generator = cycle(load_nomis_prisoner_locations())
@@ -195,6 +215,9 @@ def generate_transactions(
     data_list = generate_initial_transactions_data(
         tot=transaction_batch,
         prisoner_location_generator=prisoner_location_generator,
+        include_debits=include_debits,
+        include_administrative_credits=include_administrative_credits,
+        include_online_payments=include_online_payments
     )
 
     location_creator = get_prisoner_location_creator()
@@ -205,9 +228,21 @@ def generate_transactions(
         owner_status_chooser = get_owner_and_status_chooser()
 
     transactions = []
-    gen_transaction = partial(generate_transaction, location_creator, owner_status_chooser)
+    if consistent_history:
+        create_transaction = partial(
+            setup_historical_transaction,
+            location_creator,
+            owner_status_chooser,
+            latest_transaction_date()
+        )
+    else:
+        create_transaction = partial(
+            setup_transaction,
+            location_creator,
+            owner_status_chooser
+        )
     for transaction_counter, data in enumerate(data_list, start=1):
-        new_transaction = gen_transaction(transaction_counter, data)
+        new_transaction = create_transaction(transaction_counter, data)
         transactions.append(new_transaction)
 
     if predetermined_transactions:
@@ -222,8 +257,45 @@ def generate_transactions(
     return transactions
 
 
-def generate_transaction(location_creator, owner_status_chooser,
-                         transaction_counter, data):
+def setup_historical_transaction(location_creator, owner_status_chooser,
+                                 end_date, transaction_counter, data):
+    if (data['category'] == TRANSACTION_CATEGORY.CREDIT and
+            data['source'] == TRANSACTION_SOURCE.BANK_TRANSFER):
+        is_valid, prisoner_location = location_creator(
+            data.get('prisoner_name'), data.get('prisoner_number'),
+            data.get('prisoner_dob'), data.get('prison'),
+        )
+
+        is_most_recent = data['received_at'].date() == end_date.date()
+        if is_valid:
+            prison = prisoner_location.prison
+            owner, status = owner_status_chooser(prison)
+            data['prison'] = prison
+            if is_most_recent:
+                data.update({
+                    'owner': None,
+                    'credited': False
+                })
+            else:
+                data.update({
+                    'owner': owner,
+                    'credited': True
+                })
+        else:
+            if is_most_recent:
+                data.update({'refunded': False})
+            else:
+                data.update({'refunded': True})
+
+    with MockModelTimestamps(data['created'], data['modified']):
+        new_transaction = Transaction.objects.create(**data)
+        new_transaction.populate_ref_code()
+
+    return new_transaction
+
+
+def setup_transaction(location_creator, owner_status_chooser,
+                      transaction_counter, data):
     if data['category'] == TRANSACTION_CATEGORY.CREDIT:
         is_valid, prisoner_location = location_creator(
             data.get('prisoner_name'), data.get('prisoner_number'),

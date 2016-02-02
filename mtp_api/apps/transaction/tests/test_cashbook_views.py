@@ -336,21 +336,21 @@ class TransactionListWithReceivedAtFilterTestCase(TransactionListTestCase):
     def _format_date(self, date):
         return format_date(date, 'Y-m-d')
 
-    def test_filter_received_at_today(self):
+    def test_filter_received_at_yesterday(self):
         """
-        Returns all transactions received today
+        Returns all transactions received yesterday
         """
-        today = timezone.now().date()
+        yesterday = self._get_latest_date()
         self._test_response_with_filters(filters={
-            'received_at_0': self._format_date(today),
-            'received_at_1': self._format_date(today),
+            'received_at_0': self._format_date(yesterday),
+            'received_at_1': self._format_date(yesterday),
         })
 
     def test_filter_received_since_five_days_ago(self):
         """
         Returns all transactions received since 5 days ago
         """
-        five_days_ago = timezone.now().date() - datetime.timedelta(days=5)
+        five_days_ago = self._get_latest_date() - datetime.timedelta(days=5)
         self._test_response_with_filters(filters={
             'received_at_0': self._format_date(five_days_ago),
         })
@@ -359,7 +359,7 @@ class TransactionListWithReceivedAtFilterTestCase(TransactionListTestCase):
         """
         Returns all transactions received until 5 days ago
         """
-        five_days_ago = timezone.now().date() - datetime.timedelta(days=5)
+        five_days_ago = self._get_latest_date() - datetime.timedelta(days=5)
         self._test_response_with_filters(filters={
             'received_at_1': self._format_date(five_days_ago),
         })
