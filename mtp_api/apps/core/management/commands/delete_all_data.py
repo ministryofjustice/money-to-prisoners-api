@@ -4,7 +4,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management import BaseCommand, CommandError
 
-from account.models import Batch
+from account.models import Batch, Balance
 from prison.models import Prison, PrisonerLocation
 from transaction.models import Transaction
 
@@ -43,6 +43,7 @@ class Command(BaseCommand):
 
         if not protect_transactions:
             print_message('Deleting all transactions')
+            Balance.objects.all().delete()
             Batch.objects.all().delete()
             Transaction.objects.all().delete()
 
