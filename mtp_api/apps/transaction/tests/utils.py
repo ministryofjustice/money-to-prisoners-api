@@ -74,10 +74,7 @@ def generate_initial_transactions_data(
         random_date = latest_transaction_date() - datetime.timedelta(
             minutes=random.randint(0, 10000)
         )
-        midnight_random_date = datetime.datetime.combine(
-            random_date.date(), datetime.time.min
-        ).replace(tzinfo=timezone.get_current_timezone())
-
+        midnight_random_date = random_date.replace(hour=0, minute=0, second=0)
         data = {
             'category': TRANSACTION_CATEGORY.CREDIT,
             'amount': random.randint(1000, 30000),
@@ -153,7 +150,7 @@ def generate_predetermined_transactions_data():
     over_a_week_ago = now - datetime.timedelta(days=8)
     a_week_ago = over_a_week_ago + datetime.timedelta(days=1)
     data = {
-        'received_at': over_a_week_ago,
+        'received_at': over_a_week_ago.replace(hour=0, minute=0, second=0),
         'created': over_a_week_ago,
         'modified': a_week_ago,
         'owner': None,
