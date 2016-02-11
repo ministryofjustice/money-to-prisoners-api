@@ -124,7 +124,7 @@ class ReconcileTransactionsView(generics.GenericAPIView):
 
         try:
             parsed_date = datetime.strptime(date, '%Y-%m-%d').replace(
-                tzinfo=timezone.get_current_timezone())
+                tzinfo=timezone.utc)
         except ValueError:
             return Response(data={'errors': _("Invalid date format")},
                             status=400)

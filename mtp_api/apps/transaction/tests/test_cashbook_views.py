@@ -106,7 +106,7 @@ class TransactionListTestCase(
             for date_format in settings.DATE_INPUT_FORMATS:
                 try:
                     date = datetime.datetime.strptime(date, date_format)
-                    return date.replace(tzinfo=timezone.get_current_timezone())
+                    return date.replace(tzinfo=timezone.utc)
                 except (ValueError, TypeError):
                     continue
             raise ValueError('Cannot parse date %s' % date)
@@ -116,11 +116,11 @@ class TransactionListTestCase(
         received_at_1 = (parse_date(received_at_1) + datetime.timedelta(days=1)) if received_at_1 else None
 
         if received_at_0 and received_at_1:
-            return lambda t: received_at_0 <= t.received_at < received_at_1
+            return lambda t: received_at_0 <= t.received_at <= received_at_1
         elif received_at_0:
             return lambda t: received_at_0 <= t.received_at
         elif received_at_1:
-            return lambda t: t.received_at < received_at_1
+            return lambda t: t.received_at <= received_at_1
         return noop_checker
 
     def _get_search_checker(self, filters, noop_checker):
