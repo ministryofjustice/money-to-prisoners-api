@@ -10,6 +10,8 @@ from django.contrib.auth.models import User
 from faker import Faker
 
 from core.tests.utils import MockModelTimestamps
+from payment.models import Payment
+from payment.constants import PAYMENT_STATUS
 from prison.models import Prison, PrisonerLocation
 from prison.tests.utils import random_prisoner_number, random_prisoner_dob, \
     random_prisoner_name, get_prisoner_location_creator, \
@@ -93,6 +95,15 @@ def generate_initial_transactions_data(
             data['source'] = TRANSACTION_SOURCE.ONLINE
             del data['sender_sort_code']
             del data['sender_account_number']
+
+            if prisoner_location_generator:
+                data.update(next(prisoner_location_generator))
+            else:
+                data.update({
+                    'prisoner_name': random_prisoner_name(),
+                    'prisoner_number': random_prisoner_number(),
+                    'prisoner_dob': random_prisoner_dob(),
+                })
         elif make_administrative_credit_transaction:
             data['source'] = TRANSACTION_SOURCE.ADMINISTRATIVE
             del data['sender_sort_code']
@@ -329,6 +340,17 @@ def setup_transaction(location_creator, owner_status_chooser,
     with MockModelTimestamps(data['created'], data['modified']):
         new_transaction = Transaction.objects.create(**data)
         new_transaction.populate_ref_code()
+
+    if data['source'] == TRANSACTION_SOURCE.ONLINE:
+        payment = Payment()
+        payment.transaction = new_transaction
+        payment.status = PAYMENT_STATUS.TAKEN
+        payment.amount = new_transaction.amount
+        payment.prisoner_number = new_transaction.prisoner_number
+        payment.prisoner_dob = new_transaction.prisoner_dob
+        payment.processor_id = random.randint(100, 1000)
+        payment.recipient_name = new_transaction.prisoner_name
+        payment.save()
 
     return new_transaction
 
