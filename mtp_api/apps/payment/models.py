@@ -19,7 +19,7 @@ class Payment(TimeStampedModel):
     recipient_name = models.CharField(max_length=250, null=True, blank=True)
     prisoner_number = models.CharField(max_length=250)
     prisoner_dob = models.DateField()
-    transaction = models.ForeignKey(Transaction, on_delete=models.CASCADE, null=True)
+    transaction = models.OneToOneField(Transaction, on_delete=models.CASCADE, null=True)
 
     class Meta:
         permissions = (
@@ -27,7 +27,7 @@ class Payment(TimeStampedModel):
         )
 
     def __str__(self):
-        return self.uuid
+        return str(self.uuid)
 
 
 @receiver(pre_save, sender=Payment, dispatch_uid='create_transction_for_payment')
