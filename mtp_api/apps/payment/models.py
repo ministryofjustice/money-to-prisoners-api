@@ -16,6 +16,7 @@ class Payment(TimeStampedModel):
     status = models.CharField(max_length=50, choices=PAYMENT_STATUS, default=PAYMENT_STATUS.PENDING)
     processor_id = models.CharField(max_length=250, null=True)
     amount = models.PositiveIntegerField()
+    service_charge = models.PositiveIntegerField(default=0)
     recipient_name = models.CharField(max_length=250, null=True, blank=True)
     prisoner_number = models.CharField(max_length=250)
     prisoner_dob = models.DateField()
