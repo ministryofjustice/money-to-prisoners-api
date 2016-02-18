@@ -1,10 +1,12 @@
 from django.contrib.auth.models import User
+from django.db.transaction import atomic
 from django.http import Http404
-
+from django.utils.translation import ugettext_lazy as _
+from rest_framework import viewsets, mixins, generics
 from rest_framework.permissions import IsAuthenticated
-from rest_framework import viewsets, mixins
+from rest_framework.response import Response
 
-from .serializers import UserSerializer
+from .serializers import UserSerializer, ChangePasswordSerializer
 
 
 class UserViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
@@ -25,3 +27,30 @@ class UserViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
             raise Http404()
 
         return super(UserViewSet, self).get_object(*args, **kwargs)
+
+
+class ChangePasswordView(generics.GenericAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = ChangePasswordSerializer
+
+    @atomic
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            old_password = serializer.validated_data['old_password']
+            new_password = serializer.validated_data['new_password']
+
+            if request.user.check_password(old_password):
+                request.user.set_password(new_password)
+                request.user.save()
+                return Response(status=204)
+            else:
+                return Response(
+                    data={'errors': _('Old password was incorrect.')},
+                    status=400
+                )
+        else:
+            return Response(
+                data=serializer.errors,
+                status=400,
+            )

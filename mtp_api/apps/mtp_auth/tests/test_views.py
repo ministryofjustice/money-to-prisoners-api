@@ -262,3 +262,41 @@ class AccountLockoutTestCase(APITestCase):
 
         self.assertTrue(FailedLoginAttempt.objects.is_locked_out(prison_clerk, bank_admin_client))
         self.assertFalse(FailedLoginAttempt.objects.is_locked_out(prison_clerk, cashbook_client))
+
+
+class ChangePasswordTestCase(APITestCase):
+    fixtures = [
+        'initial_groups.json',
+        'test_prisons.json'
+    ]
+
+    def setUp(self):
+        super().setUp()
+        self.user = make_test_users()[0][0]
+        self.current_password = self.user.username
+
+    def test_change_password(self):
+        new_password = 'fresh'
+        self.client.force_authenticate(user=self.user)
+        self.client.post(
+            reverse('user-change-password'),
+            {'old_password': self.current_password, 'new_password': new_password}
+        )
+        self.assertTrue(self.user.check_password(new_password))
+
+    def test_requires_auth(self):
+        response = self.client.post(
+            reverse('user-change-password'),
+            {'old_password': self.current_password, 'new_password': 'fresh'}
+        )
+        self.assertEqual(response.status_code, 401)
+        self.assertTrue(self.user.check_password(self.current_password))
+
+    def test_fails_with_incorrect_old_password(self):
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(
+            reverse('user-change-password'),
+            {'old_password': 'wrong', 'new_password': 'fresh'}
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(self.user.check_password(self.current_password))

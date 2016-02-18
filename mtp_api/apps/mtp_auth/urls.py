@@ -8,4 +8,6 @@ router.register(r'users', views.UserViewSet)
 
 urlpatterns = [
     url(r'^', include(router.urls)),
+    url(r'^change_password/$', views.ChangePasswordView.as_view(),
+        name='user-change-password'),
 ]
