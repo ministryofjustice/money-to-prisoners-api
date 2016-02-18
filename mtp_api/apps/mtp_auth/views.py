@@ -6,6 +6,7 @@ from rest_framework import viewsets, mixins, generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from .models import FailedLoginAttempt
 from .serializers import UserSerializer, ChangePasswordSerializer
 
 
@@ -40,15 +41,21 @@ class ChangePasswordView(generics.GenericAPIView):
             old_password = serializer.validated_data['old_password']
             new_password = serializer.validated_data['new_password']
 
-            if request.user.check_password(old_password):
-                request.user.set_password(new_password)
-                request.user.save()
-                return Response(status=204)
-            else:
-                return Response(
-                    data={'errors': _('Old password was incorrect.')},
-                    status=400
-                )
+            if not FailedLoginAttempt.objects.is_locked_out(
+                    request.user, request.auth.application):
+                if request.user.check_password(old_password):
+                    FailedLoginAttempt.objects.delete_failed_attempts(
+                        request.user, request.auth.application)
+                    request.user.set_password(new_password)
+                    request.user.save()
+                    return Response(status=204)
+                else:
+                    FailedLoginAttempt.objects.add_failed_attempt(
+                        request.user, request.auth.application)
+            return Response(
+                data={'errors': _('Old password was incorrect.')},
+                status=400
+            )
         else:
             return Response(
                 data=serializer.errors,
