@@ -287,19 +287,20 @@ class ChangePasswordTestCase(APITestCase, AuthTestCaseMixin):
     def incorrect_password_attempt(self):
         return self.client.post(
             reverse('user-change-password'),
-            {'old_password': 'wrong', 'new_password': 'fresh'},
+            {'old_password': 'wrong', 'new_password': 'freshpass'},
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.user)
         )
 
     def test_change_password(self):
-        new_password = 'fresh'
-        self.correct_password_change(new_password)
+        new_password = 'freshpass'
+        response = self.correct_password_change(new_password)
+        self.assertEqual(response.status_code, 204)
         self.assertTrue(User.objects.get(pk=self.user.pk).check_password(new_password))
 
     def test_requires_auth(self):
         response = self.client.post(
             reverse('user-change-password'),
-            {'old_password': self.current_password, 'new_password': 'fresh'}
+            {'old_password': self.current_password, 'new_password': 'freshpass'}
         )
         self.assertEqual(response.status_code, 401)
         self.assertTrue(self.user.check_password(self.current_password))

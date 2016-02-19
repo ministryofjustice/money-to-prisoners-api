@@ -1,5 +1,7 @@
+from django.contrib.auth import password_validation
 from django.contrib.auth.models import User
 from django.db.transaction import atomic
+from django.forms import ValidationError
 from django.http import Http404
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import viewsets, mixins, generics
@@ -41,23 +43,26 @@ class ChangePasswordView(generics.GenericAPIView):
             old_password = serializer.validated_data['old_password']
             new_password = serializer.validated_data['new_password']
 
-            if not FailedLoginAttempt.objects.is_locked_out(
-                    request.user, request.auth.application):
-                if request.user.check_password(old_password):
-                    FailedLoginAttempt.objects.delete_failed_attempts(
-                        request.user, request.auth.application)
-                    request.user.set_password(new_password)
-                    request.user.save()
-                    return Response(status=204)
-                else:
-                    FailedLoginAttempt.objects.add_failed_attempt(
-                        request.user, request.auth.application)
-            return Response(
-                data={'errors': _('Old password was incorrect.')},
-                status=400
-            )
+            try:
+                if not FailedLoginAttempt.objects.is_locked_out(
+                        request.user, request.auth.application):
+                    if request.user.check_password(old_password):
+                        FailedLoginAttempt.objects.delete_failed_attempts(
+                            request.user, request.auth.application)
+                        password_validation.validate_password(new_password, request.user)
+                        request.user.set_password(new_password)
+                        request.user.save()
+                        return Response(status=204)
+                    else:
+                        FailedLoginAttempt.objects.add_failed_attempt(
+                            request.user, request.auth.application)
+                errors = {'old_password': [_('Your old password was entered incorrectly. '
+                                             'Please enter it again.')]},
+            except ValidationError as e:
+                errors = {'new_password': e.error_list}
         else:
-            return Response(
-                data=serializer.errors,
-                status=400,
-            )
+            errors = serializer.errors
+        return Response(
+            data={'errors': errors},
+            status=400,
+        )
