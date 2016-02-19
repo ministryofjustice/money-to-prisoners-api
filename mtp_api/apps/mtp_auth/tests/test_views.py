@@ -2,6 +2,7 @@ import datetime
 from unittest import mock
 
 from django.conf import settings
+from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 from django.utils.timezone import now
 from oauth2_provider.models import Application
@@ -13,6 +14,7 @@ from mtp_auth.constants import BANK_ADMIN_OAUTH_CLIENT_ID, CASHBOOK_OAUTH_CLIENT
     PRISONER_LOCATION_OAUTH_CLIENT_ID
 from mtp_auth.models import FailedLoginAttempt
 from prison.models import Prison
+from .utils import AuthTestCaseMixin
 
 
 class UserViewTestCase(APITestCase):
@@ -262,3 +264,78 @@ class AccountLockoutTestCase(APITestCase):
 
         self.assertTrue(FailedLoginAttempt.objects.is_locked_out(prison_clerk, bank_admin_client))
         self.assertFalse(FailedLoginAttempt.objects.is_locked_out(prison_clerk, cashbook_client))
+
+
+class ChangePasswordTestCase(APITestCase, AuthTestCaseMixin):
+    fixtures = [
+        'initial_groups.json',
+        'test_prisons.json'
+    ]
+
+    def setUp(self):
+        super().setUp()
+        self.user = make_test_users()[0][0]
+        self.current_password = self.user.username
+
+    def correct_password_change(self, new_password):
+        return self.client.post(
+            reverse('user-change-password'),
+            {'old_password': self.current_password, 'new_password': new_password},
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.user)
+        )
+
+    def incorrect_password_attempt(self):
+        return self.client.post(
+            reverse('user-change-password'),
+            {'old_password': 'wrong', 'new_password': 'freshpass'},
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.user)
+        )
+
+    def test_change_password(self):
+        new_password = 'freshpass'
+        response = self.correct_password_change(new_password)
+        self.assertEqual(response.status_code, 204)
+        self.assertTrue(User.objects.get(pk=self.user.pk).check_password(new_password))
+
+    def test_requires_auth(self):
+        response = self.client.post(
+            reverse('user-change-password'),
+            {'old_password': self.current_password, 'new_password': 'freshpass'}
+        )
+        self.assertEqual(response.status_code, 401)
+        self.assertTrue(self.user.check_password(self.current_password))
+
+    def test_fails_with_incorrect_old_password(self):
+        response = self.incorrect_password_attempt()
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(self.user.check_password(self.current_password))
+
+    def test_account_lockout_on_too_many_attempts(self):
+        cashbook_client = Application.objects.get(client_id=CASHBOOK_OAUTH_CLIENT_ID)
+
+        for _ in range(settings.MTP_AUTH_LOCKOUT_COUNT):
+            self.assertFalse(FailedLoginAttempt.objects.is_locked_out(self.user, cashbook_client))
+            self.incorrect_password_attempt()
+
+        self.assertTrue(FailedLoginAttempt.objects.is_locked_out(self.user, cashbook_client))
+        response = self.correct_password_change('new_password')
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(self.user.check_password(self.current_password))
+
+    def test_account_lockout_removed_on_successful_change(self):
+        if not settings.MTP_AUTH_LOCKOUT_COUNT:
+            return
+
+        cashbook_client = Application.objects.get(client_id=CASHBOOK_OAUTH_CLIENT_ID)
+
+        for _ in range(settings.MTP_AUTH_LOCKOUT_COUNT - 1):
+            self.assertFalse(FailedLoginAttempt.objects.is_locked_out(self.user, cashbook_client))
+            self.incorrect_password_attempt()
+
+        self.assertFalse(FailedLoginAttempt.objects.is_locked_out(self.user, cashbook_client))
+        self.correct_password_change('new_password')
+        self.assertFalse(FailedLoginAttempt.objects.is_locked_out(self.user, cashbook_client))
+        self.assertEqual(FailedLoginAttempt.objects.filter(
+            user=self.user,
+            application=cashbook_client,
+        ).count(), 0)
