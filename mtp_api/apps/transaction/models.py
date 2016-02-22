@@ -49,6 +49,7 @@ class Transaction(TimeStampedModel):
     credited = models.BooleanField(default=False)
     refunded = models.BooleanField(default=False)
     reconciled = models.BooleanField(default=False)
+    incomplete_remitter_info = models.BooleanField(default=False)
 
     # NB: there are matching boolean fields or properties on the model instance for each
     STATUS_LOOKUP = {
@@ -91,6 +92,7 @@ class Transaction(TimeStampedModel):
             'owner__isnull': True,
             'credited': False,
             'refunded': False,
+            'incomplete_remitter_info': False,
             'category': TRANSACTION_CATEGORY.CREDIT,
             'source': TRANSACTION_SOURCE.BANK_TRANSFER
         },
@@ -144,6 +146,7 @@ class Transaction(TimeStampedModel):
     def refund_pending(self):
         return (self.prison is None and self.owner is None and
                 not (self.credited or self.refunded) and
+                not self.incomplete_remitter_info and
                 self.category == TRANSACTION_CATEGORY.CREDIT and
                 self.source == TRANSACTION_SOURCE.BANK_TRANSFER)
 
