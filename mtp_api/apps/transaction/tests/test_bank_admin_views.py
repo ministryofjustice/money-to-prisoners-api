@@ -39,7 +39,7 @@ class CreateTransactionsTestCase(
     def _get_url(self, *args, **kwargs):
         return reverse('bank_admin:transaction-list')
 
-    def _get_transactions_data(self, tot=30):
+    def _get_transactions_data(self, tot=80):
         data_list = generate_initial_transactions_data(tot=tot)
 
         serializer = CreateTransactionSerializer()
