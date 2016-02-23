@@ -49,7 +49,8 @@ class CreateTransactionSerializer(serializers.ModelSerializer):
             'received_at',
             'category',
             'ref_code',
-            'source'
+            'source',
+            'incomplete_sender_info'
         )
 
 

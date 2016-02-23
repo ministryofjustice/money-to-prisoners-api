@@ -106,6 +106,7 @@ def generate_initial_transactions_data(
                 })
         elif make_administrative_credit_transaction:
             data['source'] = TRANSACTION_SOURCE.ADMINISTRATIVE
+            data['incomplete_sender_info'] = True
             del data['sender_sort_code']
             del data['sender_account_number']
         elif make_debit_transaction:
