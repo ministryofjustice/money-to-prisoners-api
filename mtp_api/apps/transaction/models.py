@@ -96,6 +96,16 @@ class Transaction(TimeStampedModel):
             'category': TRANSACTION_CATEGORY.CREDIT,
             'source': TRANSACTION_SOURCE.BANK_TRANSFER
         },
+        TRANSACTION_STATUS.UNIDENTIFIED: {
+            'prison__isnull': True,
+            'incomplete_sender_info': True,
+            'category': TRANSACTION_CATEGORY.CREDIT,
+            'source': TRANSACTION_SOURCE.BANK_TRANSFER
+        },
+        TRANSACTION_STATUS.ANOMALOUS: {
+            'category': TRANSACTION_CATEGORY.CREDIT,
+            'source': TRANSACTION_SOURCE.ADMINISTRATIVE
+        }
     }
 
     objects = TransactionQuerySet.as_manager()
