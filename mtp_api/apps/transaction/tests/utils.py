@@ -107,14 +107,17 @@ def generate_initial_transactions_data(
         elif make_administrative_credit_transaction:
             data['source'] = TRANSACTION_SOURCE.ADMINISTRATIVE
             data['incomplete_sender_info'] = True
+            data['processor_type_code'] = 'RA'
             del data['sender_sort_code']
             del data['sender_account_number']
         elif make_debit_transaction:
             data['source'] = TRANSACTION_SOURCE.ADMINISTRATIVE
             data['category'] = TRANSACTION_CATEGORY.DEBIT
+            data['processor_type_code'] = '03'
             data['reference'] = 'Payment refunded'
         else:
             data['source'] = TRANSACTION_SOURCE.BANK_TRANSFER
+            data['processor_type_code'] = '99'
 
             if include_prisoner_info:
                 if prisoner_location_generator:

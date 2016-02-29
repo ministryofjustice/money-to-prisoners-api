@@ -29,6 +29,7 @@ class Transaction(TimeStampedModel):
     category = models.CharField(max_length=50, choices=TRANSACTION_CATEGORY)
     source = models.CharField(max_length=50, choices=TRANSACTION_SOURCE)
 
+    processor_type_code = models.CharField(max_length=12, blank=True, null=True)
     sender_sort_code = models.CharField(max_length=50, blank=True)
     sender_account_number = models.CharField(max_length=50, blank=True)
     sender_name = models.CharField(max_length=250, blank=True)
