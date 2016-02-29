@@ -34,6 +34,8 @@ class Command(BaseCommand):
         parser.add_argument('--transactions', default='random',
                             choices=['none', 'random', 'nomis'],
                             help='Create new transactions using this method')
+        parser.add_argument('--number-of-transactions', default=100, type=int,
+                            help='Number of new transactions to create')
 
     def handle(self, *args, **options):
         if settings.ENVIRONMENT == 'prod':
@@ -78,16 +80,17 @@ class Command(BaseCommand):
         print_message('Making test users')
         make_test_users(clerks_per_prison=clerks_per_prison)
 
+        number_of_transactions = options['number_of_transactions']
         if transactions == 'random':
             print_message('Generating pre-defined prisoner locations')
             # to allow for automated testing
             generate_predefined_prisoner_locations()
             print_message('Generating random prisoner locations and transactions')
-            generate_transactions(transaction_batch=100)
+            generate_transactions(transaction_batch=number_of_transactions)
         elif transactions == 'nomis':
             print_message('Generating test NOMIS prisoner locations and transactions')
             generate_transactions(
-                transaction_batch=100,
+                transaction_batch=number_of_transactions,
                 use_test_nomis_prisoners=True,
                 predetermined_transactions=True,
                 only_new_transactions=True,

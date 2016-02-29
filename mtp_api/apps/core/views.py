@@ -47,6 +47,7 @@ class RecreateTestDataView(FormView):
             'no_color': True,
             'stdout': output,
             'stderr': output,
+            'number_of_transactions': form.cleaned_data['number_of_transactions']
         }
 
         if scenario in ('random', 'cashbook'):
