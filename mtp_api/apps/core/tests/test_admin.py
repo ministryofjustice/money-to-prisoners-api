@@ -52,6 +52,7 @@ class RecreateTestDataViewTestCase(TestCase):
         with mock.patch.object(Command, 'handle') as method:
             response = self.client.post(self.url, data={
                 'scenario': 'random',
+                'number_of_transactions': '100'
             })
             self.assertEqual(response.status_code, 200)
             self.assertEqual(method.call_count, 1)
@@ -62,6 +63,7 @@ class RecreateTestDataViewTestCase(TestCase):
                 'no_color': True,
                 'transactions': 'random',
                 'prisons': ['sample'],
+                'number_of_transactions': 100
             }
             options = method.call_args[1]
             options_subset = {

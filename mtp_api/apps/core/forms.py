@@ -11,6 +11,7 @@ class RecreateTestDataForm(forms.Form):
             ('delete-locations-transactions', _('Delete prisoner location and transaction data')),
         ),
     )
+    number_of_transactions = forms.IntegerField(initial=100)
 
 
 class AdminFilterForm(forms.Form):
