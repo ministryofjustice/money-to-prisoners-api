@@ -29,6 +29,7 @@ class Transaction(TimeStampedModel):
     category = models.CharField(max_length=50, choices=TRANSACTION_CATEGORY)
     source = models.CharField(max_length=50, choices=TRANSACTION_SOURCE)
 
+    processor_type_code = models.CharField(max_length=12, blank=True, null=True)
     sender_sort_code = models.CharField(max_length=50, blank=True)
     sender_account_number = models.CharField(max_length=50, blank=True)
     sender_name = models.CharField(max_length=250, blank=True)
@@ -96,6 +97,16 @@ class Transaction(TimeStampedModel):
             'category': TRANSACTION_CATEGORY.CREDIT,
             'source': TRANSACTION_SOURCE.BANK_TRANSFER
         },
+        TRANSACTION_STATUS.UNIDENTIFIED: {
+            'prison__isnull': True,
+            'incomplete_sender_info': True,
+            'category': TRANSACTION_CATEGORY.CREDIT,
+            'source': TRANSACTION_SOURCE.BANK_TRANSFER
+        },
+        TRANSACTION_STATUS.ANOMALOUS: {
+            'category': TRANSACTION_CATEGORY.CREDIT,
+            'source': TRANSACTION_SOURCE.ADMINISTRATIVE
+        }
     }
 
     objects = TransactionQuerySet.as_manager()
@@ -143,12 +154,54 @@ class Transaction(TimeStampedModel):
                 ])
 
     @property
+    def status_credited(self):
+        return (self.credited and self.category == TRANSACTION_CATEGORY.CREDIT and
+                self.source in [
+                    TRANSACTION_SOURCE.BANK_TRANSFER,
+                    TRANSACTION_SOURCE.ONLINE
+                ])
+
+    @property
+    def status_refunded(self):
+        return (self.refunded and self.category == TRANSACTION_CATEGORY.CREDIT and
+                self.source == TRANSACTION_SOURCE.BANK_TRANSFER)
+
+    @property
     def refund_pending(self):
         return (self.prison is None and self.owner is None and
                 not (self.credited or self.refunded) and
                 not self.incomplete_sender_info and
                 self.category == TRANSACTION_CATEGORY.CREDIT and
                 self.source == TRANSACTION_SOURCE.BANK_TRANSFER)
+
+    @property
+    def unidentified(self):
+        return (self.prison is None and
+                self.incomplete_sender_info and
+                self.category == TRANSACTION_CATEGORY.CREDIT and
+                self.source == TRANSACTION_SOURCE.BANK_TRANSFER)
+
+    @property
+    def anomalous(self):
+        return (self.category == TRANSACTION_CATEGORY.CREDIT and
+                self.source == TRANSACTION_SOURCE.ADMINISTRATIVE)
+
+    @property
+    def status(self):
+        if self.available:
+            return TRANSACTION_STATUS.AVAILABLE
+        elif self.locked:
+            return TRANSACTION_STATUS.LOCKED
+        elif self.status_credited:
+            return TRANSACTION_STATUS.CREDITED
+        elif self.status_refunded:
+            return TRANSACTION_STATUS.REFUNDED
+        elif self.refund_pending:
+            return TRANSACTION_STATUS.REFUND_PENDING
+        elif self.unidentified:
+            return TRANSACTION_STATUS.UNIDENTIFIED
+        elif self.anomalous:
+            return TRANSACTION_STATUS.ANOMALOUS
 
     def lock(self, by_user):
         self.owner = by_user

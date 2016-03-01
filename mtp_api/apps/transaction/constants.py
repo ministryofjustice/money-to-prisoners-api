@@ -15,7 +15,13 @@ TRANSACTION_STATUS = Choices(
     ('REFUNDED', 'refunded', 'Refunded'),
 
     # transactions with prisoner_number == None & refunded == False
-    ('REFUND_PENDING', 'refund_pending', 'Refund Pending')
+    ('REFUND_PENDING', 'refund_pending', 'Refund Pending'),
+
+    # transactions which can be neither credited nor refunded
+    ('UNIDENTIFIED', 'unidentified', 'Unidentified'),
+
+    # transactions of an unknown type
+    ('ANOMALOUS', 'anomalous', 'Anomalous')
 )
 
 
