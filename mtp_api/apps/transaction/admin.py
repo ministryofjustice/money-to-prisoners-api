@@ -2,10 +2,13 @@ from datetime import timedelta
 
 from django.contrib import admin
 from django.contrib import messages
+from django.contrib.admin.options import IncorrectLookupParameters
+from django.core.exceptions import ValidationError
 from django.db.models import Sum
 
 from core.admin import DateRangeFilter, RelatedAnyFieldListFilter, ExactSearchFilter
 from .models import Transaction, Log, LOG_ACTIONS
+from .constants import TRANSACTION_STATUS
 
 
 class LogAdminInline(admin.TabularInline):
@@ -22,15 +25,32 @@ class LogAdminInline(admin.TabularInline):
         return False
 
 
+class StatusFilter(admin.SimpleListFilter):
+    parameter_name = 'status'
+    title = 'status'
+
+    def lookups(self, request, model_admin):
+        return TRANSACTION_STATUS
+
+    def queryset(self, request, queryset):
+        status = self.used_parameters.get(self.parameter_name)
+        if status in Transaction.STATUS_LOOKUP:
+            try:
+                return queryset.filter(**Transaction.STATUS_LOOKUP[status])
+            except ValidationError as e:
+                raise IncorrectLookupParameters(e)
+
+
 class TransactionAdmin(admin.ModelAdmin):
     list_display = ('prisoner_name', 'prisoner_number', 'prison', 'formatted_amount',
-                    'sender_name', 'received_at', 'credited_at', 'refunded_at')
+                    'type', 'sender_sort_code', 'sender_account_number',
+                    'sender_roll_number', 'sender_name', 'reference',
+                    'received_at', 'status')
     ordering = ('-received_at',)
-    readonly_fields = ('credited', 'refunded', 'reconciled')
+    readonly_fields = ('credited', 'refunded', 'reconciled', 'incomplete_sender_info')
     inlines = (LogAdminInline,)
     list_filter = (
-        'credited',
-        'refunded',
+        StatusFilter,
         'reconciled',
         ('prison', RelatedAnyFieldListFilter),
         'category',
@@ -43,9 +63,12 @@ class TransactionAdmin(admin.ModelAdmin):
         'display_resolution_time'
     ]
 
-    @classmethod
-    def formatted_amount(cls, instance):
+    def formatted_amount(self, instance):
         return '£%0.2f' % (instance.amount / 100)
+    formatted_amount.short_description = 'Amount'
+
+    def type(self, instance):
+        return '%s/%s' % (instance.processor_type_code, instance.category)
 
     def display_total_amount(self, request, queryset):
         total = queryset.aggregate(Sum('amount'))['amount__sum']
