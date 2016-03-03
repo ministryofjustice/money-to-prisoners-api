@@ -135,8 +135,9 @@ class TransactionViewMixin(object):
 
 class GetTransactions(TransactionViewMixin, generics.ListAPIView):
     serializer_class = TransactionSerializer
-    filter_backends = (filters.DjangoFilterBackend,)
+    filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter)
     filter_class = TransactionListFilter
+    ordering_fields = ('received_at',)
     action = 'list'
 
     permission_classes = (
