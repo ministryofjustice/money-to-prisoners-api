@@ -106,7 +106,7 @@ class TransactionListTestCase(
             for date_format in settings.DATE_INPUT_FORMATS:
                 try:
                     date = datetime.datetime.strptime(date, date_format)
-                    return date.replace(tzinfo=timezone.utc)
+                    return timezone.make_aware(date)
                 except (ValueError, TypeError):
                     continue
             raise ValueError('Cannot parse date %s' % date)

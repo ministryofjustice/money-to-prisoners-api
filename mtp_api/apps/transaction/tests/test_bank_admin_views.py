@@ -670,8 +670,7 @@ class GetTransactionsFilteredByDateTestCase(GetTransactionsBaseTestCase):
 
         results = response.data['results']
         result_ids = [t['id'] for t in results]
-        yesterday = datetime.combine(self._get_latest_date(), time.min).replace(
-            tzinfo=timezone.utc)
+        yesterday = timezone.make_aware(datetime.combine(self._get_latest_date(), time.min))
         received_between_dates = Transaction.objects.filter(
             received_at__lt=yesterday,
             received_at__gte=(yesterday - timedelta(days=2))
@@ -740,8 +739,7 @@ class ReconcileTransactionsTestCase(
         )
         self.assertEqual(response.status_code, http_status.HTTP_204_NO_CONTENT)
 
-        yesterday = datetime.combine(self._get_latest_date(), time.min).replace(
-            tzinfo=timezone.utc)
+        yesterday = timezone.make_aware(datetime.combine(self._get_latest_date(), time.min))
         transactions_yesterday = Transaction.objects.filter(
             received_at__lt=yesterday + timedelta(days=1),
             received_at__gte=yesterday
