@@ -38,7 +38,9 @@ def random_reference(prisoner_number=None, prisoner_dob=None):
 
 
 def latest_transaction_date():
-    latest_transaction_date = timezone.now().replace(microsecond=0) - datetime.timedelta(days=1)
+    latest_transaction_date = timezone.make_aware(
+        datetime.datetime.now().replace(microsecond=0) - datetime.timedelta(days=1)
+    )
     while latest_transaction_date.weekday() > 4:
         latest_transaction_date = latest_transaction_date - datetime.timedelta(days=1)
     return latest_transaction_date
