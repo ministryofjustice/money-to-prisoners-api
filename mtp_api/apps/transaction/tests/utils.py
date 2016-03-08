@@ -51,6 +51,7 @@ def generate_initial_transactions_data(
         prisoner_location_generator=None,
         include_debits=True,
         include_administrative_credits=True,
+        include_unidentified_credits=True,
         include_online_payments=True):
     data_list = []
 
@@ -64,12 +65,15 @@ def generate_initial_transactions_data(
         # societies is instead low, set here to 10%,
         # which is again arbitrary.
         include_prisoner_info = transaction_counter % 5 != 0
-        include_sender_roll_number = transaction_counter % 29 == 0
+        include_sender_roll_number = transaction_counter % 19 == 0
+        omit_sender_details = (
+            include_unidentified_credits and transaction_counter % 23 == 0
+        )
         make_debit_transaction = (
             include_debits and (transaction_counter + 1) % 5 == 0
         )
         make_administrative_credit_transaction = (
-            include_administrative_credits and transaction_counter % 17 == 0
+            include_administrative_credits and transaction_counter % 41 == 0
         )
         make_online_payment = (
             include_online_payments and transaction_counter % 13 == 0
@@ -135,6 +139,14 @@ def generate_initial_transactions_data(
                 data.update({
                     'sender_roll_number': get_random_string(15, '1234567890')
                 })
+
+            if omit_sender_details:
+                data['incomplete_sender_info'] = True
+                if data.get('sender_roll_number'):
+                    del data['sender_roll_number']
+                else:
+                    del data['sender_sort_code']
+                    del data['sender_account_number']
 
             data['reference'] = random_reference(
                 data.get('prisoner_number'), data.get('prisoner_dob')
@@ -220,6 +232,7 @@ def generate_transactions(
     consistent_history=False,
     include_debits=True,
     include_administrative_credits=True,
+    include_unidentified_credits=True,
     include_online_payments=True
 ):
     if use_test_nomis_prisoners:
@@ -231,6 +244,7 @@ def generate_transactions(
         prisoner_location_generator=prisoner_location_generator,
         include_debits=include_debits,
         include_administrative_credits=include_administrative_credits,
+        include_unidentified_credits=include_unidentified_credits,
         include_online_payments=include_online_payments
     )
 
@@ -296,7 +310,7 @@ def setup_historical_transaction(location_creator, owner_status_chooser,
                     'credited': True
                 })
         else:
-            if is_most_recent:
+            if is_most_recent and not data.get('incomplete_sender_info'):
                 data.update({'refunded': False})
             else:
                 data.update({'refunded': True})
@@ -338,7 +352,7 @@ def setup_transaction(location_creator, owner_status_chooser,
                     'credited': True
                 })
         else:
-            if transaction_counter % 2 == 0:
+            if transaction_counter % 2 == 0 and not data.get('incomplete_sender_info'):
                 data.update({'refunded': True})
             else:
                 data.update({'refunded': False})
