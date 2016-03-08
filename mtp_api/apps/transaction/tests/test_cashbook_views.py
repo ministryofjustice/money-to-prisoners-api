@@ -8,8 +8,6 @@ from django.core.urlresolvers import reverse
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.utils.dateformat import format as format_date
-from django.utils.six.moves.urllib.parse import urlsplit
-
 from rest_framework import status
 
 from mtp_auth.models import PrisonUserMapping
@@ -668,7 +666,7 @@ class UnlockTransactionTestCase(
 
         self.assertEqual(response.status_code, status.HTTP_303_SEE_OTHER)
         self.assertEqual(
-            urlsplit(response['Location']).path,
+            urllib.parse.urlsplit(response['Location']).path,
             reverse('cashbook:transaction-list')
         )
 

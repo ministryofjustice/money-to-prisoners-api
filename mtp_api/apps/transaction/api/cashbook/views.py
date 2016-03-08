@@ -24,6 +24,7 @@ from prison.models import Prison
 
 from transaction.constants import TRANSACTION_STATUS, LOCK_LIMIT
 from transaction.models import Transaction
+from transaction.pagination import DateBasedPagination
 from transaction.signals import transaction_prisons_need_updating
 
 from .serializers import TransactionSerializer, \
@@ -135,6 +136,7 @@ class TransactionViewMixin(object):
 
 class GetTransactions(TransactionViewMixin, generics.ListAPIView):
     serializer_class = TransactionSerializer
+    pagination_class = DateBasedPagination
     filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter)
     filter_class = TransactionListFilter
     ordering_fields = ('received_at',)
