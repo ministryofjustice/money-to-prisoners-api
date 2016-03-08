@@ -748,6 +748,46 @@ class ReconcileTransactionsTestCase(
         for transaction in transactions_yesterday:
             self.assertTrue(transaction.reconciled)
 
+    def test_reconciliation_logs_are_not_duplicated(self):
+        yesterday = timezone.make_aware(datetime.combine(self._get_latest_date(), time.min))
+        transactions_yesterday = Transaction.objects.filter(
+            received_at__lt=yesterday + timedelta(days=1),
+            received_at__gte=yesterday
+        )
+
+        url = self._get_url()
+        user = self._get_authorised_user()
+
+        response = self.client.post(
+            url, {'date': self._get_latest_date().isoformat()}, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_204_NO_CONTENT)
+
+        # check logs
+        self.assertEqual(
+            Log.objects.filter(
+                user=user,
+                action=LOG_ACTIONS.RECONCILED,
+            ).count(),
+            len(transactions_yesterday)
+        )
+
+        response = self.client.post(
+            url, {'date': self._get_latest_date().isoformat()}, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_204_NO_CONTENT)
+
+        # check logs again
+        self.assertEqual(
+            Log.objects.filter(
+                user=user,
+                action=LOG_ACTIONS.RECONCILED,
+            ).count(),
+            len(transactions_yesterday)
+        )
+
     def test_no_date_returns_bad_request(self):
         url = self._get_url()
         user = self._get_authorised_user()
