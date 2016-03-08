@@ -137,11 +137,12 @@ class ReconcileTransactionsView(generics.GenericAPIView):
         update_set.update(reconciled=True)
 
         for transaction in updated_transactions:
-            transaction.reconciled = True
-            transaction_reconciled.send(
-                sender=Transaction,
-                transaction=transaction,
-                by_user=request.user
-            )
+            if not transaction.reconciled:
+                transaction.reconciled = True
+                transaction_reconciled.send(
+                    sender=Transaction,
+                    transaction=transaction,
+                    by_user=request.user
+                )
 
         return Response(status=204)
