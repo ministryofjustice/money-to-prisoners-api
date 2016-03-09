@@ -1,5 +1,10 @@
-from django.db import models, connection
+from datetime import timedelta
 
+from django.conf import settings
+from django.db import models, connection
+from django.db.transaction import atomic
+
+from .signals import transaction_reconciled
 from .constants import TRANSACTION_STATUS, LOG_ACTIONS
 
 
@@ -22,6 +27,28 @@ class TransactionQuerySet(models.QuerySet):
 
     def locked_by(self, user):
         return self.filter(owner=user)
+
+    @atomic
+    def reconcile(self, date, user):
+        update_set = self.filter(
+            received_at__gte=date,
+            received_at__lt=(date + timedelta(days=1))
+        ).select_for_update()
+
+        ref_code = settings.REF_CODE_BASE
+        for transaction in update_set:
+            if not transaction.reconciled:
+                if transaction.reconcilable:
+                    transaction.ref_code = ref_code
+                    ref_code += 1
+                transaction.reconciled = True
+                transaction.save()
+
+                transaction_reconciled.send(
+                    sender=self.model,
+                    transaction=transaction,
+                    by_user=user
+                )
 
     def update_prisons(self):
         cursor = connection.cursor()

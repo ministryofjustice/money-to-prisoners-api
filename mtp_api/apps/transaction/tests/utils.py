@@ -277,7 +277,6 @@ def generate_transactions(
         for data in generate_predetermined_transactions_data():
             with MockModelTimestamps(data['created'], data['modified']):
                 new_transaction = Transaction.objects.create(**data)
-                new_transaction.populate_ref_code()
             transactions.append(new_transaction)
 
     generate_transaction_logs(transactions)
@@ -317,7 +316,6 @@ def setup_historical_transaction(location_creator, owner_status_chooser,
 
     with MockModelTimestamps(data['created'], data['modified']):
         new_transaction = Transaction.objects.create(**data)
-        new_transaction.populate_ref_code()
 
     return new_transaction
 
@@ -359,7 +357,6 @@ def setup_transaction(location_creator, owner_status_chooser,
 
     with MockModelTimestamps(data['created'], data['modified']):
         new_transaction = Transaction.objects.create(**data)
-        new_transaction.populate_ref_code()
 
     if data['source'] == TRANSACTION_SOURCE.ONLINE:
         payment = Payment()

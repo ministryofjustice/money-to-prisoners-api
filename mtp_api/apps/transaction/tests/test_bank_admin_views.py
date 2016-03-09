@@ -127,41 +127,6 @@ class CreateTransactionsTestCase(
             Transaction.objects.filter(**data_list[0]).count(), 1
         )
 
-    def test_create_populates_ref_code(self):
-        user = self.bank_admins[0]
-        data_list = self._get_transactions_data()
-
-        response = self.client.post(
-            self._get_url(), data=data_list, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
-        )
-        self.assertEqual(response.status_code, http_status.HTTP_201_CREATED)
-
-        qs = Transaction.objects.filter(category=TRANSACTION_CATEGORY.DEBIT)
-        for trans in qs:
-            self.assertEqual(trans.ref_code, None)
-
-        qs = Transaction.objects.filter(
-            category=TRANSACTION_CATEGORY.CREDIT,
-            source=TRANSACTION_SOURCE.BANK_TRANSFER
-        )
-        grouped = sorted(qs, key=lambda t: t.received_at.date())
-        results = []
-        last_date = None
-        for transaction in grouped:
-            if transaction.received_at.date() == last_date:
-                results[-1].append(transaction)
-            else:
-                last_date = transaction.received_at.date()
-                results.append([transaction])
-        grouped_trans = map(lambda l: sorted(l, key=lambda t: t.id), results)
-
-        for group in grouped_trans:
-            expected_ref_code = settings.REF_CODE_BASE
-            for trans in group:
-                self.assertEqual(trans.ref_code, str(expected_ref_code))
-                expected_ref_code += 1
-
 
 class CreateIncompleteTransactionsTestCase(
     TransactionRejectsRequestsWithoutPermissionTestMixin,
@@ -723,7 +688,7 @@ class ReconcileTransactionsTestCase(
     def _get_url(self, *args, **kwargs):
         return reverse('bank_admin:reconcile-transactions')
 
-    def _populate_transactions(self, tot=80):
+    def _populate_transactions(self, tot=100):
         return generate_transactions(transaction_batch=tot)
 
     def _get_authorised_user(self):
@@ -807,3 +772,55 @@ class ReconcileTransactionsTestCase(
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
         self.assertEqual(response.status_code, http_status.HTTP_400_BAD_REQUEST)
+
+    def test_reconciliation_populates_ref_code(self):
+        url = self._get_url()
+        user = self._get_authorised_user()
+
+        response = self.client.post(
+            url, {'date': self._get_latest_date().isoformat()}, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_204_NO_CONTENT)
+
+        # debits not given ref code
+        qs = Transaction.objects.filter(
+            category=TRANSACTION_CATEGORY.DEBIT,
+            received_at__date=self._get_latest_date()
+        )
+        for trans in qs:
+            self.assertEqual(trans.ref_code, None)
+
+        # anomalous not given ref code
+        qs = Transaction.objects.filter(
+            source=TRANSACTION_SOURCE.ADMINISTRATIVE,
+            received_at__date=self._get_latest_date()
+        )
+        for trans in qs:
+            self.assertEqual(trans.ref_code, None)
+
+        # unidentified not given ref code
+        qs = Transaction.objects.filter(
+            prison__isnull=True,
+            incomplete_sender_info=True,
+            received_at__date=self._get_latest_date()
+        )
+        for trans in qs:
+            self.assertEqual(trans.ref_code, None)
+
+        # valid credits and refunds given ref code
+        qs = (Transaction.objects.filter(
+            category=TRANSACTION_CATEGORY.CREDIT,
+            prison__isnull=False,
+            received_at__date=self._get_latest_date()
+        ) | Transaction.objects.filter(
+            category=TRANSACTION_CATEGORY.CREDIT,
+            prison__isnull=True,
+            incomplete_sender_info=False,
+            received_at__date=self._get_latest_date()
+        )).exclude(source=TRANSACTION_SOURCE.ADMINISTRATIVE).order_by('id')
+
+        expected_ref_code = settings.REF_CODE_BASE
+        for trans in qs:
+            self.assertEqual(trans.ref_code, str(expected_ref_code))
+            expected_ref_code += 1
