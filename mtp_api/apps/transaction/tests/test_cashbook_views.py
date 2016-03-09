@@ -1,4 +1,5 @@
 import datetime
+import math
 import random
 from unittest import mock
 import urllib.parse
@@ -8,18 +9,17 @@ from django.core.urlresolvers import reverse
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.utils.dateformat import format as format_date
+from django.utils.timezone import localtime
 from rest_framework import status
 
 from mtp_auth.models import PrisonUserMapping
-
 from prison.models import Prison
-
+from transaction.api.cashbook.views import TransactionTextSearchFilter
 from transaction.models import Transaction, Log
 from transaction.constants import TRANSACTION_STATUS, LOCK_LIMIT, LOG_ACTIONS
-
-
-from .test_base import BaseTransactionViewTestCase, \
+from transaction.tests.test_base import BaseTransactionViewTestCase, \
     TransactionRejectsRequestsWithoutPermissionTestMixin
+from transaction.tests.utils import generate_transactions
 
 
 def get_prisons_for_user(user):
@@ -43,6 +43,7 @@ class TransactionListTestCase(
     CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
     BaseTransactionViewTestCase
 ):
+    pagination_response_keys = ['page', 'page_count']
 
     def _get_url(self, **filters):
         url = reverse('cashbook:transaction-list')
@@ -52,10 +53,15 @@ class TransactionListTestCase(
             url=url, filters=urllib.parse.urlencode(filters)
         )
 
-    def _test_response_with_filters(self, filters={}):
-        logged_in_user = self.prison_clerks[0]
+    def _get_managed_prison_transactions(self, logged_in_user=None):
+        logged_in_user = logged_in_user or self._get_authorised_user()
         logged_in_user.prisonusermapping.prisons.add(*self.prisons)
         managing_prisons = list(get_prisons_for_user(logged_in_user))
+        return [t for t in self.transactions if t.prison in managing_prisons]
+
+    def _test_response_with_filters(self, filters={}):
+        logged_in_user = self._get_authorised_user()
+        transactions = self._get_managed_prison_transactions()
 
         url = self._get_url(**filters)
         response = self.client.get(
@@ -84,9 +90,8 @@ class TransactionListTestCase(
 
         expected_ids = [
             t.pk
-            for t in self.transactions
-            if t.prison in managing_prisons and
-            status_checker(t) and
+            for t in transactions
+            if status_checker(t) and
             prison_checker(t) and
             user_checker(t) and
             received_at_checker(t) and
@@ -97,6 +102,11 @@ class TransactionListTestCase(
             sorted([t['id'] for t in response.data['results']]),
             sorted(expected_ids)
         )
+
+        # ensure date-based pagination hasn't occurred
+        for key in self.pagination_response_keys:
+            self.assertNotIn(key, response.data)
+
         return response
 
     def _get_received_at_checker(self, filters, noop_checker):
@@ -109,9 +119,18 @@ class TransactionListTestCase(
                     continue
             raise ValueError('Cannot parse date %s' % date)
 
+        almost_one_day = datetime.timedelta(days=1) - datetime.timedelta(microseconds=1)
+
         received_at_0, received_at_1 = filters.get('received_at_0'), filters.get('received_at_1')
         received_at_0 = parse_date(received_at_0) if received_at_0 else None
-        received_at_1 = (parse_date(received_at_1) + datetime.timedelta(days=1)) if received_at_1 else None
+        received_at_1 = (parse_date(received_at_1) + almost_one_day) if received_at_1 else None
+
+        received_at = filters.get('received_at')
+        if received_at:
+            if received_at_0 or received_at_1:
+                raise NotImplementedError
+            received_at = parse_date(received_at)
+            received_at_0, received_at_1 = received_at, received_at + almost_one_day
 
         if received_at_0 and received_at_1:
             return lambda t: received_at_0 <= t.received_at <= received_at_1
@@ -563,6 +582,218 @@ class LockedTransactionListTestCase(TransactionListTestCase):
         )
         self.assertTrue(all(transaction['locked'] for transaction in response_locked.data['results']))
         self.assertTrue(all('locked_at' in transaction for transaction in response_locked.data['results']))
+
+
+class DateBasedPaginationTestCase(TransactionListTestCase):
+    def _get_response(self, filters):
+        logged_in_user = self._get_authorised_user()
+        url = self._get_url(**filters)
+        return self.client.get(
+            url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+
+    def _test_invalid_response(self, filters):
+        response = self._get_response(filters)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_invalid_ordering(self):
+        self._test_invalid_response({'page_by_date_field': 'received_at',
+                                     'ordering': 'prisoner_number'})
+
+    def test_invalid_pagination(self):
+        received_at_filter = self._get_random_transaction_date().strftime('%Y-%m-%d')
+        self._test_invalid_response({'page_by_date_field': 'prisoner_name',
+                                     'received_at': received_at_filter})
+
+    def _get_random_transaction(self):
+        return random.choice(self.transactions)
+
+    def _get_date_of_transaction(self, transaction):
+        return localtime(transaction.received_at).date()
+
+    def _get_random_transaction_date(self):
+        return self._get_date_of_transaction(self._get_random_transaction())
+
+    def _get_date_count(self, transactions):
+        transaction_dates = set(map(self._get_date_of_transaction, transactions))
+        return len(transaction_dates)
+
+    def _get_page_count(self, transactions, page_size=settings.REQUEST_PAGE_DAYS):
+        return int(math.ceil(self._get_date_count(transactions) / page_size))
+
+    def _get_all_pages_of_transactions(self, transactions, page_size=settings.REQUEST_PAGE_DAYS):
+        all_pages = []
+        current_page = []
+        dates_collected = 0
+        last_date = None
+        for transaction in transactions:
+            date = self._get_date_of_transaction(transaction)
+            if date != last_date:
+                dates_collected += 1
+                last_date = date
+            if dates_collected > page_size:
+                dates_collected = 0
+                last_date = date
+                all_pages.append(current_page)
+                current_page = []
+            current_page.append(transaction)
+        if current_page:
+            all_pages.append(current_page)
+        return all_pages
+
+    def _get_page_of_transactions(self, transactions, page=1, page_size=settings.REQUEST_PAGE_DAYS):
+        all_pages = self._get_all_pages_of_transactions(transactions, page_size=page_size)
+        return all_pages[page - 1]
+
+    def _get_page_of_transaction_ids(self, transactions, page=1, page_size=settings.REQUEST_PAGE_DAYS):
+        page = self._get_page_of_transactions(transactions, page=page, page_size=page_size)
+        return sorted(transaction.id for transaction in page)
+
+    def _test_paginated_response(self, filters, transaction_ids, count, page, page_count):
+        response = self._get_response(filters)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        response_ids = sorted(transaction['id'] for transaction in response.data['results'])
+        self.assertListEqual(response_ids, transaction_ids)
+
+        self.assertEqual(response.data['count'], count)
+        self.assertEqual(response.data['page'], page)
+        self.assertEqual(response.data['page_count'], page_count)
+
+    def _get_transactions(self, transaction_filter=None, ordering='-received_at'):
+        transactions = self._get_managed_prison_transactions()
+        transactions = filter(transaction_filter, transactions)
+
+        def transaction_sort(transaction):
+            return transaction.received_at
+
+        if ordering == 'received_at':
+            transactions = sorted(transactions, key=transaction_sort)
+        elif ordering == '-received_at':
+            transactions = sorted(transactions, key=transaction_sort, reverse=True)
+        else:
+            raise NotImplementedError
+
+        return transactions
+
+    def test_pagination_without_filters(self):
+        transactions = self._get_transactions()
+
+        expected = {
+            'count': len(transactions),
+            'page': 1,
+            'page_count': self._get_page_count(transactions),
+            'transaction_ids': self._get_page_of_transaction_ids(transactions),
+        }
+        self._test_paginated_response(filters={'page_by_date_field': 'received_at',
+                                               'ordering': '-received_at'},
+                                      **expected)
+
+    def test_pagination_with_search(self):
+        search_term = ''
+        while not search_term:
+            random_transaction = self._get_random_transaction()
+            search_term = random_transaction.prisoner_name or \
+                random_transaction.prisoner_number
+        search_term = search_term.lower().split()[0]
+
+        search_fields = TransactionTextSearchFilter.fields
+
+        def transaction_filter(transaction):
+            return any(
+                search_term in str(getattr(transaction, search_field, '') or '').lower()
+                for search_field in search_fields
+            )
+
+        transactions = self._get_transactions(transaction_filter)
+
+        expected = {
+            'count': len(transactions),
+            'page': 1,
+            'page_count': self._get_page_count(transactions),
+            'transaction_ids': self._get_page_of_transaction_ids(transactions),
+        }
+        self._test_paginated_response(filters={'page_by_date_field': 'received_at',
+                                               'ordering': '-received_at',
+                                               'search': search_term},
+                                      **expected)
+
+    def test_pagination_with_single_date(self):
+        received_at = self._get_random_transaction_date()
+
+        def transaction_filter(transaction):
+            return self._get_date_of_transaction(transaction) == received_at
+
+        transactions = self._get_transactions(transaction_filter)
+
+        expected = {
+            'count': len(transactions),
+            'page': 1,
+            'page_count': self._get_page_count(transactions),
+            'transaction_ids': self._get_page_of_transaction_ids(transactions),
+        }
+        received_at_filter = received_at.strftime('%Y-%m-%d')
+        self._test_paginated_response(filters={'page_by_date_field': 'received_at',
+                                               'ordering': '-received_at',
+                                               'received_at_0': received_at_filter,
+                                               'received_at_1': received_at_filter},
+                                      **expected)
+
+    def test_pagination_with_date_range(self):
+        received_at_0, received_at_1 = self._get_random_transaction_date(), self._get_random_transaction_date()
+        if received_at_0 > received_at_1:
+            received_at_0, received_at_1 = received_at_1, received_at_0
+
+        def transaction_filter(transaction):
+            return received_at_0 <= self._get_date_of_transaction(transaction) <= received_at_1
+
+        transactions = self._get_transactions(transaction_filter)
+
+        expected = {
+            'count': len(transactions),
+            'page': 1,
+            'page_count': self._get_page_count(transactions),
+            'transaction_ids': self._get_page_of_transaction_ids(transactions),
+        }
+        received_at_0_filter = received_at_0.strftime('%Y-%m-%d')
+        received_at_1_filter = received_at_1.strftime('%Y-%m-%d')
+        self._test_paginated_response(filters={'page_by_date_field': 'received_at',
+                                               'ordering': '-received_at',
+                                               'received_at_0': received_at_0_filter,
+                                               'received_at_1': received_at_1_filter},
+                                      **expected)
+
+    def test_pagination_beyond_page_1(self):
+        tries = 6
+        page_count = 0
+        transactions = []
+        for _ in range(tries):
+            transactions = self._get_transactions()
+            page_count = self._get_page_count(transactions)
+            if page_count > 1:
+                break
+            self.transactions = generate_transactions(
+                transaction_batch=150
+            )
+        self.assertGreater(page_count, 1,
+                           'Could not generate enough pages for test in %d tries' % tries)
+
+        response = self._get_response(filters={'page_by_date_field': 'received_at',
+                                               'ordering': '-received_at',
+                                               'page': 1})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        expected = {
+            'count': len(transactions),
+            'page': 2,
+            'page_count': page_count,
+            'transaction_ids': self._get_page_of_transaction_ids(transactions, page=2),
+        }
+        self._test_paginated_response(filters={'page_by_date_field': 'received_at',
+                                               'ordering': '-received_at',
+                                               'page': 2},
+                                      **expected)
 
 
 class LockTransactionTestCase(
