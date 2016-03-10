@@ -1,4 +1,3 @@
-import datetime
 from functools import reduce
 import logging
 import re
@@ -24,6 +23,7 @@ from prison.models import Prison
 
 from transaction.constants import TRANSACTION_STATUS, LOCK_LIMIT
 from transaction.models import Transaction
+from transaction.pagination import DateBasedPagination
 from transaction.signals import transaction_prisons_need_updating
 
 from .serializers import TransactionSerializer, \
@@ -58,8 +58,6 @@ class DateRangeField(forms.MultiValueField):
     def compress(self, data_list):
         if data_list:
             start, end = data_list
-            if end:
-                end += datetime.timedelta(days=1)
             return slice(start, end)
         return None
 
@@ -146,6 +144,10 @@ class GetTransactions(TransactionViewMixin, generics.ListAPIView):
     )
 
 
+class DatePaginatedTransactions(GetTransactions):
+    pagination_class = DateBasedPagination
+
+
 class CreditTransactions(TransactionViewMixin, generics.GenericAPIView):
     serializer_class = CreditedOnlyTransactionSerializer
     action = 'patch_credited'
@@ -179,8 +181,8 @@ class CreditTransactions(TransactionViewMixin, generics.GenericAPIView):
 
             if conflict_ids:
                 conflict_ids = sorted(conflict_ids)
-                logger.warn('Some transactions were not credited: [%s]' %
-                            ', '.join(map(str, conflict_ids)))
+                logger.warning('Some transactions were not credited: [%s]' %
+                               ', '.join(map(str, conflict_ids)))
                 return Response(
                     data={
                         'errors': [
@@ -213,7 +215,11 @@ class TransactionList(View):
     """
 
     def get(self, request, *args, **kwargs):
-        return GetTransactions.as_view()(request, *args, **kwargs)
+        if DateBasedPagination.page_query_param in request.GET:
+            view = DatePaginatedTransactions
+        else:
+            view = GetTransactions
+        return view.as_view()(request, *args, **kwargs)
 
     def patch(self, request, *args, **kwargs):
         return CreditTransactions.as_view()(request, *args, **kwargs)
@@ -287,8 +293,8 @@ class UnlockTransactions(TransactionViewMixin, APIView):
 
             if conflict_ids:
                 conflict_ids = sorted(conflict_ids)
-                logger.warn('Some transactions were not unlocked: [%s]' %
-                            ', '.join(map(str, conflict_ids)))
+                logger.warning('Some transactions were not unlocked: [%s]' %
+                               ', '.join(map(str, conflict_ids)))
                 return Response(
                     data={
                         'errors': [

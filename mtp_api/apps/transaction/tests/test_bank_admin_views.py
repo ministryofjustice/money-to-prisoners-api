@@ -640,7 +640,7 @@ class GetTransactionsFilteredByDateTestCase(GetTransactionsBaseTestCase):
             received_at__lt=yesterday,
             received_at__gte=(yesterday - timedelta(days=2))
         )
-        self.assertEquals(len(result_ids), len(received_between_dates))
+        self.assertEqual(len(result_ids), len(received_between_dates))
 
         for trans in received_between_dates:
             self.assertTrue(trans.id in result_ids)
@@ -658,7 +658,7 @@ class GetTransactionsFilteredByDateTestCase(GetTransactionsBaseTestCase):
 
         results = response.data['results']
         db_transactions = Transaction.objects.all().order_by('-received_at')
-        self.assertEquals(len(results), len(db_transactions))
+        self.assertEqual(len(results), len(db_transactions))
 
         for db_trans, response_trans in zip(db_transactions, results):
             self.assertEqual(db_trans.id, response_trans['id'])

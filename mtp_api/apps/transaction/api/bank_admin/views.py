@@ -68,8 +68,8 @@ class TransactionView(mixins.CreateModelMixin, mixins.UpdateModelMixin,
             return self.partial_update(request, *args, **kwargs)
         except Transaction.DoesNotExist as e:
             transaction_ids = sorted(e.args[0])
-            logger.warn('Some transactions failed to update: [%s]' %
-                        ', '.join(map(str, transaction_ids)))
+            logger.warning('Some transactions failed to update: [%s]' %
+                           ', '.join(map(str, transaction_ids)))
             return Response(
                 data={
                     'errors': [
