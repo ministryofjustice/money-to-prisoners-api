@@ -12,6 +12,9 @@ verbosity ?= 1
 ifeq ($(shell [ $(verbosity) -gt 1 ] && echo true),true)
 TASK_OUTPUT_REDIRECTION := &1
 PYTHON_WARNINGS := "-W default"
+else ifeq ($(shell [ $(verbosity) -eq 0 ] && echo true),true)
+TASK_OUTPUT_REDIRECTION := /dev/null
+PYTHON_WARNINGS := "-W ignore"
 else
 TASK_OUTPUT_REDIRECTION := /dev/null
 PYTHON_WARNINGS := "-W once"

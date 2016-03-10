@@ -176,6 +176,8 @@ LOGGING = {
     },
 }
 
+TEST_RUNNER = 'core.tests.TestRunner'
+
 # sentry exception handling
 if os.environ.get('SENTRY_DSN'):
     INSTALLED_APPS = ('raven.contrib.django.raven_compat',) + INSTALLED_APPS
