@@ -1,4 +1,3 @@
-from datetime import timedelta
 import warnings
 
 from django.db import models
@@ -203,6 +202,14 @@ class Transaction(TimeStampedModel):
         elif self.anomalous:
             return TRANSACTION_STATUS.ANOMALOUS
 
+    @property
+    def reconcilable(self):
+        return self.status in [
+            TRANSACTION_STATUS.AVAILABLE, TRANSACTION_STATUS.LOCKED,
+            TRANSACTION_STATUS.CREDITED, TRANSACTION_STATUS.REFUND_PENDING,
+            TRANSACTION_STATUS.REFUNDED
+        ]
+
     def lock(self, by_user):
         self.owner = by_user
         self.save()
@@ -276,25 +283,6 @@ class Transaction(TimeStampedModel):
             return None
         return log_action.created
 
-    def populate_ref_code(self):
-        if (self.category == TRANSACTION_CATEGORY.CREDIT and
-                self.source == TRANSACTION_SOURCE.BANK_TRANSFER):
-            code_date = self.received_at.replace(hour=0, minute=0,
-                                                 second=0, microsecond=0)
-            qs = Transaction.objects.filter(
-                received_at__gte=code_date,
-                received_at__lt=code_date + timedelta(days=1),
-                ref_code__isnull=False,
-                category=TRANSACTION_CATEGORY.CREDIT,
-                source=TRANSACTION_SOURCE.BANK_TRANSFER
-            ).aggregate(models.Max('ref_code'))
-
-            if qs and qs.get('ref_code__max'):
-                self.ref_code = int(qs['ref_code__max']) + 1
-            else:
-                self.ref_code = settings.REF_CODE_BASE
-            self.save()
-
 
 class Log(TimeStampedModel):
     transaction = models.ForeignKey(Transaction)
@@ -316,7 +304,6 @@ class Log(TimeStampedModel):
 @receiver(transaction_created)
 def transaction_created_receiver(sender, transaction, by_user, **kwargs):
     Log.objects.transaction_created(transaction, by_user)
-    transaction.populate_ref_code()
 
 
 @receiver(transaction_locked)

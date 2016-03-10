@@ -1,7 +1,6 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 import logging
 
-from django.db.transaction import atomic
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import mixins, viewsets, status, filters, generics
@@ -12,7 +11,6 @@ import django_filters
 
 from mtp_auth.permissions import BankAdminClientIDPermissions
 from transaction.models import Transaction
-from transaction.signals import transaction_reconciled
 from .permissions import TransactionPermissions
 from .serializers import CreateTransactionSerializer, \
     UpdateRefundedTransactionSerializer, TransactionSerializer, \
@@ -115,7 +113,6 @@ class ReconcileTransactionsView(generics.GenericAPIView):
         TransactionPermissions
     )
 
-    @atomic
     def post(self, request, format=None):
         date = request.data.get('date')
         if not date:
@@ -128,21 +125,5 @@ class ReconcileTransactionsView(generics.GenericAPIView):
             return Response(data={'errors': _("Invalid date format")},
                             status=400)
 
-        update_set = self.queryset.filter(
-            received_at__gte=parsed_date,
-            received_at__lt=(parsed_date + timedelta(days=1))
-        ).select_for_update()
-
-        updated_transactions = list(update_set)
-        update_set.update(reconciled=True)
-
-        for transaction in updated_transactions:
-            if not transaction.reconciled:
-                transaction.reconciled = True
-                transaction_reconciled.send(
-                    sender=Transaction,
-                    transaction=transaction,
-                    by_user=request.user
-                )
-
+        Transaction.objects.reconcile(parsed_date, request.user)
         return Response(status=204)
