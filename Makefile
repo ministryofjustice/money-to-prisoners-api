@@ -66,6 +66,10 @@ docker: .host_machine_ip
 
 # run uwsgi, this is the entry point for docker running remotely
 uwsgi: venv/bin/uwsgi migrate_db static_assets
+ifneq ($(ENV),prod)
+	@echo "Starting API load data listener on port 8800"
+	@venv/bin/python $(PYTHON_WARNINGS) manage.py load_data_listener &
+endif
 	@echo "Starting MTP $(app) in uWSGI"
 	@venv/bin/uwsgi --ini conf/uwsgi/api.ini
 

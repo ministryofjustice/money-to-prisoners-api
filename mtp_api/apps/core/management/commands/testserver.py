@@ -1,4 +1,3 @@
-from functools import wraps
 import signal
 import socketserver
 import textwrap
@@ -11,20 +10,7 @@ from django.core.management.commands.testserver import Command as TestServerComm
 from django.db import connection
 
 from core.tests.utils import give_superusers_full_access
-
-_lock = threading.RLock()
-
-
-def synchronised(func):
-    @wraps(func)
-    def inner(*args, **kwargs):
-        if _lock.acquire(timeout=10):
-            response = func(*args, **kwargs)
-            _lock.release()
-            return response
-        raise OSError('Cannot acquire lock')
-
-    return inner
+from . import synchronised
 
 
 class Command(TestServerCommand):

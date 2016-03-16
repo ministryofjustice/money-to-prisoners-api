@@ -28,4 +28,5 @@ ADD . /app
 RUN make build python_requirements=requirements/docker.txt
 
 EXPOSE 8080
+EXPOSE 8800
 CMD make uwsgi python_requirements=requirements/docker.txt
