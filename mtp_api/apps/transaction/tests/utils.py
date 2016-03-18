@@ -207,7 +207,7 @@ def generate_predetermined_transactions_data():
 def get_owner_and_status_chooser():
     clerks_per_prison = {}
     for p in Prison.objects.all():
-        user_ids = p.prisonusermapping_set.values_list('user', flat=True)
+        user_ids = p.prisonusermapping_set.filter(user__is_staff=False).values_list('user', flat=True)
         clerks_per_prison[p.pk] = (
             cycle(list(User.objects.filter(id__in=user_ids))),
             cycle([
