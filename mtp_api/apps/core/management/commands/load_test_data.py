@@ -34,7 +34,7 @@ class Command(BaseCommand):
         parser.add_argument('--transactions', default='random',
                             choices=['none', 'random', 'nomis'],
                             help='Create new transactions using this method')
-        parser.add_argument('--number-of-transactions', default=100, type=int,
+        parser.add_argument('--number-of-transactions', default=200, type=int,
                             help='Number of new transactions to create')
 
     def handle(self, *args, **options):
