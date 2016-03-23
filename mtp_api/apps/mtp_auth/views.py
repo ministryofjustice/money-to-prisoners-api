@@ -7,7 +7,7 @@ from django.db.transaction import atomic
 from django.forms import ValidationError
 from django.http import Http404
 from django.utils.translation import ugettext_lazy as _
-from rest_framework import viewsets, mixins, generics
+from rest_framework import viewsets, mixins, generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -52,6 +52,21 @@ class UserViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin,
             return super(UserViewSet, self).get_object(*args, **kwargs)
         else:
             raise Http404()
+
+    def destroy(self, request, *args, **kwargs):
+        user = self.get_object()
+        if user != request.user:
+            self.perform_destroy(user)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        else:
+            return Response(
+                status=status.HTTP_400_BAD_REQUEST,
+                data={
+                    'errors': {
+                        '__all__': _('You cannot delete yourself.')
+                    }
+                },
+            )
 
 
 class ChangePasswordView(generics.GenericAPIView):

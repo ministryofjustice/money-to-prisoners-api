@@ -404,6 +404,12 @@ class DeleteUserTestCase(APITestCase, AuthTestCaseMixin):
             self.prison_clerks[0].username
         )
 
+    def test_user_deleting_self_fails(self):
+        self._check_delete_user_fails(
+            self.cashbook_uas[0],
+            self.cashbook_uas[0].username
+        )
+
 
 class UserApplicationValidationTestCase(APITestCase):
     fixtures = ['test_prisons.json', 'initial_groups.json']
