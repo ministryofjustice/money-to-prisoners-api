@@ -7,7 +7,6 @@ from model_utils.models import TimeStampedModel
 
 
 class PrisonUserMapping(TimeStampedModel):
-
     user = models.OneToOneField('auth.User')
     prisons = models.ManyToManyField('prison.Prison')
 
@@ -21,7 +20,16 @@ class ApplicationUserMapping(TimeStampedModel):
     application = models.ForeignKey('oauth2_provider.Application')
 
     def __str__(self):
-        return self.user.username
+        return '%s -> %s' % (self.user.username, self.application.client_id)
+
+
+class ApplicationGroupMapping(TimeStampedModel):
+
+    group = models.ForeignKey('auth.Group')
+    application = models.ForeignKey('oauth2_provider.Application')
+
+    def __str__(self):
+        return '%s -> %s' % (self.group.name, self.application.client_id)
 
 
 class FailedLoginAttemptManager(models.Manager):

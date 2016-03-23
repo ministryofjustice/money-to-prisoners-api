@@ -9,7 +9,7 @@ from mtp_auth.constants import (
     PRISONER_LOCATION_OAUTH_CLIENT_ID, SEND_MONEY_CLIENT_ID
 )
 from mtp_auth.models import (
-    ApplicationUserMapping, PrisonUserMapping
+    ApplicationUserMapping, ApplicationGroupMapping, PrisonUserMapping
 )
 from mtp_auth.tests.mommy_recipes import (
     create_prison_clerk, create_prisoner_location_admin, create_bank_admin,
@@ -56,6 +56,12 @@ def make_applications():
             name=client_id,
             user=user
         )
+        new_app = Application.objects.get(client_id=client_id)
+        for group in groups:
+            ApplicationGroupMapping.objects.get_or_create(
+                application=new_app,
+                group=group
+            )
 
     user = get_user_model().objects.first()
 
