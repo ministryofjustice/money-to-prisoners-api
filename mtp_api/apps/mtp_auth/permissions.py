@@ -1,8 +1,16 @@
 from rest_framework.permissions import BasePermission
 
+from core.permissions import ActionsBasedPermissions
 from .constants import CASHBOOK_OAUTH_CLIENT_ID, \
     BANK_ADMIN_OAUTH_CLIENT_ID, PRISONER_LOCATION_OAUTH_CLIENT_ID, \
     SEND_MONEY_CLIENT_ID
+
+
+class UserPermissions(ActionsBasedPermissions):
+    actions_perms_map = ActionsBasedPermissions.actions_perms_map.copy()
+    actions_perms_map.update({
+        'list': ['%(app_label)s.change_%(model_name)s'],
+    })
 
 
 class ClientIDPermissions(BasePermission):

@@ -1,5 +1,8 @@
+from functools import reduce
+
 from django.contrib.auth import password_validation
 from django.contrib.auth.models import User
+from django.db.models import Q
 from django.db.transaction import atomic
 from django.forms import ValidationError
 from django.http import Http404
@@ -8,28 +11,47 @@ from rest_framework import viewsets, mixins, generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import FailedLoginAttempt
+from .models import FailedLoginAttempt, PrisonUserMapping
+from .permissions import UserPermissions
 from .serializers import UserSerializer, ChangePasswordSerializer
 
 
-class UserViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+class UserViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin,
+                  mixins.UpdateModelMixin, mixins.CreateModelMixin,
+                  mixins.DestroyModelMixin, viewsets.GenericViewSet):
     lookup_field = 'username'
 
-    queryset = User.objects.all()
-    permission_classes = (IsAuthenticated,)
+    queryset = User.objects.none()
+    permission_classes = (IsAuthenticated, UserPermissions)
     serializer_class = UserSerializer
+
+    def get_queryset(self):
+        client_id = self.request.auth.application.client_id
+        queryset = User.objects.filter(
+            applicationusermapping__application__client_id=client_id
+        )
+
+        user_prisons = PrisonUserMapping.objects.get_prison_set_for_user(self.request.user)
+        if len(user_prisons) > 0:
+            prison_filters = []
+            for prison in user_prisons:
+                prison_filters.append(Q(prisonusermapping__prisons=prison))
+            queryset = queryset.filter(reduce(lambda a, b: a | b, prison_filters))
+        return queryset
 
     def get_object(self, *args, **kwargs):
         """
-        Make sure that you can only access your own user data.
+        Make sure that you can only access your own user data,
+        unless the user is a UserAdmin.
         """
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
         lookup = self.kwargs.get(lookup_url_kwarg, None)
 
-        if lookup != self.request.user.username:
+        if (lookup == self.request.user.username or
+                self.request.user.has_perm('auth.change_user')):
+            return super(UserViewSet, self).get_object(*args, **kwargs)
+        else:
             raise Http404()
-
-        return super(UserViewSet, self).get_object(*args, **kwargs)
 
 
 class ChangePasswordView(generics.GenericAPIView):
