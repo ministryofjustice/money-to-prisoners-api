@@ -57,5 +57,17 @@
       ["change_payment", "payment", "payment"]
     ]
   }
+},
+{
+  "model": "auth.group",
+  "pk": 6,
+  "fields": {
+    "name": "UserAdmin",
+    "permissions": [
+      ["add_user", "auth", "user"],
+      ["change_user", "auth", "user"],
+      ["delete_user", "auth", "user"]
+    ]
+  }
 }
 ]
