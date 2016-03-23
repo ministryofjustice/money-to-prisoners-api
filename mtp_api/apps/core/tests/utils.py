@@ -143,7 +143,9 @@ def make_test_user_admins():
     # bank admin user admins
     refund_bank_admins = [
         create_user_admin(create_refund_bank_admin,
-                          name_and_password='rba-user-admin')]
+                          name_and_password='rba-user-admin-1'),
+        create_user_admin(create_refund_bank_admin,
+                          name_and_password='rba-user-admin-2')]
 
     # create test oauth applications
     make_applications()

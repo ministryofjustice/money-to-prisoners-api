@@ -206,6 +206,7 @@ class CreateUserTestCase(APITestCase, AuthTestCaseMixin):
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(requester)
         )
 
+        make_user_admin = user_data.pop('user_admin', False)
         new_user = User.objects.get(**user_data)
         self.assertEqual(
             new_user.applicationusermapping_set.all()[0].application.client_id,
@@ -222,6 +223,9 @@ class CreateUserTestCase(APITestCase, AuthTestCaseMixin):
             )
         else:
             self.assertFalse(hasattr(new_user, 'prisonusermapping'))
+
+        if make_user_admin:
+            self.assertTrue(Group.objects.get(name='UserAdmin') in new_user.groups.all())
 
     def test_create_bank_admin(self):
         user_data = {
@@ -252,6 +256,22 @@ class CreateUserTestCase(APITestCase, AuthTestCaseMixin):
             [Group.objects.get(name='PrisonClerk')]
         )
 
+    def test_create_cashbook_user_admin(self):
+        user_data = {
+            'username': 'new-cashbook-ua',
+            'first_name': 'New',
+            'last_name': 'Cashbook User Admin',
+            'email': 'cua@mtp.gov.uk',
+            'user_admin': True
+        }
+        self._check_create_user_succeeds(
+            self.cashbook_uas[0],
+            user_data,
+            'cashbook',
+            [Group.objects.get(name='PrisonClerk'),
+             Group.objects.get(name='UserAdmin')]
+        )
+
 
 class UpdateUserTestCase(APITestCase, AuthTestCaseMixin):
     fixtures = [
@@ -278,6 +298,7 @@ class UpdateUserTestCase(APITestCase, AuthTestCaseMixin):
 
     def _check_update_user_succeeds(self, requester, username, user_data):
         self._update_user(requester, username, user_data)
+        user_data.pop('user_admin', None)
         User.objects.get(username=username, **user_data)
 
     def _check_update_user_fails(self, requester, username, user_data):
@@ -299,6 +320,48 @@ class UpdateUserTestCase(APITestCase, AuthTestCaseMixin):
             user_data
         )
 
+    def test_upgrade_normal_user_to_admin_succeeds(self):
+        user_data = {
+            'user_admin': True
+        }
+        self._check_update_user_succeeds(
+            self.bank_uas[0],
+            self.refund_bank_admins[0].username,
+            user_data
+        )
+        updated_user = User.objects.get(username=self.refund_bank_admins[0].username)
+        self.assertTrue(
+            Group.objects.get(name='UserAdmin') in updated_user.groups.all()
+        )
+
+    def test_upgrade_user_of_other_application_fails(self):
+        user_data = {
+            'user_admin': True
+        }
+        self._check_update_user_succeeds(
+            self.bank_uas[0],
+            self.prisoner_location_admins[0].username,
+            user_data
+        )
+        updated_user = User.objects.get(username=self.prisoner_location_admins[0].username)
+        self.assertTrue(
+            Group.objects.get(name='UserAdmin') not in updated_user.groups.all()
+        )
+
+    def test_downgrade_admin_user_to_normal_succeeds(self):
+        user_data = {
+            'user_admin': False
+        }
+        self._check_update_user_succeeds(
+            self.bank_uas[0],
+            self.bank_uas[1].username,
+            user_data
+        )
+        updated_user = User.objects.get(username=self.bank_uas[1].username)
+        self.assertTrue(
+            Group.objects.get(name='UserAdmin') not in updated_user.groups.all()
+        )
+
     def test_update_bank_admin_as_cashbook_user_admin_fails(self):
         user_data = {
             'first_name': 'New',
@@ -317,6 +380,17 @@ class UpdateUserTestCase(APITestCase, AuthTestCaseMixin):
         }
         self._check_update_user_fails(
             self.refund_bank_admins[0],
+            self.bank_admins[0].username,
+            user_data
+        )
+
+    def test_update_self_as_normal_user_fails(self):
+        user_data = {
+            'first_name': 'New',
+            'last_name': 'Name'
+        }
+        self._check_update_user_fails(
+            self.bank_admins[0],
             self.bank_admins[0].username,
             user_data
         )

@@ -53,6 +53,18 @@ class UserViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin,
         else:
             raise Http404()
 
+    def perform_create(self, serializer):
+        if 'user_admin' in self.request.data:
+            serializer.save(user_admin=self.request.data['user_admin'])
+        else:
+            serializer.save()
+
+    def perform_update(self, serializer):
+        if 'user_admin' in self.request.data:
+            serializer.save(user_admin=self.request.data['user_admin'])
+        else:
+            serializer.save()
+
     def destroy(self, request, *args, **kwargs):
         user = self.get_object()
         if user != request.user:
