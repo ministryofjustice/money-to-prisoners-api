@@ -140,9 +140,9 @@ class ListUserTestCase(APITestCase, AuthTestCaseMixin):
 
         for user_item in response.data['results']:
             user = User.objects.get(username=user_item['username'])
-            self.assertEqual(
-                user.applicationusermapping_set.all()[0].application.client_id,
-                client_id
+            self.assertTrue(
+                client_id in user.applicationusermapping_set.all()
+                .values_list('application__client_id', flat=True)
             )
             if hasattr(requester, 'prisonusermapping'):
                 matching_prison = False
@@ -209,17 +209,20 @@ class CreateUserTestCase(APITestCase, AuthTestCaseMixin):
         make_user_admin = user_data.pop('user_admin', False)
         new_user = User.objects.get(**user_data)
         self.assertEqual(
-            new_user.applicationusermapping_set.all()[0].application.client_id,
-            client_id
+            list(
+                new_user.applicationusermapping_set.all()
+                .values_list('application__client_id', flat=True)
+            ),
+            [client_id]
         )
         self.assertEqual(
-            list(new_user.groups.all()),
-            groups
+            set(new_user.groups.all()),
+            set(groups)
         )
         if hasattr(requester, 'prisonusermapping'):
             self.assertEqual(
-                list(new_user.prisonusermapping.prisons.all()),
-                list(requester.prisonusermapping.prisons.all())
+                set(new_user.prisonusermapping.prisons.all()),
+                set(requester.prisonusermapping.prisons.all())
             )
         else:
             self.assertFalse(hasattr(new_user, 'prisonusermapping'))
