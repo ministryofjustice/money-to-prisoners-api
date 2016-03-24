@@ -36,7 +36,8 @@ class UserViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin,
             prison_filters = []
             for prison in user_prisons:
                 prison_filters.append(Q(prisonusermapping__prisons=prison))
-            queryset = queryset.filter(reduce(lambda a, b: a | b, prison_filters))
+            queryset = queryset.filter(
+                reduce(lambda a, b: a | b, prison_filters)).distinct()
         return queryset
 
     def get_object(self, *args, **kwargs):
