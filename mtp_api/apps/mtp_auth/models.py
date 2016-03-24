@@ -5,11 +5,22 @@ from django.db import models
 from django.utils.timezone import now
 from model_utils.models import TimeStampedModel
 
+from prison.models import Prison
+
+
+class PrisonUserMappingManager(models.Manager):
+
+    def get_prison_set_for_user(self, user):
+        try:
+            return PrisonUserMapping.objects.get(user=user).prisons.all()
+        except PrisonUserMapping.DoesNotExist:
+            return Prison.objects.none()
+
 
 class PrisonUserMapping(TimeStampedModel):
-
     user = models.OneToOneField('auth.User')
     prisons = models.ManyToManyField('prison.Prison')
+    objects = PrisonUserMappingManager()
 
     def __str__(self):
         return self.user.username
@@ -21,7 +32,16 @@ class ApplicationUserMapping(TimeStampedModel):
     application = models.ForeignKey('oauth2_provider.Application')
 
     def __str__(self):
-        return self.user.username
+        return '%s -> %s' % (self.user.username, self.application.client_id)
+
+
+class ApplicationGroupMapping(TimeStampedModel):
+
+    group = models.ForeignKey('auth.Group')
+    application = models.ForeignKey('oauth2_provider.Application')
+
+    def __str__(self):
+        return '%s -> %s' % (self.group.name, self.application.client_id)
 
 
 class FailedLoginAttemptManager(models.Manager):

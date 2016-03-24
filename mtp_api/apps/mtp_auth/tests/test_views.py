@@ -2,29 +2,31 @@ import datetime
 from unittest import mock
 
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from django.core.urlresolvers import reverse
 from django.utils.timezone import now
 from oauth2_provider.models import Application
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from core.tests.utils import make_test_users
-from mtp_auth.constants import BANK_ADMIN_OAUTH_CLIENT_ID, CASHBOOK_OAUTH_CLIENT_ID, \
+from core.tests.utils import make_test_users, make_test_user_admins
+from mtp_auth.constants import (
+    BANK_ADMIN_OAUTH_CLIENT_ID, CASHBOOK_OAUTH_CLIENT_ID,
     PRISONER_LOCATION_OAUTH_CLIENT_ID
+)
 from mtp_auth.models import FailedLoginAttempt
 from prison.models import Prison
 from .utils import AuthTestCaseMixin
 
 
-class UserViewTestCase(APITestCase):
+class GetUserTestCase(APITestCase, AuthTestCaseMixin):
     fixtures = [
         'initial_groups.json',
         'test_prisons.json'
     ]
 
     def setUp(self):
-        super(UserViewTestCase, self).setUp()
+        super(GetUserTestCase, self).setUp()
         (
             self.prison_clerks, self.prisoner_location_admins,
             self.bank_admins, self.refund_bank_admins,
@@ -53,19 +55,22 @@ class UserViewTestCase(APITestCase):
         db.
         """
         logged_in_user = self.prison_clerks[0]
-        self.client.force_authenticate(user=logged_in_user)
 
         for user in self.prison_clerks[1:]:
             url = self._get_url(user.username)
-            response = self.client.get(url, format='json')
+            response = self.client.get(
+                url, format='json',
+                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+            )
             self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_can_access_my_data_including_managing_prisons(self):
         for user in self.prison_clerks:
-            self.client.force_authenticate(user=user)
-
             url = self._get_url(user.username)
-            response = self.client.get(url, format='json')
+            response = self.client.get(
+                url, format='json',
+                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+            )
             self.assertEqual(response.status_code, status.HTTP_200_OK)
 
             self.assertEqual(response.data['pk'], user.pk)
@@ -74,28 +79,413 @@ class UserViewTestCase(APITestCase):
 
     def test_correct_permissions_returned(self):
         for user in self.test_users:
-            self.client.force_authenticate(user=user)
-
             url = self._get_url(user.username)
-            response = self.client.get(url, format='json')
+            response = self.client.get(
+                url, format='json',
+                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+            )
             self.assertEqual(response.status_code, status.HTTP_200_OK)
 
             self.assertEqual(response.data['permissions'], user.get_all_permissions())
 
     def test_my_data_with_empty_prisons(self):
-        users = \
-            self.prisoner_location_admins + \
+        users = (
+            self.prisoner_location_admins +
             self.bank_admins + self.refund_bank_admins
+        )
 
         for user in users:
-            self.client.force_authenticate(user=user)
-
             url = self._get_url(user.username)
-            response = self.client.get(url, format='json')
+            response = self.client.get(
+                url, format='json',
+                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+            )
             self.assertEqual(response.status_code, status.HTTP_200_OK)
 
             self.assertEqual(response.data['pk'], user.pk)
             self.assertEqual(response.data['prisons'], [])
+
+
+class ListUserTestCase(APITestCase, AuthTestCaseMixin):
+    fixtures = [
+        'initial_groups.json',
+        'test_prisons.json'
+    ]
+
+    def setUp(self):
+        super().setUp()
+        (
+            self.prison_clerks, self.prisoner_location_admins,
+            self.bank_admins, self.refund_bank_admins, _
+        ) = make_test_users(clerks_per_prison=1)
+        self.cashbook_uas, self.pla_uas, self.bank_uas = make_test_user_admins()
+
+    def get_url(self):
+        return reverse('user-list')
+
+    def test_list_users_only_accessible_to_admins(self):
+        response = self.client.get(
+            self.get_url(),
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.refund_bank_admins[0])
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def _check_list_users_succeeds(self, requester, client_id):
+        response = self.client.get(
+            self.get_url(),
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(requester)
+        )
+
+        for user_item in response.data['results']:
+            user = User.objects.get(username=user_item['username'])
+            self.assertTrue(
+                client_id in user.applicationusermapping_set.all()
+                .values_list('application__client_id', flat=True)
+            )
+            if hasattr(requester, 'prisonusermapping'):
+                matching_prison = False
+                for prison in requester.prisonusermapping.prisons.all():
+                    if prison in list(user.prisonusermapping.prisons.all()):
+                        matching_prison = True
+                        break
+                self.assertTrue(
+                    matching_prison,
+                    msg='User Admin able to retrieve users without matching prisons'
+                )
+
+    def test_list_users_for_bank_user_admin(self):
+        self._check_list_users_succeeds(
+            self.bank_uas[0],
+            'bank-admin'
+        )
+
+    def test_list_users_for_cashbook_user_admin(self):
+        self._check_list_users_succeeds(
+            self.cashbook_uas[0],
+            'cashbook'
+        )
+
+
+class CreateUserTestCase(APITestCase, AuthTestCaseMixin):
+    fixtures = [
+        'initial_groups.json',
+        'test_prisons.json'
+    ]
+
+    def setUp(self):
+        super().setUp()
+        self.cashbook_uas, self.pla_uas, self.bank_uas = make_test_user_admins()
+
+    def get_url(self):
+        return reverse('user-list')
+
+    def test_normal_user_cannot_create_user(self):
+        _, _, bank_admins, _, _ = make_test_users(clerks_per_prison=1)
+        user_data = {
+            'username': 'new-bank-admin',
+            'first_name': 'New',
+            'last_name': 'Bank Admin',
+            'email': 'nba@mtp.gov.uk'
+        }
+        response = self.client.post(
+            self.get_url(),
+            format='json',
+            data=user_data,
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(bank_admins[0])
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(len(User.objects.filter(username=user_data['username'])), 0)
+
+    def _check_create_user_succeeds(self, requester, user_data, client_id, groups):
+        self.client.post(
+            self.get_url(),
+            format='json',
+            data=user_data,
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(requester)
+        )
+
+        make_user_admin = user_data.pop('user_admin', False)
+        new_user = User.objects.get(**user_data)
+        self.assertEqual(
+            list(
+                new_user.applicationusermapping_set.all()
+                .values_list('application__client_id', flat=True)
+            ),
+            [client_id]
+        )
+        self.assertEqual(
+            set(new_user.groups.all()),
+            set(groups)
+        )
+        if hasattr(requester, 'prisonusermapping'):
+            self.assertEqual(
+                set(new_user.prisonusermapping.prisons.all()),
+                set(requester.prisonusermapping.prisons.all())
+            )
+        else:
+            self.assertFalse(hasattr(new_user, 'prisonusermapping'))
+
+        if make_user_admin:
+            self.assertTrue(Group.objects.get(name='UserAdmin') in new_user.groups.all())
+
+    def test_create_bank_admin(self):
+        user_data = {
+            'username': 'new-bank-admin',
+            'first_name': 'New',
+            'last_name': 'Bank Admin',
+            'email': 'nba@mtp.gov.uk'
+        }
+        self._check_create_user_succeeds(
+            self.bank_uas[0],
+            user_data,
+            'bank-admin',
+            [Group.objects.get(name='BankAdmin'),
+             Group.objects.get(name='RefundBankAdmin')]
+        )
+
+    def test_create_prison_clerk(self):
+        user_data = {
+            'username': 'new-prison-clerk',
+            'first_name': 'New',
+            'last_name': 'Prison Clerk',
+            'email': 'pc@mtp.gov.uk'
+        }
+        self._check_create_user_succeeds(
+            self.cashbook_uas[0],
+            user_data,
+            'cashbook',
+            [Group.objects.get(name='PrisonClerk')]
+        )
+
+    def test_create_cashbook_user_admin(self):
+        user_data = {
+            'username': 'new-cashbook-ua',
+            'first_name': 'New',
+            'last_name': 'Cashbook User Admin',
+            'email': 'cua@mtp.gov.uk',
+            'user_admin': True
+        }
+        self._check_create_user_succeeds(
+            self.cashbook_uas[0],
+            user_data,
+            'cashbook',
+            [Group.objects.get(name='PrisonClerk'),
+             Group.objects.get(name='UserAdmin')]
+        )
+
+
+class UpdateUserTestCase(APITestCase, AuthTestCaseMixin):
+    fixtures = [
+        'initial_groups.json',
+        'test_prisons.json'
+    ]
+
+    def setUp(self):
+        super().setUp()
+        (self.prison_clerks, self.prisoner_location_admins,
+         self.bank_admins, self.refund_bank_admins, _) = make_test_users(clerks_per_prison=1)
+        self.cashbook_uas, self.pla_uas, self.bank_uas = make_test_user_admins()
+
+    def get_url(self, username):
+        return reverse('user-detail', kwargs={'username': username})
+
+    def _update_user(self, requester, username, user_data):
+        self.client.patch(
+            self.get_url(username),
+            format='json',
+            data=user_data,
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(requester)
+        )
+
+    def _check_update_user_succeeds(self, requester, username, user_data):
+        self._update_user(requester, username, user_data)
+        user_data.pop('user_admin', None)
+        User.objects.get(username=username, **user_data)
+
+    def _check_update_user_fails(self, requester, username, user_data):
+        user = User.objects.get(username=username)
+        original_user_data = {
+            attr: getattr(user, attr, None) for attr in user_data.keys()
+        }
+        self._update_user(requester, username, user_data)
+        User.objects.get(username=username, **original_user_data)
+
+    def test_update_bank_admin_bank_user_admin_succeeds(self):
+        user_data = {
+            'first_name': 'New',
+            'last_name': 'Name'
+        }
+        self._check_update_user_succeeds(
+            self.bank_uas[0],
+            self.refund_bank_admins[0].username,
+            user_data
+        )
+
+    def test_upgrade_normal_user_to_admin_succeeds(self):
+        user_data = {
+            'user_admin': True
+        }
+        self._check_update_user_succeeds(
+            self.bank_uas[0],
+            self.refund_bank_admins[0].username,
+            user_data
+        )
+        updated_user = User.objects.get(username=self.refund_bank_admins[0].username)
+        self.assertTrue(
+            Group.objects.get(name='UserAdmin') in updated_user.groups.all()
+        )
+
+    def test_upgrade_user_of_other_application_fails(self):
+        user_data = {
+            'user_admin': True
+        }
+        self._check_update_user_succeeds(
+            self.bank_uas[0],
+            self.prisoner_location_admins[0].username,
+            user_data
+        )
+        updated_user = User.objects.get(username=self.prisoner_location_admins[0].username)
+        self.assertTrue(
+            Group.objects.get(name='UserAdmin') not in updated_user.groups.all()
+        )
+
+    def test_downgrade_admin_user_to_normal_succeeds(self):
+        user_data = {
+            'user_admin': False
+        }
+        self._check_update_user_succeeds(
+            self.bank_uas[0],
+            self.bank_uas[1].username,
+            user_data
+        )
+        updated_user = User.objects.get(username=self.bank_uas[1].username)
+        self.assertTrue(
+            Group.objects.get(name='UserAdmin') not in updated_user.groups.all()
+        )
+
+    def test_update_bank_admin_as_cashbook_user_admin_fails(self):
+        user_data = {
+            'first_name': 'New',
+            'last_name': 'Name'
+        }
+        self._check_update_user_fails(
+            self.cashbook_uas[0],
+            self.refund_bank_admins[0].username,
+            user_data
+        )
+
+    def test_update_user_as_normal_user_fails(self):
+        user_data = {
+            'first_name': 'New',
+            'last_name': 'Name'
+        }
+        self._check_update_user_fails(
+            self.refund_bank_admins[0],
+            self.bank_admins[0].username,
+            user_data
+        )
+
+    def test_update_self_as_normal_user_fails(self):
+        user_data = {
+            'first_name': 'New',
+            'last_name': 'Name'
+        }
+        self._check_update_user_fails(
+            self.bank_admins[0],
+            self.bank_admins[0].username,
+            user_data
+        )
+
+    def test_update_prison_clerk_in_same_prison_succeeds(self):
+        user_data = {
+            'first_name': 'New',
+            'last_name': 'Name'
+        }
+        self._check_update_user_succeeds(
+            self.cashbook_uas[0],
+            self.prison_clerks[0].username,
+            user_data
+        )
+
+    def test_update_prison_clerk_in_different_prison_fails(self):
+        user_data = {
+            'first_name': 'New',
+            'last_name': 'Name'
+        }
+        self._check_update_user_fails(
+            self.cashbook_uas[1],
+            self.prison_clerks[0].username,
+            user_data
+        )
+
+
+class DeleteUserTestCase(APITestCase, AuthTestCaseMixin):
+    fixtures = [
+        'initial_groups.json',
+        'test_prisons.json'
+    ]
+
+    def setUp(self):
+        super().setUp()
+        (self.prison_clerks, self.prisoner_location_admins,
+         self.bank_admins, self.refund_bank_admins, _) = make_test_users(clerks_per_prison=1)
+        self.cashbook_uas, self.pla_uas, self.bank_uas = make_test_user_admins()
+
+    def get_url(self, username):
+        return reverse('user-detail', kwargs={'username': username})
+
+    def _delete_user(self, requester, username):
+        self.client.delete(
+            self.get_url(username),
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(requester)
+        )
+
+    def _check_delete_user_succeeds(self, requester, username):
+        self._delete_user(requester, username)
+        self.assertEqual(len(User.objects.filter(username=username)), 0)
+
+    def _check_delete_user_fails(self, requester, username):
+        self._delete_user(requester, username)
+        User.objects.get(username=username)
+
+    def test_delete_bank_admin_bank_user_admin_succeeds(self):
+        self._check_delete_user_succeeds(
+            self.bank_uas[0],
+            self.refund_bank_admins[0].username
+        )
+
+    def test_delete_bank_admin_as_cashbook_user_admin_fails(self):
+        self._check_delete_user_fails(
+            self.cashbook_uas[0],
+            self.refund_bank_admins[0].username
+        )
+
+    def test_delete_user_as_normal_user_fails(self):
+        self._check_delete_user_fails(
+            self.bank_admins[0],
+            self.refund_bank_admins[0].username
+        )
+
+    def test_delete_prison_clerk_in_same_prison_succeeds(self):
+        self._check_delete_user_succeeds(
+            self.cashbook_uas[0],
+            self.prison_clerks[0].username
+        )
+
+    def test_delete_prison_clerk_in_different_prison_fails(self):
+        self._check_delete_user_fails(
+            self.cashbook_uas[1],
+            self.prison_clerks[0].username
+        )
+
+    def test_user_deleting_self_fails(self):
+        self._check_delete_user_fails(
+            self.cashbook_uas[0],
+            self.cashbook_uas[0].username
+        )
 
 
 class UserApplicationValidationTestCase(APITestCase):

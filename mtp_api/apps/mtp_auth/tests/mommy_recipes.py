@@ -49,10 +49,13 @@ def name_generator(name):
         yield from gen
 
 
-def create_prison_user_mapping(prison):
+def create_prison_clerk(name_and_password=None, prison=None):
     prison_clerk_group = Group.objects.get(name='PrisonClerk')
 
-    name_and_password = base_clerk_name = 'test-' + slugify(prison)
+    base_clerk_name = 'test-' + slugify(prison)
+    if name_and_password:
+        base_clerk_name += '-' + name_and_password
+    name_and_password = base_clerk_name
     names = name_generator(name_and_password)
     while User.objects.filter(username=name_and_password).exists():
         name_and_password = next(names)
@@ -69,12 +72,10 @@ def create_prison_user_mapping(prison):
         user=user,
         prisons=[prison],
     )
-    return pu
+    return pu.user
 
 
-def create_prisoner_location_admins():
-    name_and_password = 'prisoner-location-admin'
-
+def create_prisoner_location_admin(name_and_password='prisoner-location-admin'):
     prisoner_location_admin_group = Group.objects.get(name='PrisonerLocationAdmin')
     plu = create_basic_user(
         name_and_password,
@@ -83,12 +84,10 @@ def create_prisoner_location_admins():
         last_name='Admin',
     )
 
-    return [plu]
+    return plu
 
 
-def create_bank_admins():
-    name_and_password = 'bank-admin'
-
+def create_bank_admin(name_and_password='bank-admin'):
     bank_admin_group = Group.objects.get(name='BankAdmin')
     ba = create_basic_user(
         name_and_password,
@@ -97,12 +96,10 @@ def create_bank_admins():
         last_name='Admin',
     )
 
-    return [ba]
+    return ba
 
 
-def create_refund_bank_admins():
-    name_and_password = 'refund-bank-admin'
-
+def create_refund_bank_admin(name_and_password='refund-bank-admin'):
     bank_admin_group = Group.objects.get(name='BankAdmin')
     refund_bank_admin_group = Group.objects.get(name='RefundBankAdmin')
     rba = create_basic_user(
@@ -112,11 +109,10 @@ def create_refund_bank_admins():
         last_name='Admin',
     )
 
-    return [rba]
+    return rba
 
 
-def create_send_money_shared_users():
-    name_and_password = 'send-money'
+def create_send_money_shared_user(name_and_password='send-money'):
     send_money_group = Group.objects.get(name='SendMoney')
     user = create_basic_user(
         name_and_password,
@@ -124,4 +120,11 @@ def create_send_money_shared_users():
         first_name='Send Money',
         last_name='Shared',
     )
-    return [user]
+    return user
+
+
+def create_user_admin(user_creator, **kwargs):
+    user = user_creator(**kwargs)
+    user.groups.add(Group.objects.get(name='UserAdmin'))
+    user.save()
+    return user

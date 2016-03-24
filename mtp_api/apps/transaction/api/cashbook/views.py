@@ -121,14 +121,10 @@ class TransactionListFilter(django_filters.FilterSet):
 
 class TransactionViewMixin(object):
 
-    def get_prison_set_for_user(self):
-        try:
-            return PrisonUserMapping.objects.get(user=self.request.user).prisons.all()
-        except PrisonUserMapping.DoesNotExist:
-            return Prison.objects.none()
-
     def get_queryset(self):
-        return Transaction.objects.filter(prison__in=self.get_prison_set_for_user())
+        return Transaction.objects.filter(
+            prison__in=PrisonUserMapping.objects.get_prison_set_for_user(self.request.user)
+        )
 
 
 class GetTransactions(TransactionViewMixin, generics.ListAPIView):
