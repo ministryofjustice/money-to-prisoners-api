@@ -1,5 +1,6 @@
 # Place your docker dependencies here
 -r base.txt
 
+money-to-prisoners-utils[monitoring]==0.9
+
 uWSGI==2.0.12
-raven==5.10.0
