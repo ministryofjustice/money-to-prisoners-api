@@ -22,10 +22,6 @@ from transaction.tests.test_base import BaseTransactionViewTestCase, \
 from transaction.tests.utils import generate_transactions
 
 
-def get_prisons_for_user(user):
-    return PrisonUserMapping.objects.get(user=user).prisons.all()
-
-
 class CashbookTransactionRejectsRequestsWithoutPermissionTestMixin(
     TransactionRejectsRequestsWithoutPermissionTestMixin
 ):
@@ -56,7 +52,7 @@ class TransactionListTestCase(
     def _get_managed_prison_transactions(self, logged_in_user=None):
         logged_in_user = logged_in_user or self._get_authorised_user()
         logged_in_user.prisonusermapping.prisons.add(*self.prisons)
-        managing_prisons = list(get_prisons_for_user(logged_in_user))
+        managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
         return [t for t in self.transactions if t.prison in managing_prisons]
 
     def _test_response_with_filters(self, filters={}):
@@ -303,7 +299,7 @@ class TransactionListWithDefaultStatusAndUserTestCase(TransactionListTestCase):
         # logged-in user managing all the prisons
         logged_in_user = self.prison_clerks[0]
         logged_in_user.prisonusermapping.prisons.add(*self.prisons)
-        managing_prisons = list(get_prisons_for_user(logged_in_user))
+        managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
 
         url = self._get_url(**{
             'prison[]': [p.pk for p in self.prisons]
@@ -484,7 +480,8 @@ class TransactionListInvalidValuesTestCase(TransactionListTestCase):
 
     def test_prison_not_managed_by_loggedin_user(self):
         logged_in_user = self.prison_clerks[0]
-        managing_prison_ids = get_prisons_for_user(logged_in_user).values_list('pk', flat=True)
+        managing_prison_ids = PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user)\
+            .values_list('pk', flat=True)
         non_managing_prisons = Prison.objects.exclude(pk__in=managing_prison_ids)
 
         self.assertTrue(len(non_managing_prisons) > 0)
@@ -559,7 +556,7 @@ class LockedTransactionListTestCase(TransactionListTestCase):
     def test_locked_transactions_returns_same_ones_as_filtered_list(self):
         logged_in_user = self.prison_clerks[0]
         logged_in_user.prisonusermapping.prisons.add(*self.prisons)
-        # managing_prisons = list(get_prisons_for_user(logged_in_user))
+        # managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
 
         url_list = super()._get_url(status=TRANSACTION_STATUS.LOCKED)
         response_list = self.client.get(
@@ -942,7 +939,7 @@ class UnlockTransactionTestCase(
 
     def test_cannot_unlock_credited_transactions(self):
         logged_in_user = self.prison_clerks[0]
-        managing_prisons = list(get_prisons_for_user(logged_in_user))
+        managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
 
         locked_qs = self._get_locked_transactions_qs(managing_prisons, user=logged_in_user)
         credited_qs = self._get_credited_transactions_qs(managing_prisons, user=logged_in_user)
@@ -994,7 +991,7 @@ class CreditTransactionTestCase(
 
     def test_credit_uncredit_transactions(self):
         logged_in_user = self.prison_clerks[0]
-        managing_prisons = list(get_prisons_for_user(logged_in_user))
+        managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
 
         locked_qs = self._get_locked_transactions_qs(managing_prisons, logged_in_user)
         credited_qs = self._get_credited_transactions_qs(managing_prisons, logged_in_user)
@@ -1082,7 +1079,7 @@ class CreditTransactionTestCase(
 
     def test_cannot_credit_non_locked_transactions(self):
         logged_in_user = self.prison_clerks[0]
-        managing_prisons = list(get_prisons_for_user(logged_in_user))
+        managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
 
         locked_qs = self._get_locked_transactions_qs(managing_prisons, logged_in_user)
         credited_qs = self._get_credited_transactions_qs(self.prisons, logged_in_user)
@@ -1140,7 +1137,7 @@ class CreditTransactionTestCase(
 
     def test_misspelt_credit(self):
         logged_in_user = self.prison_clerks[0]
-        managing_prisons = list(get_prisons_for_user(logged_in_user))
+        managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
 
         locked_qs = self._get_locked_transactions_qs(managing_prisons, logged_in_user)
 
