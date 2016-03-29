@@ -1,6 +1,4 @@
 from django.core.exceptions import ImproperlyConfigured
-
-from rest_framework.compat import get_model_name
 from rest_framework.permissions import BasePermission
 
 
@@ -51,7 +49,7 @@ class ActionsBasedPermissions(BasePermission):
         """
         kwargs = {
             'app_label': model_cls._meta.app_label,
-            'model_name': get_model_name(model_cls)
+            'model_name': model_cls._meta.model_name,
         }
 
         # This line raises KeyError if you add a custom action to
