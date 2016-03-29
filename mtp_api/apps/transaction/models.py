@@ -18,7 +18,7 @@ from .signals import (
 
 
 class Transaction(TimeStampedModel):
-    prison = models.ForeignKey(Prison, blank=True, null=True)
+    prison = models.ForeignKey(Prison, blank=True, null=True, on_delete=models.SET_NULL)
 
     prisoner_name = models.CharField(blank=True, null=True, max_length=250)
     prisoner_number = models.CharField(blank=True, null=True, max_length=250)
@@ -44,7 +44,7 @@ class Transaction(TimeStampedModel):
     ref_code = models.CharField(max_length=12, null=True)
 
     # set when a transaction is locked and unset if it gets unlocked.
-    owner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
 
     credited = models.BooleanField(default=False)
     refunded = models.BooleanField(default=False)
@@ -285,8 +285,8 @@ class Transaction(TimeStampedModel):
 
 
 class Log(TimeStampedModel):
-    transaction = models.ForeignKey(Transaction)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True)
+    transaction = models.ForeignKey(Transaction, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
     action = models.CharField(max_length=50, choices=LOG_ACTIONS)
 
     objects = LogManager()

@@ -37,6 +37,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='balance',
             name='batch',
-            field=models.OneToOneField(to='account.Batch'),
+            field=models.OneToOneField(to='account.Batch', on_delete=models.CASCADE),
         ),
     ]

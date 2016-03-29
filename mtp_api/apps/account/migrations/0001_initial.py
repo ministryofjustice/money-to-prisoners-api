@@ -47,7 +47,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='file',
             name='file_type',
-            field=models.ForeignKey(to='account.FileType'),
+            field=models.ForeignKey(to='account.FileType', on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='file',
@@ -57,6 +57,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='balance',
             name='file',
-            field=models.OneToOneField(to='account.File'),
+            field=models.OneToOneField(to='account.File', on_delete=models.CASCADE),
         ),
     ]

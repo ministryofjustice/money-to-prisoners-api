@@ -22,8 +22,8 @@ class Migration(migrations.Migration):
                 ('created', model_utils.fields.AutoCreatedField(default=django.utils.timezone.now, editable=False, verbose_name='created')),
                 ('modified', model_utils.fields.AutoLastModifiedField(default=django.utils.timezone.now, editable=False, verbose_name='modified')),
                 ('action', models.CharField(choices=[('created', 'Created'), ('taken', 'Taken'), ('released', 'Released'), ('credited', 'Credited')], max_length=50)),
-                ('transaction', models.ForeignKey(to='transaction.Transaction')),
-                ('user', models.ForeignKey(null=True, blank=True, to=settings.AUTH_USER_MODEL)),
+                ('transaction', models.ForeignKey(to='transaction.Transaction', on_delete=models.CASCADE)),
+                ('user', models.ForeignKey(null=True, blank=True, to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE)),
             ],
             options={
                 'abstract': False,
