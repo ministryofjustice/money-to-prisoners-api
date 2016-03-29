@@ -1,4 +1,6 @@
-Django==1.9.1
+# Dependencies needed for all environments
+# NB: this is not the complete set needed to run the app
+Django==1.9.4
 psycopg2==2.6
 djangorestframework==3.2.3
 django-model-utils==2.2
