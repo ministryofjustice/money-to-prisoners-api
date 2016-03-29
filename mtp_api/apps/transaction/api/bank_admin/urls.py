@@ -2,6 +2,7 @@ from django.conf.urls import url
 
 from . import views
 
+app_name = 'bank_admin'
 urlpatterns = [
     url(r'^transactions/$', views.TransactionView.as_view({
         'get': 'list',
