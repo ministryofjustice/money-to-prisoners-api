@@ -28,7 +28,8 @@ class UserViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin,
     def get_queryset(self):
         client_id = self.request.auth.application.client_id
         queryset = User.objects.filter(
-            applicationusermapping__application__client_id=client_id
+            applicationusermapping__application__client_id=client_id,
+            is_active=True
         )
 
         user_prisons = PrisonUserMapping.objects.get_prison_set_for_user(self.request.user)
