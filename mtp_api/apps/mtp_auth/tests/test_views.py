@@ -154,6 +154,7 @@ class ListUserTestCase(APITestCase, AuthTestCaseMixin):
                     matching_prison,
                     msg='User Admin able to retrieve users without matching prisons'
                 )
+        return response.data['results']
 
     def test_list_users_for_bank_user_admin(self):
         self._check_list_users_succeeds(
@@ -166,6 +167,24 @@ class ListUserTestCase(APITestCase, AuthTestCaseMixin):
             self.cashbook_uas[0],
             'cashbook'
         )
+
+    def test_list_users_excludes_deactivated_users(self):
+        self.client.delete(
+            reverse('user-detail', kwargs={'username': self.bank_admins[0].username}),
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.bank_uas[0])
+        )
+        returned_users = self._check_list_users_succeeds(
+            self.bank_uas[0],
+            'bank-admin'
+        )
+
+        queryset = User.objects.filter(
+            applicationusermapping__application__client_id='bank-admin'
+        )
+        active_queryset = queryset.filter(is_active=True)
+        self.assertNotEqual(len(queryset), len(returned_users))
+        self.assertEqual(len(active_queryset), len(returned_users))
 
 
 class CreateUserTestCase(APITestCase, AuthTestCaseMixin):
@@ -445,11 +464,11 @@ class DeleteUserTestCase(APITestCase, AuthTestCaseMixin):
 
     def _check_delete_user_succeeds(self, requester, username):
         self._delete_user(requester, username)
-        self.assertEqual(len(User.objects.filter(username=username)), 0)
+        self.assertFalse(User.objects.get(username=username).is_active)
 
     def _check_delete_user_fails(self, requester, username):
         self._delete_user(requester, username)
-        User.objects.get(username=username)
+        self.assertTrue(User.objects.get(username=username).is_active)
 
     def test_delete_bank_admin_bank_user_admin_succeeds(self):
         self._check_delete_user_succeeds(
