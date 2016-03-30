@@ -445,11 +445,11 @@ class DeleteUserTestCase(APITestCase, AuthTestCaseMixin):
 
     def _check_delete_user_succeeds(self, requester, username):
         self._delete_user(requester, username)
-        self.assertEqual(len(User.objects.filter(username=username)), 0)
+        self.assertFalse(User.objects.get(username=username).is_active)
 
     def _check_delete_user_fails(self, requester, username):
         self._delete_user(requester, username)
-        User.objects.get(username=username)
+        self.assertTrue(User.objects.get(username=username).is_active)
 
     def test_delete_bank_admin_bank_user_admin_succeeds(self):
         self._check_delete_user_succeeds(

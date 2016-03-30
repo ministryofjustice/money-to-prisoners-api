@@ -69,7 +69,8 @@ class UserViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin,
     def destroy(self, request, *args, **kwargs):
         user = self.get_object()
         if user != request.user:
-            self.perform_destroy(user)
+            user.is_active = False
+            user.save()
             return Response(status=status.HTTP_204_NO_CONTENT)
         else:
             return Response(
