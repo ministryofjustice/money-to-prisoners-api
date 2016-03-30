@@ -14,13 +14,13 @@ class Prison(TimeStampedModel):
 
 
 class PrisonerLocation(TimeStampedModel):
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
     prisoner_name = models.CharField(blank=True, max_length=250)
     prisoner_number = models.CharField(max_length=250)  # TODO: shouldn't this be unique?
     prisoner_dob = models.DateField()
 
-    prison = models.ForeignKey(Prison)
+    prison = models.ForeignKey(Prison, on_delete=models.CASCADE)
 
     class Meta:
         index_together = (

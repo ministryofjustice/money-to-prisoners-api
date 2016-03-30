@@ -16,6 +16,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='batch',
             name='user',
-            field=models.ForeignKey(null=True, to=settings.AUTH_USER_MODEL),
+            field=models.ForeignKey(null=True, to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE),
         ),
     ]

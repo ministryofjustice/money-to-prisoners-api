@@ -28,7 +28,7 @@ class Migration(migrations.Migration):
                 ('sender_customer_reference', models.CharField(blank=True, max_length=250)),
                 ('reference', models.TextField(blank=True)),
                 ('received_at', models.DateTimeField()),
-                ('prison', models.ForeignKey(blank=True, to='prison.Prison', null=True)),
+                ('prison', models.ForeignKey(blank=True, to='prison.Prison', null=True, on_delete=models.CASCADE)),
             ],
             options={
                 'abstract': False,

@@ -31,8 +31,9 @@ INSTALLED_APPS = (
     'oauth2_provider',
     'rest_framework',
     'django_filters',
-    'rest_framework_swagger',
 )
+if ENVIRONMENT != 'prod':
+    INSTALLED_APPS += ('rest_framework_swagger',)
 PROJECT_APPS = (
     'core',
     'prison',

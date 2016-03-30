@@ -25,6 +25,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='transaction',
             name='owner',
-            field=models.ForeignKey(null=True, to=settings.AUTH_USER_MODEL, blank=True),
+            field=models.ForeignKey(null=True, to=settings.AUTH_USER_MODEL, blank=True, on_delete=models.CASCADE),
         ),
     ]

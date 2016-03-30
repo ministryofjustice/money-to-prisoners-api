@@ -12,10 +12,10 @@ urlpatterns = [
     url(r'^', include('account.urls')),
     url(r'^', include('payment.urls')),
 
-    url(r'^oauth2/', include('oauth2_provider.urls', namespace='oauth2_provider')),
+    url(r'^oauth2/', include(('oauth2_provider.urls', 'oauth2_provider'), namespace='oauth2_provider')),
     url(r'^docs/', include('rest_framework_swagger.urls')),
     url(r'^admin/core/', include('core.urls', namespace='mtp-admin')),
-    url(r'^admin/', include(admin.site.urls)),
+    url(r'^admin/', admin.site.urls),
 
     url(r'^ping.json$', PingJsonView.as_view(
         build_date_key='APP_BUILD_DATE',

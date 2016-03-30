@@ -107,6 +107,7 @@ class TransactionView(mixins.CreateModelMixin, mixins.UpdateModelMixin,
 class ReconcileTransactionsView(generics.GenericAPIView):
     queryset = Transaction.objects.all()
     action = 'patch_processed'
+    serializer_class = TransactionSerializer
 
     permission_classes = (
         IsAuthenticated, BankAdminClientIDPermissions,
