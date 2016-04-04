@@ -42,12 +42,10 @@ def get_midnight(dt):
 
 
 def latest_transaction_date():
-    latest_transaction_date = timezone.make_aware(
-        datetime.datetime.now().replace(microsecond=0) - datetime.timedelta(days=1)
-    )
+    latest_transaction_date = timezone.now().replace(microsecond=0) - datetime.timedelta(days=1)
     while latest_transaction_date.weekday() > 4:
         latest_transaction_date = latest_transaction_date - datetime.timedelta(days=1)
-    return latest_transaction_date
+    return timezone.localtime(latest_transaction_date)
 
 
 def generate_initial_transactions_data(

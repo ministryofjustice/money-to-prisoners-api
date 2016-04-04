@@ -109,8 +109,7 @@ class TransactionListTestCase(
         def parse_date(date):
             for date_format in settings.DATE_INPUT_FORMATS:
                 try:
-                    date = datetime.datetime.strptime(date, date_format)
-                    return timezone.make_aware(date)
+                    return datetime.datetime.strptime(date, date_format)
                 except (ValueError, TypeError):
                     continue
             raise ValueError('Cannot parse date %s' % date)
@@ -127,6 +126,11 @@ class TransactionListTestCase(
                 raise NotImplementedError
             received_at = parse_date(received_at)
             received_at_0, received_at_1 = received_at, received_at + almost_one_day
+
+        if received_at_0:
+            received_at_0 = timezone.make_aware(received_at_0)
+        if received_at_1:
+            received_at_1 = timezone.make_aware(received_at_1)
 
         if received_at_0 and received_at_1:
             return lambda t: received_at_0 <= t.received_at <= received_at_1
