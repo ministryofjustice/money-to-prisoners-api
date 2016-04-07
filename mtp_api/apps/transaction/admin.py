@@ -7,8 +7,9 @@ from django.core.exceptions import ValidationError
 from django.db.models import Sum
 
 from core.admin import DateRangeFilter, RelatedAnyFieldListFilter, ExactSearchFilter
-from .models import Transaction, Log, LOG_ACTIONS
-from .constants import TRANSACTION_STATUS
+from transaction.constants import TRANSACTION_STATUS
+from transaction.models import Transaction, Log, LOG_ACTIONS
+from transaction.utils import format_amount
 
 
 class LogAdminInline(admin.TabularInline):
@@ -47,6 +48,7 @@ class TransactionAdmin(admin.ModelAdmin):
                     'sender_roll_number', 'sender_name', 'reference',
                     'received_at', 'status')
     ordering = ('-received_at',)
+    date_hierarchy = 'received_at'
     readonly_fields = ('credited', 'refunded', 'reconciled', 'incomplete_sender_info')
     inlines = (LogAdminInline,)
     list_filter = (
@@ -64,7 +66,8 @@ class TransactionAdmin(admin.ModelAdmin):
     ]
 
     def formatted_amount(self, instance):
-        return '£%0.2f' % (instance.amount / 100)
+        return format_amount(instance.amount)
+
     formatted_amount.short_description = 'Amount'
 
     def type(self, instance):
@@ -72,7 +75,7 @@ class TransactionAdmin(admin.ModelAdmin):
 
     def display_total_amount(self, request, queryset):
         total = queryset.aggregate(Sum('amount'))['amount__sum']
-        self.message_user(request, 'Total: £%0.2f' % (total / 100))
+        self.message_user(request, 'Total: %s' % format_amount(total, True))
 
     def display_reference_validity(self, request, queryset):
         invalid_ref_count = queryset.filter(prison__isnull=True).count()

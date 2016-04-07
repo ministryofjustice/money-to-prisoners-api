@@ -13,6 +13,7 @@ class PrisonerLocationAdmin(ModelAdmin):
     ordering = ('prisoner_number',)
     list_display = ('prisoner_name', 'prisoner_number', 'prisoner_dob', 'prison')
     list_filter = ('prison',)
+    search_fields = ('prisoner_name', 'prisoner_number')
 
 
 admin.site.register(Prison, PrisonAdmin)
