@@ -51,7 +51,8 @@ class CreateTransactionSerializer(serializers.ModelSerializer):
             'ref_code',
             'source',
             'incomplete_sender_info',
-            'processor_type_code'
+            'processor_type_code',
+            'reference_in_sender_field'
         )
 
 
