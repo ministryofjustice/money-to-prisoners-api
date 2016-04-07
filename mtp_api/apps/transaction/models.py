@@ -15,6 +15,7 @@ from .signals import (
     transaction_unlocked, transaction_credited, transaction_refunded,
     transaction_prisons_need_updating, transaction_reconciled,
 )
+from .utils import format_amount
 
 
 class Transaction(TimeStampedModel):
@@ -125,9 +126,9 @@ class Transaction(TimeStampedModel):
         )
 
     def __str__(self):
-        return 'Transaction {id}, £{amount:.2f} {sender_name} > {prisoner_name}'.format(
+        return 'Transaction {id}, {amount} {sender_name} > {prisoner_name}'.format(
             id=self.pk,
-            amount=self.amount / 100,
+            amount=format_amount(self.amount, True),
             sender_name=self.sender_name,
             prisoner_name=self.prisoner_name,
         )
