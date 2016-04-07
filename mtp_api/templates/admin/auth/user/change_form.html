@@ -1,0 +1,48 @@
+{% extends 'admin/change_form.html' %}
+{% load i18n %}
+
+{% block field_sets %}
+  {{ block.super }}
+
+  {% if change and user.is_superuser %}
+    <fieldset class="module aligned">
+      <h2>{% trans 'MTP Authorisations' %}</h2>
+
+      <div class="form-row">
+        <div>
+          <p>
+            {% if original.applicationusermapping_set.count %}
+
+              {% trans 'This user has access to the following MTP applications:' %}
+              {% for application in original.applicationusermapping_set.all %}
+                <strong>{{ application.application }}</strong>{% if forloop.last %}.{% else %},{% endif %}
+              {% endfor %}
+              <a href="{% url 'admin:mtp_auth_applicationusermapping_changelist' %}?user__id__exact={{ object_id }}">{% trans 'Edit' %}</a>
+
+            {% else %}
+
+              {% trans 'This user has no access to MTP applications.' %}
+              <a href="{% url 'admin:mtp_auth_applicationusermapping_add' %}">{% trans 'Add' %}</a>
+
+            {% endif %}
+          </p>
+
+          <p>
+            {% blocktrans trimmed count count=original.prisonusermapping.prisons.count|default:0 %}
+              This user has access to <strong>{{ count }}</strong> prison in the cashbook.
+              {% plural %}
+              This user has access to <strong>{{ count }}</strong> prisons in the cashbook.
+            {% endblocktrans %}
+
+            {% if original.prisonusermapping.pk %}
+              <a href="{% url 'admin:mtp_auth_prisonusermapping_change' original.prisonusermapping.pk %}">{% trans 'Edit' %}</a>
+            {% else %}
+              <a href="{% url 'admin:mtp_auth_prisonusermapping_add' %}">{% trans 'Add' %}</a>
+            {% endif %}
+          </p>
+        </div>
+      </div>
+    </fieldset>
+  {% endif %}
+
+{% endblock %}
