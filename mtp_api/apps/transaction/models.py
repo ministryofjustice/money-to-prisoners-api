@@ -51,6 +51,7 @@ class Transaction(TimeStampedModel):
     refunded = models.BooleanField(default=False)
     reconciled = models.BooleanField(default=False)
     incomplete_sender_info = models.BooleanField(default=False)
+    reference_in_sender_field = models.BooleanField(default=False)
 
     # NB: there are matching boolean fields or properties on the model instance for each
     STATUS_LOOKUP = {
