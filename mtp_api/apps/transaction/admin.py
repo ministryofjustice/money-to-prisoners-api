@@ -58,7 +58,8 @@ class TransactionAdmin(admin.ModelAdmin):
         'category',
         'source',
         ('received_at', DateRangeFilter),
-        ('owner__username', ExactSearchFilter)
+        ('owner__username', ExactSearchFilter),
+        'reference_in_sender_field'
     )
     actions = [
         'display_total_amount', 'display_reference_validity',
