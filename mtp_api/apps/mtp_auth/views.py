@@ -77,9 +77,7 @@ class UserViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin,
             return Response(
                 status=status.HTTP_400_BAD_REQUEST,
                 data={
-                    'errors': {
-                        '__all__': _('You cannot delete yourself.')
-                    }
+                    '__all__': [_('You cannot delete yourself.')]
                 },
             )
 
