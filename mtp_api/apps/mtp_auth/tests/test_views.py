@@ -3,6 +3,7 @@ from unittest import mock
 
 from django.conf import settings
 from django.contrib.auth.models import User, Group
+from django.core import mail
 from django.core.urlresolvers import reverse
 from django.utils.timezone import now
 from oauth2_provider.models import Application
@@ -248,6 +249,12 @@ class CreateUserTestCase(APITestCase, AuthTestCaseMixin):
 
         if make_user_admin:
             self.assertTrue(Group.objects.get(name='UserAdmin') in new_user.groups.all())
+
+        self.assertTrue(user_data['username'] in mail.outbox[0].body)
+        self.assertEqual(
+            'Your new Money To Prisoners %s account' % client_id,
+            mail.outbox[0].subject
+        )
 
     def test_create_bank_admin(self):
         user_data = {

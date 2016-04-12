@@ -1,5 +1,9 @@
+from django.conf import settings
 from django.contrib.auth.models import User, Group
+from django.core.mail import EmailMessage
 from django.db.transaction import atomic
+from django.template import loader
+from django.utils.translation import ugettext as _
 
 from rest_framework import serializers
 
@@ -59,6 +63,20 @@ class UserSerializer(serializers.ModelSerializer):
             for prison in prisons:
                 pu.prisons.add(prison)
             pu.save()
+
+        context = {
+            'username': new_user.username,
+            'password': password,
+            'app': client_application.name
+        }
+        body = loader.get_template('mtp_auth/new_user.txt').render(context)
+        email = EmailMessage(
+            _('Your new Money To Prisoners %(app)s account' % {'app': client_application.name}),
+            body,
+            settings.MAILGUN_FROM_ADDRESS,
+            [new_user.email]
+        )
+        email.send()
 
         return new_user
 
