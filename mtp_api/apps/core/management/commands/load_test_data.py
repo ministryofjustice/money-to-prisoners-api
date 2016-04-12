@@ -5,7 +5,9 @@ from django.contrib.auth import get_user_model
 from django.core.management import BaseCommand, call_command
 
 from account.models import Batch, Balance
-from core.tests.utils import make_test_users, give_superusers_full_access
+from core.tests.utils import (
+    make_test_users, make_test_user_admins, give_superusers_full_access
+)
 from prison.models import Prison
 from prison.tests.utils import generate_predefined_prisoner_locations
 from transaction.models import Transaction
@@ -79,6 +81,8 @@ class Command(BaseCommand):
 
         print_message('Making test users')
         make_test_users(clerks_per_prison=clerks_per_prison)
+        print_message('Making test user admins')
+        make_test_user_admins()
 
         number_of_transactions = options['number_of_transactions']
         if transactions == 'random':

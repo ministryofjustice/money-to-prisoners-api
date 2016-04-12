@@ -43,13 +43,18 @@ class StatusFilter(admin.SimpleListFilter):
 
 
 class TransactionAdmin(admin.ModelAdmin):
-    list_display = ('prisoner_name', 'prisoner_number', 'prison', 'formatted_amount',
-                    'type', 'sender_sort_code', 'sender_account_number',
-                    'sender_roll_number', 'sender_name', 'reference',
-                    'received_at', 'status')
+    list_display = (
+        'prisoner_name', 'prisoner_number', 'prison', 'formatted_amount',
+        'type', 'sender_sort_code', 'sender_account_number',
+        'sender_roll_number', 'sender_name', 'reference',
+        'received_at', 'status'
+    )
     ordering = ('-received_at',)
     date_hierarchy = 'received_at'
-    readonly_fields = ('credited', 'refunded', 'reconciled', 'incomplete_sender_info')
+    readonly_fields = (
+        'credited', 'refunded', 'reconciled', 'incomplete_sender_info',
+        'reference_in_sender_field'
+    )
     inlines = (LogAdminInline,)
     list_filter = (
         StatusFilter,
