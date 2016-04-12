@@ -1,9 +1,12 @@
 from django.conf.urls import include, url
 from django.contrib import admin
+from django.utils.translation import ugettext_lazy as _
 
 from moj_irat.views import HealthcheckView, PingJsonView
 
 admin.site.index_template = 'core/index.html'
+admin.site.site_title = _('Send money to a prisoner')
+admin.site.site_header = _('Send money to a prisoner')
 
 urlpatterns = [
     url(r'^', include('prison.urls')),
