@@ -1,0 +1,31 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block extrahead %}
+  {{ block.super }}
+
+  {{ view.media }}
+  {% for dashboard_module in dashboard_modules %}
+    {{ dashboard_module.media }}
+  {% endfor %}
+{% endblock %}
+
+{% block content %}
+  <div id="content-main">
+    <ul class="object-tools">
+      <li>
+        <label id="mtp-dashboard-autoreload" title="{% blocktrans with count=view.reload_interval %}Reloads every {{ count }} seconds{% endblocktrans %}">
+          <input type="checkbox" checked>
+          {% trans 'Auto-reload' %}
+        </label>
+      </li>
+    </ul>
+
+    <div id="mtp-dashboard" data-reload-interval="{{ view.reload_interval }}">
+      {% for dashboard_module in dashboard_modules %}
+        {% include dashboard_module.template with dashboard=view dashboard_module=dashboard_module only %}
+      {% endfor %}
+    </div>
+
+  </div>
+{% endblock %}

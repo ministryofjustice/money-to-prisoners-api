@@ -1,0 +1,19 @@
+{% extends 'core/dashboard/module.html' %}
+
+{% block module_tbody %}
+  <tbody>
+    {% for row in dashboard_module.get_table %}
+      <tr>
+        <th scope="row">{{ row.title }}</th>
+        <td>
+          {% for link in row.links %}
+            <a href="{{ link.url }}" target="_blank">{{ link.title }}</a>
+            {% if not forloop.last %}
+              <br/>
+            {% endif %}
+          {% endfor %}
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+{% endblock %}

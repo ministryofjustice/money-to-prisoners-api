@@ -18,6 +18,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterModelOptions(
             name='batch',
-            options={'verbose_name_plural': 'batches'},
+            options={'ordering': ('-created',), 'verbose_name_plural': 'batches'},
         ),
     ]

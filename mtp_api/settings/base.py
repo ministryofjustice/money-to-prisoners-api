@@ -22,27 +22,31 @@ ALLOWED_HOSTS = []
 
 # Application definition
 INSTALLED_APPS = (
-    'django.contrib.admin',
+    # django core
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    # third-party
     'oauth2_provider',
     'rest_framework',
     'django_filters',
-)
-if ENVIRONMENT != 'prod':
-    INSTALLED_APPS += ('rest_framework_swagger',)
-PROJECT_APPS = (
+
+    # MTP api & admin
     'core',
     'prison',
     'transaction',
     'mtp_auth',
     'account',
-    'payment'
+    'payment',
+
+    # django admin
+    'django.contrib.admin',
 )
-INSTALLED_APPS += PROJECT_APPS
+if ENVIRONMENT != 'prod':
+    INSTALLED_APPS += ('rest_framework_swagger',)
 
 
 WSGI_APPLICATION = 'mtp_api.wsgi.application'

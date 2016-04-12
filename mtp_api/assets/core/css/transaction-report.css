@@ -1,0 +1,15 @@
+.transaction_report-stat {
+  min-width: 14em;
+  min-height: 5.5em;
+  padding: 10px;
+  background: #f9f9f9;
+  text-align: center;
+}
+
+.transaction_report-stat strong {
+  display: block;
+  font-size: 2.8em;
+  line-height: normal;
+  font-weight: bold;
+  font-family: Courier, Courier New, monospace;
+}

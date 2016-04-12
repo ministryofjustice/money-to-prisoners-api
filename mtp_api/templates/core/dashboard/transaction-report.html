@@ -1,0 +1,25 @@
+{% extends 'core/dashboard/module.html' %}
+{% load i18n %}
+
+{% block module_tbody %}
+  <tbody>
+    <tr>
+      {% for stat in dashboard_module.get_table %}
+        <td>
+          <div class="transaction_report-stat" {% if stat.help_text %}title="{{ stat.help_text }}"{% endif %}>
+            <strong>{{ stat.value }}</strong>
+            {{ stat.title }}
+          </div>
+        </td>
+        {% if not forloop.last and forloop.counter|divisibleby:dashboard_module.column_count %}</tr><tr>{% endif %}
+      {% endfor %}
+    </tr>
+  </tbody>
+  <tfoot>
+    <tr>
+      <td>
+        <a href="{{ dashboard_module.change_list_url }}">{% trans 'View transactions list' %}</a>
+      </td>
+    </tr>
+  </tfoot>
+{% endblock %}

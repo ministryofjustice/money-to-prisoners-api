@@ -3,15 +3,21 @@ from django.contrib.admin import ModelAdmin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin
 
-from .models import ApplicationUserMapping, PrisonUserMapping, FailedLoginAttempt
+from mtp_auth.models import ApplicationUserMapping, PrisonUserMapping, FailedLoginAttempt
+
+User = get_user_model()
+if admin.site.is_registered(User):
+    admin.site.unregister(User)
 
 
+@admin.register(ApplicationUserMapping)
 class ApplicationUserMappingAdmin(ModelAdmin):
     ordering = ('user__username', 'application')
     list_display = ('user', 'application')
     list_filter = ('application',)
 
 
+@admin.register(PrisonUserMapping)
 class PrisonUserMappingAdmin(ModelAdmin):
     ordering = ('user__username',)
     list_display = ('user', 'prison_names')
@@ -27,6 +33,7 @@ class PrisonUserMappingAdmin(ModelAdmin):
                + suffix
 
 
+@admin.register(User)
 class MtpUserAdmin(UserAdmin):
     actions = ['remove_account_lockouts']
 
@@ -35,9 +42,3 @@ class MtpUserAdmin(UserAdmin):
             FailedLoginAttempt.objects.filter(user=instance).delete()
         messages.info(request, 'Removed account lockout for %s' %
                       ', '.join(map(str, instances)))
-
-
-admin.site.register(ApplicationUserMapping, ApplicationUserMappingAdmin)
-admin.site.register(PrisonUserMapping, PrisonUserMappingAdmin)
-admin.site.unregister(get_user_model())
-admin.site.register(get_user_model(), MtpUserAdmin)
