@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.admin.utils import prepare_lookup_value
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django import forms
 
 from .forms import AdminFilterForm, SidebarDateWidget

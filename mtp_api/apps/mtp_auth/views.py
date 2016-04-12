@@ -6,7 +6,7 @@ from django.db.models import Q
 from django.db.transaction import atomic
 from django.forms import ValidationError
 from django.http import Http404
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from rest_framework import viewsets, mixins, generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
