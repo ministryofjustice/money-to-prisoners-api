@@ -1,0 +1,10 @@
+{% block module %}
+  <div class="{{ dashboard_module.html_classes }}">
+    <table>
+      <caption>{{ dashboard_module.title }}</caption>
+      {% block module_tbody %}
+        {{ dashboard_module.as_tbody }}
+      {% endblock %}
+    </table>
+  </div>
+{% endblock %}

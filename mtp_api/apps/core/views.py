@@ -6,38 +6,87 @@ from django.contrib.admin import site
 from django.core.exceptions import PermissionDenied
 from django.core.management import call_command
 from django.core.urlresolvers import reverse_lazy
+from django.forms import MediaDefiningClass
 from django.http.response import Http404
 from django.utils.decorators import method_decorator
 from django.utils.translation import gettext_lazy as _
-from django.views.generic import FormView
+from django.views.generic import FormView, TemplateView
 
-from .forms import RecreateTestDataForm
+from core.dashboards import ExternalDashboards, TransactionReport
+from core.forms import RecreateTestDataForm
 
 logger = logging.getLogger('mtp')
 
 
-class RecreateTestDataView(FormView):
+class AdminViewMixin:
     """
-    Django admin view which calls load_test_data management command
+    Mixin for custom MTP django admin views
     """
-    form_class = RecreateTestDataForm
-    template_name = 'core/recreate_test_data.html'
-    success_url = reverse_lazy('mtp-admin:recreate_test_data')
+    disable_in_production = False
+    superuser_required = False
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.request = None
 
     @method_decorator(site.admin_view)
     def dispatch(self, request, *args, **kwargs):
-        if settings.ENVIRONMENT == 'prod':
-            raise Http404
-        if not request.user.is_superuser:
-            raise PermissionDenied
+        if self.disable_in_production and settings.ENVIRONMENT == 'prod':
+            raise Http404('View disabled in production')
+        if self.superuser_required and not request.user.is_superuser:
+            raise PermissionDenied('Superuser required')
+
+        self.request = request
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
+        context = site.each_context(self.request)
+        if hasattr(self, 'title'):
+            context['title'] = self.title
+        context.update(kwargs)
+        return super().get_context_data(**context)
+
+
+class DashboardView(AdminViewMixin, TemplateView, metaclass=MediaDefiningClass):
+    """
+    Django admin view which presents an overview report for MTP
+    """
+    title = _('Dashboard')
+    template_name = 'core/dashboard/index.html'
+    required_permissions = ['transaction.view_dashboard']
+    reload_interval = 5 * 60
+
+    class Media:
+        css = {
+            'all': ('core/css/dashboard.css',)
+        }
+        js = (
+            'admin/js/vendor/jquery/jquery.min.js',
+            'admin/js/jquery.init.js',
+            'core/js/dashboard.js',
+        )
+
+    @classmethod
+    def get_dashboard_modules(cls):
+        dashboard_modules = [TransactionReport(), ExternalDashboards()]
+        return [dashboard_module for dashboard_module in dashboard_modules if dashboard_module.enabled]
+
+    def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context.update({
-            'title': _('Recreate test data'),
-        })
+        context['dashboard_modules'] = self.get_dashboard_modules()
         return context
+
+
+class RecreateTestDataView(AdminViewMixin, FormView):
+    """
+    Django admin view which calls load_test_data management command
+    """
+    title = _('Recreate test data')
+    form_class = RecreateTestDataForm
+    template_name = 'core/recreate_test_data.html'
+    success_url = reverse_lazy('admin:recreate_test_data')
+    disable_in_production = True
+    superuser_required = True
 
     def form_valid(self, form):
         scenario = form.cleaned_data['scenario']

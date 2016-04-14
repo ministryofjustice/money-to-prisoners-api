@@ -9,7 +9,7 @@ from django.test import TestCase
 class RecreateTestDataViewTestCase(TestCase):
     @property
     def url(self):
-        return reverse('mtp-admin:recreate_test_data')
+        return reverse('admin:recreate_test_data')
 
     def make_superuser(self, log_into_client=False):
         superuser = get_user_model().objects.create(

@@ -4,6 +4,7 @@ from account.models import Batch, Balance
 from transaction.utils import format_amount
 
 
+@admin.register(Batch)
 class BatchAdmin(admin.ModelAdmin):
     list_display = ('created', 'label', 'user', 'transaction_count')
 
@@ -12,6 +13,7 @@ class BatchAdmin(admin.ModelAdmin):
         return instance.transactions.count()
 
 
+@admin.register(Balance)
 class BalanceAdmin(admin.ModelAdmin):
     list_display = ('date', 'balance')
     date_hierarchy = 'date'
@@ -19,7 +21,3 @@ class BalanceAdmin(admin.ModelAdmin):
     @classmethod
     def balance(cls, instance):
         return format_amount(instance.closing_balance)
-
-
-admin.site.register(Batch, BatchAdmin)
-admin.site.register(Balance, BalanceAdmin)

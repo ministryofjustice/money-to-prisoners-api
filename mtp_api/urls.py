@@ -3,8 +3,6 @@ from django.contrib import admin
 
 from moj_irat.views import HealthcheckView, PingJsonView
 
-admin.site.index_template = 'core/index.html'
-
 urlpatterns = [
     url(r'^', include('prison.urls')),
     url(r'^', include('mtp_auth.urls')),
@@ -14,7 +12,6 @@ urlpatterns = [
 
     url(r'^oauth2/', include(('oauth2_provider.urls', 'oauth2_provider'), namespace='oauth2_provider')),
     url(r'^docs/', include('rest_framework_swagger.urls')),
-    url(r'^admin/core/', include('core.urls', namespace='mtp-admin')),
     url(r'^admin/', admin.site.urls),
 
     url(r'^ping.json$', PingJsonView.as_view(

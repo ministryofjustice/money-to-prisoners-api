@@ -1,9 +1,46 @@
+from django import forms
+from django.conf import settings
+from django.conf.urls import url
 from django.contrib import admin
 from django.contrib.admin.utils import prepare_lookup_value
-from django.utils.translation import ugettext_lazy as _
-from django import forms
+from django.utils.translation import gettext_lazy as _
 
-from .forms import AdminFilterForm, SidebarDateWidget
+from core import getattr_path
+from core.forms import AdminFilterForm, SidebarDateWidget
+
+
+class AdminSite(admin.AdminSite):
+    site_title = _('Send money to a prisoner')
+    site_header = _('Send money to a prisoner')
+    site_url = None
+    index_template = 'core/index.html'
+
+    def get_urls(self):
+        from core.views import DashboardView, RecreateTestDataView
+
+        return [
+            url(r'^dashboard/$', DashboardView.as_view(), name='dashboard'),
+            url(r'^recreate-test-data/$', RecreateTestDataView.as_view(), name='recreate_test_data'),
+        ] + super().get_urls()
+
+    def index(self, request, extra_context=None):
+        extra_context = extra_context or {}
+
+        if request.user.is_superuser:
+            extra_context['show_reports'] = True
+
+        if settings.ENVIRONMENT != 'prod' and request.user.is_superuser:
+            extra_context['show_recreate_test_data'] = True
+
+        return super().index(request, extra_context)
+
+    def has_permission(self, request):
+        has_permission = super().has_permission(request)
+        required_permissions = getattr_path(request, 'resolver_match.func.view_class.required_permissions', [])
+        return has_permission and request.user.has_perms(required_permissions)
+
+
+site = AdminSite()
 
 
 class FormFilter(admin.FieldListFilter):

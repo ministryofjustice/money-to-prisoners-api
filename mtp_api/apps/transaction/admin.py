@@ -42,6 +42,7 @@ class StatusFilter(admin.SimpleListFilter):
                 raise IncorrectLookupParameters(e)
 
 
+@admin.register(Transaction)
 class TransactionAdmin(admin.ModelAdmin):
     list_display = (
         'prisoner_name', 'prisoner_number', 'prison', 'formatted_amount',
@@ -145,6 +146,3 @@ class TransactionAdmin(admin.ModelAdmin):
         else:
             self.message_user(request, 'No transactions have been unlocked yet.',
                               messages.WARNING)
-
-
-admin.site.register(Transaction, TransactionAdmin)
