@@ -44,7 +44,8 @@ class CreatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
             'prisoner_dob': date(1986, 12, 9),
             'recipient_name': 'Alan Smith',
             'amount': 1000,
-            'service_charge': 24
+            'service_charge': 24,
+            'email': 'sender@outside.local'
         }
 
         response = self.client.post(
@@ -76,7 +77,8 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
             'prisoner_dob': date(1986, 12, 9),
             'recipient_name': 'Alan Smith',
             'amount': 1000,
-            'service_charge': 24
+            'service_charge': 24,
+            'email': 'sender@outside.local'
         }
         payment_uuid = Payment.objects.create(**new_payment).uuid
 
