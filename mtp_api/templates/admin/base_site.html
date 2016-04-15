@@ -1,0 +1,22 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block branding %}
+  {% if APP_GIT_COMMIT %}
+    {% blocktrans trimmed with version=APP_GIT_COMMIT|truncatechars:7 asvar version_description %}
+      App version {{ version }}
+    {% endblocktrans %}
+  {% else %}
+    {% trans 'App version not known' as version_description %}
+  {% endif %}
+
+  <h1 id="site-name" title="{{ version_description }}">
+    <a href="{% url 'admin:index' %}">{{ site_header|default:_('Send money to a prisoner') }}</a>
+    {% if ENVIRONMENT != 'prod' %}— <strong>{{ ENVIRONMENT|capfirst }}</strong>{% endif %}
+  </h1>
+{% endblock %}
+
+{% block welcome-msg %}
+  {% firstof user.get_short_name user.get_username as user_name %}
+  {% blocktrans %}Logged in as <strong>{{ user_name }}</strong>.{% endblocktrans %}
+{% endblock %}
