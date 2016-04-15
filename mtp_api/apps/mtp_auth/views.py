@@ -107,7 +107,7 @@ class ChangePasswordView(generics.GenericAPIView):
                         FailedLoginAttempt.objects.add_failed_attempt(
                             request.user, request.auth.application)
                 errors = {'old_password': [_('Your old password was entered incorrectly. '
-                                             'Please enter it again.')]},
+                                             'Please enter it again.')]}
             except ValidationError as e:
                 errors = {'new_password': e.error_list}
         else:
