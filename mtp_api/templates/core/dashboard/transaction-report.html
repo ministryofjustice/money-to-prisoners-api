@@ -3,6 +3,13 @@
 
 {% block module_tbody %}
   <tbody>
+    <tr class="mtp-dashboard-change" style="display: none">
+      <th colspan="{{ dashboard_module.column_count }}">
+        <form data-cookie-key="{{ dashboard_module.cookie_key }}">
+          {{ dashboard_module.form.as_p }}
+        </form>
+      </th>
+    </tr>
     <tr>
       {% for stat in dashboard_module.get_table %}
         <td>

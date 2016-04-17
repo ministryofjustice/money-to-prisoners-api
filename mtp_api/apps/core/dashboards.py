@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.forms import MediaDefiningClass
+from django.http.request import QueryDict
 from django.utils.translation import gettext_lazy as _
 
 from core.views import DashboardView
@@ -7,12 +8,14 @@ from core.views import DashboardView
 
 class DashboardModule(metaclass=MediaDefiningClass):
     template = 'core/dashboard/module.html'
-    html_classes = 'module'
+    html_classes = 'mtp-dashboard-module module'
     title = _('Dashboard')
     enabled = True
+    cookie_key = None
 
     def __init__(self, dashboard_view):
         self.dashboard_view = dashboard_view
+        self.cookie_data = QueryDict(dashboard_view.cookie_data.get(self.cookie_key))
 
 
 @DashboardView.register_dashboard
@@ -26,6 +29,7 @@ class ExternalDashboards(DashboardModule):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
         if settings.ENVIRONMENT == 'test':
             self.grafana_host = 'grafana-staging.service.dsd.io'
             self.kibana_host = 'kibana-staging.service.dsd.io'

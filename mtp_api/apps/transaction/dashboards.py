@@ -1,5 +1,6 @@
 import datetime
 
+from django import forms
 from django.core.urlresolvers import reverse
 from django.db import models
 from django.utils.dateformat import format as format_date
@@ -14,40 +15,60 @@ from transaction.models import Transaction
 from transaction.utils import format_amount, format_number
 
 
+class TransactionReportDateForm(forms.Form):
+    date_range = forms.ChoiceField(
+        label=_('Date range'),
+        choices=(
+            ('latest', _('Latest')),
+            ('this_month', _('This month')),
+            ('all', _('Since the beginning')),
+        ),
+        initial='latest',
+    )
+
+
 @DashboardView.register_dashboard
 class TransactionReport(DashboardModule):
     template = 'core/dashboard/transaction-report.html'
     title = _('Transaction report')
     column_count = 3
+    cookie_key = 'transaction-report'
 
     class Media:
         css = {
             'all': ('core/css/transaction-report.css',)
         }
 
-    def __init__(self, received_at=None, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        if not received_at:
+
+        self.form = TransactionReportDateForm(data=self.cookie_data)
+        date_range = self.form['date_range'].value()
+        if date_range == 'all':
+            self.title = _('All transactions')
+            self.transaction_filters = {}
+            filter_string = ''
+        elif date_range == 'this_month':
+            received_at_start = now().date()
+            received_at_end = received_at_start.replace(day=1)
+            self.title = _('Transactions received in %(month)s') % {
+                'month': format_date(received_at_end, 'N Y')
+            }
+            self.transaction_filters = {
+                'received_at__date__gte': received_at_end,
+                'received_at__date__lte': received_at_start,
+            }
+            filter_string = 'received_at__date__gte=%s&' \
+                            'received_at__date__lte=%s' % (received_at_end.isoformat(),
+                                                           received_at_start.isoformat())
+        else:
             try:
                 received_at = Transaction.objects.latest().received_at.date()
             except Transaction.DoesNotExist:
                 received_at = (now() - datetime.timedelta(days=1)).date()
-            self.title = _('Latest transactions received %(date)s') % {
+            self.title = _('Latest transactions received on %(date)s') % {
                 'date':  format_date(received_at, 'j N')
             }
-        if isinstance(received_at, (list, tuple)):
-            received_at = list(map(
-                lambda d: d.date() if isinstance(d, datetime.datetime) else d,
-                received_at
-            ))
-            self.transaction_filters = {
-                'received_at__date__gte': received_at[0],
-                'received_at__date__lte': received_at[1],
-            }
-            filter_string = 'received_at__date__gte=%s&' \
-                            'received_at__date__lte=%s' % (received_at[0].isoformat(),
-                                                           received_at[1].isoformat())
-        else:
             self.transaction_filters = {
                 'received_at__date': received_at
             }

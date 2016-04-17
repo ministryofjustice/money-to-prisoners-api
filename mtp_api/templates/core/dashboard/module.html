@@ -1,10 +1,15 @@
+{% load i18n %}
+
 {% block module %}
   <div class="{{ dashboard_module.html_classes }}">
     <table>
-      <caption>{{ dashboard_module.title }}</caption>
-      {% block module_tbody %}
-        {{ dashboard_module.as_tbody }}
-      {% endblock %}
+      <caption>
+        {{ dashboard_module.title }}
+        {% if dashboard_module.form %}
+          <a href="#" class="js-mtp-dashboard-change changelink float-right">{% trans 'Change' %}</a>
+        {% endif %}
+      </caption>
+      {% block module_tbody %}{% endblock %}
     </table>
   </div>
 {% endblock %}

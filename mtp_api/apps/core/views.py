@@ -1,5 +1,7 @@
 from io import StringIO
+import json
 import logging
+from urllib.parse import unquote as url_unquote
 
 from django.conf import settings
 from django.contrib.admin import site
@@ -54,6 +56,7 @@ class DashboardView(AdminViewMixin, TemplateView, metaclass=MediaDefiningClass):
     title = _('Dashboard')
     template_name = 'core/dashboard/index.html'
     required_permissions = ['transaction.view_dashboard']
+    cookie_name = 'mtp-dashboard'
     reload_interval = 5 * 60
     _registry = []
 
@@ -62,6 +65,7 @@ class DashboardView(AdminViewMixin, TemplateView, metaclass=MediaDefiningClass):
             'all': ('core/css/dashboard.css',)
         }
         js = (
+            'core/js/js.cookie-2.1.1.min.js',
             'admin/js/vendor/jquery/jquery.min.js',
             'admin/js/jquery.init.js',
             'core/js/dashboard.js',
@@ -71,6 +75,17 @@ class DashboardView(AdminViewMixin, TemplateView, metaclass=MediaDefiningClass):
     def register_dashboard(cls, dashboard_class):
         cls._registry.append(dashboard_class)
         return dashboard_class
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.cookie_data = {}
+
+    def dispatch(self, request, *args, **kwargs):
+        try:
+            self.cookie_data = json.loads(url_unquote(request.COOKIES.get(self.cookie_name, '')))
+        except (TypeError, ValueError):
+            pass
+        return super().dispatch(request, *args, **kwargs)
 
     def get_dashboards(self):
         cls = self.__class__
