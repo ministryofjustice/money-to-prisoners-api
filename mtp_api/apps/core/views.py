@@ -66,9 +66,8 @@ class DashboardView(AdminViewMixin, TemplateView, metaclass=MediaDefiningClass):
             'core/js/dashboard.js',
         )
 
-    @classmethod
-    def get_dashboard_modules(cls):
-        dashboard_modules = [TransactionReport(), ExternalDashboards()]
+    def get_dashboard_modules(self):
+        dashboard_modules = [TransactionReport(self), ExternalDashboards(self)]
         return [dashboard_module for dashboard_module in dashboard_modules if dashboard_module.enabled]
 
     def get_context_data(self, **kwargs):

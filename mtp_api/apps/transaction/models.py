@@ -114,6 +114,7 @@ class Transaction(TimeStampedModel):
 
     class Meta:
         ordering = ('received_at',)
+        get_latest_by = 'received_at'
         permissions = (
             ('view_transaction', 'Can view transaction'),
             ('view_dashboard', 'Can view dashboard'),

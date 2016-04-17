@@ -15,11 +15,13 @@
       {% endfor %}
     </tr>
   </tbody>
-  <tfoot>
-    <tr>
-      <td>
-        <a href="{{ dashboard_module.change_list_url }}">{% trans 'View transactions list' %}</a>
-      </td>
-    </tr>
-  </tfoot>
+  {% if dashboard_module.change_list_url %}
+    <tfoot>
+      <tr>
+        <td>
+          <a href="{{ dashboard_module.change_list_url }}">{% trans 'View transactions list' %}</a>
+        </td>
+      </tr>
+    </tfoot>
+  {% endif %}
 {% endblock %}

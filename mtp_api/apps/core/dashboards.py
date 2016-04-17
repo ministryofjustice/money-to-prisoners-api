@@ -4,6 +4,7 @@ from django.conf import settings
 from django.core.urlresolvers import reverse
 from django.db import models
 from django.forms import MediaDefiningClass
+from django.utils.dateformat import format as format_date
 from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 
@@ -19,6 +20,9 @@ class DashboardModule(metaclass=MediaDefiningClass):
     title = _('Dashboard')
     enabled = True
 
+    def __init__(self, dashboard_view):
+        self.dashboard_view = dashboard_view
+
 
 class TransactionReport(DashboardModule):
     template = 'core/dashboard/transaction-report.html'
@@ -30,10 +34,16 @@ class TransactionReport(DashboardModule):
             'all': ('core/css/transaction-report.css',)
         }
 
-    def __init__(self, received_at=None):
+    def __init__(self, dashboard_view, received_at=None):
+        super().__init__(dashboard_view)
         if not received_at:
-            self.title = _('Today’s transaction report')
-            received_at = (now() - datetime.timedelta(days=1)).date()
+            try:
+                received_at = Transaction.objects.latest().received_at.date()
+            except Transaction.DoesNotExist:
+                received_at = (now() - datetime.timedelta(days=1)).date()
+            self.title = _('Latest transactions received %(date)s') % {
+                'date':  format_date(received_at, 'j N')
+            }
         if isinstance(received_at, (list, tuple)):
             received_at = list(map(
                 lambda d: d.date() if isinstance(d, datetime.datetime) else d,
@@ -55,7 +65,8 @@ class TransactionReport(DashboardModule):
                             'received_at__year=%d' % (received_at.day,
                                                       received_at.month,
                                                       received_at.year)
-        self.change_list_url = reverse('admin:transaction_transaction_changelist') + '?' + filter_string
+        if self.dashboard_view.request.user.has_perm('transaction.change_transaction'):
+            self.change_list_url = reverse('admin:transaction_transaction_changelist') + '?' + filter_string
         self.queryset = Transaction.objects.filter(**self.transaction_filters)
 
     @classmethod
@@ -173,7 +184,8 @@ class ExternalDashboards(DashboardModule):
         'transaction-uploader', 'send-money',
     ]
 
-    def __init__(self):
+    def __init__(self, dashboard_view):
+        super().__init__(dashboard_view)
         if settings.ENVIRONMENT == 'test':
             self.grafana_host = 'grafana-staging.service.dsd.io'
             self.kibana_host = 'kibana-staging.service.dsd.io'
