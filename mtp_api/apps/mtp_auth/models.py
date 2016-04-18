@@ -45,11 +45,10 @@ class ApplicationGroupMapping(TimeStampedModel):
 
 
 class FailedLoginAttemptManager(models.Manager):
-    def is_locked_out(self, user, client):
-        failed_attempts = self.get_queryset().filter(
-            user=user,
-            application=client,
-        )
+    def is_locked_out(self, user, client=None):
+        failed_attempts = self.get_queryset().filter(user=user)
+        if client:
+            failed_attempts = failed_attempts.filter(application=client)
         failed_attempt_count = failed_attempts.count()
         if not failed_attempt_count:
             return False
