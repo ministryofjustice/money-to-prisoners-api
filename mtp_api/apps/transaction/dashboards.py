@@ -1,4 +1,6 @@
 import datetime
+from functools import reduce
+import re
 
 from django import forms
 from django.core.urlresolvers import reverse
@@ -148,6 +150,36 @@ class TransactionReport(DashboardModule):
             source=TRANSACTION_SOURCE.BANK_TRANSFER,
         )
 
+    @property
+    def well_formed_references(self):
+        # taken from transaction-uploader
+        reference_pattern = re.compile(
+            '''
+            ^
+            [^a-zA-Z]*                    # skip until first letter
+            ([A-Za-z][0-9]{4}[A-Za-z]{2}) # match the prisoner number
+            \D*                           # skip until next digit
+            ([0-9]{1,2})                  # match 1 or 2 digit day of month
+            \D*                           # skip until next digit
+            ([0-9]{1,2})                  # match 1 or 2 digit month
+            \D*                           # skip until next digit
+            ([0-9]{4}|[0-9]{2})           # match 4 or 2 digit year
+            \D*                           # skip until end
+            $
+            ''',
+            re.X
+        )
+
+        candidate_credits = self.queryset.filter(
+            category=TRANSACTION_CATEGORY.CREDIT,
+            source__in=[
+                TRANSACTION_SOURCE.BANK_TRANSFER,
+                TRANSACTION_SOURCE.ONLINE,
+            ],
+        ).values_list('reference', flat=True)
+        return reduce(lambda count, reference: count + (1 if reference_pattern.match(reference) else 0),
+                      candidate_credits, 0)
+
     def get_table(self):
         return [
             {
@@ -171,9 +203,9 @@ class TransactionReport(DashboardModule):
                 'value': self.get_count(self.credits_to_refund),
             },
             {
-                'title': _('Unidentified credits'),
-                'value': self.get_count(self.unidentified_credits),
-                'help_text': _('Credits that do not match an offender in the system and cannot be refunded'),
+                'title': _('Well-formed references'),
+                'value': self.well_formed_references,
+                'help_text': _('References that were can be formatted into a prisoner number and date of birth'),
             },
             {
                 'title': _('Credited'),
@@ -184,5 +216,10 @@ class TransactionReport(DashboardModule):
                 'title': _('Refunded'),
                 'value': self.get_count(self.refunded_payments),
                 'help_text': _('Refunds file downloaded through the Bank Admin tool'),
+            },
+            {
+                'title': _('Unidentified credits'),
+                'value': self.get_count(self.unidentified_credits),
+                'help_text': _('Credits that do not match an offender in the system and cannot be refunded'),
             },
         ]
