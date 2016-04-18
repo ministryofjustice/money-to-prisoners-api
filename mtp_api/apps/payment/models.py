@@ -18,6 +18,7 @@ class Payment(TimeStampedModel):
     amount = models.PositiveIntegerField()
     service_charge = models.PositiveIntegerField(default=0)
     recipient_name = models.CharField(max_length=250, null=True, blank=True)
+    email = models.EmailField(null=True, blank=True)
     prisoner_number = models.CharField(max_length=250)
     prisoner_dob = models.DateField()
     transaction = models.OneToOneField(Transaction, on_delete=models.CASCADE, null=True)
