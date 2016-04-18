@@ -1,5 +1,7 @@
 from io import StringIO
+import json
 import logging
+from urllib.parse import unquote as url_unquote
 
 from django.conf import settings
 from django.contrib.admin import site
@@ -9,10 +11,10 @@ from django.core.urlresolvers import reverse_lazy
 from django.forms import MediaDefiningClass
 from django.http.response import Http404
 from django.utils.decorators import method_decorator
+from django.utils.module_loading import autodiscover_modules
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import FormView, TemplateView
 
-from core.dashboards import ExternalDashboards, TransactionReport
 from core.forms import RecreateTestDataForm
 
 logger = logging.getLogger('mtp')
@@ -54,26 +56,49 @@ class DashboardView(AdminViewMixin, TemplateView, metaclass=MediaDefiningClass):
     title = _('Dashboard')
     template_name = 'core/dashboard/index.html'
     required_permissions = ['transaction.view_dashboard']
+    cookie_name = 'mtp-dashboard'
     reload_interval = 5 * 60
+    _registry = []
 
     class Media:
         css = {
             'all': ('core/css/dashboard.css',)
         }
         js = (
+            'core/js/js.cookie-2.1.1.min.js',
             'admin/js/vendor/jquery/jquery.min.js',
             'admin/js/jquery.init.js',
             'core/js/dashboard.js',
         )
 
     @classmethod
-    def get_dashboard_modules(cls):
-        dashboard_modules = [TransactionReport(), ExternalDashboards()]
-        return [dashboard_module for dashboard_module in dashboard_modules if dashboard_module.enabled]
+    def register_dashboard(cls, dashboard_class):
+        cls._registry.append(dashboard_class)
+        return dashboard_class
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.cookie_data = {}
+
+    def dispatch(self, request, *args, **kwargs):
+        try:
+            self.cookie_data = json.loads(url_unquote(request.COOKIES.get(self.cookie_name, '')))
+        except (TypeError, ValueError):
+            pass
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_dashboards(self):
+        cls = self.__class__
+        if not cls._registry:
+            autodiscover_modules('dashboards', register_to=cls)
+
+        dashboards = map(lambda d: d(dashboard_view=self),
+                         cls._registry)
+        return [dashboard for dashboard in dashboards if dashboard.enabled]
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['dashboard_modules'] = self.get_dashboard_modules()
+        context['dashboard_modules'] = self.get_dashboards()
         return context
 
 

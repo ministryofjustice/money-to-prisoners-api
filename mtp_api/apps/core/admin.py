@@ -26,9 +26,7 @@ class AdminSite(admin.AdminSite):
     def index(self, request, extra_context=None):
         extra_context = extra_context or {}
 
-        if request.user.is_superuser:
-            extra_context['show_reports'] = True
-
+        extra_context['show_reports'] = request.user.has_perm('transaction.view_dashboard')
         if settings.ENVIRONMENT != 'prod' and request.user.is_superuser:
             extra_context['show_recreate_test_data'] = True
 

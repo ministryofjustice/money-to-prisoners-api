@@ -67,6 +67,8 @@ class TransactionAdmin(admin.ModelAdmin):
         ('owner__username', ExactSearchFilter),
         'reference_in_sender_field'
     )
+    search_fields = ('prisoner_name', 'prisoner_number', 'reference',
+                     'sender_name', 'sender_sort_code', 'sender_account_number', 'sender_roll_number')
     actions = [
         'display_total_amount', 'display_reference_validity',
         'display_resolution_time'
