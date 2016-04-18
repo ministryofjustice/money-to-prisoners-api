@@ -10,4 +10,6 @@ urlpatterns = [
     url(r'^', include(router.urls)),
     url(r'^change_password/$', views.ChangePasswordView.as_view(),
         name='user-change-password'),
+    url(r'^reset_password/$', views.ResetPasswordView.as_view(),
+        name='user-reset-password'),
 ]
