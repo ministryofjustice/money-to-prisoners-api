@@ -1,5 +1,6 @@
 from django.contrib import admin, messages
 from django.contrib.admin import ModelAdmin
+from django.contrib.admin.templatetags.admin_list import _boolean_icon
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin
 
@@ -35,6 +36,7 @@ class PrisonUserMappingAdmin(ModelAdmin):
 
 @admin.register(User)
 class MtpUserAdmin(UserAdmin):
+    list_display = UserAdmin.list_display + ('account_locked',)
     actions = ['remove_account_lockouts']
 
     def remove_account_lockouts(self, request, instances):
@@ -42,3 +44,7 @@ class MtpUserAdmin(UserAdmin):
             FailedLoginAttempt.objects.filter(user=instance).delete()
         messages.info(request, 'Removed account lockout for %s' %
                       ', '.join(map(str, instances)))
+
+    @classmethod
+    def account_locked(cls, instance):
+        return _boolean_icon(FailedLoginAttempt.objects.is_locked_out(user=instance))

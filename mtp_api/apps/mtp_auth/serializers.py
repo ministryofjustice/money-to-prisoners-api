@@ -1,5 +1,6 @@
 from django.conf import settings
-from django.contrib.auth.models import User, Group
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.core.mail import EmailMessage
 from django.db.transaction import atomic
 from django.template import loader
@@ -10,6 +11,8 @@ from rest_framework import serializers
 from .models import (
     PrisonUserMapping, ApplicationGroupMapping, ApplicationUserMapping
 )
+
+User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -71,7 +74,7 @@ class UserSerializer(serializers.ModelSerializer):
         }
         body = loader.get_template('mtp_auth/new_user.txt').render(context)
         email = EmailMessage(
-            _('Your new Money To Prisoners %(app)s account' % {'app': client_application.name}),
+            _('Your new Money To Prisoners %(app)s account') % {'app': client_application.name},
             body,
             settings.MAILGUN_FROM_ADDRESS,
             [new_user.email]
@@ -113,3 +116,7 @@ class UserSerializer(serializers.ModelSerializer):
 class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField()
     new_password = serializers.CharField()
+
+
+class ResetPasswordSerializer(serializers.Serializer):
+    username = serializers.CharField(write_only=True)

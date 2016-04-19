@@ -1,8 +1,11 @@
 import datetime
+import json
+import re
 from unittest import mock
 
 from django.conf import settings
-from django.contrib.auth.models import User, Group
+from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth.models import Group
 from django.core import mail
 from django.core.urlresolvers import reverse
 from django.utils.timezone import now
@@ -16,8 +19,11 @@ from mtp_auth.constants import (
     PRISONER_LOCATION_OAUTH_CLIENT_ID
 )
 from mtp_auth.models import FailedLoginAttempt
+from mtp_auth.views import ResetPasswordView
 from prison.models import Prison
 from .utils import AuthTestCaseMixin
+
+User = get_user_model()
 
 
 class GetUserTestCase(APITestCase, AuthTestCaseMixin):
@@ -710,7 +716,7 @@ class ChangePasswordTestCase(APITestCase, AuthTestCaseMixin):
     def test_change_password(self):
         new_password = 'freshpass'
         response = self.correct_password_change(new_password)
-        self.assertEqual(response.status_code, 204)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertTrue(User.objects.get(pk=self.user.pk).check_password(new_password))
 
     def test_requires_auth(self):
@@ -718,12 +724,12 @@ class ChangePasswordTestCase(APITestCase, AuthTestCaseMixin):
             reverse('user-change-password'),
             {'old_password': self.current_password, 'new_password': 'freshpass'}
         )
-        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertTrue(self.user.check_password(self.current_password))
 
     def test_fails_with_incorrect_old_password(self):
         response = self.incorrect_password_attempt()
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertTrue(self.user.check_password(self.current_password))
 
     def test_account_lockout_on_too_many_attempts(self):
@@ -735,7 +741,7 @@ class ChangePasswordTestCase(APITestCase, AuthTestCaseMixin):
 
         self.assertTrue(FailedLoginAttempt.objects.is_locked_out(self.user, cashbook_client))
         response = self.correct_password_change('new_password')
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertTrue(self.user.check_password(self.current_password))
 
     def test_account_lockout_removed_on_successful_change(self):
@@ -755,3 +761,64 @@ class ChangePasswordTestCase(APITestCase, AuthTestCaseMixin):
             user=self.user,
             application=cashbook_client,
         ).count(), 0)
+
+
+class ResetPasswordTestCase(APITestCase):
+    fixtures = ['initial_groups.json', 'test_prisons.json']
+    reset_url = reverse('user-reset-password')
+
+    def setUp(self):
+        super().setUp()
+        self.user = make_test_users()[0][0]
+        self.current_password = 'Password321='
+        self.user.set_password(self.current_password)
+        self.user.save()
+
+    def assertErrorResponse(self, response, error_dict):  # noqa
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        error = json.loads(response.content.decode('utf-8')).get('errors', {})
+        for key, value in error_dict.items():
+            self.assertIn(key, error)
+            self.assertSequenceEqual(error[key], value)
+        user = authenticate(username=self.user.username, password=self.current_password)
+        self.assertEqual(self.user.username, getattr(user, 'username', None),
+                         msg='Cannot log in with old password')
+
+    def test_unknown_user(self):
+        response = self.client.post(self.reset_url, {'username': 'unknown'})
+        self.assertErrorResponse(response, {
+            'username': [ResetPasswordView.error_messages['not_found']],
+        })
+
+    def test_user_with_no_email(self):
+        self.user.email = ''
+        self.user.save()
+        response = self.client.post(self.reset_url, {'username': self.user.username})
+        self.assertErrorResponse(response, {
+            'username': [ResetPasswordView.error_messages['no_email']],
+        })
+
+    def test_locked_user(self):
+        app = Application.objects.first()
+        for _ in range(settings.MTP_AUTH_LOCKOUT_COUNT):
+            FailedLoginAttempt.objects.create(user=self.user, application=app)
+        response = self.client.post(self.reset_url, {'username': self.user.username})
+        self.assertErrorResponse(response, {
+            'username': [ResetPasswordView.error_messages['locked_out']],
+        })
+
+    def test_password_reset(self):
+        response = self.client.post(self.reset_url, {'username': self.user.username})
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        user = authenticate(username=self.user.username, password=self.current_password)
+        self.assertIsNone(user, msg='Password was not changed')
+
+        latest_email = mail.outbox[0]
+        self.assertIn(self.user.username, latest_email.body)
+        self.assertNotIn(self.current_password, latest_email.body)
+        password_match = re.search(r'Password: (?P<password>[^\n]+)', latest_email.body)
+        self.assertTrue(password_match, msg='Cannot find new password in email')
+        user = authenticate(username=self.user.username,
+                            password=password_match.group('password'))
+        self.assertEqual(self.user.username, getattr(user, 'username', None),
+                         msg='Cannot log in with new password')

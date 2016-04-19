@@ -23,7 +23,14 @@ class ClientIDPermissions(BasePermission):
     def has_permission(self, request, view):
         if not request.auth or not request.auth.application:
             return False
+        if isinstance(self.client_id, (list, tuple, set)):
+            return request.auth.application.client_id in self.client_id
         return self.client_id == request.auth.application.client_id
+
+
+class AnyAdminClientIDPermissions(ClientIDPermissions):
+    client_id = (CASHBOOK_OAUTH_CLIENT_ID, BANK_ADMIN_OAUTH_CLIENT_ID,
+                 PRISONER_LOCATION_OAUTH_CLIENT_ID)
 
 
 class CashbookClientIDPermissions(ClientIDPermissions):
