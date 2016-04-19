@@ -11,6 +11,7 @@ class DashboardModule(metaclass=MediaDefiningClass):
     html_classes = 'mtp-dashboard-module module'
     title = _('Dashboard')
     enabled = True
+    priority = 0
     cookie_key = None
 
     def __init__(self, dashboard_view):
