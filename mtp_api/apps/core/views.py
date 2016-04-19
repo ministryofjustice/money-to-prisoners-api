@@ -94,7 +94,8 @@ class DashboardView(AdminViewMixin, TemplateView, metaclass=MediaDefiningClass):
 
         dashboards = map(lambda d: d(dashboard_view=self),
                          cls._registry)
-        return [dashboard for dashboard in dashboards if dashboard.enabled]
+        return sorted((dashboard for dashboard in dashboards if dashboard.enabled),
+                      key=lambda dashboard: dashboard.priority, reverse=True)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

@@ -33,6 +33,7 @@ class TransactionReportDateForm(forms.Form):
 class TransactionReport(DashboardModule):
     template = 'core/dashboard/transaction-report.html'
     title = _('Transaction report')
+    priority = 100
     column_count = 3
     cookie_key = 'transaction-report'
 
