@@ -5,8 +5,8 @@ import re
 from django import forms
 from django.core.urlresolvers import reverse
 from django.db import models
+from django.utils import timezone
 from django.utils.dateformat import format as format_date
-from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 
 from account.models import Balance
@@ -52,23 +52,23 @@ class TransactionReport(DashboardModule):
             self.transaction_filters = {}
             filter_string = ''
         elif date_range == 'this_month':
-            received_at_start = now().date()
-            received_at_end = received_at_start.replace(day=1)
+            received_at_end = timezone.localtime(timezone.now()).date()
+            received_at_start = received_at_end.replace(day=1)
             self.title = _('Transactions received in %(month)s') % {
-                'month': format_date(received_at_end, 'N Y')
+                'month': format_date(received_at_start, 'N Y')
             }
             self.transaction_filters = {
-                'received_at__date__gte': received_at_end,
-                'received_at__date__lte': received_at_start,
+                'received_at__date__gte': received_at_start,
+                'received_at__date__lte': received_at_end,
             }
             filter_string = 'received_at__date__gte=%s&' \
-                            'received_at__date__lte=%s' % (received_at_end.isoformat(),
-                                                           received_at_start.isoformat())
+                            'received_at__date__lte=%s' % (received_at_start.isoformat(),
+                                                           received_at_end.isoformat())
         else:
             try:
-                received_at = Transaction.objects.latest().received_at.date()
+                received_at = timezone.localtime(Transaction.objects.latest().received_at).date()
             except Transaction.DoesNotExist:
-                received_at = (now() - datetime.timedelta(days=1)).date()
+                received_at = (timezone.localtime(timezone.now()) - datetime.timedelta(days=1)).date()
             self.title = _('Latest transactions received on %(date)s') % {
                 'date':  format_date(received_at, 'j N')
             }
