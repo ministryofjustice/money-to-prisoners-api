@@ -1,5 +1,6 @@
 FROM ubuntu:trusty
 
+RUN echo "Europe/London" | cat > /etc/timezone && dpkg-reconfigure --frontend noninteractive tzdata
 RUN locale-gen "en_GB.UTF-8"
 ENV LC_CTYPE=en_GB.UTF-8
 
