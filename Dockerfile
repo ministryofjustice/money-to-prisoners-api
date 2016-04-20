@@ -15,7 +15,6 @@ RUN apt-get update && \
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 10
 
 WORKDIR /app
-RUN mkdir -p /app/mtp_api/assets
 RUN mkdir -p /app/static
 
 RUN pip3 install -U setuptools pip wheel virtualenv
