@@ -3,6 +3,7 @@ import json
 from django.contrib.auth import get_user_model
 from django.core.urlresolvers import reverse
 from django.db import models
+from django.utils.timezone import localtime
 
 from core.views import DashboardView
 from core.tests.test_dashboard import DashboardTestCase
@@ -39,7 +40,7 @@ class TransactionDashboardTestCase(DashboardTestCase):
         response = self.client.get(url)
         self.assertContains(response, 'Latest transactions received on')
         transactions = Transaction.objects.filter(
-            received_at__date=Transaction.objects.latest().received_at.date(),
+            received_at__date=localtime(Transaction.objects.latest().received_at).date(),
             **Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.AVAILABLE]
         )
         creditable_amount = transactions.aggregate(amount=models.Sum('amount'))['amount']

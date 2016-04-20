@@ -11,6 +11,5 @@ __pycache__
 
 # project
 mtp_api/settings/local.py
-mtp_api/assets/
 static/
 venv/

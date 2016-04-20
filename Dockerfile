@@ -1,5 +1,6 @@
 FROM ubuntu:trusty
 
+RUN echo "Europe/London" | cat > /etc/timezone && dpkg-reconfigure --frontend noninteractive tzdata
 RUN locale-gen "en_GB.UTF-8"
 ENV LC_CTYPE=en_GB.UTF-8
 
@@ -14,7 +15,6 @@ RUN apt-get update && \
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 10
 
 WORKDIR /app
-RUN mkdir -p /app/mtp_api/assets
 RUN mkdir -p /app/static
 
 RUN pip3 install -U setuptools pip wheel virtualenv
