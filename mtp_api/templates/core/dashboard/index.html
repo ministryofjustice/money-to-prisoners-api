@@ -21,7 +21,7 @@
       </li>
     </ul>
 
-    <div id="mtp-dashboard" data-reload-interval="{{ view.reload_interval }}" data-cookie-name="{{ view.cookie_name }}">
+    <div id="mtp-dashboard" data-reload-interval="{{ view.reload_interval }}" data-cookie-name="{{ view.cookie_name }}" data-standout-cookie-name="{{ view.standout_cookie_name }}">
       {% for dashboard_module in dashboard_modules %}
         {% include dashboard_module.template with dashboard=view dashboard_module=dashboard_module only %}
       {% endfor %}

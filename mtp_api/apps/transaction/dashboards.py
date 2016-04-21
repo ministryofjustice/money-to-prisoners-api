@@ -60,10 +60,9 @@ class TransactionReportChart:
     @property
     def data(self):
         columns = '[%s]' % ','.join(
-            '{type: "%s", title: "%s", colour: "%s"}' % (
+            '{type: "%s", title: "%s"}' % (
                 column['type'],
                 force_text(column['title']),
-                column.get('colour', ''),
             )
             for column in self.columns
         )
@@ -80,8 +79,8 @@ class TransactionReportChart:
     def columns(self):
         return [
             {'type': 'date', 'title': _('Date')},
-            {'type': 'number', 'title': _('Valid credits'), 'colour': '#79aec8'},
-            {'type': 'number', 'title': _('Credits to refund'), 'colour': '#666'},
+            {'type': 'number', 'title': _('Valid credits')},
+            {'type': 'number', 'title': _('Credits to refund')},
         ]
 
     @property
@@ -106,6 +105,7 @@ class TransactionReportChart:
 class TransactionReport(DashboardModule):
     template = 'core/dashboard/transaction-report.html'
     title = _('Transaction report')
+    show_stand_out = True
     priority = 100
     column_count = 3
     cookie_key = 'transaction-report'

@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.forms import MediaDefiningClass
 from django.http.request import QueryDict
+from django.utils.text import re_camel_case
 from django.utils.translation import gettext_lazy as _
 
 from core.views import DashboardView
@@ -8,8 +9,9 @@ from core.views import DashboardView
 
 class DashboardModule(metaclass=MediaDefiningClass):
     template = 'core/dashboard/module.html'
-    html_classes = 'mtp-dashboard-module module'
+    html_classes = ''
     title = _('Dashboard')
+    show_stand_out = False
     enabled = True
     priority = 0
     cookie_key = None
@@ -17,6 +19,12 @@ class DashboardModule(metaclass=MediaDefiningClass):
     def __init__(self, dashboard_view):
         self.dashboard_view = dashboard_view
         self.cookie_data = QueryDict(dashboard_view.cookie_data.get(self.cookie_key))
+
+    @property
+    def html_id(self):
+        html_id = re_camel_case.sub(r'_\1', self.__class__.__name__)
+        html_id = html_id.strip().lower()
+        return 'id' + html_id
 
 
 @DashboardView.register_dashboard

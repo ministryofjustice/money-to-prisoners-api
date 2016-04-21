@@ -1,13 +1,20 @@
 {% load i18n %}
 
 {% block module %}
-  <div class="{{ dashboard_module.html_classes }}">
+  <div id="{{ dashboard_module.html_id }}" class="module mtp-dashboard-module {{ dashboard_module.html_classes }}">
     <table>
       <caption>
         {{ dashboard_module.title }}
-        {% if dashboard_module.form %}
-          <a href="#" class="js-mtp-dashboard-change changelink float-right">{% trans 'Change' %}</a>
-        {% endif %}
+        <span class="float-right">
+          {% if dashboard_module.show_stand_out %}
+            <a href="#" class="js-mtp-dashboard-standout"
+               data-title-standout="{% trans 'Stand out' %}"
+               data-title-no-standout="{% trans 'Hide' %}">{% trans 'Stand out' %}</a>
+          {% endif %}
+          {% if dashboard_module.form %}
+            <a href="#" class="js-mtp-dashboard-change changelink">{% trans 'Change' %}</a>
+          {% endif %}
+        </span>
       </caption>
       {% block module_tbody %}{% endblock %}
     </table>

@@ -22,7 +22,7 @@
       {% endfor %}
     </tr>
     {% if dashboard_module.chart %}
-      <tr>
+      <tr style="height: 50%">
         <td colspan="{{ dashboard_module.column_count }}">
           <script>
             var transactionReportData = {{ dashboard_module.chart.data }};
