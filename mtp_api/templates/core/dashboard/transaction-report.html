@@ -21,6 +21,16 @@
         {% if not forloop.last and forloop.counter|divisibleby:dashboard_module.column_count %}</tr><tr>{% endif %}
       {% endfor %}
     </tr>
+    {% if dashboard_module.chart %}
+      <tr>
+        <td colspan="{{ dashboard_module.column_count }}">
+          <script>
+            var transactionReportData = {{ dashboard_module.chart.data }};
+          </script>
+          <div id="transaction-report-chart"></div>
+        </td>
+      </tr>
+    {% endif %}
   </tbody>
   {% if dashboard_module.change_list_url %}
     <tfoot>
