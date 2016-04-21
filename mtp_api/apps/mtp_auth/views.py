@@ -11,7 +11,6 @@ from django.db.transaction import atomic
 from django.forms import ValidationError
 from django.http import Http404
 from django.template import loader
-from django.utils.crypto import get_random_string
 from django.utils.translation import gettext_lazy as _
 from rest_framework import viewsets, mixins, generics, status
 from rest_framework.permissions import IsAuthenticated
@@ -148,10 +147,7 @@ class ResetPasswordView(generics.GenericAPIView):
     def generate_new_password(cls):
         validators = get_default_password_validators()
         for __ in range(5):
-            password = get_random_string(length=10,
-                                         allowed_chars='ABCDEFGHJKLMNPQRSTUVWXYZ'
-                                                       'abcdefghjkmnpqrstuvwxyz'
-                                                       '23456789')
+            password = User.objects.make_random_password(length=10)
             try:
                 for validator in validators:
                     validator.validate(password)

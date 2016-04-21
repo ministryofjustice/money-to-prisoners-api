@@ -4,13 +4,16 @@ import textwrap
 import threading
 import types
 
-from django.contrib.auth.models import User, Group
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.core.management import call_command
 from django.core.management.commands.testserver import Command as TestServerCommand
 from django.db import connection
 
 from core.tests.utils import give_superusers_full_access
 from . import synchronised
+
+User = get_user_model()
 
 
 class Command(TestServerCommand):

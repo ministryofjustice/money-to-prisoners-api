@@ -1,5 +1,5 @@
+from django.contrib.auth import get_user_model
 from django.test import TestCase
-from django.contrib.auth.models import User
 from django.utils import timezone
 
 from core.tests.utils import make_test_users
@@ -10,6 +10,8 @@ from prison.tests.utils import random_prisoner_number, random_prisoner_dob,\
 
 from transaction.models import Transaction
 from transaction.signals import transaction_prisons_need_updating
+
+User = get_user_model()
 
 
 class BaseUpdatePrisonsTestCase(TestCase):

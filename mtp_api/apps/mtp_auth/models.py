@@ -18,7 +18,7 @@ class PrisonUserMappingManager(models.Manager):
 
 
 class PrisonUserMapping(TimeStampedModel):
-    user = models.OneToOneField('auth.User', on_delete=models.CASCADE)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     prisons = models.ManyToManyField('prison.Prison')
     objects = PrisonUserMappingManager()
 
@@ -28,7 +28,7 @@ class PrisonUserMapping(TimeStampedModel):
 
 class ApplicationUserMapping(TimeStampedModel):
 
-    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     application = models.ForeignKey('oauth2_provider.Application', on_delete=models.CASCADE)
 
     def __str__(self):
@@ -72,7 +72,7 @@ class FailedLoginAttemptManager(models.Manager):
 
 
 class FailedLoginAttempt(TimeStampedModel):
-    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     application = models.ForeignKey('oauth2_provider.Application', on_delete=models.CASCADE)
 
     objects = FailedLoginAttemptManager()

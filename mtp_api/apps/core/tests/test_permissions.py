@@ -1,9 +1,9 @@
 import base64
 
-from django.test import TestCase
-from django.contrib.auth.models import Group, Permission, User
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group, Permission
 from django.core.exceptions import ImproperlyConfigured
-
+from django.test import TestCase
 from rest_framework import (
     HTTP_HEADER_ENCODING, authentication, serializers, generics,
     status, mixins, viewsets
@@ -12,6 +12,7 @@ from rest_framework.test import APIRequestFactory
 
 from core.permissions import ActionsBasedPermissions
 
+User = get_user_model()
 
 factory = APIRequestFactory()
 
