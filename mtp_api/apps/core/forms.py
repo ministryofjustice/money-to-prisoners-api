@@ -27,6 +27,6 @@ class AdminFilterForm(forms.Form):
 class SidebarDateWidget(widgets.AdminDateWidget):
     class Media:
         css = {
-            'all': ('admin/css/widgets.css', 'admin/css/filter_form.css')
+            'all': ('admin/css/widgets.css', 'core/css/filter_form.css')
         }
-        js = ('admin/js/calendar_overrides.js',)
+        js = ('core/js/calendar_overrides.js',)
