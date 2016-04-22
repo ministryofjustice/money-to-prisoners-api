@@ -2,43 +2,35 @@
 {% load i18n %}
 
 {% block module_tbody %}
-  <tbody>
-    <tr class="mtp-dashboard-change" style="display: none">
-      <th colspan="{{ dashboard_module.column_count }}">
-        <form data-cookie-key="{{ dashboard_module.cookie_key }}">
-          {{ dashboard_module.form.as_p }}
-        </form>
-      </th>
+  <tr>
+    {% for stat in dashboard_module.get_table %}
+      <td>
+        <div class="transaction_report-stat" {% if stat.help_text %}title="{{ stat.help_text }}"{% endif %}>
+          <strong>{{ stat.value }}</strong>
+          {{ stat.title }}
+        </div>
+      </td>
+      {% if not forloop.last and forloop.counter|divisibleby:dashboard_module.column_count %}</tr><tr>{% endif %}
+    {% endfor %}
+  </tr>
+  {% if dashboard_module.chart %}
+    <tr style="height: 50%">
+      <td colspan="{{ dashboard_module.column_count }}">
+        <script>
+          var transactionReportData = {{ dashboard_module.chart.data }};
+        </script>
+        <div id="transaction-report-chart"></div>
+      </td>
     </tr>
-    <tr>
-      {% for stat in dashboard_module.get_table %}
-        <td>
-          <div class="transaction_report-stat" {% if stat.help_text %}title="{{ stat.help_text }}"{% endif %}>
-            <strong>{{ stat.value }}</strong>
-            {{ stat.title }}
-          </div>
-        </td>
-        {% if not forloop.last and forloop.counter|divisibleby:dashboard_module.column_count %}</tr><tr>{% endif %}
-      {% endfor %}
-    </tr>
-    {% if dashboard_module.chart %}
-      <tr>
-        <td colspan="{{ dashboard_module.column_count }}">
-          <script>
-            var transactionReportData = {{ dashboard_module.chart.data }};
-          </script>
-          <div id="transaction-report-chart"></div>
-        </td>
-      </tr>
-    {% endif %}
-  </tbody>
+  {% endif %}
+{% endblock %}
+
+{% block module_tfoot %}
   {% if dashboard_module.change_list_url %}
-    <tfoot>
       <tr>
         <td>
           <a href="{{ dashboard_module.change_list_url }}">{% trans 'View transactions list' %}</a>
         </td>
       </tr>
-    </tfoot>
   {% endif %}
 {% endblock %}
