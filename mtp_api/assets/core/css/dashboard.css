@@ -8,6 +8,11 @@
 .mtp-dashboard-module caption span a {
   margin-left: 10px;
 }
+
+.mtp-dashboard-change {
+  display: none;
+}
+
 .mtp-dashboard-module-standout {
   position: fixed;
   top: 0;

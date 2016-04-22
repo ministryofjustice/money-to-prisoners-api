@@ -104,10 +104,10 @@ class TransactionReportChart:
 @DashboardView.register_dashboard
 class TransactionReport(DashboardModule):
     template = 'core/dashboard/transaction-report.html'
+    column_count = 3
     title = _('Transaction report')
     show_stand_out = True
     priority = 100
-    column_count = 3
     cookie_key = 'transaction-report'
 
     class Media:

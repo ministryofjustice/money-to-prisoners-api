@@ -9,6 +9,7 @@ from core.views import DashboardView
 
 class DashboardModule(metaclass=MediaDefiningClass):
     template = 'core/dashboard/module.html'
+    column_count = 1
     html_classes = ''
     title = _('Dashboard')
     show_stand_out = False
@@ -30,11 +31,13 @@ class DashboardModule(metaclass=MediaDefiningClass):
 @DashboardView.register_dashboard
 class ExternalDashboards(DashboardModule):
     template = 'core/dashboard/external-dashboards.html'
+    column_count = 2
     title = _('External dashboards and logs')
     apps = [
         'api', 'cashbook', 'bank-admin', 'prisoner-location-admin',
         'transaction-uploader', 'send-money',
     ]
+    kibana_params = '_g=(time:(from:now-24h,mode:quick,to:now))'  # last 24 hours
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -42,18 +45,22 @@ class ExternalDashboards(DashboardModule):
         if settings.ENVIRONMENT == 'test':
             self.grafana_host = 'grafana-staging.service.dsd.io'
             self.kibana_host = 'kibana-staging.service.dsd.io'
+            self.sentry_url = 'https://sentry.service.dsd.io/mojds/mtp-test-%(app)s/'
         elif settings.ENVIRONMENT == 'prod':
             self.grafana_host = 'grafana.service.dsd.io'
             self.kibana_host = 'kibana.service.dsd.io'
+            self.sentry_url = 'https://sentry.service.dsd.io/mojds/mtp-prod-%(app)s/'
         else:
             self.grafana_host = None
             self.kibana_host = None
-            self.enabled = False
-        self.kibana_params = '_g=(time:(from:now-24h,mode:quick,to:now))'  # last 24 hours
+            self.sentry_url = None
+
+        self.enabled = self.kibana_host or self.grafana_host or self.sentry_url
 
     def get_table(self):
-        return [
-            {
+        table = []
+        if self.kibana_host:
+            table.append({
                 'title': _('Application dashboard'),
                 'links': [
                     {
@@ -61,18 +68,24 @@ class ExternalDashboards(DashboardModule):
                         'url': 'https://%s/#/dashboard/MTP?%s' % (self.kibana_host, self.kibana_params)
                     }
                 ],
-            },
-            {
+            })
+            table.append({
                 'title': _('Application logs'),
                 'links': self.make_app_links('https://%(kibana_host)s/#/discover/MTP-%(app)s'
                                              '?%(kibana_params)s'),
-            },
-            {
+            })
+        if self.sentry_url:
+            table.append({
+                'title': _('Sentry error monitors'),
+                'links': self.make_app_links(self.sentry_url),
+            })
+        if self.grafana_host:
+            table.append({
                 'title': _('Host machine dashboards'),
                 'links': self.make_app_links('https://%(grafana_host)s/dashboard/db/mtp'
                                              '?var-project=moneytoprisoners-%(app)s'),
-            },
-        ]
+            })
+        return table
 
     def make_app_links(self, link_template):
         return [
