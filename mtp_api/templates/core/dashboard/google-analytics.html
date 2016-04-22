@@ -1,0 +1,16 @@
+{% extends 'core/dashboard/module.html' %}
+{% load i18n %}
+
+{% block module_tbody %}
+  {% for table_row in dashboard_module.get_table %}
+    <tr>
+      {% for table_cell in table_row %}
+        {% if forloop.first %}
+          <th>{{ table_cell }}</th>
+        {% else %}
+          <td>{{ table_cell }}</td>
+        {% endif %}
+      {% endfor %}
+    </tr>
+  {% endfor %}
+{% endblock %}

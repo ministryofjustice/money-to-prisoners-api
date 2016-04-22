@@ -141,6 +141,13 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'mtp',
+    }
+}
+
 EMAIL_BACKEND = 'django_mailgun.MailgunBackend'
 MAILGUN_ACCESS_KEY = os.environ.get('MAILGUN_ACCESS_KEY', '')
 MAILGUN_SERVER_NAME = os.environ.get('MAILGUN_SERVER_NAME', '')
@@ -234,6 +241,9 @@ RUN_CLEANUP_TASKS = os.environ.get('RUN_CLEANUP_TASKS') == 'True'
 
 REF_CODE_BASE = 900001
 
+GOOGLE_API_KEY_PATH = '/key-share/google-api-service-account'
+if not os.path.isfile(GOOGLE_API_KEY_PATH):
+    GOOGLE_API_KEY_PATH = None
 
 try:
     from .local import *  # noqa
