@@ -19,7 +19,7 @@ class DashboardModule(metaclass=MediaDefiningClass):
 
     def __init__(self, dashboard_view):
         self.dashboard_view = dashboard_view
-        self.cookie_data = QueryDict(dashboard_view.cookie_data.get(self.cookie_key))
+        self.cookie_data = QueryDict(dashboard_view.cookie_data.get(self.cookie_key)) or None
 
     @property
     def html_id(self):

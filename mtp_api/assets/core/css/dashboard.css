@@ -42,3 +42,20 @@
 .mtp-dashboard-module-standout tfoot {
   display: none;
 }
+.mtp-dashboard-standout-show {
+  display: none;
+}
+.mtp-dashboard-module-standout .mtp-dashboard-standout-show {
+  display: block;
+}
+.mtp-dashboard-module-standout .mtp-dashboard-standout-hide {
+  display: none;
+}
+.mtp-dashboard-module > a.mtp-dashboard-standout-show {
+  position: fixed;
+  top: 0;
+  right: 0;
+  padding: 2px 6px;
+  color: #999;
+  text-transform: uppercase;
+}
