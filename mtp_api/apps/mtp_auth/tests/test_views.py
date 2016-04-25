@@ -43,6 +43,7 @@ class GetUserTestCase(APITestCase, AuthTestCaseMixin):
             self.prison_clerks + self.prisoner_location_admins +
             self.bank_admins + self.refund_bank_admins
         )
+        _, _, self.bank_uas = make_test_user_admins()
 
         self.prisons = Prison.objects.all()
 
@@ -111,6 +112,25 @@ class GetUserTestCase(APITestCase, AuthTestCaseMixin):
 
             self.assertEqual(response.data['pk'], user.pk)
             self.assertEqual(response.data['prisons'], [])
+
+    def test_all_valid_usernames_retrievable(self):
+        user_data = {
+            'username': 'dotted.name',
+            'first_name': 'New',
+            'last_name': 'User',
+            'email': 'user@mtp.local'
+        }
+        self.client.post(
+            reverse('user-list'),
+            format='json',
+            data=user_data,
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.bank_uas[0])
+        )
+        self.client.get(
+            self._get_url(user_data['username']),
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.bank_uas[0])
+        )
 
 
 class ListUserTestCase(APITestCase, AuthTestCaseMixin):
@@ -213,7 +233,7 @@ class CreateUserTestCase(APITestCase, AuthTestCaseMixin):
             'username': 'new-bank-admin',
             'first_name': 'New',
             'last_name': 'Bank Admin',
-            'email': 'nba@mtp.gov.uk'
+            'email': 'nba@mtp.local'
         }
         response = self.client.post(
             self.get_url(),
@@ -267,7 +287,7 @@ class CreateUserTestCase(APITestCase, AuthTestCaseMixin):
             'username': 'new-bank-admin',
             'first_name': 'New',
             'last_name': 'Bank Admin',
-            'email': 'nba@mtp.gov.uk'
+            'email': 'nba@mtp.local'
         }
         self._check_create_user_succeeds(
             self.bank_uas[0],
@@ -282,7 +302,7 @@ class CreateUserTestCase(APITestCase, AuthTestCaseMixin):
             'username': 'new-prison-clerk',
             'first_name': 'New',
             'last_name': 'Prison Clerk',
-            'email': 'pc@mtp.gov.uk'
+            'email': 'pc@mtp.local'
         }
         self._check_create_user_succeeds(
             self.cashbook_uas[0],
@@ -296,7 +316,7 @@ class CreateUserTestCase(APITestCase, AuthTestCaseMixin):
             'username': 'new-cashbook-ua',
             'first_name': 'New',
             'last_name': 'Cashbook User Admin',
-            'email': 'cua@mtp.gov.uk',
+            'email': 'cua@mtp.local',
             'user_admin': True
         }
         self._check_create_user_succeeds(

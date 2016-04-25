@@ -30,6 +30,7 @@ class UserViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin,
                   mixins.UpdateModelMixin, mixins.CreateModelMixin,
                   mixins.DestroyModelMixin, viewsets.GenericViewSet):
     lookup_field = 'username'
+    lookup_value_regex = '[^/]+'
 
     queryset = User.objects.none()
     permission_classes = (IsAuthenticated, UserPermissions)
