@@ -33,7 +33,7 @@ class TransactionQuerySet(models.QuerySet):
         update_set = self.filter(
             received_at__gte=date,
             received_at__lt=(date + timedelta(days=1))
-        ).select_for_update()
+        ).order_by('id').select_for_update()
 
         ref_code = settings.REF_CODE_BASE
         for transaction in update_set:
