@@ -19,7 +19,7 @@ class DashboardModule(metaclass=MediaDefiningClass):
 
     def __init__(self, dashboard_view):
         self.dashboard_view = dashboard_view
-        self.cookie_data = QueryDict(dashboard_view.cookie_data.get(self.cookie_key))
+        self.cookie_data = QueryDict(dashboard_view.cookie_data.get(self.cookie_key)) or None
 
     @property
     def html_id(self):
@@ -37,6 +37,10 @@ class ExternalDashboards(DashboardModule):
         'api', 'cashbook', 'bank-admin', 'prisoner-location-admin',
         'transaction-uploader', 'send-money',
     ]
+    grafana_host = None
+    kibana_host = None
+    sentry_url = None
+    sensu_url = None
     kibana_params = '_g=(time:(from:now-24h,mode:quick,to:now))'  # last 24 hours
 
     def __init__(self, **kwargs):
@@ -46,16 +50,14 @@ class ExternalDashboards(DashboardModule):
             self.grafana_host = 'grafana-staging.service.dsd.io'
             self.kibana_host = 'kibana-staging.service.dsd.io'
             self.sentry_url = 'https://sentry.service.dsd.io/mojds/mtp-test-%(app)s/'
+            self.sensu_url = 'https://sensu-staging.service.dsd.io/#/checks?q=moneytoprisoners'
         elif settings.ENVIRONMENT == 'prod':
             self.grafana_host = 'grafana.service.dsd.io'
             self.kibana_host = 'kibana.service.dsd.io'
             self.sentry_url = 'https://sentry.service.dsd.io/mojds/mtp-prod-%(app)s/'
-        else:
-            self.grafana_host = None
-            self.kibana_host = None
-            self.sentry_url = None
+            self.sensu_url = 'https://sensu.service.dsd.io/#/checks?q=moneytoprisoners'
 
-        self.enabled = self.kibana_host or self.grafana_host or self.sentry_url
+        self.enabled = self.kibana_host or self.grafana_host or self.sentry_url or self.sensu_url
 
     def get_table(self):
         table = []
@@ -78,6 +80,16 @@ class ExternalDashboards(DashboardModule):
             table.append({
                 'title': _('Sentry error monitors'),
                 'links': self.make_app_links(self.sentry_url),
+            })
+        if self.sensu_url:
+            table.append({
+                'title': _('Sensu monitoring checks'),
+                'links': [
+                    {
+                        'title': _('All apps'),
+                        'url': self.sensu_url
+                    }
+                ]
             })
         if self.grafana_host:
             table.append({

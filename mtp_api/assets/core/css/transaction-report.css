@@ -28,4 +28,8 @@
 #transaction-report-chart {
   width: 100%;
   height: 100%;
+  background: #f9f9f9;
+}
+.mtp-dashboard-module-standout #transaction-report-chart {
+  background: #111;
 }

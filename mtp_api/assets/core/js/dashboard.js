@@ -61,26 +61,22 @@ django.jQuery(function($) {
 
   // dashboard module stand-out
 
-  $('.mtp-dashboard-module').on('mtp.dashboard-standout', function(e, $module, $standoutLink) {
+  $('.mtp-dashboard-module').on('mtp.dashboard-standout', function(e, $module) {
     if($module.hasClass('mtp-dashboard-module-standout')) {
       $module.removeClass('mtp-dashboard-module-standout');
-      $standoutLink.text($standoutLink.data('title-standout'));
       $pageBackground.css('background', '#fff');
       Cookies.remove(standoutCookieName);
     } else {
       $module.addClass('mtp-dashboard-module-standout');
-      $standoutLink.text($standoutLink.data('title-no-standout'));
       $pageBackground.css('background', $module.css('background'));
       Cookies.set(standoutCookieName, $module.attr('id'));
     }
   });
 
   $('.js-mtp-dashboard-standout').click(function(e) {
-    var $standoutLink = $(this),
-      $module = $standoutLink.closest('.mtp-dashboard-module');
-
     e.preventDefault();
-    $module.trigger('mtp.dashboard-standout', [$module, $standoutLink])
+    var $module = $(this).closest('.mtp-dashboard-module');
+    $module.trigger('mtp.dashboard-standout', [$module])
   });
 
   $('#' + Cookies.get(standoutCookieName) + ' .js-mtp-dashboard-standout').click();

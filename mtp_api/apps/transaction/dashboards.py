@@ -1,5 +1,6 @@
 import datetime
 from functools import reduce
+import json
 import re
 
 from django import forms
@@ -8,8 +9,9 @@ from django.db import models
 from django.utils import timezone
 from django.utils.dateformat import format as format_date
 from django.utils.encoding import force_text
+from django.utils.html import escapejs
 from django.utils.safestring import mark_safe
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext, gettext_lazy as _
 
 from account.models import Balance
 from core.dashboards import DashboardModule
@@ -50,37 +52,46 @@ class TransactionReportDateForm(forms.Form):
 
 
 class TransactionReportChart:
-    def __init__(self, queryset, start_date=None, end_date=None):
+    def __init__(self, queryset, title, start_date=None, end_date=None):
         self.queryset = queryset
+        self.title = title
         self.start_date = start_date or \
             timezone.localtime(self.queryset.earliest().received_at).date()
         self.end_date = end_date or \
             timezone.localtime(self.queryset.latest().received_at).date()
+        self.max_creditable = 0
+        self.max_creditable_date = None
+        self.max_refundable = 0
+        self.max_refundable_date = None
+        self.weekends = []
 
     @property
     def data(self):
-        columns = '[%s]' % ','.join(
-            '{type: "%s", title: "%s"}' % (
-                column['type'],
-                force_text(column['title']),
-            )
-            for column in self.columns
-        )
         rows = '[%s]' % ','.join(
-            '[new Date(%d,%d,%d),%d,%d]' % (
+            '[new Date(%d,%d,%d),%d,%s,%d,%s]' % (
                 date.year, date.month - 1, date.day,
-                creditable, refundable,
+                creditable, json.dumps(self.creditable_annotation(date)),
+                refundable, json.dumps(self.refundable_annotation(date)),
             )
             for date, creditable, refundable in self.rows
         )
-        return mark_safe('{columns: %s, rows: %s}' % (columns, rows))
+        weekends = '[%s]' % ','.join(
+            'new Date(%d,%d,%d)' % (date.year, date.month - 1, date.day)
+            for date in self.weekends
+        )
+        return mark_safe('{columns: %s, rows: %s, weekends: %s, title: "%s"}' % (
+            json.dumps(self.columns), rows, weekends,
+            force_text(escapejs(self.title)),
+        ))
 
     @property
     def columns(self):
         return [
-            {'type': 'date', 'title': _('Date')},
-            {'type': 'number', 'title': _('Valid credits')},
-            {'type': 'number', 'title': _('Credits to refund')},
+            {'type': 'date', 'label': gettext('Date'), 'role': 'domain'},
+            {'type': 'number', 'label': gettext('Valid credits'), 'role': 'data'},
+            {'type': 'string', 'role': 'annotation'},
+            {'type': 'number', 'label': gettext('Credits to refund'), 'role': 'data'},
+            {'type': 'string', 'role': 'annotation'},
         ]
 
     @property
@@ -92,13 +103,31 @@ class TransactionReportChart:
             date_stride = 1
         date_stride = datetime.timedelta(days=date_stride)
 
+        data = []
         date = self.start_date
         while date <= self.end_date:
+            if date.weekday() > 4:
+                self.weekends.append(date)
             transactions = self.queryset.filter(received_at__date=date)
             creditable = transactions.filter(**CREDITABLE_FILTERS).count() or 0
             refundable = transactions.filter(**REFUNDABLE_FILTERS).count() or 0
-            yield [date, creditable, refundable]
+            data.append([date, creditable, refundable])
+            if creditable > self.max_creditable:
+                self.max_creditable = creditable
+                self.max_creditable_date = date
+            if refundable > self.max_refundable:
+                self.max_refundable = refundable
+                self.max_refundable_date = date
             date += date_stride
+        return data
+
+    def creditable_annotation(self, date):
+        if date == self.max_creditable_date:
+            return str(self.max_creditable)
+
+    def refundable_annotation(self, date):
+        if date == self.max_refundable_date:
+            return str(self.max_refundable)
 
 
 @DashboardView.register_dashboard
@@ -128,7 +157,7 @@ class TransactionReport(DashboardModule):
             self.title = _('All transactions')
             self.queryset = Transaction.objects.all()
             filter_string = ''
-            self.chart = TransactionReportChart(self.queryset)
+            self.chart = TransactionReportChart(self.queryset, self.title)
         elif date_range == 'this_month':
             received_at_end = timezone.localtime(timezone.now()).date()
             received_at_start = received_at_end.replace(day=1)
@@ -144,6 +173,7 @@ class TransactionReport(DashboardModule):
                                                            received_at_end.isoformat())
             self.chart = TransactionReportChart(
                 self.queryset,
+                format_date(received_at_start, 'N'),
                 start_date=received_at_start,
                 end_date=received_at_end,
             )
