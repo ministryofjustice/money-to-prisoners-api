@@ -8,6 +8,7 @@ django.jQuery(function($) {
     cookieName = $dashboardWrapper.data('cookie-name'),
     standoutCookieName = $dashboardWrapper.data('standout-cookie-name'),
     $moduleForms = $('.mtp-dashboard-change form'),
+    $standoutModule = $('#' + Cookies.get(standoutCookieName)),
     autoreloadInterval;
 
 
@@ -79,5 +80,7 @@ django.jQuery(function($) {
     $module.trigger('mtp.dashboard-standout', [$module])
   });
 
-  $('#' + Cookies.get(standoutCookieName) + ' .js-mtp-dashboard-standout').click();
+  if ($standoutModule.size()) {
+    $standoutModule.trigger('mtp.dashboard-standout', [$standoutModule]);
+  }
 });
