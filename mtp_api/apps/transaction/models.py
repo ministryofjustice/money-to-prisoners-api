@@ -58,18 +58,11 @@ class Transaction(TimeStampedModel):
         TRANSACTION_STATUS.LOCKED: {
             'owner__isnull': False,
             'credited': False,
-            'refunded': False,
-            'category': TRANSACTION_CATEGORY.CREDIT,
-            'source__in': [
-                TRANSACTION_SOURCE.BANK_TRANSFER,
-                TRANSACTION_SOURCE.ONLINE
-            ]
         },
         TRANSACTION_STATUS.AVAILABLE: {
             'prison__isnull': False,
             'owner__isnull': True,
             'credited': False,
-            'refunded': False,
             'category': TRANSACTION_CATEGORY.CREDIT,
             'source__in': [
                 TRANSACTION_SOURCE.BANK_TRANSFER,
@@ -77,22 +70,13 @@ class Transaction(TimeStampedModel):
             ]
         },
         TRANSACTION_STATUS.CREDITED: {
-            'credited': True,
-            'category': TRANSACTION_CATEGORY.CREDIT,
-            'source__in': [
-                TRANSACTION_SOURCE.BANK_TRANSFER,
-                TRANSACTION_SOURCE.ONLINE
-            ]
+            'credited': True
         },
         TRANSACTION_STATUS.REFUNDED: {
-            'refunded': True,
-            'category': TRANSACTION_CATEGORY.CREDIT,
-            'source': TRANSACTION_SOURCE.BANK_TRANSFER
+            'refunded': True
         },
         TRANSACTION_STATUS.REFUND_PENDING: {
             'prison__isnull': True,
-            'owner__isnull': True,
-            'credited': False,
             'refunded': False,
             'incomplete_sender_info': False,
             'category': TRANSACTION_CATEGORY.CREDIT,
@@ -157,19 +141,6 @@ class Transaction(TimeStampedModel):
                 ])
 
     @property
-    def status_credited(self):
-        return (self.credited and self.category == TRANSACTION_CATEGORY.CREDIT and
-                self.source in [
-                    TRANSACTION_SOURCE.BANK_TRANSFER,
-                    TRANSACTION_SOURCE.ONLINE
-                ])
-
-    @property
-    def status_refunded(self):
-        return (self.refunded and self.category == TRANSACTION_CATEGORY.CREDIT and
-                self.source == TRANSACTION_SOURCE.BANK_TRANSFER)
-
-    @property
     def refund_pending(self):
         return (self.prison is None and self.owner is None and
                 not (self.credited or self.refunded) and
@@ -195,9 +166,9 @@ class Transaction(TimeStampedModel):
             return TRANSACTION_STATUS.AVAILABLE
         elif self.locked:
             return TRANSACTION_STATUS.LOCKED
-        elif self.status_credited:
+        elif self.credited:
             return TRANSACTION_STATUS.CREDITED
-        elif self.status_refunded:
+        elif self.refunded:
             return TRANSACTION_STATUS.REFUNDED
         elif self.refund_pending:
             return TRANSACTION_STATUS.REFUND_PENDING
