@@ -1,6 +1,6 @@
 import logging
 
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, user_logged_in
 from oauth2_provider.oauth2_validators import OAuth2Validator
 
 from .models import ApplicationUserMapping, FailedLoginAttempt
@@ -26,6 +26,7 @@ class ApplicationRequestValidator(OAuth2Validator):
             if valid and ApplicationUserMapping.objects.filter(
                     user=request.user, application=client).exists():
                 FailedLoginAttempt.objects.delete_failed_attempts(user, client)
+                user_logged_in.send(sender=user.__class__, request=request, user=user)
                 return True
             elif user:
                 logger.info('User "%s" failed login' % username)
