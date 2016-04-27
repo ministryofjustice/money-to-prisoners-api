@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.contrib.admin import ModelAdmin
 
+from core.admin import DateFilter
 from prison.models import Prison, PrisonerLocation
 
 
@@ -14,5 +15,5 @@ class PrisonAdmin(ModelAdmin):
 class PrisonerLocationAdmin(ModelAdmin):
     ordering = ('prisoner_number',)
     list_display = ('prisoner_name', 'prisoner_number', 'prisoner_dob', 'prison')
-    list_filter = ('prison',)
+    list_filter = ('prison', ('prisoner_dob', DateFilter))
     search_fields = ('prisoner_name', 'prisoner_number')
