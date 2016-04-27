@@ -1,8 +1,11 @@
+from datetime import datetime
+
 from django import forms
 from django.conf import settings
 from django.conf.urls import url
 from django.contrib import admin
 from django.contrib.admin.utils import prepare_lookup_value
+from django.utils import formats
 from django.utils.translation import gettext_lazy as _
 
 from core import getattr_path
@@ -47,6 +50,7 @@ class FormFilter(admin.FieldListFilter):
     def __init__(self, field, request, params, model, model_admin, field_path):
         self.field_generic = '%s__' % field_path
         self.field_path = field_path
+        self.prepare_params(params)
         super().__init__(field, request, params, model, model_admin, field_path)
 
     def expected_parameters(self):
@@ -100,8 +104,24 @@ class FormFilter(admin.FieldListFilter):
         """
         raise NotImplementedError('subclasses of FormFilter must provide a get_submit_label() method')
 
+    def prepare_params(self, params):
+        return params
 
-class DateRangeFilter(FormFilter):
+
+class BaseDateFilter(FormFilter):
+
+    def prepare_params(self, params):
+        for field in self.expected_parameters():
+            if field in params:
+                for format in formats.get_format('DATE_INPUT_FORMATS'):
+                    try:
+                        params[field] = (datetime.strptime(params[field], format)
+                                         .date().isoformat())
+                    except (ValueError, TypeError):
+                        continue
+
+
+class DateRangeFilter(BaseDateFilter):
 
     def get_form_fields(self):
         return [
@@ -115,6 +135,19 @@ class DateRangeFilter(FormFilter):
 
     def get_submit_label(self):
         return _('Date in range')
+
+
+class DateFilter(BaseDateFilter):
+
+    def get_form_fields(self):
+        return [
+            ('%s' % self.field_path, forms.DateField(
+                widget=SidebarDateWidget(attrs={'placeholder': _('Date')})
+            ))
+        ]
+
+    def get_submit_label(self):
+        return _('Search')
 
 
 class ExactSearchFilter(FormFilter):
