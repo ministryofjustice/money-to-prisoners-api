@@ -1,5 +1,7 @@
+from django.conf import settings
 from django.conf.urls import include, url
 from django.contrib import admin
+from django.views.generic import RedirectView
 
 from moj_irat.views import HealthcheckView, PingJsonView
 
@@ -20,4 +22,6 @@ urlpatterns = [
         version_number_key='APP_BUILD_TAG',
     ), name='ping_json'),
     url(r'^healthcheck.json$', HealthcheckView.as_view(), name='healthcheck_json'),
+
+    url(r'^favicon.ico$', RedirectView.as_view(url=settings.STATIC_URL + 'images/favicon.ico', permanent=True)),
 ]
