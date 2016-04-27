@@ -1,1 +1,1 @@
-from mtp_utils.test_utils.code_style import CodeStyleTestCase  # noqa
+from mtp_common.test_utils.code_style import CodeStyleTestCase  # noqa

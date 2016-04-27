@@ -117,7 +117,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'mtp_utils.context_processors.app_environment',
+                'mtp_common.context_processors.app_environment',
             ],
         },
     },
@@ -156,7 +156,7 @@ LOGGING = {
             'datefmt': '%Y-%m-%dT%H:%M:%S',
         },
         'elk': {
-            '()': 'mtp_utils.logging.ELKFormatter'
+            '()': 'mtp_common.logging.ELKFormatter'
         },
     },
     'handlers': {
@@ -191,7 +191,7 @@ LOGGING = {
     },
 }
 
-TEST_RUNNER = 'mtp_utils.test_utils.runner.TestRunner'
+TEST_RUNNER = 'mtp_common.test_utils.runner.TestRunner'
 
 # sentry exception handling
 if os.environ.get('SENTRY_DSN'):
