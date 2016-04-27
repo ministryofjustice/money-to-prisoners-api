@@ -4,6 +4,7 @@ from django.contrib.admin.templatetags.admin_list import _boolean_icon
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin
 
+from mtp_auth.forms import RestrictedUserChangeForm
 from mtp_auth.models import ApplicationUserMapping, PrisonUserMapping, FailedLoginAttempt
 
 User = get_user_model()
@@ -38,6 +39,7 @@ class PrisonUserMappingAdmin(ModelAdmin):
 class MtpUserAdmin(UserAdmin):
     list_display = UserAdmin.list_display + ('account_locked',)
     actions = ['remove_account_lockouts']
+    form = RestrictedUserChangeForm
 
     def remove_account_lockouts(self, request, instances):
         for instance in instances:
