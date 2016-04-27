@@ -5,8 +5,8 @@ from django.core.mail import EmailMessage
 from django.db.transaction import atomic
 from django.template import loader
 from django.utils.translation import ugettext as _
-
 from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
 
 from .models import (
     PrisonUserMapping, ApplicationGroupMapping, ApplicationUserMapping
@@ -19,6 +19,20 @@ class UserSerializer(serializers.ModelSerializer):
     prisons = serializers.SerializerMethodField()
     permissions = serializers.SerializerMethodField()
     user_admin = serializers.SerializerMethodField()
+
+    def get_fields(self):
+        fields = super().get_fields()
+
+        for field_name in ['first_name', 'last_name', 'email']:
+            field = fields[field_name]
+            field.required = True
+
+        fields['email'].validators.append(UniqueValidator(
+            User.objects.all(),
+            message=_('A user with that email address already exists')
+        ))
+
+        return fields
 
     def get_prisons(self, obj):
         return list(
