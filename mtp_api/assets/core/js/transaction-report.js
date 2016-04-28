@@ -10,7 +10,10 @@ django.jQuery(function($) {
       lines: ['#79aec8', '#666'],
       lineWidth: 4,
       background: '#f9f9f9',
-      weekendBackground: '#ddd',
+      weekendBackground: '#ebebeb',
+      bar: {
+        groupWidth: '90%'
+      },
       annotationTextStyle: {},
       lengendTextStyle: {
         color: '#000',
@@ -23,7 +26,10 @@ django.jQuery(function($) {
       lines: ['#6f6', '#F3513F'],
       lineWidth: 10,
       background: '#111',
-      weekendBackground: '#444',
+      weekendBackground: '#2b2b2b',
+      bar: {
+        groupWidth: '80%'
+      },
       annotationTextStyle: {
         color: '#fff',
         fontSize: 36,
@@ -56,7 +62,7 @@ django.jQuery(function($) {
   }
 
   function drawTransactionReports() {
-    var chart = new google.visualization.LineChart($chart[0]),
+    var chart = new google.visualization.ColumnChart($chart[0]),
       styles = $module.hasClass('mtp-dashboard-module-standout') ? standoutStyles : normalStyles;
 
     chart.draw(chartData, {
@@ -82,13 +88,15 @@ django.jQuery(function($) {
         alignment: 'center',
         textStyle: styles.lengendTextStyle
       },
+      bar: styles.bar,
+      isStacked: false,
       backgroundColor: styles.background,
-      colors: styles.lines,
-      lineWidth: styles.lineWidth
+      colors: styles.lines
     });
 
     google.visualization.events.addListener(chart, 'ready', function() {
-      var cli = chart.getChartLayoutInterface(),
+      var $svg = $chart.find('svg'),
+        cli = chart.getChartLayoutInterface(),
         bounds = cli.getChartAreaBoundingBox(),
         dayWidth = bounds.width / transactionReportData.rows.length,
         dayHeight = bounds.height,
@@ -98,7 +106,7 @@ django.jQuery(function($) {
         legendBounds = cli.getBoundingBox('legend'),
         $title;
 
-      $title = $(document.createElementNS('http://www.w3.org/2000/svg', 'text'));
+      $title = $(document.createElementNS($svg[0].namespaceURI, 'text'));
       $title.text(transactionReportData.title);
       $title.attr({
         'text-anchor': 'start',
@@ -109,7 +117,7 @@ django.jQuery(function($) {
         'font-weight': 'bold',
         'font-size': styles.lengendTextStyle.fontSize
       });
-      $chart.find('svg').append($title);
+      $svg.append($title);
 
       $chart.find('rect').each(function() {
         if (this.x.baseVal.value == bounds.left &&
@@ -127,7 +135,7 @@ django.jQuery(function($) {
           }
           weekend = transactionReportData.weekends[weekend];
           dayLeft = cli.getXLocation(weekend) - dayWidth / 2;
-          var $rect = $(document.createElementNS('http://www.w3.org/2000/svg', 'rect'));
+          var $rect = $(document.createElementNS($svg[0].namespaceURI, 'rect'));
           $rect.attr({
             x: dayLeft,
             y: dayTop,
@@ -135,8 +143,7 @@ django.jQuery(function($) {
             width: dayWidth,
             stroke: 'none',
             'stroke-width': 0,
-            fill: styles.weekendBackground,
-            'fill-opacity': 0.5
+            fill: styles.weekendBackground
           });
           $chartRect.after($rect);
         }
