@@ -12,7 +12,7 @@ django.jQuery(function($) {
       background: '#f9f9f9',
       weekendBackground: '#ebebeb',
       bar: {
-        groupWidth: '90%'
+        groupWidth: '70%'
       },
       annotationTextStyle: {},
       lengendTextStyle: {
@@ -28,10 +28,9 @@ django.jQuery(function($) {
       background: '#111',
       weekendBackground: '#2b2b2b',
       bar: {
-        groupWidth: '80%'
+        groupWidth: '95%'
       },
       annotationTextStyle: {
-        color: '#fff',
         fontSize: 36,
         fontWeight: 'bold'
       },
@@ -72,6 +71,7 @@ django.jQuery(function($) {
       },
       vAxis: {
         minValue: 0,
+        maxValue: transactionReportData.max,
         baselineColor: 'none',
         gridlines: {count: 0}
       },
@@ -89,7 +89,7 @@ django.jQuery(function($) {
         textStyle: styles.lengendTextStyle
       },
       bar: styles.bar,
-      isStacked: false,
+      isStacked: true,
       backgroundColor: styles.background,
       colors: styles.lines
     });

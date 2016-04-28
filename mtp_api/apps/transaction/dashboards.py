@@ -59,6 +59,7 @@ class TransactionReportChart:
             timezone.localtime(self.queryset.earliest().received_at).date()
         self.end_date = end_date or \
             timezone.localtime(self.queryset.latest().received_at).date()
+        self.max_sum = 0
         self.max_creditable = 0
         self.max_creditable_date = None
         self.max_refundable = 0
@@ -81,9 +82,9 @@ class TransactionReportChart:
             'new Date(%d,%d,%d)' % (date.year, date.month - 1, date.day)
             for date in self.weekends
         )
-        return mark_safe('{columns: %s, rows: %s, weekends: %s, title: "%s"}' % (
+        return mark_safe('{columns: %s, rows: %s, weekends: %s, max: %d, title: "%s"}' % (
             json.dumps(self.columns), rows, weekends,
-            force_text(escapejs(self.title)),
+            self.max_sum, force_text(escapejs(self.title)),
         ))
 
     @property
@@ -114,6 +115,9 @@ class TransactionReportChart:
             creditable = transactions.filter(**CREDITABLE_FILTERS).count() or 0
             refundable = transactions.filter(**REFUNDABLE_FILTERS).count() or 0
             data.append([date, creditable, refundable])
+            max_sum = creditable + refundable
+            if max_sum >= self.max_sum:
+                self.max_sum = max_sum
             if creditable >= self.max_creditable:
                 self.max_creditable = creditable
                 self.max_creditable_date = date
