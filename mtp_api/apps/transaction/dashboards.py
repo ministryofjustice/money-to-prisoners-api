@@ -75,6 +75,8 @@ class TransactionReportChart:
             )
             for date, creditable, refundable in self.rows
         )
+        if len(self.weekends) > 8:
+            self.weekends = []
         weekends = '[%s]' % ','.join(
             'new Date(%d,%d,%d)' % (date.year, date.month - 1, date.day)
             for date in self.weekends
@@ -112,10 +114,10 @@ class TransactionReportChart:
             creditable = transactions.filter(**CREDITABLE_FILTERS).count() or 0
             refundable = transactions.filter(**REFUNDABLE_FILTERS).count() or 0
             data.append([date, creditable, refundable])
-            if creditable > self.max_creditable:
+            if creditable >= self.max_creditable:
                 self.max_creditable = creditable
                 self.max_creditable_date = date
-            if refundable > self.max_refundable:
+            if refundable >= self.max_refundable:
                 self.max_refundable = refundable
                 self.max_refundable_date = date
             date += date_stride
