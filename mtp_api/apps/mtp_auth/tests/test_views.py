@@ -156,7 +156,7 @@ class ListUserTestCase(APITestCase, AuthTestCaseMixin):
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.refund_bank_admins[0])
         )
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def _check_list_users_succeeds(self, requester, client_id):
         response = self.client.get(
@@ -241,7 +241,7 @@ class CreateUserTestCase(APITestCase, AuthTestCaseMixin):
             data=user_data,
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(bank_admins[0])
         )
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(len(User.objects.filter(username=user_data['username'])), 0)
 
     def _check_create_user_succeeds(self, requester, user_data, client_id, groups):
@@ -326,6 +326,43 @@ class CreateUserTestCase(APITestCase, AuthTestCaseMixin):
             [Group.objects.get(name='PrisonClerk'),
              Group.objects.get(name='UserAdmin')]
         )
+
+    def test_cannot_create_non_unique_email(self):
+        user_data = {
+            'username': 'new-cashbook-ua',
+            'first_name': 'New',
+            'last_name': 'Cashbook User Admin',
+            'email': self.cashbook_uas[0].email,
+            'user_admin': True
+        }
+        response = self.client.post(
+            self.get_url(),
+            format='json',
+            data=user_data,
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.cashbook_uas[0])
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(len(User.objects.filter(username=user_data['username'])), 0)
+
+    def test_cannot_create_with_missing_fields(self):
+        user_data = {
+            'username': 'new-cashbook-ua',
+            'first_name': 'New',
+            'last_name': 'Cashbook User Admin',
+            'email': self.cashbook_uas[0].email,
+            'user_admin': True
+        }
+        for field in ['first_name', 'last_name', 'email']:
+            data = user_data.copy()
+            del data[field]
+            response = self.client.post(
+                self.get_url(),
+                format='json',
+                data=data,
+                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.cashbook_uas[0])
+            )
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(len(User.objects.filter(username=data['username'])), 0)
 
 
 class UpdateUserTestCase(APITestCase, AuthTestCaseMixin):
@@ -469,6 +506,16 @@ class UpdateUserTestCase(APITestCase, AuthTestCaseMixin):
         self._check_update_user_fails(
             self.cashbook_uas[1],
             self.prison_clerks[0].username,
+            user_data
+        )
+
+    def test_cannot_update_non_unique_email(self):
+        user_data = {
+            'email': self.bank_uas[0].email
+        }
+        self._check_update_user_fails(
+            self.bank_uas[0],
+            self.refund_bank_admins[0].username,
             user_data
         )
 

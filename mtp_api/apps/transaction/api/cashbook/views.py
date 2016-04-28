@@ -5,7 +5,7 @@ import re
 import django_filters
 
 from django import forms
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.db import models, transaction
 from django_filters.widgets import RangeWidget
 from django.http import HttpResponseRedirect
@@ -30,6 +30,8 @@ from .serializers import TransactionSerializer, \
     CreditedOnlyTransactionSerializer, \
     IdsTransactionSerializer, LockedTransactionSerializer
 from .permissions import TransactionPermissions
+
+User = get_user_model()
 
 logger = logging.getLogger('mtp')
 

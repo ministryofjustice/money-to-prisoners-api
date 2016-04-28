@@ -4,9 +4,9 @@ from itertools import cycle
 import random
 import warnings
 
+from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.utils.crypto import get_random_string
-from django.contrib.auth.models import User
 from faker import Faker
 
 from core.tests.utils import MockModelTimestamps
@@ -20,6 +20,8 @@ from transaction.models import Transaction, Log
 from transaction.constants import (
     TRANSACTION_STATUS, LOG_ACTIONS, TRANSACTION_CATEGORY, TRANSACTION_SOURCE
 )
+
+User = get_user_model()
 
 fake = Faker(locale='en_GB')
 

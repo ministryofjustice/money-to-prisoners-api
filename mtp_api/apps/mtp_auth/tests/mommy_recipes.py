@@ -1,12 +1,15 @@
 from itertools import count
 import string
 
-from django.contrib.auth.models import User, Group
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.utils.text import slugify
 from faker import Faker
 from model_mommy import timezone
 from model_mommy.mommy import make
 from model_mommy.recipe import Recipe
+
+User = get_user_model()
 
 fake = Faker(locale='en_GB')
 
