@@ -88,7 +88,7 @@ class UserSerializer(serializers.ModelSerializer):
         }
         body = loader.get_template('mtp_auth/new_user.txt').render(context)
         email = EmailMessage(
-            _('Your new Money To Prisoners %(app)s account') % {'app': client_application.name},
+            _('Your new %(app)s account is ready to use') % {'app': client_application.name},
             body,
             settings.MAILGUN_FROM_ADDRESS,
             [new_user.email]
