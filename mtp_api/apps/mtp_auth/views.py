@@ -190,8 +190,12 @@ class ResetPasswordView(generics.GenericAPIView):
                 'username': user.username,
                 'password': password,
             }).strip()
-            email = EmailMessage(subject=_('Your new Money To Prisoners password'), body=email_body,
-                                 from_email=settings.MAILGUN_FROM_ADDRESS, to=[user.email])
+            email = EmailMessage(
+                subject=_('Your new Money To Prisoners password'),
+                body=email_body,
+                from_email=settings.MAILGUN_FROM_ADDRESS,
+                to=[user.email]
+            )
             email.send()
 
             return Response(status=status.HTTP_204_NO_CONTENT)

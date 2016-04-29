@@ -278,7 +278,7 @@ class CreateUserTestCase(APITestCase, AuthTestCaseMixin):
 
         self.assertTrue(user_data['username'] in mail.outbox[0].body)
         self.assertEqual(
-            'Your new Money To Prisoners %s account' % client_id,
+            'Your new %s account is ready to use' % client_id,
             mail.outbox[0].subject
         )
 
