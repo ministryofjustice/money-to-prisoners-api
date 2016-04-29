@@ -33,7 +33,6 @@ TRANSACTION_CATEGORY = Choices(
 TRANSACTION_SOURCE = Choices(
     ('BANK_TRANSFER', 'bank_transfer', 'Bank transfer'),
     ('ADMINISTRATIVE', 'administrative', 'Administrative'),
-    ('ONLINE', 'online', 'Online')
 )
 
 

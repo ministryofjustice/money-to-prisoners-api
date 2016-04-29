@@ -23,10 +23,7 @@ from transaction.utils import format_amount, format_number
 CREDITABLE_FILTERS = {
     'prison__isnull': False,
     'category': TRANSACTION_CATEGORY.CREDIT,
-    'source__in': [
-        TRANSACTION_SOURCE.BANK_TRANSFER,
-        TRANSACTION_SOURCE.ONLINE,
-    ],
+    'source': TRANSACTION_SOURCE.BANK_TRANSFER,
 }
 CREDITED_FILTERS = Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.CREDITED]
 REFUNDABLE_FILTERS = {
@@ -265,10 +262,7 @@ class TransactionReport(DashboardModule):
 
         candidate_credits = self.queryset.filter(
             category=TRANSACTION_CATEGORY.CREDIT,
-            source__in=[
-                TRANSACTION_SOURCE.BANK_TRANSFER,
-                TRANSACTION_SOURCE.ONLINE,
-            ],
+            source=TRANSACTION_SOURCE.BANK_TRANSFER
         ).values_list('reference', flat=True)
         return reduce(lambda count, reference: count + (1 if reference_pattern.match(reference) else 0),
                       candidate_credits, 0)

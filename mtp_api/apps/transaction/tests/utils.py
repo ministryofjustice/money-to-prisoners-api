@@ -10,8 +10,6 @@ from django.utils.crypto import get_random_string
 from faker import Faker
 
 from core.tests.utils import MockModelTimestamps
-from payment.models import Payment
-from payment.constants import PAYMENT_STATUS
 from prison.models import Prison, PrisonerLocation
 from prison.tests.utils import random_prisoner_number, random_prisoner_dob, \
     random_prisoner_name, get_prisoner_location_creator, \
@@ -55,8 +53,7 @@ def generate_initial_transactions_data(
         prisoner_location_generator=None,
         include_debits=True,
         include_administrative_credits=True,
-        include_unidentified_credits=True,
-        include_online_payments=True):
+        include_unidentified_credits=True):
     data_list = []
 
     for transaction_counter in range(1, tot + 1):
@@ -79,9 +76,6 @@ def generate_initial_transactions_data(
         make_administrative_credit_transaction = (
             include_administrative_credits and transaction_counter % 41 == 0
         )
-        make_online_payment = (
-            include_online_payments and transaction_counter % 13 == 0
-        )
 
         random_date = latest_transaction_date() - datetime.timedelta(
             minutes=random.randint(0, 10000)
@@ -102,20 +96,7 @@ def generate_initial_transactions_data(
             'modified': random_date,
         }
 
-        if make_online_payment:
-            data['source'] = TRANSACTION_SOURCE.ONLINE
-            del data['sender_sort_code']
-            del data['sender_account_number']
-
-            if prisoner_location_generator:
-                data.update(next(prisoner_location_generator))
-            else:
-                data.update({
-                    'prisoner_name': random_prisoner_name(),
-                    'prisoner_number': random_prisoner_number(),
-                    'prisoner_dob': random_prisoner_dob(),
-                })
-        elif make_administrative_credit_transaction:
+        if make_administrative_credit_transaction:
             data['source'] = TRANSACTION_SOURCE.ADMINISTRATIVE
             data['incomplete_sender_info'] = True
             data['processor_type_code'] = 'RA'
@@ -239,8 +220,7 @@ def generate_transactions(
     consistent_history=False,
     include_debits=True,
     include_administrative_credits=True,
-    include_unidentified_credits=True,
-    include_online_payments=True
+    include_unidentified_credits=True
 ):
     if use_test_nomis_prisoners:
         prisoner_location_generator = cycle(load_nomis_prisoner_locations())
@@ -251,8 +231,7 @@ def generate_transactions(
         prisoner_location_generator=prisoner_location_generator,
         include_debits=include_debits,
         include_administrative_credits=include_administrative_credits,
-        include_unidentified_credits=include_unidentified_credits,
-        include_online_payments=include_online_payments
+        include_unidentified_credits=include_unidentified_credits
     )
 
     location_creator = get_prisoner_location_creator()
@@ -364,17 +343,6 @@ def setup_transaction(location_creator, owner_status_chooser,
 
     with MockModelTimestamps(data['created'], data['modified']):
         new_transaction = Transaction.objects.create(**data)
-
-    if data['source'] == TRANSACTION_SOURCE.ONLINE:
-        payment = Payment()
-        payment.transaction = new_transaction
-        payment.status = PAYMENT_STATUS.TAKEN
-        payment.amount = new_transaction.amount
-        payment.prisoner_number = new_transaction.prisoner_number
-        payment.prisoner_dob = new_transaction.prisoner_dob
-        payment.processor_id = random.randint(100, 1000)
-        payment.recipient_name = new_transaction.prisoner_name
-        payment.save()
 
     return new_transaction
 

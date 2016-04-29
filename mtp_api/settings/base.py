@@ -43,6 +43,7 @@ INSTALLED_APPS = (
     'mtp_auth',
     'account',
     'payment',
+    'credit',
 
     # django admin
     'django.contrib.admin',

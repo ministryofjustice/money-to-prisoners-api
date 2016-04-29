@@ -5,10 +5,10 @@ from rest_framework import status as http_status
 from rest_framework.test import APITestCase
 
 from core.tests.utils import make_test_users
+from credit.models import Credit
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from payment.models import Payment
 from payment.constants import PAYMENT_STATUS
-from transaction.models import Transaction
 
 
 class CreatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
@@ -56,6 +56,16 @@ class CreatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertTrue(response.data['uuid'] is not None)
 
         # check changes in db
+        new_credit = {
+            'amount': new_payment['amount'],
+            'prisoner_number': new_payment.pop('prisoner_number'),
+            'prisoner_dob': new_payment.pop('prisoner_dob')
+        }
+        self.assertEqual(Credit.objects.count(), 1)
+        self.assertEqual(
+            Credit.objects.filter(**new_credit).count(), 1
+        )
+        new_payment['credit'] = Credit.objects.get(**new_credit)
         self.assertEqual(Payment.objects.count(), 1)
         self.assertEqual(
             Payment.objects.filter(**new_payment).count(), 1
@@ -80,7 +90,11 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
             'service_charge': 24,
             'email': 'sender@outside.local'
         }
-        payment_uuid = Payment.objects.create(**new_payment).uuid
+        response = self.client.post(
+            reverse('payment-list'), data=new_payment, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        payment_uuid = response.data['uuid']
 
         update = {
             'status': new_outcome
@@ -103,14 +117,6 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(Payment.objects.count(), 1)
         self.assertEqual(Payment.objects.all()[0].status,
                          PAYMENT_STATUS.TAKEN)
-
-        # check transaction has been created
-        self.assertEqual(Transaction.objects.count(), 1)
-        transaction = Transaction.objects.all()[0]
-        self.assertEqual(transaction.id, response.data['transaction'])
-        self.assertEqual(transaction.amount, response.data['amount'])
-        self.assertEqual(transaction.prisoner_number, response.data['prisoner_number'])
-        self.assertEqual(transaction.prisoner_dob.isoformat(), response.data['prisoner_dob'])
 
     def test_update_status_failed_succeeds(self):
         response = self._test_update_status(PAYMENT_STATUS.FAILED)
@@ -148,3 +154,39 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(Payment.objects.count(), 1)
         self.assertEqual(Payment.objects.all()[0].status,
                          PAYMENT_STATUS.TAKEN)
+
+
+class GetPaymentViewTestCase(AuthTestCaseMixin, APITestCase):
+    fixtures = ['test_prisons.json', 'initial_groups.json']
+
+    def setUp(self):
+        super().setUp()
+        self.prison_clerks, _, _, _, self.send_money_users = make_test_users()
+
+    def test_get_payment(self):
+        user = self.send_money_users[0]
+
+        new_payment = {
+            'prisoner_number': 'A1234BY',
+            'prisoner_dob': date(1986, 12, 9),
+            'recipient_name': 'Alan Smith',
+            'amount': 1000,
+            'service_charge': 24,
+            'email': 'sender@outside.local'
+        }
+        response = self.client.post(
+            reverse('payment-list'), data=new_payment, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        payment_uuid = response.data['uuid']
+
+        response = self.client.get(
+            reverse('payment-detail', kwargs={'pk': payment_uuid}), format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        retrieved_payment = response.data
+        self.assertEqual(payment_uuid, retrieved_payment['uuid'])
+        self.assertEqual(new_payment['prisoner_number'],
+                         retrieved_payment['prisoner_number'])
+        self.assertEqual(new_payment['prisoner_dob'].isoformat(),
+                         retrieved_payment['prisoner_dob'])

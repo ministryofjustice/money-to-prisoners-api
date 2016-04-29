@@ -64,10 +64,7 @@ class Transaction(TimeStampedModel):
             'owner__isnull': True,
             'credited': False,
             'category': TRANSACTION_CATEGORY.CREDIT,
-            'source__in': [
-                TRANSACTION_SOURCE.BANK_TRANSFER,
-                TRANSACTION_SOURCE.ONLINE
-            ]
+            'source': TRANSACTION_SOURCE.BANK_TRANSFER,
         },
         TRANSACTION_STATUS.CREDITED: {
             'credited': True
@@ -125,20 +122,14 @@ class Transaction(TimeStampedModel):
         return (self.prison is not None and self.owner is None and
                 not (self.credited or self.refunded) and
                 self.category == TRANSACTION_CATEGORY.CREDIT and
-                self.source in [
-                    TRANSACTION_SOURCE.BANK_TRANSFER,
-                    TRANSACTION_SOURCE.ONLINE
-                ])
+                self.source == TRANSACTION_SOURCE.BANK_TRANSFER)
 
     @property
     def locked(self):
         return (self.owner is not None and
                 not (self.credited or self.refunded) and
                 self.category == TRANSACTION_CATEGORY.CREDIT and
-                self.source in [
-                    TRANSACTION_SOURCE.BANK_TRANSFER,
-                    TRANSACTION_SOURCE.ONLINE
-                ])
+                self.source == TRANSACTION_SOURCE.BANK_TRANSFER)
 
     @property
     def refund_pending(self):
