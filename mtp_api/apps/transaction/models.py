@@ -5,6 +5,7 @@ from django.conf import settings
 from django.dispatch import receiver
 from model_utils.models import TimeStampedModel
 
+from credit.models import Credit
 from prison.models import Prison
 from .constants import (
     TRANSACTION_STATUS, LOG_ACTIONS, TRANSACTION_CATEGORY, TRANSACTION_SOURCE
@@ -52,6 +53,8 @@ class Transaction(TimeStampedModel):
     reconciled = models.BooleanField(default=False)
     incomplete_sender_info = models.BooleanField(default=False)
     reference_in_sender_field = models.BooleanField(default=False)
+
+    credit = models.OneToOneField(Credit, on_delete=models.CASCADE, null=True)
 
     # NB: there are matching boolean fields or properties on the model instance for each
     STATUS_LOOKUP = {
@@ -192,7 +195,7 @@ class Transaction(TimeStampedModel):
             sender=self.__class__, transaction=self, by_user=by_user
         )
 
-    def credit(self, credited, by_user):
+    def credit_prisoner(self, credited, by_user):
         self.credited = credited
         self.save()
 

@@ -195,7 +195,7 @@ class CreditTransactions(TransactionViewMixin, generics.GenericAPIView):
 
             for item in deserialized.data:
                 obj = to_update.get(pk=item['id'])
-                obj.credit(credited=item['credited'], by_user=request.user)
+                obj.credit_prisoner(credited=item['credited'], by_user=request.user)
 
         return Response(status=drf_status.HTTP_204_NO_CONTENT)
 
