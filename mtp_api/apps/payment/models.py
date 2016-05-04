@@ -1,8 +1,12 @@
 import uuid
 
 from django.db import models
+from django.db.models.signals import pre_save
+from django.dispatch import receiver
+from django.utils import timezone
 from model_utils.models import TimeStampedModel
 
+from credit.constants import CREDIT_RESOLUTION
 from credit.models import Credit
 from .constants import PAYMENT_STATUS
 
@@ -40,3 +44,12 @@ class Payment(TimeStampedModel):
 
     def __str__(self):
         return str(self.uuid)
+
+
+@receiver(pre_save, sender=Payment, dispatch_uid='update_credit_for_payment')
+def update_credit_for_payment(sender, instance, **kwargs):
+    if (instance.status == PAYMENT_STATUS.TAKEN and
+            instance.credit.resolution == CREDIT_RESOLUTION.INITIAL):
+        instance.credit.resolution = CREDIT_RESOLUTION.PENDING
+        instance.credit.received_at = timezone.now()
+        instance.credit.save()

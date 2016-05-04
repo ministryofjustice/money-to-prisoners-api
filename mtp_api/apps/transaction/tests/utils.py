@@ -10,6 +10,8 @@ from django.utils.crypto import get_random_string
 from faker import Faker
 
 from core.tests.utils import MockModelTimestamps
+from credit.constants import CREDIT_RESOLUTION
+from credit.models import Credit
 from prison.models import Prison, PrisonerLocation
 from prison.tests.utils import random_prisoner_number, random_prisoner_dob, \
     random_prisoner_name, get_prisoner_location_creator, \
@@ -262,7 +264,7 @@ def generate_transactions(
     if predetermined_transactions:
         for data in generate_predetermined_transactions_data():
             with MockModelTimestamps(data['created'], data['modified']):
-                new_transaction = Transaction.objects.create(**data)
+                new_transaction = save_transaction(data)
             transactions.append(new_transaction)
 
     generate_transaction_logs(transactions)
@@ -301,7 +303,7 @@ def setup_historical_transaction(location_creator, owner_status_chooser,
                 data.update({'refunded': True})
 
     with MockModelTimestamps(data['created'], data['modified']):
-        new_transaction = Transaction.objects.create(**data)
+        new_transaction = save_transaction(data)
 
     return new_transaction
 
@@ -342,9 +344,33 @@ def setup_transaction(location_creator, owner_status_chooser,
                 data.update({'refunded': False})
 
     with MockModelTimestamps(data['created'], data['modified']):
-        new_transaction = Transaction.objects.create(**data)
+        new_transaction = save_transaction(data)
 
     return new_transaction
+
+
+def save_transaction(data):
+    if data.get('credited'):
+        resolution = CREDIT_RESOLUTION.CREDITED
+    elif data.get('refunded'):
+        resolution = CREDIT_RESOLUTION.REFUNDED
+    else:
+        resolution = CREDIT_RESOLUTION.PENDING
+
+    credit = Credit(
+        amount=data.get('amount'),
+        prisoner_dob=data.get('prisoner_dob'),
+        prisoner_number=data.get('prisoner_number'),
+        prisoner_name=data.get('prisoner_name'),
+        prison=data.get('prison'),
+        reconciled=data.get('reconciled', False),
+        owner=data.get('owner'),
+        received_at=data.get('received_at'),
+        resolution=resolution
+    )
+    credit.save()
+    data['credit'] = credit
+    return Transaction.objects.create(**data)
 
 
 def generate_transaction_logs(transactions):

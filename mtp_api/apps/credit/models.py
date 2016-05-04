@@ -1,22 +1,17 @@
+import warnings
+
 from django.conf import settings
 from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from extended_choices import Choices
 from model_utils.models import TimeStampedModel
 
 from prison.models import Prison, PrisonerLocation
-from .constants import LOG_ACTIONS
-from .managers import LogManager
+from .constants import LOG_ACTIONS, CREDIT_RESOLUTION, CREDIT_STATUS
+from .managers import CreditManager, CreditQuerySet, LogManager
 from .signals import (
     credit_created, credit_locked, credit_unlocked, credit_credited,
-    credit_refunded, credit_reconciled
-)
-
-CREDIT_RESOLUTION = Choices(
-    ('PENDING', 'pending', 'Pending'),
-    ('CREDITED', 'credited', 'Credited'),
-    ('REFUNDED', 'refunded', 'Refunded')
+    credit_refunded, credit_reconciled, credit_prisons_need_updating
 )
 
 
@@ -44,6 +39,137 @@ class Credit(TimeStampedModel):
         index_together = (
             ('prisoner_number', 'prisoner_dob'),
         )
+
+    objects = CreditManager.from_queryset(CreditQuerySet)()
+
+    STATUS_LOOKUP = {
+        CREDIT_STATUS.LOCKED: {
+            'owner__isnull': False,
+            'resolution': CREDIT_RESOLUTION.PENDING,
+        },
+        CREDIT_STATUS.AVAILABLE: {
+            'prison__isnull': False,
+            'owner__isnull': True,
+            'resolution': CREDIT_RESOLUTION.PENDING,
+        },
+        CREDIT_STATUS.CREDITED: {
+            'resolution': CREDIT_RESOLUTION.CREDITED,
+        },
+        CREDIT_STATUS.REFUNDED: {
+            'resolution': CREDIT_RESOLUTION.REFUNDED,
+        },
+        CREDIT_STATUS.REFUND_PENDING: {
+            'prison__isnull': True,
+            'resolution': CREDIT_RESOLUTION.PENDING,
+        },
+    }
+
+    def lock(self, by_user):
+        self.owner = by_user
+        self.save()
+
+        credit_locked.send(
+            sender=self.__class__, credit=self, by_user=by_user
+        )
+
+    def unlock(self, by_user):
+        self.owner = None
+        self.save()
+
+        credit_unlocked.send(
+            sender=self.__class__, credit=self, by_user=by_user
+        )
+
+    def credit_prisoner(self, credited, by_user):
+        if credited:
+            self.resolution = CREDIT_RESOLUTION.CREDITED
+        else:
+            self.resolution = CREDIT_RESOLUTION.PENDING
+        self.save()
+
+        credit_credited.send(
+            sender=self.__class__, credit=self, by_user=by_user,
+            credited=credited
+        )
+
+    @property
+    def available(self):
+        return (
+            self.owner is None and self.prison is not None and
+            self.resolution == CREDIT_RESOLUTION.PENDING
+        )
+
+    @property
+    def locked(self):
+        return (
+            self.owner is not None and self.resolution == CREDIT_RESOLUTION.PENDING
+        )
+
+    @property
+    def credited(self):
+        return self.resolution == CREDIT_RESOLUTION.CREDITED
+
+    @property
+    def refunded(self):
+        return self.resolution == CREDIT_RESOLUTION.REFUNDED
+
+    @property
+    def refund_pending(self):
+        return (
+            self.prison is None and self.resolution == CREDIT_RESOLUTION.PENDING
+        )
+
+    @property
+    def owner_name(self):
+        return self.owner.get_full_name() if self.owner else None
+
+    @property
+    def sender(self):
+        return self.transaction.sender_name if self.transaction else None
+
+    @property
+    def credited_at(self):
+        if not self.resolution == CREDIT_RESOLUTION.CREDITED:
+            return None
+        log_action = self.log_set.filter(action=LOG_ACTIONS.CREDITED) \
+            .order_by('-created').first()
+        if not log_action:
+            warnings.warn('Credit model %s is missing a credited log' % self.pk)
+            return None
+        return log_action.created
+
+    @property
+    def refunded_at(self):
+        if not self.resolution == CREDIT_RESOLUTION.REFUNDED:
+            return None
+        log_action = self.log_set.filter(action=LOG_ACTIONS.REFUNDED) \
+            .order_by('-created').first()
+        if not log_action:
+            warnings.warn('Credit model %s is missing a refunded log' % self.pk)
+            return None
+        return log_action.created
+
+    @property
+    def reconciled_at(self):
+        if not self.reconciled:
+            return None
+        log_action = self.log_set.filter(action=LOG_ACTIONS.RECONCILED) \
+            .order_by('-created').first()
+        if not log_action:
+            warnings.warn('Credit model %s is missing a reconciled log' % self.pk)
+            return None
+        return log_action.created
+
+    @property
+    def locked_at(self):
+        if not self.locked:
+            return None
+        log_action = self.log_set.filter(action=LOG_ACTIONS.LOCKED) \
+            .order_by('-created').first()
+        if not log_action:
+            warnings.warn('Credit model %s is missing a locked log' % self.pk)
+            return None
+        return log_action.created
 
 
 class Log(TimeStampedModel):
@@ -110,3 +236,8 @@ def credit_refunded_receiver(sender, credit, by_user, **kwargs):
 @receiver(credit_reconciled)
 def credit_reconciled_receiver(sender, credit, by_user, **kwargs):
     Log.objects.credit_reconciled(credit, by_user)
+
+
+@receiver(credit_prisons_need_updating)
+def update_credit_prisons(*args, **kwargs):
+    Credit.objects.update_prisons()

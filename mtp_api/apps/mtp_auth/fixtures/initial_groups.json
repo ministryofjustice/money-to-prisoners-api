@@ -29,10 +29,10 @@
   "fields": {
     "name": "PrisonClerk",
     "permissions": [
-      ["view_transaction", "transaction", "transaction"],
-      ["lock_transaction", "transaction", "transaction"],
-      ["unlock_transaction", "transaction", "transaction"],
-      ["patch_credited_transaction", "transaction", "transaction"]
+      ["view_credit", "credit", "credit"],
+      ["lock_credit", "credit", "credit"],
+      ["unlock_credit", "credit", "credit"],
+      ["patch_credited_credit", "credit", "credit"]
     ]
   }
 },
