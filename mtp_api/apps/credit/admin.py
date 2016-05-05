@@ -4,16 +4,27 @@ from core.admin import DateRangeFilter, RelatedAnyFieldListFilter, ExactSearchFi
 from payment.models import Payment
 from transaction.models import Transaction
 from transaction.utils import format_amount
-from .models import Credit
+from .models import Credit, Log
+
+
+class LogAdminInline(admin.TabularInline):
+    model = Log
+    extra = 0
+    fields = ('action', 'created', 'user')
+    readonly_fields = ('action', 'created', 'user')
+    ordering = ('-created',)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 class TransactionAdminInline(admin.StackedInline):
     model = Transaction
     extra = 0
-    readonly_fields = (
-        'credited', 'refunded', 'reconciled', 'incomplete_sender_info',
-        'reference_in_sender_field'
-    )
+    readonly_fields = ('incomplete_sender_info', 'reference_in_sender_field')
 
     def has_add_permission(self, request):
         return False
@@ -38,11 +49,11 @@ class PaymentAdminInline(admin.StackedInline):
 class CreditAdmin(admin.ModelAdmin):
     list_display = (
         'prisoner_name', 'prison', 'prisoner_number', 'prisoner_dob',
-        'formatted_amount', 'created', 'resolution'
+        'formatted_amount', 'created', 'status'
     )
     ordering = ('-created',)
     date_hierarchy = 'created'
-    inlines = (TransactionAdminInline, PaymentAdminInline)
+    inlines = (TransactionAdminInline, PaymentAdminInline, LogAdminInline)
     readonly_fields = ('resolution', 'reconciled',)
     list_filter = (
         'resolution',

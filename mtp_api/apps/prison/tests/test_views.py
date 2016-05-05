@@ -182,9 +182,9 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
             assert_error_msg='Should fail because invalid prison'
         )
 
-    @mock.patch('prison.serializers.transaction_prisons_need_updating')
-    def test_create_sends_transaction_prisons_need_updating_signal(
-        self, mocked_transaction_prisons_need_updating
+    @mock.patch('prison.serializers.credit_prisons_need_updating')
+    def test_create_sends_credit_prisons_need_updating_signal(
+        self, mocked_credit_prisons_need_updating
     ):
         user = self.users[0]
 
@@ -202,7 +202,7 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        mocked_transaction_prisons_need_updating.send.assert_called_with(sender=PrisonerLocation)
+        mocked_credit_prisons_need_updating.send.assert_called_with(sender=PrisonerLocation)
 
 
 class PrisonerValidityViewTestCase(AuthTestCaseMixin, APITestCase):

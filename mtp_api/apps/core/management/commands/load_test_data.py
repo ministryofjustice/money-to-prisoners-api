@@ -8,6 +8,8 @@ from account.models import Batch, Balance
 from core.tests.utils import (
     make_test_users, make_test_user_admins, give_superusers_full_access
 )
+from credit.models import Credit
+from payment.models import Payment
 from prison.models import Prison
 from prison.tests.utils import generate_predefined_prisoner_locations
 from transaction.models import Transaction
@@ -58,6 +60,8 @@ class Command(BaseCommand):
             Balance.objects.all().delete()
             Batch.objects.all().delete()
             Transaction.objects.all().delete()
+            Payment.objects.all().delete()
+            Credit.objects.all().delete()
 
         user_set = get_user_model().objects.exclude(username__in=protect_usernames or [])
         if protect_superusers:

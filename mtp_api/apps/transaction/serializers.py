@@ -1,12 +1,13 @@
 from django.db import transaction as db_transaction
 
-from rest_framework import serializers
-from rest_framework.fields import IntegerField
+from rest_framework import serializers, fields
 
-from transaction.signals import transaction_created, transaction_refunded, \
-    transaction_prisons_need_updating
-from transaction.models import Transaction
+from credit.constants import CREDIT_RESOLUTION
+from credit.models import Credit
+from credit.signals import credit_refunded, credit_created
 from prison.serializers import PrisonSerializer
+from .constants import TRANSACTION_CATEGORY, TRANSACTION_SOURCE
+from .models import Transaction
 
 
 class CreateTransactionListSerializer(serializers.ListSerializer):
@@ -17,22 +18,33 @@ class CreateTransactionListSerializer(serializers.ListSerializer):
         user = self.context['request'].user
 
         for data in validated_data:
+            prisoner_number = data.pop('prisoner_number', None)
+            prisoner_dob = data.pop('prisoner_dob', None)
+            if (data['category'] == TRANSACTION_CATEGORY.CREDIT and
+                    data['source'] == TRANSACTION_SOURCE.BANK_TRANSFER):
+                new_credit = Credit(
+                    amount=data['amount'],
+                    prisoner_number=prisoner_number,
+                    prisoner_dob=prisoner_dob
+                )
+                new_credit.save()
+                data['credit'] = new_credit
+
+                credit_created.send(
+                    sender=Credit,
+                    credit=new_credit,
+                    by_user=user
+                )
+
             transaction = Transaction.objects.create(**data)
-
-            transaction_created.send(
-                sender=Transaction,
-                transaction=transaction,
-                by_user=user
-            )
-
             transactions.append(transaction)
-
-        transaction_prisons_need_updating.send(sender=Transaction)
 
         return transactions
 
 
 class CreateTransactionSerializer(serializers.ModelSerializer):
+    prisoner_dob = serializers.DateField(required=False)
+    prisoner_number = serializers.CharField(required=False)
 
     class Meta:
         model = Transaction
@@ -62,39 +74,41 @@ class UpdateTransactionListSerializer(serializers.ListSerializer):
     def update(self, instance, validated_data):
         user = self.context['request'].user
 
-        to_refund = [t['id'] for t in validated_data if t.get('refunded', False)]
+        to_refund = [t['id'] for t in validated_data if t['refunded']]
 
         updated_transactions = []
         if to_refund:
-            updated_transactions += self.refund(user, to_refund)
+            self.refund(user, to_refund)
+            updated_transactions = Transaction.objects.filter(pk__in=to_refund)
 
         return updated_transactions
 
     def refund(self, user, to_refund):
-        update_set = Transaction.objects.filter(
-            pk__in=to_refund,
-            **Transaction.STATUS_LOOKUP['refund_pending']).select_for_update()
+        update_set = Credit.objects.filter(
+            transaction__pk__in=to_refund,
+            **Credit.STATUS_LOOKUP['refund_pending']).select_for_update()
         if len(update_set) != len(to_refund):
-            raise Transaction.DoesNotExist(
-                list(set(to_refund) - {t.id for t in update_set})
+            raise Credit.DoesNotExist(
+                list(set(to_refund) - {c.transaction.id for c in update_set})
             )
 
-        updated_transactions = list(update_set)
-        update_set.update(refunded=True)
+        updated_credits = list(update_set)
+        update_set.update(resolution=CREDIT_RESOLUTION.REFUNDED)
 
-        for transaction in updated_transactions:
-            transaction.refunded = True
-            transaction_refunded.send(
-                sender=Transaction,
-                transaction=transaction,
+        for credit in updated_credits:
+            credit.resolution = CREDIT_RESOLUTION.REFUNDED
+            credit_refunded.send(
+                sender=Credit,
+                credit=credit,
                 by_user=user
             )
 
-        return updated_transactions
+        return updated_credits
 
 
 class UpdateRefundedTransactionSerializer(serializers.ModelSerializer):
-    id = IntegerField(read_only=False)
+    id = fields.IntegerField(required=True)
+    refunded = fields.BooleanField(required=True)
 
     class Meta:
         model = Transaction
@@ -107,6 +121,8 @@ class UpdateRefundedTransactionSerializer(serializers.ModelSerializer):
 
 class TransactionSerializer(serializers.ModelSerializer):
     prison = PrisonSerializer(required=False)
+    credited = fields.BooleanField()
+    refunded = fields.BooleanField()
 
     class Meta:
         model = Transaction
@@ -130,6 +146,8 @@ class TransactionSerializer(serializers.ModelSerializer):
 
 class ReconcileTransactionSerializer(serializers.ModelSerializer):
     prison = PrisonSerializer(required=False)
+    credited = fields.BooleanField()
+    refunded = fields.BooleanField()
 
     class Meta:
         model = Transaction

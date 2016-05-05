@@ -7,6 +7,7 @@ from django.dispatch import receiver
 from model_utils.models import TimeStampedModel
 
 from prison.models import Prison, PrisonerLocation
+from transaction.utils import format_amount
 from .constants import LOG_ACTIONS, CREDIT_RESOLUTION, CREDIT_STATUS
 from .managers import CreditManager, CreditQuerySet, LogManager
 from .signals import (
@@ -64,6 +65,15 @@ class Credit(TimeStampedModel):
         },
     }
 
+    def __str__(self):
+        return 'Credit {id}, {amount} {sender_name} > {prisoner_name}, {status}'.format(
+            id=self.pk,
+            amount=format_amount(self.amount, True),
+            sender_name=self.sender,
+            prisoner_name=self.prisoner_name,
+            status=self.status
+        )
+
     def lock(self, by_user):
         self.owner = by_user
         self.save()
@@ -90,6 +100,16 @@ class Credit(TimeStampedModel):
         credit_credited.send(
             sender=self.__class__, credit=self, by_user=by_user,
             credited=credited
+        )
+
+    def reconcile(self, by_user):
+        self.reconciled = True
+        self.save()
+
+        credit_reconciled.send(
+            sender=self.__class__,
+            credit=self,
+            by_user=by_user
         )
 
     @property
@@ -120,12 +140,25 @@ class Credit(TimeStampedModel):
         )
 
     @property
+    def status(self):
+        if self.available:
+            return CREDIT_STATUS.AVAILABLE
+        elif self.locked:
+            return CREDIT_STATUS.LOCKED
+        elif self.credited:
+            return CREDIT_STATUS.CREDITED
+        elif self.refund_pending:
+            return CREDIT_STATUS.REFUND_PENDING
+        elif self.refunded:
+            return CREDIT_STATUS.REFUNDED
+
+    @property
     def owner_name(self):
         return self.owner.get_full_name() if self.owner else None
 
     @property
     def sender(self):
-        return self.transaction.sender_name if self.transaction else None
+        return self.transaction.sender_name if hasattr(self, 'transaction') else None
 
     @property
     def credited_at(self):

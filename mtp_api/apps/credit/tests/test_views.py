@@ -54,7 +54,7 @@ class CreditListTestCase(
         logged_in_user = logged_in_user or self._get_authorised_user()
         logged_in_user.prisonusermapping.prisons.add(*self.prisons)
         managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
-        return [t for t in self.credits if t.prison in managing_prisons]
+        return [c for c in self.credits if c.prison in managing_prisons]
 
     def _test_response_with_filters(self, filters={}):
         logged_in_user = self._get_authorised_user()
@@ -68,35 +68,35 @@ class CreditListTestCase(
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # check expected result
-        def noop_checker(t):
+        def noop_checker(c):
             return True
 
         status_checker = self.STATUS_FILTERS[filters.get('status', None)]
         if filters.get('prison'):
-            def prison_checker(t):
-                return t.prison and t.prison.pk in filters['prison'].split(',')
+            def prison_checker(c):
+                return c.prison and c.prison.pk in filters['prison'].split(',')
         else:
             prison_checker = noop_checker
         if filters.get('user'):
-            def user_checker(t):
-                return t.owner and t.owner.pk == filters['user']
+            def user_checker(c):
+                return c.owner and c.owner.pk == filters['user']
         else:
             user_checker = noop_checker
         received_at_checker = self._get_received_at_checker(filters, noop_checker)
         search_checker = self._get_search_checker(filters, noop_checker)
 
         expected_ids = [
-            t.pk
-            for t in credits
-            if status_checker(t) and
-            prison_checker(t) and
-            user_checker(t) and
-            received_at_checker(t) and
-            search_checker(t)
+            c.pk
+            for c in credits
+            if status_checker(c) and
+            prison_checker(c) and
+            user_checker(c) and
+            received_at_checker(c) and
+            search_checker(c)
         ]
         self.assertEqual(response.data['count'], len(expected_ids))
         self.assertListEqual(
-            sorted([t['id'] for t in response.data['results']]),
+            sorted([c['id'] for c in response.data['results']]),
             sorted(expected_ids)
         )
 
@@ -134,11 +134,11 @@ class CreditListTestCase(
             received_at_1 = timezone.make_aware(received_at_1)
 
         if received_at_0 and received_at_1:
-            return lambda t: received_at_0 <= t.received_at <= received_at_1
+            return lambda c: received_at_0 <= c.received_at <= received_at_1
         elif received_at_0:
-            return lambda t: received_at_0 <= t.received_at
+            return lambda c: received_at_0 <= c.received_at
         elif received_at_1:
-            return lambda t: t.received_at <= received_at_1
+            return lambda c: c.received_at <= received_at_1
         return noop_checker
 
     def _get_search_checker(self, filters, noop_checker):
@@ -146,10 +146,10 @@ class CreditListTestCase(
             search_phrase = filters['search'].lower()
             search_fields = ['prisoner_name', 'prisoner_number', 'sender']
 
-            return lambda t: any(
-                search_phrase in getattr(t, field).lower()
+            return lambda c: any(
+                search_phrase in getattr(c, field).lower()
                 for field in search_fields
-            ) or (search_phrase in '£%0.2f' % (t.amount / 100))
+            ) or (search_phrase in '£%0.2f' % (c.amount / 100))
         return noop_checker
 
 
@@ -316,13 +316,13 @@ class CreditListWithDefaultStatusAndUserTestCase(CreditListTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         expected_ids = [
-            t.pk
-            for t in self.credits
-            if t.prison in managing_prisons
+            c.pk
+            for c in self.credits
+            if c.prison in managing_prisons
         ]
         self.assertEqual(response.data['count'], len(expected_ids))
         self.assertListEqual(
-            sorted([t['id'] for t in response.data['results']]),
+            sorted([c['id'] for c in response.data['results']]),
             sorted(expected_ids)
         )
 

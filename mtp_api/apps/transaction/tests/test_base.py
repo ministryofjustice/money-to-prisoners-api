@@ -8,10 +8,7 @@ from mtp_auth.tests.utils import AuthTestCaseMixin
 
 from prison.models import Prison
 
-from transaction.models import Transaction
-from transaction.constants import TRANSACTION_STATUS
-
-from .utils import generate_transactions, latest_transaction_date
+from .utils import latest_transaction_date
 
 
 class BaseTransactionViewTestCase(AuthTestCaseMixin, APITestCase):
@@ -19,12 +16,6 @@ class BaseTransactionViewTestCase(AuthTestCaseMixin, APITestCase):
         'initial_groups.json',
         'test_prisons.json'
     ]
-    STATUS_FILTERS = {
-        None: lambda t: True,
-        TRANSACTION_STATUS.LOCKED: lambda t: t.owner and not t.credited,
-        TRANSACTION_STATUS.AVAILABLE: lambda t: not t.owner and not t.credited,
-        TRANSACTION_STATUS.CREDITED: lambda t: t.owner and t.credited
-    }
     transaction_batch = 50
 
     def setUp(self):
@@ -36,32 +27,7 @@ class BaseTransactionViewTestCase(AuthTestCaseMixin, APITestCase):
         ) = make_test_users(clerks_per_prison=2)
 
         self.latest_transaction_date = latest_transaction_date()
-        self.transactions = generate_transactions(
-            transaction_batch=self.transaction_batch
-        )
         self.prisons = Prison.objects.all()
-
-    def _get_locked_transactions_qs(self, prisons, user=None):
-        params = {
-            'credited': False,
-            'prison__in': prisons
-        }
-        if user:
-            params['owner'] = user
-        else:
-            params['owner__isnull'] = False
-
-        return Transaction.objects.filter(**params)
-
-    def _get_available_transactions_qs(self, prisons):
-        return Transaction.objects.filter(
-            owner__isnull=True, credited=False, prison__in=prisons
-        )
-
-    def _get_credited_transactions_qs(self, prisons, user=None):
-        return Transaction.objects.filter(
-            owner=user, credited=True, prison__in=prisons
-        )
 
     def _get_latest_date(self):
         return self.latest_transaction_date.date()

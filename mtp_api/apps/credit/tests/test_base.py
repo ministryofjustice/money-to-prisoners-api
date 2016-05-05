@@ -34,7 +34,7 @@ class BaseCreditViewTestCase(AuthTestCaseMixin, APITestCase):
         self.latest_transaction_date = latest_transaction_date()
         self.credits = [t.credit for t in generate_transactions(
             transaction_batch=self.transaction_batch
-        )]
+        ) if t.credit]
         self.prisons = Prison.objects.all()
 
     def _get_locked_credits_qs(self, prisons, user=None):
