@@ -5,11 +5,18 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin
 
 from mtp_auth.forms import RestrictedUserChangeForm
-from mtp_auth.models import ApplicationUserMapping, PrisonUserMapping, FailedLoginAttempt
+from mtp_auth.models import ApplicationGroupMapping, ApplicationUserMapping, FailedLoginAttempt, PrisonUserMapping
 
 User = get_user_model()
 if admin.site.is_registered(User):
     admin.site.unregister(User)
+
+
+@admin.register(ApplicationGroupMapping)
+class ApplicationGroupMappingAdmin(ModelAdmin):
+    ordering = ('group__name', 'application')
+    list_display = ('group', 'application')
+    list_filter = ('application',)
 
 
 @admin.register(ApplicationUserMapping)
