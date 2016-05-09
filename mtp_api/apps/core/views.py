@@ -5,6 +5,7 @@ from urllib.parse import unquote as url_unquote
 
 from django.conf import settings
 from django.contrib.admin import site
+from django.contrib.admin.models import LogEntry, CHANGE as CHANGE_LOG_ENTRY
 from django.core.exceptions import PermissionDenied
 from django.core.management import call_command
 from django.core.urlresolvers import reverse_lazy
@@ -156,6 +157,14 @@ class RecreateTestDataView(AdminViewMixin, FormView):
         output.seek(0)
         command_output = output.read()
 
+        LogEntry.objects.log_action(
+            user_id=self.request.user.pk,
+            content_type_id=None, object_id=None,
+            object_repr=_('Data reset to %(scenario)s scenario') % {
+                'scenario': scenario
+            },
+            action_flag=CHANGE_LOG_ENTRY,
+        )
         logger.info('User "%(username)s" reset data for testing using "%(scenario)s" scenario' % {
             'username': self.request.user.username,
             'scenario': scenario,
