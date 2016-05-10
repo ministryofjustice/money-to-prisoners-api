@@ -1,9 +1,13 @@
-from django.conf.urls import include, url
+from django.conf.urls import url
 
-from .api.cashbook import urls as cashbook_urls
-from .api.bank_admin import urls as bank_admin_urls
+from . import views
 
 urlpatterns = [
-    url(r'^bank_admin/', include(bank_admin_urls, namespace='bank_admin')),
-    url(r'^cashbook/', include(cashbook_urls, namespace='cashbook')),
+    url(r'^transactions/$', views.TransactionView.as_view({
+        'get': 'list',
+        'post': 'create',
+        'patch': 'patch_processed'
+        }), name='transaction-list'),
+    url(r'^transactions/reconcile/$', views.ReconcileTransactionsView.as_view(),
+        name='reconcile-transactions')
 ]

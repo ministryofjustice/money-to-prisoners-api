@@ -1,7 +1,7 @@
 from core.permissions import ActionsBasedPermissions
 
 
-class TransactionPermissions(ActionsBasedPermissions):
+class CreditPermissions(ActionsBasedPermissions):
     actions_perms_map = ActionsBasedPermissions.actions_perms_map.copy()
     actions_perms_map.update({
         'list': ['%(app_label)s.view_%(model_name)s'],

@@ -1,25 +1,30 @@
 from oauth2_provider.models import AccessToken
-
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from core.tests.utils import make_test_users
 from mtp_auth.tests.utils import AuthTestCaseMixin
-
 from prison.models import Prison
+from credit.models import Credit
+from credit.constants import CREDIT_STATUS, CREDIT_RESOLUTION
+from transaction.tests.utils import generate_transactions, latest_transaction_date
 
-from .utils import latest_transaction_date
 
-
-class BaseTransactionViewTestCase(AuthTestCaseMixin, APITestCase):
+class BaseCreditViewTestCase(AuthTestCaseMixin, APITestCase):
     fixtures = [
         'initial_groups.json',
         'test_prisons.json'
     ]
+    STATUS_FILTERS = {
+        None: lambda t: True,
+        CREDIT_STATUS.LOCKED: lambda t: t.owner and not t.credited,
+        CREDIT_STATUS.AVAILABLE: lambda t: not t.owner and not t.credited,
+        CREDIT_STATUS.CREDITED: lambda t: t.owner and t.credited
+    }
     transaction_batch = 50
 
     def setUp(self):
-        super(BaseTransactionViewTestCase, self).setUp()
+        super(BaseCreditViewTestCase, self).setUp()
         (
             self.prison_clerks, self.prisoner_location_admins,
             self.bank_admins, self.refund_bank_admins,
@@ -27,13 +32,39 @@ class BaseTransactionViewTestCase(AuthTestCaseMixin, APITestCase):
         ) = make_test_users(clerks_per_prison=2)
 
         self.latest_transaction_date = latest_transaction_date()
+        self.credits = [t.credit for t in generate_transactions(
+            transaction_batch=self.transaction_batch
+        ) if t.credit]
         self.prisons = Prison.objects.all()
+
+    def _get_locked_credits_qs(self, prisons, user=None):
+        params = {
+            'resolution': CREDIT_RESOLUTION.PENDING,
+            'prison__in': prisons
+        }
+        if user:
+            params['owner'] = user
+        else:
+            params['owner__isnull'] = False
+
+        return Credit.objects.filter(**params)
+
+    def _get_available_credits_qs(self, prisons):
+        return Credit.objects.filter(
+            owner__isnull=True, resolution=CREDIT_RESOLUTION.PENDING,
+            prison__in=prisons
+        )
+
+    def _get_credited_credits_qs(self, prisons, user=None):
+        return Credit.objects.filter(
+            owner=user, resolution=CREDIT_RESOLUTION.CREDITED, prison__in=prisons
+        )
 
     def _get_latest_date(self):
         return self.latest_transaction_date.date()
 
 
-class TransactionRejectsRequestsWithoutPermissionTestMixin(object):
+class CreditRejectsRequestsWithoutPermissionTestMixin(object):
 
     """
     Mixin for permission checks on the endpoint.
@@ -95,8 +126,8 @@ class TransactionRejectsRequestsWithoutPermissionTestMixin(object):
 
     def test_fails_without_action_permissions(self):
         """
-        Tests that if the user does not have permissions to create
-        transactions, they won't be able to access the API.
+        Tests that if the user does not have permissions,
+        they won't be able to access the API.
         """
         user = self._get_unauthorised_user()
 

@@ -41,7 +41,7 @@ class TransactionDashboardTestCase(DashboardTestCase):
         self.assertContains(response, 'Latest transactions received on')
         transactions = Transaction.objects.filter(
             received_at__date=localtime(Transaction.objects.latest().received_at).date(),
-            **Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.AVAILABLE]
+            **Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.CREDITABLE]
         )
         creditable_amount = transactions.aggregate(amount=models.Sum('amount'))['amount']
         self.assertAmountInContent(creditable_amount, response)
@@ -52,7 +52,7 @@ class TransactionDashboardTestCase(DashboardTestCase):
         response = self.client.get(url)
         self.assertContains(response, 'All transactions')
         transactions = Transaction.objects.filter(
-            **Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.AVAILABLE]
+            **Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.CREDITABLE]
         )
         creditable_amount = transactions.aggregate(amount=models.Sum('amount'))['amount']
         self.assertAmountInContent(creditable_amount, response)

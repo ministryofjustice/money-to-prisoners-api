@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta, time
-from unittest import mock
 
 from django.utils import timezone
 from django.core.urlresolvers import reverse
@@ -7,12 +6,17 @@ from django.conf import settings
 from rest_framework import status as http_status
 
 from account.models import Batch
-from transaction.models import Transaction, Log
-from transaction.constants import LOG_ACTIONS, TRANSACTION_CATEGORY, TRANSACTION_SOURCE
-from transaction.api.bank_admin.serializers import CreateTransactionSerializer
-from .utils import generate_initial_transactions_data, generate_transactions
-from .test_base import BaseTransactionViewTestCase, \
-    TransactionRejectsRequestsWithoutPermissionTestMixin
+from credit.constants import LOG_ACTIONS
+from credit.models import Credit, Log
+from transaction.models import Transaction
+from transaction.constants import TRANSACTION_CATEGORY, TRANSACTION_SOURCE
+from transaction.serializers import CreateTransactionSerializer
+from .utils import (
+    generate_initial_transactions_data, generate_transactions, filters_from_api_data
+)
+from .test_base import (
+    BaseTransactionViewTestCase, TransactionRejectsRequestsWithoutPermissionTestMixin
+)
 
 
 class CreateTransactionsTestCase(
@@ -37,7 +41,7 @@ class CreateTransactionsTestCase(
         return self.bank_admins[0]
 
     def _get_url(self, *args, **kwargs):
-        return reverse('bank_admin:transaction-list')
+        return reverse('transaction-list')
 
     def _get_transactions_data(self, tot=80):
         data_list = generate_initial_transactions_data(tot=tot)
@@ -69,37 +73,25 @@ class CreateTransactionsTestCase(
         # check changes in db
         self.assertEqual(len(data_list), Transaction.objects.count())
         for data in data_list:
+            filters = filters_from_api_data(data)
             self.assertEqual(
-                Transaction.objects.filter(**data).count(), 1
+                Transaction.objects.filter(**filters).count(), 1
             )
 
         # check logs
         self.assertEqual(
             Log.objects.filter(
                 user=user,
-                action=LOG_ACTIONS.CREATED,
-                transaction__id__in=Transaction.objects.all().values_list('id', flat=True)
+                action=LOG_ACTIONS.CREATED
             ).count(),
-            len(data_list)
+            len([data for data in data_list if
+                 data['category'] == TRANSACTION_CATEGORY.CREDIT and
+                 data['source'] == TRANSACTION_SOURCE.BANK_TRANSFER])
         )
-
-    @mock.patch('transaction.api.bank_admin.serializers.transaction_prisons_need_updating')
-    def test_create_sends_transaction_prisons_need_updating_signal(
-        self, mocked_transaction_prisons_need_updating
-    ):
-        user = self.bank_admins[0]
-
-        response = self.client.post(
-            self._get_url(), data=self._get_transactions_data(), format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
-        )
-        self.assertEqual(response.status_code, http_status.HTTP_201_CREATED)
-
-        mocked_transaction_prisons_need_updating.send.assert_called_with(sender=Transaction)
 
     def test_create_with_debit_category(self):
         user = self.bank_admins[0]
-        data_list = self._get_transactions_data()
+        data_list = self._get_transactions_data(tot=1)
         data_list[0]['category'] = TRANSACTION_CATEGORY.DEBIT
 
         response = self.client.post(
@@ -109,12 +101,12 @@ class CreateTransactionsTestCase(
         self.assertEqual(response.status_code, http_status.HTTP_201_CREATED)
 
         self.assertEqual(
-            Transaction.objects.filter(**data_list[0]).count(), 1
+            Transaction.objects.filter(category=TRANSACTION_CATEGORY.DEBIT).count(), 1
         )
 
     def test_create_with_administrative_source(self):
         user = self.bank_admins[0]
-        data_list = self._get_transactions_data()
+        data_list = self._get_transactions_data(tot=1)
         data_list[0]['source'] = TRANSACTION_SOURCE.ADMINISTRATIVE
 
         response = self.client.post(
@@ -124,7 +116,7 @@ class CreateTransactionsTestCase(
         self.assertEqual(response.status_code, http_status.HTTP_201_CREATED)
 
         self.assertEqual(
-            Transaction.objects.filter(**data_list[0]).count(), 1
+            Transaction.objects.filter(source=TRANSACTION_SOURCE.ADMINISTRATIVE).count(), 1
         )
 
 
@@ -150,7 +142,7 @@ class CreateIncompleteTransactionsTestCase(
         return self.bank_admins[0]
 
     def _get_url(self, *args, **kwargs):
-        return reverse('bank_admin:transaction-list')
+        return reverse('transaction-list')
 
     def _get_transactions_data(self, tot=30):
         data_list = generate_initial_transactions_data(tot=tot)
@@ -258,7 +250,7 @@ class UpdateRefundTransactionsTestCase(
         return self.refund_bank_admins[0]
 
     def _get_url(self, *args, **kwargs):
-        return reverse('bank_admin:transaction-list')
+        return reverse('transaction-list')
 
     def _get_transactions(self, tot=30):
         transactions = generate_transactions(transaction_batch=tot)
@@ -266,7 +258,7 @@ class UpdateRefundTransactionsTestCase(
         data_list = []
         for i, trans in enumerate(transactions):
             refund = False
-            if trans.refund_pending:
+            if trans.credit and trans.credit.refund_pending:
                 refund = True
             data_list.append({'id': trans.id, 'refunded': refund})
 
@@ -289,15 +281,14 @@ class UpdateRefundTransactionsTestCase(
         # check changes in db
         for data in data_list:
             if data['refunded']:
-                self.assertTrue(Transaction.objects.get(id=data['id']).refunded)
+                self.assertTrue(Transaction.objects.get(id=data['id']).credit.refunded)
 
         # check logs
         refunded_data_list = [t['id'] for t in data_list if t['refunded']]
         self.assertEqual(
             Log.objects.filter(
                 user=user,
-                action=LOG_ACTIONS.REFUNDED,
-                transaction__id__in=Transaction.objects.all().values_list('id', flat=True)
+                action=LOG_ACTIONS.REFUNDED
             ).count(),
             len(refunded_data_list)
         )
@@ -320,7 +311,7 @@ class UpdateRefundTransactionsTestCase(
     def test_patch_credited_creates_conflict(self):
         valid_data_list = self._get_transactions()
         response = self._patch_refunded_with_invalid_status(
-            valid_data_list, 'credited')
+            valid_data_list, 'creditable')
 
         self.assertEqual(response.status_code, http_status.HTTP_409_CONFLICT)
 
@@ -328,13 +319,13 @@ class UpdateRefundTransactionsTestCase(
         for data in valid_data_list:
             if data['refunded']:
                 self.assertFalse(
-                    Transaction.objects.get(id=data['id']).refunded
+                    Transaction.objects.get(id=data['id']).credit.refunded
                 )
 
     def test_patch_refunded_creates_conflict(self):
         valid_data_list = self._get_transactions()
         response = self._patch_refunded_with_invalid_status(
-            valid_data_list, 'refunded')
+            valid_data_list, 'refundable')
 
         self.assertEqual(response.status_code, http_status.HTTP_409_CONFLICT)
 
@@ -342,7 +333,7 @@ class UpdateRefundTransactionsTestCase(
         for data in valid_data_list:
             if data['refunded']:
                 self.assertFalse(
-                    Transaction.objects.get(id=data['id']).refunded
+                    Transaction.objects.get(id=data['id']).credit.refunded
                 )
 
     def test_patch_cannot_update_disallowed_fields(self):
@@ -351,7 +342,7 @@ class UpdateRefundTransactionsTestCase(
         url = self._get_url()
         data_list = self._get_transactions()
         for item in data_list:
-            item['prisoner_number'] = 'AAAAAAA'
+            item['amount'] = '999999999'
 
         user = self._get_authorised_user()
 
@@ -364,7 +355,8 @@ class UpdateRefundTransactionsTestCase(
         # check lack changes in db
         for data in data_list:
             self.assertNotEqual(
-                Transaction.objects.get(id=data['id']).prisoner_number, data['prisoner_number']
+                Transaction.objects.get(id=data['id']).amount,
+                data['amount']
             )
 
 
@@ -389,7 +381,7 @@ class GetTransactionsBaseTestCase(
         ]
 
     def _get_url(self, *args, **kwargs):
-        return reverse('bank_admin:transaction-list')
+        return reverse('transaction-list')
 
     def _populate_transactions(self, tot=80):
         return generate_transactions(transaction_batch=tot)
@@ -473,18 +465,13 @@ class GetTransactionsAsBankAdminTestCase(GetTransactionsBaseTestCase):
 
     def test_get_list_refund_pending(self):
         self._test_get_list_with_status_verify_fields(
-            'refund_pending',
-            ['refund_pending'])
+            'refundable',
+            ['refundable'])
 
     def test_get_list_credit_refunded(self):
         self._test_get_list_with_status_verify_fields(
-            'credited,refunded',
-            ['credited', 'refunded'])
-
-    def test_get_list_credit_refunded_refund_pending(self):
-        self._test_get_list_with_status_verify_fields(
-            'credited,refunded,refund_pending',
-            ['credited', 'refunded', 'refund_pending'])
+            'creditable,refundable',
+            ['creditable', 'refundable'])
 
     def test_get_list_invalid_status_bad_request(self):
         url = self._get_url()
@@ -524,7 +511,7 @@ class GetTransactionsRelatedToBatchesTestCase(GetTransactionsBaseTestCase):
         adi_batch.save()
 
         adi_batch.transactions = list(Transaction.objects.filter(
-            **Transaction.STATUS_LOOKUP['refunded']))
+            **Transaction.STATUS_LOOKUP['refundable']))
         adi_batch.save()
 
         response = self.client.get(
@@ -561,7 +548,7 @@ class GetTransactionsRelatedToBatchesTestCase(GetTransactionsBaseTestCase):
         adi_batch.save()
 
         refunded_trans = list(Transaction.objects.filter(
-            **Transaction.STATUS_LOOKUP['refunded']))
+            **Transaction.STATUS_LOOKUP['refundable']))
         attached = [a for (i, a) in enumerate(refunded_trans) if i % 2]
         unattached = [a for (i, a) in enumerate(refunded_trans) if not i % 2]
         self.assertTrue(len(attached) >= 1)
@@ -571,7 +558,7 @@ class GetTransactionsRelatedToBatchesTestCase(GetTransactionsBaseTestCase):
         adi_batch.save()
 
         response = self.client.get(
-            url, {'status': 'refunded',
+            url, {'status': 'refundable',
                   'exclude_batch_label': 'ADIREFUND',
                   'limit': 1000}, format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
@@ -596,7 +583,7 @@ class GetTransactionsRelatedToBatchesTestCase(GetTransactionsBaseTestCase):
         adi_batch.save()
 
         refunded_trans = list(Transaction.objects.filter(
-            **Transaction.STATUS_LOOKUP['refunded']))
+            **Transaction.STATUS_LOOKUP['refundable']))
         attached = [a for (i, a) in enumerate(refunded_trans) if i % 2]
         self.assertTrue(len(attached) >= 1)
 
@@ -604,7 +591,7 @@ class GetTransactionsRelatedToBatchesTestCase(GetTransactionsBaseTestCase):
         adi_batch.save()
 
         response = self.client.get(
-            url, {'status': 'refunded',
+            url, {'status': 'refundable',
                   'exclude_batch_label': 'WIBBLE',
                   'limit': 1000}, format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
@@ -686,7 +673,7 @@ class ReconcileTransactionsTestCase(
         ]
 
     def _get_url(self, *args, **kwargs):
-        return reverse('bank_admin:reconcile-transactions')
+        return reverse('reconcile-transactions')
 
     def _populate_transactions(self, tot=100):
         return generate_transactions(transaction_batch=tot)
@@ -711,11 +698,12 @@ class ReconcileTransactionsTestCase(
         )
 
         for transaction in transactions_yesterday:
-            self.assertTrue(transaction.reconciled)
+            if transaction.credit:
+                self.assertTrue(transaction.credit.reconciled)
 
     def test_reconciliation_logs_are_not_duplicated(self):
         yesterday = timezone.make_aware(datetime.combine(self._get_latest_date(), time.min))
-        transactions_yesterday = Transaction.objects.filter(
+        credits_yesterday = Credit.objects.filter(
             received_at__lt=yesterday + timedelta(days=1),
             received_at__gte=yesterday
         )
@@ -735,7 +723,7 @@ class ReconcileTransactionsTestCase(
                 user=user,
                 action=LOG_ACTIONS.RECONCILED,
             ).count(),
-            len(transactions_yesterday)
+            len(credits_yesterday)
         )
 
         response = self.client.post(
@@ -750,7 +738,7 @@ class ReconcileTransactionsTestCase(
                 user=user,
                 action=LOG_ACTIONS.RECONCILED,
             ).count(),
-            len(transactions_yesterday)
+            len(credits_yesterday)
         )
 
     def test_no_date_returns_bad_request(self):
@@ -801,7 +789,7 @@ class ReconcileTransactionsTestCase(
 
         # unidentified not given ref code
         qs = Transaction.objects.filter(
-            prison__isnull=True,
+            credit__prison__isnull=True,
             incomplete_sender_info=True,
             received_at__date=self._get_latest_date()
         )
@@ -811,11 +799,11 @@ class ReconcileTransactionsTestCase(
         # valid credits and refunds given ref code
         qs = (Transaction.objects.filter(
             category=TRANSACTION_CATEGORY.CREDIT,
-            prison__isnull=False,
+            credit__prison__isnull=False,
             received_at__date=self._get_latest_date()
         ) | Transaction.objects.filter(
             category=TRANSACTION_CATEGORY.CREDIT,
-            prison__isnull=True,
+            credit__prison__isnull=True,
             incomplete_sender_info=False,
             received_at__date=self._get_latest_date()
         )).exclude(source=TRANSACTION_SOURCE.ADMINISTRATIVE).order_by('id')

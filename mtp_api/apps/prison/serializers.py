@@ -2,7 +2,7 @@ from django.db import transaction
 
 from rest_framework import serializers
 
-from transaction.signals import transaction_prisons_need_updating
+from credit.signals import credit_prisons_need_updating
 
 from .models import PrisonerLocation, Prison
 
@@ -30,7 +30,7 @@ class PrisonerLocationListSerializer(serializers.ListSerializer):
         PrisonerLocation.objects.all().delete()
         objects = PrisonerLocation.objects.bulk_create(locations)
 
-        transaction_prisons_need_updating.send(sender=PrisonerLocation)
+        credit_prisons_need_updating.send(sender=PrisonerLocation)
 
         return objects
 

@@ -6,24 +6,11 @@ from django.contrib.admin.options import IncorrectLookupParameters
 from django.core.exceptions import ValidationError
 from django.db.models import Sum
 
-from core.admin import DateRangeFilter, RelatedAnyFieldListFilter, ExactSearchFilter
+from core.admin import DateRangeFilter
+from credit.constants import LOG_ACTIONS
 from transaction.constants import TRANSACTION_STATUS
-from transaction.models import Transaction, Log, LOG_ACTIONS
+from transaction.models import Transaction
 from transaction.utils import format_amount
-
-
-class LogAdminInline(admin.TabularInline):
-    model = Log
-    extra = 0
-    fields = ('action', 'created', 'user')
-    readonly_fields = ('action', 'created', 'user')
-    ordering = ('-created',)
-
-    def has_add_permission(self, request):
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        return False
 
 
 class StatusFilter(admin.SimpleListFilter):
@@ -52,23 +39,18 @@ class TransactionAdmin(admin.ModelAdmin):
     )
     ordering = ('-received_at',)
     date_hierarchy = 'received_at'
-    readonly_fields = (
-        'credited', 'refunded', 'reconciled', 'incomplete_sender_info',
-        'reference_in_sender_field'
-    )
-    inlines = (LogAdminInline,)
+    readonly_fields = ('incomplete_sender_info', 'reference_in_sender_field')
     list_filter = (
         StatusFilter,
-        'reconciled',
-        ('prison', RelatedAnyFieldListFilter),
         'category',
         'source',
         ('received_at', DateRangeFilter),
-        ('owner__username', ExactSearchFilter),
         'reference_in_sender_field'
     )
-    search_fields = ('prisoner_name', 'prisoner_number', 'reference',
-                     'sender_name', 'sender_sort_code', 'sender_account_number', 'sender_roll_number')
+    search_fields = (
+        'reference', 'sender_name', 'sender_sort_code',
+        'sender_account_number', 'sender_roll_number'
+    )
     actions = [
         'display_total_amount', 'display_reference_validity',
         'display_resolution_time'
@@ -87,10 +69,11 @@ class TransactionAdmin(admin.ModelAdmin):
         self.message_user(request, 'Total: %s' % format_amount(total, True))
 
     def display_reference_validity(self, request, queryset):
-        invalid_ref_count = queryset.filter(prison__isnull=True).count()
-        invalid_percent = (invalid_ref_count / queryset.count()) * 100
+        invalid_ref_count = queryset.filter(credit__prison__isnull=True).count()
+        total_count = queryset.filter(credit__isnull=False).count()
+        invalid_percent = (invalid_ref_count / total_count) * 100
 
-        valid_ref_count = queryset.count() - invalid_ref_count
+        valid_ref_count = total_count - invalid_ref_count
         valid_percent = 100 - invalid_percent
 
         self.message_user(
@@ -98,7 +81,7 @@ class TransactionAdmin(admin.ModelAdmin):
             'Of %(total)s transactions: '
             '%(valid_count)s (%(valid_percent)0.2f%%) of references are valid, '
             '%(invalid_count)s (%(invalid_percent)0.2f%%) of references are invalid.'
-            % {'total': len(queryset), 'invalid_count': invalid_ref_count,
+            % {'total': total_count, 'invalid_count': invalid_ref_count,
                'invalid_percent': invalid_percent, 'valid_count': valid_ref_count,
                'valid_percent': valid_percent}
         )
@@ -106,7 +89,7 @@ class TransactionAdmin(admin.ModelAdmin):
     def display_resolution_time(self, request, queryset):
         until_credited_times = []
         until_unlocked_times = []
-        for t in queryset.prefetch_related('log_set'):
+        for t in queryset.prefetch_related('credit__log_set'):
             last_lock_time = None
             logs = sorted(t.log_set.all(), key=lambda l: l.created)
             for l in logs:

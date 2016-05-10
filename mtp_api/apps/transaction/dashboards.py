@@ -14,28 +14,21 @@ from django.utils.safestring import mark_safe
 from django.utils.translation import gettext, gettext_lazy as _
 
 from account.models import Balance
+from credit.constants import CREDIT_RESOLUTION
 from core.dashboards import DashboardModule
 from core.views import DashboardView
 from transaction.constants import TRANSACTION_CATEGORY, TRANSACTION_SOURCE, TRANSACTION_STATUS
 from transaction.models import Transaction
 from transaction.utils import format_amount, format_number
 
-CREDITABLE_FILTERS = {
-    'prison__isnull': False,
-    'category': TRANSACTION_CATEGORY.CREDIT,
-    'source__in': [
-        TRANSACTION_SOURCE.BANK_TRANSFER,
-        TRANSACTION_SOURCE.ONLINE,
-    ],
+CREDITABLE_FILTERS = Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.CREDITABLE]
+CREDITED_FILTERS = {
+    'credit__resolution': CREDIT_RESOLUTION.CREDITED,
 }
-CREDITED_FILTERS = Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.CREDITED]
-REFUNDABLE_FILTERS = {
-    'prison__isnull': True,
-    'incomplete_sender_info': False,
-    'category': TRANSACTION_CATEGORY.CREDIT,
-    'source': TRANSACTION_SOURCE.BANK_TRANSFER,
+REFUNDABLE_FILTERS = Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.REFUNDABLE]
+REFUNDED_FILTERS = {
+    'credit__resolution': CREDIT_RESOLUTION.REFUNDED
 }
-REFUNDED_FILTERS = Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.REFUNDED]
 UNIDENTIFIED_FILTERS = Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.UNIDENTIFIED]
 
 
@@ -265,10 +258,7 @@ class TransactionReport(DashboardModule):
 
         candidate_credits = self.queryset.filter(
             category=TRANSACTION_CATEGORY.CREDIT,
-            source__in=[
-                TRANSACTION_SOURCE.BANK_TRANSFER,
-                TRANSACTION_SOURCE.ONLINE,
-            ],
+            source=TRANSACTION_SOURCE.BANK_TRANSFER
         ).values_list('reference', flat=True)
         return reduce(lambda count, reference: count + (1 if reference_pattern.match(reference) else 0),
                       candidate_credits, 0)

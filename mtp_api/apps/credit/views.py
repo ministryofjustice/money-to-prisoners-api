@@ -2,15 +2,13 @@ from functools import reduce
 import logging
 import re
 
-import django_filters
-
 from django import forms
 from django.contrib.auth import get_user_model
 from django.db import models, transaction
+import django_filters
 from django_filters.widgets import RangeWidget
 from django.http import HttpResponseRedirect
 from django.views.generic import View
-
 from rest_framework import generics, filters, status as drf_status
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
@@ -20,16 +18,15 @@ from rest_framework.reverse import reverse
 from mtp_auth.models import PrisonUserMapping
 from mtp_auth.permissions import CashbookClientIDPermissions
 from prison.models import Prison
-
-from transaction.constants import TRANSACTION_STATUS, LOCK_LIMIT
-from transaction.models import Transaction
 from transaction.pagination import DateBasedPagination
-from transaction.signals import transaction_prisons_need_updating
-
-from .serializers import TransactionSerializer, \
-    CreditedOnlyTransactionSerializer, \
-    IdsTransactionSerializer, LockedTransactionSerializer
-from .permissions import TransactionPermissions
+from .constants import CREDIT_STATUS, LOCK_LIMIT
+from .models import Credit
+from .permissions import CreditPermissions
+from .serializers import (
+    CreditSerializer, CreditedOnlyCreditSerializer,
+    IdsCreditSerializer, LockedCreditSerializer
+)
+from .signals import credit_prisons_need_updating
 
 User = get_user_model()
 
@@ -64,14 +61,14 @@ class DateRangeField(forms.MultiValueField):
         return None
 
 
-class DateRangeFilter(django_filters.RangeFilter):
+class CreditReceivedAtRangeFilter(django_filters.RangeFilter):
     field_class = DateRangeField
 
 
-class TransactionTextSearchFilter(django_filters.CharFilter):
+class CreditTextSearchFilter(django_filters.CharFilter):
     """
-    Filters transactions using a text search.
-    Works by splitting the input into words and matches any transactions
+    Filters credits using a text search.
+    Works by splitting the input into words and matches any credits
     that have *all* of these words in *any* of these fields:
     - prisoner_name
     - prisoner_number
@@ -97,6 +94,8 @@ class TransactionTextSearchFilter(django_filters.CharFilter):
                         return None
                     amount = matches.group(1).replace('.', '')
                     return models.Q(**{'%s__startswith' % field: amount})
+                elif field == 'sender_name':
+                    return models.Q(**{'transaction__%s__icontains' % field: word})
 
                 return models.Q(**{'%s__icontains' % field: word})
 
@@ -109,50 +108,50 @@ class TransactionTextSearchFilter(django_filters.CharFilter):
         return qs
 
 
-class TransactionListFilter(django_filters.FilterSet):
+class CreditListFilter(django_filters.FilterSet):
 
-    status = StatusChoiceFilter(choices=TRANSACTION_STATUS.choices)
+    status = StatusChoiceFilter(choices=CREDIT_STATUS.choices)
     prison = django_filters.ModelMultipleChoiceFilter(queryset=Prison.objects.all())
     user = django_filters.ModelChoiceFilter(name='owner', queryset=User.objects.all())
-    received_at = DateRangeFilter()
-    search = TransactionTextSearchFilter()
+    received_at = CreditReceivedAtRangeFilter()
+    search = CreditTextSearchFilter()
 
     class Meta:
-        model = Transaction
+        model = Credit
 
 
-class TransactionViewMixin(object):
+class CreditViewMixin(object):
 
     def get_queryset(self):
-        return Transaction.objects.filter(
+        return Credit.objects.filter(
             prison__in=PrisonUserMapping.objects.get_prison_set_for_user(self.request.user)
         )
 
 
-class GetTransactions(TransactionViewMixin, generics.ListAPIView):
-    serializer_class = TransactionSerializer
+class GetCredits(CreditViewMixin, generics.ListAPIView):
+    serializer_class = CreditSerializer
     filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter)
-    filter_class = TransactionListFilter
-    ordering_fields = ('received_at',)
+    filter_class = CreditListFilter
+    ordering_fields = ('created',)
     action = 'list'
 
     permission_classes = (
         IsAuthenticated, CashbookClientIDPermissions,
-        TransactionPermissions
+        CreditPermissions
     )
 
 
-class DatePaginatedTransactions(GetTransactions):
+class DatePaginatedCredits(GetCredits):
     pagination_class = DateBasedPagination
 
 
-class CreditTransactions(TransactionViewMixin, generics.GenericAPIView):
-    serializer_class = CreditedOnlyTransactionSerializer
+class CreditCredits(CreditViewMixin, generics.GenericAPIView):
+    serializer_class = CreditedOnlyCreditSerializer
     action = 'patch_credited'
 
     permission_classes = (
         IsAuthenticated, CashbookClientIDPermissions,
-        TransactionPermissions
+        CreditPermissions
     )
 
     def get_serializer(self, *args, **kwargs):
@@ -167,25 +166,25 @@ class CreditTransactions(TransactionViewMixin, generics.GenericAPIView):
         deserialized = self.get_serializer(data=request.data, many=True)
         deserialized.is_valid(raise_exception=True)
 
-        transaction_ids = [x['id'] for x in deserialized.data]
+        credit_ids = [x['id'] for x in deserialized.data]
         with transaction.atomic():
             to_update = self.get_queryset().filter(
                 owner=request.user,
-                pk__in=transaction_ids
+                pk__in=credit_ids
             ).select_for_update()
 
-            ids_to_update = [t.id for t in to_update]
-            conflict_ids = set(transaction_ids) - set(ids_to_update)
+            ids_to_update = [c.id for c in to_update]
+            conflict_ids = set(credit_ids) - set(ids_to_update)
 
             if conflict_ids:
                 conflict_ids = sorted(conflict_ids)
-                logger.warning('Some transactions were not credited: [%s]' %
+                logger.warning('Some credits were not credited: [%s]' %
                                ', '.join(map(str, conflict_ids)))
                 return Response(
                     data={
                         'errors': [
                             {
-                                'msg': 'Some transactions could not be credited.',
+                                'msg': 'Some credits could not be credited.',
                                 'ids': conflict_ids,
                             }
                         ]
@@ -195,50 +194,50 @@ class CreditTransactions(TransactionViewMixin, generics.GenericAPIView):
 
             for item in deserialized.data:
                 obj = to_update.get(pk=item['id'])
-                obj.credit(credited=item['credited'], by_user=request.user)
+                obj.credit_prisoner(credited=item['credited'], by_user=request.user)
 
         return Response(status=drf_status.HTTP_204_NO_CONTENT)
 
 
-class TransactionList(View):
+class CreditList(View):
     """
-    Dispatcher View that dispatches to GetTransactions or CreditTransactions
+    Dispatcher View that dispatches to GetCredits or CreditCredits
     depending on the method.
 
     The standard logic would not work in this case as:
     - the two endpoints need to do something quite different so better if
         they belong to different classes
     - we need specific permissions for the two endpoints so it's cleaner to
-        use the same TransactionPermissions for all the views
+        use the same CreditPermissions for all the views
     """
 
     def get(self, request, *args, **kwargs):
         if DateBasedPagination.page_query_param in request.GET:
-            view = DatePaginatedTransactions
+            view = DatePaginatedCredits
         else:
-            view = GetTransactions
+            view = GetCredits
         return view.as_view()(request, *args, **kwargs)
 
     def patch(self, request, *args, **kwargs):
-        return CreditTransactions.as_view()(request, *args, **kwargs)
+        return CreditCredits.as_view()(request, *args, **kwargs)
 
 
-class LockedTransactionList(GetTransactions):
-    serializer_class = LockedTransactionSerializer
+class LockedCreditList(GetCredits):
+    serializer_class = LockedCreditSerializer
 
     def get_queryset(self):
         queryset = super().get_queryset()
         return queryset.filter(
-            **Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.LOCKED]
+            **Credit.STATUS_LOOKUP[CREDIT_STATUS.LOCKED]
         )
 
 
-class LockTransactions(TransactionViewMixin, APIView):
+class LockCredits(CreditViewMixin, APIView):
     action = 'lock'
 
     permission_classes = (
         IsAuthenticated, CashbookClientIDPermissions,
-        TransactionPermissions
+        CreditPermissions
     )
 
     def post(self, request, format=None):
@@ -250,24 +249,24 @@ class LockTransactions(TransactionViewMixin, APIView):
                 slice_pks = to_lock.values_list('pk', flat=True)[:slice_size]
 
                 queryset = self.get_queryset().filter(pk__in=slice_pks)
-                for t in queryset:
-                    t.lock(by_user=request.user)
+                for c in queryset:
+                    c.lock(by_user=request.user)
 
             redirect_url = '{url}?user={user}&status={status}'.format(
-                url=reverse('cashbook:transaction-list'),
+                url=reverse('credit-list'),
                 user=request.user.pk,
-                status=TRANSACTION_STATUS.LOCKED
+                status=CREDIT_STATUS.LOCKED
             )
             return HttpResponseRedirect(redirect_url, status=drf_status.HTTP_303_SEE_OTHER)
 
 
-class UnlockTransactions(TransactionViewMixin, APIView):
-    serializer_class = IdsTransactionSerializer
+class UnlockCredits(CreditViewMixin, APIView):
+    serializer_class = IdsCreditSerializer
     action = 'unlock'
 
     permission_classes = (
         IsAuthenticated, CashbookClientIDPermissions,
-        TransactionPermissions
+        CreditPermissions
     )
 
     def get_serializer(self, *args, **kwargs):
@@ -282,36 +281,36 @@ class UnlockTransactions(TransactionViewMixin, APIView):
         deserialized = self.get_serializer(data=request.data)
         deserialized.is_valid(raise_exception=True)
 
-        transaction_ids = deserialized.data.get('transaction_ids', [])
+        credit_ids = deserialized.data.get('credit_ids', [])
         with transaction.atomic():
-            to_update = self.get_queryset().locked().filter(pk__in=transaction_ids).select_for_update()
+            to_update = self.get_queryset().locked().filter(pk__in=credit_ids).select_for_update()
 
-            ids_to_update = [t.id for t in to_update]
-            conflict_ids = set(transaction_ids) - set(ids_to_update)
+            ids_to_update = [c.id for c in to_update]
+            conflict_ids = set(credit_ids) - set(ids_to_update)
 
             if conflict_ids:
                 conflict_ids = sorted(conflict_ids)
-                logger.warning('Some transactions were not unlocked: [%s]' %
+                logger.warning('Some credits were not unlocked: [%s]' %
                                ', '.join(map(str, conflict_ids)))
                 return Response(
                     data={
                         'errors': [
                             {
-                                'msg': 'Some transactions could not be unlocked.',
+                                'msg': 'Some credits could not be unlocked.',
                                 'ids': conflict_ids,
                             }
                         ]
                     },
                     status=drf_status.HTTP_409_CONFLICT
                 )
-            for t in to_update:
-                t.unlock(by_user=request.user)
+            for c in to_update:
+                c.unlock(by_user=request.user)
 
-        transaction_prisons_need_updating.send(sender=Transaction)
+        credit_prisons_need_updating.send(sender=Credit)
 
         redirect_url = '{url}?user={user}&status={status}'.format(
-            url=reverse('cashbook:transaction-list'),
+            url=reverse('credit-list'),
             user=request.user.pk,
-            status=TRANSACTION_STATUS.AVAILABLE
+            status=CREDIT_STATUS.AVAILABLE
         )
         return HttpResponseRedirect(redirect_url, status=drf_status.HTTP_303_SEE_OTHER)

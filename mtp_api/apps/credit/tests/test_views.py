@@ -14,16 +14,17 @@ from rest_framework import status
 
 from mtp_auth.models import PrisonUserMapping
 from prison.models import Prison
-from transaction.api.cashbook.views import TransactionTextSearchFilter
-from transaction.models import Transaction, Log
-from transaction.constants import TRANSACTION_STATUS, LOCK_LIMIT, LOG_ACTIONS
-from transaction.tests.test_base import BaseTransactionViewTestCase, \
-    TransactionRejectsRequestsWithoutPermissionTestMixin
+from credit.views import CreditTextSearchFilter
+from credit.models import Credit, Log
+from credit.constants import CREDIT_STATUS, LOCK_LIMIT, LOG_ACTIONS
+from credit.tests.test_base import (
+    BaseCreditViewTestCase, CreditRejectsRequestsWithoutPermissionTestMixin
+)
 from transaction.tests.utils import generate_transactions
 
 
-class CashbookTransactionRejectsRequestsWithoutPermissionTestMixin(
-    TransactionRejectsRequestsWithoutPermissionTestMixin
+class CashbookCreditRejectsRequestsWithoutPermissionTestMixin(
+    CreditRejectsRequestsWithoutPermissionTestMixin
 ):
 
     def _get_unauthorised_application_users(self):
@@ -35,29 +36,29 @@ class CashbookTransactionRejectsRequestsWithoutPermissionTestMixin(
         return self.prison_clerks[0]
 
 
-class TransactionListTestCase(
-    CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
-    BaseTransactionViewTestCase
+class CreditListTestCase(
+    CashbookCreditRejectsRequestsWithoutPermissionTestMixin,
+    BaseCreditViewTestCase
 ):
     pagination_response_keys = ['page', 'page_count']
 
     def _get_url(self, **filters):
-        url = reverse('cashbook:transaction-list')
+        url = reverse('credit-list')
 
         filters['limit'] = 1000
         return '{url}?{filters}'.format(
             url=url, filters=urllib.parse.urlencode(filters)
         )
 
-    def _get_managed_prison_transactions(self, logged_in_user=None):
+    def _get_managed_prison_credits(self, logged_in_user=None):
         logged_in_user = logged_in_user or self._get_authorised_user()
         logged_in_user.prisonusermapping.prisons.add(*self.prisons)
         managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
-        return [t for t in self.transactions if t.prison in managing_prisons]
+        return [c for c in self.credits if c.prison in managing_prisons]
 
     def _test_response_with_filters(self, filters={}):
         logged_in_user = self._get_authorised_user()
-        transactions = self._get_managed_prison_transactions()
+        credits = self._get_managed_prison_credits()
 
         url = self._get_url(**filters)
         response = self.client.get(
@@ -67,35 +68,35 @@ class TransactionListTestCase(
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # check expected result
-        def noop_checker(t):
+        def noop_checker(c):
             return True
 
         status_checker = self.STATUS_FILTERS[filters.get('status', None)]
         if filters.get('prison'):
-            def prison_checker(t):
-                return t.prison and t.prison.pk in filters['prison'].split(',')
+            def prison_checker(c):
+                return c.prison and c.prison.pk in filters['prison'].split(',')
         else:
             prison_checker = noop_checker
         if filters.get('user'):
-            def user_checker(t):
-                return t.owner and t.owner.pk == filters['user']
+            def user_checker(c):
+                return c.owner and c.owner.pk == filters['user']
         else:
             user_checker = noop_checker
         received_at_checker = self._get_received_at_checker(filters, noop_checker)
         search_checker = self._get_search_checker(filters, noop_checker)
 
         expected_ids = [
-            t.pk
-            for t in transactions
-            if status_checker(t) and
-            prison_checker(t) and
-            user_checker(t) and
-            received_at_checker(t) and
-            search_checker(t)
+            c.pk
+            for c in credits
+            if status_checker(c) and
+            prison_checker(c) and
+            user_checker(c) and
+            received_at_checker(c) and
+            search_checker(c)
         ]
         self.assertEqual(response.data['count'], len(expected_ids))
         self.assertListEqual(
-            sorted([t['id'] for t in response.data['results']]),
+            sorted([c['id'] for c in response.data['results']]),
             sorted(expected_ids)
         )
 
@@ -133,70 +134,70 @@ class TransactionListTestCase(
             received_at_1 = timezone.make_aware(received_at_1)
 
         if received_at_0 and received_at_1:
-            return lambda t: received_at_0 <= t.received_at <= received_at_1
+            return lambda c: received_at_0 <= c.received_at <= received_at_1
         elif received_at_0:
-            return lambda t: received_at_0 <= t.received_at
+            return lambda c: received_at_0 <= c.received_at
         elif received_at_1:
-            return lambda t: t.received_at <= received_at_1
+            return lambda c: c.received_at <= received_at_1
         return noop_checker
 
     def _get_search_checker(self, filters, noop_checker):
         if filters.get('search'):
             search_phrase = filters['search'].lower()
-            search_fields = ['prisoner_name', 'prisoner_number', 'sender_name']
+            search_fields = ['prisoner_name', 'prisoner_number', 'sender']
 
-            return lambda t: any(
-                search_phrase in getattr(t, field).lower()
+            return lambda c: any(
+                search_phrase in getattr(c, field).lower()
                 for field in search_fields
-            ) or (search_phrase in '£%0.2f' % (t.amount / 100))
+            ) or (search_phrase in '£%0.2f' % (c.amount / 100))
         return noop_checker
 
 
-class TransactionListWithDefaultsTestCase(TransactionListTestCase):
+class CreditListWithDefaultsTestCase(CreditListTestCase):
 
-    def test_returns_all_transactions(self):
+    def test_returns_all_credits(self):
         """
-        Returns all transactions attached to all the prisons that
+        Returns all credits attached to all the prisons that
         the logged-in user can manage.
         """
         self._test_response_with_filters(filters={})
 
 
-class TransactionListWithDefaultPrisonAndUserTestCase(TransactionListTestCase):
+class CreditListWithDefaultPrisonAndUserTestCase(CreditListTestCase):
 
     def test_filter_by_status_available(self):
         """
-        Returns available transactions attached to all the prisons
+        Returns available credits attached to all the prisons
         that the logged-in user can manage.
         """
         self._test_response_with_filters(filters={
-            'status': TRANSACTION_STATUS.AVAILABLE
+            'status': CREDIT_STATUS.AVAILABLE
         })
 
     def test_filter_by_status_locked(self):
         """
-        Returns locked transactions attached to all the prisons
+        Returns locked credits attached to all the prisons
         that the logged-in user can manage.
         """
         self._test_response_with_filters(filters={
-            'status': TRANSACTION_STATUS.LOCKED
+            'status': CREDIT_STATUS.LOCKED
         })
 
     def test_filter_by_status_credited(self):
         """
-        Returns credited transactions attached to all the prisons
+        Returns credited credits attached to all the prisons
         that the logged-in user can manage.
         """
         self._test_response_with_filters(filters={
-            'status': TRANSACTION_STATUS.CREDITED
+            'status': CREDIT_STATUS.CREDITED
         })
 
 
-class TransactionListWithDefaultUserTestCase(TransactionListTestCase):
+class CreditListWithDefaultUserTestCase(CreditListTestCase):
 
     def test_filter_by_status_available_and_prison(self):
         """
-        Returns available transactions attached to the passed-in prison.
+        Returns available credits attached to the passed-in prison.
         """
         self._test_response_with_filters(filters={
             'prison': self.prisons[0].pk
@@ -204,28 +205,28 @@ class TransactionListWithDefaultUserTestCase(TransactionListTestCase):
 
     def test_filter_by_status_locked_and_prison(self):
         """
-        Returns locked transactions attached to the passed-in prison.
+        Returns locked credits attached to the passed-in prison.
         """
         self._test_response_with_filters(filters={
-            'status': TRANSACTION_STATUS.LOCKED,
+            'status': CREDIT_STATUS.LOCKED,
             'prison': self.prisons[0].pk
         })
 
     def test_filter_by_status_credited_prison(self):
         """
-        Returns crdited transactions attached to the passed-in prison.
+        Returns crdited credits attached to the passed-in prison.
         """
         self._test_response_with_filters(filters={
-            'status': TRANSACTION_STATUS.CREDITED,
+            'status': CREDIT_STATUS.CREDITED,
             'prison': self.prisons[0].pk
         })
 
 
-class TransactionListWithDefaultPrisonTestCase(TransactionListTestCase):
+class CreditListWithDefaultPrisonTestCase(CreditListTestCase):
 
     def test_filter_by_status_available_and_user(self):
         """
-        Returns available transactions attached to all the prisons
+        Returns available credits attached to all the prisons
         that the passed-in user can manage.
         """
         self._test_response_with_filters(filters={
@@ -234,28 +235,28 @@ class TransactionListWithDefaultPrisonTestCase(TransactionListTestCase):
 
     def test_filter_by_status_locked_and_user(self):
         """
-        Returns transactions locked by the passed-in user.
+        Returns credits locked by the passed-in user.
         """
         self._test_response_with_filters(filters={
-            'status': TRANSACTION_STATUS.LOCKED,
+            'status': CREDIT_STATUS.LOCKED,
             'user': self.prison_clerks[1].pk
         })
 
     def test_filter_by_status_credited_and_user(self):
         """
-        Returns transactions credited by the passed-in user.
+        Returns credits credited by the passed-in user.
         """
         self._test_response_with_filters(filters={
-            'status': TRANSACTION_STATUS.CREDITED,
+            'status': CREDIT_STATUS.CREDITED,
             'user': self.prison_clerks[1].pk
         })
 
 
-class TransactionListWithoutDefaultsTestCase(TransactionListTestCase):
+class CreditListWithoutDefaultsTestCase(CreditListTestCase):
 
     def test_filter_by_status_available_and_prison_and_user(self):
         """
-        Returns available transactions attached to the passed-in prison.
+        Returns available credits attached to the passed-in prison.
         """
         self._test_response_with_filters(filters={
             'prison': self.prisons[0].pk,
@@ -264,32 +265,32 @@ class TransactionListWithoutDefaultsTestCase(TransactionListTestCase):
 
     def test_filter_by_status_locked_and_prison_and_user(self):
         """
-        Returns transactions locked by the passed-in user and
+        Returns credits locked by the passed-in user and
         attached to the passed-in prison.
         """
         self._test_response_with_filters(filters={
-            'status': TRANSACTION_STATUS.LOCKED,
+            'status': CREDIT_STATUS.LOCKED,
             'prison': self.prisons[0].pk,
             'user': self.prison_clerks[1].pk
         })
 
     def test_filter_by_status_credited_and_prison_and_user(self):
         """
-        Returns transactions credited by the passed-in user and
+        Returns credits credited by the passed-in user and
         attached to the passed-in prison.
         """
         self._test_response_with_filters(filters={
-            'status': TRANSACTION_STATUS.CREDITED,
+            'status': CREDIT_STATUS.CREDITED,
             'prison': self.prisons[0].pk,
             'user': self.prison_clerks[1].pk
         })
 
 
-class TransactionListWithDefaultStatusAndUserTestCase(TransactionListTestCase):
+class CreditListWithDefaultStatusAndUserTestCase(CreditListTestCase):
 
     def test_filter_by_prison(self):
         """
-        Returns all transactions attached to the passed-in prison.
+        Returns all credits attached to the passed-in prison.
         """
         self._test_response_with_filters(filters={
             'prison': self.prisons[0].pk
@@ -297,7 +298,7 @@ class TransactionListWithDefaultStatusAndUserTestCase(TransactionListTestCase):
 
     def test_filter_by_multiple_prisons(self):
         """
-        Returns all transactions attached to the passed-in prisons.
+        Returns all credits attached to the passed-in prisons.
         """
 
         # logged-in user managing all the prisons
@@ -315,22 +316,22 @@ class TransactionListWithDefaultStatusAndUserTestCase(TransactionListTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         expected_ids = [
-            t.pk
-            for t in self.transactions
-            if t.prison in managing_prisons
+            c.pk
+            for c in self.credits
+            if c.prison in managing_prisons
         ]
         self.assertEqual(response.data['count'], len(expected_ids))
         self.assertListEqual(
-            sorted([t['id'] for t in response.data['results']]),
+            sorted([c['id'] for c in response.data['results']]),
             sorted(expected_ids)
         )
 
 
-class TransactionListWithDefaultStatusTestCase(TransactionListTestCase):
+class CreditListWithDefaultStatusTestCase(CreditListTestCase):
 
     def test_filter_by_prison_and_user(self):
         """
-        Returns all transactions attached to the passed-in prison.
+        Returns all credits attached to the passed-in prison.
         """
         self._test_response_with_filters(filters={
             'prison': self.prisons[0].pk,
@@ -338,24 +339,24 @@ class TransactionListWithDefaultStatusTestCase(TransactionListTestCase):
         })
 
 
-class TransactionListWithDefaultStatusAndPrisonTestCase(TransactionListTestCase):
+class CreditListWithDefaultStatusAndPrisonTestCase(CreditListTestCase):
 
     def test_filter_by_user(self):
         """
-        Returns all transactions managed by the passed-in user
+        Returns all credits managed by the passed-in user
         """
         self._test_response_with_filters(filters={
             'user': self.prison_clerks[1].pk
         })
 
 
-class TransactionListWithReceivedAtFilterTestCase(TransactionListTestCase):
+class CreditListWithReceivedAtFilterTestCase(CreditListTestCase):
     def _format_date(self, date):
         return format_date(date, 'Y-m-d')
 
     def test_filter_received_at_yesterday(self):
         """
-        Returns all transactions received yesterday
+        Returns all credits received yesterday
         """
         yesterday = self._get_latest_date()
         self._test_response_with_filters(filters={
@@ -365,7 +366,7 @@ class TransactionListWithReceivedAtFilterTestCase(TransactionListTestCase):
 
     def test_filter_received_since_five_days_ago(self):
         """
-        Returns all transactions received since 5 days ago
+        Returns all credits received since 5 days ago
         """
         five_days_ago = self._get_latest_date() - datetime.timedelta(days=5)
         self._test_response_with_filters(filters={
@@ -374,7 +375,7 @@ class TransactionListWithReceivedAtFilterTestCase(TransactionListTestCase):
 
     def test_filter_received_until_five_days_ago(self):
         """
-        Returns all transactions received until 5 days ago
+        Returns all credits received until 5 days ago
         """
         five_days_ago = self._get_latest_date() - datetime.timedelta(days=5)
         self._test_response_with_filters(filters={
@@ -382,16 +383,16 @@ class TransactionListWithReceivedAtFilterTestCase(TransactionListTestCase):
         })
 
 
-class TransactionListWithSearchTestCase(TransactionListTestCase):
+class CreditListWithSearchTestCase(CreditListTestCase):
     def test_filter_search_for_prisoner_number(self):
         """
         Search for a prisoner number
         """
         while True:
-            transaction = random.choice(self.transactions)
-            if transaction.prisoner_number:
+            credit = random.choice(self.credits)
+            if credit.prisoner_number:
                 break
-        search_phrase = transaction.prisoner_number
+        search_phrase = credit.prisoner_number
         self._test_response_with_filters(filters={
             'search': search_phrase
         })
@@ -401,10 +402,10 @@ class TransactionListWithSearchTestCase(TransactionListTestCase):
         Search for a prisoner first name
         """
         while True:
-            transaction = random.choice(self.transactions)
-            if transaction.prisoner_name:
+            credit = random.choice(self.credits)
+            if credit.prisoner_name:
                 break
-        search_phrase = transaction.prisoner_name.split()[0]
+        search_phrase = credit.prisoner_name.split()[0]
         self._test_response_with_filters(filters={
             'search': search_phrase
         })
@@ -413,8 +414,8 @@ class TransactionListWithSearchTestCase(TransactionListTestCase):
         """
         Search for a partial sender name
         """
-        transaction = random.choice(self.transactions)
-        search_phrase = transaction.sender_name[:2]
+        credit = random.choice(self.credits)
+        search_phrase = credit.sender[:2]
         self._test_response_with_filters(filters={
             'search': search_phrase
         })
@@ -423,8 +424,8 @@ class TransactionListWithSearchTestCase(TransactionListTestCase):
         """
         Search for a payment amount
         """
-        transaction = random.choice(self.transactions)
-        search_phrase = '£%0.2f' % (transaction.amount / 100)
+        credit = random.choice(self.credits)
+        search_phrase = '£%0.2f' % (credit.amount / 100)
         self._test_response_with_filters(filters={
             'search': search_phrase
         })
@@ -439,7 +440,7 @@ class TransactionListWithSearchTestCase(TransactionListTestCase):
 
     def test_search_with_no_results(self):
         """
-        Search for a value that cannot exist in generated transactions
+        Search for a value that cannot exist in generated credits
         """
         response = self._test_response_with_filters(filters={
             'search': get_random_string(
@@ -450,7 +451,7 @@ class TransactionListWithSearchTestCase(TransactionListTestCase):
         self.assertFalse(response.data['results'])
 
 
-class TransactionListInvalidValuesTestCase(TransactionListTestCase):
+class CreditListInvalidValuesTestCase(CreditListTestCase):
 
     def test_invalid_status_filter(self):
         logged_in_user = self.prison_clerks[0]
@@ -506,7 +507,7 @@ class TransactionListInvalidValuesTestCase(TransactionListTestCase):
         # passed-in user managing only prison #1
         passed_in_user = self.prison_clerks[1]
         passed_in_user.prisonusermapping.prisons.clear()
-        Transaction.objects.filter(
+        Credit.objects.filter(
             owner=passed_in_user, prison__isnull=False
         ).update(prison=self.prisons[1])
         passed_in_user.prisonusermapping.prisons.add(self.prisons[1])
@@ -548,26 +549,26 @@ class TransactionListInvalidValuesTestCase(TransactionListTestCase):
         self.assertEqual(response.data['count'], 0)
 
 
-class LockedTransactionListTestCase(TransactionListTestCase):
+class LockedCreditListTestCase(CreditListTestCase):
     def _get_url(self, **filters):
-        url = reverse('cashbook:transaction-locked')
+        url = reverse('credit-locked')
 
         filters['limit'] = 1000
         return '{url}?{filters}'.format(
             url=url, filters=urllib.parse.urlencode(filters)
         )
 
-    def test_locked_transactions_returns_same_ones_as_filtered_list(self):
+    def test_locked_credits_returns_same_ones_as_filtered_list(self):
         logged_in_user = self.prison_clerks[0]
         logged_in_user.prisonusermapping.prisons.add(*self.prisons)
         # managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
 
-        url_list = super()._get_url(status=TRANSACTION_STATUS.LOCKED)
+        url_list = super()._get_url(status=CREDIT_STATUS.LOCKED)
         response_list = self.client.get(
             url_list, format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
         )
-        self.assertTrue(response_list.data['count'])  # ensure some transactions exist!
+        self.assertTrue(response_list.data['count'])  # ensure some credits exist!
 
         url_locked = self._get_url()
         response_locked = self.client.get(
@@ -578,14 +579,14 @@ class LockedTransactionListTestCase(TransactionListTestCase):
         self.assertEqual(response_locked.status_code, status.HTTP_200_OK)
         self.assertEqual(response_locked.data['count'], response_list.data['count'])
         self.assertListEqual(
-            list(sorted(transaction['id'] for transaction in response_locked.data['results'])),
-            list(sorted(transaction['id'] for transaction in response_list.data['results'])),
+            list(sorted(credit['id'] for credit in response_locked.data['results'])),
+            list(sorted(credit['id'] for credit in response_list.data['results'])),
         )
-        self.assertTrue(all(transaction['locked'] for transaction in response_locked.data['results']))
-        self.assertTrue(all('locked_at' in transaction for transaction in response_locked.data['results']))
+        self.assertTrue(all(credit['locked'] for credit in response_locked.data['results']))
+        self.assertTrue(all('locked_at' in credit for credit in response_locked.data['results']))
 
 
-class DateBasedPaginationTestCase(TransactionListTestCase):
+class DateBasedPaginationTestCase(CreditListTestCase):
     def _get_response(self, filters):
         logged_in_user = self._get_authorised_user()
         url = self._get_url(**filters)
@@ -603,33 +604,33 @@ class DateBasedPaginationTestCase(TransactionListTestCase):
                                      'ordering': 'prisoner_number'})
 
     def test_invalid_pagination(self):
-        received_at_filter = self._get_random_transaction_date().strftime('%Y-%m-%d')
+        received_at_filter = self._get_random_credit_date().strftime('%Y-%m-%d')
         self._test_invalid_response({'page_by_date_field': 'prisoner_name',
                                      'received_at': received_at_filter})
 
-    def _get_random_transaction(self):
-        return random.choice(self.transactions)
+    def _get_random_credit(self):
+        return random.choice(self.credits)
 
-    def _get_date_of_transaction(self, transaction):
-        return localtime(transaction.received_at).date()
+    def _get_date_of_credit(self, credit):
+        return localtime(credit.received_at).date()
 
-    def _get_random_transaction_date(self):
-        return self._get_date_of_transaction(self._get_random_transaction())
+    def _get_random_credit_date(self):
+        return self._get_date_of_credit(self._get_random_credit())
 
-    def _get_date_count(self, transactions):
-        transaction_dates = set(map(self._get_date_of_transaction, transactions))
-        return len(transaction_dates)
+    def _get_date_count(self, credits):
+        credit_dates = set(map(self._get_date_of_credit, credits))
+        return len(credit_dates)
 
-    def _get_page_count(self, transactions, page_size=settings.REQUEST_PAGE_DAYS):
-        return int(math.ceil(self._get_date_count(transactions) / page_size))
+    def _get_page_count(self, credits, page_size=settings.REQUEST_PAGE_DAYS):
+        return int(math.ceil(self._get_date_count(credits) / page_size))
 
-    def _get_all_pages_of_transactions(self, transactions, page_size=settings.REQUEST_PAGE_DAYS):
+    def _get_all_pages_of_credits(self, credits, page_size=settings.REQUEST_PAGE_DAYS):
         all_pages = []
         current_page = []
         dates_collected = 0
         last_date = None
-        for transaction in transactions:
-            date = self._get_date_of_transaction(transaction)
+        for credit in credits:
+            date = self._get_date_of_credit(credit)
             if date != last_date:
                 dates_collected += 1
                 last_date = date
@@ -638,54 +639,54 @@ class DateBasedPaginationTestCase(TransactionListTestCase):
                 last_date = date
                 all_pages.append(current_page)
                 current_page = []
-            current_page.append(transaction)
+            current_page.append(credit)
         if current_page:
             all_pages.append(current_page)
         return all_pages
 
-    def _get_page_of_transactions(self, transactions, page=1, page_size=settings.REQUEST_PAGE_DAYS):
-        all_pages = self._get_all_pages_of_transactions(transactions, page_size=page_size)
+    def _get_page_of_credits(self, credits, page=1, page_size=settings.REQUEST_PAGE_DAYS):
+        all_pages = self._get_all_pages_of_credits(credits, page_size=page_size)
         return all_pages[page - 1]
 
-    def _get_page_of_transaction_ids(self, transactions, page=1, page_size=settings.REQUEST_PAGE_DAYS):
-        page = self._get_page_of_transactions(transactions, page=page, page_size=page_size)
-        return sorted(transaction.id for transaction in page)
+    def _get_page_of_credit_ids(self, credits, page=1, page_size=settings.REQUEST_PAGE_DAYS):
+        page = self._get_page_of_credits(credits, page=page, page_size=page_size)
+        return sorted(credit.id for credit in page)
 
-    def _test_paginated_response(self, filters, transaction_ids, count, page, page_count):
+    def _test_paginated_response(self, filters, credit_ids, count, page, page_count):
         response = self._get_response(filters)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        response_ids = sorted(transaction['id'] for transaction in response.data['results'])
-        self.assertListEqual(response_ids, transaction_ids)
+        response_ids = sorted(credit['id'] for credit in response.data['results'])
+        self.assertListEqual(response_ids, credit_ids)
 
         self.assertEqual(response.data['count'], count)
         self.assertEqual(response.data['page'], page)
         self.assertEqual(response.data['page_count'], page_count)
 
-    def _get_transactions(self, transaction_filter=None, ordering='-received_at'):
-        transactions = self._get_managed_prison_transactions()
-        transactions = filter(transaction_filter, transactions)
+    def _get_credits(self, credit_filter=None, ordering='-received_at'):
+        credits = self._get_managed_prison_credits()
+        credits = filter(credit_filter, credits)
 
-        def transaction_sort(transaction):
-            return transaction.received_at
+        def credit_sort(credit):
+            return credit.received_at
 
         if ordering == 'received_at':
-            transactions = sorted(transactions, key=transaction_sort)
+            credits = sorted(credits, key=credit_sort)
         elif ordering == '-received_at':
-            transactions = sorted(transactions, key=transaction_sort, reverse=True)
+            credits = sorted(credits, key=credit_sort, reverse=True)
         else:
             raise NotImplementedError
 
-        return transactions
+        return credits
 
     def test_pagination_without_filters(self):
-        transactions = self._get_transactions()
+        credits = self._get_credits()
 
         expected = {
-            'count': len(transactions),
+            'count': len(credits),
             'page': 1,
-            'page_count': self._get_page_count(transactions),
-            'transaction_ids': self._get_page_of_transaction_ids(transactions),
+            'page_count': self._get_page_count(credits),
+            'credit_ids': self._get_page_of_credit_ids(credits),
         }
         self._test_paginated_response(filters={'page_by_date_field': 'received_at',
                                                'ordering': '-received_at'},
@@ -694,26 +695,26 @@ class DateBasedPaginationTestCase(TransactionListTestCase):
     def test_pagination_with_search(self):
         search_term = ''
         while not search_term:
-            random_transaction = self._get_random_transaction()
-            search_term = random_transaction.prisoner_name or \
-                random_transaction.prisoner_number
+            random_credit = self._get_random_credit()
+            search_term = random_credit.prisoner_name or \
+                random_credit.prisoner_number
         search_term = search_term.lower().split()[0]
 
-        search_fields = TransactionTextSearchFilter.fields
+        search_fields = CreditTextSearchFilter.fields
 
-        def transaction_filter(transaction):
+        def credit_filter(credit):
             return any(
-                search_term in str(getattr(transaction, search_field, '') or '').lower()
+                search_term in str(getattr(credit, search_field, '') or '').lower()
                 for search_field in search_fields
             )
 
-        transactions = self._get_transactions(transaction_filter)
+        credits = self._get_credits(credit_filter)
 
         expected = {
-            'count': len(transactions),
+            'count': len(credits),
             'page': 1,
-            'page_count': self._get_page_count(transactions),
-            'transaction_ids': self._get_page_of_transaction_ids(transactions),
+            'page_count': self._get_page_count(credits),
+            'credit_ids': self._get_page_of_credit_ids(credits),
         }
         self._test_paginated_response(filters={'page_by_date_field': 'received_at',
                                                'ordering': '-received_at',
@@ -721,18 +722,18 @@ class DateBasedPaginationTestCase(TransactionListTestCase):
                                       **expected)
 
     def test_pagination_with_single_date(self):
-        received_at = self._get_random_transaction_date()
+        received_at = self._get_random_credit_date()
 
-        def transaction_filter(transaction):
-            return self._get_date_of_transaction(transaction) == received_at
+        def credit_filter(credit):
+            return self._get_date_of_credit(credit) == received_at
 
-        transactions = self._get_transactions(transaction_filter)
+        credits = self._get_credits(credit_filter)
 
         expected = {
-            'count': len(transactions),
+            'count': len(credits),
             'page': 1,
-            'page_count': self._get_page_count(transactions),
-            'transaction_ids': self._get_page_of_transaction_ids(transactions),
+            'page_count': self._get_page_count(credits),
+            'credit_ids': self._get_page_of_credit_ids(credits),
         }
         received_at_filter = received_at.strftime('%Y-%m-%d')
         self._test_paginated_response(filters={'page_by_date_field': 'received_at',
@@ -742,20 +743,20 @@ class DateBasedPaginationTestCase(TransactionListTestCase):
                                       **expected)
 
     def test_pagination_with_date_range(self):
-        received_at_0, received_at_1 = self._get_random_transaction_date(), self._get_random_transaction_date()
+        received_at_0, received_at_1 = self._get_random_credit_date(), self._get_random_credit_date()
         if received_at_0 > received_at_1:
             received_at_0, received_at_1 = received_at_1, received_at_0
 
-        def transaction_filter(transaction):
-            return received_at_0 <= self._get_date_of_transaction(transaction) <= received_at_1
+        def credit_filter(credit):
+            return received_at_0 <= self._get_date_of_credit(credit) <= received_at_1
 
-        transactions = self._get_transactions(transaction_filter)
+        credits = self._get_credits(credit_filter)
 
         expected = {
-            'count': len(transactions),
+            'count': len(credits),
             'page': 1,
-            'page_count': self._get_page_count(transactions),
-            'transaction_ids': self._get_page_of_transaction_ids(transactions),
+            'page_count': self._get_page_count(credits),
+            'credit_ids': self._get_page_of_credit_ids(credits),
         }
         received_at_0_filter = received_at_0.strftime('%Y-%m-%d')
         received_at_1_filter = received_at_1.strftime('%Y-%m-%d')
@@ -768,15 +769,15 @@ class DateBasedPaginationTestCase(TransactionListTestCase):
     def test_pagination_beyond_page_1(self):
         tries = 6
         page_count = 0
-        transactions = []
+        credits = []
         for _ in range(tries):
-            transactions = self._get_transactions()
-            page_count = self._get_page_count(transactions)
+            credits = self._get_credits()
+            page_count = self._get_page_count(credits)
             if page_count > 1:
                 break
-            self.transactions = generate_transactions(
+            self.credits = [t.credit for t in generate_transactions(
                 transaction_batch=150
-            )
+            )]
         self.assertGreater(page_count, 1,
                            'Could not generate enough pages for test in %d tries' % tries)
 
@@ -786,10 +787,10 @@ class DateBasedPaginationTestCase(TransactionListTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         expected = {
-            'count': len(transactions),
+            'count': len(credits),
             'page': 2,
             'page_count': page_count,
-            'transaction_ids': self._get_page_of_transaction_ids(transactions, page=2),
+            'credit_ids': self._get_page_of_credit_ids(credits, page=2),
         }
         self._test_paginated_response(filters={'page_by_date_field': 'received_at',
                                                'ordering': '-received_at',
@@ -797,37 +798,37 @@ class DateBasedPaginationTestCase(TransactionListTestCase):
                                       **expected)
 
 
-class LockTransactionTestCase(
-    CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
-    BaseTransactionViewTestCase
+class LockCreditTestCase(
+    CashbookCreditRejectsRequestsWithoutPermissionTestMixin,
+    BaseCreditViewTestCase
 ):
     ENDPOINT_VERB = 'post'
     transaction_batch = 500
 
     def _get_url(self):
-        return reverse('cashbook:transaction-lock')
+        return reverse('credit-lock')
 
     def setUp(self):
-        super(LockTransactionTestCase, self).setUp()
+        super(LockCreditTestCase, self).setUp()
 
         self.logged_in_user = self.prison_clerks[0]
         self.logged_in_user.prisonusermapping.prisons.add(*self.prisons)
 
     def _test_lock(self, already_locked_count, available_count=LOCK_LIMIT):
-        locked_qs = self._get_locked_transactions_qs(self.prisons, self.logged_in_user)
-        available_qs = self._get_available_transactions_qs(self.prisons)
+        locked_qs = self._get_locked_credits_qs(self.prisons, self.logged_in_user)
+        available_qs = self._get_available_credits_qs(self.prisons)
 
-        # set nr of transactions locked by logged-in user to 'already_locked'
+        # set nr of credits locked by logged-in user to 'already_locked'
         locked = locked_qs.values_list('pk', flat=True)
-        Transaction.objects.filter(
+        Credit.objects.filter(
             pk__in=[-1]+list(locked[:locked.count() - already_locked_count])
         ).delete()
 
         self.assertEqual(locked_qs.count(), already_locked_count)
 
-        # set nr of transactions available to 'available'
+        # set nr of credits available to 'available'
         available = available_qs.values_list('pk', flat=True)
-        Transaction.objects.filter(
+        Credit.objects.filter(
             pk__in=[-1]+list(available[:available.count() - available_count])
         ).delete()
 
@@ -852,16 +853,16 @@ class LockTransactionTestCase(
         return locked_qs
 
     def test_lock_with_none_locked_already(self):
-        locked_transactions = self._test_lock(already_locked_count=0)
+        locked_credits = self._test_lock(already_locked_count=0)
 
         # check logs
         self.assertEqual(
             Log.objects.filter(
                 user=self.logged_in_user,
                 action=LOG_ACTIONS.LOCKED,
-                transaction__id__in=locked_transactions.values_list('id', flat=True)
+                credit__id__in=locked_credits.values_list('id', flat=True)
             ).count(),
-            locked_transactions.count()
+            locked_credits.count()
         )
 
     def test_lock_with_max_locked_already(self):
@@ -874,24 +875,24 @@ class LockTransactionTestCase(
         self._test_lock(already_locked_count=(LOCK_LIMIT/2), available_count=0)
 
 
-class UnlockTransactionTestCase(
-    CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
-    BaseTransactionViewTestCase
+class UnlockCreditTestCase(
+    CashbookCreditRejectsRequestsWithoutPermissionTestMixin,
+    BaseCreditViewTestCase
 ):
     ENDPOINT_VERB = 'post'
 
     def _get_url(self):
-        return reverse('cashbook:transaction-unlock')
+        return reverse('credit-unlock')
 
-    def test_can_unlock_somebody_else_s_transactions(self):
+    def test_can_unlock_somebody_else_s_credits(self):
         logged_in_user = self.prison_clerks[0]
         logged_in_user.prisonusermapping.prisons.add(*self.prisons)
-        locked_qs = self._get_locked_transactions_qs(self.prisons)
+        locked_qs = self._get_locked_credits_qs(self.prisons)
 
         to_unlock = list(locked_qs.values_list('id', flat=True))
         response = self.client.post(
             self._get_url(),
-            {'transaction_ids': to_unlock},
+            {'credit_ids': to_unlock},
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
         )
@@ -899,7 +900,7 @@ class UnlockTransactionTestCase(
         self.assertEqual(response.status_code, status.HTTP_303_SEE_OTHER)
         self.assertEqual(
             urllib.parse.urlsplit(response['Location']).path,
-            reverse('cashbook:transaction-list')
+            reverse('credit-list')
         )
 
         self.assertEqual(locked_qs.count(), 0)
@@ -909,12 +910,12 @@ class UnlockTransactionTestCase(
             Log.objects.filter(
                 user=logged_in_user,
                 action=LOG_ACTIONS.UNLOCKED,
-                transaction__id__in=to_unlock
+                credit__id__in=to_unlock
             ).count(),
             len(to_unlock)
         )
 
-    def test_cannot_unlock_somebody_else_s_transactions_in_different_prison(self):
+    def test_cannot_unlock_somebody_else_s_credits_in_different_prison(self):
         # logged-in user managing prison #0
         logged_in_user = self.prison_clerks[0]
         logged_in_user.prisonusermapping.prisons.clear()
@@ -924,13 +925,13 @@ class UnlockTransactionTestCase(
         other_user = self.prison_clerks[1]
         other_user.prisonusermapping.prisons.add(self.prisons[1])
 
-        locked_qs = self._get_locked_transactions_qs(self.prisons, other_user)
+        locked_qs = self._get_locked_credits_qs(self.prisons, other_user)
         locked_qs.update(prison=self.prisons[1])
 
         to_unlock = locked_qs.values_list('id', flat=True)
         response = self.client.post(
             self._get_url(),
-            {'transaction_ids': to_unlock},
+            {'credit_ids': to_unlock},
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
         )
@@ -938,22 +939,22 @@ class UnlockTransactionTestCase(
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
         errors = response.data['errors']
         self.assertEqual(len(errors), 1)
-        self.assertEqual(errors[0]['msg'], 'Some transactions could not be unlocked.')
+        self.assertEqual(errors[0]['msg'], 'Some credits could not be unlocked.')
         self.assertEqual(errors[0]['ids'], sorted(to_unlock))
 
-    def test_cannot_unlock_credited_transactions(self):
+    def test_cannot_unlock_credited_credits(self):
         logged_in_user = self.prison_clerks[0]
         managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
 
-        locked_qs = self._get_locked_transactions_qs(managing_prisons, user=logged_in_user)
-        credited_qs = self._get_credited_transactions_qs(managing_prisons, user=logged_in_user)
+        locked_qs = self._get_locked_credits_qs(managing_prisons, user=logged_in_user)
+        credited_qs = self._get_credited_credits_qs(managing_prisons, user=logged_in_user)
 
         locked_ids = list(locked_qs.values_list('id', flat=True))
         credited_ids = list(credited_qs.values_list('id', flat=True)[:1])
 
         response = self.client.post(
             self._get_url(),
-            {'transaction_ids': locked_ids + credited_ids},
+            {'credit_ids': locked_ids + credited_ids},
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
         )
@@ -961,44 +962,44 @@ class UnlockTransactionTestCase(
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
         errors = response.data['errors']
         self.assertEqual(len(errors), 1)
-        self.assertEqual(errors[0]['msg'], 'Some transactions could not be unlocked.')
+        self.assertEqual(errors[0]['msg'], 'Some credits could not be unlocked.')
         self.assertEqual(errors[0]['ids'], sorted(credited_ids))
 
-    @mock.patch('transaction.api.cashbook.views.transaction_prisons_need_updating')
-    def test_unlock_sends_transaction_prisons_need_updating_signal(
-        self, mocked_transaction_prisons_need_updating
+    @mock.patch('credit.views.credit_prisons_need_updating')
+    def test_unlock_sends_credit_prisons_need_updating_signal(
+        self, mocked_credit_prisons_need_updating
     ):
         logged_in_user = self.prison_clerks[0]
         logged_in_user.prisonusermapping.prisons.add(*self.prisons)
-        locked_qs = self._get_locked_transactions_qs(self.prisons)
+        locked_qs = self._get_locked_credits_qs(self.prisons)
 
         response = self.client.post(
             self._get_url(),
-            {'transaction_ids': list(locked_qs.values_list('id', flat=True))},
+            {'credit_ids': list(locked_qs.values_list('id', flat=True))},
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
         )
 
         self.assertEqual(response.status_code, status.HTTP_303_SEE_OTHER)
 
-        mocked_transaction_prisons_need_updating.send.assert_called_with(sender=Transaction)
+        mocked_credit_prisons_need_updating.send.assert_called_with(sender=Credit)
 
 
-class CreditTransactionTestCase(
-    CashbookTransactionRejectsRequestsWithoutPermissionTestMixin,
-    BaseTransactionViewTestCase
+class CreditCreditTestCase(
+    CashbookCreditRejectsRequestsWithoutPermissionTestMixin,
+    BaseCreditViewTestCase
 ):
     ENDPOINT_VERB = 'patch'
 
     def _get_url(self, **filters):
-        return reverse('cashbook:transaction-list')
+        return reverse('credit-list')
 
-    def test_credit_uncredit_transactions(self):
+    def test_credit_uncredit_credits(self):
         logged_in_user = self.prison_clerks[0]
         managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
 
-        locked_qs = self._get_locked_transactions_qs(managing_prisons, logged_in_user)
-        credited_qs = self._get_credited_transactions_qs(managing_prisons, logged_in_user)
+        locked_qs = self._get_locked_credits_qs(managing_prisons, logged_in_user)
+        credited_qs = self._get_credited_credits_qs(managing_prisons, logged_in_user)
 
         self.assertTrue(locked_qs.count() > 0)
         self.assertTrue(credited_qs.count() > 0)
@@ -1033,7 +1034,7 @@ class CreditTransactionTestCase(
             Log.objects.filter(
                 user=logged_in_user,
                 action=LOG_ACTIONS.CREDITED,
-                transaction__id__in=to_credit
+                credit__id__in=to_credit
             ).count(),
             len(to_credit)
         )
@@ -1042,18 +1043,18 @@ class CreditTransactionTestCase(
             Log.objects.filter(
                 user=logged_in_user,
                 action=LOG_ACTIONS.UNCREDITED,
-                transaction__id__in=to_uncredit
+                credit__id__in=to_uncredit
             ).count(),
             len(to_uncredit)
         )
 
-    def test_cannot_credit_somebody_else_s_transactions(self):
+    def test_cannot_credit_somebody_else_s_credits(self):
         logged_in_user = self.prison_clerks[0]
         other_user = self.prison_clerks[1]
 
-        locked_qs = self._get_locked_transactions_qs(self.prisons, logged_in_user)
-        credited_qs = self._get_credited_transactions_qs(self.prisons, logged_in_user)
-        locked_by_other_user_qs = self._get_locked_transactions_qs(self.prisons, other_user)
+        locked_qs = self._get_locked_credits_qs(self.prisons, logged_in_user)
+        credited_qs = self._get_credited_credits_qs(self.prisons, logged_in_user)
+        locked_by_other_user_qs = self._get_locked_credits_qs(self.prisons, other_user)
 
         credited = credited_qs.count()
 
@@ -1075,19 +1076,19 @@ class CreditTransactionTestCase(
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
         errors = response.data['errors']
         self.assertEqual(len(errors), 1)
-        self.assertEqual(errors[0]['msg'], 'Some transactions could not be credited.')
+        self.assertEqual(errors[0]['msg'], 'Some credits could not be credited.')
         self.assertEqual(errors[0]['ids'], sorted(locked_by_other_user_ids))
 
         # nothing changed in db
         self.assertEqual(credited_qs.count(), credited)
 
-    def test_cannot_credit_non_locked_transactions(self):
+    def test_cannot_credit_non_locked_credits(self):
         logged_in_user = self.prison_clerks[0]
         managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
 
-        locked_qs = self._get_locked_transactions_qs(managing_prisons, logged_in_user)
-        credited_qs = self._get_credited_transactions_qs(self.prisons, logged_in_user)
-        available_qs = self._get_available_transactions_qs(managing_prisons)
+        locked_qs = self._get_locked_credits_qs(managing_prisons, logged_in_user)
+        credited_qs = self._get_credited_credits_qs(self.prisons, logged_in_user)
+        available_qs = self._get_available_credits_qs(managing_prisons)
 
         credited = credited_qs.count()
 
@@ -1109,7 +1110,7 @@ class CreditTransactionTestCase(
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
         errors = response.data['errors']
         self.assertEqual(len(errors), 1)
-        self.assertEqual(errors[0]['msg'], 'Some transactions could not be credited.')
+        self.assertEqual(errors[0]['msg'], 'Some credits could not be credited.')
         self.assertEqual(errors[0]['ids'], sorted(available_ids))
 
         # nothing changed in db
@@ -1143,7 +1144,7 @@ class CreditTransactionTestCase(
         logged_in_user = self.prison_clerks[0]
         managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
 
-        locked_qs = self._get_locked_transactions_qs(managing_prisons, logged_in_user)
+        locked_qs = self._get_locked_credits_qs(managing_prisons, logged_in_user)
 
         data = [
             {'id': t_id, 'credted': True}

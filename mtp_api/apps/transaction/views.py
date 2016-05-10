@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.exceptions import ParseError
 import django_filters
 
+from credit.models import Credit
 from mtp_auth.permissions import BankAdminClientIDPermissions
 from transaction.models import Transaction
 from .permissions import TransactionPermissions
@@ -66,7 +67,7 @@ class TransactionView(mixins.CreateModelMixin, mixins.UpdateModelMixin,
     def patch_processed(self, request, *args, **kwargs):
         try:
             return self.partial_update(request, *args, **kwargs)
-        except Transaction.DoesNotExist as e:
+        except Credit.DoesNotExist as e:
             transaction_ids = sorted(e.args[0])
             logger.warning('Some transactions failed to update: [%s]' %
                            ', '.join(map(str, transaction_ids)))

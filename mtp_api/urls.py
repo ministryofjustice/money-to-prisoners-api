@@ -12,6 +12,7 @@ urlpatterns = [
     url(r'^', include('transaction.urls')),
     url(r'^', include('account.urls')),
     url(r'^', include('payment.urls')),
+    url(r'^', include('credit.urls')),
 
     url(r'^oauth2/', include(('oauth2_provider.urls', 'oauth2_provider'), namespace='oauth2_provider')),
     url(r'^docs/', include('rest_framework_swagger.urls')),

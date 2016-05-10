@@ -5,20 +5,21 @@ import random
 import warnings
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import FieldDoesNotExist
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from faker import Faker
 
 from core.tests.utils import MockModelTimestamps
-from payment.models import Payment
-from payment.constants import PAYMENT_STATUS
+from credit.constants import CREDIT_RESOLUTION, LOG_ACTIONS, CREDIT_STATUS
+from credit.models import Credit, Log
 from prison.models import Prison, PrisonerLocation
 from prison.tests.utils import random_prisoner_number, random_prisoner_dob, \
     random_prisoner_name, get_prisoner_location_creator, \
     load_nomis_prisoner_locations
-from transaction.models import Transaction, Log
+from transaction.models import Transaction
 from transaction.constants import (
-    TRANSACTION_STATUS, LOG_ACTIONS, TRANSACTION_CATEGORY, TRANSACTION_SOURCE
+    TRANSACTION_CATEGORY, TRANSACTION_SOURCE
 )
 
 User = get_user_model()
@@ -55,8 +56,7 @@ def generate_initial_transactions_data(
         prisoner_location_generator=None,
         include_debits=True,
         include_administrative_credits=True,
-        include_unidentified_credits=True,
-        include_online_payments=True):
+        include_unidentified_credits=True):
     data_list = []
 
     for transaction_counter in range(1, tot + 1):
@@ -79,9 +79,6 @@ def generate_initial_transactions_data(
         make_administrative_credit_transaction = (
             include_administrative_credits and transaction_counter % 41 == 0
         )
-        make_online_payment = (
-            include_online_payments and transaction_counter % 13 == 0
-        )
 
         random_date = latest_transaction_date() - datetime.timedelta(
             minutes=random.randint(0, 10000)
@@ -102,20 +99,7 @@ def generate_initial_transactions_data(
             'modified': random_date,
         }
 
-        if make_online_payment:
-            data['source'] = TRANSACTION_SOURCE.ONLINE
-            del data['sender_sort_code']
-            del data['sender_account_number']
-
-            if prisoner_location_generator:
-                data.update(next(prisoner_location_generator))
-            else:
-                data.update({
-                    'prisoner_name': random_prisoner_name(),
-                    'prisoner_number': random_prisoner_number(),
-                    'prisoner_dob': random_prisoner_dob(),
-                })
-        elif make_administrative_credit_transaction:
+        if make_administrative_credit_transaction:
             data['source'] = TRANSACTION_SOURCE.ADMINISTRATIVE
             data['incomplete_sender_info'] = True
             data['processor_type_code'] = 'RA'
@@ -196,6 +180,7 @@ def generate_predetermined_transactions_data():
         'sender_name': 'Mary Stevenson',
         'amount': 7230,
         'category': TRANSACTION_CATEGORY.CREDIT,
+        'source': TRANSACTION_SOURCE.BANK_TRANSFER,
         'sender_sort_code': '680966',
         'sender_account_number': '75823963',
 
@@ -218,9 +203,9 @@ def get_owner_and_status_chooser():
         clerks_per_prison[p.pk] = (
             cycle(list(User.objects.filter(id__in=user_ids))),
             cycle([
-                TRANSACTION_STATUS.LOCKED,
-                TRANSACTION_STATUS.AVAILABLE,
-                TRANSACTION_STATUS.CREDITED
+                CREDIT_STATUS.LOCKED,
+                CREDIT_STATUS.AVAILABLE,
+                CREDIT_STATUS.CREDITED
             ])
         )
 
@@ -239,8 +224,7 @@ def generate_transactions(
     consistent_history=False,
     include_debits=True,
     include_administrative_credits=True,
-    include_unidentified_credits=True,
-    include_online_payments=True
+    include_unidentified_credits=True
 ):
     if use_test_nomis_prisoners:
         prisoner_location_generator = cycle(load_nomis_prisoner_locations())
@@ -251,14 +235,13 @@ def generate_transactions(
         prisoner_location_generator=prisoner_location_generator,
         include_debits=include_debits,
         include_administrative_credits=include_administrative_credits,
-        include_unidentified_credits=include_unidentified_credits,
-        include_online_payments=include_online_payments
+        include_unidentified_credits=include_unidentified_credits
     )
 
     location_creator = get_prisoner_location_creator()
     if only_new_transactions:
         def owner_status_chooser(*args):
-            return None, TRANSACTION_STATUS.AVAILABLE
+            return None, CREDIT_STATUS.AVAILABLE
     else:
         owner_status_chooser = get_owner_and_status_chooser()
 
@@ -283,7 +266,7 @@ def generate_transactions(
     if predetermined_transactions:
         for data in generate_predetermined_transactions_data():
             with MockModelTimestamps(data['created'], data['modified']):
-                new_transaction = Transaction.objects.create(**data)
+                new_transaction = save_transaction(data)
             transactions.append(new_transaction)
 
     generate_transaction_logs(transactions)
@@ -322,7 +305,7 @@ def setup_historical_transaction(location_creator, owner_status_chooser,
                 data.update({'refunded': True})
 
     with MockModelTimestamps(data['created'], data['modified']):
-        new_transaction = Transaction.objects.create(**data)
+        new_transaction = save_transaction(data)
 
     return new_transaction
 
@@ -341,17 +324,17 @@ def setup_transaction(location_creator, owner_status_chooser,
             owner, status = owner_status_chooser(prison)
 
             data['prison'] = prison
-            if status == TRANSACTION_STATUS.LOCKED:
+            if status == CREDIT_STATUS.LOCKED:
                 data.update({
                     'owner': owner,
                     'credited': False
                 })
-            elif status == TRANSACTION_STATUS.AVAILABLE:
+            elif status == CREDIT_STATUS.AVAILABLE:
                 data.update({
                     'owner': None,
                     'credited': False
                 })
-            elif status == TRANSACTION_STATUS.CREDITED:
+            elif status == CREDIT_STATUS.CREDITED:
                 data.update({
                     'owner': owner,
                     'credited': True
@@ -363,36 +346,72 @@ def setup_transaction(location_creator, owner_status_chooser,
                 data.update({'refunded': False})
 
     with MockModelTimestamps(data['created'], data['modified']):
-        new_transaction = Transaction.objects.create(**data)
-
-    if data['source'] == TRANSACTION_SOURCE.ONLINE:
-        payment = Payment()
-        payment.transaction = new_transaction
-        payment.status = PAYMENT_STATUS.TAKEN
-        payment.amount = new_transaction.amount
-        payment.prisoner_number = new_transaction.prisoner_number
-        payment.prisoner_dob = new_transaction.prisoner_dob
-        payment.processor_id = random.randint(100, 1000)
-        payment.recipient_name = new_transaction.prisoner_name
-        payment.save()
+        new_transaction = save_transaction(data)
 
     return new_transaction
 
 
+def save_transaction(data):
+    if data.pop('credited', False):
+        resolution = CREDIT_RESOLUTION.CREDITED
+    elif data.pop('refunded', False):
+        resolution = CREDIT_RESOLUTION.REFUNDED
+    else:
+        resolution = CREDIT_RESOLUTION.PENDING
+
+    prisoner_dob = data.pop('prisoner_dob', None)
+    prisoner_number = data.pop('prisoner_number', None)
+    prisoner_name = data.pop('prisoner_name', None)
+    prison = data.pop('prison', None)
+    reconciled = data.pop('reconciled', False)
+    owner = data.pop('owner', None)
+
+    if (data['category'] == TRANSACTION_CATEGORY.CREDIT and
+            data['source'] == TRANSACTION_SOURCE.BANK_TRANSFER):
+        credit = Credit(
+            amount=data['amount'],
+            prisoner_dob=prisoner_dob,
+            prisoner_number=prisoner_number,
+            prisoner_name=prisoner_name,
+            prison=prison,
+            reconciled=reconciled,
+            owner=owner,
+            received_at=data['received_at'],
+            resolution=resolution
+        )
+        credit.save()
+        data['credit'] = credit
+
+    return Transaction.objects.create(**data)
+
+
 def generate_transaction_logs(transactions):
     for new_transaction in transactions:
-        with MockModelTimestamps(new_transaction.modified, new_transaction.modified):
-            log_data = {
-                'transaction': new_transaction,
-                'user': new_transaction.owner,
-            }
+        if new_transaction.credit:
+            with MockModelTimestamps(new_transaction.modified, new_transaction.modified):
+                log_data = {
+                    'credit': new_transaction.credit,
+                    'user': new_transaction.credit.owner,
+                }
 
-            if new_transaction.credited:
-                log_data['action'] = LOG_ACTIONS.CREDITED
-                Log.objects.create(**log_data)
-            elif new_transaction.refunded:
-                log_data['action'] = LOG_ACTIONS.REFUNDED
-                Log.objects.create(**log_data)
-            elif new_transaction.locked:
-                log_data['action'] = LOG_ACTIONS.LOCKED
-                Log.objects.create(**log_data)
+                if new_transaction.credit.credited:
+                    log_data['action'] = LOG_ACTIONS.CREDITED
+                    Log.objects.create(**log_data)
+                elif new_transaction.credit.refunded:
+                    log_data['action'] = LOG_ACTIONS.REFUNDED
+                    Log.objects.create(**log_data)
+                elif new_transaction.credit.locked:
+                    log_data['action'] = LOG_ACTIONS.LOCKED
+                    Log.objects.create(**log_data)
+
+
+def filters_from_api_data(data):
+    filters = {}
+    for field in data:
+        try:
+            Transaction._meta.get_field(field)
+            filters[field] = data[field]
+        except FieldDoesNotExist:
+            Credit._meta.get_field(field)
+            filters['credit__%s' % field] = data[field]
+    return filters

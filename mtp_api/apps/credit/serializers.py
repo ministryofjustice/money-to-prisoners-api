@@ -1,60 +1,56 @@
 from rest_framework import serializers
 
-from payment.serializers import PaymentSerializer
-from transaction.models import Transaction
+from .models import Credit
 
 
-class CreditedOnlyTransactionSerializer(serializers.ModelSerializer):
+class CreditedOnlyCreditSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(required=True)
     credited = serializers.BooleanField(required=True)
 
     class Meta:
-        model = Transaction
+        model = Credit
         fields = (
             'id',
             'credited',
         )
 
 
-class IdsTransactionSerializer(serializers.Serializer):
-    transaction_ids = serializers.ListField(
+class IdsCreditSerializer(serializers.Serializer):
+    credit_ids = serializers.ListField(
        child=serializers.IntegerField()
     )
 
 
-class TransactionSerializer(serializers.ModelSerializer):
-    sender = serializers.CharField(source='sender_name')
+class CreditSerializer(serializers.ModelSerializer):
+    sender = serializers.CharField(read_only=True)
     owner_name = serializers.CharField(read_only=True)
     credited_at = serializers.DateTimeField(read_only=True)
     refunded_at = serializers.DateTimeField(read_only=True)
-    payment = PaymentSerializer(read_only=True)
 
     class Meta:
-        model = Transaction
+        model = Credit
         fields = (
             'id',
             'prisoner_name',
             'prisoner_number',
             'amount',
-            'sender',
             'received_at',
+            'sender',
             'prison',
             'owner',
             'owner_name',
-            'credited',
+            'resolution',
             'credited_at',
-            'refunded',
             'refunded_at',
-            'payment'
         )
 
 
-class LockedTransactionSerializer(TransactionSerializer):
+class LockedCreditSerializer(CreditSerializer):
     locked = serializers.BooleanField(read_only=True)
     locked_at = serializers.DateTimeField(read_only=True)
 
-    class Meta(TransactionSerializer.Meta):
-        fields = TransactionSerializer.Meta.fields + (
+    class Meta(CreditSerializer.Meta):
+        fields = CreditSerializer.Meta.fields + (
             'locked',
             'locked_at',
         )
