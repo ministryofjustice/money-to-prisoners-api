@@ -1,13 +1,8 @@
-from datetime import timedelta
-
 from django.contrib import admin
-from django.contrib import messages
 from django.contrib.admin.options import IncorrectLookupParameters
 from django.core.exceptions import ValidationError
-from django.db.models import Sum
 
 from core.admin import DateRangeFilter
-from credit.constants import LOG_ACTIONS
 from transaction.constants import TRANSACTION_STATUS
 from transaction.models import Transaction
 from transaction.utils import format_amount
@@ -32,7 +27,7 @@ class StatusFilter(admin.SimpleListFilter):
 @admin.register(Transaction)
 class TransactionAdmin(admin.ModelAdmin):
     list_display = (
-        'prisoner_name', 'prisoner_number', 'prison', 'formatted_amount',
+        'prisoner_name', 'prison', 'prisoner_number', 'formatted_amount',
         'type', 'sender_sort_code', 'sender_account_number',
         'sender_roll_number', 'sender_name', 'reference',
         'received_at', 'status'
@@ -51,83 +46,10 @@ class TransactionAdmin(admin.ModelAdmin):
         'reference', 'sender_name', 'sender_sort_code',
         'sender_account_number', 'sender_roll_number'
     )
-    actions = [
-        'display_total_amount', 'display_reference_validity',
-        'display_resolution_time'
-    ]
 
     def formatted_amount(self, instance):
         return format_amount(instance.amount)
-
     formatted_amount.short_description = 'Amount'
 
     def type(self, instance):
         return '%s/%s' % (instance.processor_type_code, instance.category)
-
-    def display_total_amount(self, request, queryset):
-        total = queryset.aggregate(Sum('amount'))['amount__sum']
-        self.message_user(request, 'Total: %s' % format_amount(total, True))
-
-    def display_reference_validity(self, request, queryset):
-        invalid_ref_count = queryset.filter(credit__prison__isnull=True).count()
-        total_count = queryset.filter(credit__isnull=False).count()
-        invalid_percent = (invalid_ref_count / total_count) * 100
-
-        valid_ref_count = total_count - invalid_ref_count
-        valid_percent = 100 - invalid_percent
-
-        self.message_user(
-            request,
-            'Of %(total)s transactions: '
-            '%(valid_count)s (%(valid_percent)0.2f%%) of references are valid, '
-            '%(invalid_count)s (%(invalid_percent)0.2f%%) of references are invalid.'
-            % {'total': total_count, 'invalid_count': invalid_ref_count,
-               'invalid_percent': invalid_percent, 'valid_count': valid_ref_count,
-               'valid_percent': valid_percent}
-        )
-
-    def display_resolution_time(self, request, queryset):
-        until_credited_times = []
-        until_unlocked_times = []
-        for t in queryset.prefetch_related('credit__log_set'):
-            last_lock_time = None
-            logs = sorted(t.log_set.all(), key=lambda l: l.created)
-            for l in logs:
-                if l.action == LOG_ACTIONS.LOCKED:
-                    last_lock_time = l.created
-                elif l.action == LOG_ACTIONS.UNLOCKED:
-                    if last_lock_time is not None:
-                        until_unlocked_times.append(l.created - last_lock_time)
-                elif l.action == LOG_ACTIONS.CREDITED:
-                    if last_lock_time is not None:
-                        until_credited_times.append(l.created - last_lock_time)
-
-        if until_credited_times:
-            avg_credit_time = (sum(until_credited_times, timedelta(0)) /
-                               len(until_credited_times))
-
-            self.message_user(
-                request,
-                'Time until credit after lock: '
-                'AVG (%(avg)s), MAX (%(max)s), MIN (%(min)s)'
-                % {'avg': avg_credit_time, 'max': max(until_credited_times),
-                   'min': min(until_credited_times)}
-            )
-        else:
-            self.message_user(request, 'No transactions have been credited yet.',
-                              messages.WARNING)
-
-        if until_unlocked_times:
-            avg_unlock_time = (sum(until_unlocked_times, timedelta(0)) /
-                               len(until_unlocked_times))
-
-            self.message_user(
-                request,
-                'Time until unlock after lock: '
-                'AVG (%(avg)s), MAX (%(max)s), MIN (%(min)s)'
-                % {'avg': avg_unlock_time, 'max': max(until_unlocked_times),
-                   'min': min(until_unlocked_times)}
-            )
-        else:
-            self.message_user(request, 'No transactions have been unlocked yet.',
-                              messages.WARNING)
