@@ -15,6 +15,12 @@ CREDIT_STATUS = Choices(
     ('REFUND_PENDING', 'refund_pending', 'Refund Pending'),
 )
 
+CREDIT_SOURCE = Choices(
+    ('BANK_TRANSFER', 'bank_transfer', 'Bank transfer'),
+    ('ONLINE', 'online', 'Online'),
+    ('UNKNOWN', 'unknown', 'Unknown'),
+)
+
 LOCK_LIMIT = 20
 
 LOG_ACTIONS = Choices(

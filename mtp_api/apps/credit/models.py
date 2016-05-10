@@ -8,7 +8,7 @@ from model_utils.models import TimeStampedModel
 
 from prison.models import Prison, PrisonerLocation
 from transaction.utils import format_amount
-from .constants import LOG_ACTIONS, CREDIT_RESOLUTION, CREDIT_STATUS
+from .constants import LOG_ACTIONS, CREDIT_RESOLUTION, CREDIT_STATUS, CREDIT_SOURCE
 from .managers import CreditManager, CreditQuerySet, LogManager
 from .signals import (
     credit_created, credit_locked, credit_unlocked, credit_credited,
@@ -111,6 +111,15 @@ class Credit(TimeStampedModel):
             credit=self,
             by_user=by_user
         )
+
+    @property
+    def source(self):
+        if hasattr(self, 'transaction'):
+            return CREDIT_SOURCE.BANK_TRANSFER
+        elif hasattr(self, 'payment'):
+            return CREDIT_SOURCE.ONLINE
+        else:
+            return CREDIT_SOURCE.UNKNOWN
 
     @property
     def available(self):
