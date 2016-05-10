@@ -29,7 +29,7 @@ class UserSerializer(serializers.ModelSerializer):
 
         fields['email'].validators.append(UniqueValidator(
             User.objects.all(),
-            message=_('A user with that email address already exists')
+            message=_('That email address already exists')
         ))
 
         return fields
