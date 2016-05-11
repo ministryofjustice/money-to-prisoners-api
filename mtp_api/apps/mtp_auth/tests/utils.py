@@ -4,13 +4,13 @@ from django.utils.crypto import get_random_string
 
 from oauth2_provider.models import Application, AccessToken
 from mtp_auth.constants import CASHBOOK_OAUTH_CLIENT_ID, \
-    BANK_ADMIN_OAUTH_CLIENT_ID, PRISONER_LOCATION_OAUTH_CLIENT_ID, \
+    BANK_ADMIN_OAUTH_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID, \
     SEND_MONEY_CLIENT_ID
 
 
 class AuthTestCaseMixin(object):
     APPLICATION_ID_MAP = {
-        'PrisonerLocationAdmin': PRISONER_LOCATION_OAUTH_CLIENT_ID,
+        'PrisonerLocationAdmin': NOMS_OPS_OAUTH_CLIENT_ID,
         'BankAdmin': BANK_ADMIN_OAUTH_CLIENT_ID,
         'PrisonClerk': CASHBOOK_OAUTH_CLIENT_ID,
         'SendMoney': SEND_MONEY_CLIENT_ID,

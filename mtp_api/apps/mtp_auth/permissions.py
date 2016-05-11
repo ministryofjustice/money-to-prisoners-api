@@ -1,9 +1,10 @@
 from rest_framework.permissions import BasePermission
 
 from core.permissions import ActionsBasedPermissions
-from .constants import CASHBOOK_OAUTH_CLIENT_ID, \
-    BANK_ADMIN_OAUTH_CLIENT_ID, PRISONER_LOCATION_OAUTH_CLIENT_ID, \
-    SEND_MONEY_CLIENT_ID
+from .constants import (
+    CASHBOOK_OAUTH_CLIENT_ID, BANK_ADMIN_OAUTH_CLIENT_ID,
+    NOMS_OPS_OAUTH_CLIENT_ID, SEND_MONEY_CLIENT_ID
+)
 
 
 class UserPermissions(ActionsBasedPermissions):
@@ -30,7 +31,7 @@ class ClientIDPermissions(BasePermission):
 
 class AnyAdminClientIDPermissions(ClientIDPermissions):
     client_id = (CASHBOOK_OAUTH_CLIENT_ID, BANK_ADMIN_OAUTH_CLIENT_ID,
-                 PRISONER_LOCATION_OAUTH_CLIENT_ID)
+                 NOMS_OPS_OAUTH_CLIENT_ID)
 
 
 class CashbookClientIDPermissions(ClientIDPermissions):
@@ -41,8 +42,8 @@ class BankAdminClientIDPermissions(ClientIDPermissions):
     client_id = BANK_ADMIN_OAUTH_CLIENT_ID
 
 
-class PrisonerLocationClientIDPermissions(ClientIDPermissions):
-    client_id = PRISONER_LOCATION_OAUTH_CLIENT_ID
+class NomsOpsClientIDPermissions(ClientIDPermissions):
+    client_id = NOMS_OPS_OAUTH_CLIENT_ID
 
 
 class SendMoneyClientIDPermissions(ClientIDPermissions):
