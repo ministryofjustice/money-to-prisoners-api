@@ -8,7 +8,7 @@ User = get_user_model()
 
 class RestrictedUserChangeForm(UserChangeForm):
     error_messages = {
-        'non_unique_email': _('A user with that email address already exists'),
+        'non_unique_email': _('That email address already exists'),
     }
 
     def __init__(self, *args, **kwargs):

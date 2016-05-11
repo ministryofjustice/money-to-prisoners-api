@@ -116,8 +116,7 @@ class ChangePasswordView(generics.GenericAPIView):
                     else:
                         FailedLoginAttempt.objects.add_failed_attempt(
                             request.user, request.auth.application)
-                errors = {'old_password': [_('Your old password was entered incorrectly. '
-                                             'Please enter it again.')]}
+                errors = {'old_password': [_('You’ve entered an incorrect password')]}
             except ValidationError as e:
                 errors = {'new_password': e.error_list}
         else:
@@ -134,13 +133,12 @@ class ResetPasswordView(generics.GenericAPIView):
     serializer_class = ResetPasswordSerializer
 
     error_messages = {
-        'generic': _('Password could not be generated.'
-                     'This system error has been reported'),
-        'not_found': _('User account with matching username not found'),
+        'generic': _('There has been a system error. Please try again later'),
+        'not_found': _('Username doesn’t match any user account'),
         'locked_out': _('Your account is locked, '
-                        'please contact a user account manager'),
+                        'please contact the person who set it up'),
         'no_email': _('We don’t have your email address, '
-                      'please contact a user account manager'),
+                      'please contact the person who set up the account'),
     }
 
     @classmethod
