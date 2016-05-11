@@ -69,5 +69,17 @@
       ["delete_user", "auth", "user"]
     ]
   }
+},
+{
+  "model": "auth.group",
+  "pk": 7,
+  "fields": {
+    "name": "Security",
+    "permissions": [
+      ["view_credit", "credit", "credit"],
+      ["view_transaction", "transaction", "transaction"],
+      ["view_payment", "payment", "payment"]
+    ]
+  }
 }
 ]

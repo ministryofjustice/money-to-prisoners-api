@@ -34,7 +34,7 @@ class ExternalDashboards(DashboardModule):
     column_count = 2
     title = _('External dashboards and logs')
     apps = [
-        'api', 'cashbook', 'bank-admin', 'prisoner-location-admin',
+        'api', 'cashbook', 'bank-admin', 'noms-ops',
         'transaction-uploader', 'send-money',
     ]
     grafana_host = None

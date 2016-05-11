@@ -16,7 +16,7 @@ from rest_framework.test import APITestCase
 from core.tests.utils import make_test_users, make_test_user_admins
 from mtp_auth.constants import (
     BANK_ADMIN_OAUTH_CLIENT_ID, CASHBOOK_OAUTH_CLIENT_ID,
-    PRISONER_LOCATION_OAUTH_CLIENT_ID
+    NOMS_OPS_OAUTH_CLIENT_ID
 )
 from mtp_auth.models import FailedLoginAttempt
 from mtp_auth.views import ResetPasswordView
@@ -730,7 +730,7 @@ class AccountLockoutTestCase(APITestCase):
         prison_clerk = self.prison_clerks[0]
         cashbook_client = Application.objects.get(client_id=CASHBOOK_OAUTH_CLIENT_ID)
         bank_admin_client = Application.objects.get(client_id=BANK_ADMIN_OAUTH_CLIENT_ID)
-        prisoner_location_admin_client = Application.objects.get(client_id=PRISONER_LOCATION_OAUTH_CLIENT_ID)
+        prisoner_location_admin_client = Application.objects.get(client_id=NOMS_OPS_OAUTH_CLIENT_ID)
 
         for _ in range(settings.MTP_AUTH_LOCKOUT_COUNT):
             self.assertFalse(FailedLoginAttempt.objects.is_locked_out(prison_clerk, cashbook_client))

@@ -6,7 +6,7 @@ from oauth2_provider.models import Application
 
 from mtp_auth.constants import (
     CASHBOOK_OAUTH_CLIENT_ID, BANK_ADMIN_OAUTH_CLIENT_ID,
-    PRISONER_LOCATION_OAUTH_CLIENT_ID, SEND_MONEY_CLIENT_ID
+    NOMS_OPS_OAUTH_CLIENT_ID, SEND_MONEY_CLIENT_ID
 )
 from mtp_auth.models import (
     ApplicationUserMapping, ApplicationGroupMapping, PrisonUserMapping
@@ -67,7 +67,7 @@ def make_applications():
 
     make_application(user, CASHBOOK_OAUTH_CLIENT_ID,
                      [Group.objects.get(name='PrisonClerk')])
-    make_application(user, PRISONER_LOCATION_OAUTH_CLIENT_ID,
+    make_application(user, NOMS_OPS_OAUTH_CLIENT_ID,
                      [Group.objects.get(name='PrisonerLocationAdmin')])
     make_application(user, BANK_ADMIN_OAUTH_CLIENT_ID,
                      [Group.objects.get(name='BankAdmin'),
@@ -117,7 +117,7 @@ def make_test_users(clerks_per_prison=2):
             )
 
     link_users_with_client(prison_clerks, CASHBOOK_OAUTH_CLIENT_ID)
-    link_users_with_client(prisoner_location_admins, PRISONER_LOCATION_OAUTH_CLIENT_ID)
+    link_users_with_client(prisoner_location_admins, NOMS_OPS_OAUTH_CLIENT_ID)
     link_users_with_client(bank_admins, BANK_ADMIN_OAUTH_CLIENT_ID)
     link_users_with_client(refund_bank_admins, BANK_ADMIN_OAUTH_CLIENT_ID)
     link_users_with_client(send_money_users, SEND_MONEY_CLIENT_ID)
@@ -158,7 +158,7 @@ def make_test_user_admins():
             )
 
     link_users_with_client(prison_clerks, CASHBOOK_OAUTH_CLIENT_ID)
-    link_users_with_client(prisoner_location_admins, PRISONER_LOCATION_OAUTH_CLIENT_ID)
+    link_users_with_client(prisoner_location_admins, NOMS_OPS_OAUTH_CLIENT_ID)
     link_users_with_client(refund_bank_admins, BANK_ADMIN_OAUTH_CLIENT_ID)
 
     return (prison_clerks, prisoner_location_admins, refund_bank_admins)
