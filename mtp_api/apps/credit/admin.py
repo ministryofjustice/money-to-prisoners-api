@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.contrib.admin.options import IncorrectLookupParameters
 from django.core.exceptions import ValidationError
 from django.db.models import Sum
+from django.utils.translation import gettext_lazy as _
 
 from core.admin import DateRangeFilter, RelatedAnyFieldListFilter, ExactSearchFilter
 from payment.models import Payment
@@ -54,7 +55,7 @@ class PaymentAdminInline(admin.StackedInline):
 
 class StatusFilter(admin.SimpleListFilter):
     parameter_name = 'status'
-    title = 'status'
+    title = _('status')
 
     def lookups(self, request, model_admin):
         return CREDIT_STATUS

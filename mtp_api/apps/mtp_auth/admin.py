@@ -5,6 +5,7 @@ from django.contrib.admin.options import get_content_type_for_model
 from django.contrib.admin.templatetags.admin_list import _boolean_icon
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin
+from django.utils.translation import gettext_lazy as _
 
 from mtp_auth.forms import RestrictedUserChangeForm
 from mtp_auth.models import ApplicationGroupMapping, ApplicationUserMapping, FailedLoginAttempt, PrisonUserMapping
@@ -47,7 +48,7 @@ class PrisonUserMappingAdmin(ModelAdmin):
 @admin.register(User)
 class MtpUserAdmin(UserAdmin):
     list_display = UserAdmin.list_display + ('account_locked',)
-    actions = ['remove_account_lockouts']
+    actions = UserAdmin.actions + ['remove_account_lockouts']
     form = RestrictedUserChangeForm
 
     def remove_account_lockouts(self, request, instances):
@@ -59,7 +60,7 @@ class MtpUserAdmin(UserAdmin):
                 LogEntry.objects.log_action(
                     user_id=request.user.pk,
                     content_type_id=get_content_type_for_model(instance).pk, object_id=instance.pk,
-                    object_repr='Remove lockouts',
+                    object_repr=_('Remove lockouts'),
                     action_flag=CHANGE_LOG_ENTRY,
                 )
                 accounts.append(instance)
@@ -69,6 +70,7 @@ class MtpUserAdmin(UserAdmin):
         else:
             messages.info(request, 'No account lockouts to remove')
 
-    @classmethod
-    def account_locked(cls, instance):
-        return _boolean_icon(FailedLoginAttempt.objects.is_locked_out(user=instance))
+    def account_locked(self, instance):
+        return _boolean_icon(instance.is_locked_out)
+
+    account_locked.short_description = _('account locked')

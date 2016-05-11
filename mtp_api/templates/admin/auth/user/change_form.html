@@ -2,6 +2,10 @@
 {% load i18n %}
 
 {% block field_sets %}
+  {% if original.is_locked_out %}
+    <p class="errornote">{% trans 'This user is locked out' %}</p>
+  {% endif %}
+
   {{ block.super }}
 
   {% if change and user.is_superuser %}

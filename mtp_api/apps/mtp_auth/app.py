@@ -7,7 +7,6 @@ class AppConfig(DjangoAppConfig):
     verbose_name = _('MTP Authorisation')
 
     def ready(self):
-        from django.contrib.auth import get_user_model
+        from mtp_auth.models import patch_user_model
 
-        field = get_user_model()._meta.get_field('username')
-        field.error_messages['unique'] = _('That username already exists')
+        patch_user_model()
