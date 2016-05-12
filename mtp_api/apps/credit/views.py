@@ -15,6 +15,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 
+from core.filters import StatusChoiceFilter
 from mtp_auth.models import PrisonUserMapping
 from mtp_auth.permissions import CashbookClientIDPermissions
 from prison.models import Prison
@@ -31,17 +32,6 @@ from .signals import credit_prisons_need_updating
 User = get_user_model()
 
 logger = logging.getLogger('mtp')
-
-
-class StatusChoiceFilter(django_filters.ChoiceFilter):
-
-    def filter(self, qs, value):
-
-        if value in ([], (), {}, None, ''):
-            return qs
-
-        qs = qs.filter(**qs.model.STATUS_LOOKUP[value.lower()])
-        return qs
 
 
 class DateRangeField(forms.MultiValueField):
