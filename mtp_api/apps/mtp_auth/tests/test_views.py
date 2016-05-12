@@ -222,7 +222,7 @@ class CreateUserTestCase(APITestCase, AuthTestCaseMixin):
 
     def setUp(self):
         super().setUp()
-        self.cashbook_uas, self.pla_uas, self.bank_uas, _ = make_test_user_admins()
+        self.cashbook_uas, self.pla_uas, self.bank_uas, self.security_uas = make_test_user_admins()
 
     def get_url(self):
         return reverse('user-list')
@@ -249,7 +249,8 @@ class CreateUserTestCase(APITestCase, AuthTestCaseMixin):
             self.get_url(),
             format='json',
             data=user_data,
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(requester)
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(requester,
+                                                                    client_id=client_id)
         )
 
         make_user_admin = user_data.pop('user_admin', False)
@@ -295,6 +296,34 @@ class CreateUserTestCase(APITestCase, AuthTestCaseMixin):
             'bank-admin',
             [Group.objects.get(name='BankAdmin'),
              Group.objects.get(name='RefundBankAdmin')]
+        )
+
+    def test_create_prisoner_location_admin(self):
+        user_data = {
+            'username': 'new-location-admin',
+            'first_name': 'New',
+            'last_name': 'Location Admin',
+            'email': 'nla@mtp.local'
+        }
+        self._check_create_user_succeeds(
+            self.pla_uas[0],
+            user_data,
+            'noms-ops',
+            [Group.objects.get(name='PrisonerLocationAdmin')]
+        )
+
+    def test_create_security_staff(self):
+        user_data = {
+            'username': 'new-security-staff',
+            'first_name': 'New',
+            'last_name': 'Security Staff',
+            'email': 'nss@mtp.local'
+        }
+        self._check_create_user_succeeds(
+            self.security_uas[0],
+            user_data,
+            'noms-ops',
+            [Group.objects.get(name='Security')]
         )
 
     def test_create_prison_clerk(self):

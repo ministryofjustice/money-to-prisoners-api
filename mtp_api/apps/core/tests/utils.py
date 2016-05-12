@@ -69,7 +69,8 @@ def make_applications():
     make_application(user, CASHBOOK_OAUTH_CLIENT_ID,
                      [Group.objects.get(name='PrisonClerk')])
     make_application(user, NOMS_OPS_OAUTH_CLIENT_ID,
-                     [Group.objects.get(name='PrisonerLocationAdmin')])
+                     [Group.objects.get(name='PrisonerLocationAdmin'),
+                      Group.objects.get(name='Security')])
     make_application(user, BANK_ADMIN_OAUTH_CLIENT_ID,
                      [Group.objects.get(name='BankAdmin'),
                       Group.objects.get(name='RefundBankAdmin')])
