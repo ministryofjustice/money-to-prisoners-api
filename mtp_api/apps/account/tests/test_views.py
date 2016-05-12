@@ -15,7 +15,7 @@ class CreateBatchViewTestCase(AuthTestCaseMixin, APITestCase):
 
     def setUp(self):
         super().setUp()
-        self.prison_clerks, _, self.bank_admins, _, _ = make_test_users()
+        self.prison_clerks, _, self.bank_admins, _, _, _ = make_test_users()
 
     def test_permissions_required(self):
         user = self.prison_clerks[0]
@@ -99,7 +99,7 @@ class ListBatchViewTestCase(AuthTestCaseMixin, APITestCase):
 
     def setUp(self):
         super().setUp()
-        self.prison_clerks, _, self.bank_admins, _, _ = make_test_users()
+        self.prison_clerks, _, self.bank_admins, _, _, _ = make_test_users()
 
     def test_get_batch_by_type(self):
         user = self.bank_admins[0]
@@ -173,7 +173,7 @@ class CreateBalanceTestCase(AuthTestCaseMixin, APITestCase):
 
     def setUp(self):
         super().setUp()
-        self.prison_clerks, _, self.bank_admins, _, _ = make_test_users()
+        self.prison_clerks, _, self.bank_admins, _, _, _ = make_test_users()
 
     def test_permissions_required(self):
         user = self.prison_clerks[0]
@@ -245,7 +245,7 @@ class ListBalanceViewTestCase(AuthTestCaseMixin, APITestCase):
 
     def setUp(self):
         super().setUp()
-        self.prison_clerks, _, self.bank_admins, _, _ = make_test_users()
+        self.prison_clerks, _, self.bank_admins, _, _, _ = make_test_users()
 
     def test_get_balance_is_ordered_by_date_desc(self):
         user = self.bank_admins[0]

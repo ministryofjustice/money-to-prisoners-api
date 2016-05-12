@@ -50,6 +50,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     @atomic
     def create(self, validated_data):
+        creating_user = self.context['request'].user
         make_user_admin = validated_data.pop('user_admin', False)
         new_user = super().create(validated_data)
 
@@ -68,12 +69,12 @@ class UserSerializer(serializers.ModelSerializer):
             application__client_id=client_application.client_id
         )
         for groupmapping in groupmappings:
-            new_user.groups.add(groupmapping.group)
+            if groupmapping.group in creating_user.groups.all():
+                new_user.groups.add(groupmapping.group)
         if make_user_admin:
             new_user.groups.add(Group.objects.get(name='UserAdmin'))
         new_user.save()
 
-        creating_user = self.context['request'].user
         prisons = PrisonUserMapping.objects.get_prison_set_for_user(creating_user)
         if len(prisons) > 0:
             pu = PrisonUserMapping.objects.create(user=new_user)

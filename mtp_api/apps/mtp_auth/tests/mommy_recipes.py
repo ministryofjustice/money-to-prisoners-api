@@ -90,6 +90,18 @@ def create_prisoner_location_admin(name_and_password='prisoner-location-admin'):
     return plu
 
 
+def create_security_staff_user(name_and_password='security-staff'):
+    security_staff_group = Group.objects.get(name='Security')
+    plu = create_basic_user(
+        name_and_password,
+        [security_staff_group],
+        first_name='Security',
+        last_name='Staff',
+    )
+
+    return plu
+
+
 def create_bank_admin(name_and_password='bank-admin'):
     bank_admin_group = Group.objects.get(name='BankAdmin')
     ba = create_basic_user(

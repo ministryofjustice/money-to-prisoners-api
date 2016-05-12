@@ -23,7 +23,7 @@ class BaseTransactionViewTestCase(AuthTestCaseMixin, APITestCase):
         (
             self.prison_clerks, self.prisoner_location_admins,
             self.bank_admins, self.refund_bank_admins,
-            self.send_money_users,
+            self.send_money_users, self.security_staff
         ) = make_test_users(clerks_per_prison=2)
 
         self.latest_transaction_date = latest_transaction_date()
