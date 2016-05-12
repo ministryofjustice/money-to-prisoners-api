@@ -22,7 +22,7 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
         super(PrisonerLocationViewTestCase, self).setUp()
         (self.prison_clerks, self.users,
          self.bank_admins, self.refund_bank_admins,
-         self.send_money_users) = make_test_users()
+         self.send_money_users, _) = make_test_users()
         self.prisons = Prison.objects.all()
 
     @property
@@ -212,7 +212,7 @@ class PrisonerValidityViewTestCase(AuthTestCaseMixin, APITestCase):
         super().setUp()
         (self.prison_clerks, self.prisoner_location_admins,
          self.bank_admins, self.refund_bank_admins,
-         self.send_money_users) = make_test_users()
+         self.send_money_users, _) = make_test_users()
         generate_transactions(transaction_batch=10)
         self.prisoner_locations = PrisonerLocation.objects.all()
 

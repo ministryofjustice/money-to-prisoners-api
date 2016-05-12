@@ -37,13 +37,13 @@ class GetUserTestCase(APITestCase, AuthTestCaseMixin):
         (
             self.prison_clerks, self.prisoner_location_admins,
             self.bank_admins, self.refund_bank_admins,
-            self.send_money_users,
+            self.send_money_users, _
         ) = make_test_users(clerks_per_prison=2)
         self.test_users = (
             self.prison_clerks + self.prisoner_location_admins +
             self.bank_admins + self.refund_bank_admins
         )
-        _, _, self.bank_uas = make_test_user_admins()
+        _, _, self.bank_uas, _ = make_test_user_admins()
 
         self.prisons = Prison.objects.all()
 
@@ -143,9 +143,9 @@ class ListUserTestCase(APITestCase, AuthTestCaseMixin):
         super().setUp()
         (
             self.prison_clerks, self.prisoner_location_admins,
-            self.bank_admins, self.refund_bank_admins, _
+            self.bank_admins, self.refund_bank_admins, _, _
         ) = make_test_users(clerks_per_prison=1)
-        self.cashbook_uas, self.pla_uas, self.bank_uas = make_test_user_admins()
+        self.cashbook_uas, self.pla_uas, self.bank_uas, _ = make_test_user_admins()
 
     def get_url(self):
         return reverse('user-list')
@@ -222,13 +222,13 @@ class CreateUserTestCase(APITestCase, AuthTestCaseMixin):
 
     def setUp(self):
         super().setUp()
-        self.cashbook_uas, self.pla_uas, self.bank_uas = make_test_user_admins()
+        self.cashbook_uas, self.pla_uas, self.bank_uas, _ = make_test_user_admins()
 
     def get_url(self):
         return reverse('user-list')
 
     def test_normal_user_cannot_create_user(self):
-        _, _, bank_admins, _, _ = make_test_users(clerks_per_prison=1)
+        _, _, bank_admins, _, _, _ = make_test_users(clerks_per_prison=1)
         user_data = {
             'username': 'new-bank-admin',
             'first_name': 'New',
@@ -374,8 +374,8 @@ class UpdateUserTestCase(APITestCase, AuthTestCaseMixin):
     def setUp(self):
         super().setUp()
         (self.prison_clerks, self.prisoner_location_admins,
-         self.bank_admins, self.refund_bank_admins, _) = make_test_users(clerks_per_prison=1)
-        self.cashbook_uas, self.pla_uas, self.bank_uas = make_test_user_admins()
+         self.bank_admins, self.refund_bank_admins, _, _) = make_test_users(clerks_per_prison=1)
+        self.cashbook_uas, self.pla_uas, self.bank_uas, _ = make_test_user_admins()
 
     def get_url(self, username):
         return reverse('user-detail', kwargs={'username': username})
@@ -529,8 +529,8 @@ class DeleteUserTestCase(APITestCase, AuthTestCaseMixin):
     def setUp(self):
         super().setUp()
         (self.prison_clerks, self.prisoner_location_admins,
-         self.bank_admins, self.refund_bank_admins, _) = make_test_users(clerks_per_prison=1)
-        self.cashbook_uas, self.pla_uas, self.bank_uas = make_test_user_admins()
+         self.bank_admins, self.refund_bank_admins, _, _) = make_test_users(clerks_per_prison=1)
+        self.cashbook_uas, self.pla_uas, self.bank_uas, _ = make_test_user_admins()
 
     def get_url(self, username):
         return reverse('user-detail', kwargs={'username': username})
@@ -592,7 +592,7 @@ class UserApplicationValidationTestCase(APITestCase):
 
     def setUp(self):
         super(UserApplicationValidationTestCase, self).setUp()
-        self.prison_clerks, self.users, self.bank_admins, _, _ = make_test_users()
+        self.prison_clerks, self.users, self.bank_admins, _, _, _ = make_test_users()
 
     def test_prison_clerk_can_log_in_to_cashbook(self):
         response = self.client.post(

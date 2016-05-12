@@ -16,7 +16,7 @@ class CreatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
 
     def setUp(self):
         super().setUp()
-        self.prison_clerks, _, _, _, self.send_money_users = make_test_users()
+        self.prison_clerks, _, _, _, self.send_money_users, _ = make_test_users()
 
     def test_permissions_required(self):
         user = self.prison_clerks[0]
@@ -77,7 +77,7 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
 
     def setUp(self):
         super().setUp()
-        self.prison_clerks, _, _, _, self.send_money_users = make_test_users()
+        self.prison_clerks, _, _, _, self.send_money_users, _ = make_test_users()
 
     def _test_update_status(self, new_outcome):
         user = self.send_money_users[0]
@@ -161,7 +161,7 @@ class GetPaymentViewTestCase(AuthTestCaseMixin, APITestCase):
 
     def setUp(self):
         super().setUp()
-        self.prison_clerks, _, _, _, self.send_money_users = make_test_users()
+        self.prison_clerks, _, _, _, self.send_money_users, _ = make_test_users()
 
     def test_get_payment(self):
         user = self.send_money_users[0]

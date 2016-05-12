@@ -13,7 +13,8 @@ from mtp_auth.models import (
 )
 from mtp_auth.tests.mommy_recipes import (
     create_prison_clerk, create_prisoner_location_admin, create_bank_admin,
-    create_refund_bank_admin, create_send_money_shared_user, create_user_admin
+    create_refund_bank_admin, create_send_money_shared_user, create_user_admin,
+    create_security_staff_user
 )
 from prison.models import Prison
 
@@ -106,6 +107,8 @@ def make_test_users(clerks_per_prison=2):
     # send money shared user
     send_money_users = [create_send_money_shared_user()]
 
+    security_users = [create_security_staff_user()]
+
     # create test oauth applications
     make_applications()
 
@@ -121,10 +124,11 @@ def make_test_users(clerks_per_prison=2):
     link_users_with_client(bank_admins, BANK_ADMIN_OAUTH_CLIENT_ID)
     link_users_with_client(refund_bank_admins, BANK_ADMIN_OAUTH_CLIENT_ID)
     link_users_with_client(send_money_users, SEND_MONEY_CLIENT_ID)
+    link_users_with_client(security_users, NOMS_OPS_OAUTH_CLIENT_ID)
 
     return (prison_clerks, prisoner_location_admins,
             bank_admins, refund_bank_admins,
-            send_money_users)
+            send_money_users, security_users)
 
 
 def make_test_user_admins():
@@ -136,6 +140,11 @@ def make_test_user_admins():
         )
 
     # prisoner location user admins
+    security_users = [
+        create_user_admin(create_security_staff_user,
+                          name_and_password='security-user-admin')]
+
+    # security staff user admins
     prisoner_location_admins = [
         create_user_admin(create_prisoner_location_admin,
                           name_and_password='pla-user-admin')]
@@ -160,5 +169,6 @@ def make_test_user_admins():
     link_users_with_client(prison_clerks, CASHBOOK_OAUTH_CLIENT_ID)
     link_users_with_client(prisoner_location_admins, NOMS_OPS_OAUTH_CLIENT_ID)
     link_users_with_client(refund_bank_admins, BANK_ADMIN_OAUTH_CLIENT_ID)
+    link_users_with_client(security_users, NOMS_OPS_OAUTH_CLIENT_ID)
 
-    return (prison_clerks, prisoner_location_admins, refund_bank_admins)
+    return (prison_clerks, prisoner_location_admins, refund_bank_admins, security_users)
