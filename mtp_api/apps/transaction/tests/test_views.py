@@ -392,41 +392,38 @@ class GetTransactionsBaseTestCase(
 
 class GetTransactionsAsBankAdminTestCase(GetTransactionsBaseTestCase):
 
-    def _get_with_status(self, user, status_arg):
+    def _get_with_status(self, user, status):
         url = self._get_url()
 
         response = self.client.get(
-            url, {'status': status_arg, 'limit': 1000}, format='json',
+            url, {'status': status, 'limit': 1000}, format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
         self.assertEqual(response.status_code, http_status.HTTP_200_OK)
 
         return response.data
 
-    def _test_get_list_with_status(self, status_str_arg, statuses):
+    def _test_get_list_with_status(self, status):
         data = self._get_with_status(self._get_authorised_user(),
-                                     status_str_arg)
+                                     status)
 
         # check that all matching db records are returned
-        db_ids = []
-        for status in statuses:
-            ts = list(Transaction.objects.filter(
-                **Transaction.STATUS_LOOKUP[status]))
-            db_ids += [t.id for t in ts]
+        ts = list(Transaction.objects.filter(
+            **Transaction.STATUS_LOOKUP[status]))
+        db_ids = [t.id for t in ts]
         self.assertEqual(len(set(db_ids)), len(data['results']))
 
         # check that all results match one of the provided statuses
         for t in data['results']:
             matches_one = False
-            for status in statuses:
-                try:
-                    Transaction.objects.get(
-                        id=t['id'],
-                        **Transaction.STATUS_LOOKUP[status])
-                    matches_one = True
-                    break
-                except Transaction.DoesNotExist:
-                    pass
+            try:
+                Transaction.objects.get(
+                    id=t['id'],
+                    **Transaction.STATUS_LOOKUP[status])
+                matches_one = True
+                break
+            except Transaction.DoesNotExist:
+                pass
             self.assertTrue(matches_one)
 
         return data['results']
@@ -449,10 +446,8 @@ class GetTransactionsAsBankAdminTestCase(GetTransactionsBaseTestCase):
                             'sender_roll_number' not in t and
                             'sender_name' not in t)
 
-    def _test_get_list_with_status_verify_fields(
-        self, status_str_arg, statuses
-    ):
-        results = self._test_get_list_with_status(status_str_arg, statuses)
+    def _test_get_list_with_status_verify_fields(self, status):
+        results = self._test_get_list_with_status(status)
         self._assert_required_fields_present(results)
         self._assert_hidden_fields_absent(results)
 
@@ -463,17 +458,13 @@ class GetTransactionsAsBankAdminTestCase(GetTransactionsBaseTestCase):
         self._assert_required_fields_present(data['results'])
         self._assert_hidden_fields_absent(data['results'])
 
-    def test_get_list_refund_pending(self):
-        self._test_get_list_with_status_verify_fields(
-            'refundable',
-            ['refundable'])
+    def test_get_list_refundable(self):
+        self._test_get_list_with_status_verify_fields('refundable')
 
-    def test_get_list_credit_refunded(self):
-        self._test_get_list_with_status_verify_fields(
-            'creditable,refundable',
-            ['creditable', 'refundable'])
+    def test_get_list_creditable(self):
+        self._test_get_list_with_status_verify_fields('creditable')
 
-    def test_get_list_invalid_status_bad_request(self):
+    def test_get_list_invalid_status_returns_no_results(self):
         url = self._get_url()
         user = self._get_authorised_user()
 
@@ -481,7 +472,7 @@ class GetTransactionsAsBankAdminTestCase(GetTransactionsBaseTestCase):
             url, {'status': 'not_a_real_status'}, format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
-        self.assertEqual(response.status_code, http_status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(len(response.data['results']), 0)
 
 
 class GetTransactionsAsRefundBankAdminTestCase(GetTransactionsAsBankAdminTestCase):

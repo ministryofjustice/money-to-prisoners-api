@@ -6,12 +6,13 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import mixins, viewsets, status, filters, generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.exceptions import ParseError
 import django_filters
 
+from core.filters import StatusChoiceFilter
 from credit.models import Credit
 from mtp_auth.permissions import BankAdminClientIDPermissions
 from transaction.models import Transaction
+from .constants import TRANSACTION_STATUS
 from .permissions import TransactionPermissions
 from .serializers import CreateTransactionSerializer, \
     UpdateRefundedTransactionSerializer, TransactionSerializer, \
@@ -21,29 +22,13 @@ logger = logging.getLogger('mtp')
 
 
 class TransactionListFilter(django_filters.FilterSet):
-    status = django_filters.MethodFilter(action='filter_status')
+    status = StatusChoiceFilter(choices=TRANSACTION_STATUS.choices)
     batch = django_filters.MethodFilter(action='filter_batch')
     exclude_batch_label = django_filters.MethodFilter(action='filter_exclude_batch_label')
 
     class Meta:
         model = Transaction
         fields = {'received_at': ['lt', 'gte']}
-
-    def filter_status(self, queryset, value):
-        if value:
-            values = [v.lower() for v in value.split(',')]
-
-            if len(values) > 0:
-                try:
-                    status_set = queryset.filter(
-                        **Transaction.STATUS_LOOKUP[values[0]])
-                    for value in values[1:]:
-                        status_set = status_set | queryset.filter(
-                            **Transaction.STATUS_LOOKUP[value])
-                    queryset = status_set
-                except KeyError:
-                    raise ParseError()
-        return queryset
 
     def filter_batch(self, queryset, value):
         return queryset.filter(batch__id=value)
