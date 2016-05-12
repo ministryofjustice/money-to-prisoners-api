@@ -171,7 +171,7 @@ class ResetPasswordView(generics.GenericAPIView):
                 user = self.queryset.get(username=serializer.validated_data['username'])
             except User.DoesNotExist:
                 return self.failure_response('not_found', field='username')
-            if FailedLoginAttempt.objects.is_locked_out(user):
+            if user.is_locked_out:
                 return self.failure_response('locked_out', field='username')
             if not user.email:
                 return self.failure_response('no_email', field='username')

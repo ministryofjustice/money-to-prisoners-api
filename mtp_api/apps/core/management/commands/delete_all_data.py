@@ -5,6 +5,8 @@ from django.contrib.auth import get_user_model
 from django.core.management import BaseCommand, CommandError
 
 from account.models import Batch, Balance
+from credit.models import Credit
+from payment.models import Payment
 from prison.models import Prison, PrisonerLocation
 from transaction.models import Transaction
 
@@ -26,7 +28,7 @@ class Command(BaseCommand):
         parser.add_argument('--protect-prisoner-locations', action='store_true',
                             help='Prevents prisoner locations from being deleted')
         parser.add_argument('--protect-transactions', action='store_true',
-                            help='Prevents existing transactions from being deleted')
+                            help='Prevents existing credits/payments/transactions from being deleted')
 
     def handle(self, *args, **options):
         if settings.ENVIRONMENT == 'prod':
@@ -46,6 +48,8 @@ class Command(BaseCommand):
             Balance.objects.all().delete()
             Batch.objects.all().delete()
             Transaction.objects.all().delete()
+            Payment.objects.all().delete()
+            Credit.objects.all().delete()
 
         if not protect_prisoner_locations:
             print_message('Deleting all prisoner locations')

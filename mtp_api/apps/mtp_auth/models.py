@@ -1,8 +1,10 @@
 import datetime
 
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.db import models
 from django.utils.timezone import now
+from django.utils.translation import gettext_lazy as _
 from model_utils.models import TimeStampedModel
 
 from prison.models import Prison
@@ -82,3 +84,14 @@ class FailedLoginAttempt(TimeStampedModel):
 
     def __str__(self):
         return self.user.username
+
+
+def patch_user_model():
+    user_model = get_user_model()
+
+    # add shortcut for chechking non-app-specific lock-outs
+    user_model.is_locked_out = property(lambda u: FailedLoginAttempt.objects.is_locked_out(user=u))
+
+    # update default error messages
+    username_field = user_model._meta.get_field('username')
+    username_field.error_messages['unique'] = _('That username already exists')
