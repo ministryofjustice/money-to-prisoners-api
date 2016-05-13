@@ -96,7 +96,7 @@ def make_test_users(clerks_per_prison=2):
     prison_clerks = []
     for prison in Prison.objects.all():
         for _ in range(clerks_per_prison):
-            prison_clerks.append(create_prison_clerk(prison=prison))
+            prison_clerks.append(create_prison_clerk(prisons=[prison]))
 
     # prisoner location admin
     prisoner_location_admins = [create_prisoner_location_admin()]
@@ -108,7 +108,7 @@ def make_test_users(clerks_per_prison=2):
     # send money shared user
     send_money_users = [create_send_money_shared_user()]
 
-    security_users = [create_security_staff_user()]
+    security_users = [create_security_staff_user(prisons=list(Prison.objects.all()))]
 
     # create test oauth applications
     make_applications()
@@ -137,12 +137,12 @@ def make_test_user_admins():
     prison_clerks = []
     for prison in Prison.objects.all():
         prison_clerks.append(create_user_admin(
-            create_prison_clerk, prison=prison, name_and_password='user-admin')
+            create_prison_clerk, prisons=[prison], name_and_password='user-admin')
         )
 
     # prisoner location user admins
     security_users = [
-        create_user_admin(create_security_staff_user,
+        create_user_admin(create_security_staff_user, prisons=list(Prison.objects.all()),
                           name_and_password='security-user-admin')]
 
     # security staff user admins

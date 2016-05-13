@@ -33,6 +33,7 @@ class Credit(TimeStampedModel):
     class Meta:
         permissions = (
             ('view_credit', 'Can view credit'),
+            ('view_any_credit', 'Can view any credit'),
             ('lock_credit', 'Can lock credit'),
             ('unlock_credit', 'Can unlock credit'),
             ('patch_credited_credit', 'Can patch credited credit'),
@@ -168,6 +169,18 @@ class Credit(TimeStampedModel):
     @property
     def sender(self):
         return self.transaction.sender_name if hasattr(self, 'transaction') else None
+
+    @property
+    def sender_sort_code(self):
+        return self.transaction.sender_sort_code if hasattr(self, 'transaction') else None
+
+    @property
+    def sender_account_number(self):
+        return self.transaction.sender_account_number if hasattr(self, 'transaction') else None
+
+    @property
+    def sender_roll_number(self):
+        return self.transaction.sender_roll_number if hasattr(self, 'transaction') else None
 
     @property
     def credited_at(self):

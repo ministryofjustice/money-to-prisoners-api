@@ -45,6 +45,36 @@ class CreditSerializer(serializers.ModelSerializer):
         )
 
 
+class SecurityCreditSerializer(serializers.ModelSerializer):
+    sender = serializers.CharField(read_only=True)
+    sender_sort_code = serializers.CharField(read_only=True)
+    sender_account_number = serializers.CharField(read_only=True)
+    sender_roll_number = serializers.CharField(read_only=True)
+    owner_name = serializers.CharField(read_only=True)
+    credited_at = serializers.DateTimeField(read_only=True)
+    refunded_at = serializers.DateTimeField(read_only=True)
+
+    class Meta:
+        model = Credit
+        fields = (
+            'id',
+            'prisoner_name',
+            'prisoner_number',
+            'amount',
+            'received_at',
+            'sender',
+            'sender_sort_code',
+            'sender_account_number',
+            'sender_roll_number',
+            'prison',
+            'owner',
+            'owner_name',
+            'resolution',
+            'credited_at',
+            'refunded_at',
+        )
+
+
 class LockedCreditSerializer(CreditSerializer):
     locked = serializers.BooleanField(read_only=True)
     locked_at = serializers.DateTimeField(read_only=True)

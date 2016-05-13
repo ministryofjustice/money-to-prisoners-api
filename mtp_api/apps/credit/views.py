@@ -17,14 +17,16 @@ from rest_framework.reverse import reverse
 
 from core.filters import StatusChoiceFilter
 from mtp_auth.models import PrisonUserMapping
-from mtp_auth.permissions import CashbookClientIDPermissions
+from mtp_auth.permissions import (
+    CashbookClientIDPermissions, NomsOpsCashbookClientIDPermissions
+)
 from prison.models import Prison
 from transaction.pagination import DateBasedPagination
 from .constants import CREDIT_STATUS, LOCK_LIMIT
 from .models import Credit
 from .permissions import CreditPermissions
 from .serializers import (
-    CreditSerializer, CreditedOnlyCreditSerializer,
+    CreditSerializer, SecurityCreditSerializer, CreditedOnlyCreditSerializer,
     IdsCreditSerializer, LockedCreditSerializer
 )
 from .signals import credit_prisons_need_updating
@@ -105,9 +107,13 @@ class CreditListFilter(django_filters.FilterSet):
     user = django_filters.ModelChoiceFilter(name='owner', queryset=User.objects.all())
     received_at = CreditReceivedAtRangeFilter()
     search = CreditTextSearchFilter()
+    sender_sort_code = django_filters.CharFilter(name="transaction__sender_sort_code")
+    sender_account_number = django_filters.CharFilter(name="transaction__sender_account_number")
+    sender_roll_number = django_filters.CharFilter(name="transaction__sender_roll_number")
 
     class Meta:
         model = Credit
+        fields = ('prisoner_number',)
 
 
 class CreditViewMixin(object):
@@ -119,16 +125,22 @@ class CreditViewMixin(object):
 
 
 class GetCredits(CreditViewMixin, generics.ListAPIView):
-    serializer_class = CreditSerializer
     filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter)
     filter_class = CreditListFilter
     ordering_fields = ('created',)
     action = 'list'
 
     permission_classes = (
-        IsAuthenticated, CashbookClientIDPermissions,
+        IsAuthenticated, NomsOpsCashbookClientIDPermissions,
         CreditPermissions
     )
+
+    def get_serializer_class(self):
+        if self.request.user.has_perm(
+                'transaction.view_bank_details_transaction'):
+            return SecurityCreditSerializer
+        else:
+            return CreditSerializer
 
 
 class DatePaginatedCredits(GetCredits):
@@ -212,8 +224,16 @@ class CreditList(View):
         return CreditCredits.as_view()(request, *args, **kwargs)
 
 
-class LockedCreditList(GetCredits):
+class LockedCreditList(CreditViewMixin, generics.ListAPIView):
     serializer_class = LockedCreditSerializer
+    filter_backends = (filters.OrderingFilter,)
+    ordering_fields = ('created',)
+    action = 'list'
+
+    permission_classes = (
+        IsAuthenticated, CashbookClientIDPermissions,
+        CreditPermissions
+    )
 
     def get_queryset(self):
         queryset = super().get_queryset()

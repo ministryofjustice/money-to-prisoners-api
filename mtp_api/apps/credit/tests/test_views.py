@@ -84,6 +84,18 @@ class CreditListTestCase(
             user_checker = noop_checker
         received_at_checker = self._get_received_at_checker(filters, noop_checker)
         search_checker = self._get_search_checker(filters, noop_checker)
+        sender_sort_code_checker = self._get_attribute_checker(
+            'sender_sort_code', filters, noop_checker
+        )
+        sender_account_number_checker = self._get_attribute_checker(
+            'sender_account_number', filters, noop_checker
+        )
+        sender_roll_number_checker = self._get_attribute_checker(
+            'sender_roll_number', filters, noop_checker
+        )
+        prisoner_number_checker = self._get_attribute_checker(
+            'prisoner_number', filters, noop_checker
+        )
 
         expected_ids = [
             c.pk
@@ -92,7 +104,11 @@ class CreditListTestCase(
             prison_checker(c) and
             user_checker(c) and
             received_at_checker(c) and
-            search_checker(c)
+            search_checker(c) and
+            sender_sort_code_checker(c) and
+            sender_account_number_checker(c) and
+            sender_roll_number_checker(c) and
+            prisoner_number_checker(c)
         ]
         self.assertEqual(response.data['count'], len(expected_ids))
         self.assertListEqual(
@@ -105,6 +121,11 @@ class CreditListTestCase(
             self.assertNotIn(key, response.data)
 
         return response
+
+    def _get_attribute_checker(self, attribute, filters, noop_checker):
+        if filters.get(attribute):
+            return lambda c: getattr(c, attribute) == filters[attribute]
+        return noop_checker
 
     def _get_received_at_checker(self, filters, noop_checker):
         def parse_date(date):
@@ -796,6 +817,75 @@ class DateBasedPaginationTestCase(CreditListTestCase):
                                                'ordering': '-received_at',
                                                'page': 2},
                                       **expected)
+
+
+class SecurityCreditListTestCase(CreditListTestCase):
+
+    def _get_authorised_user(self):
+        return self.security_staff[0]
+
+    def _test_response_with_filters(self, filters={}):
+        response = super()._test_response_with_filters(filters)
+        for response_credit in response.data['results']:
+            db_credit = Credit.objects.get(pk=response_credit['id'])
+            self.assertEqual(
+                db_credit.sender_sort_code,
+                response_credit.get('sender_sort_code')
+            )
+            self.assertEqual(
+                db_credit.sender_account_number,
+                response_credit.get('sender_account_number')
+            )
+            self.assertEqual(
+                db_credit.sender_roll_number,
+                response_credit.get('sender_roll_number')
+            )
+
+
+class TransactionSenderDetailsCreditListTestCase(SecurityCreditListTestCase):
+
+    def test_sort_code_filter(self):
+        random_sort_code = (
+            Credit.objects.filter(transaction__sender_sort_code__isnull=False)
+            .exclude(transaction__sender_sort_code='')
+            .order_by('?').first().sender_sort_code
+        )
+        self._test_response_with_filters(filters={
+            'sender_sort_code': random_sort_code
+        })
+
+    def test_account_number_filter(self):
+        random_account_number = (
+            Credit.objects.filter(transaction__sender_account_number__isnull=False)
+            .exclude(transaction__sender_account_number='')
+            .order_by('?').first().sender_account_number
+        )
+        self._test_response_with_filters(filters={
+            'sender_account_number': random_account_number
+        })
+
+    def test_roll_number_filter(self):
+        random_roll_number = (
+            Credit.objects.filter(transaction__sender_roll_number__isnull=False)
+            .exclude(transaction__sender_roll_number='')
+            .order_by('?').first().sender_roll_number
+        )
+        self._test_response_with_filters(filters={
+            'sender_roll_number': random_roll_number
+        })
+
+
+class PrisonerNumberCreditListTestCase(SecurityCreditListTestCase):
+
+    def test_prisoner_number_filter(self):
+        random_prisoner_number = (
+            Credit.objects.filter(prisoner_number__isnull=False)
+            .exclude(prisoner_number='')
+            .order_by('?').first().prisoner_number
+        )
+        self._test_response_with_filters(filters={
+            'prisoner_number': random_prisoner_number
+        })
 
 
 class LockCreditTestCase(
