@@ -101,7 +101,14 @@ class DashboardView(AdminViewMixin, TemplateView, metaclass=MediaDefiningClass):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['dashboard_modules'] = self.get_dashboards()
+        dashboard_modules = self.get_dashboards()
+        combined_media = self.media
+        for dashboard_module in dashboard_modules:
+            combined_media += dashboard_module.media
+        context.update({
+            'dashboard_modules': dashboard_modules,
+            'combined_media': combined_media,
+        })
         return context
 
 

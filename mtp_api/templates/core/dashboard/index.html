@@ -4,10 +4,7 @@
 {% block extrahead %}
   {{ block.super }}
 
-  {{ view.media }}
-  {% for dashboard_module in dashboard_modules %}
-    {{ dashboard_module.media }}
-  {% endfor %}
+  {{ combined_media }}
 {% endblock %}
 
 {% block content %}

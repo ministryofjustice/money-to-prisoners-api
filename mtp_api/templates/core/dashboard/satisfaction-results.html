@@ -1,0 +1,14 @@
+{% extends 'core/dashboard/module.html' %}
+
+{% block module_tbody %}
+  <tr>
+    <td>
+      <script>
+        var satisfactionResultsData = {{ dashboard_module.get_chart_data }};
+      </script>
+      {% for question in dashboard_module.questions %}
+        <div id="satisfaction-results-chart-{{ question.id }}" class="satisfaction-results-chart" data-title="{{ question.title }}"></div>
+      {% endfor %}
+    </td>
+  </tr>
+{% endblock %}

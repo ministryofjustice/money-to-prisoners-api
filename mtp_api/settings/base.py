@@ -142,6 +142,13 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'mtp',
+    }
+}
+
 EMAIL_BACKEND = 'django_mailgun.MailgunBackend'
 MAILGUN_ACCESS_KEY = os.environ.get('MAILGUN_ACCESS_KEY', '')
 MAILGUN_SERVER_NAME = os.environ.get('MAILGUN_SERVER_NAME', '')
@@ -235,6 +242,7 @@ RUN_CLEANUP_TASKS = os.environ.get('RUN_CLEANUP_TASKS') == 'True'
 
 REF_CODE_BASE = 900001
 
+SURVEY_GIZMO_API_KEY = os.environ.get('SURVEY_GIZMO_API_KEY')
 
 try:
     from .local import *  # noqa
