@@ -84,3 +84,37 @@ class LockedCreditSerializer(CreditSerializer):
             'locked',
             'locked_at',
         )
+
+
+class RecipientSerializer(serializers.Serializer):
+    prisoner_number = serializers.CharField()
+    prisoner_name = serializers.CharField()
+    credit_total = serializers.IntegerField()
+    credit_count = serializers.IntegerField()
+
+    class Meta:
+        fields = (
+            'prisoner_number',
+            'prisoner_name',
+            'credit_total',
+            'credit_count',
+        )
+
+
+class SenderSerializer(serializers.Serializer):
+    sender = serializers.CharField(required=False)
+    sender_sort_code = serializers.CharField(required=False)
+    sender_account_number = serializers.CharField(required=False)
+    sender_roll_number = serializers.CharField(required=False)
+    recipient_count = serializers.IntegerField()
+    recipients = RecipientSerializer(many=True)
+
+    class Meta:
+        fields = (
+            'sender',
+            'sender_sort_code',
+            'sender_account_number',
+            'sender_roll_number',
+            'recipient_count',
+            'recipients',
+        )

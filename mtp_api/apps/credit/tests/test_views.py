@@ -6,6 +6,7 @@ import urllib.parse
 
 from django.conf import settings
 from django.core.urlresolvers import reverse
+from django.db import models
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.utils.dateformat import format as format_date
@@ -1248,3 +1249,133 @@ class CreditCreditTestCase(
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class SenderRecipientCountTestCase(BaseCreditViewTestCase):
+
+    def _get_authorised_user(self):
+        return self.security_staff[0]
+
+    def _get_url(self, **filters):
+        url = reverse('sender-list')
+
+        filters['limit'] = 1000
+        return '{url}?{filters}'.format(
+            url=url, filters=urllib.parse.urlencode(filters)
+        )
+
+    def _get_senders_multiple_recipients(self, **filters):
+        logged_in_user = self._get_authorised_user()
+
+        response = self.client.get(
+            self._get_url(**filters),
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+        return response
+
+    def test_get_senders_multiple_recipients(self):
+        response = self._get_senders_multiple_recipients()
+
+        for sender in response.data['results']:
+            # check recipient_count is correct (not including refunds)
+            recipient_count = Credit.objects.filter(
+                transaction__sender_name=sender['sender'],
+                transaction__sender_sort_code=sender['sender_sort_code'],
+                transaction__sender_account_number=sender['sender_account_number'],
+                transaction__sender_roll_number=sender['sender_roll_number'],
+            ).exclude(prisoner_number=None).values('prisoner_number').distinct().count()
+            self.assertEqual(
+                recipient_count,
+                sender['recipient_count']
+            )
+
+            # check refunds are included in recipients
+            refund_count = Credit.objects.filter(
+                transaction__sender_name=sender['sender'],
+                transaction__sender_sort_code=sender['sender_sort_code'],
+                transaction__sender_account_number=sender['sender_account_number'],
+                transaction__sender_roll_number=sender['sender_roll_number'],
+                prisoner_number=None
+            ).count()
+            if refund_count > 0:
+                self.assertEqual(sender['recipient_count'],
+                                 len(sender['recipients']) - 1)
+                refund_recipients = 0
+                for recipient in sender['recipients']:
+                    if recipient['prisoner_number'] is None:
+                        refund_recipients += 1
+                self.assertEqual(refund_recipients, 1)
+            else:
+                self.assertEqual(sender['recipient_count'],
+                                 len(sender['recipients']))
+                for recipient in sender['recipients']:
+                    self.assertNotEqual(recipient['prisoner_number'], None)
+
+    def test_set_senders_recipients_correct_credit_totals(self):
+        response = self._get_senders_multiple_recipients()
+
+        for sender in response.data['results']:
+            for recipient in sender['recipients']:
+                credits = Credit.objects.filter(
+                    transaction__sender_name=sender['sender'],
+                    transaction__sender_sort_code=sender['sender_sort_code'],
+                    transaction__sender_account_number=sender['sender_account_number'],
+                    transaction__sender_roll_number=sender['sender_roll_number'],
+                    prisoner_number=recipient['prisoner_number']
+                )
+                self.assertEqual(recipient['credit_count'], credits.count())
+                self.assertEqual(
+                    recipient['credit_total'],
+                    credits.aggregate(total=models.Sum('amount'))['total']
+                )
+
+    def test_get_senders_min_recipient_count(self):
+        min_recipient_count = 2
+        response = self._get_senders_multiple_recipients(
+            min_recipient_count=min_recipient_count)
+
+        for sender in response.data['results']:
+            self.assertGreaterEqual(sender['recipient_count'], min_recipient_count)
+
+    def test_get_senders_max_recipient_count(self):
+        max_recipient_count = 3
+        response = self._get_senders_multiple_recipients(
+            max_recipient_count=max_recipient_count)
+
+        for sender in response.data['results']:
+            self.assertLessEqual(sender['recipient_count'], max_recipient_count)
+
+    def test_get_senders_min_max_recipient_count(self):
+        min_recipient_count = 2
+        max_recipient_count = 3
+        response = self._get_senders_multiple_recipients(
+            min_recipient_count=min_recipient_count,
+            max_recipient_count=max_recipient_count
+        )
+
+        for sender in response.data['results']:
+            self.assertGreaterEqual(sender['recipient_count'], min_recipient_count)
+            self.assertLessEqual(sender['recipient_count'], max_recipient_count)
+
+    def test_get_senders_with_received_at(self):
+        end_date = self._get_latest_date()
+        start_date = end_date - datetime.timedelta(days=1)
+        response = self._get_senders_multiple_recipients(
+            received_at_0=format_date(start_date, 'Y-m-d'),
+            received_at_1=format_date(end_date, 'Y-m-d')
+        )
+
+        for sender in response.data['results']:
+            recipient_count = Credit.objects.filter(
+                transaction__sender_name=sender['sender'],
+                transaction__sender_sort_code=sender['sender_sort_code'],
+                transaction__sender_account_number=sender['sender_account_number'],
+                transaction__sender_roll_number=sender['sender_roll_number'],
+                received_at__date__gte=start_date,
+                received_at__date__lte=end_date
+            ).exclude(prisoner_number=None).values('prisoner_number').distinct().count()
+            self.assertEqual(
+                recipient_count,
+                sender['recipient_count']
+            )
