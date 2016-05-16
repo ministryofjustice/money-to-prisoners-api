@@ -34,6 +34,10 @@ class AnyAdminClientIDPermissions(ClientIDPermissions):
                  NOMS_OPS_OAUTH_CLIENT_ID)
 
 
+class NomsOpsCashbookClientIDPermissions(ClientIDPermissions):
+    client_id = (CASHBOOK_OAUTH_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID)
+
+
 class CashbookClientIDPermissions(ClientIDPermissions):
     client_id = CASHBOOK_OAUTH_CLIENT_ID
 

@@ -78,7 +78,8 @@
     "permissions": [
       ["view_credit", "credit", "credit"],
       ["view_transaction", "transaction", "transaction"],
-      ["view_payment", "payment", "payment"]
+      ["view_payment", "payment", "payment"],
+      ["view_bank_details_transaction", "transaction", "transaction"]
     ]
   }
 }

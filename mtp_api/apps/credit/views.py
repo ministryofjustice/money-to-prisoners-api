@@ -17,15 +17,18 @@ from rest_framework.reverse import reverse
 
 from core.filters import StatusChoiceFilter
 from mtp_auth.models import PrisonUserMapping
-from mtp_auth.permissions import CashbookClientIDPermissions
+from mtp_auth.permissions import (
+    CashbookClientIDPermissions, NomsOpsCashbookClientIDPermissions,
+    NomsOpsClientIDPermissions
+)
 from prison.models import Prison
 from transaction.pagination import DateBasedPagination
 from .constants import CREDIT_STATUS, LOCK_LIMIT
 from .models import Credit
 from .permissions import CreditPermissions
 from .serializers import (
-    CreditSerializer, CreditedOnlyCreditSerializer,
-    IdsCreditSerializer, LockedCreditSerializer
+    CreditSerializer, SecurityCreditSerializer, CreditedOnlyCreditSerializer,
+    IdsCreditSerializer, LockedCreditSerializer, SenderSerializer
 )
 from .signals import credit_prisons_need_updating
 
@@ -105,9 +108,13 @@ class CreditListFilter(django_filters.FilterSet):
     user = django_filters.ModelChoiceFilter(name='owner', queryset=User.objects.all())
     received_at = CreditReceivedAtRangeFilter()
     search = CreditTextSearchFilter()
+    sender_sort_code = django_filters.CharFilter(name="transaction__sender_sort_code")
+    sender_account_number = django_filters.CharFilter(name="transaction__sender_account_number")
+    sender_roll_number = django_filters.CharFilter(name="transaction__sender_roll_number")
 
     class Meta:
         model = Credit
+        fields = ('prisoner_number',)
 
 
 class CreditViewMixin(object):
@@ -119,16 +126,22 @@ class CreditViewMixin(object):
 
 
 class GetCredits(CreditViewMixin, generics.ListAPIView):
-    serializer_class = CreditSerializer
     filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter)
     filter_class = CreditListFilter
     ordering_fields = ('created',)
     action = 'list'
 
     permission_classes = (
-        IsAuthenticated, CashbookClientIDPermissions,
+        IsAuthenticated, NomsOpsCashbookClientIDPermissions,
         CreditPermissions
     )
+
+    def get_serializer_class(self):
+        if self.request.user.has_perm(
+                'transaction.view_bank_details_transaction'):
+            return SecurityCreditSerializer
+        else:
+            return CreditSerializer
 
 
 class DatePaginatedCredits(GetCredits):
@@ -212,8 +225,16 @@ class CreditList(View):
         return CreditCredits.as_view()(request, *args, **kwargs)
 
 
-class LockedCreditList(GetCredits):
+class LockedCreditList(CreditViewMixin, generics.ListAPIView):
     serializer_class = LockedCreditSerializer
+    filter_backends = (filters.OrderingFilter,)
+    ordering_fields = ('created',)
+    action = 'list'
+
+    permission_classes = (
+        IsAuthenticated, CashbookClientIDPermissions,
+        CreditPermissions
+    )
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -304,3 +325,103 @@ class UnlockCredits(CreditViewMixin, APIView):
             status=CREDIT_STATUS.AVAILABLE
         )
         return HttpResponseRedirect(redirect_url, status=drf_status.HTTP_303_SEE_OTHER)
+
+
+class SenderList(CreditViewMixin, generics.ListAPIView):
+    serializer_class = SenderSerializer
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_class = CreditListFilter
+    action = 'list'
+
+    permission_classes = (
+        IsAuthenticated, NomsOpsClientIDPermissions,
+        CreditPermissions
+    )
+
+    def get_queryset(self):
+        # restrict by prison access, but include refunds
+        return super().get_queryset() | Credit.objects.filter(prison=None)
+
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+
+        min_recipient_count = self.request.query_params.get('min_recipient_count', None)
+        max_recipient_count = self.request.query_params.get('max_recipient_count', None)
+        if min_recipient_count or max_recipient_count:
+            recipient_counts = (
+                queryset
+                .values(
+                    'transaction__sender_name',
+                    'transaction__sender_sort_code',
+                    'transaction__sender_account_number',
+                    'transaction__sender_roll_number',
+                )
+                .annotate(recipient_count=models.Count('prisoner_number',
+                                                       distinct=True))
+            )
+
+            if min_recipient_count:
+                recipient_counts = recipient_counts.filter(
+                    recipient_count__gte=min_recipient_count)
+            if max_recipient_count:
+                recipient_counts = recipient_counts.filter(
+                    recipient_count__lte=max_recipient_count)
+
+            queryset = queryset.filter(
+                transaction__sender_name__in=recipient_counts.values(
+                    'transaction__sender_name'),
+                transaction__sender_sort_code__in=recipient_counts.values(
+                    'transaction__sender_sort_code'),
+                transaction__sender_account_number__in=recipient_counts.values(
+                    'transaction__sender_account_number'),
+                transaction__sender_roll_number__in=recipient_counts.values(
+                    'transaction__sender_roll_number'),
+            )
+
+        credits_by_recipient = (
+            queryset
+            .values(
+                'transaction__sender_name',
+                'transaction__sender_sort_code',
+                'transaction__sender_account_number',
+                'transaction__sender_roll_number',
+                'prisoner_number',
+                'prisoner_name'
+            )
+            .annotate(credit_count=models.Count('*'))
+            .annotate(credit_total=models.Sum('amount'))
+            .order_by(
+                'transaction__sender_roll_number',
+                'transaction__sender_account_number',
+                'transaction__sender_sort_code',
+                'transaction__sender_name'
+            )
+        )
+        senders = []
+        for credit_count in credits_by_recipient:
+            recipient = {
+                'prisoner_number': credit_count['prisoner_number'],
+                'prisoner_name': credit_count['prisoner_name'],
+                'credit_count': credit_count['credit_count'],
+                'credit_total': credit_count['credit_total'],
+            }
+            if (len(senders) and
+                    senders[-1]['sender'] == credit_count['transaction__sender_name'] and
+                    senders[-1]['sender_sort_code'] == credit_count['transaction__sender_sort_code'] and
+                    senders[-1]['sender_account_number'] == credit_count['transaction__sender_account_number'] and
+                    senders[-1]['sender_roll_number'] == credit_count['transaction__sender_roll_number']):
+                senders[-1]['recipients'].append(recipient)
+                if recipient['prisoner_number'] is not None:
+                    senders[-1]['recipient_count'] += 1
+            else:
+                senders.append({
+                    'sender': credit_count['transaction__sender_name'],
+                    'sender_sort_code': credit_count['transaction__sender_sort_code'],
+                    'sender_account_number': credit_count['transaction__sender_account_number'],
+                    'sender_roll_number': credit_count['transaction__sender_roll_number'],
+                    'recipients': [recipient],
+                    'recipient_count': 0
+                })
+                if recipient['prisoner_number'] is not None:
+                    senders[-1]['recipient_count'] += 1
+        return senders

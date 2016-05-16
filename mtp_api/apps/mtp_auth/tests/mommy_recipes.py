@@ -52,10 +52,10 @@ def name_generator(name):
         yield from gen
 
 
-def create_prison_clerk(name_and_password=None, prison=None):
+def create_prison_clerk(name_and_password=None, prisons=[]):
     prison_clerk_group = Group.objects.get(name='PrisonClerk')
 
-    base_clerk_name = 'test-' + slugify(prison)
+    base_clerk_name = 'test-' + slugify(prisons[0])
     if name_and_password:
         base_clerk_name += '-' + name_and_password
     name_and_password = base_clerk_name
@@ -67,13 +67,13 @@ def create_prison_clerk(name_and_password=None, prison=None):
     user = create_basic_user(
         name_and_password,
         [prison_clerk_group],
-        first_name=prison.name,
+        first_name=prisons[0].name,
         last_name='Clerk %s' % name_suffix.upper() if name_suffix else 'Clerk',
     )
     pu = make(
         'mtp_auth.PrisonUserMapping',
         user=user,
-        prisons=[prison],
+        prisons=prisons,
     )
     return pu.user
 
@@ -90,16 +90,22 @@ def create_prisoner_location_admin(name_and_password='prisoner-location-admin'):
     return plu
 
 
-def create_security_staff_user(name_and_password='security-staff'):
+def create_security_staff_user(name_and_password='security-staff', prisons=[]):
     security_staff_group = Group.objects.get(name='Security')
-    plu = create_basic_user(
+    ssu = create_basic_user(
         name_and_password,
         [security_staff_group],
         first_name='Security',
         last_name='Staff',
     )
 
-    return plu
+    make(
+        'mtp_auth.PrisonUserMapping',
+        user=ssu,
+        prisons=prisons,
+    )
+
+    return ssu
 
 
 def create_bank_admin(name_and_password='bank-admin'):

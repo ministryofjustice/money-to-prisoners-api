@@ -27,10 +27,6 @@ User = get_user_model()
 fake = Faker(locale='en_GB')
 
 
-def random_sender_name():
-    return fake.name()
-
-
 def random_reference(prisoner_number=None, prisoner_dob=None):
     if not prisoner_number or not prisoner_dob:
         return get_random_string(length=15)
@@ -56,8 +52,29 @@ def generate_initial_transactions_data(
         prisoner_location_generator=None,
         include_debits=True,
         include_administrative_credits=True,
-        include_unidentified_credits=True):
+        include_unidentified_credits=True,
+        number_of_sort_codes=6,
+        number_of_senders=20,
+        number_of_prisoners=50):
     data_list = []
+    sort_codes = [
+        get_random_string(6, '1234567890') for _ in range(number_of_sort_codes)
+    ]
+    senders = [
+        {
+            'name': fake.name(),
+            'sort_code': sort_codes[n % number_of_sort_codes],
+            'account_number': get_random_string(8, '1234567890'),
+            'roll_number': get_random_string(15, '1234567890')
+        } for n in range(number_of_senders)
+    ]
+    prisoners = [
+        {
+            'prisoner_name': random_prisoner_name(),
+            'prisoner_number': random_prisoner_number(),
+            'prisoner_dob': random_prisoner_dob()
+        } for n in range(number_of_prisoners)
+    ]
 
     for transaction_counter in range(1, tot + 1):
         # Records might not have prisoner data and/or might not
@@ -85,13 +102,15 @@ def generate_initial_transactions_data(
         )
         random_date = timezone.localtime(random_date)
         midnight_random_date = get_midnight(random_date)
+        random_sender = random.choice(senders)
+        random_prisoner = random.choice(prisoners)
         data = {
             'category': TRANSACTION_CATEGORY.CREDIT,
             'amount': random.randint(1000, 30000),
             'received_at': midnight_random_date,
-            'sender_sort_code': get_random_string(6, '1234567890'),
-            'sender_account_number': get_random_string(8, '1234567890'),
-            'sender_name': random_sender_name(),
+            'sender_sort_code': random_sender['sort_code'],
+            'sender_account_number': random_sender['account_number'],
+            'sender_name': random_sender['name'],
             'owner': None,
             'credited': False,
             'refunded': False,
@@ -119,14 +138,14 @@ def generate_initial_transactions_data(
                     data.update(next(prisoner_location_generator))
                 else:
                     data.update({
-                        'prisoner_name': random_prisoner_name(),
-                        'prisoner_number': random_prisoner_number(),
-                        'prisoner_dob': random_prisoner_dob(),
+                        'prisoner_name': random_prisoner['prisoner_name'],
+                        'prisoner_number': random_prisoner['prisoner_number'],
+                        'prisoner_dob': random_prisoner['prisoner_dob'],
                     })
 
             if include_sender_roll_number:
                 data.update({
-                    'sender_roll_number': get_random_string(15, '1234567890')
+                    'sender_roll_number': random_sender['roll_number']
                 })
 
             if omit_sender_details:
@@ -199,7 +218,9 @@ def generate_predetermined_transactions_data():
 def get_owner_and_status_chooser():
     clerks_per_prison = {}
     for p in Prison.objects.all():
-        user_ids = p.prisonusermapping_set.filter(user__is_staff=False).values_list('user', flat=True)
+        user_ids = p.prisonusermapping_set.filter(
+            user__is_staff=False, user__groups__name='PrisonClerk'
+        ).values_list('user', flat=True)
         clerks_per_prison[p.pk] = (
             cycle(list(User.objects.filter(id__in=user_ids))),
             cycle([
