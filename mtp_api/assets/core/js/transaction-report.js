@@ -6,7 +6,7 @@ django.jQuery(function($) {
   var $module = $('#id_transaction_report'),
     $chart = $('#transaction-report-chart'),
     normalStyles = {
-      font: '"Roboto", "Lucida Grande", Verdana, Arial, sans-serif',
+      font: 'Roboto, "Lucida Grande", Verdana, Arial, sans-serif',
       lines: ['#79aec8', '#666'],
       lineWidth: 4,
       background: '#f9f9f9',
@@ -22,7 +22,7 @@ django.jQuery(function($) {
     },
     standoutStyles = {
       // colours and sizes optimised for philips tv
-      font: '"Roboto", "Lucida Grande", Verdana, Arial, sans-serif',
+      font: 'Roboto, "Lucida Grande", Verdana, Arial, sans-serif',
       lines: ['#6f6', '#F3513F'],
       lineWidth: 10,
       background: '#111',
@@ -45,10 +45,7 @@ django.jQuery(function($) {
     return;
   }
 
-  google.charts.load('current', {packages: ['corechart']});
-  google.charts.setOnLoadCallback(chartsLoaded);
-
-  function chartsLoaded() {
+  google.charts.setOnLoadCallback(function() {
     chartData = new google.visualization.DataTable();
     for (var column in transactionReportData.columns) {
       if (transactionReportData.columns.hasOwnProperty(column)) {
@@ -58,7 +55,7 @@ django.jQuery(function($) {
     chartData.addRows(transactionReportData.rows);
 
     drawTransactionReports();
-  }
+  });
 
   function drawTransactionReports() {
     var chart = new google.visualization.ColumnChart($chart[0]),

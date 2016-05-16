@@ -1,8 +1,13 @@
+import json
+
 from django.conf import settings
+from django.core.cache import cache
 from django.forms import MediaDefiningClass
 from django.http.request import QueryDict
+from django.utils.safestring import mark_safe
 from django.utils.text import re_camel_case
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext, gettext_lazy as _
+import requests
 
 from core.views import DashboardView
 
@@ -112,3 +117,124 @@ class ExternalDashboards(DashboardModule):
             }
             for app in self.apps
         ]
+
+
+@DashboardView.register_dashboard
+class SatisfactionDashboard(DashboardModule):
+    template = 'core/dashboard/satisfaction-results.html'
+    column_count = 1
+    title = _('User satisfaction')
+    cache_lifetime = 60 * 60  # 1 hour
+    survey_id = '2527768'  # results: http://data.surveygizmo.com/r/413845_57330cc99681a7.27709426
+    questions = [
+        {'id': '13', 'title': 'Easy'},
+        {'id': '14', 'title': 'Unreasonably slow'},
+        {'id': '15', 'title': 'Cheap'},
+        {'id': '70', 'title': 'Rating'},
+    ]
+
+    class Media:
+        css = {
+            'all': ('core/css/satisfaction-results.css',)
+        }
+        js = (
+            'https://www.gstatic.com/charts/loader.js',
+            'core/js/google-charts.js',
+            'core/js/satisfaction-results.js',
+        )
+
+    def __init__(self, dashboard_view):
+        super().__init__(dashboard_view)
+        self.enabled = bool(settings.SURVEY_GIZMO_API_KEY)
+        self.cache_key = 'satisfaction_results'
+
+        self.max_response_count = 0
+
+    @classmethod
+    def get_modal_response(cls, responses):
+        responses = sorted(responses, key=lambda response: response['count'], reverse=True)
+        if len(responses) > 1 and responses[0]['count'] > responses[1]['count']:
+            return responses[0]['.index']
+
+    def get_satisfaction_results(self):
+        response = cache.get(self.cache_key)
+        if not response:
+            url_prefix = 'https://restapi.surveygizmo.com/v4/survey/%s' % self.survey_id
+
+            response = []
+            for question in self.questions:
+                question_id = question['id']
+                question_response = requests.get('%(url_prefix)s/surveyquestion/%(question)s' % {
+                    'url_prefix': url_prefix,
+                    'question': question_id,
+                }, params={
+                    'api_token': settings.SURVEY_GIZMO_API_KEY,
+                }).json()['data']
+                statistics_response = requests.get('%(url_prefix)s/surveystatistic' % {
+                    'url_prefix': url_prefix,
+                }, params={
+                    'api_token': settings.SURVEY_GIZMO_API_KEY,
+                    'surveyquestion': question_id,
+                }).json()['data']
+                response.append({
+                    'id': question_id,
+                    'question': question_response,
+                    'statistics': statistics_response,
+                })
+
+            cache.set(self.cache_key, response, timeout=self.cache_lifetime)
+
+        return response
+
+    @property
+    def columns(self):
+        return [
+            {'type': 'string', 'label': gettext('Response'), 'role': 'domain'},
+            {'type': 'number', 'label': gettext('Payments by mail'), 'role': 'data'},
+            {'type': 'string', 'role': 'style'},
+            {'type': 'string', 'role': 'annotation'},
+        ]
+
+    def make_chart_rows(self, question, statistics):
+        rows = []
+        row_index = dict()
+        for index, option in enumerate(question['options']):
+            title = option['value']
+            style = 'color: #666' if title == 'Not applicable' else ''
+            rows.append([title, 0, style, None])
+            row_index[title] = index
+        self.max_response_count = 0
+        max_response_index = None
+        for response in statistics['Breakdown']:
+            index = row_index[response['label']]
+            response['.index'] = index
+            response_count = int(response['count'])
+            response['count'] = response_count
+            rows[index][1] = response_count
+            if response_count > self.max_response_count:
+                max_response_index = index
+                self.max_response_count = response_count
+        modal_response = self.get_modal_response(statistics['Breakdown'])
+        if modal_response is not None and not rows[modal_response][2]:
+            rows[modal_response][2] = 'color: #79C890'
+        if max_response_index is not None:
+            rows[max_response_index][3] = str(self.max_response_count)
+        return rows
+
+    def get_chart_data(self):
+        responses = self.get_satisfaction_results()
+        questions = []
+        for source_data in responses:
+            question = source_data['question']
+            statistics = source_data['statistics']
+            rows = self.make_chart_rows(question, statistics)
+            questions.append({
+                'id': source_data['id'],
+                'rows': rows,
+            })
+
+        return mark_safe(json.dumps({
+            'columns': self.columns,
+            'questions': questions,
+            'max': self.max_response_count,
+        }))

@@ -144,6 +144,7 @@ class TransactionReport(DashboardModule):
         }
         js = (
             'https://www.gstatic.com/charts/loader.js',
+            'core/js/google-charts.js',
             'core/js/transaction-report.js',
         )
 
