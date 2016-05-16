@@ -7,6 +7,7 @@ django.jQuery(function($) {
     $dashboardWrapper = $('#mtp-dashboard'),
     cookieName = $dashboardWrapper.data('cookie-name'),
     standoutCookieName = $dashboardWrapper.data('standout-cookie-name'),
+    $dashboardModules = $('.mtp-dashboard-module'),
     $moduleForms = $('.mtp-dashboard-change form'),
     $standoutModule = $('#' + Cookies.get(standoutCookieName)),
     autoreloadInterval;
@@ -31,7 +32,7 @@ django.jQuery(function($) {
   startDashboardAutoreload();
 
 
-  // dashboard module fomrs
+  // dashboard module forms
 
   $('.js-mtp-dashboard-change').each(function() {
     var $changeLink = $(this),
@@ -62,12 +63,14 @@ django.jQuery(function($) {
 
   // dashboard module stand-out
 
-  $('.mtp-dashboard-module').on('mtp.dashboard-standout', function(e, $module) {
+  $dashboardModules.on('mtp.dashboard-standout', function(e, $module) {
     if($module.hasClass('mtp-dashboard-module-standout')) {
+      $dashboardModules.css('visibility', 'visible');
       $module.removeClass('mtp-dashboard-module-standout');
       $pageBackground.css('background', '#fff');
       Cookies.remove(standoutCookieName);
     } else {
+      $dashboardModules.not($module).css('visibility', 'hidden');
       $module.addClass('mtp-dashboard-module-standout');
       $pageBackground.css('background', $module.css('background'));
       Cookies.set(standoutCookieName, $module.attr('id'));
