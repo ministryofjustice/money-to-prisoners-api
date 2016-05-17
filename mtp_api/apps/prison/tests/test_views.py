@@ -8,6 +8,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from core.tests.utils import make_test_users
+from mtp_auth.models import PrisonUserMapping
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from mtp_auth.constants import CASHBOOK_OAUTH_CLIENT_ID
 from prison.models import Prison, PrisonerLocation
@@ -355,3 +356,31 @@ class PrisonerValidityViewTestCase(AuthTestCaseMixin, APITestCase):
             response_data = response.json()
             self.assertEqual(response_data['count'], 0)
             self.assertSequenceEqual(response_data['results'], [])
+
+
+class PrisonViewTestCase(AuthTestCaseMixin, APITestCase):
+    fixtures = ['test_prisons.json', 'initial_groups.json']
+
+    def setUp(self):
+        super().setUp()
+        self.prison_clerks, _, _, _, _, _ = make_test_users()
+
+    @property
+    def url(self):
+        return reverse('prison-list')
+
+    def test_list_prisons_for_users(self):
+        user = self.prison_clerks[0]
+        response = self.client.get(
+            self.url,
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user),
+        )
+
+        user_prisons = (
+            PrisonUserMapping.objects.get_prison_set_for_user(user=user)
+            .values_list('name', flat=True)
+        )
+        self.assertEqual(len(user_prisons), response.data['count'])
+        for prison in response.data['results']:
+            self.assertTrue(prison['name'] in user_prisons)

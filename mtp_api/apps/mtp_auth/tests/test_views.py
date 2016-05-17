@@ -72,7 +72,7 @@ class GetUserTestCase(APITestCase, AuthTestCaseMixin):
             )
             self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_can_access_my_data_including_managing_prisons(self):
+    def test_can_access_my_data(self):
         for user in self.prison_clerks:
             url = self._get_url(user.username)
             response = self.client.get(
@@ -82,8 +82,6 @@ class GetUserTestCase(APITestCase, AuthTestCaseMixin):
             self.assertEqual(response.status_code, status.HTTP_200_OK)
 
             self.assertEqual(response.data['pk'], user.pk)
-            prison_ids = list(user.prisonusermapping.prisons.values_list('pk', flat=True))
-            self.assertEqual(response.data['prisons'], prison_ids)
 
     def test_correct_permissions_returned(self):
         for user in self.test_users:
@@ -95,23 +93,6 @@ class GetUserTestCase(APITestCase, AuthTestCaseMixin):
             self.assertEqual(response.status_code, status.HTTP_200_OK)
 
             self.assertEqual(response.data['permissions'], user.get_all_permissions())
-
-    def test_my_data_with_empty_prisons(self):
-        users = (
-            self.prisoner_location_admins +
-            self.bank_admins + self.refund_bank_admins
-        )
-
-        for user in users:
-            url = self._get_url(user.username)
-            response = self.client.get(
-                url, format='json',
-                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
-            )
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-            self.assertEqual(response.data['pk'], user.pk)
-            self.assertEqual(response.data['prisons'], [])
 
     def test_all_valid_usernames_retrievable(self):
         user_data = {
