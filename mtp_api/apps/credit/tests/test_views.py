@@ -1251,7 +1251,7 @@ class CreditCreditTestCase(
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
 
-class SenderRecipientCountTestCase(BaseCreditViewTestCase):
+class SenderListTestCase(BaseCreditViewTestCase):
 
     def _get_authorised_user(self):
         return self.security_staff[0]
@@ -1378,4 +1378,100 @@ class SenderRecipientCountTestCase(BaseCreditViewTestCase):
             self.assertEqual(
                 recipient_count,
                 sender['recipient_count']
+            )
+
+
+class RecipientListTestCase(BaseCreditViewTestCase):
+
+    def _get_authorised_user(self):
+        return self.security_staff[0]
+
+    def _get_url(self, **filters):
+        url = reverse('recipient-list')
+
+        return '{url}?{filters}'.format(
+            url=url, filters=urllib.parse.urlencode(filters)
+        )
+
+    def _get_recipients_multiple_senders(self, **filters):
+        logged_in_user = self._get_authorised_user()
+
+        response = self.client.get(
+            self._get_url(**filters),
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+        return response
+
+    def test_get_recipients_multiple_senders(self):
+        response = self._get_recipients_multiple_senders(limit=5)
+
+        for recipient in response.data['results']:
+            # check sender_count is correct (not including refunds)
+            sender_count = Credit.objects.filter(
+                prisoner_number=recipient['prisoner_number'],
+            ).values(
+                'transaction__sender_name',
+                'transaction__sender_sort_code',
+                'transaction__sender_account_number',
+                'transaction__sender_roll_number',
+            ).distinct().count()
+            self.assertEqual(
+                sender_count,
+                recipient['sender_count']
+            )
+
+    def test_get_recipients_min_sender_count(self):
+        min_sender_count = 2
+        response = self._get_recipients_multiple_senders(
+            min_sender_count=min_sender_count)
+
+        for recipient in response.data['results']:
+            if recipient['sender_count'] < min_sender_count:
+                print(recipient)
+                print(Credit.objects.filter(prisoner_number=recipient['prisoner_number']))
+            self.assertGreaterEqual(recipient['sender_count'], min_sender_count)
+
+    def test_get_recipients_max_sender_count(self):
+        max_sender_count = 3
+        response = self._get_recipients_multiple_senders(
+            max_sender_count=max_sender_count)
+
+        for sender in response.data['results']:
+            self.assertLessEqual(sender['sender_count'], max_sender_count)
+
+    def test_get_recipients_min_max_sender_count(self):
+        min_sender_count = 2
+        max_sender_count = 3
+        response = self._get_recipients_multiple_senders(
+            min_sender_count=min_sender_count,
+            max_sender_count=max_sender_count
+        )
+
+        for sender in response.data['results']:
+            self.assertGreaterEqual(sender['sender_count'], min_sender_count)
+            self.assertLessEqual(sender['sender_count'], max_sender_count)
+
+    def test_get_recipients_with_received_at(self):
+        end_date = self._get_latest_date()
+        start_date = end_date - datetime.timedelta(days=1)
+        response = self._get_recipients_multiple_senders(
+            received_at_0=format_date(start_date, 'Y-m-d'),
+            received_at_1=format_date(end_date, 'Y-m-d')
+        )
+
+        for recipient in response.data['results']:
+            sender_count = Credit.objects.filter(
+                prisoner_number=recipient['prisoner_number'],
+                received_at__date__gte=start_date,
+                received_at__date__lte=end_date
+            ).values(
+                'transaction__sender_name',
+                'transaction__sender_sort_code',
+                'transaction__sender_account_number',
+                'transaction__sender_roll_number',
+            ).distinct().count()
+            self.assertEqual(
+                sender_count,
+                recipient['sender_count']
             )

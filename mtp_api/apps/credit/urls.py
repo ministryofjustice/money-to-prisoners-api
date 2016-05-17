@@ -9,4 +9,5 @@ urlpatterns = [
     url(r'^credits/actions/lock/$', views.LockCredits.as_view(), name='credit-lock'),
     url(r'^credits/actions/unlock/$', views.UnlockCredits.as_view(), name='credit-unlock'),
     url(r'^credits/senders/$', csrf_exempt(views.SenderList.as_view()), name='sender-list'),
+    url(r'^credits/recipients/$', csrf_exempt(views.RecipientList.as_view()), name='recipient-list'),
 ]

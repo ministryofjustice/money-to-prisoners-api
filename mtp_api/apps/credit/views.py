@@ -4,7 +4,7 @@ import re
 
 from django import forms
 from django.contrib.auth import get_user_model
-from django.db import models, transaction
+from django.db import connection, models, transaction
 import django_filters
 from django_filters.widgets import RangeWidget
 from django.http import HttpResponseRedirect
@@ -15,6 +15,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 
+from core import dictfetchall
 from core.filters import StatusChoiceFilter
 from mtp_auth.models import PrisonUserMapping
 from mtp_auth.permissions import (
@@ -28,7 +29,8 @@ from .models import Credit
 from .permissions import CreditPermissions
 from .serializers import (
     CreditSerializer, SecurityCreditSerializer, CreditedOnlyCreditSerializer,
-    IdsCreditSerializer, LockedCreditSerializer, SenderSerializer
+    IdsCreditSerializer, LockedCreditSerializer, SenderSerializer,
+    RecipientSerializer
 )
 from .signals import credit_prisons_need_updating
 
@@ -345,60 +347,43 @@ class SenderList(CreditViewMixin, generics.ListAPIView):
     def filter_queryset(self, queryset):
         queryset = super().filter_queryset(queryset)
 
-        min_recipient_count = self.request.query_params.get('min_recipient_count', None)
-        max_recipient_count = self.request.query_params.get('max_recipient_count', None)
-        if min_recipient_count or max_recipient_count:
-            recipient_counts = (
-                queryset
-                .values(
-                    'transaction__sender_name',
-                    'transaction__sender_sort_code',
-                    'transaction__sender_account_number',
-                    'transaction__sender_roll_number',
-                )
-                .annotate(recipient_count=models.Count('prisoner_number',
-                                                       distinct=True))
-            )
+        min_recipient_count = self.request.query_params.get('min_recipient_count', 0)
+        max_recipient_count = self.request.query_params.get('max_recipient_count', 99999)
 
-            if min_recipient_count:
-                recipient_counts = recipient_counts.filter(
-                    recipient_count__gte=min_recipient_count)
-            if max_recipient_count:
-                recipient_counts = recipient_counts.filter(
-                    recipient_count__lte=max_recipient_count)
+        cursor = connection.cursor()
+        cursor.execute('''
+            SELECT
+                t.sender_name AS sender,
+                t.sender_sort_code AS sender_sort_code,
+                t.sender_account_number AS sender_account_number,
+                t.sender_roll_number AS sender_roll_number,
+                c.prisoner_number AS prisoner_number,
+                c.prisoner_name AS prisoner_name,
+                COUNT(*) AS credit_count,
+                SUM(c.amount) AS credit_total
+            FROM credit_credit c INNER JOIN transaction_transaction t ON t.credit_id=c.id
+            WHERE c.id IN %s AND (
+                SELECT COUNT(*)>=%s AND COUNT(*)<=%s FROM (
+                    SELECT 1 FROM credit_credit c2
+                    INNER JOIN transaction_transaction t2 ON t2.credit_id = c2.id
+                    WHERE c2.prisoner_number IS NOT NULL AND
+                          t2.sender_name=t.sender_name AND
+                          t2.sender_sort_code=t.sender_sort_code AND
+                          t2.sender_account_number=t.sender_account_number AND
+                          t2.sender_roll_number=t.sender_roll_number
+                    GROUP BY c2.prisoner_number
+                ) AS s
+            )
+            GROUP BY t.sender_name, t.sender_sort_code, t.sender_account_number,
+            t.sender_roll_number, c.prisoner_number, c.prisoner_name
+            ORDER BY t.sender_sort_code, t.sender_account_number,
+            t.sender_roll_number, t.sender_name;
+        ''', [tuple(queryset.values_list('pk')), min_recipient_count, max_recipient_count])
 
-            queryset = queryset.filter(
-                transaction__sender_name__in=recipient_counts.values(
-                    'transaction__sender_name'),
-                transaction__sender_sort_code__in=recipient_counts.values(
-                    'transaction__sender_sort_code'),
-                transaction__sender_account_number__in=recipient_counts.values(
-                    'transaction__sender_account_number'),
-                transaction__sender_roll_number__in=recipient_counts.values(
-                    'transaction__sender_roll_number'),
-            )
+        credits_by_sender_and_recipient = dictfetchall(cursor)
 
-        credits_by_recipient = (
-            queryset
-            .values(
-                'transaction__sender_name',
-                'transaction__sender_sort_code',
-                'transaction__sender_account_number',
-                'transaction__sender_roll_number',
-                'prisoner_number',
-                'prisoner_name'
-            )
-            .annotate(credit_count=models.Count('*'))
-            .annotate(credit_total=models.Sum('amount'))
-            .order_by(
-                'transaction__sender_roll_number',
-                'transaction__sender_account_number',
-                'transaction__sender_sort_code',
-                'transaction__sender_name'
-            )
-        )
         senders = []
-        for credit_count in credits_by_recipient:
+        for credit_count in credits_by_sender_and_recipient:
             recipient = {
                 'prisoner_number': credit_count['prisoner_number'],
                 'prisoner_name': credit_count['prisoner_name'],
@@ -406,22 +391,91 @@ class SenderList(CreditViewMixin, generics.ListAPIView):
                 'credit_total': credit_count['credit_total'],
             }
             if (len(senders) and
-                    senders[-1]['sender'] == credit_count['transaction__sender_name'] and
-                    senders[-1]['sender_sort_code'] == credit_count['transaction__sender_sort_code'] and
-                    senders[-1]['sender_account_number'] == credit_count['transaction__sender_account_number'] and
-                    senders[-1]['sender_roll_number'] == credit_count['transaction__sender_roll_number']):
+                    senders[-1]['sender'] == credit_count['sender'] and
+                    senders[-1]['sender_sort_code'] == credit_count['sender_sort_code'] and
+                    senders[-1]['sender_account_number'] == credit_count['sender_account_number'] and
+                    senders[-1]['sender_roll_number'] == credit_count['sender_roll_number']):
                 senders[-1]['recipients'].append(recipient)
                 if recipient['prisoner_number'] is not None:
                     senders[-1]['recipient_count'] += 1
             else:
                 senders.append({
-                    'sender': credit_count['transaction__sender_name'],
-                    'sender_sort_code': credit_count['transaction__sender_sort_code'],
-                    'sender_account_number': credit_count['transaction__sender_account_number'],
-                    'sender_roll_number': credit_count['transaction__sender_roll_number'],
+                    'sender': credit_count['sender'],
+                    'sender_sort_code': credit_count['sender_sort_code'],
+                    'sender_account_number': credit_count['sender_account_number'],
+                    'sender_roll_number': credit_count['sender_roll_number'],
                     'recipients': [recipient],
                     'recipient_count': 0
                 })
                 if recipient['prisoner_number'] is not None:
                     senders[-1]['recipient_count'] += 1
         return senders
+
+
+class RecipientList(CreditViewMixin, generics.ListAPIView):
+    serializer_class = RecipientSerializer
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_class = CreditListFilter
+    action = 'list'
+
+    permission_classes = (
+        IsAuthenticated, NomsOpsClientIDPermissions,
+        CreditPermissions
+    )
+
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+
+        min_sender_count = self.request.query_params.get('min_sender_count', 0)
+        max_sender_count = self.request.query_params.get('max_sender_count', 99999)
+
+        cursor = connection.cursor()
+        cursor.execute('''
+            SELECT
+                t.sender_name AS sender,
+                t.sender_sort_code AS sender_sort_code,
+                t.sender_account_number AS sender_account_number,
+                t.sender_roll_number AS sender_roll_number,
+                c.prisoner_number AS prisoner_number,
+                c.prisoner_name AS prisoner_name,
+                COUNT(*) AS credit_count,
+                SUM(c.amount) AS credit_total
+            FROM credit_credit c INNER JOIN transaction_transaction t ON t.credit_id=c.id
+            WHERE c.id IN %s AND (
+                SELECT COUNT(*)>=%s AND COUNT(*)<=%s FROM (
+                    SELECT 1 FROM credit_credit c2
+                    INNER JOIN transaction_transaction t2 ON t2.credit_id = c2.id
+                    WHERE c2.prisoner_number=c.prisoner_number
+                    GROUP BY t2.sender_name, t2.sender_sort_code,
+                    t2.sender_account_number, t2.sender_roll_number
+                ) AS s
+            )
+            GROUP BY t.sender_name, t.sender_sort_code, t.sender_account_number,
+            t.sender_roll_number, c.prisoner_number, c.prisoner_name
+            ORDER BY c.prisoner_number;
+        ''', [tuple(queryset.values_list('pk')), min_sender_count, max_sender_count])
+
+        credits_by_sender_and_recipient = dictfetchall(cursor)
+
+        recipients = []
+        for credit_count in credits_by_sender_and_recipient:
+            sender = {
+                'sender': credit_count['sender'],
+                'sender_sort_code': credit_count['sender_sort_code'],
+                'sender_account_number': credit_count['sender_account_number'],
+                'sender_roll_number': credit_count['sender_roll_number'],
+                'credit_count': credit_count['credit_count'],
+                'credit_total': credit_count['credit_total'],
+            }
+            if (len(recipients) and
+                    recipients[-1]['prisoner_number'] == credit_count['prisoner_number']):
+                recipients[-1]['senders'].append(sender)
+                recipients[-1]['sender_count'] += 1
+            else:
+                recipients.append({
+                    'prisoner_number': credit_count['prisoner_number'],
+                    'prisoner_name': credit_count['prisoner_name'],
+                    'senders': [sender],
+                    'sender_count': 1
+                })
+        return recipients
