@@ -432,7 +432,10 @@ def filters_from_api_data(data):
         try:
             Transaction._meta.get_field(field)
             filters[field] = data[field]
+            if (data['category'] == TRANSACTION_CATEGORY.CREDIT and
+                    data['source'] == TRANSACTION_SOURCE.BANK_TRANSFER):
+                Credit._meta.get_field(field)
+                filters['credit__%s' % field] = data[field]
         except FieldDoesNotExist:
-            Credit._meta.get_field(field)
-            filters['credit__%s' % field] = data[field]
+            pass
     return filters
