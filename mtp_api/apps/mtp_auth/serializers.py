@@ -16,7 +16,6 @@ User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
-    prisons = serializers.SerializerMethodField()
     permissions = serializers.SerializerMethodField()
     user_admin = serializers.SerializerMethodField()
 
@@ -33,12 +32,6 @@ class UserSerializer(serializers.ModelSerializer):
         ))
 
         return fields
-
-    def get_prisons(self, obj):
-        return list(
-            PrisonUserMapping.objects.get_prison_set_for_user(obj)
-            .values_list('pk', flat=True)
-        )
 
     def get_permissions(self, obj):
         return obj.get_all_permissions()
@@ -122,7 +115,6 @@ class UserSerializer(serializers.ModelSerializer):
             'first_name',
             'last_name',
             'email',
-            'prisons',
             'permissions',
             'user_admin'
         )

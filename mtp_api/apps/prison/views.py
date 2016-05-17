@@ -4,12 +4,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from core.permissions import ActionsBasedPermissions
+from mtp_auth.models import PrisonUserMapping
 from mtp_auth.permissions import (
     NomsOpsClientIDPermissions, SendMoneyClientIDPermissions
 )
 from prison.models import PrisonerLocation
 from prison.serializers import (
-    PrisonerLocationSerializer, PrisonerValiditySerializer
+    PrisonerLocationSerializer, PrisonerValiditySerializer, PrisonSerializer
 )
 
 
@@ -64,3 +65,14 @@ class PrisonerValidityView(mixins.ListModelMixin, viewsets.GenericViewSet):
                                             'fields are required'},
                             status=status.HTTP_400_BAD_REQUEST)
         return super().list(request, *args, **kwargs)
+
+
+class PrisonView(mixins.ListModelMixin, viewsets.GenericViewSet):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = PrisonSerializer
+
+    def get_queryset(self):
+        return (
+            PrisonUserMapping.objects.get_prison_set_for_user(self.request.user)
+            .order_by('name')
+        )
