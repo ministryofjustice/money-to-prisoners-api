@@ -25,7 +25,8 @@ class CreateTransactionListSerializer(serializers.ListSerializer):
                 new_credit = Credit(
                     amount=data['amount'],
                     prisoner_number=prisoner_number,
-                    prisoner_dob=prisoner_dob
+                    prisoner_dob=prisoner_dob,
+                    received_at=data['received_at']
                 )
                 new_credit.save()
                 data['credit'] = new_credit
