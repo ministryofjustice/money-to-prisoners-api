@@ -15,3 +15,8 @@ def getattr_path(obj, path, default=_not_provided):
     if path:
         return getattr_path(value, path, default=default)
     return value
+
+
+def dictfetchall(cursor):
+    columns = [col[0] for col in cursor.description]
+    return [dict(zip(columns, row)) for row in cursor.fetchall()]
