@@ -110,9 +110,10 @@ class CreditListFilter(django_filters.FilterSet):
     user = django_filters.ModelChoiceFilter(name='owner', queryset=User.objects.all())
     received_at = CreditReceivedAtRangeFilter()
     search = CreditTextSearchFilter()
-    sender_sort_code = django_filters.CharFilter(name="transaction__sender_sort_code")
-    sender_account_number = django_filters.CharFilter(name="transaction__sender_account_number")
-    sender_roll_number = django_filters.CharFilter(name="transaction__sender_roll_number")
+    sender_name = django_filters.CharFilter(name='transaction__sender_name')
+    sender_sort_code = django_filters.CharFilter(name='transaction__sender_sort_code')
+    sender_account_number = django_filters.CharFilter(name='transaction__sender_account_number')
+    sender_roll_number = django_filters.CharFilter(name='transaction__sender_roll_number')
 
     class Meta:
         model = Credit
@@ -354,12 +355,13 @@ class SenderList(CreditViewMixin, generics.ListAPIView):
         cursor = connection.cursor()
         cursor.execute('''
             SELECT
-                t.sender_name AS sender,
+                t.sender_name AS sender_name,
                 t.sender_sort_code AS sender_sort_code,
                 t.sender_account_number AS sender_account_number,
                 t.sender_roll_number AS sender_roll_number,
                 c.prisoner_number AS prisoner_number,
                 c.prisoner_name AS prisoner_name,
+                c.prison_id AS prison_id,
                 COUNT(*) AS credit_count,
                 SUM(c.amount) AS credit_total
             FROM credit_credit c INNER JOIN transaction_transaction t ON t.credit_id=c.id
@@ -377,7 +379,7 @@ class SenderList(CreditViewMixin, generics.ListAPIView):
                 ) AS s
             )
             GROUP BY t.sender_name, t.sender_sort_code, t.sender_account_number,
-            t.sender_roll_number, c.prisoner_number, c.prisoner_name
+            t.sender_roll_number, c.prisoner_number, c.prisoner_name, c.prison_id
             ORDER BY t.sender_sort_code, t.sender_account_number,
             t.sender_roll_number, t.sender_name;
         ''', [filtered_ids, min_recipient_count, max_recipient_count, filtered_ids])
@@ -389,11 +391,12 @@ class SenderList(CreditViewMixin, generics.ListAPIView):
             recipient = {
                 'prisoner_number': credit_count['prisoner_number'],
                 'prisoner_name': credit_count['prisoner_name'],
+                'prison_id': credit_count['prison_id'],
                 'credit_count': credit_count['credit_count'],
                 'credit_total': credit_count['credit_total'],
             }
             if (len(senders) and
-                    senders[-1]['sender'] == credit_count['sender'] and
+                    senders[-1]['sender_name'] == credit_count['sender_name'] and
                     senders[-1]['sender_sort_code'] == credit_count['sender_sort_code'] and
                     senders[-1]['sender_account_number'] == credit_count['sender_account_number'] and
                     senders[-1]['sender_roll_number'] == credit_count['sender_roll_number']):
@@ -402,7 +405,7 @@ class SenderList(CreditViewMixin, generics.ListAPIView):
                     senders[-1]['recipient_count'] += 1
             else:
                 senders.append({
-                    'sender': credit_count['sender'],
+                    'sender_name': credit_count['sender_name'],
                     'sender_sort_code': credit_count['sender_sort_code'],
                     'sender_account_number': credit_count['sender_account_number'],
                     'sender_roll_number': credit_count['sender_roll_number'],
@@ -435,12 +438,13 @@ class RecipientList(CreditViewMixin, generics.ListAPIView):
         cursor = connection.cursor()
         cursor.execute('''
             SELECT
-                t.sender_name AS sender,
+                t.sender_name AS sender_name,
                 t.sender_sort_code AS sender_sort_code,
                 t.sender_account_number AS sender_account_number,
                 t.sender_roll_number AS sender_roll_number,
                 c.prisoner_number AS prisoner_number,
                 c.prisoner_name AS prisoner_name,
+                c.prison_id AS prison_id,
                 COUNT(*) AS credit_count,
                 SUM(c.amount) AS credit_total
             FROM credit_credit c INNER JOIN transaction_transaction t ON t.credit_id=c.id
@@ -454,7 +458,7 @@ class RecipientList(CreditViewMixin, generics.ListAPIView):
                 ) AS s
             )
             GROUP BY t.sender_name, t.sender_sort_code, t.sender_account_number,
-            t.sender_roll_number, c.prisoner_number, c.prisoner_name
+            t.sender_roll_number, c.prisoner_number, c.prisoner_name, c.prison_id
             ORDER BY c.prisoner_number;
         ''', [filtered_ids, min_sender_count, max_sender_count, filtered_ids])
 
@@ -463,7 +467,7 @@ class RecipientList(CreditViewMixin, generics.ListAPIView):
         recipients = []
         for credit_count in credits_by_sender_and_recipient:
             sender = {
-                'sender': credit_count['sender'],
+                'sender_name': credit_count['sender_name'],
                 'sender_sort_code': credit_count['sender_sort_code'],
                 'sender_account_number': credit_count['sender_account_number'],
                 'sender_roll_number': credit_count['sender_roll_number'],
@@ -478,6 +482,7 @@ class RecipientList(CreditViewMixin, generics.ListAPIView):
                 recipients.append({
                     'prisoner_number': credit_count['prisoner_number'],
                     'prisoner_name': credit_count['prisoner_name'],
+                    'prison_id': credit_count['prison_id'],
                     'senders': [sender],
                     'sender_count': 1
                 })

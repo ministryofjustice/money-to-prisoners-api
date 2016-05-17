@@ -1280,7 +1280,7 @@ class SenderListTestCase(BaseCreditViewTestCase):
         for sender in response.data['results']:
             # check recipient_count is correct (not including refunds)
             recipient_count = Credit.objects.filter(
-                transaction__sender_name=sender['sender'],
+                transaction__sender_name=sender['sender_name'],
                 transaction__sender_sort_code=sender['sender_sort_code'],
                 transaction__sender_account_number=sender['sender_account_number'],
                 transaction__sender_roll_number=sender['sender_roll_number'],
@@ -1292,7 +1292,7 @@ class SenderListTestCase(BaseCreditViewTestCase):
 
             # check refunds are included in recipients
             refund_count = Credit.objects.filter(
-                transaction__sender_name=sender['sender'],
+                transaction__sender_name=sender['sender_name'],
                 transaction__sender_sort_code=sender['sender_sort_code'],
                 transaction__sender_account_number=sender['sender_account_number'],
                 transaction__sender_roll_number=sender['sender_roll_number'],
@@ -1318,7 +1318,7 @@ class SenderListTestCase(BaseCreditViewTestCase):
         for sender in response.data['results']:
             for recipient in sender['recipients']:
                 credits = Credit.objects.filter(
-                    transaction__sender_name=sender['sender'],
+                    transaction__sender_name=sender['sender_name'],
                     transaction__sender_sort_code=sender['sender_sort_code'],
                     transaction__sender_account_number=sender['sender_account_number'],
                     transaction__sender_roll_number=sender['sender_roll_number'],
@@ -1378,7 +1378,7 @@ class SenderListTestCase(BaseCreditViewTestCase):
 
         for sender in response.data['results']:
             recipient_count = Credit.objects.filter(
-                transaction__sender_name=sender['sender'],
+                transaction__sender_name=sender['sender_name'],
                 transaction__sender_sort_code=sender['sender_sort_code'],
                 transaction__sender_account_number=sender['sender_account_number'],
                 transaction__sender_roll_number=sender['sender_roll_number'],
