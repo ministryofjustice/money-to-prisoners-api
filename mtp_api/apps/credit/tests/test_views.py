@@ -1338,6 +1338,16 @@ class SenderListTestCase(BaseCreditViewTestCase):
         for sender in response.data['results']:
             self.assertGreaterEqual(sender['recipient_count'], min_recipient_count)
 
+    def test_get_senders_min_recipient_count_with_prison_filter(self):
+        min_recipient_count = 2
+        response = self._get_senders_multiple_recipients(
+            min_recipient_count=min_recipient_count,
+            prison='IXB'
+        )
+
+        for sender in response.data['results']:
+            self.assertGreaterEqual(sender['recipient_count'], min_recipient_count)
+
     def test_get_senders_max_recipient_count(self):
         max_recipient_count = 3
         response = self._get_senders_multiple_recipients(
@@ -1427,9 +1437,16 @@ class RecipientListTestCase(BaseCreditViewTestCase):
             min_sender_count=min_sender_count)
 
         for recipient in response.data['results']:
-            if recipient['sender_count'] < min_sender_count:
-                print(recipient)
-                print(Credit.objects.filter(prisoner_number=recipient['prisoner_number']))
+            self.assertGreaterEqual(recipient['sender_count'], min_sender_count)
+
+    def test_get_recipients_min_sender_count_with_prison_filter(self):
+        min_sender_count = 2
+        response = self._get_recipients_multiple_senders(
+            min_sender_count=min_sender_count,
+            prison='IXB'
+        )
+
+        for recipient in response.data['results']:
             self.assertGreaterEqual(recipient['sender_count'], min_sender_count)
 
     def test_get_recipients_max_sender_count(self):

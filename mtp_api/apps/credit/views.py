@@ -346,6 +346,7 @@ class SenderList(CreditViewMixin, generics.ListAPIView):
 
     def filter_queryset(self, queryset):
         queryset = super().filter_queryset(queryset)
+        filtered_ids = tuple(queryset.values_list('pk'))
 
         min_recipient_count = self.request.query_params.get('min_recipient_count', 0)
         max_recipient_count = self.request.query_params.get('max_recipient_count', 99999)
@@ -366,7 +367,8 @@ class SenderList(CreditViewMixin, generics.ListAPIView):
                 SELECT COUNT(*)>=%s AND COUNT(*)<=%s FROM (
                     SELECT 1 FROM credit_credit c2
                     INNER JOIN transaction_transaction t2 ON t2.credit_id = c2.id
-                    WHERE c2.prisoner_number IS NOT NULL AND
+                    WHERE c2.id IN %s AND
+                          c2.prisoner_number IS NOT NULL AND
                           t2.sender_name=t.sender_name AND
                           t2.sender_sort_code=t.sender_sort_code AND
                           t2.sender_account_number=t.sender_account_number AND
@@ -378,7 +380,7 @@ class SenderList(CreditViewMixin, generics.ListAPIView):
             t.sender_roll_number, c.prisoner_number, c.prisoner_name
             ORDER BY t.sender_sort_code, t.sender_account_number,
             t.sender_roll_number, t.sender_name;
-        ''', [tuple(queryset.values_list('pk')), min_recipient_count, max_recipient_count])
+        ''', [filtered_ids, min_recipient_count, max_recipient_count, filtered_ids])
 
         credits_by_sender_and_recipient = dictfetchall(cursor)
 
@@ -425,6 +427,7 @@ class RecipientList(CreditViewMixin, generics.ListAPIView):
 
     def filter_queryset(self, queryset):
         queryset = super().filter_queryset(queryset)
+        filtered_ids = tuple(queryset.values_list('pk'))
 
         min_sender_count = self.request.query_params.get('min_sender_count', 0)
         max_sender_count = self.request.query_params.get('max_sender_count', 99999)
@@ -445,7 +448,7 @@ class RecipientList(CreditViewMixin, generics.ListAPIView):
                 SELECT COUNT(*)>=%s AND COUNT(*)<=%s FROM (
                     SELECT 1 FROM credit_credit c2
                     INNER JOIN transaction_transaction t2 ON t2.credit_id = c2.id
-                    WHERE c2.prisoner_number=c.prisoner_number
+                    WHERE c2.id IN %s AND c2.prisoner_number=c.prisoner_number
                     GROUP BY t2.sender_name, t2.sender_sort_code,
                     t2.sender_account_number, t2.sender_roll_number
                 ) AS s
@@ -453,7 +456,7 @@ class RecipientList(CreditViewMixin, generics.ListAPIView):
             GROUP BY t.sender_name, t.sender_sort_code, t.sender_account_number,
             t.sender_roll_number, c.prisoner_number, c.prisoner_name
             ORDER BY c.prisoner_number;
-        ''', [tuple(queryset.values_list('pk')), min_sender_count, max_sender_count])
+        ''', [filtered_ids, min_sender_count, max_sender_count, filtered_ids])
 
         credits_by_sender_and_recipient = dictfetchall(cursor)
 
