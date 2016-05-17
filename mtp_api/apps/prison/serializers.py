@@ -14,7 +14,9 @@ class PrisonSerializer(serializers.ModelSerializer):
         fields = (
             'nomis_id',
             'general_ledger_code',
-            'name'
+            'name',
+            'region',
+            'gender',
         )
 
 

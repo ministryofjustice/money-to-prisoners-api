@@ -107,6 +107,8 @@ class CreditListFilter(django_filters.FilterSet):
 
     status = StatusChoiceFilter(choices=CREDIT_STATUS.choices)
     prison = django_filters.ModelMultipleChoiceFilter(queryset=Prison.objects.all())
+    prison_region = django_filters.CharFilter(name='prison__region')
+    prison_gender = django_filters.CharFilter(name='prison__gender')
     user = django_filters.ModelChoiceFilter(name='owner', queryset=User.objects.all())
     received_at = CreditReceivedAtRangeFilter()
     search = CreditTextSearchFilter()
@@ -348,6 +350,8 @@ class SenderList(CreditViewMixin, generics.ListAPIView):
     def filter_queryset(self, queryset):
         queryset = super().filter_queryset(queryset)
         filtered_ids = tuple(queryset.values_list('pk'))
+        if not filtered_ids:
+            return []
 
         min_recipient_count = self.request.query_params.get('min_recipient_count', 0)
         max_recipient_count = self.request.query_params.get('max_recipient_count', 99999)
@@ -431,6 +435,8 @@ class RecipientList(CreditViewMixin, generics.ListAPIView):
     def filter_queryset(self, queryset):
         queryset = super().filter_queryset(queryset)
         filtered_ids = tuple(queryset.values_list('pk'))
+        if not filtered_ids:
+            return []
 
         min_sender_count = self.request.query_params.get('min_sender_count', 0)
         max_sender_count = self.request.query_params.get('max_sender_count', 99999)
