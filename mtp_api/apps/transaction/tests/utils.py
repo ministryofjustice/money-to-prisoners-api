@@ -27,6 +27,24 @@ User = get_user_model()
 fake = Faker(locale='en_GB')
 
 
+def random_sender_name():
+    name = []
+    # < 5% have a title
+    if random.random() < 0.05:
+        name.insert(0, random.choice(['MISS', 'MR', 'MRS']))
+    # > 60% have an initial
+    if random.random() > 0.6:
+        name.append(random.choice('ABCDEFGHIJKLMNOPQRSTUVWXYZ'))
+    else:
+        name.append(fake.first_name().upper())
+    surname = fake.last_name().upper()
+    if random.random() > 0.5:
+        name.append(surname)
+    else:
+        name.insert(0, surname)
+    return ' '.join(name)
+
+
 def random_reference(prisoner_number=None, prisoner_dob=None):
     if not prisoner_number or not prisoner_dob:
         return get_random_string(length=15)
@@ -62,7 +80,7 @@ def generate_initial_transactions_data(
     ]
     senders = [
         {
-            'name': fake.name(),
+            'name': random_sender_name(),
             'sort_code': sort_codes[n % number_of_sort_codes],
             'account_number': get_random_string(8, '1234567890'),
             'roll_number': get_random_string(15, '1234567890')

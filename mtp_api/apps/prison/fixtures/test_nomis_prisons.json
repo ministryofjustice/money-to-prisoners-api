@@ -6,7 +6,9 @@
       "name": "HMP ALBANY",
       "general_ledger_code": "137",
       "created": "2015-12-09T12:00:00Z",
-      "modified": "2015-12-09T12:00:00Z"
+      "modified": "2015-12-09T12:00:00Z",
+      "gender": "m",
+      "region": "South Central"
     }
   },
   {
@@ -16,7 +18,9 @@
       "name": "HMP BRIXTON",
       "general_ledger_code": "014",
       "created": "2015-12-09T12:00:00Z",
-      "modified": "2015-12-09T12:00:00Z"
+      "modified": "2015-12-09T12:00:00Z",
+      "gender": "m",
+      "region": "London"
     }
   },
   {
@@ -26,7 +30,9 @@
       "name": "HMP/YOI ISIS",
       "general_ledger_code": "138",
       "created": "2015-12-09T12:00:00Z",
-      "modified": "2015-12-09T12:00:00Z"
+      "modified": "2015-12-09T12:00:00Z",
+      "gender": "m",
+      "region": "London"
     }
   },
   {
@@ -36,7 +42,9 @@
       "name": "HMP LEEDS",
       "general_ledger_code": "071",
       "created": "2015-12-09T12:00:00Z",
-      "modified": "2015-12-09T12:00:00Z"
+      "modified": "2015-12-09T12:00:00Z",
+      "gender": "m",
+      "region": "Yorkshire and Humberside"
     }
   }
 ]
