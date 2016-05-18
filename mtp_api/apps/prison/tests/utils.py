@@ -2,7 +2,6 @@ import csv
 import datetime
 from itertools import cycle
 import os
-import string
 import random
 
 from django.contrib.auth import get_user_model
@@ -20,17 +19,17 @@ def random_prisoner_dob():
 
 
 def random_prisoner_number():
-    # format: [A-Z]\d{4}[A-Z]{2}
-    return '%s%s%s' % (
-        get_random_string(allowed_chars=string.ascii_uppercase, length=1),
-        get_random_string(allowed_chars=string.digits, length=4),
-        get_random_string(allowed_chars=string.ascii_uppercase, length=2)
+    # format: A\d{4}[A-Z]{2}
+    return 'A%s%s' % (
+        get_random_string(allowed_chars='0123456789', length=4),
+        get_random_string(allowed_chars='ABCDEFGHIJKLMNOPQRSTUVWXYZ', length=2)
     )
 
 
 def random_prisoner_name():
-    return '%s %s' % (fake.first_name_female() if random.random() > 0.8 else fake.first_name_male(),
+    name = '%s %s' % (fake.first_name_female() if random.random() > 0.8 else fake.first_name_male(),
                       fake.last_name())
+    return name.upper()
 
 
 def load_nomis_prisoner_locations():
@@ -102,14 +101,14 @@ def generate_predefined_prisoner_locations():
     prisons = cycle(Prison.objects.all())
     predefined_prisoner_locations = [
         {
-            'prisoner_name': 'James Halls',
+            'prisoner_name': 'JAMES HALLS',
             'prisoner_number': 'A1409AE',
             'prisoner_dob': datetime.date(1989, 1, 21),
             'prison': next(prisons),
         },
         {
-            'prisoner_name': 'Rickie Rippin',
-            'prisoner_number': 'P7617FY',
+            'prisoner_name': 'RICKIE RIPPIN',
+            'prisoner_number': 'A1617FY',
             'prisoner_dob': datetime.date(1975, 6, 30),
             'prison': next(prisons),
         },
