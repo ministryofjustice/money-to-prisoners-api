@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 from model_utils.models import TimeStampedModel
 
@@ -8,6 +9,8 @@ class Prison(TimeStampedModel):
     nomis_id = models.CharField(max_length=3, primary_key=True, verbose_name='NOMIS id')
     general_ledger_code = models.CharField(max_length=3)
     name = models.CharField(max_length=500)
+    region = models.CharField(max_length=255, blank=True)
+    gender = models.CharField(max_length=1, blank=True, choices=(('m', _('Male')), ('f', _('Female'))))
 
     def __str__(self):
         return self.name
