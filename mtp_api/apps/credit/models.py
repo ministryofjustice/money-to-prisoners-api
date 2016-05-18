@@ -69,7 +69,7 @@ class Credit(TimeStampedModel):
         return 'Credit {id}, {amount} {sender_name} > {prisoner_name}, {status}'.format(
             id=self.pk,
             amount=format_amount(self.amount, True),
-            sender_name=self.sender,
+            sender_name=self.sender_name,
             prisoner_name=self.prisoner_name,
             status=self.status
         )
@@ -171,7 +171,7 @@ class Credit(TimeStampedModel):
         return self.owner.get_full_name() if self.owner else None
 
     @property
-    def sender(self):
+    def sender_name(self):
         return self.transaction.sender_name if hasattr(self, 'transaction') else None
 
     @property

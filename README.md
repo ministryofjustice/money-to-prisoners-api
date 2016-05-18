@@ -152,7 +152,7 @@ The response will be something like this:
             "prisoner_number": "R5957RF",
             "prisoner_dob": "1984-09-21",
             "amount": 29339,
-            "sender": "RjXqVbLtSzGFIWURj28cQsIg",
+            "sender_name": "RjXqVbLtSzGFIWURj28cQsIg",
             "received_at": "2015-06-11T13:44:57.645000Z"
         },
         ...
@@ -161,7 +161,7 @@ The response will be something like this:
             "prisoner_number": "E2601NE",
             "prisoner_dob": "1955-08-29",
             "amount": 2841,
-            "sender": "Zz5EPK6gIcv5b1yOKqX20PVb",
+            "sender_name": "Zz5EPK6gIcv5b1yOKqX20PVb",
             "received_at": "2015-06-14T20:41:57.479000Z"
         }
     ]

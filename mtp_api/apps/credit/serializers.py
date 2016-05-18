@@ -23,7 +23,7 @@ class IdsCreditSerializer(serializers.Serializer):
 
 
 class CreditSerializer(serializers.ModelSerializer):
-    sender = serializers.CharField(read_only=True)
+    sender_name = serializers.CharField(read_only=True)
     owner_name = serializers.CharField(read_only=True)
     credited_at = serializers.DateTimeField(read_only=True)
     refunded_at = serializers.DateTimeField(read_only=True)
@@ -38,7 +38,7 @@ class CreditSerializer(serializers.ModelSerializer):
             'prisoner_number',
             'amount',
             'received_at',
-            'sender',
+            'sender_name',
             'prison',
             'owner',
             'owner_name',
