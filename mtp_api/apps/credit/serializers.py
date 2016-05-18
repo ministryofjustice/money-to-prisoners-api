@@ -27,6 +27,8 @@ class CreditSerializer(serializers.ModelSerializer):
     owner_name = serializers.CharField(read_only=True)
     credited_at = serializers.DateTimeField(read_only=True)
     refunded_at = serializers.DateTimeField(read_only=True)
+    source = serializers.CharField(read_only=True)
+    intended_recipient = serializers.CharField(read_only=True)
 
     class Meta:
         model = Credit
@@ -43,36 +45,22 @@ class CreditSerializer(serializers.ModelSerializer):
             'resolution',
             'credited_at',
             'refunded_at',
+            'source',
+            'intended_recipient',
         )
 
 
-class SecurityCreditSerializer(serializers.ModelSerializer):
-    sender = serializers.CharField(read_only=True)
+class SecurityCreditSerializer(CreditSerializer):
     sender_sort_code = serializers.CharField(read_only=True)
     sender_account_number = serializers.CharField(read_only=True)
     sender_roll_number = serializers.CharField(read_only=True)
-    owner_name = serializers.CharField(read_only=True)
-    credited_at = serializers.DateTimeField(read_only=True)
-    refunded_at = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = Credit
-        fields = (
-            'id',
-            'prisoner_name',
-            'prisoner_number',
-            'amount',
-            'received_at',
-            'sender',
+        fields = CreditSerializer.Meta.fields + (
             'sender_sort_code',
             'sender_account_number',
             'sender_roll_number',
-            'prison',
-            'owner',
-            'owner_name',
-            'resolution',
-            'credited_at',
-            'refunded_at',
         )
 
 

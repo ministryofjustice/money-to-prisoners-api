@@ -122,6 +122,11 @@ class Credit(TimeStampedModel):
             return CREDIT_SOURCE.UNKNOWN
 
     @property
+    def intended_recipient(self):
+        if hasattr(self, 'payment'):
+            return self.payment.recipient_name
+
+    @property
     def available(self):
         return (
             self.owner is None and self.prison is not None and
