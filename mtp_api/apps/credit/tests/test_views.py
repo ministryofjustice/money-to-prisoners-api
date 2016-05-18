@@ -166,7 +166,7 @@ class CreditListTestCase(
     def _get_search_checker(self, filters, noop_checker):
         if filters.get('search'):
             search_phrase = filters['search'].lower()
-            search_fields = ['prisoner_name', 'prisoner_number', 'sender']
+            search_fields = ['prisoner_name', 'prisoner_number', 'sender_name']
 
             return lambda c: any(
                 search_phrase in getattr(c, field).lower()
@@ -437,7 +437,7 @@ class CreditListWithSearchTestCase(CreditListTestCase):
         Search for a partial sender name
         """
         credit = random.choice(self.credits)
-        search_phrase = credit.sender[:2]
+        search_phrase = credit.sender_name[:2]
         self._test_response_with_filters(filters={
             'search': search_phrase
         })
