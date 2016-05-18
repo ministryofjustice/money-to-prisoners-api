@@ -33,7 +33,6 @@ class Credit(TimeStampedModel):
     class Meta:
         permissions = (
             ('view_credit', 'Can view credit'),
-            ('view_any_credit', 'Can view any credit'),
             ('lock_credit', 'Can lock credit'),
             ('unlock_credit', 'Can unlock credit'),
             ('patch_credited_credit', 'Can patch credited credit'),
