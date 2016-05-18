@@ -89,7 +89,8 @@ class CreditListFilter(django_filters.FilterSet):
     user = django_filters.ModelChoiceFilter(name='owner', queryset=User.objects.all())
     received_at = django_filters.DateFromToRangeFilter()
     search = CreditTextSearchFilter()
-    sender_name = django_filters.CharFilter(name='transaction__sender_name')
+    sender_name = django_filters.CharFilter(name='transaction__sender_name',
+                                            lookup_expr='icontains')
     sender_sort_code = django_filters.CharFilter(name='transaction__sender_sort_code')
     sender_account_number = django_filters.CharFilter(name='transaction__sender_account_number')
     sender_roll_number = django_filters.CharFilter(name='transaction__sender_roll_number')
