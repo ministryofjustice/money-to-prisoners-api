@@ -1,4 +1,4 @@
-from functools import reduce
+from functools import cmp_to_key, reduce
 import logging
 import re
 
@@ -12,6 +12,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
+from rest_framework.settings import api_settings
 
 from core import dictfetchall
 from core.filters import StatusChoiceFilter
@@ -28,7 +29,7 @@ from .permissions import CreditPermissions
 from .serializers import (
     CreditSerializer, SecurityCreditSerializer, CreditedOnlyCreditSerializer,
     IdsCreditSerializer, LockedCreditSerializer, SenderSerializer,
-    RecipientSerializer
+    PrisonerSerializer
 )
 from .signals import credit_prisons_need_updating
 
@@ -310,10 +311,64 @@ class UnlockCredits(CreditViewMixin, APIView):
         return HttpResponseRedirect(redirect_url, status=drf_status.HTTP_303_SEE_OTHER)
 
 
-class SenderList(CreditViewMixin, generics.ListAPIView):
+class GroupedListAPIView(generics.ListAPIView):
+    ordering_param = api_settings.ORDERING_PARAM
+    ordering_fields = ()
+    default_ordering = ()
+
+    def get_ordering(self):
+        params = self.request.query_params.get(self.ordering_param, '')
+        params = [param for param in map(str.strip, params.split(','))
+                  if param in self.ordering_fields or param.lstrip('-') in self.ordering_fields]
+        return params or self.default_ordering
+
+    def paginate_queryset(self, queryset):
+        queryset = self.get_ordered_queryset(queryset)
+        page = super().paginate_queryset(queryset)
+        return page
+
+    def get_ordered_queryset(self, queryset):
+        # NB: queryset is a *list* of dicts
+        ordering = self.get_ordering()
+        if not ordering:
+            return queryset
+
+        if len(ordering) == 1:
+            field = ordering[0]
+            reverse_order = False
+            if field[0] == '-':
+                field = field[1:]
+                reverse_order = True
+            return sorted(queryset, key=lambda item: item[field], reverse=reverse_order)
+
+        def compare(a, b):
+            for field in ordering:
+                reverse_order = False
+                if field[0] == '-':
+                    field = field[1:]
+                    reverse_order = True
+                a_value = a[field]
+                b_value = b[field]
+                if a_value == b_value:
+                    continue
+                if a_value < b_value:
+                    key = -1
+                else:
+                    key = 1
+                if reverse_order:
+                    key = -key
+                return key
+            return 0
+
+        return sorted(queryset, key=cmp_to_key(compare))
+
+
+class SenderList(CreditViewMixin, GroupedListAPIView):
     serializer_class = SenderSerializer
     filter_backends = (filters.DjangoFilterBackend,)
     filter_class = CreditListFilter
+    ordering_fields = ('prisoner_count', 'credit_count', 'credit_total', 'sender_name')
+    default_ordering = ('-prisoner_count',)
     action = 'list'
 
     permission_classes = (
@@ -331,8 +386,8 @@ class SenderList(CreditViewMixin, generics.ListAPIView):
         if not filtered_ids:
             return []
 
-        min_recipient_count = self.request.query_params.get('min_recipient_count', 0)
-        max_recipient_count = self.request.query_params.get('max_recipient_count', 99999)
+        min_prisoner_count = self.request.query_params.get('min_prisoner_count', 0)
+        max_prisoner_count = self.request.query_params.get('max_prisoner_count', 99999)
 
         cursor = connection.cursor()
         cursor.execute('''
@@ -364,45 +419,49 @@ class SenderList(CreditViewMixin, generics.ListAPIView):
             t.sender_roll_number, c.prisoner_number, c.prisoner_name, c.prison_id
             ORDER BY t.sender_sort_code, t.sender_account_number,
             t.sender_roll_number, t.sender_name;
-        ''', [filtered_ids, min_recipient_count, max_recipient_count, filtered_ids])
+        ''', [filtered_ids, min_prisoner_count, max_prisoner_count, filtered_ids])
 
-        credits_by_sender_and_recipient = dictfetchall(cursor)
+        grouped_credits = dictfetchall(cursor)
 
         senders = []
-        for credit_count in credits_by_sender_and_recipient:
-            recipient = {
-                'prisoner_number': credit_count['prisoner_number'],
-                'prisoner_name': credit_count['prisoner_name'],
-                'prison_id': credit_count['prison_id'],
-                'credit_count': credit_count['credit_count'],
-                'credit_total': credit_count['credit_total'],
+        last_sender = None
+        sender_identifiers = ('sender_name', 'sender_sort_code', 'sender_account_number', 'sender_roll_number')
+        for credit_group in grouped_credits:
+            prisoner = {
+                'prisoner_number': credit_group['prisoner_number'],
+                'prisoner_name': credit_group['prisoner_name'],
+                'prison_id': credit_group['prison_id'],
+                'credit_count': credit_group['credit_count'],
+                'credit_total': credit_group['credit_total'],
             }
-            if (len(senders) and
-                    senders[-1]['sender_name'] == credit_count['sender_name'] and
-                    senders[-1]['sender_sort_code'] == credit_count['sender_sort_code'] and
-                    senders[-1]['sender_account_number'] == credit_count['sender_account_number'] and
-                    senders[-1]['sender_roll_number'] == credit_count['sender_roll_number']):
-                senders[-1]['recipients'].append(recipient)
-                if recipient['prisoner_number'] is not None:
-                    senders[-1]['recipient_count'] += 1
+            if last_sender and all(last_sender[key] == credit_group[key]
+                                   for key in sender_identifiers):
+                last_sender['prisoners'].append(prisoner)
             else:
-                senders.append({
-                    'sender_name': credit_count['sender_name'],
-                    'sender_sort_code': credit_count['sender_sort_code'],
-                    'sender_account_number': credit_count['sender_account_number'],
-                    'sender_roll_number': credit_count['sender_roll_number'],
-                    'recipients': [recipient],
-                    'recipient_count': 0
+                last_sender = {
+                    key: credit_group[key]
+                    for key in sender_identifiers
+                }
+                last_sender.update({
+                    'prisoners': [prisoner],
+                    'prisoner_count': 0,
+                    'credit_count': 0,
+                    'credit_total': 0,
                 })
-                if recipient['prisoner_number'] is not None:
-                    senders[-1]['recipient_count'] += 1
+                senders.append(last_sender)
+            last_sender['credit_count'] += prisoner['credit_count']
+            last_sender['credit_total'] += prisoner['credit_total']
+            if prisoner['prisoner_number'] is not None:
+                last_sender['prisoner_count'] += 1
         return senders
 
 
-class RecipientList(CreditViewMixin, generics.ListAPIView):
-    serializer_class = RecipientSerializer
+class PrisonerList(CreditViewMixin, GroupedListAPIView):
+    serializer_class = PrisonerSerializer
     filter_backends = (filters.DjangoFilterBackend,)
     filter_class = CreditListFilter
+    ordering_fields = ('sender_count', 'credit_count', 'credit_total', 'prisoner_name', 'prisoner_number')
+    default_ordering = ('-sender_count',)
     action = 'list'
 
     permission_classes = (
@@ -446,28 +505,38 @@ class RecipientList(CreditViewMixin, generics.ListAPIView):
             ORDER BY c.prisoner_number;
         ''', [filtered_ids, min_sender_count, max_sender_count, filtered_ids])
 
-        credits_by_sender_and_recipient = dictfetchall(cursor)
+        grouped_credits = dictfetchall(cursor)
 
-        recipients = []
-        for credit_count in credits_by_sender_and_recipient:
+        prisoners = []
+        last_prisoner = None
+        prisoner_identifiers = ('prisoner_number',)
+        for credit_group in grouped_credits:
             sender = {
-                'sender_name': credit_count['sender_name'],
-                'sender_sort_code': credit_count['sender_sort_code'],
-                'sender_account_number': credit_count['sender_account_number'],
-                'sender_roll_number': credit_count['sender_roll_number'],
-                'credit_count': credit_count['credit_count'],
-                'credit_total': credit_count['credit_total'],
+                'sender_name': credit_group['sender_name'],
+                'sender_sort_code': credit_group['sender_sort_code'],
+                'sender_account_number': credit_group['sender_account_number'],
+                'sender_roll_number': credit_group['sender_roll_number'],
+                'credit_count': credit_group['credit_count'],
+                'credit_total': credit_group['credit_total'],
             }
-            if (len(recipients) and
-                    recipients[-1]['prisoner_number'] == credit_count['prisoner_number']):
-                recipients[-1]['senders'].append(sender)
-                recipients[-1]['sender_count'] += 1
+            if last_prisoner and all(last_prisoner[key] == credit_group[key]
+                                     for key in prisoner_identifiers):
+                last_prisoner['senders'].append(sender)
             else:
-                recipients.append({
-                    'prisoner_number': credit_count['prisoner_number'],
-                    'prisoner_name': credit_count['prisoner_name'],
-                    'prison_id': credit_count['prison_id'],
+                last_prisoner = {
+                    key: credit_group[key]
+                    for key in prisoner_identifiers
+                }
+                last_prisoner.update({
+                    'prisoner_name': credit_group['prisoner_name'],
+                    'prison_id': credit_group['prison_id'],
                     'senders': [sender],
-                    'sender_count': 1
+                    'sender_count': 0,
+                    'credit_count': 0,
+                    'credit_total': 0,
                 })
-        return recipients
+                prisoners.append(last_prisoner)
+            last_prisoner['credit_count'] += sender['credit_count']
+            last_prisoner['credit_total'] += sender['credit_total']
+            last_prisoner['sender_count'] += 1
+        return prisoners
