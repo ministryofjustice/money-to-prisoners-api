@@ -52,18 +52,20 @@ class RecreateTestDataViewTestCase(TestCase):
         with mock.patch.object(Command, 'handle') as method:
             response = self.client.post(self.url, data={
                 'scenario': 'random',
-                'number_of_transactions': '100'
+                'number_of_transactions': '50',
+                'number_of_payments': '50'
             })
             self.assertEqual(response.status_code, 200)
             self.assertEqual(method.call_count, 1)
             expected_options_subset = {
                 'protect_superusers': True,
                 'protect_usernames': ['transaction-uploader'],
-                'protect_transactions': False,
+                'protect_credits': False,
                 'no_color': True,
-                'transactions': 'random',
+                'credits': 'random',
                 'prisons': ['sample'],
-                'number_of_transactions': 100
+                'number_of_transactions': 50,
+                'number_of_payments': 50
             }
             options = method.call_args[1]
             options_subset = {

@@ -10,6 +10,7 @@ from core.tests.utils import (
 )
 from credit.models import Credit
 from payment.models import Payment
+from payment.tests.utils import generate_payments
 from prison.models import Prison
 from prison.tests.utils import generate_predefined_prisoner_locations
 from transaction.models import Transaction
@@ -19,7 +20,7 @@ from transaction.tests.utils import generate_transactions
 class Command(BaseCommand):
     """
     Generates data for automated or user testing, creating standard users
-    and (optionally) sample transactions.
+    and (optionally) sample credits.
     """
     help = textwrap.dedent(__doc__).strip()
 
@@ -28,18 +29,20 @@ class Command(BaseCommand):
                             help='Prevents superusers from being deleted')
         parser.add_argument('--protect-usernames', nargs='*',
                             help='Prevents specific usernames being deleted')
-        parser.add_argument('--protect-transactions', action='store_true',
-                            help='Prevents existing transactions from being deleted')
+        parser.add_argument('--protect-credits', action='store_true',
+                            help='Prevents existing credits from being deleted')
         parser.add_argument('--prisons', nargs='*', default=['sample'],
                             choices=['sample', 'nomis'],
                             help='Create prisions from these sets')
         parser.add_argument('--clerks-per-prison', type=int, default=2,
                             help='The number of clerks to make for the Cashbook')
-        parser.add_argument('--transactions', default='random',
+        parser.add_argument('--credits', default='random',
                             choices=['none', 'random', 'nomis'],
-                            help='Create new transactions using this method')
-        parser.add_argument('--number-of-transactions', default=200, type=int,
+                            help='Create new credits using this method')
+        parser.add_argument('--number-of-transactions', default=100, type=int,
                             help='Number of new transactions to create')
+        parser.add_argument('--number-of-payments', default=100, type=int,
+                            help='Number of new payments to create')
 
     def handle(self, *args, **options):
         if settings.ENVIRONMENT == 'prod':
@@ -48,15 +51,15 @@ class Command(BaseCommand):
         verbosity = options.get('verbosity', 1)
         protect_superusers = options['protect_superusers']
         protect_usernames = options['protect_usernames']
-        protect_transactions = options['protect_transactions']
+        protect_credits = options['protect_credits']
         prisons = options['prisons']
         clerks_per_prison = options['clerks_per_prison']
-        transactions = options['transactions']
+        credits = options['credits']
 
         print_message = self.stdout.write if verbosity else lambda m: m
 
-        if not protect_transactions:
-            print_message('Deleting all transactions')
+        if not protect_credits:
+            print_message('Deleting all credits')
             Balance.objects.all().delete()
             Batch.objects.all().delete()
             Transaction.objects.all().delete()
@@ -89,14 +92,16 @@ class Command(BaseCommand):
         make_test_user_admins()
 
         number_of_transactions = options['number_of_transactions']
-        if transactions == 'random':
+        number_of_payments = options['number_of_payments']
+        if credits == 'random':
             print_message('Generating pre-defined prisoner locations')
             # to allow for automated testing
             generate_predefined_prisoner_locations()
-            print_message('Generating random prisoner locations and transactions')
+            print_message('Generating random prisoner locations and credits')
             generate_transactions(transaction_batch=number_of_transactions)
-        elif transactions == 'nomis':
-            print_message('Generating test NOMIS prisoner locations and transactions')
+            generate_payments(payment_batch=number_of_payments)
+        elif credits == 'nomis':
+            print_message('Generating test NOMIS prisoner locations and credits')
             generate_transactions(
                 transaction_batch=number_of_transactions,
                 use_test_nomis_prisoners=True,
@@ -106,6 +111,12 @@ class Command(BaseCommand):
                 include_debits=False,
                 include_administrative_credits=False,
                 include_unidentified_credits=False
+            )
+            generate_payments(
+                payment_batch=number_of_payments,
+                use_test_nomis_prisoners=True,
+                only_new_payments=True,
+                consistent_history=True
             )
 
     def handle_prod(self, **options):
