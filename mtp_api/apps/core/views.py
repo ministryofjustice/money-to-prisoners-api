@@ -131,33 +131,34 @@ class RecreateTestDataView(AdminViewMixin, FormView):
             'no_color': True,
             'stdout': output,
             'stderr': output,
-            'number_of_transactions': form.cleaned_data['number_of_transactions']
+            'number_of_transactions': form.cleaned_data['number_of_transactions'],
+            'number_of_payments': form.cleaned_data['number_of_payments'],
         }
 
         if scenario in ('random', 'cashbook'):
             options.update({
                 'protect_superusers': True,
                 'protect_usernames': ['transaction-uploader'],
-                'protect_transactions': False,
+                'protect_credits': False,
                 'clerks_per_prison': 4,
             })
             if scenario == 'random':
                 options.update({
                     'prisons': ['sample'],
-                    'transactions': 'random',
+                    'credits': 'random',
                 })
             elif scenario == 'cashbook':
                 options.update({
                     'prisons': ['nomis'],
-                    'transactions': 'nomis',
+                    'credits': 'nomis',
                 })
             call_command('load_test_data', **options)
-        elif scenario == 'delete-locations-transactions':
+        elif scenario == 'delete-locations-credits':
             options.update({
                 'protect_users': 'all',
                 'protect_prisons': True,
                 'protect_prisoner_locations': False,
-                'protect_transactions': False,
+                'protect_credits': False,
             })
             call_command('delete_all_data', **options)
 

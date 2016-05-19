@@ -1,9 +1,11 @@
+from django.db import models
 from oauth2_provider.models import AccessToken
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from core.tests.utils import make_test_users
 from mtp_auth.tests.utils import AuthTestCaseMixin
+from payment.tests.utils import generate_payments, latest_payment_date
 from prison.models import Prison
 from credit.models import Credit
 from credit.constants import CREDIT_STATUS, CREDIT_RESOLUTION
@@ -32,9 +34,14 @@ class BaseCreditViewTestCase(AuthTestCaseMixin, APITestCase):
         ) = make_test_users(clerks_per_prison=2)
 
         self.latest_transaction_date = latest_transaction_date()
-        self.credits = [t.credit for t in generate_transactions(
+        self.latest_payment_date = latest_payment_date()
+        transaction_credits = [t.credit for t in generate_transactions(
             transaction_batch=self.transaction_batch
         ) if t.credit]
+        payment_credits = [t.credit for t in generate_payments(
+            payment_batch=self.transaction_batch
+        ) if t.credit]
+        self.credits = transaction_credits + payment_credits
         self.prisons = Prison.objects.all()
 
     def _get_locked_credits_qs(self, prisons, user=None):
@@ -61,7 +68,7 @@ class BaseCreditViewTestCase(AuthTestCaseMixin, APITestCase):
         )
 
     def _get_latest_date(self):
-        return self.latest_transaction_date.date()
+        return Credit.objects.all().aggregate(models.Max('received_at'))['received_at__max']
 
 
 class CreditRejectsRequestsWithoutPermissionTestMixin(object):

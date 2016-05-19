@@ -2,11 +2,9 @@ from functools import reduce
 import logging
 import re
 
-from django import forms
 from django.contrib.auth import get_user_model
 from django.db import connection, models, transaction
 import django_filters
-from django_filters.widgets import RangeWidget
 from django.http import HttpResponseRedirect
 from django.views.generic import View
 from rest_framework import generics, filters, status as drf_status
@@ -37,27 +35,6 @@ from .signals import credit_prisons_need_updating
 User = get_user_model()
 
 logger = logging.getLogger('mtp')
-
-
-class DateRangeField(forms.MultiValueField):
-    widget = RangeWidget
-
-    def __init__(self, *args, **kwargs):
-        fields = (
-            forms.DateTimeField(),
-            forms.DateTimeField(),
-        )
-        super().__init__(fields, *args, **kwargs)
-
-    def compress(self, data_list):
-        if data_list:
-            start, end = data_list
-            return slice(start, end)
-        return None
-
-
-class CreditReceivedAtRangeFilter(django_filters.RangeFilter):
-    field_class = DateRangeField
 
 
 class CreditTextSearchFilter(django_filters.CharFilter):
@@ -110,7 +87,7 @@ class CreditListFilter(django_filters.FilterSet):
     prison_region = django_filters.CharFilter(name='prison__region')
     prison_gender = django_filters.CharFilter(name='prison__gender')
     user = django_filters.ModelChoiceFilter(name='owner', queryset=User.objects.all())
-    received_at = CreditReceivedAtRangeFilter()
+    received_at = django_filters.DateFromToRangeFilter()
     search = CreditTextSearchFilter()
     sender_name = django_filters.CharFilter(name='transaction__sender_name')
     sender_sort_code = django_filters.CharFilter(name='transaction__sender_sort_code')

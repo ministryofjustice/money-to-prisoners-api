@@ -7,11 +7,12 @@ class RecreateTestDataForm(forms.Form):
     scenario = forms.ChoiceField(
         choices=(
             ('cashbook', _('User testing the Cashbook service')),
-            ('random', _('Random set of transactions')),
-            ('delete-locations-transactions', _('Delete prisoner location and transaction data')),
+            ('random', _('Random set of credits')),
+            ('delete-locations-credits', _('Delete prisoner location and credit data')),
         ),
     )
-    number_of_transactions = forms.IntegerField(initial=100)
+    number_of_transactions = forms.IntegerField(initial=50)
+    number_of_payments = forms.IntegerField(initial=50)
 
 
 class AdminFilterForm(forms.Form):
