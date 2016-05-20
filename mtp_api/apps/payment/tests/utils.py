@@ -9,7 +9,9 @@ from faker import Faker
 from core.tests.utils import MockModelTimestamps
 from credit.constants import CREDIT_STATUS, CREDIT_RESOLUTION
 from credit.models import Credit
-from credit.tests.utils import get_owner_and_status_chooser, create_credit_log
+from credit.tests.utils import (
+    get_owner_and_status_chooser, create_credit_log, random_amount
+)
 from payment.constants import PAYMENT_STATUS
 from payment.models import Payment
 from prison.tests.utils import (
@@ -46,11 +48,11 @@ def generate_initial_payment_data(tot=50,
             minutes=random.randint(0, 10000)
         )
         random_date = timezone.localtime(random_date)
-        random_amount = random.randint(1000, 30000)
+        amount = random_amount()
         prisoner = next(prisoners)
         data = {
-            'amount': random_amount,
-            'service_charge': int(random_amount * 0.025),
+            'amount': amount,
+            'service_charge': int(amount * 0.025),
             'prisoner_name': prisoner['prisoner_name'],
             'prisoner_number': prisoner['prisoner_number'],
             'prisoner_dob': prisoner['prisoner_dob'],

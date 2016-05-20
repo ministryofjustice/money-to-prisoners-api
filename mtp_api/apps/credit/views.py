@@ -83,7 +83,6 @@ class CreditTextSearchFilter(django_filters.CharFilter):
 
 
 class CreditListFilter(django_filters.FilterSet):
-
     status = StatusChoiceFilter(choices=CREDIT_STATUS.choices)
     prison = django_filters.ModelMultipleChoiceFilter(queryset=Prison.objects.all())
     prison_region = django_filters.CharFilter(name='prison__region')
@@ -96,10 +95,25 @@ class CreditListFilter(django_filters.FilterSet):
     sender_sort_code = django_filters.CharFilter(name='transaction__sender_sort_code')
     sender_account_number = django_filters.CharFilter(name='transaction__sender_account_number')
     sender_roll_number = django_filters.CharFilter(name='transaction__sender_roll_number')
+    exclude_amount__endswith = django_filters.CharFilter(
+        name='amount', lookup_expr='endswith', exclude=True
+    )
+    exclude_amount__regex = django_filters.CharFilter(
+        name='amount', lookup_expr='regex', exclude=True
+    )
+    amount__endswith = django_filters.CharFilter(
+        name='amount', lookup_expr='endswith'
+    )
+    amount__regex = django_filters.CharFilter(
+        name='amount', lookup_expr='regex'
+    )
 
     class Meta:
         model = Credit
-        fields = ('prisoner_number',)
+        fields = {
+            'prisoner_number': ['exact'],
+            'amount': ['exact', 'lte', 'gte']
+        }
 
 
 class CreditViewMixin(object):

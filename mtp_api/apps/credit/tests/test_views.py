@@ -1,6 +1,7 @@
 import datetime
 import math
 import random
+import re
 from unittest import mock
 import urllib.parse
 
@@ -48,7 +49,7 @@ class CreditListTestCase(
 
         filters['limit'] = 1000
         return '{url}?{filters}'.format(
-            url=url, filters=urllib.parse.urlencode(filters)
+            url=url, filters=urllib.parse.urlencode(filters, doseq=True)
         )
 
     def _get_managed_prison_credits(self, logged_in_user=None):
@@ -97,6 +98,7 @@ class CreditListTestCase(
         prisoner_number_checker = self._get_attribute_checker(
             'prisoner_number', filters, noop_checker
         )
+        amount_pattern_checker = self._get_amount_pattern_checker(filters, noop_checker)
 
         expected_ids = [
             c.pk
@@ -109,7 +111,8 @@ class CreditListTestCase(
             sender_sort_code_checker(c) and
             sender_account_number_checker(c) and
             sender_roll_number_checker(c) and
-            prisoner_number_checker(c)
+            prisoner_number_checker(c) and
+            amount_pattern_checker(c)
         ]
         self.assertEqual(response.data['count'], len(expected_ids))
         self.assertListEqual(
@@ -173,6 +176,40 @@ class CreditListTestCase(
                 for field in search_fields
             ) or (search_phrase in '£%0.2f' % (c.amount / 100))
         return noop_checker
+
+    def _get_amount_pattern_checker(self, filters, noop_checker):
+        checkers = [noop_checker]
+        if 'exclude_amount__endswith' in filters:
+            excluded_ends = filters['exclude_amount__endswith']
+            if type(excluded_ends) is not list:
+                excluded_ends = [excluded_ends]
+            for ending in excluded_ends:
+                checkers.append(
+                    lambda c: not str(c.amount).endswith(ending)
+                )
+        if 'exclude_amount__regex' in filters:
+            checkers.append(lambda c: not re.match(
+                filters['exclude_amount__regex'], str(c.amount))
+            )
+        if 'amount__endswith' in filters:
+            endings = filters['amount__endswith']
+            if type(endings) is not list:
+                endings = [endings]
+            for ending in endings:
+                checkers.append(
+                    lambda c: str(c.amount).endswith(ending)
+                )
+        if 'amount__regex' in filters:
+            checkers.append(lambda c: re.match(
+                filters['amount__regex'], str(c.amount))
+            )
+        if 'amount__lte' in filters:
+            checkers.append(lambda c: c.amount <= int(filters['amount__lte']))
+        if 'amount__gte' in filters:
+            checkers.append(lambda c: c.amount >= int(filters['amount__gte']))
+        if 'amount' in filters:
+            checkers.append(lambda c: c.amount == int(filters['amount']))
+        return lambda c: all([checker(c) for checker in checkers])
 
 
 class CreditListWithDefaultsTestCase(CreditListTestCase):
@@ -889,6 +926,52 @@ class PrisonerNumberCreditListTestCase(SecurityCreditListTestCase):
         )
         self._test_response_with_filters(filters={
             'prisoner_number': random_prisoner_number
+        })
+
+
+class AmountPatternCreditListTestCase(SecurityCreditListTestCase):
+
+    def test_exclude_amount_pattern_filter_endswith_multiple(self):
+        self._test_response_with_filters(filters={
+            'exclude_amount__endswith': ['000', '500'],
+        })
+
+    def test_exclude_amount_pattern_filter_regex(self):
+        self._test_response_with_filters(filters={
+            'exclude_amount__regex': '^.*000$',
+        })
+
+    def test_amount_pattern_filter_endswith(self):
+        self._test_response_with_filters(filters={
+            'amount__endswith': '000',
+        })
+
+    def test_amount_pattern_filter_endswith_multiple(self):
+        self._test_response_with_filters(filters={
+            'amount__endswith': ['000', '500'],
+        })
+
+    def test_amount_pattern_filter_regex(self):
+        self._test_response_with_filters(filters={
+            'amount__regex': '^.*000$',
+        })
+
+    def test_amount_pattern_filter_less_than_regex(self):
+        self._test_response_with_filters(filters={
+            'amount__lte': 5000,
+            'amount__regex': '^.*00$',
+        })
+
+    def test_amount_pattern_filter_range(self):
+        self._test_response_with_filters(filters={
+            'amount__gte': 5000,
+            'amount__lte': 10000,
+        })
+
+    def test_amount_pattern_filter_exact(self):
+        random_amount = random.choice(self.credits).amount
+        self._test_response_with_filters(filters={
+            'amount': random_amount,
         })
 
 
