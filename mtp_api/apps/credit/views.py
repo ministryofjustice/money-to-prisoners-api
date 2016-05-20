@@ -24,6 +24,7 @@ from mtp_auth.permissions import (
 from prison.models import Prison
 from transaction.pagination import DateBasedPagination
 from .constants import CREDIT_STATUS, LOCK_LIMIT
+from .forms import SenderListFilterForm, PrisonerListFilterForm
 from .models import Credit
 from .permissions import CreditPermissions
 from .serializers import (
@@ -386,11 +387,7 @@ class SenderList(CreditViewMixin, GroupedListAPIView):
         if not filtered_ids:
             return []
 
-        min_prisoner_count = self.request.query_params.get('min_prisoner_count', 0)
-        max_prisoner_count = self.request.query_params.get('max_prisoner_count', 99999)
-
-        cursor = connection.cursor()
-        cursor.execute('''
+        sql = '''
             SELECT
                 t.sender_name AS sender_name,
                 t.sender_sort_code AS sender_sort_code,
@@ -402,24 +399,19 @@ class SenderList(CreditViewMixin, GroupedListAPIView):
                 COUNT(*) AS credit_count,
                 SUM(c.amount) AS credit_total
             FROM credit_credit c INNER JOIN transaction_transaction t ON t.credit_id=c.id
-            WHERE c.id IN %s AND (
-                SELECT COUNT(*)>=%s AND COUNT(*)<=%s FROM (
-                    SELECT 1 FROM credit_credit c2
-                    INNER JOIN transaction_transaction t2 ON t2.credit_id = c2.id
-                    WHERE c2.id IN %s AND
-                          c2.prisoner_number IS NOT NULL AND
-                          t2.sender_name=t.sender_name AND
-                          t2.sender_sort_code=t.sender_sort_code AND
-                          t2.sender_account_number=t.sender_account_number AND
-                          t2.sender_roll_number=t.sender_roll_number
-                    GROUP BY c2.prisoner_number
-                ) AS s
-            )
+            WHERE c.id IN %s $$WHERE$$
             GROUP BY t.sender_name, t.sender_sort_code, t.sender_account_number,
             t.sender_roll_number, c.prisoner_number, c.prisoner_name, c.prison_id
             ORDER BY t.sender_sort_code, t.sender_account_number,
             t.sender_roll_number, t.sender_name;
-        ''', [filtered_ids, min_prisoner_count, max_prisoner_count, filtered_ids])
+        '''
+        sql_params = [filtered_ids]
+
+        sql_where = self.get_raw_sql_filter(filtered_ids, sql_params)
+        sql = sql.replace('$$WHERE$$', sql_where or '')
+
+        cursor = connection.cursor()
+        cursor.execute(sql, sql_params)
 
         grouped_credits = dictfetchall(cursor)
 
@@ -449,11 +441,39 @@ class SenderList(CreditViewMixin, GroupedListAPIView):
                     'credit_total': 0,
                 })
                 senders.append(last_sender)
-            last_sender['credit_count'] += prisoner['credit_count']
-            last_sender['credit_total'] += prisoner['credit_total']
             if prisoner['prisoner_number'] is not None:
+                # NB: counts and totals are only summed for valid credits (those that reach a prisoner)
+                last_sender['credit_count'] += prisoner['credit_count']
+                last_sender['credit_total'] += prisoner['credit_total']
                 last_sender['prisoner_count'] += 1
         return senders
+
+    def get_raw_sql_filter(self, filtered_ids, sql_params):
+        form = SenderListFilterForm(data=self.request.query_params)
+        if not form.is_valid():
+            return
+
+        prisoner_count = form.get_prisoner_count_sql_filter('COUNT(*)')
+        credit_count = form.get_credit_count_sql_filter('SUM(credit_count)')
+        credit_total = form.get_credit_total_sql_filter('SUM(credit_total)')
+        sql_where = ' AND '.join(filter(None, [prisoner_count, credit_count, credit_total]))
+        if sql_where:
+            sql_params.append(filtered_ids)
+            # NB: counts and totals are only summed for valid credits (those that reach a prisoner)
+            return ''' AND (
+                SELECT $$WHERE$$ FROM (
+                    SELECT COUNT(*) AS credit_count, SUM(c2.amount) AS credit_total
+                    FROM credit_credit c2
+                    INNER JOIN transaction_transaction t2 ON t2.credit_id = c2.id
+                    WHERE c2.id IN %s AND
+                          c2.prisoner_number IS NOT NULL AND
+                          t2.sender_name=t.sender_name AND
+                          t2.sender_sort_code=t.sender_sort_code AND
+                          t2.sender_account_number=t.sender_account_number AND
+                          t2.sender_roll_number=t.sender_roll_number
+                    GROUP BY c2.prisoner_number
+                ) AS s
+            )'''.replace('$$WHERE$$', sql_where)
 
 
 class PrisonerList(CreditViewMixin, GroupedListAPIView):
@@ -475,11 +495,7 @@ class PrisonerList(CreditViewMixin, GroupedListAPIView):
         if not filtered_ids:
             return []
 
-        min_sender_count = self.request.query_params.get('min_sender_count', 0)
-        max_sender_count = self.request.query_params.get('max_sender_count', 99999)
-
-        cursor = connection.cursor()
-        cursor.execute('''
+        sql = '''
             SELECT
                 t.sender_name AS sender_name,
                 t.sender_sort_code AS sender_sort_code,
@@ -491,19 +507,18 @@ class PrisonerList(CreditViewMixin, GroupedListAPIView):
                 COUNT(*) AS credit_count,
                 SUM(c.amount) AS credit_total
             FROM credit_credit c INNER JOIN transaction_transaction t ON t.credit_id=c.id
-            WHERE c.id IN %s AND (
-                SELECT COUNT(*)>=%s AND COUNT(*)<=%s FROM (
-                    SELECT 1 FROM credit_credit c2
-                    INNER JOIN transaction_transaction t2 ON t2.credit_id = c2.id
-                    WHERE c2.id IN %s AND c2.prisoner_number=c.prisoner_number
-                    GROUP BY t2.sender_name, t2.sender_sort_code,
-                    t2.sender_account_number, t2.sender_roll_number
-                ) AS s
-            )
+            WHERE c.id IN %s $$WHERE$$
             GROUP BY t.sender_name, t.sender_sort_code, t.sender_account_number,
             t.sender_roll_number, c.prisoner_number, c.prisoner_name, c.prison_id
             ORDER BY c.prisoner_number;
-        ''', [filtered_ids, min_sender_count, max_sender_count, filtered_ids])
+        '''
+        sql_params = [filtered_ids]
+
+        sql_where = self.get_raw_sql_filter(filtered_ids, sql_params)
+        sql = sql.replace('$$WHERE$$', sql_where or '')
+
+        cursor = connection.cursor()
+        cursor.execute(sql, sql_params)
 
         grouped_credits = dictfetchall(cursor)
 
@@ -540,3 +555,25 @@ class PrisonerList(CreditViewMixin, GroupedListAPIView):
             last_prisoner['credit_total'] += sender['credit_total']
             last_prisoner['sender_count'] += 1
         return prisoners
+
+    def get_raw_sql_filter(self, filtered_ids, sql_params):
+        form = PrisonerListFilterForm(data=self.request.query_params)
+        if not form.is_valid():
+            return
+
+        sender_count = form.get_sender_count_sql_filter('COUNT(*)')
+        credit_count = form.get_credit_count_sql_filter('SUM(credit_count)')
+        credit_total = form.get_credit_total_sql_filter('SUM(credit_total)')
+        sql_where = ' AND '.join(filter(None, [sender_count, credit_count, credit_total]))
+        if sql_where:
+            sql_params.append(filtered_ids)
+            return ''' AND (
+                SELECT $$WHERE$$ FROM (
+                    SELECT COUNT(*) AS credit_count, SUM(c2.amount) AS credit_total
+                    FROM credit_credit c2
+                    INNER JOIN transaction_transaction t2 ON t2.credit_id = c2.id
+                    WHERE c2.id IN %s AND c2.prisoner_number=c.prisoner_number
+                    GROUP BY t2.sender_name, t2.sender_sort_code,
+                    t2.sender_account_number, t2.sender_roll_number
+                ) AS s
+            )'''.replace('$$WHERE$$', sql_where)

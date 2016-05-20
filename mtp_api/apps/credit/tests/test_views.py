@@ -1366,45 +1366,18 @@ class SenderListTestCase(GroupedListTestCase):
                     credits.aggregate(total=models.Sum('amount'))['total']
                 )
 
-    def test_get_senders_min_prisoner_count(self):
-        min_prisoner_count = 2
-        response = self._get_grouped_response(
-            min_prisoner_count=min_prisoner_count)
-
-        for sender in response.data['results']:
-            self.assertGreaterEqual(sender['prisoner_count'], min_prisoner_count)
-
     def test_get_senders_min_prisoner_count_with_prison_filter(self):
         min_prisoner_count = 2
         response = self._get_grouped_response(
-            min_prisoner_count=min_prisoner_count,
+            prisoner_count_0=min_prisoner_count,
             prison='IXB'
         )
 
         for sender in response.data['results']:
             self.assertGreaterEqual(sender['prisoner_count'], min_prisoner_count)
+            self.assertTrue(all(prisoner['prison_name'] == 'Prison 1' for prisoner in sender['prisoners']))
 
-    def test_get_senders_max_prisoner_count(self):
-        max_prisoner_count = 3
-        response = self._get_grouped_response(
-            max_prisoner_count=max_prisoner_count)
-
-        for sender in response.data['results']:
-            self.assertLessEqual(sender['prisoner_count'], max_prisoner_count)
-
-    def test_get_senders_min_max_prisoner_count(self):
-        min_prisoner_count = 2
-        max_prisoner_count = 3
-        response = self._get_grouped_response(
-            min_prisoner_count=min_prisoner_count,
-            max_prisoner_count=max_prisoner_count
-        )
-
-        for sender in response.data['results']:
-            self.assertGreaterEqual(sender['prisoner_count'], min_prisoner_count)
-            self.assertLessEqual(sender['prisoner_count'], max_prisoner_count)
-
-    def test_get_senders_with_received_at(self):
+    def test_get_senders_with_received_at_filter(self):
         end_date = self._get_latest_date()
         start_date = end_date - datetime.timedelta(days=1)
         response = self._get_grouped_response(
@@ -1425,6 +1398,19 @@ class SenderListTestCase(GroupedListTestCase):
                 prisoner_count,
                 sender['prisoner_count']
             )
+
+    def test_get_senders_with_multiple_post_filters(self):
+        min_prisoner_count = 2
+        max_credit_total = 200000
+        response = self._get_grouped_response(
+            prisoner_count_0=min_prisoner_count,
+            credit_total_1=max_credit_total,
+            prison='IXB',
+        )
+        for sender in response.data['results']:
+            self.assertGreaterEqual(sender['prisoner_count'], min_prisoner_count)
+            self.assertLessEqual(sender['credit_total'], max_credit_total)
+            self.assertTrue(all(prisoner['prison_name'] == 'Prison 1' for prisoner in sender['prisoners']))
 
 
 class PrisonerListTestCase(GroupedListTestCase):
@@ -1449,45 +1435,18 @@ class PrisonerListTestCase(GroupedListTestCase):
                 prisoner['sender_count']
             )
 
-    def test_get_prisoners_min_sender_count(self):
-        min_sender_count = 2
-        response = self._get_grouped_response(
-            min_sender_count=min_sender_count)
-
-        for prisoner in response.data['results']:
-            self.assertGreaterEqual(prisoner['sender_count'], min_sender_count)
-
     def test_get_prisoners_min_sender_count_with_prison_filter(self):
         min_sender_count = 2
         response = self._get_grouped_response(
-            min_sender_count=min_sender_count,
+            sender_count_0=min_sender_count,
             prison='IXB'
         )
 
         for prisoner in response.data['results']:
             self.assertGreaterEqual(prisoner['sender_count'], min_sender_count)
+            self.assertEqual(prisoner['prison_name'], 'Prison 1')
 
-    def test_get_prisoners_max_sender_count(self):
-        max_sender_count = 3
-        response = self._get_grouped_response(
-            max_sender_count=max_sender_count)
-
-        for sender in response.data['results']:
-            self.assertLessEqual(sender['sender_count'], max_sender_count)
-
-    def test_get_prisoners_min_max_sender_count(self):
-        min_sender_count = 2
-        max_sender_count = 3
-        response = self._get_grouped_response(
-            min_sender_count=min_sender_count,
-            max_sender_count=max_sender_count
-        )
-
-        for sender in response.data['results']:
-            self.assertGreaterEqual(sender['sender_count'], min_sender_count)
-            self.assertLessEqual(sender['sender_count'], max_sender_count)
-
-    def test_get_prisoners_with_received_at(self):
+    def test_get_prisoners_with_received_at_filter(self):
         end_date = self._get_latest_date()
         start_date = end_date - datetime.timedelta(days=1)
         response = self._get_grouped_response(
@@ -1510,3 +1469,56 @@ class PrisonerListTestCase(GroupedListTestCase):
                 sender_count,
                 prisoner['sender_count']
             )
+
+    def test_get_senders_with_multiple_post_filters(self):
+        min_sender_count = 2
+        max_credit_total = 200000
+        response = self._get_grouped_response(
+            sender_count_0=min_sender_count,
+            credit_total_1=max_credit_total,
+            prison='IXB',
+        )
+        for sender in response.data['results']:
+            self.assertGreaterEqual(sender['sender_count'], min_sender_count)
+            self.assertLessEqual(sender['credit_total'], max_credit_total)
+            self.assertTrue(all(prisoner['prison_name'] == 'Prison 1' for prisoner in sender['prisoners']))
+
+
+def add_credit_filter_tests(cls, group_name, row_name):
+    def add_test_method(f, lower, upper):
+        def test_method(self):
+            response = self._get_grouped_response(**{
+                f + '_0': lower,
+            })
+            for group in response.data['results']:
+                self.assertGreaterEqual(group[f], lower,
+                                        'Lower bound check on %s failed' % f)
+
+            response = self._get_grouped_response(**{
+                f + '_1': upper,
+            })
+            for group in response.data['results']:
+                self.assertLessEqual(group[f], upper,
+                                     'Upper bound check on %s failed' % f)
+
+            response = self._get_grouped_response(**{
+                f + '_0': lower,
+                f + '_1': upper,
+            })
+            for group in response.data['results']:
+                self.assertTrue(lower <= group[f] <= upper,
+                                'Between bound check on %s failed' % f)
+
+        setattr(cls, 'test_get_%s_with_%s_filters' % (group_name, f), test_method)
+
+    field_and_bounds = [
+        ('%s_count' % row_name, 1, 2),
+        ('credit_count', 2, 3),
+        ('credit_total', 10000, 20000),
+    ]
+    for field, lower_bound, upper_bound in field_and_bounds:
+        add_test_method(field, lower_bound, upper_bound)
+
+
+add_credit_filter_tests(SenderListTestCase, 'senders', 'prisoner')
+add_credit_filter_tests(PrisonerListTestCase, 'prisoners', 'sender')
