@@ -12,11 +12,14 @@ from faker import Faker
 from core.tests.utils import MockModelTimestamps
 from credit.constants import CREDIT_RESOLUTION, CREDIT_STATUS
 from credit.models import Credit
-from credit.tests.utils import get_owner_and_status_chooser, create_credit_log
+from credit.tests.utils import (
+    get_owner_and_status_chooser, create_credit_log, random_amount
+)
 from prison.models import PrisonerLocation
-from prison.tests.utils import random_prisoner_number, random_prisoner_dob, \
-    random_prisoner_name, get_prisoner_location_creator, \
-    load_nomis_prisoner_locations
+from prison.tests.utils import (
+    random_prisoner_number, random_prisoner_dob, random_prisoner_name,
+    get_prisoner_location_creator, load_nomis_prisoner_locations
+)
 from transaction.models import Transaction
 from transaction.constants import (
     TRANSACTION_CATEGORY, TRANSACTION_SOURCE
@@ -125,7 +128,7 @@ def generate_initial_transactions_data(
         random_sender = random.choice(senders)
         data = {
             'category': TRANSACTION_CATEGORY.CREDIT,
-            'amount': random.randint(1000, 30000),
+            'amount': random_amount(),
             'received_at': midnight_random_date,
             'sender_sort_code': random_sender['sort_code'],
             'sender_account_number': random_sender['account_number'],

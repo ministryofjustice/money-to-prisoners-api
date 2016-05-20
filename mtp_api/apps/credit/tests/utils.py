@@ -1,4 +1,5 @@
 from itertools import cycle
+import random
 
 from django.contrib.auth import get_user_model
 
@@ -48,3 +49,10 @@ def create_credit_log(credit, created, modified):
         elif credit.locked:
             log_data['action'] = LOG_ACTIONS.LOCKED
             Log.objects.create(**log_data)
+
+
+def random_amount():
+    amount = random.randrange(500, 30000, 500)
+    if random.random() < 0.1:
+        amount += random.randint(0, 1000)
+    return amount
