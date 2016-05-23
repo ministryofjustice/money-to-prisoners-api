@@ -66,8 +66,14 @@ class CreditTextSearchFilter(django_filters.CharFilter):
                     matches = re_amount.match(word)
                     if not matches:
                         return None
-                    amount = matches.group(1).replace('.', '')
-                    return models.Q(**{'%s__startswith' % field: amount})
+                    search_term = matches.group(1)
+                    amount = search_term.replace('.', '')
+                    # exact match if amount fully specified e.g. £5.00,
+                    # startswith if not e.g. £5
+                    if '.' in search_term:
+                        return models.Q(**{'%s' % field: amount})
+                    else:
+                        return models.Q(**{'%s__startswith' % field: amount})
                 elif field == 'sender_name':
                     return models.Q(**{'transaction__%s__icontains' % field: word})
 

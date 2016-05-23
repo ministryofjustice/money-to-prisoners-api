@@ -492,6 +492,12 @@ class CreditListWithSearchTestCase(CreditListTestCase):
             'search': search_phrase
         })
 
+    def test_filter_search_for_amount_prefix(self):
+        search_phrase = '£5'
+        self._test_response_with_filters(filters={
+            'search': search_phrase
+        })
+
     def test_empty_search(self):
         """
         Empty search causes no errors
