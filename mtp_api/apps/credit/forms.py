@@ -1,5 +1,9 @@
+from collections import namedtuple
+
 from django import forms
 from django.core.exceptions import ValidationError
+
+SQLFragment = namedtuple('SQLFragment', ['query', 'params'])
 
 
 def range_field_decorations(field_name):
@@ -22,14 +26,14 @@ def range_field_decorations(field_name):
             # take care what goes into `expression`
             lower_value, upper_value = getattr(self, get_range_attribute)()
             if lower_value is None and upper_value is None:
-                return None
+                return SQLFragment(None, [])
             if lower_value == upper_value:
-                return '%s = %d' % (expression, lower_value)
+                return SQLFragment('%s = %%s' % (expression), [lower_value])
             if lower_value is None:
-                return '%s <= %d' % (expression, upper_value)
+                return SQLFragment('%s <= %%s' % (expression), [upper_value])
             if upper_value is None:
-                return '%s >= %d' % (expression, lower_value)
-            return '%s BETWEEN %d and %d' % (expression, lower_value, upper_value)
+                return SQLFragment('%s >= %%s' % (expression), [lower_value])
+            return SQLFragment('%s BETWEEN %%s and %%s' % (expression), [lower_value, upper_value])
 
         setattr(cls, get_range_attribute, get_range)
         setattr(cls, 'clean_' + upper, clean)

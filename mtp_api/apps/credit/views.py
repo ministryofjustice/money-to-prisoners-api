@@ -24,7 +24,7 @@ from mtp_auth.permissions import (
 from prison.models import Prison
 from transaction.pagination import DateBasedPagination
 from .constants import CREDIT_STATUS, LOCK_LIMIT
-from .forms import SenderListFilterForm, PrisonerListFilterForm
+from .forms import SenderListFilterForm, PrisonerListFilterForm, SQLFragment
 from .models import Credit
 from .permissions import CreditPermissions
 from .serializers import (
@@ -66,8 +66,14 @@ class CreditTextSearchFilter(django_filters.CharFilter):
                     matches = re_amount.match(word)
                     if not matches:
                         return None
-                    amount = matches.group(1).replace('.', '')
-                    return models.Q(**{'%s__startswith' % field: amount})
+                    search_term = matches.group(1)
+                    amount = search_term.replace('.', '')
+                    # exact match if amount fully specified e.g. £5.00,
+                    # startswith if not e.g. £5
+                    if '.' in search_term:
+                        return models.Q(**{'%s' % field: amount})
+                    else:
+                        return models.Q(**{'%s__startswith' % field: amount})
                 elif field == 'sender_name':
                     return models.Q(**{'transaction__%s__icontains' % field: word})
 
@@ -421,8 +427,9 @@ class SenderList(CreditViewMixin, GroupedListAPIView):
         '''
         sql_params = [filtered_ids]
 
-        sql_where = self.get_raw_sql_filter(filtered_ids, sql_params)
+        sql_where, where_params = self.get_raw_sql_filter(filtered_ids)
         sql = sql.replace('$$WHERE$$', sql_where or '')
+        sql_params += where_params
 
         cursor = connection.cursor()
         cursor.execute(sql, sql_params)
@@ -462,19 +469,19 @@ class SenderList(CreditViewMixin, GroupedListAPIView):
                 last_sender['prisoner_count'] += 1
         return senders
 
-    def get_raw_sql_filter(self, filtered_ids, sql_params):
+    def get_raw_sql_filter(self, filtered_ids):
         form = SenderListFilterForm(data=self.request.query_params)
         if not form.is_valid():
             return
 
-        prisoner_count = form.get_prisoner_count_sql_filter('COUNT(*)')
-        credit_count = form.get_credit_count_sql_filter('SUM(credit_count)')
-        credit_total = form.get_credit_total_sql_filter('SUM(credit_total)')
+        prisoner_count, pc_params = form.get_prisoner_count_sql_filter('COUNT(*)')
+        credit_count, cc_params = form.get_credit_count_sql_filter('SUM(credit_count)')
+        credit_total, ct_params = form.get_credit_total_sql_filter('SUM(credit_total)')
         sql_where = ' AND '.join(filter(None, [prisoner_count, credit_count, credit_total]))
         if sql_where:
-            sql_params.append(filtered_ids)
+            where_params = pc_params + cc_params + ct_params + [filtered_ids]
             # NB: counts and totals are only summed for valid credits (those that reach a prisoner)
-            return ''' AND (
+            return SQLFragment(''' AND (
                 SELECT $$WHERE$$ FROM (
                     SELECT COUNT(*) AS credit_count, SUM(c2.amount) AS credit_total
                     FROM credit_credit c2
@@ -487,7 +494,8 @@ class SenderList(CreditViewMixin, GroupedListAPIView):
                           t2.sender_roll_number=t.sender_roll_number
                     GROUP BY c2.prisoner_number
                 ) AS s
-            )'''.replace('$$WHERE$$', sql_where)
+            )'''.replace('$$WHERE$$', sql_where), where_params)
+        return SQLFragment(None, [])
 
 
 class PrisonerList(CreditViewMixin, GroupedListAPIView):
@@ -528,8 +536,9 @@ class PrisonerList(CreditViewMixin, GroupedListAPIView):
         '''
         sql_params = [filtered_ids]
 
-        sql_where = self.get_raw_sql_filter(filtered_ids, sql_params)
+        sql_where, where_params = self.get_raw_sql_filter(filtered_ids)
         sql = sql.replace('$$WHERE$$', sql_where or '')
+        sql_params += where_params
 
         cursor = connection.cursor()
         cursor.execute(sql, sql_params)
@@ -570,18 +579,18 @@ class PrisonerList(CreditViewMixin, GroupedListAPIView):
             last_prisoner['sender_count'] += 1
         return prisoners
 
-    def get_raw_sql_filter(self, filtered_ids, sql_params):
+    def get_raw_sql_filter(self, filtered_ids):
         form = PrisonerListFilterForm(data=self.request.query_params)
         if not form.is_valid():
             return
 
-        sender_count = form.get_sender_count_sql_filter('COUNT(*)')
-        credit_count = form.get_credit_count_sql_filter('SUM(credit_count)')
-        credit_total = form.get_credit_total_sql_filter('SUM(credit_total)')
+        sender_count, sc_params = form.get_sender_count_sql_filter('COUNT(*)')
+        credit_count, cc_params = form.get_credit_count_sql_filter('SUM(credit_count)')
+        credit_total, ct_params = form.get_credit_total_sql_filter('SUM(credit_total)')
         sql_where = ' AND '.join(filter(None, [sender_count, credit_count, credit_total]))
         if sql_where:
-            sql_params.append(filtered_ids)
-            return ''' AND (
+            where_params = sc_params + cc_params + ct_params + [filtered_ids]
+            return SQLFragment(''' AND (
                 SELECT $$WHERE$$ FROM (
                     SELECT COUNT(*) AS credit_count, SUM(c2.amount) AS credit_total
                     FROM credit_credit c2
@@ -590,4 +599,5 @@ class PrisonerList(CreditViewMixin, GroupedListAPIView):
                     GROUP BY t2.sender_name, t2.sender_sort_code,
                     t2.sender_account_number, t2.sender_roll_number
                 ) AS s
-            )'''.replace('$$WHERE$$', sql_where)
+            )'''.replace('$$WHERE$$', sql_where), where_params)
+        return SQLFragment(None, [])
