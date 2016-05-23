@@ -1,4 +1,5 @@
 {% extends 'core/dashboard/module.html' %}
+{% load i18n %}
 
 {% block module_tbody %}
   <tr>
@@ -6,9 +7,7 @@
       <script>
         var satisfactionResultsData = {{ dashboard_module.get_chart_data }};
       </script>
-      {% for question in dashboard_module.questions %}
-        <div id="satisfaction-results-chart-{{ question.id }}" class="satisfaction-results-chart" data-title="{{ question.title }}"></div>
-      {% endfor %}
+      <div id="satisfaction-results-chart" class="satisfaction-results-chart" data-title="{% trans 'Satisfaction levels of users sending money through the post' %}"></div>
     </td>
   </tr>
 {% endblock %}

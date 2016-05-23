@@ -4,71 +4,49 @@ django.jQuery(function($) {
   'use strict';
 
   google.charts.setOnLoadCallback(function() {
-    for(var question in satisfactionResultsData.questions) {
-      if (satisfactionResultsData.questions.hasOwnProperty(question)) {
-        question = satisfactionResultsData.questions[question];
+    var $chart = $('#satisfaction-results-chart'),
+      chartData = [];
 
-        var $chart = $('#satisfaction-results-chart-' + question.id),
-          chartData = new google.visualization.DataTable();
-
-        for (var column in satisfactionResultsData.columns) {
-          if (satisfactionResultsData.columns.hasOwnProperty(column)) {
-            chartData.addColumn(satisfactionResultsData.columns[column]);
-          }
-        }
-        chartData.addRows(question.rows);
-
-        drawTransactionReports($chart, chartData, question.title);
+    chartData.push(satisfactionResultsData.columns);
+    for (var row in satisfactionResultsData.rows) {
+      if (satisfactionResultsData.rows.hasOwnProperty(row)) {
+        chartData.push(satisfactionResultsData.rows[row]);
       }
     }
+    chartData = google.visualization.arrayToDataTable(chartData);
+
+    drawTransactionReports($chart, chartData);
   });
 
   function drawTransactionReports($chart, chartData) {
-    var chart = new google.visualization.ColumnChart($chart[0]);
+    var chart = new google.visualization.BarChart($chart[0]);
+
     chart.draw(chartData, {
+      title: $chart.data('title'),
       hAxis: {
-        baselineColor: 'none'
+        baselineColor: 'none',
+        viewWindowMode:'explicit',
+            viewWindow: {
+              max: satisfactionResultsData.max,
+              min: 0
+            }
       },
       vAxis: {
-        minValue: 0,
-        maxValue: satisfactionResultsData.max,
-        baselineColor: 'none',
-        gridlines: {count: 0}
+        baselineColor: 'none'
       },
+      isStacked: true,
       chartArea: {
-        top: 10,
-        left: 10
+        top: 40,
+        right: 10,
+        bottom: 20,
+        left: 100
       },
       fontName: 'Roboto, "Lucida Grande", Verdana, Arial, sans-serif',
       legend: {
-        alignment: 'center',
-        textStyle: {
-          color: '#000',
-          fontSize: 13
-        }
+        position: 'none'
       },
       backgroundColor: '#f9f9f9',
-      colors: ['#79aec8']
-    });
-
-    google.visualization.events.addListener(chart, 'ready', function() {
-      var $svg = $chart.find('svg'),
-        cli = chart.getChartLayoutInterface(),
-        legendBounds = cli.getBoundingBox('legend'),
-        $title;
-
-      $title = $(document.createElementNS($svg[0].namespaceURI, 'text'));
-      $title.text($chart.data('title'));
-      $title.attr({
-        'text-anchor': 'start',
-        x: legendBounds.left,
-        y: legendBounds.top - 6,
-        fill: '#000',
-        'font-family': 'Roboto, "Lucida Grande", Verdana, Arial, sans-serif',
-        'font-weight': 'bold',
-        'font-size': 13
-      });
-      $svg.append($title);
+      colors: ['#ECC678', '#EED7B3', '#eee', '#9AAFC2', '#7593AA', '#f9f9f9']
     });
   }
 });

@@ -1,6 +1,8 @@
 import json
+import math
 
 from django.conf import settings
+from django.contrib import messages
 from django.core.cache import cache
 from django.forms import MediaDefiningClass
 from django.http.request import QueryDict
@@ -127,10 +129,10 @@ class SatisfactionDashboard(DashboardModule):
     cache_lifetime = 60 * 60  # 1 hour
     survey_id = '2527768'  # results: http://data.surveygizmo.com/r/413845_57330cc99681a7.27709426
     questions = [
-        {'id': '13', 'title': 'Easy'},
-        {'id': '14', 'title': 'Unreasonably slow'},
-        {'id': '15', 'title': 'Cheap'},
-        {'id': '70', 'title': 'Rating'},
+        {'id': '13', 'title': _('Easiness'), 'reverse': False},
+        {'id': '14', 'title': _('Speed'), 'reverse': True},
+        {'id': '15', 'title': _('Cost'), 'reverse': False},
+        {'id': '70', 'title': _('Quality'), 'reverse': False},
     ]
 
     class Media:
@@ -149,12 +151,6 @@ class SatisfactionDashboard(DashboardModule):
         self.cache_key = 'satisfaction_results'
 
         self.max_response_count = 0
-
-    @classmethod
-    def get_modal_response(cls, responses):
-        responses = sorted(responses, key=lambda response: response['count'], reverse=True)
-        if len(responses) > 1 and responses[0]['count'] > responses[1]['count']:
-            return responses[0]['.index']
 
     def get_satisfaction_results(self):
         response = cache.get(self.cache_key)
@@ -186,55 +182,68 @@ class SatisfactionDashboard(DashboardModule):
 
         return response
 
-    @property
-    def columns(self):
-        return [
-            {'type': 'string', 'label': gettext('Response'), 'role': 'domain'},
-            {'type': 'number', 'label': gettext('Payments by mail'), 'role': 'data'},
-            {'type': 'string', 'role': 'style'},
-            {'type': 'string', 'role': 'annotation'},
-        ]
-
-    def make_chart_rows(self, question, statistics):
-        rows = []
-        row_index = dict()
-        for index, option in enumerate(question['options']):
-            title = option['value']
-            style = 'color: #666' if title == 'Not applicable' else ''
-            rows.append([title, 0, style, None])
-            row_index[title] = index
-        self.max_response_count = 0
-        max_response_index = None
-        for response in statistics['Breakdown']:
-            index = row_index[response['label']]
-            response['.index'] = index
-            response_count = int(response['count'])
-            response['count'] = response_count
-            rows[index][1] = response_count
-            if response_count > self.max_response_count:
-                max_response_index = index
-                self.max_response_count = response_count
-        modal_response = self.get_modal_response(statistics['Breakdown'])
-        if modal_response is not None and not rows[modal_response][2]:
-            rows[modal_response][2] = 'color: #79C890'
-        if max_response_index is not None:
-            rows[max_response_index][3] = str(self.max_response_count)
-        return rows
-
     def get_chart_data(self):
         responses = self.get_satisfaction_results()
-        questions = []
-        for source_data in responses:
-            question = source_data['question']
-            statistics = source_data['statistics']
-            rows = self.make_chart_rows(question, statistics)
-            questions.append({
-                'id': source_data['id'],
-                'rows': rows,
-            })
+
+        columns = [
+            {'type': 'string', 'label': gettext('Quality'), 'role': 'domain'},
+            {'type': 'number', 'label': gettext('Very dissatisfied'), 'role': 'data'},
+            {'type': 'string', 'role': 'annotation'},
+            {'type': 'number', 'label': gettext('Dissatisfied'), 'role': 'data'},
+            {'type': 'string', 'role': 'annotation'},
+            {'type': 'number', 'label': gettext('Ambivalent'), 'role': 'data'},
+            {'type': 'string', 'role': 'annotation'},
+            {'type': 'number', 'label': gettext('Satisfied'), 'role': 'data'},
+            {'type': 'string', 'role': 'annotation'},
+            {'type': 'number', 'label': gettext('Very satisfied'), 'role': 'data'},
+            {'type': 'string', 'role': 'annotation'},
+            {'type': 'number', 'label': gettext('Not applicable'), 'role': 'data'},
+            {'type': 'string', 'role': 'annotation'},
+        ]
+        rows = []
+        max_response_sum = 0
+        for question_index, question in enumerate(responses):
+            response_sum = 0
+            definition = self.questions[question_index]
+            row = [str(definition['title'])]
+            options = question['question']['options']
+            if definition['reverse']:
+                options = list(reversed(options[:-1])) + [options[-1]]
+            if len(options) != 6:
+                messages.error(
+                    self.dashboard_view.request,
+                    _('Satisfaction survey question %s have unexpected numbers of options' % question['id'])
+                )
+                return
+            if options[-1]['value'] != 'Not applicable':
+                messages.error(
+                    self.dashboard_view.request,
+                    _('Satisfaction survey question %s do not all have "Not applicable" option' % question['id'])
+                )
+                return
+            max_count = 0
+            max_count_index = None
+            for option_index, option in enumerate(options):
+                title = option['value']
+                option_votes = 0
+                for result in question['statistics']['Breakdown']:
+                    if result['label'] == title:
+                        option_votes = int(result['count'])
+                        break
+                row.append(option_votes)
+                row.append(None)
+                if option_votes > max_count:
+                    max_count = option_votes
+                    max_count_index = option_index
+                response_sum += option_votes
+            if max_count_index is not None:
+                row[(max_count_index + 1) * 2] = str(math.ceil(100 * max_count / response_sum)) + '%'
+            rows.append(row)
+            if response_sum > max_response_sum:
+                max_response_sum = response_sum
 
         return mark_safe(json.dumps({
-            'columns': self.columns,
-            'questions': questions,
-            'max': self.max_response_count,
+            'columns': columns,
+            'rows': rows,
+            'max': math.ceil(max_response_sum / 10) * 10,
         }))
