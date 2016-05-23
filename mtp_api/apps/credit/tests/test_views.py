@@ -697,7 +697,7 @@ class DateBasedPaginationTestCase(CreditListTestCase):
                 dates_collected += 1
                 last_date = date
             if dates_collected > page_size:
-                dates_collected = 0
+                dates_collected = 1
                 last_date = date
                 all_pages.append(current_page)
                 current_page = []
