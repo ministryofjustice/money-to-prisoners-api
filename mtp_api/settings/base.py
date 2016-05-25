@@ -47,6 +47,9 @@ INSTALLED_APPS = (
 
     # django admin
     'django.contrib.admin',
+
+    # common
+    'mtp_common',
 )
 if ENVIRONMENT != 'prod':
     INSTALLED_APPS += ('rest_framework_swagger',)

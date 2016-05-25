@@ -1,17 +1,15 @@
 from functools import reduce
 import logging
 
-from django.conf import settings
 from django.contrib.auth import password_validation, get_user_model
 from django.contrib.auth.password_validation import get_default_password_validators
 from django.core.exceptions import NON_FIELD_ERRORS
-from django.core.mail import EmailMessage
 from django.db.models import Q
 from django.db.transaction import atomic
 from django.forms import ValidationError
 from django.http import Http404
-from django.template import loader
 from django.utils.translation import gettext_lazy as _
+from mtp_common.email import send_email
 from rest_framework import viewsets, mixins, generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -184,17 +182,12 @@ class ResetPasswordView(generics.GenericAPIView):
             user.set_password(password)
             user.save()
 
-            email_body = loader.get_template('mtp_auth/reset-password.txt').render({
-                'username': user.username,
-                'password': password,
-            }).strip()
-            email = EmailMessage(
-                subject=_('Your new Money To Prisoners password'),
-                body=email_body,
-                from_email=settings.MAILGUN_FROM_ADDRESS,
-                to=[user.email]
+            send_email(
+                user.email, 'mtp_auth/reset_password.txt',
+                _('Your new Money To Prisoners password'),
+                context={'username': user.username, 'password': password},
+                html_template='mtp_auth/reset_password.html'
             )
-            email.send()
 
             return Response(status=status.HTTP_204_NO_CONTENT)
         else:

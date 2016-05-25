@@ -1,10 +1,8 @@
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
-from django.core.mail import EmailMessage
 from django.db.transaction import atomic
-from django.template import loader
 from django.utils.translation import ugettext as _
+from mtp_common.email import send_email
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
@@ -80,14 +78,11 @@ class UserSerializer(serializers.ModelSerializer):
             'password': password,
             'app': client_application.name
         }
-        body = loader.get_template('mtp_auth/new_user.txt').render(context)
-        email = EmailMessage(
+        send_email(
+            new_user.email, 'mtp_auth/new_user.txt',
             _('Your new %(app)s account is ready to use') % {'app': client_application.name},
-            body,
-            settings.MAILGUN_FROM_ADDRESS,
-            [new_user.email]
+            context=context, html_template='mtp_auth/new_user.html'
         )
-        email.send()
 
         return new_user
 
