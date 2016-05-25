@@ -1,0 +1,21 @@
+{% extends 'mtp_common/email_base.html' %}
+{% load i18n %}
+
+{% block content %}
+  <p>
+    {% blocktrans %}
+    Your new Money To Prisoners {{ app }} account has been created for you.
+    {% endblocktrans %}
+  </p>
+
+  <table cellspacing="10">
+    <tr>
+      <th valign="top" align="left">{% trans 'Username' %}</th>
+      <td>{{ username }}</td>
+    </tr>
+    <tr>
+      <th valign="top" align="left">{% trans 'Password' %}</th>
+      <td>{{ password }}</td>
+    </tr>
+  </table>
+{% endblock %}
