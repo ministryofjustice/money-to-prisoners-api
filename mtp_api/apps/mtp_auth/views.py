@@ -8,7 +8,7 @@ from django.db.models import Q
 from django.db.transaction import atomic
 from django.forms import ValidationError
 from django.http import Http404
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext, gettext_lazy as _
 from mtp_common.email import send_email
 from rest_framework import viewsets, mixins, generics, status
 from rest_framework.permissions import IsAuthenticated
@@ -184,7 +184,7 @@ class ResetPasswordView(generics.GenericAPIView):
 
             send_email(
                 user.email, 'mtp_auth/reset_password.txt',
-                _('Your new Money To Prisoners password'),
+                gettext('Your new Money To Prisoners password'),
                 context={'username': user.username, 'password': password},
                 html_template='mtp_auth/reset_password.html'
             )
