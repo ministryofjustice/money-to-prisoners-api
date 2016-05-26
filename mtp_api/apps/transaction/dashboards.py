@@ -195,8 +195,8 @@ class TransactionReport(DashboardModule):
                                                       received_at.year)
             self.chart = None
 
-        if self.dashboard_view and self.dashboard_view.request.user.has_perm('transaction.change_transaction'):
-            self.change_list_url = reverse('admin:transaction_transaction_changelist') + '?' + filter_string
+        if self.dashboard_view and self.dashboard_view.request.user.has_perm('credit.change_credit'):
+            self.change_list_url = reverse('admin:credit_credit_changelist') + '?' + filter_string
 
     @classmethod
     def get_current_balance(cls):
