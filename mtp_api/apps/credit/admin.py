@@ -64,7 +64,7 @@ class StatusFilter(admin.SimpleListFilter):
         status = self.used_parameters.get(self.parameter_name)
         if status in Credit.STATUS_LOOKUP:
             try:
-                return queryset.filter(**Credit.STATUS_LOOKUP[status])
+                return queryset.filter(Credit.STATUS_LOOKUP[status])
             except ValidationError as e:
                 raise IncorrectLookupParameters(e)
 

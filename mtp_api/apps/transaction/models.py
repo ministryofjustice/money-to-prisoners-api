@@ -36,24 +36,24 @@ class Transaction(TimeStampedModel):
 
     # NB: there are matching boolean fields or properties on the model instance for each
     STATUS_LOOKUP = {
-        TRANSACTION_STATUS.CREDITABLE: {
-            'credit__prison__isnull': False
-        },
-        TRANSACTION_STATUS.REFUNDABLE: {
-            'credit__isnull': False,
-            'credit__prison__isnull': True,
-            'incomplete_sender_info': False
-        },
-        TRANSACTION_STATUS.UNIDENTIFIED: {
-            'credit__prison__isnull': True,
-            'incomplete_sender_info': True,
-            'category': TRANSACTION_CATEGORY.CREDIT,
-            'source': TRANSACTION_SOURCE.BANK_TRANSFER
-        },
-        TRANSACTION_STATUS.ANOMALOUS: {
-            'category': TRANSACTION_CATEGORY.CREDIT,
-            'source': TRANSACTION_SOURCE.ADMINISTRATIVE
-        }
+        TRANSACTION_STATUS.CREDITABLE: (
+            models.Q(credit__prison__isnull=False)
+        ),
+        TRANSACTION_STATUS.REFUNDABLE: (
+            models.Q(credit__isnull=False) &
+            models.Q(credit__prison__isnull=True) &
+            models.Q(incomplete_sender_info=False)
+        ),
+        TRANSACTION_STATUS.UNIDENTIFIED: (
+            models.Q(credit__prison__isnull=True) &
+            models.Q(incomplete_sender_info=True) &
+            models.Q(category=TRANSACTION_CATEGORY.CREDIT) &
+            models.Q(source=TRANSACTION_SOURCE.BANK_TRANSFER)
+        ),
+        TRANSACTION_STATUS.ANOMALOUS: (
+            models.Q(category=TRANSACTION_CATEGORY.CREDIT) &
+            models.Q(source=TRANSACTION_SOURCE.ADMINISTRATIVE)
+        )
     }
 
     objects = TransactionQuerySet.as_manager()
@@ -83,11 +83,11 @@ class Transaction(TimeStampedModel):
 
     @property
     def credited(self):
-        return self.credit and self.credit.credited
+        return self.credit.credited if self.credit else False
 
     @property
     def refunded(self):
-        return self.credit and self.credit.refunded
+        return self.credit.refunded if self.credit else False
 
     @property
     def prison(self):

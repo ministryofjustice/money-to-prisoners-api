@@ -19,7 +19,7 @@ class StatusFilter(admin.SimpleListFilter):
         status = self.used_parameters.get(self.parameter_name)
         if status in Transaction.STATUS_LOOKUP:
             try:
-                return queryset.filter(**Transaction.STATUS_LOOKUP[status])
+                return queryset.filter(Transaction.STATUS_LOOKUP[status])
             except ValidationError as e:
                 raise IncorrectLookupParameters(e)
 

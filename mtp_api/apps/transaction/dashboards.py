@@ -22,13 +22,13 @@ from transaction.models import Transaction
 from transaction.utils import format_amount, format_number
 
 CREDITABLE_FILTERS = Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.CREDITABLE]
-CREDITED_FILTERS = {
-    'credit__resolution': CREDIT_RESOLUTION.CREDITED,
-}
+CREDITED_FILTERS = (
+    models.Q(credit__resolution=CREDIT_RESOLUTION.CREDITED)
+)
 REFUNDABLE_FILTERS = Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.REFUNDABLE]
-REFUNDED_FILTERS = {
-    'credit__resolution': CREDIT_RESOLUTION.REFUNDED
-}
+REFUNDED_FILTERS = (
+    models.Q(credit__resolution=CREDIT_RESOLUTION.REFUNDED)
+)
 UNIDENTIFIED_FILTERS = Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.UNIDENTIFIED]
 
 
@@ -105,8 +105,8 @@ class TransactionReportChart:
             if date.weekday() > 4:
                 self.weekends.append(date)
             transactions = self.queryset.filter(received_at__date=date)
-            creditable = transactions.filter(**CREDITABLE_FILTERS).count() or 0
-            refundable = transactions.filter(**REFUNDABLE_FILTERS).count() or 0
+            creditable = transactions.filter(CREDITABLE_FILTERS).count() or 0
+            refundable = transactions.filter(REFUNDABLE_FILTERS).count() or 0
             data.append([date, creditable, refundable])
             max_sum = creditable + refundable
             if max_sum >= self.max_sum:
@@ -219,23 +219,23 @@ class TransactionReport(DashboardModule):
 
     @property
     def creditable(self):
-        return self.queryset.filter(**CREDITABLE_FILTERS)
+        return self.queryset.filter(CREDITABLE_FILTERS)
 
     @property
     def credited(self):
-        return self.queryset.filter(**CREDITED_FILTERS)
+        return self.queryset.filter(CREDITED_FILTERS)
 
     @property
     def refundable(self):
-        return self.queryset.filter(**REFUNDABLE_FILTERS)
+        return self.queryset.filter(REFUNDABLE_FILTERS)
 
     @property
     def refunded(self):
-        return self.queryset.filter(**REFUNDED_FILTERS)
+        return self.queryset.filter(REFUNDED_FILTERS)
 
     @property
     def unidentified(self):
-        return self.queryset.filter(**UNIDENTIFIED_FILTERS)
+        return self.queryset.filter(UNIDENTIFIED_FILTERS)
 
     @property
     def well_formed_references(self):

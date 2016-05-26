@@ -44,25 +44,25 @@ class Credit(TimeStampedModel):
     objects = CreditManager.from_queryset(CreditQuerySet)()
 
     STATUS_LOOKUP = {
-        CREDIT_STATUS.LOCKED: {
-            'owner__isnull': False,
-            'resolution': CREDIT_RESOLUTION.PENDING,
-        },
-        CREDIT_STATUS.AVAILABLE: {
-            'prison__isnull': False,
-            'owner__isnull': True,
-            'resolution': CREDIT_RESOLUTION.PENDING,
-        },
-        CREDIT_STATUS.CREDITED: {
-            'resolution': CREDIT_RESOLUTION.CREDITED,
-        },
-        CREDIT_STATUS.REFUNDED: {
-            'resolution': CREDIT_RESOLUTION.REFUNDED,
-        },
-        CREDIT_STATUS.REFUND_PENDING: {
-            'prison__isnull': True,
-            'resolution': CREDIT_RESOLUTION.PENDING,
-        },
+        CREDIT_STATUS.LOCKED: (
+            models.Q(owner__isnull=False) &
+            models.Q(resolution=CREDIT_RESOLUTION.PENDING)
+        ),
+        CREDIT_STATUS.AVAILABLE: (
+            models.Q(prison__isnull=False) &
+            models.Q(owner__isnull=True) &
+            models.Q(resolution=CREDIT_RESOLUTION.PENDING)
+        ),
+        CREDIT_STATUS.CREDITED: (
+            models.Q(resolution=CREDIT_RESOLUTION.CREDITED)
+        ),
+        CREDIT_STATUS.REFUNDED: (
+            models.Q(resolution=CREDIT_RESOLUTION.REFUNDED)
+        ),
+        CREDIT_STATUS.REFUND_PENDING: (
+            models.Q(prison__isnull=True) &
+            models.Q(resolution=CREDIT_RESOLUTION.PENDING)
+        ),
     }
 
     def __str__(self):
