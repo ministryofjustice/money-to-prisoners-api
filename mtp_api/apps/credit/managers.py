@@ -6,19 +6,19 @@ from .constants import LOG_ACTIONS, CREDIT_STATUS
 class CreditQuerySet(models.QuerySet):
 
     def available(self):
-        return self.filter(**self.model.STATUS_LOOKUP[CREDIT_STATUS.AVAILABLE])
+        return self.filter(self.model.STATUS_LOOKUP[CREDIT_STATUS.AVAILABLE])
 
     def locked(self):
-        return self.filter(**self.model.STATUS_LOOKUP[CREDIT_STATUS.LOCKED])
+        return self.filter(self.model.STATUS_LOOKUP[CREDIT_STATUS.LOCKED])
 
     def credited(self):
-        return self.filter(**self.model.STATUS_LOOKUP[CREDIT_STATUS.CREDITED])
+        return self.filter(self.model.STATUS_LOOKUP[CREDIT_STATUS.CREDITED])
 
     def refunded(self):
-        return self.filter(**self.model.STATUS_LOOKUP[CREDIT_STATUS.REFUNDED])
+        return self.filter(self.model.STATUS_LOOKUP[CREDIT_STATUS.REFUNDED])
 
     def refund_pending(self):
-        return self.filter(**self.model.STATUS_LOOKUP[CREDIT_STATUS.REFUND_PENDING])
+        return self.filter(self.model.STATUS_LOOKUP[CREDIT_STATUS.REFUND_PENDING])
 
     def locked_by(self, user):
         return self.filter(owner=user)

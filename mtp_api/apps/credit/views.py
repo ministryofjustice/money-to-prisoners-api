@@ -244,7 +244,7 @@ class LockedCreditList(CreditViewMixin, generics.ListAPIView):
     def get_queryset(self):
         queryset = super().get_queryset()
         return queryset.filter(
-            **Credit.STATUS_LOOKUP[CREDIT_STATUS.LOCKED]
+            Credit.STATUS_LOOKUP[CREDIT_STATUS.LOCKED]
         )
 
 

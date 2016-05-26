@@ -86,8 +86,8 @@ class UpdateTransactionListSerializer(serializers.ListSerializer):
 
     def refund(self, user, to_refund):
         update_set = Credit.objects.filter(
-            transaction__pk__in=to_refund,
-            **Credit.STATUS_LOOKUP['refund_pending']).select_for_update()
+            Credit.STATUS_LOOKUP['refund_pending'],
+            transaction__pk__in=to_refund).select_for_update()
         if len(update_set) != len(to_refund):
             raise Credit.DoesNotExist(
                 list(set(to_refund) - {c.transaction.id for c in update_set})

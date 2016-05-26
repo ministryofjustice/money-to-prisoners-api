@@ -298,7 +298,7 @@ class UpdateRefundTransactionsTestCase(
         user = self._get_authorised_user()
 
         invalid_transactions = Transaction.objects.filter(
-            **Transaction.STATUS_LOOKUP[status])
+            Transaction.STATUS_LOOKUP[status])
         invalid_data_list = (
             [{'id': t.id, 'refunded': True} for t in invalid_transactions]
         )
@@ -409,7 +409,7 @@ class GetTransactionsAsBankAdminTestCase(GetTransactionsBaseTestCase):
 
         # check that all matching db records are returned
         ts = list(Transaction.objects.filter(
-            **Transaction.STATUS_LOOKUP[status]))
+            Transaction.STATUS_LOOKUP[status]))
         db_ids = [t.id for t in ts]
         self.assertEqual(len(set(db_ids)), len(data['results']))
 
@@ -418,8 +418,7 @@ class GetTransactionsAsBankAdminTestCase(GetTransactionsBaseTestCase):
             matches_one = False
             try:
                 Transaction.objects.get(
-                    id=t['id'],
-                    **Transaction.STATUS_LOOKUP[status])
+                    Transaction.STATUS_LOOKUP[status], id=t['id'])
                 matches_one = True
                 break
             except Transaction.DoesNotExist:
@@ -502,7 +501,7 @@ class GetTransactionsRelatedToBatchesTestCase(GetTransactionsBaseTestCase):
         adi_batch.save()
 
         adi_batch.transactions = list(Transaction.objects.filter(
-            **Transaction.STATUS_LOOKUP['refundable']))
+            Transaction.STATUS_LOOKUP['refundable']))
         adi_batch.save()
 
         response = self.client.get(
@@ -539,7 +538,7 @@ class GetTransactionsRelatedToBatchesTestCase(GetTransactionsBaseTestCase):
         adi_batch.save()
 
         refunded_trans = list(Transaction.objects.filter(
-            **Transaction.STATUS_LOOKUP['refundable']))
+            Transaction.STATUS_LOOKUP['refundable']))
         attached = [a for (i, a) in enumerate(refunded_trans) if i % 2]
         unattached = [a for (i, a) in enumerate(refunded_trans) if not i % 2]
         self.assertTrue(len(attached) >= 1)
@@ -574,7 +573,7 @@ class GetTransactionsRelatedToBatchesTestCase(GetTransactionsBaseTestCase):
         adi_batch.save()
 
         refunded_trans = list(Transaction.objects.filter(
-            **Transaction.STATUS_LOOKUP['refundable']))
+            Transaction.STATUS_LOOKUP['refundable']))
         attached = [a for (i, a) in enumerate(refunded_trans) if i % 2]
         self.assertTrue(len(attached) >= 1)
 
