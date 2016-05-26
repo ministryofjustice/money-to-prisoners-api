@@ -1,7 +1,5 @@
 import datetime
-from functools import reduce
 import json
-import re
 
 from django import forms
 from django.core.urlresolvers import reverse
@@ -17,7 +15,7 @@ from account.models import Balance
 from credit.constants import CREDIT_RESOLUTION
 from core.dashboards import DashboardModule
 from core.views import DashboardView
-from transaction.constants import TRANSACTION_CATEGORY, TRANSACTION_SOURCE, TRANSACTION_STATUS
+from transaction.constants import TRANSACTION_STATUS
 from transaction.models import Transaction
 from transaction.utils import format_amount, format_number
 
@@ -239,30 +237,10 @@ class TransactionReport(DashboardModule):
 
     @property
     def well_formed_references(self):
-        # taken from transaction-uploader
-        reference_pattern = re.compile(
-            '''
-            ^
-            [^a-zA-Z]*                    # skip until first letter
-            ([A-Za-z][0-9]{4}[A-Za-z]{2}) # match the prisoner number
-            \D*                           # skip until next digit
-            ([0-9]{1,2})                  # match 1 or 2 digit day of month
-            \D*                           # skip until next digit
-            ([0-9]{1,2})                  # match 1 or 2 digit month
-            \D*                           # skip until next digit
-            ([0-9]{4}|[0-9]{2})           # match 4 or 2 digit year
-            \D*                           # skip until end
-            $
-            ''',
-            re.X
-        )
-
-        candidate_credits = self.queryset.filter(
-            category=TRANSACTION_CATEGORY.CREDIT,
-            source=TRANSACTION_SOURCE.BANK_TRANSFER
-        ).values_list('reference', flat=True)
-        return reduce(lambda count, reference: count + (1 if reference_pattern.match(reference) else 0),
-                      candidate_credits, 0)
+        return self.queryset.filter(
+            credit__prisoner_dob__isnull=False,
+            credit__prisoner_number__isnull=False,
+        ).count()
 
     def get_table(self):
         return [
