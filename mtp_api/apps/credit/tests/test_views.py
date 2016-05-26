@@ -14,14 +14,15 @@ from django.utils.dateformat import format as format_date
 from django.utils.timezone import localtime
 from rest_framework import status
 
-from mtp_auth.models import PrisonUserMapping
-from prison.models import Prison
+from core import getattr_path
 from credit.views import CreditTextSearchFilter
 from credit.models import Credit, Log
 from credit.constants import CREDIT_STATUS, LOCK_LIMIT, LOG_ACTIONS
 from credit.tests.test_base import (
     BaseCreditViewTestCase, CreditRejectsRequestsWithoutPermissionTestMixin
 )
+from mtp_auth.models import PrisonUserMapping
+from prison.models import Prison
 from transaction.tests.utils import generate_transactions
 
 
@@ -86,6 +87,9 @@ class CreditListTestCase(
             user_checker = noop_checker
         received_at_checker = self._get_received_at_checker(filters, noop_checker)
         search_checker = self._get_search_checker(filters, noop_checker)
+        sender_name_checker = self._get_attribute_checker(
+            'sender_name', filters, noop_checker, True
+        )
         sender_sort_code_checker = self._get_attribute_checker(
             'sender_sort_code', filters, noop_checker
         )
@@ -95,8 +99,17 @@ class CreditListTestCase(
         sender_roll_number_checker = self._get_attribute_checker(
             'sender_roll_number', filters, noop_checker
         )
+        prisoner_name_checker = self._get_attribute_checker(
+            'prisoner_name', filters, noop_checker, True
+        )
         prisoner_number_checker = self._get_attribute_checker(
             'prisoner_number', filters, noop_checker
+        )
+        prison_region_checker = self._get_sub_attribute_checker(
+            'prison_region', 'prison.region', filters, noop_checker
+        )
+        prison_gender_checker = self._get_sub_attribute_checker(
+            'prison_gender', 'prison.gender', filters, noop_checker
         )
         amount_pattern_checker = self._get_amount_pattern_checker(filters, noop_checker)
 
@@ -108,10 +121,14 @@ class CreditListTestCase(
             user_checker(c) and
             received_at_checker(c) and
             search_checker(c) and
+            sender_name_checker(c) and
             sender_sort_code_checker(c) and
             sender_account_number_checker(c) and
             sender_roll_number_checker(c) and
+            prisoner_name_checker(c) and
             prisoner_number_checker(c) and
+            prison_region_checker(c) and
+            prison_gender_checker(c) and
             amount_pattern_checker(c)
         ]
         self.assertEqual(response.data['count'], len(expected_ids))
@@ -126,9 +143,18 @@ class CreditListTestCase(
 
         return response
 
-    def _get_attribute_checker(self, attribute, filters, noop_checker):
+    def _get_attribute_checker(self, attribute, filters, noop_checker, text_search=False):
         if filters.get(attribute):
+            if text_search:
+                return lambda c: filters[attribute].lower() in (getattr(c, attribute) or '').lower()
             return lambda c: getattr(c, attribute) == filters[attribute]
+        return noop_checker
+
+    def _get_sub_attribute_checker(self, filter_name, attribute_path, filters, noop_checker, text_search=False):
+        if filters.get(filter_name):
+            if text_search:
+                return lambda c: filters[filter_name].lower() in getattr_path(c, attribute_path, '').lower()
+            return lambda c: getattr_path(c, attribute_path) == filters[filter_name]
         return noop_checker
 
     def _get_received_at_checker(self, filters, noop_checker):
@@ -220,6 +246,46 @@ class CreditListWithDefaultsTestCase(CreditListTestCase):
         the logged-in user can manage.
         """
         self._test_response_with_filters(filters={})
+
+    def test_filter_by_sender_name(self):
+        search = ''
+        while not search:
+            credit = random.choice(self.credits)
+            if credit.sender_name:
+                search = credit.sender_name[:-4].strip()
+        self._test_response_with_filters(filters={
+            'sender_name': search
+        })
+
+    def test_filter_by_prisoner_name(self):
+        search = ''
+        while not search:
+            credit = random.choice(self.credits)
+            if credit.prisoner_name:
+                search = credit.prisoner_name[:-4].strip()
+        self._test_response_with_filters(filters={
+            'prisoner_name': search
+        })
+
+    def test_filter_by_prison_region(self):
+        search = ''
+        while not search:
+            credit = random.choice(self.credits)
+            if credit.prison:
+                search = credit.prison.region
+        self._test_response_with_filters(filters={
+            'prison_region': search
+        })
+
+    def test_filter_by_prison_gender(self):
+        search = ''
+        while not search:
+            credit = random.choice(self.credits)
+            if credit.prison:
+                search = credit.prison.gender
+        self._test_response_with_filters(filters={
+            'prison_gender': search
+        })
 
 
 class CreditListWithDefaultPrisonAndUserTestCase(CreditListTestCase):
@@ -447,11 +513,11 @@ class CreditListWithSearchTestCase(CreditListTestCase):
         """
         Search for a prisoner number
         """
-        while True:
+        search_phrase = ''
+        while not search_phrase:
             credit = random.choice(self.credits)
             if credit.prisoner_number:
-                break
-        search_phrase = credit.prisoner_number
+                search_phrase = credit.prisoner_number
         self._test_response_with_filters(filters={
             'search': search_phrase
         })
@@ -460,11 +526,11 @@ class CreditListWithSearchTestCase(CreditListTestCase):
         """
         Search for a prisoner first name
         """
-        while True:
+        search_phrase = ''
+        while not search_phrase:
             credit = random.choice(self.credits)
             if credit.prisoner_name:
-                break
-        search_phrase = credit.prisoner_name.split()[0]
+                search_phrase = credit.prisoner_name.split()[0]
         self._test_response_with_filters(filters={
             'search': search_phrase
         })
@@ -615,6 +681,55 @@ class CreditListInvalidValuesTestCase(CreditListTestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count'], 0)
+
+
+class CreditListOrderingTestCase(CreditListTestCase):
+    @classmethod
+    def add_test_methods(cls):
+        for ordering_field in ['received_at', 'amount', 'prisoner_number', 'prisoner_name']:
+            cls.add_test_method(ordering_field)
+
+    @classmethod
+    def add_test_method(cls, ordering):
+        def test_method(self):
+            response = self._test_ordering(ordering)
+            response_reversed = self._test_ordering('-' + ordering)
+            self.assertEqual(response.data['count'], response_reversed.data['count'])
+
+            search = ''
+            while not search:
+                credit = random.choice(self.credits)
+                if credit.prisoner_name:
+                    search = credit.prisoner_name[:-4].strip()
+            self._test_ordering(ordering, prisoner_name=search)
+
+        setattr(cls, 'test_ordering_by_' + ordering, test_method)
+
+    def _test_ordering(self, ordering, **filters):
+        logged_in_user = self._get_authorised_user()
+        url = self._get_url(ordering=ordering, **filters)
+        response = self.client.get(
+            url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        results = response.data['results']
+        if len(results) < 2:
+            print('Cannot test ordering on a list of fewer than 2 results')
+            return
+        if ordering.startswith('-'):
+            ordering = ordering[1:]
+            results = reversed(results)
+        last_item = None
+        for item in results:
+            if last_item is not None:
+                self.assertGreaterEqual(item[ordering], last_item[ordering])
+            last_item = item
+        return response
+
+
+CreditListOrderingTestCase.add_test_methods()
 
 
 class LockedCreditListTestCase(CreditListTestCase):

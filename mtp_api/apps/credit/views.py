@@ -90,6 +90,7 @@ class CreditTextSearchFilter(django_filters.CharFilter):
 
 class CreditListFilter(django_filters.FilterSet):
     status = StatusChoiceFilter(choices=CREDIT_STATUS.choices)
+    prisoner_name = django_filters.CharFilter(name='prisoner_name', lookup_expr='icontains')
     prison = django_filters.ModelMultipleChoiceFilter(queryset=Prison.objects.all())
     prison_region = django_filters.CharFilter(name='prison__region')
     prison_gender = django_filters.CharFilter(name='prison__gender')
@@ -133,7 +134,8 @@ class CreditViewMixin(object):
 class GetCredits(CreditViewMixin, generics.ListAPIView):
     filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter)
     filter_class = CreditListFilter
-    ordering_fields = ('created',)
+    ordering_fields = ('created', 'received_at', 'amount',
+                       'prisoner_number', 'prisoner_name')
     action = 'list'
 
     permission_classes = (
