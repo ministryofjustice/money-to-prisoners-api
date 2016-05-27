@@ -51,6 +51,7 @@ class CreditSerializer(serializers.ModelSerializer):
 
 
 class SecurityCreditSerializer(CreditSerializer):
+    prison_name = serializers.SerializerMethodField()
     sender_sort_code = serializers.CharField(read_only=True)
     sender_account_number = serializers.CharField(read_only=True)
     sender_roll_number = serializers.CharField(read_only=True)
@@ -58,10 +59,18 @@ class SecurityCreditSerializer(CreditSerializer):
     class Meta:
         model = Credit
         fields = CreditSerializer.Meta.fields + (
+            'prison_name',
             'sender_sort_code',
             'sender_account_number',
             'sender_roll_number',
         )
+
+    @classmethod
+    def get_prison_name(cls, obj):
+        try:
+            return Prison.objects.get(pk=obj.prison_id).name
+        except Prison.DoesNotExist:
+            return None
 
 
 class LockedCreditSerializer(CreditSerializer):
