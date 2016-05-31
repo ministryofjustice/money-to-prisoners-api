@@ -29,6 +29,7 @@ class CreditSerializer(serializers.ModelSerializer):
     refunded_at = serializers.DateTimeField(read_only=True)
     source = serializers.CharField(read_only=True)
     intended_recipient = serializers.CharField(read_only=True)
+    anonymous = serializers.SerializerMethodField()
 
     class Meta:
         model = Credit
@@ -47,7 +48,14 @@ class CreditSerializer(serializers.ModelSerializer):
             'refunded_at',
             'source',
             'intended_recipient',
+            'anonymous',
         )
+
+    def get_anonymous(self, obj):
+        try:
+            return obj.transaction.incomplete_sender_info
+        except AttributeError:
+            return False
 
 
 class SecurityCreditSerializer(CreditSerializer):
