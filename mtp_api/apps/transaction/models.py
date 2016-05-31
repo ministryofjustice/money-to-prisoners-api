@@ -27,7 +27,7 @@ class Transaction(TimeStampedModel):
     received_at = models.DateTimeField(auto_now=False)
 
     # 6-digit reference code for reconciliation
-    ref_code = models.CharField(max_length=12, null=True)
+    ref_code = models.CharField(max_length=12, blank=True, null=True)
 
     incomplete_sender_info = models.BooleanField(default=False)
     reference_in_sender_field = models.BooleanField(default=False)
