@@ -21,8 +21,11 @@ class BaseCreditViewTestCase(AuthTestCaseMixin, APITestCase):
     STATUS_FILTERS = {
         None: lambda t: True,
         CREDIT_STATUS.LOCKED: lambda t: t.owner and not t.credited,
-        CREDIT_STATUS.AVAILABLE: lambda t: not t.owner and not t.credited,
-        CREDIT_STATUS.CREDITED: lambda t: t.owner and t.credited
+        CREDIT_STATUS.AVAILABLE: lambda t: (
+            not t.owner and not t.credited and not
+            (hasattr(t, 'transaction') and t.transaction.incomplete_sender_info)
+        ),
+        CREDIT_STATUS.CREDITED: lambda t: t.credited
     }
     transaction_batch = 50
 
@@ -59,6 +62,10 @@ class BaseCreditViewTestCase(AuthTestCaseMixin, APITestCase):
 
     def _get_available_credits_qs(self, prisons):
         return Credit.objects.filter(
+            (
+                models.Q(transaction__isnull=True) |
+                models.Q(transaction__incomplete_sender_info=False)
+            ),
             owner__isnull=True, resolution=CREDIT_RESOLUTION.PENDING,
             prison__in=prisons
         )

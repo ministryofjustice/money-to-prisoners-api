@@ -279,7 +279,7 @@ class LockCredits(CreditViewMixin, APIView):
             locked_count = self.get_queryset().locked().filter(owner=self.request.user).count()
             if locked_count < LOCK_LIMIT:
                 slice_size = LOCK_LIMIT-locked_count
-                to_lock = self.get_queryset().available().select_for_update()
+                to_lock = self.get_queryset().available()
                 slice_pks = to_lock.values_list('pk', flat=True)[:slice_size]
 
                 queryset = self.get_queryset().filter(pk__in=slice_pks)
