@@ -1524,28 +1524,34 @@ class SenderListTestCase(GroupedListTestCase):
                 transaction__sender_sort_code=sender['sender_sort_code'],
                 transaction__sender_account_number=sender['sender_account_number'],
                 transaction__sender_roll_number=sender['sender_roll_number'],
-            ).exclude(prisoner_number=None).values('prisoner_number').distinct().count()
+            ).exclude(prison=None).values('prisoner_number').distinct().count()
             self.assertEqual(
                 prisoner_count,
                 sender['prisoner_count']
             )
 
             # check refunds are included in prisoners
-            refund_count = Credit.objects.filter(
+            refunds = Credit.objects.filter(
                 transaction__sender_name=sender['sender_name'],
                 transaction__sender_sort_code=sender['sender_sort_code'],
                 transaction__sender_account_number=sender['sender_account_number'],
                 transaction__sender_roll_number=sender['sender_roll_number'],
-                prisoner_number=None
-            ).count()
-            if refund_count > 0:
+                prison=None
+            )
+            if refunds.count() > 0:
                 self.assertEqual(sender['prisoner_count'],
                                  len(sender['prisoners']) - 1)
                 refund_prisoners = 0
                 for prisoner in sender['prisoners']:
-                    if prisoner['prisoner_number'] is None:
+                    if prisoner['prison_name'] is None:
+                        refund_prisoner = prisoner
                         refund_prisoners += 1
                 self.assertEqual(refund_prisoners, 1)
+                self.assertEqual(refund_prisoner['credit_count'], refunds.count())
+                self.assertEqual(
+                    refund_prisoner['credit_total'],
+                    refunds.aggregate(models.Sum('amount'))['amount__sum']
+                )
             else:
                 self.assertEqual(sender['prisoner_count'],
                                  len(sender['prisoners']))
@@ -1557,12 +1563,19 @@ class SenderListTestCase(GroupedListTestCase):
 
         for sender in response.data['results']:
             for prisoner in sender['prisoners']:
+                if prisoner['prison_name']:
+                    prisoner_match = {
+                        'prisoner_number': prisoner['prisoner_number'],
+                        'prison__name': prisoner['prison_name']
+                    }
+                else:
+                    prisoner_match = {'prison__isnull': True}
                 credits = Credit.objects.filter(
                     transaction__sender_name=sender['sender_name'],
                     transaction__sender_sort_code=sender['sender_sort_code'],
                     transaction__sender_account_number=sender['sender_account_number'],
                     transaction__sender_roll_number=sender['sender_roll_number'],
-                    prisoner_number=prisoner['prisoner_number']
+                    **prisoner_match
                 )
                 self.assertEqual(prisoner['credit_count'], credits.count())
                 self.assertEqual(
@@ -1597,7 +1610,7 @@ class SenderListTestCase(GroupedListTestCase):
                 transaction__sender_roll_number=sender['sender_roll_number'],
                 received_at__date__gte=start_date,
                 received_at__date__lte=end_date
-            ).exclude(prisoner_number=None).values('prisoner_number').distinct().count()
+            ).exclude(prison=None).values('prisoner_number').distinct().count()
             self.assertEqual(
                 prisoner_count,
                 sender['prisoner_count']

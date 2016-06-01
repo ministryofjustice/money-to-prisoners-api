@@ -52,7 +52,7 @@ def get_prisoner_location_creator():
         (is_valid, PrisonerLocation instance)
     """
     prisons = cycle(Prison.objects.all())
-    # index = cycle(range(1, 11))
+    index = cycle(range(0, 10))
 
     created_by = get_user_model().objects.first()
 
@@ -67,8 +67,7 @@ def get_prisoner_location_creator():
         except PrisonerLocation.DoesNotExist:
             pass
 
-        # is_invalid = next(index) % 10 == 0  # 10% invalid (TODO: not implemented yet)
-        is_invalid = False
+        is_invalid = next(index) % 10 == 0  # 10% invalid
 
         if isinstance(prison, str):
             prison = Prison.objects.get(nomis_id=prison)

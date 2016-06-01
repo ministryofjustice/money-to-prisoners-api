@@ -449,9 +449,20 @@ class SenderList(CreditViewMixin, GroupedListAPIView):
                 'credit_count': credit_group['credit_count'],
                 'credit_total': credit_group['credit_total'],
             }
+            # null out number if not matched
+            if not prisoner['prison_id']:
+                prisoner['prisoner_number'] = None
             if last_sender and all(last_sender[key] == credit_group[key]
                                    for key in sender_identifiers):
-                last_sender['prisoners'].append(prisoner)
+                add_new_prisoner = True
+                if not prisoner['prison_id']:
+                    for previous_prisoner in last_sender['prisoners']:
+                        if not previous_prisoner['prison_id']:
+                            previous_prisoner['credit_count'] += prisoner['credit_count']
+                            previous_prisoner['credit_total'] += prisoner['credit_total']
+                            add_new_prisoner = False
+                if add_new_prisoner:
+                    last_sender['prisoners'].append(prisoner)
             else:
                 last_sender = {
                     key: credit_group[key]
@@ -464,7 +475,7 @@ class SenderList(CreditViewMixin, GroupedListAPIView):
                     'credit_total': 0,
                 })
                 senders.append(last_sender)
-            if prisoner['prisoner_number'] is not None:
+            if prisoner['prison_id'] is not None:
                 # NB: counts and totals are only summed for valid credits (those that reach a prisoner)
                 last_sender['credit_count'] += prisoner['credit_count']
                 last_sender['credit_total'] += prisoner['credit_total']
@@ -489,7 +500,7 @@ class SenderList(CreditViewMixin, GroupedListAPIView):
                     FROM credit_credit c2
                     INNER JOIN transaction_transaction t2 ON t2.credit_id = c2.id
                     WHERE c2.id IN %s AND
-                          c2.prisoner_number IS NOT NULL AND
+                          c2.prison_id IS NOT NULL AND
                           t2.sender_name=t.sender_name AND
                           t2.sender_sort_code=t.sender_sort_code AND
                           t2.sender_account_number=t.sender_account_number AND

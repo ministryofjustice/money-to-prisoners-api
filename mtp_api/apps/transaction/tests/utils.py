@@ -313,6 +313,8 @@ def setup_historical_transaction(location_creator, owner_status_chooser,
                     'credited': True
                 })
         else:
+            data['prison'] = None
+            data['prisoner_name'] = None
             if is_most_recent and not data.get('incomplete_sender_info'):
                 data.update({'refunded': False})
             else:
@@ -354,6 +356,8 @@ def setup_transaction(location_creator, owner_status_chooser,
                     'credited': True
                 })
         else:
+            data['prison'] = None
+            data['prisoner_name'] = None
             if transaction_counter % 2 == 0 and not data.get('incomplete_sender_info'):
                 data.update({'refunded': True})
             else:
