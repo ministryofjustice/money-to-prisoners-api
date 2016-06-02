@@ -92,6 +92,7 @@ class CreditListFilter(django_filters.FilterSet):
     status = StatusChoiceFilter(choices=CREDIT_STATUS.choices)
     prisoner_name = django_filters.CharFilter(name='prisoner_name', lookup_expr='icontains')
     prison = django_filters.ModelMultipleChoiceFilter(queryset=Prison.objects.all())
+    prison__isnull = django_filters.BooleanFilter(name='prison', lookup_expr='isnull')
     prison_region = django_filters.CharFilter(name='prison__region')
     prison_gender = django_filters.CharFilter(name='prison__gender')
     user = django_filters.ModelChoiceFilter(name='owner', queryset=User.objects.all())

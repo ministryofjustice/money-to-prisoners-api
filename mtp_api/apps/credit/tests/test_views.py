@@ -78,6 +78,9 @@ class CreditListTestCase(
         if filters.get('prison'):
             def prison_checker(c):
                 return c.prison and c.prison.pk in filters['prison'].split(',')
+        elif filters.get('prison__isnull'):
+            def prison_checker(c):
+                return (c.prison is None) == (filters['prison__isnull'] == 'True')
         else:
             prison_checker = noop_checker
         if filters.get('user'):
@@ -1093,6 +1096,14 @@ class AmountPatternCreditListTestCase(SecurityCreditListTestCase):
         random_amount = random.choice(self.credits).amount
         self._test_response_with_filters(filters={
             'amount': random_amount,
+        })
+
+
+class NoPrisonCreditListTestCase(SecurityCreditListTestCase):
+
+    def test_no_prison_filter(self):
+        self._test_response_with_filters(filters={
+            'prison__isnull': 'True'
         })
 
 
