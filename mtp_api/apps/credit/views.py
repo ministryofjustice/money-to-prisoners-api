@@ -465,6 +465,11 @@ class SenderList(CreditViewMixin, GroupedListAPIView):
                 if add_new_prisoner:
                     last_sender['prisoners'].append(prisoner)
             else:
+                if last_sender:
+                    last_sender['prisoners'] = sorted(
+                        last_sender['prisoners'],
+                        key=lambda p: (p['prisoner_number'] or '\uffff').lower()
+                    )
                 last_sender = {
                     key: credit_group[key]
                     for key in sender_identifiers
@@ -575,6 +580,11 @@ class PrisonerList(CreditViewMixin, GroupedListAPIView):
                                      for key in prisoner_identifiers):
                 last_prisoner['senders'].append(sender)
             else:
+                if last_prisoner:
+                    last_prisoner['senders'] = sorted(
+                        last_prisoner['senders'],
+                        key=lambda s: (s['sender_name'] or '\uffff').lower()
+                    )
                 last_prisoner = {
                     key: credit_group[key]
                     for key in prisoner_identifiers
