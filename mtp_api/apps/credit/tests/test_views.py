@@ -78,6 +78,9 @@ class CreditListTestCase(
         if filters.get('prison'):
             def prison_checker(c):
                 return c.prison and c.prison.pk in filters['prison'].split(',')
+        elif filters.get('prison__isnull'):
+            def prison_checker(c):
+                return (c.prison is None) == (filters['prison__isnull'] == 'True')
         else:
             prison_checker = noop_checker
         if filters.get('user'):
@@ -1096,6 +1099,14 @@ class AmountPatternCreditListTestCase(SecurityCreditListTestCase):
         })
 
 
+class NoPrisonCreditListTestCase(SecurityCreditListTestCase):
+
+    def test_no_prison_filter(self):
+        self._test_response_with_filters(filters={
+            'prison__isnull': 'True'
+        })
+
+
 class LockCreditTestCase(
     CashbookCreditRejectsRequestsWithoutPermissionTestMixin,
     BaseCreditViewTestCase
@@ -1480,6 +1491,22 @@ class GroupedListTestCase(BaseCreditViewTestCase):
         )
         return response
 
+    def _test_get_grouped_subset_ordered_correctly(self, subset_field, ordering_field):
+        response = self._get_grouped_response()
+
+        for prisoner in response.data['results']:
+            # check ordering, with nulls last
+            in_null_tail = False
+            previous_ordering_field = ''
+            for sender in prisoner[subset_field]:
+                if sender[ordering_field]:
+                    if in_null_tail:
+                        self.fail('null %s occurs before end of list' % ordering_field)
+                    self.assertGreaterEqual(sender[ordering_field], previous_ordering_field)
+                    previous_ordering_field = sender[ordering_field]
+                else:
+                    in_null_tail = True
+
     def test_ordering(self):
         if not self.ordering:
             return
@@ -1557,6 +1584,9 @@ class SenderListTestCase(GroupedListTestCase):
                                  len(sender['prisoners']))
                 for prisoner in sender['prisoners']:
                     self.assertNotEqual(prisoner['prisoner_number'], None)
+
+    def test_get_senders_prisoners_ordered_correctly(self):
+        self._test_get_grouped_subset_ordered_correctly('prisoners', 'prisoner_number')
 
     def test_get_senders_prisoners_correct_credit_totals(self):
         response = self._get_grouped_response()
@@ -1639,18 +1669,21 @@ class PrisonerListTestCase(GroupedListTestCase):
 
         for prisoner in response.data['results']:
             # check sender_count is correct (not including refunds)
-            sender_count = Credit.objects.filter(
+            senders = Credit.objects.filter(
                 prisoner_number=prisoner['prisoner_number'],
             ).values(
                 'transaction__sender_name',
                 'transaction__sender_sort_code',
                 'transaction__sender_account_number',
                 'transaction__sender_roll_number',
-            ).distinct().count()
+            ).distinct()
             self.assertEqual(
-                sender_count,
+                senders.count(),
                 prisoner['sender_count']
             )
+
+    def test_get_prisoners_senders_ordered_correctly(self):
+        self._test_get_grouped_subset_ordered_correctly('senders', 'sender_name')
 
     def test_get_prisoners_min_sender_count_with_prison_filter(self):
         min_sender_count = 2
