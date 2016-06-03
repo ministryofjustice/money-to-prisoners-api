@@ -59,6 +59,9 @@ class CreditListTestCase(
         managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
         return [c for c in self.credits if c.prison in managing_prisons]
 
+    def _get_invalid_credits(self):
+        return [c for c in self.credits if c.prison is None]
+
     def _test_response_with_filters(self, filters={}):
         logged_in_user = self._get_authorised_user()
         credits = self._get_managed_prison_credits()
@@ -116,6 +119,8 @@ class CreditListTestCase(
         )
         amount_pattern_checker = self._get_amount_pattern_checker(filters, noop_checker)
 
+        if filters.get('include_invalid'):
+            credits += self._get_invalid_credits()
         expected_ids = [
             c.pk
             for c in credits
@@ -1103,7 +1108,7 @@ class NoPrisonCreditListTestCase(SecurityCreditListTestCase):
 
     def test_no_prison_filter(self):
         self._test_response_with_filters(filters={
-            'prison__isnull': 'True'
+            'prison__isnull': 'True', 'include_invalid': 'True'
         })
 
 
@@ -1491,19 +1496,20 @@ class GroupedListTestCase(BaseCreditViewTestCase):
         )
         return response
 
-    def _test_get_grouped_subset_ordered_correctly(self, subset_field, ordering_field):
-        response = self._get_grouped_response()
+    def _test_get_grouped_subset_ordered_correctly(
+            self, subset_field, ordering_field, **filters):
+        response = self._get_grouped_response(**filters)
 
-        for prisoner in response.data['results']:
+        for item in response.data['results']:
             # check ordering, with nulls last
             in_null_tail = False
             previous_ordering_field = ''
-            for sender in prisoner[subset_field]:
-                if sender[ordering_field]:
+            for subset_item in item[subset_field]:
+                if subset_item[ordering_field]:
                     if in_null_tail:
                         self.fail('null %s occurs before end of list' % ordering_field)
-                    self.assertGreaterEqual(sender[ordering_field], previous_ordering_field)
-                    previous_ordering_field = sender[ordering_field]
+                    self.assertGreaterEqual(subset_item[ordering_field], previous_ordering_field)
+                    previous_ordering_field = subset_item[ordering_field]
                 else:
                     in_null_tail = True
 
@@ -1542,7 +1548,7 @@ class SenderListTestCase(GroupedListTestCase):
     ordering = ('-prisoner_count', '-credit_count', '-credit_total', 'sender_name')
 
     def test_get_senders_multiple_prisoners(self):
-        response = self._get_grouped_response()
+        response = self._get_grouped_response(include_invalid=True)
 
         for sender in response.data['results']:
             # check prisoner_count is correct (not including refunds)
@@ -1586,10 +1592,11 @@ class SenderListTestCase(GroupedListTestCase):
                     self.assertNotEqual(prisoner['prisoner_number'], None)
 
     def test_get_senders_prisoners_ordered_correctly(self):
-        self._test_get_grouped_subset_ordered_correctly('prisoners', 'prisoner_number')
+        self._test_get_grouped_subset_ordered_correctly(
+            'prisoners', 'prisoner_number', include_invalid=True)
 
     def test_get_senders_prisoners_correct_credit_totals(self):
-        response = self._get_grouped_response()
+        response = self._get_grouped_response(include_invalid=True)
 
         for sender in response.data['results']:
             for prisoner in sender['prisoners']:
@@ -1617,7 +1624,8 @@ class SenderListTestCase(GroupedListTestCase):
         min_prisoner_count = 2
         response = self._get_grouped_response(
             prisoner_count_0=min_prisoner_count,
-            prison='IXB'
+            prison='IXB',
+            include_invalid=True,
         )
 
         for sender in response.data['results']:
@@ -1629,7 +1637,8 @@ class SenderListTestCase(GroupedListTestCase):
         start_date = end_date - datetime.timedelta(days=1)
         response = self._get_grouped_response(
             received_at_0=format_date(start_date, 'Y-m-d'),
-            received_at_1=format_date(end_date, 'Y-m-d')
+            received_at_1=format_date(end_date, 'Y-m-d'),
+            include_invalid=True,
         )
 
         for sender in response.data['results']:
@@ -1653,6 +1662,7 @@ class SenderListTestCase(GroupedListTestCase):
             prisoner_count_0=min_prisoner_count,
             credit_total_1=max_credit_total,
             prison='IXB',
+            include_invalid=True,
         )
         for sender in response.data['results']:
             self.assertGreaterEqual(sender['prisoner_count'], min_prisoner_count)

@@ -127,9 +127,12 @@ class CreditListFilter(django_filters.FilterSet):
 class CreditViewMixin(object):
 
     def get_queryset(self):
-        return Credit.objects.filter(
+        queryset = Credit.objects.filter(
             prison__in=PrisonUserMapping.objects.get_prison_set_for_user(self.request.user)
         )
+        if self.request.query_params.get('include_invalid', '') == 'True':
+            queryset = queryset | Credit.objects.filter(prison=None)
+        return queryset
 
 
 class GetCredits(CreditViewMixin, generics.ListAPIView):
@@ -335,7 +338,7 @@ class UnlockCredits(CreditViewMixin, APIView):
         return HttpResponseRedirect(redirect_url, status=drf_status.HTTP_303_SEE_OTHER)
 
 
-class GroupedListAPIView(generics.ListAPIView):
+class GroupedListAPIView(CreditViewMixin, generics.ListAPIView):
     ordering_param = api_settings.ORDERING_PARAM
     ordering_fields = ()
     default_ordering = ()
@@ -387,7 +390,7 @@ class GroupedListAPIView(generics.ListAPIView):
         return sorted(queryset, key=cmp_to_key(compare))
 
 
-class SenderList(CreditViewMixin, GroupedListAPIView):
+class SenderList(GroupedListAPIView):
     serializer_class = SenderSerializer
     filter_backends = (filters.DjangoFilterBackend,)
     filter_class = CreditListFilter
@@ -399,10 +402,6 @@ class SenderList(CreditViewMixin, GroupedListAPIView):
         IsAuthenticated, NomsOpsClientIDPermissions,
         CreditPermissions
     )
-
-    def get_queryset(self):
-        # restrict by prison access, but include refunds
-        return super().get_queryset() | Credit.objects.filter(prison=None)
 
     def filter_queryset(self, queryset):
         queryset = super().filter_queryset(queryset)
@@ -465,11 +464,6 @@ class SenderList(CreditViewMixin, GroupedListAPIView):
                 if add_new_prisoner:
                     last_sender['prisoners'].append(prisoner)
             else:
-                if last_sender:
-                    last_sender['prisoners'] = sorted(
-                        last_sender['prisoners'],
-                        key=lambda p: (p['prisoner_number'] or '\uffff').lower()
-                    )
                 last_sender = {
                     key: credit_group[key]
                     for key in sender_identifiers
@@ -486,6 +480,11 @@ class SenderList(CreditViewMixin, GroupedListAPIView):
                 last_sender['credit_count'] += prisoner['credit_count']
                 last_sender['credit_total'] += prisoner['credit_total']
                 last_sender['prisoner_count'] += 1
+        for sender in senders:
+            sender['prisoners'] = sorted(
+                sender['prisoners'],
+                key=lambda p: (p['prisoner_number'] or '\uffff').lower()
+            )
         return senders
 
     def get_raw_sql_filter(self, filtered_ids):
@@ -517,7 +516,7 @@ class SenderList(CreditViewMixin, GroupedListAPIView):
         return SQLFragment(None, [])
 
 
-class PrisonerList(CreditViewMixin, GroupedListAPIView):
+class PrisonerList(GroupedListAPIView):
     serializer_class = PrisonerSerializer
     filter_backends = (filters.DjangoFilterBackend,)
     filter_class = CreditListFilter
@@ -580,11 +579,6 @@ class PrisonerList(CreditViewMixin, GroupedListAPIView):
                                      for key in prisoner_identifiers):
                 last_prisoner['senders'].append(sender)
             else:
-                if last_prisoner:
-                    last_prisoner['senders'] = sorted(
-                        last_prisoner['senders'],
-                        key=lambda s: (s['sender_name'] or '\uffff').lower()
-                    )
                 last_prisoner = {
                     key: credit_group[key]
                     for key in prisoner_identifiers
@@ -601,6 +595,11 @@ class PrisonerList(CreditViewMixin, GroupedListAPIView):
             last_prisoner['credit_count'] += sender['credit_count']
             last_prisoner['credit_total'] += sender['credit_total']
             last_prisoner['sender_count'] += 1
+        for prisoner in prisoners:
+            prisoner['senders'] = sorted(
+                prisoner['senders'],
+                key=lambda s: (s['sender_name'] or '\uffff').lower()
+            )
         return prisoners
 
     def get_raw_sql_filter(self, filtered_ids):
