@@ -43,9 +43,13 @@ class TransactionReportDateForm(forms.Form):
 
 
 class TransactionReportChart:
-    def __init__(self, queryset, title, start_date=None, end_date=None):
-        self.queryset = queryset
+    def __init__(self, title, queryset=None, start_date=None, end_date=None):
         self.title = title
+        self.queryset = queryset or Transaction.objects.all()
+        if start_date:
+            self.queryset.filter(received_at__date__gte=start_date)
+        if end_date:
+            self.queryset.filter(received_at__date__lte=end_date)
         self.start_date = start_date or \
             timezone.localtime(self.queryset.earliest().received_at).date()
         self.end_date = end_date or \
@@ -155,7 +159,7 @@ class TransactionReport(DashboardModule):
             self.title = _('All transactions')
             self.queryset = Transaction.objects.all()
             filter_string = ''
-            self.chart = TransactionReportChart(self.queryset, self.title)
+            self.chart = TransactionReportChart(self.title)
         elif date_range == 'this_month':
             received_at_end = timezone.localtime(timezone.now()).date()
             received_at_start = received_at_end.replace(day=1)
@@ -170,7 +174,6 @@ class TransactionReport(DashboardModule):
                             'received_at__date__lte=%s' % (received_at_start.isoformat(),
                                                            received_at_end.isoformat())
             self.chart = TransactionReportChart(
-                self.queryset,
                 format_date(received_at_start, 'N'),
                 start_date=received_at_start,
                 end_date=received_at_end,
@@ -191,7 +194,15 @@ class TransactionReport(DashboardModule):
                             'received_at__year=%d' % (received_at.day,
                                                       received_at.month,
                                                       received_at.year)
-            self.chart = None
+
+            # display chart of last week
+            received_at_end = timezone.localtime(timezone.now()).date()
+            received_at_start = received_at_end - datetime.timedelta(days=7)
+            self.chart = TransactionReportChart(
+                format_date(received_at_start, 'N'),
+                start_date=received_at_start,
+                end_date=received_at_end,
+            )
 
         if self.dashboard_view and self.dashboard_view.request.user.has_perm('credit.change_credit'):
             self.change_list_url = reverse('admin:credit_credit_changelist') + '?' + filter_string
