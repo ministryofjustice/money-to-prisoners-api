@@ -127,7 +127,8 @@ class SatisfactionDashboard(DashboardModule):
     column_count = 1
     title = _('User satisfaction')
     cache_lifetime = 60 * 60  # 1 hour
-    survey_id = '2527768'  # results: http://data.surveygizmo.com/r/413845_57330cc99681a7.27709426
+    survey_id = '2527768'
+    survey_url = 'http://data.surveygizmo.com/r/413845_57330cc99681a7.27709426'
     questions = [
         # NB: all questions must have 6 options, ending with "Not applicable"
         {'id': '13', 'title': _('Easy'), 'reverse': False},
