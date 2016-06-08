@@ -2,6 +2,7 @@ import json
 import itertools
 
 from django.conf import settings
+from django.contrib import messages
 from django.core.cache import cache
 from django.forms import MediaDefiningClass
 from django.http.request import QueryDict
@@ -128,6 +129,7 @@ class SatisfactionDashboard(DashboardModule):
     cache_lifetime = 60 * 60  # 1 hour
     survey_id = '2527768'  # results: http://data.surveygizmo.com/r/413845_57330cc99681a7.27709426
     questions = [
+        # NB: all questions must have 6 options, ending with "Not applicable"
         {'id': '13', 'title': _('Easy'), 'reverse': False},
         {'id': '14', 'title': _('Unreasonably slow'), 'reverse': True},
         {'id': '15', 'title': _('Cheap'), 'reverse': False},
@@ -198,12 +200,24 @@ class SatisfactionDashboard(DashboardModule):
         ]
 
     def make_chart_rows(self, question, statistics, reverse=False):
+        options = question['options']
+        if len(options) != 6:
+            messages.error(
+                self.dashboard_view.request,
+                _('Satisfaction survey question %s has unexpected number of options' % question['id'])
+            )
+            return []
+        if options[-1]['value'] != 'Not applicable':
+            messages.error(
+                self.dashboard_view.request,
+                _('Satisfaction survey question %s does not have "Not applicable" option' % question['id'])
+            )
+            return
+        if reverse:
+            options = itertools.chain(reversed(options[:-1]), [options[-1]])
+
         rows = []
         row_index = dict()
-        if reverse:
-            options = itertools.chain(reversed(question['options'][:-1]), [question['options'][-1]])
-        else:
-            options = question['options']
         for index, option in enumerate(options):
             title = option['value']
             style = 'color: #666' if title == 'Not applicable' else ''
