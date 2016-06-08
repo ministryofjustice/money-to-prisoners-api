@@ -4,8 +4,7 @@ django.jQuery(function($) {
   'use strict';
 
   var colourScale = ['#ff800e', '#ffbc79', '#cfcfcf', '#a2c8ec', '#5f9ed1', '#666'],
-    alternateColourScale = ['#ebc577', '#ecd7b2', '#c7c7c7', '#9aaec1', '#7492aa', '#666'],
-    neutralColour = '#dcdcdc';
+    colourByMail = '#79aec8';
 
   google.charts.setOnLoadCallback(function() {
     for(var question in satisfactionResultsData.questions) {
@@ -25,12 +24,12 @@ django.jQuery(function($) {
           return [item];  // because jQuery flattens returned arrays
         }));
 
-        drawTransactionReports($chart, chartData, question.title);
+        drawTransactionReports($chart, chartData, colourByMail, question.mean);
       }
     }
   });
 
-  function drawTransactionReports($chart, chartData) {
+  function drawTransactionReports($chart, chartData, colour, mean) {
     var chart = new google.visualization.ColumnChart($chart[0]);
     chart.draw(chartData, {
       hAxis: {
@@ -55,16 +54,31 @@ django.jQuery(function($) {
         }
       },
       backgroundColor: '#f9f9f9',
-      colors: ['#79aec8']
+      colors: [colour]
     });
 
     google.visualization.events.addListener(chart, 'ready', function() {
       var $svg = $chart.find('svg'),
+        svgNamespace = $svg[0].namespaceURI,
         cli = chart.getChartLayoutInterface(),
         legendBounds = cli.getBoundingBox('legend'),
-        $title;
+        chartBounds = cli.getChartAreaBoundingBox(),
+        significantWidth = chartBounds.width * 5 / 6, // last option is disregarded
+        meanMarkerWidth = 10,
+        $mean, $title;
 
-      $title = $(document.createElementNS($svg[0].namespaceURI, 'text'));
+      $mean = $(document.createElementNS(svgNamespace, 'rect'));
+      $mean.attr({
+        x: chartBounds.left + significantWidth * (2 + mean) / 4 - meanMarkerWidth / 2,
+        y: chartBounds.top,
+        height: chartBounds.height,
+        width: meanMarkerWidth,
+        fill: colour,
+        opacity: 0.6
+      });
+      $svg.append($mean);
+
+      $title = $(document.createElementNS(svgNamespace, 'text'));
       $title.text($chart.data('title'));
       $title.attr({
         'text-anchor': 'start',

@@ -136,6 +136,7 @@ class SatisfactionDashboard(DashboardModule):
         {'id': '15', 'title': _('Cheap'), 'reverse': False},
         {'id': '70', 'title': _('Rating'), 'reverse': False},
     ]
+    weightings = [-2, -1, 0, 1, 2, 0]
 
     class Media:
         css = {
@@ -159,7 +160,7 @@ class SatisfactionDashboard(DashboardModule):
         responses = sorted(responses, key=lambda response: (response['count'], response['.index']), reverse=True)
         modal_responses = [(responses[0]['.index'], responses[0]['count'])]
         last_index = 0
-        for index in range(1, 6):
+        for index in range(1, len(cls.weightings)):
             if responses[last_index]['count'] == responses[index]['count']:
                 modal_responses.append((responses[index]['.index'], responses[index]['count']))
         return modal_responses
@@ -206,7 +207,7 @@ class SatisfactionDashboard(DashboardModule):
 
     def make_chart_rows(self, question, statistics, reverse=False):
         options = question['options']
-        if len(options) != 6:
+        if len(options) != len(self.weightings):
             messages.error(
                 self.dashboard_view.request,
                 _('Satisfaction survey question %s has unexpected number of options' % question['id'])
@@ -222,13 +223,14 @@ class SatisfactionDashboard(DashboardModule):
             options = itertools.chain(reversed(options[:-1]), [options[-1]])
 
         # connect responses with questions
+        self.max_response_count = 0
+        mean_response = 0
         rows = []
         row_index = dict()
         for index, option in enumerate(options):
             title = option['value']
             rows.append([title, 0, '', None])
             row_index[title] = index
-        self.max_response_count = 0
         for response in statistics['Breakdown']:
             index = row_index[response['label']]
             response['.index'] = index
@@ -237,13 +239,15 @@ class SatisfactionDashboard(DashboardModule):
             rows[index][1] = response_count
             if response_count > self.max_response_count:
                 self.max_response_count = response_count
+            mean_response += response_count * self.weightings[index]
+        mean_response /= rows[0][1] + rows[1][1] + rows[3][1] + rows[4][1]
 
         # annotate modal responses
         modal_responses = self.get_modal_responses(statistics['Breakdown'])
         for modal_response_index, modal_response_count in modal_responses:
             rows[modal_response_index][3] = str(modal_response_count)
 
-        return rows
+        return rows, mean_response
 
     def get_chart_data(self):
         responses = self.get_satisfaction_results()
@@ -252,10 +256,11 @@ class SatisfactionDashboard(DashboardModule):
             question = source_data['question']
             statistics = source_data['statistics']
             reverse = source_data['reverse']
-            rows = self.make_chart_rows(question, statistics, reverse)
+            rows, mean_response = self.make_chart_rows(question, statistics, reverse)
             questions.append({
                 'id': source_data['id'],
                 'rows': rows,
+                'mean': mean_response,
             })
 
         return mark_safe(json.dumps({
