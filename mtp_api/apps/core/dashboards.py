@@ -1,4 +1,5 @@
 import json
+import itertools
 
 from django.conf import settings
 from django.core.cache import cache
@@ -127,10 +128,10 @@ class SatisfactionDashboard(DashboardModule):
     cache_lifetime = 60 * 60  # 1 hour
     survey_id = '2527768'  # results: http://data.surveygizmo.com/r/413845_57330cc99681a7.27709426
     questions = [
-        {'id': '13', 'title': 'Easy'},
-        {'id': '14', 'title': 'Unreasonably slow'},
-        {'id': '15', 'title': 'Cheap'},
-        {'id': '70', 'title': 'Rating'},
+        {'id': '13', 'title': _('Easy'), 'reverse': False},
+        {'id': '14', 'title': _('Unreasonably slow'), 'reverse': True},
+        {'id': '15', 'title': _('Cheap'), 'reverse': False},
+        {'id': '70', 'title': _('Rating'), 'reverse': False},
     ]
 
     class Media:
@@ -180,6 +181,7 @@ class SatisfactionDashboard(DashboardModule):
                     'id': question_id,
                     'question': question_response,
                     'statistics': statistics_response,
+                    'reverse': question['reverse'],
                 })
 
             cache.set(self.cache_key, response, timeout=self.cache_lifetime)
@@ -195,10 +197,14 @@ class SatisfactionDashboard(DashboardModule):
             {'type': 'string', 'role': 'annotation'},
         ]
 
-    def make_chart_rows(self, question, statistics):
+    def make_chart_rows(self, question, statistics, reverse=False):
         rows = []
         row_index = dict()
-        for index, option in enumerate(question['options']):
+        if reverse:
+            options = itertools.chain(reversed(question['options'][:-1]), [question['options'][-1]])
+        else:
+            options = question['options']
+        for index, option in enumerate(options):
             title = option['value']
             style = 'color: #666' if title == 'Not applicable' else ''
             rows.append([title, 0, style, None])
@@ -227,7 +233,8 @@ class SatisfactionDashboard(DashboardModule):
         for source_data in responses:
             question = source_data['question']
             statistics = source_data['statistics']
-            rows = self.make_chart_rows(question, statistics)
+            reverse = source_data['reverse']
+            rows = self.make_chart_rows(question, statistics, reverse)
             questions.append({
                 'id': source_data['id'],
                 'rows': rows,
