@@ -3,6 +3,10 @@
 django.jQuery(function($) {
   'use strict';
 
+  var colourScale = ['#ff800e', '#ffbc79', '#cfcfcf', '#a2c8ec', '#5f9ed1', '#666'],
+    alternateColourScale = ['#ebc577', '#ecd7b2', '#c7c7c7', '#9aaec1', '#7492aa', '#666'],
+    neutralColour = '#dcdcdc';
+
   google.charts.setOnLoadCallback(function() {
     for(var question in satisfactionResultsData.questions) {
       if (satisfactionResultsData.questions.hasOwnProperty(question)) {
@@ -16,7 +20,10 @@ django.jQuery(function($) {
             chartData.addColumn(satisfactionResultsData.columns[column]);
           }
         }
-        chartData.addRows(question.rows);
+        chartData.addRows($.map(question.rows, function(item, index) {
+          item[2] = 'color: ' + colourScale[index];
+          return [item];  // because jQuery flattens returned arrays
+        }));
 
         drawTransactionReports($chart, chartData, question.title);
       }

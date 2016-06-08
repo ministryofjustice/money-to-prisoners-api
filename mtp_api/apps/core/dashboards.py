@@ -155,10 +155,14 @@ class SatisfactionDashboard(DashboardModule):
         self.max_response_count = 0
 
     @classmethod
-    def get_modal_response(cls, responses):
-        responses = sorted(responses, key=lambda response: response['count'], reverse=True)
-        if len(responses) > 1 and responses[0]['count'] > responses[1]['count']:
-            return responses[0]['.index']
+    def get_modal_responses(cls, responses):
+        responses = sorted(responses, key=lambda response: (response['count'], response['.index']), reverse=True)
+        modal_responses = [(responses[0]['.index'], responses[0]['count'])]
+        last_index = 0
+        for index in range(1, 6):
+            if responses[last_index]['count'] == responses[index]['count']:
+                modal_responses.append((responses[index]['.index'], responses[index]['count']))
+        return modal_responses
 
     def get_satisfaction_results(self):
         response = cache.get(self.cache_key)
@@ -217,15 +221,14 @@ class SatisfactionDashboard(DashboardModule):
         if reverse:
             options = itertools.chain(reversed(options[:-1]), [options[-1]])
 
+        # connect responses with questions
         rows = []
         row_index = dict()
         for index, option in enumerate(options):
             title = option['value']
-            style = 'color: #666' if title == 'Not applicable' else ''
-            rows.append([title, 0, style, None])
+            rows.append([title, 0, '', None])
             row_index[title] = index
         self.max_response_count = 0
-        max_response_index = None
         for response in statistics['Breakdown']:
             index = row_index[response['label']]
             response['.index'] = index
@@ -233,13 +236,13 @@ class SatisfactionDashboard(DashboardModule):
             response['count'] = response_count
             rows[index][1] = response_count
             if response_count > self.max_response_count:
-                max_response_index = index
                 self.max_response_count = response_count
-        modal_response = self.get_modal_response(statistics['Breakdown'])
-        if modal_response is not None and not rows[modal_response][2]:
-            rows[modal_response][2] = 'color: #79C890'
-        if max_response_index is not None:
-            rows[max_response_index][3] = str(self.max_response_count)
+
+        # annotate modal responses
+        modal_responses = self.get_modal_responses(statistics['Breakdown'])
+        for modal_response_index, modal_response_count in modal_responses:
+            rows[modal_response_index][3] = str(modal_response_count)
+
         return rows
 
     def get_chart_data(self):
