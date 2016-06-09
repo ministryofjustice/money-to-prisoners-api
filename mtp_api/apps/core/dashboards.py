@@ -201,10 +201,8 @@ class SatisfactionDashboard(DashboardModule):
         return [
             {'type': 'string', 'label': gettext('Response'), 'role': 'domain'},
             {'type': 'number', 'label': gettext('Money by post'), 'role': 'data'},
-            {'type': 'string', 'role': 'style'},
             {'type': 'string', 'role': 'annotation'},
             {'type': 'number', 'label': gettext('MTP service'), 'role': 'data'},
-            {'type': 'string', 'role': 'style'},
             {'type': 'string', 'role': 'annotation'},
         ]
 
@@ -232,7 +230,7 @@ class SatisfactionDashboard(DashboardModule):
         row_index = dict()
         for index, option in enumerate(options):
             title = option['value']
-            rows.append([title, 0, '', None, 0, '', None])
+            rows.append([title, 0, None, 0, None])
             row_index[title] = index
         for response in statistics['Breakdown']:
             index = row_index[response['label']]
@@ -248,7 +246,7 @@ class SatisfactionDashboard(DashboardModule):
         # annotate modal responses
         modal_responses = self.get_modal_responses(statistics['Breakdown'])
         for modal_response_index, modal_response_count in modal_responses:
-            rows[modal_response_index][3] = str(modal_response_count)
+            rows[modal_response_index][2] = str(modal_response_count)
 
         return rows, mean_response
 

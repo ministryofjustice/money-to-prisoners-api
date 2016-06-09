@@ -4,8 +4,8 @@ django.jQuery(function($) {
   'use strict';
 
   var colourScale = ['#ff800e', '#ffbc79', '#cfcfcf', '#a2c8ec', '#5f9ed1', '#dcdcdc'],
-    colourByPost = '#666',
-    colourByMTP = '#79aec8';
+    colours = ['#666', '#79aec8'],
+    font = 'Roboto, "Lucida Grande", Verdana, Arial, sans-serif';
 
   google.charts.setOnLoadCallback(function() {
     for(var question in satisfactionResultsData.questions) {
@@ -20,18 +20,14 @@ django.jQuery(function($) {
             chartData.addColumn(satisfactionResultsData.columns[column]);
           }
         }
-        chartData.addRows($.map(question.rows, function(item, index) {
-          item[2] = 'color: ' + colourScale[index];
-          item[5] = 'color: ' + colourScale[index];
-          return [item];  // because jQuery flattens returned arrays
-        }));
+        chartData.addRows(question.rows);
 
-        drawTransactionReports($chart, chartData, [colourByPost, colourByMTP], [question.mean, null]);
+        drawTransactionReports($chart, chartData, [question.mean, null]);
       }
     }
   });
 
-  function drawTransactionReports($chart, chartData, colours, means) {
+  function drawTransactionReports($chart, chartData, means) {
     var chart = new google.visualization.ColumnChart($chart[0]);
 
     chart.draw(chartData, {
@@ -48,7 +44,7 @@ django.jQuery(function($) {
         top: 10,
         left: 10
       },
-      fontName: 'Roboto, "Lucida Grande", Verdana, Arial, sans-serif',
+      fontName: font,
       legend: {
         alignment: 'center',
         textStyle: {
@@ -68,42 +64,77 @@ django.jQuery(function($) {
         chartBounds = cli.getChartAreaBoundingBox(),
         significantWidth = chartBounds.width * 5 / 6, // last option is disregarded
         meanMarkerWidth = 12,
-        $chartDetails, $meanMarkers, $title;
+        $hideOnMouseover = [],
+        $chartDetails, $title,
+        i;
 
       $chartDetails = $($svg.children('g')[1]).children('g');
       $chartDetails = $($chartDetails[0]).add($chartDetails[$chartDetails.length - 1]).attr({
         visibility: 'hidden'
       });
 
-      $meanMarkers = [];
-      for (var i in means) {
+      for (i in colourScale) {
+        if (colourScale.hasOwnProperty(i)) {
+          var colour = colourScale[i],
+            barBounds = cli.getBoundingBox('bar#0#' + i),
+            $rect = $(document.createElementNS(svgNamespace, 'rect'));
+          $rect.attr({
+            x: barBounds.left,
+            y: barBounds.top + barBounds.height + 2,
+            width: barBounds.width * 2,
+            height: 3,
+            fill: colour
+          });
+          $svg.append($rect);
+          $hideOnMouseover.push($rect);
+        }
+      }
+
+      for (i in means) {
         if (means.hasOwnProperty(i)) {
           var mean = means[i],
             $meanMarker = $(document.createElementNS(svgNamespace, 'rect')),
-            x = chartBounds.left + significantWidth * (2 + mean) / 4;
+            $meanTextMarker = $(document.createElementNS(svgNamespace, 'text')),
+            x, y;
           if (mean === null) {
-            x = chartBounds.left + chartBounds.width * (1 - (1 / 6) + (1 / 12));
+            x = chartBounds.width * (1 - (1 / 6) + (1 / 12));
+          } else {
+            x = significantWidth * (2 + mean) / 4
           }
+          x = chartBounds.left + x - meanMarkerWidth / 2;
+          y = chartBounds.top;
           $meanMarker.attr({
-            x: x - meanMarkerWidth / 2,
-            y: chartBounds.top,
-            height: chartBounds.height,
+            x: x,
+            y: y,
             width: meanMarkerWidth,
+            height: chartBounds.height,
             fill: colours[i]
           });
-          $meanMarkers.push($meanMarker);
+          x += 1;
+          y = chartBounds.top + chartBounds.height / 2;
+          $meanTextMarker.attr({
+            x: x,
+            y: y - 2,
+            transform: 'rotate(90,' + x + ',' + y + ')',
+            fill: '#fff',
+            'text-anchor': 'middle',
+            'text-align': 'center',
+            'font-family': font,
+            'font-size': 10
+          }).text('Average response');
+          $hideOnMouseover.push($meanMarker);
+          $hideOnMouseover.push($meanTextMarker);
         }
       }
-      $svg.append($meanMarkers);
+      $svg.append($hideOnMouseover);
 
       $title = $(document.createElementNS(svgNamespace, 'text'));
       $title.text($chart.data('title'));
       $title.attr({
-        'text-anchor': 'start',
         x: legendBounds.left,
         y: legendBounds.top - 6,
         fill: '#000',
-        'font-family': 'Roboto, "Lucida Grande", Verdana, Arial, sans-serif',
+        'font-family': font,
         'font-weight': 'bold',
         'font-size': 13
       });
@@ -113,7 +144,7 @@ django.jQuery(function($) {
         $chartDetails.attr({
           visibility: 'visible'
         });
-        $.each($meanMarkers, function() {
+        $.each($hideOnMouseover, function() {
           $(this).attr({
             visibility: 'hidden'
           });
@@ -122,7 +153,7 @@ django.jQuery(function($) {
         $chartDetails.attr({
           visibility: 'hidden'
         });
-        $.each($meanMarkers, function() {
+        $.each($hideOnMouseover, function() {
           $(this).attr({
             visibility: 'visible'
           });
