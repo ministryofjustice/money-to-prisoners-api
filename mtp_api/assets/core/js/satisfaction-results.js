@@ -3,8 +3,9 @@
 django.jQuery(function($) {
   'use strict';
 
-  var colourScale = ['#ff800e', '#ffbc79', '#cfcfcf', '#a2c8ec', '#5f9ed1', '#666'],
-    colourByMail = '#79aec8';
+  var colourScale = ['#ff800e', '#ffbc79', '#cfcfcf', '#a2c8ec', '#5f9ed1', '#dcdcdc'],
+    colourByMail = '#666',
+    colourByMTP = '#79aec8';
 
   google.charts.setOnLoadCallback(function() {
     for(var question in satisfactionResultsData.questions) {
@@ -31,6 +32,7 @@ django.jQuery(function($) {
 
   function drawTransactionReports($chart, chartData, colour, mean) {
     var chart = new google.visualization.ColumnChart($chart[0]);
+
     chart.draw(chartData, {
       hAxis: {
         baselineColor: 'none'
@@ -64,19 +66,23 @@ django.jQuery(function($) {
         legendBounds = cli.getBoundingBox('legend'),
         chartBounds = cli.getChartAreaBoundingBox(),
         significantWidth = chartBounds.width * 5 / 6, // last option is disregarded
-        meanMarkerWidth = 10,
-        $mean, $title;
+        meanMarkerWidth = 12,
+        $chartDetails, $meanMarker, $title;
 
-      $mean = $(document.createElementNS(svgNamespace, 'rect'));
-      $mean.attr({
+      $chartDetails = $($svg.children('g')[1]).children('g');
+      $chartDetails = $($chartDetails[0]).add($chartDetails[$chartDetails.length - 1]).attr({
+        visibility: 'hidden'
+      });
+
+      $meanMarker = $(document.createElementNS(svgNamespace, 'rect'));
+      $meanMarker.attr({
         x: chartBounds.left + significantWidth * (2 + mean) / 4 - meanMarkerWidth / 2,
         y: chartBounds.top,
         height: chartBounds.height,
         width: meanMarkerWidth,
-        fill: colour,
-        opacity: 0.6
+        fill: colour
       });
-      $svg.append($mean);
+      $svg.append($meanMarker);
 
       $title = $(document.createElementNS(svgNamespace, 'text'));
       $title.text($chart.data('title'));
@@ -90,6 +96,22 @@ django.jQuery(function($) {
         'font-size': 13
       });
       $svg.append($title);
+
+      $svg.on('mouseover', function() {
+        $chartDetails.attr({
+          visibility: 'visible'
+        });
+        $meanMarker.attr({
+          visibility: 'hidden'
+        });
+      }).on('mouseout', function() {
+        $chartDetails.attr({
+          visibility: 'hidden'
+        });
+        $meanMarker.attr({
+          visibility: 'visible'
+        });
+      });
     });
   }
 });
