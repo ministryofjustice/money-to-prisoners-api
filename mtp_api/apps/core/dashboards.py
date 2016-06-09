@@ -200,7 +200,10 @@ class SatisfactionDashboard(DashboardModule):
     def columns(self):
         return [
             {'type': 'string', 'label': gettext('Response'), 'role': 'domain'},
-            {'type': 'number', 'label': gettext('Payments by mail'), 'role': 'data'},
+            {'type': 'number', 'label': gettext('Money by post'), 'role': 'data'},
+            {'type': 'string', 'role': 'style'},
+            {'type': 'string', 'role': 'annotation'},
+            {'type': 'number', 'label': gettext('MTP service'), 'role': 'data'},
             {'type': 'string', 'role': 'style'},
             {'type': 'string', 'role': 'annotation'},
         ]
@@ -229,7 +232,7 @@ class SatisfactionDashboard(DashboardModule):
         row_index = dict()
         for index, option in enumerate(options):
             title = option['value']
-            rows.append([title, 0, '', None])
+            rows.append([title, 0, '', None, 0, '', None])
             row_index[title] = index
         for response in statistics['Breakdown']:
             index = row_index[response['label']]
