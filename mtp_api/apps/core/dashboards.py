@@ -1,6 +1,8 @@
 import json
+import itertools
 
 from django.conf import settings
+from django.contrib import messages
 from django.core.cache import cache
 from django.forms import MediaDefiningClass
 from django.http.request import QueryDict
@@ -125,13 +127,16 @@ class SatisfactionDashboard(DashboardModule):
     column_count = 1
     title = _('User satisfaction')
     cache_lifetime = 60 * 60  # 1 hour
-    survey_id = '2527768'  # results: http://data.surveygizmo.com/r/413845_57330cc99681a7.27709426
+    survey_id = '2527768'
+    survey_url = 'http://data.surveygizmo.com/r/413845_57330cc99681a7.27709426'
     questions = [
-        {'id': '13', 'title': 'Easy'},
-        {'id': '14', 'title': 'Unreasonably slow'},
-        {'id': '15', 'title': 'Cheap'},
-        {'id': '70', 'title': 'Rating'},
+        # NB: all questions must have 6 options, ending with "Not applicable"
+        {'id': '13', 'title': _('Easy'), 'reverse': False},
+        {'id': '14', 'title': _('Unreasonably slow'), 'reverse': True},
+        {'id': '15', 'title': _('Cheap'), 'reverse': False},
+        {'id': '70', 'title': _('Rating'), 'reverse': False},
     ]
+    weightings = [-2, -1, 0, 1, 2, 0]
 
     class Media:
         css = {
@@ -151,10 +156,14 @@ class SatisfactionDashboard(DashboardModule):
         self.max_response_count = 0
 
     @classmethod
-    def get_modal_response(cls, responses):
-        responses = sorted(responses, key=lambda response: response['count'], reverse=True)
-        if len(responses) > 1 and responses[0]['count'] > responses[1]['count']:
-            return responses[0]['.index']
+    def get_modal_responses(cls, responses):
+        responses = sorted(responses, key=lambda response: (response['count'], response['.index']), reverse=True)
+        modal_responses = [(responses[0]['.index'], responses[0]['count'])]
+        last_index = 0
+        for index in range(1, len(cls.weightings)):
+            if responses[last_index]['count'] == responses[index]['count']:
+                modal_responses.append((responses[index]['.index'], responses[index]['count']))
+        return modal_responses
 
     def get_satisfaction_results(self):
         response = cache.get(self.cache_key)
@@ -180,6 +189,7 @@ class SatisfactionDashboard(DashboardModule):
                     'id': question_id,
                     'question': question_response,
                     'statistics': statistics_response,
+                    'reverse': question['reverse'],
                 })
 
             cache.set(self.cache_key, response, timeout=self.cache_lifetime)
@@ -190,21 +200,38 @@ class SatisfactionDashboard(DashboardModule):
     def columns(self):
         return [
             {'type': 'string', 'label': gettext('Response'), 'role': 'domain'},
-            {'type': 'number', 'label': gettext('Payments by mail'), 'role': 'data'},
-            {'type': 'string', 'role': 'style'},
+            {'type': 'number', 'label': gettext('Money by post'), 'role': 'data'},
+            {'type': 'string', 'role': 'annotation'},
+            {'type': 'number', 'label': gettext('MTP service'), 'role': 'data'},
             {'type': 'string', 'role': 'annotation'},
         ]
 
-    def make_chart_rows(self, question, statistics):
+    def make_chart_rows(self, question, statistics, reverse=False):
+        options = question['options']
+        if len(options) != len(self.weightings):
+            messages.error(
+                self.dashboard_view.request,
+                _('Satisfaction survey question %s has unexpected number of options' % question['id'])
+            )
+            return []
+        if options[-1]['value'] != 'Not applicable':
+            messages.error(
+                self.dashboard_view.request,
+                _('Satisfaction survey question %s does not have "Not applicable" option' % question['id'])
+            )
+            return
+        if reverse:
+            options = itertools.chain(reversed(options[:-1]), [options[-1]])
+
+        # connect responses with questions
+        self.max_response_count = 0
+        mean_response = 0
         rows = []
         row_index = dict()
-        for index, option in enumerate(question['options']):
+        for index, option in enumerate(options):
             title = option['value']
-            style = 'color: #666' if title == 'Not applicable' else ''
-            rows.append([title, 0, style, None])
+            rows.append([title, 0, None, 0, None])
             row_index[title] = index
-        self.max_response_count = 0
-        max_response_index = None
         for response in statistics['Breakdown']:
             index = row_index[response['label']]
             response['.index'] = index
@@ -212,14 +239,16 @@ class SatisfactionDashboard(DashboardModule):
             response['count'] = response_count
             rows[index][1] = response_count
             if response_count > self.max_response_count:
-                max_response_index = index
                 self.max_response_count = response_count
-        modal_response = self.get_modal_response(statistics['Breakdown'])
-        if modal_response is not None and not rows[modal_response][2]:
-            rows[modal_response][2] = 'color: #79C890'
-        if max_response_index is not None:
-            rows[max_response_index][3] = str(self.max_response_count)
-        return rows
+            mean_response += response_count * self.weightings[index]
+        mean_response /= rows[0][1] + rows[1][1] + rows[3][1] + rows[4][1]
+
+        # annotate modal responses
+        modal_responses = self.get_modal_responses(statistics['Breakdown'])
+        for modal_response_index, modal_response_count in modal_responses:
+            rows[modal_response_index][2] = str(modal_response_count)
+
+        return rows, mean_response
 
     def get_chart_data(self):
         responses = self.get_satisfaction_results()
@@ -227,10 +256,12 @@ class SatisfactionDashboard(DashboardModule):
         for source_data in responses:
             question = source_data['question']
             statistics = source_data['statistics']
-            rows = self.make_chart_rows(question, statistics)
+            reverse = source_data['reverse']
+            rows, mean_response = self.make_chart_rows(question, statistics, reverse)
             questions.append({
                 'id': source_data['id'],
                 'rows': rows,
+                'mean': mean_response,
             })
 
         return mark_safe(json.dumps({

@@ -174,7 +174,7 @@ class TransactionReport(DashboardModule):
                             'received_at__date__lte=%s' % (received_at_start.isoformat(),
                                                            received_at_end.isoformat())
             self.chart = TransactionReportChart(
-                format_date(received_at_start, 'N'),
+                format_date(received_at_start, 'N Y'),
                 start_date=received_at_start,
                 end_date=received_at_end,
             )
@@ -199,7 +199,7 @@ class TransactionReport(DashboardModule):
             received_at_end = timezone.localtime(timezone.now()).date()
             received_at_start = received_at_end - datetime.timedelta(days=7)
             self.chart = TransactionReportChart(
-                format_date(received_at_start, 'N'),
+                format_date(received_at_start, 'N Y'),
                 start_date=received_at_start,
                 end_date=received_at_end,
             )

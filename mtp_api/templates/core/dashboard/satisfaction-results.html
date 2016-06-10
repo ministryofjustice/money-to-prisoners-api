@@ -1,4 +1,5 @@
 {% extends 'core/dashboard/module.html' %}
+{% load i18n %}
 
 {% block module_tbody %}
   <tr>
@@ -10,5 +11,11 @@
         <div id="satisfaction-results-chart-{{ question.id }}" class="satisfaction-results-chart" data-title="{{ question.title }}"></div>
       {% endfor %}
     </td>
+  </tr>
+{% endblock %}
+
+{% block module_tfoot %}
+  <tr>
+    <td><a href="{{ dashboard_module.survey_url }}">{% trans 'View complete survey results' %}</a></td>
   </tr>
 {% endblock %}
