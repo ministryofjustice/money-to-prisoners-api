@@ -1,6 +1,14 @@
 {% extends 'core/dashboard/module.html' %}
 {% load i18n %}
 
+{% block module_thead %}
+  <tr>
+    <th colspan="{{ dashboard_module.column_count }}">
+      {{ dashboard_module.range_title }}
+    </th>
+  </tr>
+{% endblock %}
+
 {% block module_tbody %}
   <tr>
     {% for stat in dashboard_module.get_table %}

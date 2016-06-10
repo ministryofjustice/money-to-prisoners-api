@@ -1,5 +1,5 @@
 .transaction_report-stat {
-  min-width: 14em;
+  min-width: 18em;
   min-height: 5.5em;
   padding: 10px;
   background: #f9f9f9;
@@ -12,6 +12,14 @@
   font-size: 2.8em;
   line-height: normal;
   font-weight: bold;
+}
+
+.mtp-dashboard-module-standout thead th {
+  border: none;
+  background: #111;
+  color: #ccc;
+  text-align: center;
+  font-size: 1.8em;
 }
 
 .mtp-dashboard-module-standout .transaction_report-stat {

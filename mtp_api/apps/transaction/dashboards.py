@@ -156,14 +156,14 @@ class TransactionReport(DashboardModule):
         self.form = TransactionReportDateForm(data=self.cookie_data)
         date_range = self.form['date_range'].value()
         if date_range == 'all':
-            self.title = _('All transactions')
+            self.range_title = _('All transactions')
             self.queryset = Transaction.objects.all()
             filter_string = ''
-            self.chart = TransactionReportChart(self.title)
+            self.chart = TransactionReportChart(self.range_title)
         elif date_range == 'this_month':
             received_at_end = timezone.localtime(timezone.now()).date()
             received_at_start = received_at_end.replace(day=1)
-            self.title = _('Transactions received in %(month)s') % {
+            self.range_title = _('Transactions received in %(month)s') % {
                 'month': format_date(received_at_start, 'N Y')
             }
             self.queryset = Transaction.objects.filter(
@@ -183,7 +183,7 @@ class TransactionReport(DashboardModule):
                 received_at = timezone.localtime(Transaction.objects.latest().received_at).date()
             except Transaction.DoesNotExist:
                 received_at = (timezone.localtime(timezone.now()) - datetime.timedelta(days=1)).date()
-            self.title = _('Latest transactions received on %(date)s') % {
+            self.range_title = _('Latest transactions received on %(date)s') % {
                 'date':  format_date(received_at, 'j N')
             }
             self.queryset = Transaction.objects.filter(

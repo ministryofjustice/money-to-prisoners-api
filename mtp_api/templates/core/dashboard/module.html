@@ -17,6 +17,9 @@
           {% endif %}
         </span>
       </caption>
+      <thead>
+        {% block module_thead %}{% endblock %}
+      </thead>
       <tbody>
         {% if dashboard_module.form %}
           <tr class="mtp-dashboard-change">
