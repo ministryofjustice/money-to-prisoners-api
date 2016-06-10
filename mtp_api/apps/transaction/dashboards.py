@@ -278,7 +278,7 @@ class TransactionReport(DashboardModule):
             {
                 'title': _('Well-formed references'),
                 'value': self.well_formed_references,
-                'help_text': _('References that were can be formatted into a prisoner number and date of birth'),
+                'help_text': _('References that can be read as a prisoner number and date of birth'),
             },
             {
                 'title': _('Credited'),
@@ -293,6 +293,6 @@ class TransactionReport(DashboardModule):
             {
                 'title': _('Unidentified credits'),
                 'value': self.get_count(self.unidentified),
-                'help_text': _('Credits that do not match an offender in the system and cannot be refunded'),
+                'help_text': _('Credits that do not match a prisoner and cannot be refunded'),
             },
         ]
