@@ -1,26 +1,30 @@
+from django.utils.translation import gettext_lazy as _
 from extended_choices import Choices
 
 
 TRANSACTION_STATUS = Choices(
     # transactions which can be or have been credited
-    ('CREDITABLE', 'creditable', 'Creditable'),
+    ('CREDITABLE', 'creditable', _('Creditable')),
 
     # transactions which can be or have been refunded
-    ('REFUNDABLE', 'refundable', 'Refundable'),
+    ('REFUNDABLE', 'refundable', _('Refundable')),
+
+    # transactions with incomplete sender info
+    ('ANONYMOUS', 'anonymous', _('Anonymous')),
 
     # transactions which can be neither credited nor refunded
-    ('UNIDENTIFIED', 'unidentified', 'Unidentified'),
+    ('UNIDENTIFIED', 'unidentified', _('Unidentified')),
 
     # transactions of an unknown type
-    ('ANOMALOUS', 'anomalous', 'Anomalous')
+    ('ANOMALOUS', 'anomalous', _('Anomalous'))
 )
 
 TRANSACTION_CATEGORY = Choices(
-    ('DEBIT', 'debit', 'Debit'),
-    ('CREDIT', 'credit', 'Credit')
+    ('DEBIT', 'debit', _('Debit')),
+    ('CREDIT', 'credit', _('Credit'))
 )
 
 TRANSACTION_SOURCE = Choices(
-    ('BANK_TRANSFER', 'bank_transfer', 'Bank transfer'),
-    ('ADMINISTRATIVE', 'administrative', 'Administrative'),
+    ('BANK_TRANSFER', 'bank_transfer', _('Bank transfer')),
+    ('ADMINISTRATIVE', 'administrative', _('Administrative')),
 )
