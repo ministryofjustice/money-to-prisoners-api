@@ -21,3 +21,12 @@ def format_number(value):
     :return: str
     """
     return '{:,}'.format(value)
+
+
+def format_percentage(number):
+    """
+    Formats a number into a percentage string
+    :param number: a number assumed to be between 0 and 1
+    :return: str
+    """
+    return '{}%'.format(round(number * 100))

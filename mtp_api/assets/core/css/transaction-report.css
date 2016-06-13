@@ -1,6 +1,6 @@
 .transaction_report-stat {
-  min-width: 14em;
-  min-height: 5.5em;
+  min-width: 20em;
+  min-height: 6.8em;
   padding: 10px;
   background: #f9f9f9;
   text-align: center;
@@ -14,6 +14,53 @@
   font-weight: bold;
 }
 
+.transaction_report-stat-valign {
+  display: inline-block;
+  vertical-align: text-top;
+}
+
+.transaction_report-stat-valign sub {
+  display: block;
+  margin-top: -0.2em;
+  margin-bottom: 0.2em;
+  font-size: 0.5em;
+  color: #555;
+}
+
+.transaction_report-stat dl {
+  display: inline-block;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
+.transaction_report-stat dt {
+  float: left;
+  clear: left;
+  margin: 0;
+  padding: 0;
+  line-height: normal;
+  font-weight: normal;
+}
+.transaction_report-stat dd {
+  float: left;
+  margin: 0;
+  padding: 0;
+  line-height: normal;
+  font-weight: bold;
+}
+
+.transaction_report-stat dt + dd {
+  padding-left: 10%;
+}
+
+.mtp-dashboard-module-standout thead th {
+  border: none;
+  background: #111;
+  color: #ccc;
+  text-align: center;
+  font-size: 1.8em;
+}
+
 .mtp-dashboard-module-standout .transaction_report-stat {
   background: #111;
   font-size: 2em;
@@ -22,6 +69,16 @@
 .mtp-dashboard-module-standout .transaction_report-stat strong {
   font-size: 2.8em;
   margin-bottom: 0.3em;
+}
+
+.mtp-dashboard-module-standout .transaction_report-stat-valign sub {
+  margin-bottom: 0;
+  color: #ccc;
+}
+
+.mtp-dashboard-module-standout .transaction_report-stat dt,
+.mtp-dashboard-module-standout .transaction_report-stat dd {
+  font-size: 1em;
 }
 
 #transaction-report-chart {

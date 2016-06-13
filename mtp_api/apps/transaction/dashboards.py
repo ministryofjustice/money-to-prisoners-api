@@ -15,19 +15,20 @@ from account.models import Balance
 from credit.constants import CREDIT_RESOLUTION
 from core.dashboards import DashboardModule
 from core.views import DashboardView
-from transaction.constants import TRANSACTION_STATUS
+from transaction.constants import TRANSACTION_CATEGORY, TRANSACTION_SOURCE, TRANSACTION_STATUS
 from transaction.models import Transaction
-from transaction.utils import format_amount, format_number
+from transaction.utils import format_amount, format_number, format_percentage
 
 CREDITABLE_FILTERS = Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.CREDITABLE]
-CREDITED_FILTERS = (
-    models.Q(credit__resolution=CREDIT_RESOLUTION.CREDITED)
-)
+CREDITED_FILTERS = models.Q(credit__resolution=CREDIT_RESOLUTION.CREDITED)
 REFUNDABLE_FILTERS = Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.REFUNDABLE]
-REFUNDED_FILTERS = (
-    models.Q(credit__resolution=CREDIT_RESOLUTION.REFUNDED)
-)
+REFUNDED_FILTERS = models.Q(credit__resolution=CREDIT_RESOLUTION.REFUNDED)
+ANONYMOUS_FILTERS = Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.ANONYMOUS]
 UNIDENTIFIED_FILTERS = Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.UNIDENTIFIED]
+ANOMALOUS_FILTERS = Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.ANOMALOUS]
+ERROR_FILTERS = models.Q(credit__prison__isnull=True) & \
+                models.Q(category=TRANSACTION_CATEGORY.CREDIT) & \
+                models.Q(source=TRANSACTION_SOURCE.BANK_TRANSFER)
 
 
 class TransactionReportDateForm(forms.Form):
@@ -156,14 +157,14 @@ class TransactionReport(DashboardModule):
         self.form = TransactionReportDateForm(data=self.cookie_data)
         date_range = self.form['date_range'].value()
         if date_range == 'all':
-            self.title = _('All transactions')
+            self.range_title = _('All transactions')
             self.queryset = Transaction.objects.all()
             filter_string = ''
-            self.chart = TransactionReportChart(self.title)
+            self.chart = TransactionReportChart(self.range_title)
         elif date_range == 'this_month':
             received_at_end = timezone.localtime(timezone.now()).date()
             received_at_start = received_at_end.replace(day=1)
-            self.title = _('Transactions received in %(month)s') % {
+            self.range_title = _('Transactions received in %(month)s') % {
                 'month': format_date(received_at_start, 'N Y')
             }
             self.queryset = Transaction.objects.filter(
@@ -183,7 +184,7 @@ class TransactionReport(DashboardModule):
                 received_at = timezone.localtime(Transaction.objects.latest().received_at).date()
             except Transaction.DoesNotExist:
                 received_at = (timezone.localtime(timezone.now()) - datetime.timedelta(days=1)).date()
-            self.title = _('Latest transactions received on %(date)s') % {
+            self.range_title = _('Latest transactions received on %(date)s') % {
                 'date':  format_date(received_at, 'j N')
             }
             self.queryset = Transaction.objects.filter(
@@ -226,73 +227,111 @@ class TransactionReport(DashboardModule):
         value = queryset.aggregate(amount=models.Sum('amount')).get('amount')
         return format_amount(value, trim_empty_pence=True) or '—'
 
+    def get_received_queryset(self):
+        return self.queryset.filter(category=TRANSACTION_CATEGORY.CREDIT)
+
     @property
-    def creditable(self):
+    def received_count(self):
+        return self.get_count(self.get_received_queryset())
+
+    @property
+    def received_amount(self):
+        return self.get_amount_sum(self.get_received_queryset())
+
+    def get_creditable_queryset(self):
         return self.queryset.filter(CREDITABLE_FILTERS)
 
     @property
-    def credited(self):
+    def creditable_count(self):
+        return self.get_count(self.get_creditable_queryset())
+
+    @property
+    def creditable_amount(self):
+        return self.get_amount_sum(self.get_creditable_queryset())
+
+    def get_credited_queryset(self):
         return self.queryset.filter(CREDITED_FILTERS)
 
     @property
-    def refundable(self):
+    def credited_count(self):
+        return self.get_count(self.get_credited_queryset())
+
+    def get_refundable_queryset(self):
         return self.queryset.filter(REFUNDABLE_FILTERS)
 
     @property
-    def refunded(self):
+    def refundable_count(self):
+        return self.get_count(self.get_refundable_queryset())
+
+    @property
+    def refundable_amount(self):
+        return self.get_amount_sum(self.get_refundable_queryset())
+
+    def get_refunded_queryset(self):
         return self.queryset.filter(REFUNDED_FILTERS)
 
     @property
-    def unidentified(self):
+    def refunded_count(self):
+        return self.get_count(self.get_refunded_queryset())
+
+    def get_anonymous_queryset(self):
+        return self.queryset.filter(ANONYMOUS_FILTERS)
+
+    @property
+    def anonymous_count(self):
+        return self.get_count(self.get_anonymous_queryset())
+
+    def get_unidentified_queryset(self):
         return self.queryset.filter(UNIDENTIFIED_FILTERS)
 
     @property
-    def well_formed_references(self):
+    def unidentified_count(self):
+        return self.get_count(self.get_unidentified_queryset())
+
+    def get_anomalous_queryset(self):
+        return self.queryset.filter(ANOMALOUS_FILTERS)
+
+    @property
+    def anomalous_count(self):
+        return self.get_count(self.get_anomalous_queryset())
+
+    def get_valid_reference_queryset(self):
         return self.queryset.filter(
             credit__prisoner_dob__isnull=False,
             credit__prisoner_number__isnull=False,
-        ).count()
+        )
 
-    def get_table(self):
-        return [
-            {
-                'title': _('Valid credits'),
-                'value': self.get_amount_sum(self.creditable),
-            },
-            {
-                'title': _('Credits to refund'),
-                'value': self.get_amount_sum(self.refundable),
-            },
-            {
-                'title': _('Curent balance'),
-                'value': self.get_current_balance(),
-            },
-            {
-                'title': _('Valid credits'),
-                'value': self.get_count(self.creditable),
-            },
-            {
-                'title': _('Credits to refund'),
-                'value': self.get_count(self.refundable),
-            },
-            {
-                'title': _('Well-formed references'),
-                'value': self.well_formed_references,
-                'help_text': _('References that were can be formatted into a prisoner number and date of birth'),
-            },
-            {
-                'title': _('Credited'),
-                'value': self.get_count(self.credited),
-                'help_text': _('Credited through the Cashbook tool'),
-            },
-            {
-                'title': _('Refunded'),
-                'value': self.get_count(self.refunded),
-                'help_text': _('Refunds file downloaded through the Bank Admin tool'),
-            },
-            {
-                'title': _('Unidentified credits'),
-                'value': self.get_count(self.unidentified),
-                'help_text': _('Credits that do not match an offender in the system and cannot be refunded'),
-            },
-        ]
+    @property
+    def valid_reference_count(self):
+        return self.get_count(self.get_valid_reference_queryset())
+
+    def get_unmatched_reference_queryset(self):
+        return self.queryset.filter(
+            credit__prison__isnull=True,
+            credit__prisoner_dob__isnull=False,
+            credit__prisoner_number__isnull=False,
+        )
+
+    @property
+    def unmatched_reference_count(self):
+        return self.get_count(self.get_unmatched_reference_queryset())
+
+    def get_invalid_reference_queryset(self):
+        return self.queryset.filter(
+            credit__prisoner_dob__isnull=True,
+            credit__prisoner_number__isnull=True,
+        )
+
+    @property
+    def invalid_reference_count(self):
+        return self.get_count(self.get_invalid_reference_queryset())
+
+    def get_error_queryset(self):
+        return self.queryset.filter(ERROR_FILTERS)
+
+    @property
+    def error_rate(self):
+        received = self.get_received_queryset().count()
+        if received == 0:
+            return format_percentage(0)
+        return format_percentage(self.get_error_queryset().count() / received)

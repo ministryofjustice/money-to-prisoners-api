@@ -44,6 +44,11 @@ class Transaction(TimeStampedModel):
             models.Q(credit__prison__isnull=True) &
             models.Q(incomplete_sender_info=False)
         ),
+        TRANSACTION_STATUS.ANONYMOUS: (
+            models.Q(incomplete_sender_info=True) &
+            models.Q(category=TRANSACTION_CATEGORY.CREDIT) &
+            models.Q(source=TRANSACTION_SOURCE.BANK_TRANSFER)
+        ),
         TRANSACTION_STATUS.UNIDENTIFIED: (
             models.Q(credit__prison__isnull=True) &
             models.Q(incomplete_sender_info=True) &
@@ -135,3 +140,5 @@ class Transaction(TimeStampedModel):
             return TRANSACTION_STATUS.CREDITABLE
         elif self.refundable:
             return TRANSACTION_STATUS.REFUNDABLE
+        elif self.incomplete_sender_info:
+            return TRANSACTION_STATUS.ANONYMOUS

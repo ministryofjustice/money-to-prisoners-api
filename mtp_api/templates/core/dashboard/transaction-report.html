@@ -1,18 +1,115 @@
 {% extends 'core/dashboard/module.html' %}
 {% load i18n %}
 
+{% block module_thead %}
+  <tr>
+    <th colspan="{{ dashboard_module.column_count }}">
+      {{ dashboard_module.range_title }}
+    </th>
+  </tr>
+{% endblock %}
+
 {% block module_tbody %}
   <tr>
-    {% for stat in dashboard_module.get_table %}
-      <td>
-        <div class="transaction_report-stat" {% if stat.help_text %}title="{{ stat.help_text }}"{% endif %}>
-          <strong>{{ stat.value }}</strong>
-          {{ stat.title }}
-        </div>
-      </td>
-      {% if not forloop.last and forloop.counter|divisibleby:dashboard_module.column_count %}</tr><tr>{% endif %}
-    {% endfor %}
+    <td>
+      <div class="transaction_report-stat transaction_report-stat-wide">
+        <strong>
+            <span class="transaction_report-stat-valign">
+              {{ dashboard_module.received_count }}
+              <sub>{{ dashboard_module.received_amount }}</sub>
+            </span>
+          </strong>
+        {% trans 'Received' %}
+      </div>
+    </td>
+    <td>
+      <div class="transaction_report-stat transaction_report-stat-wide">
+        {% if dashboard_module.creditable_count == dashboard_module.credited_count %}
+          <strong>
+            <span class="transaction_report-stat-valign">
+              {{ dashboard_module.creditable_count }}
+              <sub>{{ dashboard_module.creditable_amount }}</sub>
+            </span>
+          </strong>
+          {% trans 'Credited' %}
+        {% else %}
+          <strong>
+            <span title="{% trans 'Marked as credited through the Cashbook tool' %}">{{ dashboard_module.credited_count }}</span>
+            ／
+            <span class="transaction_report-stat-valign">
+              {{ dashboard_module.creditable_count }}
+              <sub>{{ dashboard_module.creditable_amount }}</sub>
+            </span>
+          </strong>
+          {% trans 'Credited' %} / {% trans 'Creditable' %}
+        {% endif %}
+      </div>
+    </td>
+    <td>
+      <div class="transaction_report-stat transaction_report-stat-wide">
+        {% if dashboard_module.refundable_count == dashboard_module.refunded_count %}
+          <strong>
+            <span class="transaction_report-stat-valign">
+              {{ dashboard_module.refundable_count }}
+              <sub>{{ dashboard_module.refundable_amount }}</sub>
+            </span>
+          </strong>
+          {% trans 'Refunded' %}
+        {% else %}
+          <strong>
+            <span title="{% trans 'Refunds file downloaded through the Bank Admin tool' %}">{{ dashboard_module.refunded_count }}</span>
+            ／
+            <span class="transaction_report-stat-valign">
+              {{ dashboard_module.refundable_count }}
+              <sub>{{ dashboard_module.refundable_amount }}</sub>
+            </span>
+          </strong>
+          {% trans 'Refunded' %} / {% trans 'Refundable' %}
+        {% endif %}
+      </div>
+    </td>
   </tr>
+  <tr>
+    <td>
+      <div class="transaction_report-stat" title="{% trans 'Proportion of incoming credits that cannot be credited' %}">
+        <strong>{{ dashboard_module.error_rate }}</strong>
+        {% trans 'Error rate' %}
+      </div>
+    </td>
+    <td>
+      <div class="transaction_report-stat">
+        <dl>
+          <dd>{% trans 'References' %}</dd>
+
+          <dt title="{% trans 'All references that can be read as a prisoner number and date of birth' %}">{% trans 'Well-formed' %}:</dt>
+          <dd>{{ dashboard_module.valid_reference_count }}</dd>
+
+          <dt title="References that can be read but do not match a prisoner">{% trans 'Unmatched' %}:</dt>
+          <dd>{{ dashboard_module.unmatched_reference_count }}</dd>
+
+          <dt title="{% trans 'References that cannot be read as a prisoner number and date of birth' %}">{% trans 'Invalid' %}:</dt>
+          <dd>{{ dashboard_module.invalid_reference_count }}</dd>
+        </dl>
+      </div>
+    </td>
+    <td>
+      <div class="transaction_report-stat">
+        <dl>
+          <dd>{% trans 'Issues' %}</dd>
+
+          <dt title="{% trans 'Transaction contained incomplete sender information' %}">{% trans 'Anonymous' %}:</dt>
+          <dd>{{ dashboard_module.anonymous_count }}</dd>
+
+          <dt title="{% trans 'Credits that do not match a prisoner and cannot be refunded' %}">{% trans 'Unidentified' %}:</dt>
+          <dd>{{ dashboard_module.unidentified_count }}</dd>
+
+          <dt title="{% trans 'Credits marked as administrative, e.g. NOMS reimbursing a payment out to a supplier' %}">{% trans 'Anomalous' %}:</dt>
+          <dd>{{ dashboard_module.anomalous_count }}</dd>
+        </dl>
+      </div>
+    </td>
+  </tr>
+
   {% if dashboard_module.chart %}
     <tr style="height: 50%">
       <td colspan="{{ dashboard_module.column_count }}">
@@ -28,7 +125,7 @@
 {% block module_tfoot %}
   {% if dashboard_module.change_list_url %}
       <tr>
-        <td>
+        <td colspan="{{ dashboard_module.column_count }}">
           <a href="{{ dashboard_module.change_list_url }}">{% trans 'View credits list' %}</a>
         </td>
       </tr>
