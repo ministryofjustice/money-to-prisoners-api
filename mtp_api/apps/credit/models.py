@@ -31,6 +31,8 @@ class Credit(TimeStampedModel):
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
 
     class Meta:
+        ordering = ('received_at',)
+        get_latest_by = 'received_at'
         permissions = (
             ('view_credit', 'Can view credit'),
             ('lock_credit', 'Can lock credit'),
