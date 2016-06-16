@@ -47,8 +47,8 @@ def basic_auth_header(username, password):
 class BaseActionsBasedPermissionsTests(TestCase):
 
     def setUp(self):
-        User.objects.create_user('disallowed', 'disallowed@example.com', 'password')
-        user = User.objects.create_user('permitted', 'permitted@example.com', 'password')
+        User.objects.create_user('disallowed', 'disallowed@outside.local', 'password')
+        user = User.objects.create_user('permitted', 'permitted@mtp.local', 'password')
         user.user_permissions = [
             Permission.objects.get(codename='add_group'),
             Permission.objects.get(codename='change_group'),

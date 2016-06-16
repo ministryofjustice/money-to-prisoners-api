@@ -82,7 +82,7 @@ class Command(TestServerCommand):
         except User.DoesNotExist:
             admin_user = User.objects.create_superuser(
                 username='admin',
-                email='admin@local',
+                email='admin@mtp.local',
                 password='admin',
                 first_name='Admin',
                 last_name='User',
