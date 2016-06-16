@@ -2,6 +2,7 @@
 Docker settings
 """
 from .base import *  # noqa
+from .base import ENVIRONMENT, os
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
