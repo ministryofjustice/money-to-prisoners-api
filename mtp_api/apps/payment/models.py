@@ -4,11 +4,12 @@ from django.db import models
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 from model_utils.models import TimeStampedModel
 
 from credit.constants import CREDIT_RESOLUTION
 from credit.models import Credit
-from .constants import PAYMENT_STATUS
+from payment.constants import PAYMENT_STATUS
 
 
 class Payment(TimeStampedModel):
@@ -17,14 +18,21 @@ class Payment(TimeStampedModel):
     processor_id = models.CharField(max_length=250, null=True, blank=True)
     amount = models.PositiveIntegerField()
     service_charge = models.PositiveIntegerField(default=0)
-    recipient_name = models.CharField(max_length=250, null=True, blank=True)
-    email = models.EmailField(null=True, blank=True)
+    recipient_name = models.CharField(max_length=250, null=True, blank=True,
+                                      help_text=_('As specified by the sender'))
+    email = models.EmailField(null=True, blank=True,
+                              help_text=_('Specified by sender for confirmation emails'))
     credit = models.OneToOneField(Credit, on_delete=models.CASCADE)
 
     class Meta:
+        ordering = ('created',)
+        get_latest_by = 'created'
         permissions = (
             ('view_payment', 'Can view payment'),
         )
+
+    def __str__(self):
+        return str(self.uuid)
 
     @property
     def prison(self):
@@ -41,9 +49,6 @@ class Payment(TimeStampedModel):
     @property
     def prisoner_number(self):
         return self.credit.prisoner_number
-
-    def __str__(self):
-        return str(self.uuid)
 
 
 @receiver(pre_save, sender=Payment, dispatch_uid='update_credit_for_payment')

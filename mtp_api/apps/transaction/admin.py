@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.contrib.admin.options import IncorrectLookupParameters
 from django.core.exceptions import ValidationError
+from django.utils.translation import gettext_lazy as _
 
 from core.admin import DateRangeFilter
 from transaction.constants import TRANSACTION_STATUS
@@ -28,7 +29,7 @@ class StatusFilter(admin.SimpleListFilter):
 class TransactionAdmin(admin.ModelAdmin):
     list_display = (
         'prisoner_name', 'prison', 'prisoner_number', 'formatted_amount',
-        'type', 'sender_sort_code', 'sender_account_number',
+        'transaction_type', 'sender_sort_code', 'sender_account_number',
         'sender_roll_number', 'sender_name', 'reference',
         'received_at', 'status'
     )
@@ -49,7 +50,9 @@ class TransactionAdmin(admin.ModelAdmin):
 
     def formatted_amount(self, instance):
         return format_amount(instance.amount)
-    formatted_amount.short_description = 'Amount'
 
-    def type(self, instance):
+    def transaction_type(self, instance):
         return '%s/%s' % (instance.processor_type_code, instance.category)
+
+    formatted_amount.short_description = _('Amount')
+    transaction_type.short_description = _('Type')
