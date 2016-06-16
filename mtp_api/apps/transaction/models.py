@@ -1,12 +1,13 @@
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 from model_utils.models import TimeStampedModel
 
 from credit.models import Credit
-from .constants import (
+from transaction.constants import (
     TRANSACTION_STATUS, TRANSACTION_CATEGORY, TRANSACTION_SOURCE
 )
-from .managers import TransactionQuerySet
-from .utils import format_amount
+from transaction.managers import TransactionQuerySet
+from transaction.utils import format_amount
 
 
 class Transaction(TimeStampedModel):
@@ -27,7 +28,8 @@ class Transaction(TimeStampedModel):
     received_at = models.DateTimeField(auto_now=False)
 
     # 6-digit reference code for reconciliation
-    ref_code = models.CharField(max_length=12, blank=True, null=True)
+    ref_code = models.CharField(max_length=12, blank=True, null=True,
+                                help_text=_('For reconciliation'))
 
     incomplete_sender_info = models.BooleanField(default=False)
     reference_in_sender_field = models.BooleanField(default=False)

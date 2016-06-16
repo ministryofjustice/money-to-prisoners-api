@@ -6,14 +6,14 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from model_utils.models import TimeStampedModel
 
-from prison.models import Prison, PrisonerLocation
-from transaction.utils import format_amount
-from .constants import LOG_ACTIONS, CREDIT_RESOLUTION, CREDIT_STATUS, CREDIT_SOURCE
-from .managers import CreditManager, CreditQuerySet, LogManager
-from .signals import (
+from credit.constants import LOG_ACTIONS, CREDIT_RESOLUTION, CREDIT_STATUS, CREDIT_SOURCE
+from credit.managers import CreditManager, CreditQuerySet, LogManager
+from credit.signals import (
     credit_created, credit_locked, credit_unlocked, credit_credited,
     credit_refunded, credit_reconciled, credit_prisons_need_updating
 )
+from prison.models import Prison, PrisonerLocation
+from transaction.utils import format_amount
 
 
 class Credit(TimeStampedModel):
@@ -31,6 +31,8 @@ class Credit(TimeStampedModel):
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
 
     class Meta:
+        ordering = ('received_at',)
+        get_latest_by = 'received_at'
         permissions = (
             ('view_credit', 'Can view credit'),
             ('lock_credit', 'Can lock credit'),

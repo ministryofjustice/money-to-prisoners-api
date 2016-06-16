@@ -1,6 +1,11 @@
 from django.contrib import admin
 from django.contrib.admin.options import IncorrectLookupParameters
 from django.core.exceptions import ValidationError
+from django.core.urlresolvers import reverse
+from django.utils import timezone
+from django.utils.dateformat import format as format_date
+from django.utils.html import format_html
+from django.utils.translation import gettext_lazy as _
 
 from core.admin import DateRangeFilter
 from transaction.constants import TRANSACTION_STATUS
@@ -28,13 +33,12 @@ class StatusFilter(admin.SimpleListFilter):
 class TransactionAdmin(admin.ModelAdmin):
     list_display = (
         'prisoner_name', 'prison', 'prisoner_number', 'formatted_amount',
-        'type', 'sender_sort_code', 'sender_account_number',
+        'transaction_type', 'sender_sort_code', 'sender_account_number',
         'sender_roll_number', 'sender_name', 'reference',
         'received_at', 'status'
     )
     ordering = ('-received_at',)
     date_hierarchy = 'received_at'
-    readonly_fields = ('incomplete_sender_info', 'reference_in_sender_field')
     list_filter = (
         StatusFilter,
         'category',
@@ -46,10 +50,24 @@ class TransactionAdmin(admin.ModelAdmin):
         'reference', 'sender_name', 'sender_sort_code',
         'sender_account_number', 'sender_roll_number'
     )
+    exclude = ('credit',)
+    readonly_fields = ('credit_link', 'incomplete_sender_info', 'reference_in_sender_field')
+
+    def credit_link(self, instance):
+        link = reverse('admin:credit_credit_change', args=(instance.credit.pk,))
+        description = '%(amount)s %(status)s, %(date)s' % {
+            'amount': format_amount(instance.amount),
+            'status': instance.status,
+            'date': format_date(timezone.localtime(instance.created), 'd/m/Y'),
+        }
+        return format_html('<a href="{}">{}</a>', link, description)
 
     def formatted_amount(self, instance):
         return format_amount(instance.amount)
-    formatted_amount.short_description = 'Amount'
 
-    def type(self, instance):
+    def transaction_type(self, instance):
         return '%s/%s' % (instance.processor_type_code, instance.category)
+
+    credit_link.short_description = _('Credit')
+    formatted_amount.short_description = _('Amount')
+    transaction_type.short_description = _('Type')

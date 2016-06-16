@@ -36,7 +36,9 @@ class TransactionReportDateForm(forms.Form):
         label=_('Date range'),
         choices=(
             ('latest', _('Latest')),
+            ('four_weeks', _('Last 4 weeks')),
             ('this_month', _('This month')),
+            ('last_month', _('Last month')),
             ('all', _('Since the beginning')),
         ),
         initial='latest',
@@ -153,20 +155,41 @@ class TransactionReport(DashboardModule):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        today = timezone.localtime(timezone.now()).date()
+
+        def get_four_weeks():
+            return today - datetime.timedelta(days=4 * 7), today
+
+        def get_this_month():
+            return today.replace(day=1), today
+
+        def get_last_month():
+            last_day = today.replace(day=1) - datetime.timedelta(days=1)
+            return last_day.replace(day=1), last_day
 
         self.form = TransactionReportDateForm(data=self.cookie_data)
         date_range = self.form['date_range'].value()
         if date_range == 'all':
             self.range_title = _('All transactions')
             self.queryset = Transaction.objects.all()
+            received_at_start, received_at_end = None, None
             filter_string = ''
-            self.chart = TransactionReportChart(self.range_title)
-        elif date_range == 'this_month':
-            received_at_end = timezone.localtime(timezone.now()).date()
-            received_at_start = received_at_end.replace(day=1)
-            self.range_title = _('Transactions received in %(month)s') % {
-                'month': format_date(received_at_start, 'N Y')
-            }
+            chart_title = self.range_title
+        elif date_range in ('four_weeks', 'this_month', 'last_month'):
+            if date_range == 'four_weeks':
+                received_at_start, received_at_end = get_four_weeks()
+                chart_title = _('Last 4 weeks')
+                self.range_title = chart_title
+            else:
+                if date_range == 'last_month':
+                    received_at_start, received_at_end = get_last_month()
+                else:
+                    received_at_start, received_at_end = get_this_month()
+                chart_title = format_date(received_at_start, 'N Y')
+                self.range_title = _('Transactions received in %(month)s') % {
+                    'month': chart_title
+                }
+
             self.queryset = Transaction.objects.filter(
                 received_at__date__gte=received_at_start,
                 received_at__date__lte=received_at_end,
@@ -174,11 +197,6 @@ class TransactionReport(DashboardModule):
             filter_string = 'received_at__date__gte=%s&' \
                             'received_at__date__lte=%s' % (received_at_start.isoformat(),
                                                            received_at_end.isoformat())
-            self.chart = TransactionReportChart(
-                format_date(received_at_start, 'N Y'),
-                start_date=received_at_start,
-                end_date=received_at_end,
-            )
         else:
             try:
                 received_at = timezone.localtime(Transaction.objects.latest().received_at).date()
@@ -196,15 +214,15 @@ class TransactionReport(DashboardModule):
                                                       received_at.month,
                                                       received_at.year)
 
-            # display chart of last week
-            received_at_end = timezone.localtime(timezone.now()).date()
-            received_at_start = received_at_end - datetime.timedelta(days=7)
-            self.chart = TransactionReportChart(
-                format_date(received_at_start, 'N Y'),
-                start_date=received_at_start,
-                end_date=received_at_end,
-            )
+            # display chart of last 4 weeks
+            received_at_start, received_at_end = get_four_weeks()
+            chart_title = _('Last 4 weeks')
 
+        self.chart = TransactionReportChart(
+            chart_title,
+            start_date=received_at_start,
+            end_date=received_at_end,
+        )
         if self.dashboard_view and self.dashboard_view.request.user.has_perm('credit.change_credit'):
             self.change_list_url = reverse('admin:credit_credit_changelist') + '?' + filter_string
 

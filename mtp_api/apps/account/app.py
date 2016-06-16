@@ -4,4 +4,4 @@ from django.utils.translation import gettext_lazy as _
 
 class AppConfig(DjangoAppConfig):
     name = 'account'
-    verbose_name = _('Account')
+    verbose_name = _('Bank account management')

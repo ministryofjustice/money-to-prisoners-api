@@ -95,11 +95,12 @@ class CreditAdmin(admin.ModelAdmin):
 
     def formatted_amount(self, instance):
         return format_amount(instance.amount)
-    formatted_amount.short_description = 'Amount'
+
+    formatted_amount.short_description = _('Amount')
 
     def display_total_amount(self, request, queryset):
         total = queryset.aggregate(Sum('amount'))['amount__sum']
-        self.message_user(request, 'Total: %s' % format_amount(total, True))
+        self.message_user(request, _('Total: %s') % format_amount(total, True))
 
     def display_credit_validity(self, request, queryset):
         invalid_ref_count = queryset.filter(prison__isnull=True).count()
@@ -111,9 +112,9 @@ class CreditAdmin(admin.ModelAdmin):
 
         self.message_user(
             request,
-            'Of %(total)s credits: '
-            '%(valid_count)s (%(valid_percent)0.2f%%) can be credited to a prisoner, '
-            '%(invalid_count)s (%(invalid_percent)0.2f%%) cannot be credited.'
+            _('Of %(total)s credits: '
+              '%(valid_count)s (%(valid_percent)0.2f%%) can be credited to a prisoner, '
+              '%(invalid_count)s (%(invalid_percent)0.2f%%) cannot be credited.')
             % {'total': total_count, 'invalid_count': invalid_ref_count,
                'invalid_percent': invalid_percent, 'valid_count': valid_ref_count,
                'valid_percent': valid_percent}
@@ -141,13 +142,13 @@ class CreditAdmin(admin.ModelAdmin):
 
             self.message_user(
                 request,
-                'Time until credit after lock: '
-                'AVG (%(avg)s), MAX (%(max)s), MIN (%(min)s)'
+                _('Time until credit after lock: '
+                  'AVG (%(avg)s), MAX (%(max)s), MIN (%(min)s)')
                 % {'avg': avg_credit_time, 'max': max(until_credited_times),
                    'min': min(until_credited_times)}
             )
         else:
-            self.message_user(request, 'No credits have been credited yet.',
+            self.message_user(request, _('No credits have been credited yet.'),
                               messages.WARNING)
 
         if until_unlocked_times:
@@ -156,11 +157,11 @@ class CreditAdmin(admin.ModelAdmin):
 
             self.message_user(
                 request,
-                'Time until unlock after lock: '
-                'AVG (%(avg)s), MAX (%(max)s), MIN (%(min)s)'
+                _('Time until unlock after lock: '
+                  'AVG (%(avg)s), MAX (%(max)s), MIN (%(min)s)')
                 % {'avg': avg_unlock_time, 'max': max(until_unlocked_times),
                    'min': min(until_unlocked_times)}
             )
         else:
-            self.message_user(request, 'No credits have been unlocked yet.',
+            self.message_user(request, _('No credits have been unlocked yet.'),
                               messages.WARNING)
