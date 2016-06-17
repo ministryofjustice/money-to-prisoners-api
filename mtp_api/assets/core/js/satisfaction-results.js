@@ -3,9 +3,9 @@
 django.jQuery(function($) {
   'use strict';
 
-  var colourScale = ['#ff800e', '#ffbc79', '#cfcfcf', '#a2c8ec', '#5f9ed1', '#dcdcdc'],
-    colours = ['#666', '#79aec8'],
-    font = 'Roboto, "Lucida Grande", Verdana, Arial, sans-serif';
+  var colourScale = ['#ff800e', '#ffbc79', '#cfcfcf', '#a2c8ec', '#5f9ed1', '#dcdcdc'];
+  var colours = ['#666', '#79aec8'];
+  var font = 'Roboto, "Lucida Grande", Verdana, Arial, sans-serif';
 
   google.charts.setOnLoadCallback(function() {
     for(var question in satisfactionResultsData.questions) {
@@ -57,16 +57,15 @@ django.jQuery(function($) {
     });
 
     google.visualization.events.addListener(chart, 'ready', function() {
-      var $svg = $chart.find('svg'),
-        svgNamespace = $svg[0].namespaceURI,
-        cli = chart.getChartLayoutInterface(),
-        legendBounds = cli.getBoundingBox('legend'),
-        chartBounds = cli.getChartAreaBoundingBox(),
-        significantWidth = chartBounds.width * 5 / 6, // last option is disregarded
-        meanMarkerWidth = 12,
-        $hideOnMouseover = [],
-        $chartDetails, $title,
-        i;
+      var $svg = $chart.find('svg');
+      var svgNamespace = $svg[0].namespaceURI;
+      var cli = chart.getChartLayoutInterface();
+      var legendBounds = cli.getBoundingBox('legend');
+      var chartBounds = cli.getChartAreaBoundingBox();
+      var significantWidth = chartBounds.width * 5 / 6;  // last option is disregarded
+      var meanMarkerWidth = 12;
+      var $hideOnMouseover = [];
+      var $chartDetails, $title, i;
 
       $chartDetails = $($svg.children('g')[1]).children('g');
       $chartDetails = $($chartDetails[0]).add($chartDetails[$chartDetails.length - 1]).attr({
@@ -75,9 +74,9 @@ django.jQuery(function($) {
 
       for (i in colourScale) {
         if (colourScale.hasOwnProperty(i)) {
-          var colour = colourScale[i],
-            barBounds = cli.getBoundingBox('bar#0#' + i),
-            $rect = $(document.createElementNS(svgNamespace, 'rect'));
+          var colour = colourScale[i];
+          var barBounds = cli.getBoundingBox('bar#0#' + i);
+          var $rect = $(document.createElementNS(svgNamespace, 'rect'));
           $rect.attr({
             x: barBounds.left,
             y: barBounds.top + barBounds.height + 2,
@@ -92,10 +91,10 @@ django.jQuery(function($) {
 
       for (i in means) {
         if (means.hasOwnProperty(i)) {
-          var mean = means[i],
-            $meanMarker = $(document.createElementNS(svgNamespace, 'rect')),
-            $meanTextMarker = $(document.createElementNS(svgNamespace, 'text')),
-            x, y;
+          var mean = means[i];
+          var $meanMarker = $(document.createElementNS(svgNamespace, 'rect'));
+          var $meanTextMarker = $(document.createElementNS(svgNamespace, 'text'));
+          var x, y;
           if (mean === null) {
             x = chartBounds.width * (1 - (1 / 6) + (1 / 12));
           } else {
