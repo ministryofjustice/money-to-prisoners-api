@@ -8,6 +8,7 @@ from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.models import Group
 from django.core import mail
 from django.core.urlresolvers import reverse
+from django.test import override_settings
 from django.utils.timezone import now
 from oauth2_provider.models import Application
 from rest_framework import status
@@ -225,6 +226,7 @@ class CreateUserTestCase(APITestCase, AuthTestCaseMixin):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(len(User.objects.filter(username=user_data['username'])), 0)
 
+    @override_settings(ENVIRONMENT='prod')
     def _check_create_user_succeeds(self, requester, user_data, client_id, groups):
         self.client.post(
             self.get_url(),
@@ -884,6 +886,7 @@ class ResetPasswordTestCase(APITestCase):
             'username': [ResetPasswordView.error_messages['locked_out']],
         })
 
+    @override_settings(ENVIRONMENT='prod')
     def test_password_reset(self):
         response = self.client.post(self.reset_url, {'username': self.user.username})
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)

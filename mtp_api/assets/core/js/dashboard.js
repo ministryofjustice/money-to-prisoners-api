@@ -3,14 +3,14 @@
 django.jQuery(function($) {
   'use strict';
 
-  var $pageBackground = $('html, body'),
-    $dashboardWrapper = $('#mtp-dashboard'),
-    cookieName = $dashboardWrapper.data('cookie-name'),
-    standoutCookieName = $dashboardWrapper.data('standout-cookie-name'),
-    $dashboardModules = $('.mtp-dashboard-module'),
-    $moduleForms = $('.mtp-dashboard-change form'),
-    $standoutModule = $('#' + Cookies.get(standoutCookieName)),
-    autoreloadInterval;
+  var $pageBackground = $('html, body');
+  var $dashboardWrapper = $('#mtp-dashboard');
+  var cookieName = $dashboardWrapper.data('cookie-name');
+  var standoutCookieName = $dashboardWrapper.data('standout-cookie-name');
+  var $dashboardModules = $('.mtp-dashboard-module');
+  var $moduleForms = $('.mtp-dashboard-change form');
+  var $standoutModule = $('#' + Cookies.get(standoutCookieName));
+  var autoreloadInterval;
 
 
   // dashboard auto-reload

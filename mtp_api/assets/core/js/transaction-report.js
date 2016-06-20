@@ -3,9 +3,9 @@
 django.jQuery(function($) {
   'use strict';
 
-  var $module = $('#id_transaction_report'),
-    $chart = $('#transaction-report-chart'),
-    normalStyles = {
+  var $module = $('#id_transaction_report');
+  var $chart = $('#transaction-report-chart');
+  var normalStyles = {
       font: 'Roboto, "Lucida Grande", Verdana, Arial, sans-serif',
       lines: ['#79aec8', '#666'],
       lineWidth: 4,
@@ -19,8 +19,8 @@ django.jQuery(function($) {
         color: '#000',
         fontSize: 13
       }
-    },
-    standoutStyles = {
+    };
+  var standoutStyles = {
       // colours and sizes optimised for philips tv
       font: 'Roboto, "Lucida Grande", Verdana, Arial, sans-serif',
       lines: ['#6f6', '#F3513F'],
@@ -38,8 +38,8 @@ django.jQuery(function($) {
         color: '#fff',
         fontSize: 26
       }
-    },
-    chartData;
+    };
+  var chartData;
 
   if (!$chart.size()) {
     return;
@@ -58,8 +58,8 @@ django.jQuery(function($) {
   });
 
   function drawTransactionReports() {
-    var chart = new google.visualization.ColumnChart($chart[0]),
-      styles = $module.hasClass('mtp-dashboard-module-standout') ? standoutStyles : normalStyles;
+    var chart = new google.visualization.ColumnChart($chart[0]);
+    var styles = $module.hasClass('mtp-dashboard-module-standout') ? standoutStyles : normalStyles;
 
     chart.draw(chartData, {
       hAxis: {
@@ -92,16 +92,16 @@ django.jQuery(function($) {
     });
 
     google.visualization.events.addListener(chart, 'ready', function() {
-      var $svg = $chart.find('svg'),
-        cli = chart.getChartLayoutInterface(),
-        bounds = cli.getChartAreaBoundingBox(),
-        dayWidth = bounds.width / transactionReportData.rows.length,
-        dayHeight = bounds.height,
-        dayTop = bounds.top,
-        dayLeft,
-        $chartRect,
-        legendBounds = cli.getBoundingBox('legend'),
-        $title;
+      var $svg = $chart.find('svg');
+      var cli = chart.getChartLayoutInterface();
+      var bounds = cli.getChartAreaBoundingBox();
+      var dayWidth = bounds.width / transactionReportData.rows.length;
+      var dayHeight = bounds.height;
+      var dayTop = bounds.top;
+      var dayLeft;
+      var $chartRect;
+      var legendBounds = cli.getBoundingBox('legend');
+      var $title;
 
       $title = $(document.createElementNS($svg[0].namespaceURI, 'text'));
       $title.text(transactionReportData.title);
