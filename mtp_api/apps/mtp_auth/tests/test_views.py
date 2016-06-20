@@ -19,10 +19,10 @@ from mtp_auth.constants import (
     BANK_ADMIN_OAUTH_CLIENT_ID, CASHBOOK_OAUTH_CLIENT_ID,
     NOMS_OPS_OAUTH_CLIENT_ID
 )
-from mtp_auth.models import FailedLoginAttempt
+from mtp_auth.models import ApplicationUserMapping, FailedLoginAttempt
 from mtp_auth.views import ResetPasswordView
+from mtp_auth.tests.utils import AuthTestCaseMixin
 from prison.models import Prison
-from .utils import AuthTestCaseMixin
 
 User = get_user_model()
 
@@ -94,6 +94,21 @@ class GetUserTestCase(APITestCase, AuthTestCaseMixin):
             self.assertEqual(response.status_code, status.HTTP_200_OK)
 
             self.assertEqual(response.data['permissions'], user.get_all_permissions())
+
+    def test_correct_applications_returned(self):
+        for user in self.test_users:
+            url = self._get_url(user.username)
+            response = self.client.get(
+                url, format='json',
+                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+            )
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+            applications = sorted(
+                application.application.name
+                for application in ApplicationUserMapping.objects.filter(user=user)
+            )
+            self.assertListEqual(response.data['applications'], applications)
 
     def test_all_valid_usernames_retrievable(self):
         user_data = {
