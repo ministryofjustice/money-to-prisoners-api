@@ -14,8 +14,23 @@ User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
+    applications = serializers.SerializerMethodField()
     permissions = serializers.SerializerMethodField()
     user_admin = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        read_only_fields = ('pk',)
+        fields = (
+            'pk',
+            'username',
+            'first_name',
+            'last_name',
+            'email',
+            'applications',
+            'permissions',
+            'user_admin',
+        )
 
     def get_fields(self):
         fields = super().get_fields()
@@ -31,10 +46,16 @@ class UserSerializer(serializers.ModelSerializer):
 
         return fields
 
-    def get_permissions(self, obj):
+    @classmethod
+    def get_applications(cls, obj):
+        return sorted(application.application.name for application in ApplicationUserMapping.objects.filter(user=obj))
+
+    @classmethod
+    def get_permissions(cls, obj):
         return obj.get_all_permissions()
 
-    def get_user_admin(self, obj):
+    @classmethod
+    def get_user_admin(cls, obj):
         return (obj.has_perm('auth.change_user') and
                 obj.has_perm('auth.delete_user') and
                 obj.has_perm('auth.add_user'))
@@ -100,19 +121,6 @@ class UserSerializer(serializers.ModelSerializer):
         updated_user.save()
 
         return updated_user
-
-    class Meta:
-        model = User
-        read_only_fields = ('pk',)
-        fields = (
-            'pk',
-            'username',
-            'first_name',
-            'last_name',
-            'email',
-            'permissions',
-            'user_admin'
-        )
 
 
 class ChangePasswordSerializer(serializers.Serializer):
