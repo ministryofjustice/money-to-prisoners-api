@@ -1,10 +1,10 @@
 {% extends 'mtp_common/email_base.html' %}
 {% load i18n %}
 
-{% block content %}
+{% block inner_content %}
   <p>
-    {% blocktrans %}
-    Your new Money To Prisoners {{ app }} account has been created for you.
+    {% blocktrans trimmed %}
+      Your new Money To Prisoners {{ app|default_if_none:'' }} account has been created for you.
     {% endblocktrans %}
   </p>
 
