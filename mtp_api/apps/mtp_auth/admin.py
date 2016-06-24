@@ -4,15 +4,44 @@ from django.contrib.admin.models import LogEntry, CHANGE as CHANGE_LOG_ENTRY
 from django.contrib.admin.options import get_content_type_for_model
 from django.contrib.admin.templatetags.admin_list import _boolean_icon
 from django.contrib.auth import get_user_model
-from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.utils.translation import gettext_lazy as _
+from oauth2_provider.admin import RawIDAdmin
+from oauth2_provider.models import Grant, AccessToken, RefreshToken, get_application_model
 
 from mtp_auth.forms import RestrictedUserChangeForm
 from mtp_auth.models import ApplicationGroupMapping, ApplicationUserMapping, FailedLoginAttempt, PrisonUserMapping
 
 User = get_user_model()
-if admin.site.is_registered(User):
-    admin.site.unregister(User)
+Application = get_application_model()
+for _model in [User, Application, Grant, AccessToken, RefreshToken]:
+    admin.site.unregister(_model)
+
+
+@admin.register(Application)
+class ApplicationAdmin(RawIDAdmin):
+    ordering = ('name',)
+    list_display = ('name', 'client_id')
+
+
+@admin.register(Grant)
+class GrantAdmin(RawIDAdmin):
+    ordering = ('-expires',)
+    list_display = ('code', 'application', 'user', 'expires')
+    list_filter = ('application',)
+
+
+class RefreshTokenInline(admin.StackedInline):
+    model = RefreshToken
+    raw_id_fields = ('user',)
+
+
+@admin.register(AccessToken)
+class AccessTokenAdmin(RawIDAdmin):
+    ordering = ('-expires',)
+    list_display = ('token', 'application', 'user', 'expires')
+    list_filter = ('application',)
+    inlines = (RefreshTokenInline,)
 
 
 @admin.register(ApplicationGroupMapping)
@@ -46,9 +75,9 @@ class PrisonUserMappingAdmin(ModelAdmin):
 
 
 @admin.register(User)
-class MtpUserAdmin(UserAdmin):
-    list_display = UserAdmin.list_display + ('account_locked',)
-    actions = UserAdmin.actions + ['remove_account_lockouts']
+class UserAdmin(DjangoUserAdmin):
+    list_display = DjangoUserAdmin.list_display + ('account_locked',)
+    actions = DjangoUserAdmin.actions + ['remove_account_lockouts']
     form = RestrictedUserChangeForm
 
     def remove_account_lockouts(self, request, instances):
