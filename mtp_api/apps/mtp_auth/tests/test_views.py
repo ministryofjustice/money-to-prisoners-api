@@ -1,3 +1,4 @@
+import base64
 import datetime
 import json
 import re
@@ -621,6 +622,10 @@ class UserApplicationValidationTestCase(APITestCase):
         super(UserApplicationValidationTestCase, self).setUp()
         self.prison_clerks, self.users, self.bank_admins, _, _, _ = make_test_users()
 
+    def _create_basic_auth(self, client_id, client_secret):
+        creds = base64.b64encode(bytes('%s:%s' % (client_id, client_secret), 'utf8')).decode('utf-8')
+        return 'Basic %s' % creds
+
     def test_prison_clerk_can_log_in_to_cashbook(self):
         response = self.client.post(
             reverse('oauth2_provider:token'),
@@ -628,9 +633,8 @@ class UserApplicationValidationTestCase(APITestCase):
                 'grant_type': 'password',
                 'username': self.prison_clerks[0].username,
                 'password': self.prison_clerks[0].username,
-                'client_id': CASHBOOK_OAUTH_CLIENT_ID,
-                'client_secret': CASHBOOK_OAUTH_CLIENT_ID,
-            }
+            },
+            HTTP_AUTHORIZATION=self._create_basic_auth(CASHBOOK_OAUTH_CLIENT_ID, CASHBOOK_OAUTH_CLIENT_ID)
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -641,9 +645,8 @@ class UserApplicationValidationTestCase(APITestCase):
                 'grant_type': 'password',
                 'username': self.bank_admins[0].username,
                 'password': self.bank_admins[0].username,
-                'client_id': BANK_ADMIN_OAUTH_CLIENT_ID,
-                'client_secret': BANK_ADMIN_OAUTH_CLIENT_ID,
-            }
+            },
+            HTTP_AUTHORIZATION=self._create_basic_auth(BANK_ADMIN_OAUTH_CLIENT_ID, BANK_ADMIN_OAUTH_CLIENT_ID)
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -654,11 +657,10 @@ class UserApplicationValidationTestCase(APITestCase):
                 'grant_type': 'password',
                 'username': self.prison_clerks[0].username,
                 'password': self.prison_clerks[0].username,
-                'client_id': BANK_ADMIN_OAUTH_CLIENT_ID,
-                'client_secret': BANK_ADMIN_OAUTH_CLIENT_ID,
-            }
+            },
+            HTTP_AUTHORIZATION=self._create_basic_auth(BANK_ADMIN_OAUTH_CLIENT_ID, BANK_ADMIN_OAUTH_CLIENT_ID)
         )
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_bank_admin_cannot_login_to_cashbook(self):
         response = self.client.post(
@@ -667,11 +669,10 @@ class UserApplicationValidationTestCase(APITestCase):
                 'grant_type': 'password',
                 'username': self.bank_admins[0].username,
                 'password': self.bank_admins[0].username,
-                'client_id': CASHBOOK_OAUTH_CLIENT_ID,
-                'client_secret': CASHBOOK_OAUTH_CLIENT_ID,
-            }
+            },
+            HTTP_AUTHORIZATION=self._create_basic_auth(CASHBOOK_OAUTH_CLIENT_ID, CASHBOOK_OAUTH_CLIENT_ID)
         )
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
 class AccountLockoutTestCase(APITestCase):
