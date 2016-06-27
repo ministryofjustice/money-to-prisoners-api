@@ -231,7 +231,11 @@ REST_FRAMEWORK = {
 }
 REQUEST_PAGE_DAYS = 5
 
+# control the time a session exists for; client apps should use this value as well
+SESSION_COOKIE_AGE = 60 * 60  # 1 hour
+
 OAUTH2_PROVIDER = {
+    'ACCESS_TOKEN_EXPIRE_SECONDS': SESSION_COOKIE_AGE,
     'SCOPES': {
         'read': 'Read scope',
         'write': 'Write scope',
