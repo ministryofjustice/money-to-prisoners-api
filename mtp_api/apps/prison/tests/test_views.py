@@ -11,13 +11,13 @@ from core.tests.utils import make_test_users
 from mtp_auth.models import PrisonUserMapping
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from mtp_auth.constants import CASHBOOK_OAUTH_CLIENT_ID
-from prison.models import Prison, PrisonerLocation
+from prison.models import Prison, PrisonerLocation, Population, Category
 from prison.tests.utils import random_prisoner_name, random_prisoner_number, random_prisoner_dob
 from transaction.tests.utils import generate_transactions
 
 
 class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
-    fixtures = ['test_prisons.json', 'initial_groups.json']
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
     def setUp(self):
         super(PrisonerLocationViewTestCase, self).setUp()
@@ -207,7 +207,7 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
 
 
 class PrisonerValidityViewTestCase(AuthTestCaseMixin, APITestCase):
-    fixtures = ['test_prisons.json', 'initial_groups.json']
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
     def setUp(self):
         super().setUp()
@@ -359,7 +359,7 @@ class PrisonerValidityViewTestCase(AuthTestCaseMixin, APITestCase):
 
 
 class PrisonViewTestCase(AuthTestCaseMixin, APITestCase):
-    fixtures = ['test_prisons.json', 'initial_groups.json']
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
     def setUp(self):
         super().setUp()
@@ -384,3 +384,51 @@ class PrisonViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(len(user_prisons), response.data['count'])
         for prison in response.data['results']:
             self.assertTrue(prison['name'] in user_prisons)
+
+
+class PrisonPopulationViewTestCase(AuthTestCaseMixin, APITestCase):
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
+
+    def setUp(self):
+        super().setUp()
+        self.prison_clerks, _, _, _, _, _ = make_test_users()
+
+    @property
+    def url(self):
+        return reverse('prison_population-list')
+
+    def test_list_prison_categories(self):
+        user = self.prison_clerks[0]
+        response = self.client.get(
+            self.url,
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user),
+        )
+
+        self.assertEqual(len(Population.objects.all()), response.data['count'])
+        for prison_category in response.data['results']:
+            self.assertTrue(prison_category['name'] in Population.objects.all().values_list('name', flat=True))
+
+
+class PrisonCategoryViewTestCase(AuthTestCaseMixin, APITestCase):
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
+
+    def setUp(self):
+        super().setUp()
+        self.prison_clerks, _, _, _, _, _ = make_test_users()
+
+    @property
+    def url(self):
+        return reverse('prison_category-list')
+
+    def test_list_prison_categories(self):
+        user = self.prison_clerks[0]
+        response = self.client.get(
+            self.url,
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user),
+        )
+
+        self.assertEqual(len(Category.objects.all()), response.data['count'])
+        for prison_category in response.data['results']:
+            self.assertTrue(prison_category['name'] in Category.objects.all().values_list('name', flat=True))

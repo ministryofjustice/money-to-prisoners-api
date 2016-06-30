@@ -1,0 +1,90 @@
+[
+{
+  "model": "prison.population",
+  "pk": 1,
+  "fields": {
+    "name": "male",
+    "description": "Male"
+  }
+},
+{
+  "model": "prison.population",
+  "pk": 2,
+  "fields": {
+    "name": "female",
+    "description": "Female"
+  }
+},
+{
+  "model": "prison.population",
+  "pk": 3,
+  "fields": {
+    "name": "adult",
+    "description": "Adults"
+  }
+},
+{
+  "model": "prison.population",
+  "pk": 4,
+  "fields": {
+    "name": "young",
+    "description": "Young people"
+  }
+},
+{
+  "model": "prison.category",
+  "pk": 1,
+  "fields": {
+    "name": "A",
+    "description": "Category A"
+  }
+},
+{
+  "model": "prison.category",
+  "pk": 2,
+  "fields": {
+    "name": "B",
+    "description": "Category B"
+  }
+},
+{
+  "model": "prison.category",
+  "pk": 3,
+  "fields": {
+    "name": "C",
+    "description": "Category C"
+  }
+},
+{
+  "model": "prison.category",
+  "pk": 4,
+  "fields": {
+    "name": "D",
+    "description": "Category D"
+  }
+},
+{
+  "model": "prison.category",
+  "pk": 5,
+  "fields": {
+    "name": "YOI",
+    "description": "Young Offender Institution"
+  }
+},
+{
+  "model": "prison.category",
+  "pk": 6,
+  "fields": {
+    "name": "IRC",
+    "description": "Immigration Removal Centre"
+  }
+},
+{
+  "model": "prison.category",
+  "pk": 7,
+  "fields": {
+    "name": "FNP",
+    "description": "Foreign National Prison"
+  }
+}
+]

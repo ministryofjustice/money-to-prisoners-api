@@ -7,8 +7,9 @@
       "general_ledger_code": "137",
       "created": "2015-12-09T12:00:00Z",
       "modified": "2015-12-09T12:00:00Z",
-      "gender": "m",
-      "region": "South Central"
+      "region": "South Central",
+      "populations": [1,3],
+      "categories": [2]
     }
   },
   {
@@ -19,8 +20,9 @@
       "general_ledger_code": "014",
       "created": "2015-12-09T12:00:00Z",
       "modified": "2015-12-09T12:00:00Z",
-      "gender": "m",
-      "region": "London"
+      "region": "London",
+      "populations": [1,3],
+      "categories": [3]
     }
   },
   {
@@ -31,8 +33,9 @@
       "general_ledger_code": "138",
       "created": "2015-12-09T12:00:00Z",
       "modified": "2015-12-09T12:00:00Z",
-      "gender": "m",
-      "region": "London"
+      "region": "London",
+      "populations": [1,4],
+      "categories": [3,5]
     }
   },
   {
@@ -43,8 +46,9 @@
       "general_ledger_code": "071",
       "created": "2015-12-09T12:00:00Z",
       "modified": "2015-12-09T12:00:00Z",
-      "gender": "m",
-      "region": "Yorkshire and Humberside"
+      "region": "Yorkshire and Humberside",
+      "populations": [1,3],
+      "categories": [2]
     }
   }
 ]

@@ -31,6 +31,7 @@ User = get_user_model()
 class GetUserTestCase(APITestCase, AuthTestCaseMixin):
     fixtures = [
         'initial_groups.json',
+        'initial_types.json',
         'test_prisons.json'
     ]
 
@@ -134,6 +135,7 @@ class GetUserTestCase(APITestCase, AuthTestCaseMixin):
 class ListUserTestCase(APITestCase, AuthTestCaseMixin):
     fixtures = [
         'initial_groups.json',
+        'initial_types.json',
         'test_prisons.json'
     ]
 
@@ -215,6 +217,7 @@ class ListUserTestCase(APITestCase, AuthTestCaseMixin):
 class CreateUserTestCase(APITestCase, AuthTestCaseMixin):
     fixtures = [
         'initial_groups.json',
+        'initial_types.json',
         'test_prisons.json'
     ]
 
@@ -396,6 +399,7 @@ class CreateUserTestCase(APITestCase, AuthTestCaseMixin):
 class UpdateUserTestCase(APITestCase, AuthTestCaseMixin):
     fixtures = [
         'initial_groups.json',
+        'initial_types.json',
         'test_prisons.json'
     ]
 
@@ -551,6 +555,7 @@ class UpdateUserTestCase(APITestCase, AuthTestCaseMixin):
 class DeleteUserTestCase(APITestCase, AuthTestCaseMixin):
     fixtures = [
         'initial_groups.json',
+        'initial_types.json',
         'test_prisons.json'
     ]
 
@@ -616,7 +621,7 @@ class DeleteUserTestCase(APITestCase, AuthTestCaseMixin):
 
 
 class UserApplicationValidationTestCase(APITestCase):
-    fixtures = ['test_prisons.json', 'initial_groups.json']
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
     def setUp(self):
         super(UserApplicationValidationTestCase, self).setUp()
@@ -676,7 +681,7 @@ class UserApplicationValidationTestCase(APITestCase):
 
 
 class AccountLockoutTestCase(APITestCase):
-    fixtures = ['test_prisons.json', 'initial_groups.json']
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
     def setUp(self):
         super().setUp()
@@ -786,6 +791,7 @@ class AccountLockoutTestCase(APITestCase):
 class ChangePasswordTestCase(APITestCase, AuthTestCaseMixin):
     fixtures = [
         'initial_groups.json',
+        'initial_types.json',
         'test_prisons.json'
     ]
 
@@ -859,7 +865,7 @@ class ChangePasswordTestCase(APITestCase, AuthTestCaseMixin):
 
 
 class ResetPasswordTestCase(APITestCase):
-    fixtures = ['initial_groups.json', 'test_prisons.json']
+    fixtures = ['initial_groups.json', 'initial_types.json', 'test_prisons.json']
     reset_url = reverse('user-reset-password')
 
     def setUp(self):

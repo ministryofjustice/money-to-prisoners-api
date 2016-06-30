@@ -15,6 +15,7 @@ from transaction.tests.utils import generate_transactions, latest_transaction_da
 class BaseCreditViewTestCase(AuthTestCaseMixin, APITestCase):
     fixtures = [
         'initial_groups.json',
+        'initial_types.json',
         'test_prisons.json'
     ]
     STATUS_FILTERS = {

@@ -18,6 +18,7 @@ User = get_user_model()
 class BaseUpdatePrisonsTestCase(TestCase):
     fixtures = [
         'initial_groups.json',
+        'initial_types.json',
         'test_prisons.json'
     ]
 

@@ -7,7 +7,7 @@ User = get_user_model()
 
 
 class DashboardTestCase(TestCase):
-    fixtures = ['initial_groups.json', 'test_prisons.json']
+    fixtures = ['initial_groups.json', 'initial_types.json', 'test_prisons.json']
 
 
 class CoreDashboardTestCase(DashboardTestCase):

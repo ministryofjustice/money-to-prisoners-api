@@ -75,7 +75,7 @@ class Command(BaseCommand):
         print_message('Deleting all prisons')
         Prison.objects.all().delete()
 
-        fixtures = ['initial_groups.json']
+        fixtures = ['initial_groups.json', 'initial_types.json']
         if 'sample' in prisons:
             fixtures.append('test_prisons.json')
         if 'nomis' in prisons:
