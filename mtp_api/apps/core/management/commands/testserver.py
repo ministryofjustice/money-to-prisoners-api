@@ -68,7 +68,6 @@ class Command(TestServerCommand):
             )
             self.controller_thread.start()
 
-        fixture_labels = ['test_prisons']  # because loaddata requires arguments
         super().handle(*fixture_labels, **options)
 
     @synchronised
