@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.admin import ModelAdmin
 
 from core.admin import DateFilter
-from prison.models import Prison, PrisonerLocation
+from prison.models import Prison, PrisonerLocation, Population, Category
 
 
 @admin.register(Prison)
@@ -18,3 +18,7 @@ class PrisonerLocationAdmin(ModelAdmin):
     list_display = ('prisoner_name', 'prisoner_number', 'prisoner_dob', 'prison')
     list_filter = ('prison', ('prisoner_dob', DateFilter))
     search_fields = ('prisoner_name', 'prisoner_number')
+
+
+admin.site.register(Population)
+admin.site.register(Category)
