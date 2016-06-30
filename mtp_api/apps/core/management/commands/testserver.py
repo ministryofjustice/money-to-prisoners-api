@@ -38,7 +38,7 @@ class Command(TestServerCommand):
         verbosity = options.get('verbosity')
         controller_port = options.pop('controller_port')
 
-        required_fixture_labels = ['initial_groups', 'test_prisons']
+        required_fixture_labels = ['initial_groups', 'initial_types', 'test_prisons']
         specified_fixture_labels = fixture_labels
         fixture_labels = required_fixture_labels + list(
             set(specified_fixture_labels) - set(required_fixture_labels)
