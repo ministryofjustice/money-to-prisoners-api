@@ -11,7 +11,7 @@ from account.models import Batch, Balance
 
 
 class CreateBatchViewTestCase(AuthTestCaseMixin, APITestCase):
-    fixtures = ['test_prisons.json', 'initial_groups.json']
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
     def setUp(self):
         super().setUp()
@@ -95,7 +95,7 @@ class CreateBatchViewTestCase(AuthTestCaseMixin, APITestCase):
 
 class ListBatchViewTestCase(AuthTestCaseMixin, APITestCase):
 
-    fixtures = ['test_prisons.json', 'initial_groups.json']
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
     def setUp(self):
         super().setUp()
@@ -169,7 +169,7 @@ class ListBatchViewTestCase(AuthTestCaseMixin, APITestCase):
 
 class CreateBalanceTestCase(AuthTestCaseMixin, APITestCase):
 
-    fixtures = ['test_prisons.json', 'initial_groups.json']
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
     def setUp(self):
         super().setUp()
@@ -241,7 +241,7 @@ class CreateBalanceTestCase(AuthTestCaseMixin, APITestCase):
 
 class ListBalanceViewTestCase(AuthTestCaseMixin, APITestCase):
 
-    fixtures = ['test_prisons.json', 'initial_groups.json']
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
     def setUp(self):
         super().setUp()

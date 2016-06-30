@@ -114,8 +114,11 @@ class CreditListTestCase(
         prison_region_checker = self._get_sub_attribute_checker(
             'prison_region', 'prison.region', filters, noop_checker
         )
-        prison_gender_checker = self._get_sub_attribute_checker(
-            'prison_gender', 'prison.gender', filters, noop_checker
+        prison_population_checker = self._get_prison_type_checker(
+            'prison_population', 'prison.populations', filters, noop_checker
+        )
+        prison_category_checker = self._get_prison_type_checker(
+            'prison_category', 'prison.categories', filters, noop_checker
         )
         amount_pattern_checker = self._get_amount_pattern_checker(filters, noop_checker)
 
@@ -136,7 +139,8 @@ class CreditListTestCase(
             prisoner_name_checker(c) and
             prisoner_number_checker(c) and
             prison_region_checker(c) and
-            prison_gender_checker(c) and
+            prison_population_checker(c) and
+            prison_category_checker(c) and
             amount_pattern_checker(c)
         ]
         self.assertEqual(response.data['count'], len(expected_ids))
@@ -163,6 +167,15 @@ class CreditListTestCase(
             if text_search:
                 return lambda c: filters[filter_name].lower() in getattr_path(c, attribute_path, '').lower()
             return lambda c: getattr_path(c, attribute_path) == filters[filter_name]
+        return noop_checker
+
+    def _get_prison_type_checker(self, filter_name, list_attribute_path, filters, noop_checker):
+        if filters.get(filter_name):
+            filter_list = filters[filter_name] if isinstance(filters[filter_name], list) else [filters[filter_name]]
+            return lambda c: any(
+                value in [t.name for t in getattr_path(c, list_attribute_path).all()]
+                for value in filter_list
+            )
         return noop_checker
 
     def _get_received_at_checker(self, filters, noop_checker):
@@ -285,14 +298,34 @@ class CreditListWithDefaultsTestCase(CreditListTestCase):
             'prison_region': search
         })
 
-    def test_filter_by_prison_gender(self):
+    def test_filter_by_prison_population(self):
         search = ''
         while not search:
             credit = random.choice(self.credits)
             if credit.prison:
-                search = credit.prison.gender
+                search = credit.prison.populations.first().name
         self._test_response_with_filters(filters={
-            'prison_gender': search
+            'prison_population': search
+        })
+
+    def test_filter_by_prison_category(self):
+        search = ''
+        while not search:
+            credit = random.choice(self.credits)
+            if credit.prison:
+                search = credit.prison.categories.first().name
+        self._test_response_with_filters(filters={
+            'prison_category': search
+        })
+
+    def test_filter_by_multiple_prison_categories(self):
+        search = []
+        while len(search) < 2:
+            credit = random.choice(self.credits)
+            if credit.prison and credit.prison.categories.first().name not in search:
+                search.append(credit.prison.categories.first().name)
+        self._test_response_with_filters(filters={
+            'prison_category': search
         })
 
 

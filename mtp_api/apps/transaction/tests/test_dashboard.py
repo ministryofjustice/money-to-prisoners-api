@@ -18,7 +18,7 @@ User = get_user_model()
 
 
 class TransactionDashboardTestCase(DashboardTestCase):
-    fixtures = ['initial_groups.json', 'test_prisons.json']
+    fixtures = ['initial_groups.json', 'initial_types.json', 'test_prisons.json']
 
     def assertAmountInContent(self, amount, response):  # noqa
         if amount:

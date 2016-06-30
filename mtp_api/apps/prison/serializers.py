@@ -4,10 +4,26 @@ from rest_framework import serializers
 
 from credit.signals import credit_prisons_need_updating
 
-from .models import PrisonerLocation, Prison
+from .models import PrisonerLocation, Prison, Category, Population
+
+
+class PopulationSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Population
+        fields = ('name', 'description')
+
+
+class CategorySerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Category
+        fields = ('name', 'description')
 
 
 class PrisonSerializer(serializers.ModelSerializer):
+    populations = PopulationSerializer(many=True)
+    categories = CategorySerializer(many=True)
 
     class Meta:
         model = Prison
@@ -16,7 +32,8 @@ class PrisonSerializer(serializers.ModelSerializer):
             'general_ledger_code',
             'name',
             'region',
-            'gender',
+            'populations',
+            'categories',
         )
 
 

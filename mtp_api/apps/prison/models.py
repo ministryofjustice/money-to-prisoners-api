@@ -1,8 +1,23 @@
 from django.conf import settings
 from django.db import models
-from django.utils.translation import gettext_lazy as _
 
 from model_utils.models import TimeStampedModel
+
+
+class Population(models.Model):
+    name = models.CharField(max_length=30)
+    description = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.description
+
+
+class Category(models.Model):
+    name = models.CharField(max_length=30)
+    description = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.description
 
 
 class Prison(TimeStampedModel):
@@ -10,7 +25,8 @@ class Prison(TimeStampedModel):
     general_ledger_code = models.CharField(max_length=3)
     name = models.CharField(max_length=500)
     region = models.CharField(max_length=255, blank=True)
-    gender = models.CharField(max_length=1, blank=True, choices=(('m', _('Male')), ('f', _('Female'))))
+    populations = models.ManyToManyField(Population)
+    categories = models.ManyToManyField(Category)
 
     def __str__(self):
         return self.name

@@ -6,8 +6,9 @@
         "modified": "2015-06-17T13:47:18.100Z",
         "name": "Prison 1",
         "general_ledger_code": "042",
-        "gender": "m",
-        "region": "West Midlands"
+        "region": "West Midlands",
+        "populations": [1, 3],
+        "categories": [2, 3]
     },
     "pk": "IXB"
 },
@@ -18,8 +19,9 @@
         "modified": "2015-06-17T13:47:31.283Z",
         "name": "Prison 2",
         "general_ledger_code": "015",
-        "gender": "m",
-        "region": "London"
+        "region": "London",
+        "populations": [2, 3, 4],
+        "categories": [4]
     },
     "pk": "INP"
 }

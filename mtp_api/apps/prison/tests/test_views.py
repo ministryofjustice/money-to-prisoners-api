@@ -17,7 +17,7 @@ from transaction.tests.utils import generate_transactions
 
 
 class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
-    fixtures = ['test_prisons.json', 'initial_groups.json']
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
     def setUp(self):
         super(PrisonerLocationViewTestCase, self).setUp()
@@ -207,7 +207,7 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
 
 
 class PrisonerValidityViewTestCase(AuthTestCaseMixin, APITestCase):
-    fixtures = ['test_prisons.json', 'initial_groups.json']
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
     def setUp(self):
         super().setUp()
@@ -359,7 +359,7 @@ class PrisonerValidityViewTestCase(AuthTestCaseMixin, APITestCase):
 
 
 class PrisonViewTestCase(AuthTestCaseMixin, APITestCase):
-    fixtures = ['test_prisons.json', 'initial_groups.json']
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
     def setUp(self):
         super().setUp()

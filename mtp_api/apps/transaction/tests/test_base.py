@@ -14,6 +14,7 @@ from .utils import latest_transaction_date
 class BaseTransactionViewTestCase(AuthTestCaseMixin, APITestCase):
     fixtures = [
         'initial_groups.json',
+        'initial_types.json',
         'test_prisons.json'
     ]
     transaction_batch = 50

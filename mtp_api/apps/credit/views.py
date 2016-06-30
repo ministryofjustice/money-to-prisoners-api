@@ -4,6 +4,7 @@ import re
 
 from django.contrib.auth import get_user_model
 from django.db import connection, models, transaction
+from django.forms import MultipleChoiceField
 import django_filters
 from django.http import HttpResponseRedirect
 from django.views.generic import View
@@ -88,13 +89,24 @@ class CreditTextSearchFilter(django_filters.CharFilter):
         return qs
 
 
+class MultipleValueField(MultipleChoiceField):
+
+    def valid_value(self, value):
+        return True
+
+
+class MultipleValueFilter(django_filters.MultipleChoiceFilter):
+    field_class = MultipleValueField
+
+
 class CreditListFilter(django_filters.FilterSet):
     status = StatusChoiceFilter(choices=CREDIT_STATUS.choices)
     prisoner_name = django_filters.CharFilter(name='prisoner_name', lookup_expr='icontains')
     prison = django_filters.ModelMultipleChoiceFilter(queryset=Prison.objects.all())
     prison__isnull = django_filters.BooleanFilter(name='prison', lookup_expr='isnull')
     prison_region = django_filters.CharFilter(name='prison__region')
-    prison_gender = django_filters.CharFilter(name='prison__gender')
+    prison_category = MultipleValueFilter(name='prison__categories__name')
+    prison_population = MultipleValueFilter(name='prison__populations__name')
     user = django_filters.ModelChoiceFilter(name='owner', queryset=User.objects.all())
     received_at = django_filters.DateFromToRangeFilter()
     search = CreditTextSearchFilter()

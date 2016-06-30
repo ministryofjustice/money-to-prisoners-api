@@ -12,7 +12,7 @@ from payment.constants import PAYMENT_STATUS
 
 
 class CreatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
-    fixtures = ['test_prisons.json', 'initial_groups.json']
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
     def setUp(self):
         super().setUp()
@@ -73,7 +73,7 @@ class CreatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
 
 
 class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
-    fixtures = ['test_prisons.json', 'initial_groups.json']
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
     def setUp(self):
         super().setUp()
@@ -157,7 +157,7 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
 
 
 class GetPaymentViewTestCase(AuthTestCaseMixin, APITestCase):
-    fixtures = ['test_prisons.json', 'initial_groups.json']
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
     def setUp(self):
         super().setUp()

@@ -9,7 +9,7 @@ from prison.models import Prison, PrisonerLocation
 class PrisonAdmin(ModelAdmin):
     ordering = ('name',)
     list_display = ('name', 'nomis_id', 'general_ledger_code')
-    list_filter = ('region', 'gender')
+    list_filter = ('region',)
 
 
 @admin.register(PrisonerLocation)
