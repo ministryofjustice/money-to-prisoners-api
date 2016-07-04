@@ -8,7 +8,8 @@ from .serializers import BatchSerializer, BalanceSerializer
 
 
 class BatchView(
-    mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet
+    mixins.CreateModelMixin, mixins.UpdateModelMixin,
+    mixins.ListModelMixin, viewsets.GenericViewSet
 ):
     queryset = Batch.objects.all().order_by('-created')
     serializer_class = BatchSerializer

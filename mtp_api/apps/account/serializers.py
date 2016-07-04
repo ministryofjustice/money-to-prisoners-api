@@ -10,9 +10,13 @@ class BatchSerializer(serializers.ModelSerializer):
 
         transactions = validated_data.pop('transactions')
         batch = Batch.objects.create(user=user, **validated_data)
-        for transaction in transactions:
-            batch.transactions.add(transaction)
+        batch.transactions.add(*transactions)
         return batch
+
+    def update(self, instance, validated_data):
+        transactions = validated_data.pop('transactions')
+        instance.transactions.add(*transactions)
+        return super().update(instance, validated_data)
 
     class Meta:
         model = Batch
