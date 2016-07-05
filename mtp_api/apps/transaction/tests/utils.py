@@ -168,8 +168,9 @@ def generate_initial_transactions_data(
                 if data.get('sender_roll_number'):
                     del data['sender_roll_number']
                 else:
-                    del data['sender_sort_code']
                     del data['sender_account_number']
+                    if transaction_counter % 2 == 0:
+                        del data['sender_sort_code']
 
             data['reference'] = random_reference(
                 data.get('prisoner_number'), data.get('prisoner_dob')

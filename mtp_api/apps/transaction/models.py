@@ -1,7 +1,9 @@
 from django.db import models
+from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from model_utils.models import TimeStampedModel
 
+from credit.constants import CREDIT_RESOLUTION
 from credit.models import Credit
 from transaction.constants import (
     TRANSACTION_STATUS, TRANSACTION_CATEGORY, TRANSACTION_SOURCE
@@ -39,27 +41,34 @@ class Transaction(TimeStampedModel):
     # NB: there are matching boolean fields or properties on the model instance for each
     STATUS_LOOKUP = {
         TRANSACTION_STATUS.CREDITABLE: (
-            models.Q(credit__prison__isnull=False)
+            Q(credit__prison__isnull=False) &
+            (
+                # for historical consistency, include unidentified that are
+                # already credited
+                Q(incomplete_sender_info=False) |
+                Q(credit__resolution=CREDIT_RESOLUTION.CREDITED)
+            )
         ),
         TRANSACTION_STATUS.REFUNDABLE: (
-            models.Q(credit__isnull=False) &
-            models.Q(credit__prison__isnull=True) &
-            models.Q(incomplete_sender_info=False)
+            Q(credit__isnull=False) &
+            Q(credit__prison__isnull=True) &
+            Q(incomplete_sender_info=False)
         ),
         TRANSACTION_STATUS.ANONYMOUS: (
-            models.Q(incomplete_sender_info=True) &
-            models.Q(category=TRANSACTION_CATEGORY.CREDIT) &
-            models.Q(source=TRANSACTION_SOURCE.BANK_TRANSFER)
+            Q(incomplete_sender_info=True) &
+            Q(category=TRANSACTION_CATEGORY.CREDIT) &
+            Q(source=TRANSACTION_SOURCE.BANK_TRANSFER)
         ),
         TRANSACTION_STATUS.UNIDENTIFIED: (
-            models.Q(credit__prison__isnull=True) &
-            models.Q(incomplete_sender_info=True) &
-            models.Q(category=TRANSACTION_CATEGORY.CREDIT) &
-            models.Q(source=TRANSACTION_SOURCE.BANK_TRANSFER)
+            # exclude those which have been credited in the past
+            ~Q(credit__resolution=CREDIT_RESOLUTION.CREDITED) &
+            Q(incomplete_sender_info=True) &
+            Q(category=TRANSACTION_CATEGORY.CREDIT) &
+            Q(source=TRANSACTION_SOURCE.BANK_TRANSFER)
         ),
         TRANSACTION_STATUS.ANOMALOUS: (
-            models.Q(category=TRANSACTION_CATEGORY.CREDIT) &
-            models.Q(source=TRANSACTION_SOURCE.ADMINISTRATIVE)
+            Q(category=TRANSACTION_CATEGORY.CREDIT) &
+            Q(source=TRANSACTION_SOURCE.ADMINISTRATIVE)
         )
     }
 
@@ -118,11 +127,13 @@ class Transaction(TimeStampedModel):
 
     @property
     def creditable(self):
-        return self.prison is not None
+        return self.prison is not None and (
+            not self.incomplete_sender_info or self.credited
+        )
 
     @property
     def unidentified(self):
-        return (self.prison is None and
+        return (not self.credited and
                 self.incomplete_sender_info and
                 self.category == TRANSACTION_CATEGORY.CREDIT and
                 self.source == TRANSACTION_SOURCE.BANK_TRANSFER)

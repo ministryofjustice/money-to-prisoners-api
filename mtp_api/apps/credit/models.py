@@ -2,6 +2,7 @@ import warnings
 
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from model_utils.models import TimeStampedModel
@@ -47,23 +48,31 @@ class Credit(TimeStampedModel):
 
     STATUS_LOOKUP = {
         CREDIT_STATUS.LOCKED: (
-            models.Q(owner__isnull=False) &
-            models.Q(resolution=CREDIT_RESOLUTION.PENDING)
+            Q(owner__isnull=False) &
+            Q(resolution=CREDIT_RESOLUTION.PENDING)
         ),
         CREDIT_STATUS.AVAILABLE: (
-            models.Q(prison__isnull=False) &
-            models.Q(owner__isnull=True) &
-            models.Q(resolution=CREDIT_RESOLUTION.PENDING)
+            Q(prison__isnull=False) &
+            Q(owner__isnull=True) &
+            Q(resolution=CREDIT_RESOLUTION.PENDING) &
+            (
+                Q(transaction__incomplete_sender_info=False) |
+                Q(transaction__isnull=True)
+            )
         ),
         CREDIT_STATUS.CREDITED: (
-            models.Q(resolution=CREDIT_RESOLUTION.CREDITED)
+            Q(resolution=CREDIT_RESOLUTION.CREDITED)
         ),
         CREDIT_STATUS.REFUNDED: (
-            models.Q(resolution=CREDIT_RESOLUTION.REFUNDED)
+            Q(resolution=CREDIT_RESOLUTION.REFUNDED)
         ),
         CREDIT_STATUS.REFUND_PENDING: (
-            models.Q(prison__isnull=True) &
-            models.Q(resolution=CREDIT_RESOLUTION.PENDING)
+            Q(prison__isnull=True) &
+            Q(resolution=CREDIT_RESOLUTION.PENDING) &
+            (
+                Q(transaction__isnull=True) |
+                Q(transaction__incomplete_sender_info=False)
+            )
         ),
     }
 
@@ -132,7 +141,11 @@ class Credit(TimeStampedModel):
     def available(self):
         return (
             self.owner is None and self.prison is not None and
-            self.resolution == CREDIT_RESOLUTION.PENDING
+            self.resolution == CREDIT_RESOLUTION.PENDING and
+            (
+                not hasattr(self, 'transaction') or
+                not self.transaction.incomplete_sender_info
+            )
         )
 
     @property
@@ -152,7 +165,11 @@ class Credit(TimeStampedModel):
     @property
     def refund_pending(self):
         return (
-            self.prison is None and self.resolution == CREDIT_RESOLUTION.PENDING
+            self.prison is None and self.resolution == CREDIT_RESOLUTION.PENDING and
+            (
+                not hasattr(self, 'transaction') or
+                not self.transaction.incomplete_sender_info
+            )
         )
 
     @property

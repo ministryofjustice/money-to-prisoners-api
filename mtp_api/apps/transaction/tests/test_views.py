@@ -413,17 +413,10 @@ class GetTransactionsAsBankAdminTestCase(GetTransactionsBaseTestCase):
         db_ids = [t.id for t in ts]
         self.assertEqual(len(set(db_ids)), len(data['results']))
 
-        # check that all results match one of the provided statuses
+        # check that all results match the provided status
         for t in data['results']:
-            matches_one = False
-            try:
-                Transaction.objects.get(
-                    Transaction.STATUS_LOOKUP[status], id=t['id'])
-                matches_one = True
-                break
-            except Transaction.DoesNotExist:
-                pass
-            self.assertTrue(matches_one)
+            self.assertEqual(Transaction.objects.filter(
+                Transaction.STATUS_LOOKUP[status], id=t['id']).count(), 1)
 
         return data['results']
 
@@ -449,6 +442,7 @@ class GetTransactionsAsBankAdminTestCase(GetTransactionsBaseTestCase):
         results = self._test_get_list_with_status(status)
         self._assert_required_fields_present(results)
         self._assert_hidden_fields_absent(results)
+        return results
 
     def test_get_list_all(self):
         data = self._get_with_status(self._get_authorised_user(), '')
