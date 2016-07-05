@@ -23,6 +23,21 @@ class CreditQuerySet(models.QuerySet):
     def locked_by(self, user):
         return self.filter(owner=user)
 
+    def reconcile(self, date, user):
+        update_set = self.filter(
+            received_at__date=date.date(),
+            reconciled=False
+        ).select_for_update()
+
+        from .models import Log
+        logs = []
+        for credit in update_set:
+            logs.append(Log(
+                credit=credit, action=LOG_ACTIONS.RECONCILED, user=user)
+            )
+        update_set.update(reconciled=True)
+        Log.objects.bulk_create(logs)
+
 
 class CreditManager(models.Manager):
 

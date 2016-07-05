@@ -72,6 +72,11 @@ class Transaction(TimeStampedModel):
         )
     }
 
+    STATUS_LOOKUP[TRANSACTION_STATUS.RECONCILABLE] = ~(
+        STATUS_LOOKUP[TRANSACTION_STATUS.UNIDENTIFIED] |
+        STATUS_LOOKUP[TRANSACTION_STATUS.ANOMALOUS]
+    )
+
     objects = TransactionQuerySet.as_manager()
 
     class Meta:
