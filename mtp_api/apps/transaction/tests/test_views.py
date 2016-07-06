@@ -6,7 +6,7 @@ from django.conf import settings
 from rest_framework import status as http_status
 
 from account.models import Batch
-from credit.constants import LOG_ACTIONS
+from credit.constants import LOG_ACTIONS, CREDIT_RESOLUTION
 from credit.models import Credit, Log
 from transaction.models import Transaction
 from transaction.constants import TRANSACTION_CATEGORY, TRANSACTION_SOURCE
@@ -771,19 +771,22 @@ class ReconcileTransactionsTestCase(
         for trans in qs:
             self.assertEqual(trans.ref_code, None)
 
-        # unidentified not given ref code
+        # anonymous not given ref code
         qs = Transaction.objects.filter(
-            credit__prison__isnull=True,
             incomplete_sender_info=True,
             received_at__date=self._get_latest_date()
-        )
+        ).exclude(credit__resolution=CREDIT_RESOLUTION.CREDITED)
         for trans in qs:
             self.assertEqual(trans.ref_code, None)
 
         # valid credits and refunds given ref code
         qs = (Transaction.objects.filter(
+            credit__resolution=CREDIT_RESOLUTION.CREDITED,
+            received_at__date=self._get_latest_date()
+        ) | Transaction.objects.filter(
             category=TRANSACTION_CATEGORY.CREDIT,
             credit__prison__isnull=False,
+            incomplete_sender_info=False,
             received_at__date=self._get_latest_date()
         ) | Transaction.objects.filter(
             category=TRANSACTION_CATEGORY.CREDIT,
