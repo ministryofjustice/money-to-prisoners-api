@@ -77,6 +77,10 @@ class PrisonUserMappingAdmin(ModelAdmin):
 @admin.register(User)
 class UserAdmin(DjangoUserAdmin):
     list_display = DjangoUserAdmin.list_display + ('account_locked',)
+    list_filter = DjangoUserAdmin.list_filter + (
+        'prisonusermapping__prisons',
+        'applicationusermapping__application'
+    )
     actions = DjangoUserAdmin.actions + ['remove_account_lockouts']
     form = RestrictedUserChangeForm
 
