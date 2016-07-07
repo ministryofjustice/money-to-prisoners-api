@@ -53,7 +53,8 @@ class RecreateTestDataViewTestCase(TestCase):
             response = self.client.post(self.url, data={
                 'scenario': 'random',
                 'number_of_transactions': '50',
-                'number_of_payments': '50'
+                'number_of_payments': '50',
+                'days_of_history': '7',
             })
             self.assertEqual(response.status_code, 200)
             self.assertEqual(method.call_count, 1)
@@ -65,7 +66,8 @@ class RecreateTestDataViewTestCase(TestCase):
                 'credits': 'random',
                 'prisons': ['sample'],
                 'number_of_transactions': 50,
-                'number_of_payments': 50
+                'number_of_payments': 50,
+                'days_of_history': 7
             }
             options = method.call_args[1]
             options_subset = {

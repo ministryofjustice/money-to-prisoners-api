@@ -66,17 +66,12 @@ def latest_transaction_date():
     return timezone.localtime(latest_transaction_date)
 
 
-def generate_initial_transactions_data(
-        tot=50,
-        prisoner_location_generator=None,
-        include_debits=True,
-        include_administrative_credits=True,
-        include_unidentified_credits=True,
-        number_of_sort_codes=6,
-        number_of_senders=50,
-        number_of_prisoners=50,
-        days_of_history=7):
-    data_list = []
+def get_sender_prisoner_pairs(
+        number_of_sort_codes,
+        number_of_senders,
+        number_of_prisoners,
+        prisoner_location_generator=None
+):
     sort_codes = [
         get_random_string(6, '1234567890') for _ in range(number_of_sort_codes)
     ]
@@ -119,7 +114,24 @@ def generate_initial_transactions_data(
         sender_prisoner_pairs.append(
             (senders[i % sender_fraction], prisoners[i % prisoner_fraction])
         )
-    sender_prisoner_pairs = cycle(sender_prisoner_pairs)
+    return cycle(sender_prisoner_pairs)
+
+
+def generate_initial_transactions_data(
+        tot=50,
+        prisoner_location_generator=None,
+        include_debits=True,
+        include_administrative_credits=True,
+        include_unidentified_credits=True,
+        number_of_sort_codes=6,
+        number_of_senders=50,
+        number_of_prisoners=50,
+        days_of_history=7):
+    data_list = []
+    sender_prisoner_pairs = get_sender_prisoner_pairs(
+        number_of_sort_codes, number_of_senders,
+        number_of_prisoners, prisoner_location_generator
+    )
 
     for transaction_counter in range(1, tot + 1):
         include_prisoner_info = transaction_counter % 5 != 0
