@@ -133,6 +133,7 @@ class RecreateTestDataView(AdminViewMixin, FormView):
             'stderr': output,
             'number_of_transactions': form.cleaned_data['number_of_transactions'],
             'number_of_payments': form.cleaned_data['number_of_payments'],
+            'days_of_history': form.cleaned_data['days_of_history'],
         }
 
         if scenario in ('random', 'cashbook'):

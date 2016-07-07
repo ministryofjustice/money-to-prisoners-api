@@ -73,8 +73,9 @@ def generate_initial_transactions_data(
         include_administrative_credits=True,
         include_unidentified_credits=True,
         number_of_sort_codes=6,
-        number_of_senders=20,
-        number_of_prisoners=50):
+        number_of_senders=35,
+        number_of_prisoners=50,
+        days_of_history=7):
     data_list = []
     sort_codes = [
         get_random_string(6, '1234567890') for _ in range(number_of_sort_codes)
@@ -121,7 +122,7 @@ def generate_initial_transactions_data(
         )
 
         random_date = latest_transaction_date() - datetime.timedelta(
-            minutes=random.randint(0, 10000)
+            minutes=random.randint(0, 1440*days_of_history)
         )
         random_date = timezone.localtime(random_date)
         midnight_random_date = get_midnight(random_date)
@@ -239,7 +240,8 @@ def generate_transactions(
     consistent_history=False,
     include_debits=True,
     include_administrative_credits=True,
-    include_unidentified_credits=True
+    include_unidentified_credits=True,
+    days_of_history=7
 ):
     if use_test_nomis_prisoners:
         prisoner_location_generator = cycle(load_nomis_prisoner_locations())
@@ -250,7 +252,8 @@ def generate_transactions(
         prisoner_location_generator=prisoner_location_generator,
         include_debits=include_debits,
         include_administrative_credits=include_administrative_credits,
-        include_unidentified_credits=include_unidentified_credits
+        include_unidentified_credits=include_unidentified_credits,
+        days_of_history=days_of_history
     )
 
     location_creator = get_prisoner_location_creator()

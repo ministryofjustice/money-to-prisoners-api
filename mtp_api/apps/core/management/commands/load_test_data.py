@@ -33,7 +33,7 @@ class Command(BaseCommand):
                             help='Prevents existing credits from being deleted')
         parser.add_argument('--prisons', nargs='*', default=['sample'],
                             choices=['sample', 'nomis'],
-                            help='Create prisions from these sets')
+                            help='Create prisons from these sets')
         parser.add_argument('--clerks-per-prison', type=int, default=2,
                             help='The number of clerks to make for the Cashbook')
         parser.add_argument('--credits', default='random',
@@ -43,6 +43,8 @@ class Command(BaseCommand):
                             help='Number of new transactions to create')
         parser.add_argument('--number-of-payments', default=100, type=int,
                             help='Number of new payments to create')
+        parser.add_argument('--days-of-history', default=7, type=int,
+                            help='Number of days of historical credits')
 
     def handle(self, *args, **options):
         if settings.ENVIRONMENT == 'prod':
@@ -93,6 +95,7 @@ class Command(BaseCommand):
 
         number_of_transactions = options['number_of_transactions']
         number_of_payments = options['number_of_payments']
+        days_of_history = options['days_of_history']
         if credits == 'random':
             print_message('Generating pre-defined prisoner locations')
             # to allow for automated testing
@@ -110,13 +113,15 @@ class Command(BaseCommand):
                 consistent_history=True,
                 include_debits=False,
                 include_administrative_credits=False,
-                include_unidentified_credits=True
+                include_unidentified_credits=True,
+                days_of_history=days_of_history
             )
             generate_payments(
                 payment_batch=number_of_payments,
                 use_test_nomis_prisoners=True,
                 only_new_payments=True,
-                consistent_history=True
+                consistent_history=True,
+                days_of_history=days_of_history
             )
 
     def handle_prod(self, **options):

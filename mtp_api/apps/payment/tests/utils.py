@@ -29,7 +29,8 @@ def latest_payment_date():
 
 def generate_initial_payment_data(tot=50,
                                   prisoner_location_generator=None,
-                                  number_of_prisoners=50):
+                                  number_of_prisoners=50,
+                                  days_of_history=7):
 
     if prisoner_location_generator:
         prisoners = prisoner_location_generator
@@ -45,7 +46,7 @@ def generate_initial_payment_data(tot=50,
     data_list = []
     for i in range(1, tot+1):
         random_date = latest_payment_date() - datetime.timedelta(
-            minutes=random.randint(0, 10000)
+            minutes=random.randint(0, 1440*days_of_history)
         )
         random_date = timezone.localtime(random_date)
         amount = random_amount()
@@ -69,7 +70,8 @@ def generate_initial_payment_data(tot=50,
 def generate_payments(payment_batch=50,
                       use_test_nomis_prisoners=False,
                       only_new_payments=False,
-                      consistent_history=False):
+                      consistent_history=False,
+                      days_of_history=7):
 
     if use_test_nomis_prisoners:
         prisoner_location_generator = cycle(load_nomis_prisoner_locations())
@@ -78,6 +80,7 @@ def generate_payments(payment_batch=50,
     data_list = generate_initial_payment_data(
         tot=payment_batch,
         prisoner_location_generator=prisoner_location_generator,
+        days_of_history=days_of_history
     )
 
     location_creator = get_prisoner_location_creator()
