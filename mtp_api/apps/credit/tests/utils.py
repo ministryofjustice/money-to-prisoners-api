@@ -52,7 +52,10 @@ def create_credit_log(credit, created, modified):
 
 
 def random_amount():
-    amount = random.randrange(500, 30000, 500)
+    if random.random() < 0.8:
+        amount = random.randrange(500, 5000, 500)
+    else:
+        amount = random.randrange(500, 30000, 500)
     if random.random() < 0.1:
         amount += random.randint(0, 1000)
     return amount
