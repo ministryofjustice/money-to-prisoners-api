@@ -110,7 +110,7 @@ class Command(BaseCommand):
                 consistent_history=True,
                 include_debits=False,
                 include_administrative_credits=False,
-                include_unidentified_credits=False
+                include_unidentified_credits=True
             )
             generate_payments(
                 payment_batch=number_of_payments,

@@ -114,7 +114,7 @@ def generate_initial_transactions_data(
             include_unidentified_credits and transaction_counter % 23 == 0
         )
         make_debit_transaction = (
-            include_debits and (transaction_counter + 1) % 5 == 0
+            include_debits and transaction_counter % 21 == 0
         )
         make_administrative_credit_transaction = (
             include_administrative_credits and transaction_counter % 41 == 0
