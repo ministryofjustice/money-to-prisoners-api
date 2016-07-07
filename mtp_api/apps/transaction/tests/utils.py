@@ -66,6 +66,57 @@ def latest_transaction_date():
     return timezone.localtime(latest_transaction_date)
 
 
+def get_sender_prisoner_pairs(
+        number_of_sort_codes,
+        number_of_senders,
+        number_of_prisoners,
+        prisoner_location_generator=None
+):
+    sort_codes = [
+        get_random_string(6, '1234567890') for _ in range(number_of_sort_codes)
+    ]
+    senders = [
+        {
+            'sender_name': random_sender_name(),
+            'sender_sort_code': sort_codes[n % number_of_sort_codes],
+            'sender_account_number': get_random_string(8, '1234567890')
+        } for n in range(number_of_senders)
+    ]
+    for i, sender in enumerate(senders):
+        if i % 20 == 0:
+            sender['sender_roll_number'] = get_random_string(15, '1234a567890')
+
+    if prisoner_location_generator:
+        prisoners = [next(prisoner_location_generator) for _ in range(number_of_prisoners)]
+    else:
+        prisoners = [
+            {
+                'prisoner_name': random_prisoner_name(),
+                'prisoner_number': random_prisoner_number(),
+                'prisoner_dob': random_prisoner_dob()
+            } for n in range(number_of_prisoners)
+        ]
+
+    sender_prisoner_pairs = []
+    for i in range(number_of_senders*3):
+        prisoner_fraction = number_of_prisoners
+        if i <= number_of_senders:
+            sender_fraction = number_of_senders
+            if i % 3 == 1:
+                prisoner_fraction = number_of_prisoners//2
+            elif i % 3 == 2:
+                prisoner_fraction = number_of_prisoners//15
+        elif i <= number_of_senders*2:
+            sender_fraction = number_of_senders//2
+        else:
+            sender_fraction = number_of_senders//15
+
+        sender_prisoner_pairs.append(
+            (senders[i % sender_fraction], prisoners[i % prisoner_fraction])
+        )
+    return cycle(sender_prisoner_pairs)
+
+
 def generate_initial_transactions_data(
         tot=50,
         prisoner_location_generator=None,
@@ -73,72 +124,45 @@ def generate_initial_transactions_data(
         include_administrative_credits=True,
         include_unidentified_credits=True,
         number_of_sort_codes=6,
-        number_of_senders=20,
-        number_of_prisoners=50):
+        number_of_senders=50,
+        number_of_prisoners=50,
+        days_of_history=7):
     data_list = []
-    sort_codes = [
-        get_random_string(6, '1234567890') for _ in range(number_of_sort_codes)
-    ]
-    senders = [
-        {
-            'name': random_sender_name(),
-            'sort_code': sort_codes[n % number_of_sort_codes],
-            'account_number': get_random_string(8, '1234567890'),
-            'roll_number': get_random_string(15, '1234567890')
-        } for n in range(number_of_senders)
-    ]
-
-    if prisoner_location_generator:
-        prisoners = prisoner_location_generator
-    else:
-        prisoners = cycle([
-            {
-                'prisoner_name': random_prisoner_name(),
-                'prisoner_number': random_prisoner_number(),
-                'prisoner_dob': random_prisoner_dob()
-            } for n in range(number_of_prisoners)
-        ])
+    sender_prisoner_pairs = get_sender_prisoner_pairs(
+        number_of_sort_codes, number_of_senders,
+        number_of_prisoners, prisoner_location_generator
+    )
 
     for transaction_counter in range(1, tot + 1):
-        # Records might not have prisoner data and/or might not
-        # have building society roll numbers.
-        # Atm, we set the probability of it having prisoner info
-        # to 80% which is an arbitrary high value as we expect
-        # records to have correct data most of the time.
-        # The probability of transactions coming from building
-        # societies is instead low, set here to 10%,
-        # which is again arbitrary.
         include_prisoner_info = transaction_counter % 5 != 0
-        include_sender_roll_number = transaction_counter % 19 == 0
         omit_sender_details = (
             include_unidentified_credits and transaction_counter % 23 == 0
         )
         make_debit_transaction = (
-            include_debits and (transaction_counter + 1) % 5 == 0
+            include_debits and transaction_counter % 21 == 0
         )
         make_administrative_credit_transaction = (
             include_administrative_credits and transaction_counter % 41 == 0
         )
 
         random_date = latest_transaction_date() - datetime.timedelta(
-            minutes=random.randint(0, 10000)
+            minutes=random.randint(0, 1440*days_of_history)
         )
         random_date = timezone.localtime(random_date)
         midnight_random_date = get_midnight(random_date)
-        random_sender = random.choice(senders)
         data = {
             'category': TRANSACTION_CATEGORY.CREDIT,
             'amount': random_amount(),
             'received_at': midnight_random_date,
-            'sender_sort_code': random_sender['sort_code'],
-            'sender_account_number': random_sender['account_number'],
-            'sender_name': random_sender['name'],
             'owner': None,
             'credited': False,
             'refunded': False,
             'created': random_date,
             'modified': random_date,
         }
+
+        sender, prisoner = next(sender_prisoner_pairs)
+        data.update(sender)
 
         if make_administrative_credit_transaction:
             data['source'] = TRANSACTION_SOURCE.ADMINISTRATIVE
@@ -156,15 +180,11 @@ def generate_initial_transactions_data(
             data['processor_type_code'] = '99'
 
             if include_prisoner_info:
-                data.update(next(prisoners))
-
-            if include_sender_roll_number:
-                data.update({
-                    'sender_roll_number': random_sender['roll_number']
-                })
+                data.update(prisoner)
 
             if omit_sender_details:
                 data['incomplete_sender_info'] = True
+                del data['sender_name']
                 if data.get('sender_roll_number'):
                     del data['sender_roll_number']
                 else:
@@ -239,7 +259,8 @@ def generate_transactions(
     consistent_history=False,
     include_debits=True,
     include_administrative_credits=True,
-    include_unidentified_credits=True
+    include_unidentified_credits=True,
+    days_of_history=7
 ):
     if use_test_nomis_prisoners:
         prisoner_location_generator = cycle(load_nomis_prisoner_locations())
@@ -250,7 +271,8 @@ def generate_transactions(
         prisoner_location_generator=prisoner_location_generator,
         include_debits=include_debits,
         include_administrative_credits=include_administrative_credits,
-        include_unidentified_credits=include_unidentified_credits
+        include_unidentified_credits=include_unidentified_credits,
+        days_of_history=days_of_history
     )
 
     location_creator = get_prisoner_location_creator()
@@ -299,7 +321,7 @@ def setup_historical_transaction(location_creator, owner_status_chooser,
         )
 
         is_most_recent = data['received_at'].date() == end_date.date()
-        if is_valid:
+        if is_valid and not data.get('incomplete_sender_info'):
             prison = prisoner_location.prison
             owner, status = owner_status_chooser(prison)
             data['prison'] = prison

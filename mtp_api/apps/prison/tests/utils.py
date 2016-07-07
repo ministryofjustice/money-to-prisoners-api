@@ -63,7 +63,8 @@ def get_prisoner_location_creator():
         try:
             # if a prisoner with given number exists, then return known instance
             # this happens when using the sample set of NOMIS data
-            return True, PrisonerLocation.objects.get(prisoner_number=prisoner_number)
+            prisoner_location = PrisonerLocation.objects.get(prisoner_number=prisoner_number)
+            return prisoner_location.prisoner_dob == prisoner_dob, prisoner_location
         except PrisonerLocation.DoesNotExist:
             pass
 

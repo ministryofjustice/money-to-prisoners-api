@@ -1763,7 +1763,7 @@ class PrisonerListTestCase(GroupedListTestCase):
                 prisoner['sender_count']
             )
 
-    def test_get_senders_with_multiple_post_filters(self):
+    def test_get_prisoners_with_multiple_post_filters(self):
         min_sender_count = 2
         max_credit_total = 200000
         response = self._get_grouped_response(
@@ -1771,10 +1771,10 @@ class PrisonerListTestCase(GroupedListTestCase):
             credit_total_1=max_credit_total,
             prison='IXB',
         )
-        for sender in response.data['results']:
-            self.assertGreaterEqual(sender['sender_count'], min_sender_count)
-            self.assertLessEqual(sender['credit_total'], max_credit_total)
-            self.assertTrue(all(prisoner['prison_name'] == 'Prison 1' for prisoner in sender['prisoners']))
+        for prisoner in response.data['results']:
+            self.assertGreaterEqual(prisoner['sender_count'], min_sender_count)
+            self.assertLessEqual(prisoner['credit_total'], max_credit_total)
+            self.assertTrue(prisoner['prison_name'] == 'Prison 1')
 
 
 def add_credit_filter_tests(cls, group_name, row_name):
