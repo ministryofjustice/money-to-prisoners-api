@@ -19,6 +19,7 @@
       ["view_transaction", "transaction", "transaction"],
       ["patch_processed_transaction", "transaction", "transaction"],
       ["add_batch", "account", "batch"],
+      ["change_batch", "account", "batch"],
       ["add_balance", "account", "balance"]
     ]
   }

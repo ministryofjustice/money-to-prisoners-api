@@ -93,6 +93,89 @@ class CreateBatchViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(Batch.objects.count(), 0)
 
 
+class UpdateBatchViewTestCase(AuthTestCaseMixin, APITestCase):
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
+
+    def setUp(self):
+        super().setUp()
+        self.prison_clerks, _, self.bank_admins, _, _, _ = make_test_users()
+
+    def _create_initial_batch(self):
+        user = self.bank_admins[0]
+        test_transactions = generate_transactions(5)
+        tid_list = [t.id for t in test_transactions]
+
+        new_batch = {
+            'label': 'BAI2',
+            'transactions': tid_list
+        }
+
+        response = self.client.post(
+            reverse('batch-list'), data=new_batch, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        created_batch_id = response.data['id']
+
+        return (created_batch_id, test_transactions)
+
+    def test_permissions_required(self):
+        created_batch_id, initial_transactions = self._create_initial_batch()
+
+        user = self.prison_clerks[0]
+        new_transactions = generate_transactions(5)
+        tid_list = [t.id for t in new_transactions]
+
+        batch_update = {
+            'transactions': tid_list
+        }
+
+        response = self.client.patch(
+            reverse('batch-detail', args=[created_batch_id]), data=batch_update,
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        batches = Batch.objects.all()
+        self.assertEqual(len(batches), 1)
+        self.assertEqual(
+            len(batches[0].transactions.all()),
+            len(initial_transactions)
+        )
+        for transaction in batches[0].transactions.all():
+            self.assertTrue(transaction in initial_transactions and
+                            transaction not in new_transactions)
+
+    def test_update_batch_succeeds(self):
+        created_batch_id, initial_transactions = self._create_initial_batch()
+
+        user = self.bank_admins[0]
+        new_transactions = generate_transactions(5)
+        tid_list = [t.id for t in new_transactions]
+        batch_update = {
+            'transactions': tid_list
+        }
+
+        response = self.client.patch(
+            reverse('batch-detail', args=[created_batch_id]), data=batch_update,
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        batches = Batch.objects.all()
+        self.assertEqual(len(batches), 1)
+        self.assertEqual(batches[0].label, 'BAI2')
+        self.assertEqual(batches[0].user, user)
+        self.assertEqual(
+            len(batches[0].transactions.all()),
+            len(initial_transactions) + len(new_transactions)
+        )
+        for transaction in batches[0].transactions.all():
+            self.assertTrue(transaction in initial_transactions or
+                            transaction in new_transactions)
+
+
 class ListBatchViewTestCase(AuthTestCaseMixin, APITestCase):
 
     fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
