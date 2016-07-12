@@ -1,9 +1,8 @@
 from django.db import transaction
-
+from django.utils.translation import ugettext as _
 from rest_framework import serializers
 
 from credit.signals import credit_prisons_need_updating
-
 from .models import PrisonerLocation, Prison, Category, Population
 
 
@@ -65,6 +64,13 @@ class PrisonerLocationSerializer(serializers.ModelSerializer):
             'prisoner_dob',
             'prison',
         )
+        extra_kwargs = {
+            'prison': {
+                'error_messages': {
+                    'does_not_exist': _('No prison found with code "{pk_value}"')
+                }
+            }
+        }
 
 
 class PrisonerValiditySerializer(serializers.ModelSerializer):
