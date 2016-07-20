@@ -22,7 +22,7 @@ from credit.tests.test_base import (
     BaseCreditViewTestCase, CreditRejectsRequestsWithoutPermissionTestMixin
 )
 from mtp_auth.models import PrisonUserMapping
-from prison.models import Prison
+from prison.models import Prison, PrisonerLocation
 from transaction.tests.utils import generate_transactions
 
 
@@ -1701,6 +1701,40 @@ class SenderListTestCase(GroupedListTestCase):
             self.assertGreaterEqual(sender['prisoner_count'], min_prisoner_count)
             self.assertLessEqual(sender['credit_total'], max_credit_total)
             self.assertTrue(all(prisoner['prison_name'] == 'Prison 1' for prisoner in sender['prisoners']))
+
+    def test_prisoner_current_prison_after_move(self):
+        credit = random.choice(self.credits)
+        while credit.prison_id is None:
+            credit = random.choice(self.credits)
+        ploc = PrisonerLocation.objects.get(prisoner_number=credit.prisoner_number)
+        ploc.prison = Prison.objects.exclude(pk=credit.prison.pk).first()
+        ploc.save()
+        response = self._get_grouped_response(
+            prisoner_number=credit.prisoner_number
+        )
+        for sender in response.data['results']:
+            self.assertTrue(all(
+                prisoner['current_prison_name'] == ploc.prison.name for prisoner in sender['prisoners']
+            ))
+            self.assertTrue(all(
+                prisoner['prison_name'] == credit.prison.name for prisoner in sender['prisoners']
+            ))
+
+    def test_prisoner_current_prison_after_leaving(self):
+        credit = random.choice(self.credits)
+        while credit.prison_id is None:
+            credit = random.choice(self.credits)
+        PrisonerLocation.objects.get(prisoner_number=credit.prisoner_number).delete()
+        response = self._get_grouped_response(
+            prisoner_number=credit.prisoner_number
+        )
+        for sender in response.data['results']:
+            self.assertTrue(all(
+                prisoner['current_prison_name'] is None for prisoner in sender['prisoners']
+            ))
+            self.assertTrue(all(
+                prisoner['prison_name'] == credit.prison.name for prisoner in sender['prisoners']
+            ))
 
 
 class PrisonerListTestCase(GroupedListTestCase):

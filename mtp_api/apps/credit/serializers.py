@@ -102,14 +102,8 @@ class BaseSenderSerializer(serializers.Serializer):
 class BasePrisonerSerializer(serializers.Serializer):
     prisoner_number = serializers.CharField()
     prisoner_name = serializers.CharField()
-    prison_name = serializers.SerializerMethodField()
-
-    @classmethod
-    def get_prison_name(cls, obj):
-        try:
-            return Prison.objects.get(pk=obj['prison_id']).name
-        except Prison.DoesNotExist:
-            return None
+    prison_name = serializers.CharField()
+    current_prison_name = serializers.CharField()
 
 
 class DetailSenderSerializer(BaseSenderSerializer):

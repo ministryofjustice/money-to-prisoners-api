@@ -429,13 +429,17 @@ class SenderList(GroupedListAPIView):
                 t.sender_roll_number AS sender_roll_number,
                 c.prisoner_number AS prisoner_number,
                 c.prisoner_name AS prisoner_name,
-                c.prison_id AS prison_id,
+                p.name AS prison_name,
+                cp.name AS current_prison_name,
                 COUNT(*) AS credit_count,
                 SUM(c.amount) AS credit_total
             FROM credit_credit c INNER JOIN transaction_transaction t ON t.credit_id=c.id
+            LEFT JOIN prison_prisonerlocation pl ON c.prisoner_number=pl.prisoner_number
+            LEFT JOIN prison_prison p on c.prison_id=p.nomis_id
+            LEFT JOIN prison_prison cp on pl.prison_id=cp.nomis_id
             WHERE c.id IN %s $$WHERE$$
             GROUP BY t.sender_name, t.sender_sort_code, t.sender_account_number,
-            t.sender_roll_number, c.prisoner_number, c.prisoner_name, c.prison_id
+            t.sender_roll_number, c.prisoner_number, c.prisoner_name, p.name, cp.name
             ORDER BY t.sender_sort_code, t.sender_account_number,
             t.sender_roll_number, t.sender_name;
         '''
@@ -457,19 +461,20 @@ class SenderList(GroupedListAPIView):
             prisoner = {
                 'prisoner_number': credit_group['prisoner_number'],
                 'prisoner_name': credit_group['prisoner_name'],
-                'prison_id': credit_group['prison_id'],
+                'prison_name': credit_group['prison_name'],
+                'current_prison_name': credit_group['current_prison_name'],
                 'credit_count': credit_group['credit_count'],
                 'credit_total': credit_group['credit_total'],
             }
             # null out number if not matched
-            if not prisoner['prison_id']:
+            if not prisoner['prison_name']:
                 prisoner['prisoner_number'] = None
             if last_sender and all(last_sender[key] == credit_group[key]
                                    for key in sender_identifiers):
                 add_new_prisoner = True
-                if not prisoner['prison_id']:
+                if not prisoner['prison_name']:
                     for previous_prisoner in last_sender['prisoners']:
-                        if not previous_prisoner['prison_id']:
+                        if not previous_prisoner['prison_name']:
                             previous_prisoner['credit_count'] += prisoner['credit_count']
                             previous_prisoner['credit_total'] += prisoner['credit_total']
                             add_new_prisoner = False
@@ -487,7 +492,7 @@ class SenderList(GroupedListAPIView):
                     'credit_total': 0,
                 })
                 senders.append(last_sender)
-            if prisoner['prison_id'] is not None:
+            if prisoner['prison_name'] is not None:
                 # NB: counts and totals are only summed for valid credits (those that reach a prisoner)
                 last_sender['credit_count'] += prisoner['credit_count']
                 last_sender['credit_total'] += prisoner['credit_total']
@@ -555,13 +560,17 @@ class PrisonerList(GroupedListAPIView):
                 t.sender_roll_number AS sender_roll_number,
                 c.prisoner_number AS prisoner_number,
                 c.prisoner_name AS prisoner_name,
-                c.prison_id AS prison_id,
+                p.name AS prison_name,
+                cp.name AS current_prison_name,
                 COUNT(*) AS credit_count,
                 SUM(c.amount) AS credit_total
             FROM credit_credit c INNER JOIN transaction_transaction t ON t.credit_id=c.id
+            LEFT JOIN prison_prisonerlocation pl ON c.prisoner_number=pl.prisoner_number
+            LEFT JOIN prison_prison p on c.prison_id=p.nomis_id
+            LEFT JOIN prison_prison cp on pl.prison_id=cp.nomis_id
             WHERE c.id IN %s $$WHERE$$
             GROUP BY t.sender_name, t.sender_sort_code, t.sender_account_number,
-            t.sender_roll_number, c.prisoner_number, c.prisoner_name, c.prison_id
+            t.sender_roll_number, c.prisoner_number, c.prisoner_name, p.name, cp.name
             ORDER BY c.prisoner_number;
         '''
         sql_params = [filtered_ids]
@@ -597,7 +606,8 @@ class PrisonerList(GroupedListAPIView):
                 }
                 last_prisoner.update({
                     'prisoner_name': credit_group['prisoner_name'],
-                    'prison_id': credit_group['prison_id'],
+                    'prison_name': credit_group['prison_name'],
+                    'current_prison_name': credit_group['current_prison_name'],
                     'senders': [sender],
                     'sender_count': 0,
                     'credit_count': 0,
