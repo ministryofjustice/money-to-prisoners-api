@@ -141,7 +141,8 @@ class TransactionSerializer(serializers.ModelSerializer):
             'received_at',
             'category',
             'source',
-            'ref_code'
+            'ref_code',
+            'reference_in_sender_field',
         )
 
 
