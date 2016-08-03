@@ -16,7 +16,7 @@ from rest_framework.reverse import reverse
 from rest_framework.settings import api_settings
 
 from core import dictfetchall
-from core.filters import StatusChoiceFilter
+from core.filters import BlankStringFilter, StatusChoiceFilter
 from mtp_auth.models import PrisonUserMapping
 from mtp_auth.permissions import (
     CashbookClientIDPermissions, NomsOpsCashbookClientIDPermissions,
@@ -101,20 +101,27 @@ class MultipleValueFilter(django_filters.MultipleChoiceFilter):
 
 class CreditListFilter(django_filters.FilterSet):
     status = StatusChoiceFilter(choices=CREDIT_STATUS.choices)
+    received_at = django_filters.DateFromToRangeFilter()
+    user = django_filters.ModelChoiceFilter(name='owner', queryset=User.objects.all())
+
     prisoner_name = django_filters.CharFilter(name='prisoner_name', lookup_expr='icontains')
     prison = django_filters.ModelMultipleChoiceFilter(queryset=Prison.objects.all())
     prison__isnull = django_filters.BooleanFilter(name='prison', lookup_expr='isnull')
     prison_region = django_filters.CharFilter(name='prison__region')
     prison_category = MultipleValueFilter(name='prison__categories__name')
     prison_population = MultipleValueFilter(name='prison__populations__name')
-    user = django_filters.ModelChoiceFilter(name='owner', queryset=User.objects.all())
-    received_at = django_filters.DateFromToRangeFilter()
+
     search = CreditTextSearchFilter()
     sender_name = django_filters.CharFilter(name='transaction__sender_name',
                                             lookup_expr='icontains')
     sender_sort_code = django_filters.CharFilter(name='transaction__sender_sort_code')
     sender_account_number = django_filters.CharFilter(name='transaction__sender_account_number')
     sender_roll_number = django_filters.CharFilter(name='transaction__sender_roll_number')
+    sender_name__isblank = BlankStringFilter(name='transaction__sender_name')
+    sender_sort_code__isblank = BlankStringFilter(name='transaction__sender_sort_code')
+    sender_account_number__isblank = BlankStringFilter(name='transaction__sender_account_number')
+    sender_roll_number__isblank = BlankStringFilter(name='transaction__sender_roll_number')
+
     exclude_amount__endswith = django_filters.CharFilter(
         name='amount', lookup_expr='endswith', exclude=True
     )
