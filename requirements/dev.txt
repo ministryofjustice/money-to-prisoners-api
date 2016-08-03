@@ -1,7 +1,7 @@
 # Place development dependencies here
 -r base.txt
 
-money-to-prisoners-common[testing]==4.4.0
+money-to-prisoners-common[testing]==4.21.0
 
 django-extensions==1.6.1
 six==1.10.0
