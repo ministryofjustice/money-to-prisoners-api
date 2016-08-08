@@ -8,6 +8,9 @@ class Population(models.Model):
     name = models.CharField(max_length=30)
     description = models.CharField(max_length=255)
 
+    class Meta:
+        ordering = ('name',)
+
     def __str__(self):
         return self.description
 
@@ -15,6 +18,10 @@ class Population(models.Model):
 class Category(models.Model):
     name = models.CharField(max_length=30)
     description = models.CharField(max_length=255)
+
+    class Meta:
+        ordering = ('name',)
+        verbose_name_plural = 'categories'
 
     def __str__(self):
         return self.description
