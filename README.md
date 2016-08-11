@@ -19,7 +19,7 @@ and if you're planning to deploy then you'll need the [deployment repository](ht
 > a single VM with linux installed where your Docker containers run. To start the vm
 > run the following first before continuing:
 > ```
-> $ docker-machine create -d virtualbox dev
+> $ docker-machine create -d virtualbox default
 > $ eval "$(docker-machine env default)"
 > ```
 
