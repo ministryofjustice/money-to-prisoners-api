@@ -16,10 +16,6 @@ from credit.tests.utils import (
     get_owner_and_status_chooser, create_credit_log, random_amount
 )
 from prison.models import PrisonerLocation
-from prison.tests.utils import (
-    random_prisoner_number, random_prisoner_dob, random_prisoner_name,
-    get_prisoner_location_creator, load_nomis_prisoner_locations
-)
 from transaction.models import Transaction
 from transaction.constants import (
     TRANSACTION_CATEGORY, TRANSACTION_SOURCE
@@ -69,8 +65,6 @@ def latest_transaction_date():
 def get_sender_prisoner_pairs(
         number_of_sort_codes,
         number_of_senders,
-        number_of_prisoners,
-        prisoner_location_generator=None
 ):
     sort_codes = [
         get_random_string(6, '1234567890') for _ in range(number_of_sort_codes)
@@ -86,16 +80,8 @@ def get_sender_prisoner_pairs(
         if i % 20 == 0:
             sender['sender_roll_number'] = get_random_string(15, '1234a567890')
 
-    if prisoner_location_generator:
-        prisoners = [next(prisoner_location_generator) for _ in range(number_of_prisoners)]
-    else:
-        prisoners = [
-            {
-                'prisoner_name': random_prisoner_name(),
-                'prisoner_number': random_prisoner_number(),
-                'prisoner_dob': random_prisoner_dob()
-            } for n in range(number_of_prisoners)
-        ]
+    number_of_prisoners = PrisonerLocation.objects.all().count()
+    prisoners = list(PrisonerLocation.objects.all())
 
     sender_prisoner_pairs = []
     for i in range(number_of_senders*3):
@@ -125,12 +111,10 @@ def generate_initial_transactions_data(
         include_unidentified_credits=True,
         number_of_sort_codes=6,
         number_of_senders=50,
-        number_of_prisoners=50,
         days_of_history=7):
     data_list = []
     sender_prisoner_pairs = get_sender_prisoner_pairs(
         number_of_sort_codes, number_of_senders,
-        number_of_prisoners, prisoner_location_generator
     )
 
     for transaction_counter in range(1, tot + 1):
@@ -180,7 +164,10 @@ def generate_initial_transactions_data(
             data['processor_type_code'] = '99'
 
             if include_prisoner_info:
-                data.update(prisoner)
+                data['prisoner_name'] = prisoner.prisoner_name
+                data['prisoner_number'] = prisoner.prisoner_number
+                data['prisoner_dob'] = prisoner.prisoner_dob
+                data['prison'] = prisoner.prison
 
             if omit_sender_details:
                 data['incomplete_sender_info'] = True
@@ -253,47 +240,32 @@ def generate_predetermined_transactions_data():
 
 def generate_transactions(
     transaction_batch=50,
-    use_test_nomis_prisoners=False,
     predetermined_transactions=False,
-    only_new_transactions=False,
     consistent_history=False,
     include_debits=True,
     include_administrative_credits=True,
     include_unidentified_credits=True,
     days_of_history=7
 ):
-    if use_test_nomis_prisoners:
-        prisoner_location_generator = cycle(load_nomis_prisoner_locations())
-    else:
-        prisoner_location_generator = None
     data_list = generate_initial_transactions_data(
         tot=transaction_batch,
-        prisoner_location_generator=prisoner_location_generator,
         include_debits=include_debits,
         include_administrative_credits=include_administrative_credits,
         include_unidentified_credits=include_unidentified_credits,
         days_of_history=days_of_history
     )
 
-    location_creator = get_prisoner_location_creator()
-    if only_new_transactions:
-        def owner_status_chooser(*args):
-            return None, CREDIT_STATUS.AVAILABLE
-    else:
-        owner_status_chooser = get_owner_and_status_chooser()
-
+    owner_status_chooser = get_owner_and_status_chooser()
     transactions = []
     if consistent_history:
         create_transaction = partial(
             setup_historical_transaction,
-            location_creator,
             owner_status_chooser,
             latest_transaction_date()
         )
     else:
         create_transaction = partial(
             setup_transaction,
-            location_creator,
             owner_status_chooser
         )
     for transaction_counter, data in enumerate(data_list, start=1):
@@ -311,20 +283,14 @@ def generate_transactions(
     return transactions
 
 
-def setup_historical_transaction(location_creator, owner_status_chooser,
+def setup_historical_transaction(owner_status_chooser,
                                  end_date, transaction_counter, data):
     if (data['category'] == TRANSACTION_CATEGORY.CREDIT and
             data['source'] == TRANSACTION_SOURCE.BANK_TRANSFER):
-        is_valid, prisoner_location = location_creator(
-            data.get('prisoner_name'), data.get('prisoner_number'),
-            data.get('prisoner_dob'), data.get('prison'),
-        )
-
+        is_valid = data.get('prison', None) and not data.get('incomplete_sender_info')
         is_most_recent = data['received_at'].date() == end_date.date()
-        if is_valid and not data.get('incomplete_sender_info'):
-            prison = prisoner_location.prison
-            owner, status = owner_status_chooser(prison)
-            data['prison'] = prison
+        if is_valid:
+            owner, status = owner_status_chooser(data['prison'])
             if is_most_recent:
                 data.update({
                     'owner': None,
@@ -336,9 +302,7 @@ def setup_historical_transaction(location_creator, owner_status_chooser,
                     'credited': True
                 })
         else:
-            data['prison'] = None
-            data['prisoner_name'] = None
-            if is_most_recent and not data.get('incomplete_sender_info'):
+            if is_most_recent or data.get('incomplete_sender_info'):
                 data.update({'refunded': False})
             else:
                 data.update({'refunded': True})
@@ -349,20 +313,13 @@ def setup_historical_transaction(location_creator, owner_status_chooser,
     return new_transaction
 
 
-def setup_transaction(location_creator, owner_status_chooser,
+def setup_transaction(owner_status_chooser,
                       transaction_counter, data):
     if data['category'] == TRANSACTION_CATEGORY.CREDIT:
-        is_valid, prisoner_location = location_creator(
-            data.get('prisoner_name'), data.get('prisoner_number'),
-            data.get('prisoner_dob'), data.get('prison'),
-        )
+        is_valid = data.get('prison', None) and not data.get('incomplete_sender_info')
 
         if is_valid:
-            # randomly choose the state of the transaction
-            prison = prisoner_location.prison
-            owner, status = owner_status_chooser(prison)
-
-            data['prison'] = prison
+            owner, status = owner_status_chooser(data['prison'])
             if status == CREDIT_STATUS.LOCKED:
                 data.update({
                     'owner': owner,
@@ -379,12 +336,10 @@ def setup_transaction(location_creator, owner_status_chooser,
                     'credited': True
                 })
         else:
-            data['prison'] = None
-            data['prisoner_name'] = None
-            if transaction_counter % 2 == 0 and not data.get('incomplete_sender_info'):
-                data.update({'refunded': True})
-            else:
+            if transaction_counter % 2 == 0 or data.get('incomplete_sender_info'):
                 data.update({'refunded': False})
+            else:
+                data.update({'refunded': True})
 
     with MockModelTimestamps(data['created'], data['modified']):
         new_transaction = save_transaction(data)

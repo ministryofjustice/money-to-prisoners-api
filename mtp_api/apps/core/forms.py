@@ -7,6 +7,7 @@ class RecreateTestDataForm(forms.Form):
     scenario = forms.ChoiceField(
         choices=(
             ('cashbook', _('User testing the Cashbook service')),
+            ('training', _('Training data for the Cashbook service')),
             ('random', _('Random set of credits')),
             ('delete-locations-credits', _('Delete prisoner location and credit data')),
         ),

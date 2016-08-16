@@ -1,13 +1,14 @@
 from datetime import date, timedelta
 
+from django.core.urlresolvers import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
-from django.core.urlresolvers import reverse
 
-from transaction.tests.utils import generate_transactions
-from mtp_auth.tests.utils import AuthTestCaseMixin
-from core.tests.utils import make_test_users
 from account.models import Batch, Balance
+from core.tests.utils import make_test_users
+from mtp_auth.tests.utils import AuthTestCaseMixin
+from prison.tests.utils import load_random_prisoner_locations
+from transaction.tests.utils import generate_transactions
 
 
 class CreateBatchViewTestCase(AuthTestCaseMixin, APITestCase):
@@ -16,6 +17,7 @@ class CreateBatchViewTestCase(AuthTestCaseMixin, APITestCase):
     def setUp(self):
         super().setUp()
         self.prison_clerks, _, self.bank_admins, _, _, _ = make_test_users()
+        load_random_prisoner_locations()
 
     def test_permissions_required(self):
         user = self.prison_clerks[0]
@@ -99,6 +101,7 @@ class UpdateBatchViewTestCase(AuthTestCaseMixin, APITestCase):
     def setUp(self):
         super().setUp()
         self.prison_clerks, _, self.bank_admins, _, _, _ = make_test_users()
+        load_random_prisoner_locations()
 
     def _create_initial_batch(self):
         user = self.bank_admins[0]
@@ -183,6 +186,7 @@ class ListBatchViewTestCase(AuthTestCaseMixin, APITestCase):
     def setUp(self):
         super().setUp()
         self.prison_clerks, _, self.bank_admins, _, _, _ = make_test_users()
+        load_random_prisoner_locations()
 
     def test_get_batch_by_type(self):
         user = self.bank_admins[0]

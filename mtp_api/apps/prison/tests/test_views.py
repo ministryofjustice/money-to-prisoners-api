@@ -12,8 +12,10 @@ from mtp_auth.models import PrisonUserMapping
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from mtp_auth.constants import CASHBOOK_OAUTH_CLIENT_ID
 from prison.models import Prison, PrisonerLocation, Population, Category
-from prison.tests.utils import random_prisoner_name, random_prisoner_number, random_prisoner_dob
-from transaction.tests.utils import generate_transactions
+from prison.tests.utils import (
+    random_prisoner_name, random_prisoner_number, random_prisoner_dob,
+    load_random_prisoner_locations
+)
 
 
 class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
@@ -214,7 +216,7 @@ class PrisonerValidityViewTestCase(AuthTestCaseMixin, APITestCase):
         (self.prison_clerks, self.prisoner_location_admins,
          self.bank_admins, self.refund_bank_admins,
          self.send_money_users, _) = make_test_users()
-        generate_transactions(transaction_batch=10)
+        load_random_prisoner_locations()
         self.prisoner_locations = PrisonerLocation.objects.all()
 
     @property

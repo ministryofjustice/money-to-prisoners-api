@@ -143,6 +143,7 @@ class CreditListTestCase(
             prison_category_checker(c) and
             amount_pattern_checker(c)
         ]
+
         self.assertEqual(response.data['count'], len(expected_ids))
         self.assertListEqual(
             sorted([c['id'] for c in response.data['results']]),
@@ -1807,6 +1808,7 @@ class PrisonerListTestCase(GroupedListTestCase):
             # check sender_count is correct (not including refunds)
             senders = Credit.objects.filter(
                 prisoner_number=prisoner['prisoner_number'],
+                transaction__isnull=False
             ).values(
                 'transaction__sender_name',
                 'transaction__sender_sort_code',
@@ -1843,6 +1845,7 @@ class PrisonerListTestCase(GroupedListTestCase):
         for prisoner in response.data['results']:
             sender_count = Credit.objects.filter(
                 prisoner_number=prisoner['prisoner_number'],
+                transaction__isnull=False,
                 received_at__date__gte=start_date,
                 received_at__date__lte=end_date
             ).values(
