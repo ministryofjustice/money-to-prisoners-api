@@ -33,10 +33,12 @@ class Command(BaseCommand):
                             help='Prevents existing credits from being deleted')
         parser.add_argument('--prisons', nargs='*', default=['sample'],
                             choices=['sample', 'nomis'],
-                            help='Create prisons from these sets'),
+                            help='Create prisons from these sets')
         parser.add_argument('--prisoners', nargs='*', default=['sample'],
                             choices=['sample', 'nomis'],
                             help='Create prisoners from these sets')
+        parser.add_argument('--number-of-prisoners', default=50, type=int,
+                            help='Number of sample prisoners to create (no effect for nomis)')
         parser.add_argument('--clerks-per-prison', type=int, default=2,
                             help='The number of clerks to make for the Cashbook')
         parser.add_argument('--credits', default='random',
@@ -59,6 +61,7 @@ class Command(BaseCommand):
         protect_credits = options['protect_credits']
         prisons = options['prisons']
         prisoners = options['prisoners']
+        number_of_prisoners = options['number_of_prisoners']
         clerks_per_prison = options['clerks_per_prison']
         credits = options['credits']
 
@@ -100,7 +103,7 @@ class Command(BaseCommand):
         if 'nomis' in prisoners:
             load_nomis_prisoner_locations()
         if 'sample' in prisoners:
-            load_random_prisoner_locations()
+            load_random_prisoner_locations(number_of_prisoners=number_of_prisoners)
 
         number_of_transactions = options['number_of_transactions']
         number_of_payments = options['number_of_payments']

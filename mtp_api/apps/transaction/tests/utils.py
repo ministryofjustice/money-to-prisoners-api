@@ -1,6 +1,7 @@
 import datetime
 from functools import partial
 from itertools import cycle
+from math import ceil
 import random
 import warnings
 
@@ -62,10 +63,11 @@ def latest_transaction_date():
     return timezone.localtime(latest_transaction_date)
 
 
-def get_sender_prisoner_pairs(
-        number_of_sort_codes,
-        number_of_senders,
-):
+def get_sender_prisoner_pairs():
+    number_of_prisoners = PrisonerLocation.objects.all().count()
+    number_of_senders = number_of_prisoners
+    number_of_sort_codes = ceil(number_of_senders/5)
+
     sort_codes = [
         get_random_string(6, '1234567890') for _ in range(number_of_sort_codes)
     ]
@@ -80,7 +82,6 @@ def get_sender_prisoner_pairs(
         if i % 20 == 0:
             sender['sender_roll_number'] = get_random_string(15, '1234a567890')
 
-    number_of_prisoners = PrisonerLocation.objects.all().count()
     prisoners = list(PrisonerLocation.objects.all())
 
     sender_prisoner_pairs = []
@@ -89,13 +90,13 @@ def get_sender_prisoner_pairs(
         if i <= number_of_senders:
             sender_fraction = number_of_senders
             if i % 3 == 1:
-                prisoner_fraction = number_of_prisoners//2
+                prisoner_fraction = ceil(number_of_prisoners/2)
             elif i % 3 == 2:
-                prisoner_fraction = number_of_prisoners//15
+                prisoner_fraction = ceil(number_of_prisoners/15)
         elif i <= number_of_senders*2:
-            sender_fraction = number_of_senders//2
+            sender_fraction = ceil(number_of_senders/2)
         else:
-            sender_fraction = number_of_senders//15
+            sender_fraction = ceil(number_of_senders/15)
 
         sender_prisoner_pairs.append(
             (senders[i % sender_fraction], prisoners[i % prisoner_fraction])
@@ -109,13 +110,9 @@ def generate_initial_transactions_data(
         include_debits=True,
         include_administrative_credits=True,
         include_unidentified_credits=True,
-        number_of_sort_codes=6,
-        number_of_senders=50,
         days_of_history=7):
     data_list = []
-    sender_prisoner_pairs = get_sender_prisoner_pairs(
-        number_of_sort_codes, number_of_senders,
-    )
+    sender_prisoner_pairs = get_sender_prisoner_pairs()
 
     for transaction_counter in range(1, tot + 1):
         include_prisoner_info = transaction_counter % 5 != 0
