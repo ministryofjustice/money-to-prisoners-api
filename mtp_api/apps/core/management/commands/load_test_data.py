@@ -12,7 +12,7 @@ from credit.models import Credit
 from payment.models import Payment
 from payment.tests.utils import generate_payments
 from prison.models import Prison
-from prison.tests.utils import generate_predefined_prisoner_locations
+from prison.tests.utils import load_nomis_prisoner_locations, load_random_prisoner_locations
 from transaction.models import Transaction
 from transaction.tests.utils import generate_transactions
 
@@ -34,6 +34,11 @@ class Command(BaseCommand):
         parser.add_argument('--prisons', nargs='*', default=['sample'],
                             choices=['sample', 'nomis'],
                             help='Create prisons from these sets')
+        parser.add_argument('--prisoners', nargs='*', default=['sample'],
+                            choices=['sample', 'nomis'],
+                            help='Create prisoners from these sets')
+        parser.add_argument('--number-of-prisoners', default=50, type=int,
+                            help='Number of sample prisoners to create (no effect for nomis)')
         parser.add_argument('--clerks-per-prison', type=int, default=2,
                             help='The number of clerks to make for the Cashbook')
         parser.add_argument('--credits', default='random',
@@ -55,6 +60,8 @@ class Command(BaseCommand):
         protect_usernames = options['protect_usernames']
         protect_credits = options['protect_credits']
         prisons = options['prisons']
+        prisoners = options['prisoners']
+        number_of_prisoners = options['number_of_prisoners']
         clerks_per_prison = options['clerks_per_prison']
         credits = options['credits']
 
@@ -93,13 +100,16 @@ class Command(BaseCommand):
         print_message('Making test user admins')
         make_test_user_admins()
 
+        if 'nomis' in prisoners:
+            load_nomis_prisoner_locations()
+        if 'sample' in prisoners:
+            load_random_prisoner_locations(number_of_prisoners=number_of_prisoners)
+
         number_of_transactions = options['number_of_transactions']
         number_of_payments = options['number_of_payments']
         days_of_history = options['days_of_history']
         if credits == 'random':
             print_message('Generating pre-defined prisoner locations')
-            # to allow for automated testing
-            generate_predefined_prisoner_locations()
             print_message('Generating random prisoner locations and credits')
             generate_transactions(transaction_batch=number_of_transactions)
             generate_payments(payment_batch=number_of_payments)
@@ -107,9 +117,7 @@ class Command(BaseCommand):
             print_message('Generating test NOMIS prisoner locations and credits')
             generate_transactions(
                 transaction_batch=number_of_transactions,
-                use_test_nomis_prisoners=True,
                 predetermined_transactions=True,
-                only_new_transactions=True,
                 consistent_history=True,
                 include_debits=False,
                 include_administrative_credits=False,
@@ -118,8 +126,6 @@ class Command(BaseCommand):
             )
             generate_payments(
                 payment_batch=number_of_payments,
-                use_test_nomis_prisoners=True,
-                only_new_payments=True,
                 consistent_history=True,
                 days_of_history=days_of_history
             )

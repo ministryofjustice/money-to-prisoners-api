@@ -9,6 +9,7 @@ from payment.tests.utils import generate_payments, latest_payment_date
 from prison.models import Prison
 from credit.models import Credit
 from credit.constants import CREDIT_STATUS, CREDIT_RESOLUTION
+from prison.tests.utils import load_random_prisoner_locations
 from transaction.tests.utils import generate_transactions, latest_transaction_date
 
 
@@ -20,9 +21,9 @@ class BaseCreditViewTestCase(AuthTestCaseMixin, APITestCase):
     ]
     STATUS_FILTERS = {
         None: lambda t: True,
-        CREDIT_STATUS.LOCKED: lambda t: t.owner and not t.credited,
+        CREDIT_STATUS.LOCKED: lambda t: t.owner and t.resolution == CREDIT_RESOLUTION.PENDING,
         CREDIT_STATUS.AVAILABLE: lambda t: (
-            not t.owner and not t.credited and not
+            t.prison and not t.owner and t.resolution == CREDIT_RESOLUTION.PENDING and not
             (hasattr(t, 'transaction') and t.transaction.incomplete_sender_info)
         ),
         CREDIT_STATUS.CREDITED: lambda t: t.credited
@@ -39,6 +40,7 @@ class BaseCreditViewTestCase(AuthTestCaseMixin, APITestCase):
 
         self.latest_transaction_date = latest_transaction_date()
         self.latest_payment_date = latest_payment_date()
+        load_random_prisoner_locations()
         transaction_credits = [t.credit for t in generate_transactions(
             transaction_batch=self.transaction_batch
         ) if t.credit]

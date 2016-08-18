@@ -1,13 +1,11 @@
 from oauth2_provider.models import AccessToken
-
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from core.tests.utils import make_test_users
 from mtp_auth.tests.utils import AuthTestCaseMixin
-
 from prison.models import Prison
-
+from prison.tests.utils import load_random_prisoner_locations
 from .utils import latest_transaction_date
 
 
@@ -29,6 +27,7 @@ class BaseTransactionViewTestCase(AuthTestCaseMixin, APITestCase):
 
         self.latest_transaction_date = latest_transaction_date()
         self.prisons = Prison.objects.all()
+        load_random_prisoner_locations()
 
     def _get_latest_date(self):
         return self.latest_transaction_date.date()

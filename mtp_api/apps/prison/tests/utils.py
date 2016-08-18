@@ -32,63 +32,41 @@ def random_prisoner_name():
     return name.upper()
 
 
+def load_random_prisoner_locations(number_of_prisoners=50):
+    created_by = get_user_model().objects.first()
+    prisons = cycle(Prison.objects.all())
+    prisoner_locations = generate_predefined_prisoner_locations() + [
+        {
+            'created_by': created_by,
+            'prisoner_name': random_prisoner_name(),
+            'prisoner_number': random_prisoner_number(),
+            'prisoner_dob': random_prisoner_dob(),
+            'prison': next(prisons),
+        } for n in range(number_of_prisoners-2)
+    ]
+    PrisonerLocation.objects.bulk_create(
+        map(lambda data: PrisonerLocation(**data), prisoner_locations)
+    )
+
+
 def load_nomis_prisoner_locations():
     """
     Load prisoner locations matching test NOMIS data
     """
+    created_by = get_user_model().objects.first()
     csv_path = os.path.join(os.path.dirname(__file__), os.path.pardir,
                             'fixtures', 'test_nomis_prisoner_locations.csv')
     with open(csv_path) as f:
         csv_reader = csv.DictReader(f)
         prisoner_locations = list(csv_reader)
     for prisoner_location in prisoner_locations:
+        prisoner_location['created_by'] = created_by
+        prisoner_location['prison'] = Prison.objects.get(nomis_id=prisoner_location['prison'])
         prisoner_location['prisoner_dob'] = parse_date(prisoner_location['prisoner_dob'])
-    return prisoner_locations
 
-
-def get_prisoner_location_creator():
-    """
-    Returns a function(prisoner_name, prisoner_number, prisoner_dob) which when called returns:
-        (is_valid, PrisonerLocation instance)
-    """
-    prisons = cycle(Prison.objects.all())
-    index = cycle(range(0, 10))
-
-    created_by = get_user_model().objects.first()
-
-    def make_prisoner_location(prisoner_name, prisoner_number, prisoner_dob, prison=None):
-        if not prisoner_number or not prisoner_dob:
-            return False, None
-
-        try:
-            # if a prisoner with given number exists, then return known instance
-            # this happens when using the sample set of NOMIS data
-            prisoner_location = PrisonerLocation.objects.get(prisoner_number=prisoner_number)
-            return prisoner_location.prisoner_dob == prisoner_dob, prisoner_location
-        except PrisonerLocation.DoesNotExist:
-            pass
-
-        is_invalid = next(index) % 10 == 0  # 10% invalid
-
-        if isinstance(prison, str):
-            prison = Prison.objects.get(nomis_id=prison)
-        elif not isinstance(prison, Prison):
-            prison = next(prisons)
-
-        data = {
-            'created_by': created_by,
-            'prisoner_name': prisoner_name,
-            'prisoner_number': prisoner_number,
-            'prisoner_dob': prisoner_dob,
-            'prison': prison,
-        }
-
-        if is_invalid:
-            data['prisoner_dob'] = data['prisoner_dob'] + datetime.timedelta(days=1)
-
-        return not is_invalid, PrisonerLocation.objects.create(**data)
-
-    return make_prisoner_location
+    PrisonerLocation.objects.bulk_create(
+        map(lambda data: PrisonerLocation(**data), prisoner_locations)
+    )
 
 
 def generate_predefined_prisoner_locations():
@@ -105,19 +83,15 @@ def generate_predefined_prisoner_locations():
             'prisoner_number': 'A1409AE',
             'prisoner_dob': datetime.date(1989, 1, 21),
             'prison': next(prisons),
+            'created_by': created_by,
         },
         {
             'prisoner_name': 'RICKIE RIPPIN',
             'prisoner_number': 'A1617FY',
             'prisoner_dob': datetime.date(1975, 6, 30),
             'prison': next(prisons),
+            'created_by': created_by,
         },
     ]
 
-    def mapper(_location):
-        _location['created_by'] = created_by
-        return _location
-
-    predefined_prisoner_locations = map(mapper, predefined_prisoner_locations)
-    for predefined_prisoner_location in predefined_prisoner_locations:
-        PrisonerLocation.objects.create(**predefined_prisoner_location)
+    return predefined_prisoner_locations

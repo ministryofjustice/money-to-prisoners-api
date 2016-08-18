@@ -31,7 +31,7 @@ class RecreateTestDataViewTestCase(TestCase):
         self.assertEqual(response.status_code, 302)
 
     def test_unauthorised_access_denied(self):
-        call_command('load_test_data', transactions=None, verbosity=0)
+        call_command('load_test_data', verbosity=0)
         self.assertTrue(self.client.login(
             username='test-prison-1',
             password='test-prison-1',
@@ -54,6 +54,7 @@ class RecreateTestDataViewTestCase(TestCase):
                 'scenario': 'random',
                 'number_of_transactions': '50',
                 'number_of_payments': '50',
+                'number_of_prisoners': '50',
                 'days_of_history': '7',
             })
             self.assertEqual(response.status_code, 200)
@@ -67,6 +68,7 @@ class RecreateTestDataViewTestCase(TestCase):
                 'prisons': ['sample'],
                 'number_of_transactions': 50,
                 'number_of_payments': 50,
+                'number_of_prisoners': 50,
                 'days_of_history': 7
             }
             options = method.call_args[1]

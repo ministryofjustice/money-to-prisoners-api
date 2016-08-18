@@ -133,10 +133,11 @@ class RecreateTestDataView(AdminViewMixin, FormView):
             'stderr': output,
             'number_of_transactions': form.cleaned_data['number_of_transactions'],
             'number_of_payments': form.cleaned_data['number_of_payments'],
+            'number_of_prisoners': form.cleaned_data['number_of_prisoners'],
             'days_of_history': form.cleaned_data['days_of_history'],
         }
 
-        if scenario in ('random', 'cashbook'):
+        if scenario in ('random', 'cashbook', 'training'):
             options.update({
                 'protect_superusers': True,
                 'protect_usernames': ['transaction-uploader'],
@@ -146,11 +147,19 @@ class RecreateTestDataView(AdminViewMixin, FormView):
             if scenario == 'random':
                 options.update({
                     'prisons': ['sample'],
+                    'prisoners': ['sample'],
                     'credits': 'random',
                 })
             elif scenario == 'cashbook':
                 options.update({
                     'prisons': ['nomis'],
+                    'prisoners': ['nomis'],
+                    'credits': 'nomis',
+                })
+            elif scenario == 'training':
+                options.update({
+                    'prisons': ['nomis'],
+                    'prisoners': ['sample'],
                     'credits': 'nomis',
                 })
             call_command('load_test_data', **options)

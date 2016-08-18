@@ -13,6 +13,7 @@ from transaction.models import Transaction
 from transaction.tests.utils import generate_transactions
 from transaction.dashboards import TransactionReport
 from transaction.utils import format_amount
+from prison.tests.utils import load_random_prisoner_locations
 
 User = get_user_model()
 
@@ -30,8 +31,8 @@ class TransactionDashboardTestCase(DashboardTestCase):
 
     def test_transaction_report(self):
         make_test_users(clerks_per_prison=1)
-        generate_transactions(transaction_batch=50,
-                              only_new_transactions=True)
+        load_random_prisoner_locations()
+        generate_transactions(transaction_batch=50)
         self.superuser = User.objects.create_superuser(username='admin', password='admin',
                                                        email='admin@mtp.local')
         self.client.login(username='admin', password='admin')
