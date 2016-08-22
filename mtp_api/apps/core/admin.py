@@ -8,7 +8,7 @@ from django.contrib.admin.utils import prepare_lookup_value
 from django.utils import formats
 from django.utils.translation import gettext_lazy as _
 
-from core import getattr_path
+from core import getattr_path, models
 from core.forms import AdminFilterForm, SidebarDateWidget
 
 
@@ -42,6 +42,11 @@ class AdminSite(admin.AdminSite):
 
 
 site = AdminSite()
+
+
+@admin.register(models.ScheduledCommand)
+class ScheduledCommandAdmin(admin.ModelAdmin):
+    list_display = ('name', 'arg_string', 'cron_entry', 'next_execution',)
 
 
 class FormFilter(admin.FieldListFilter):
