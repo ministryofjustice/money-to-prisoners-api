@@ -14,3 +14,4 @@ model-mommy==1.2.6
 pytz>=2016.3
 git+git://github.com/ministryofjustice/django-moj-irat.git
 django-mailgun==0.8.0
+crontab==0.21.3
