@@ -424,7 +424,7 @@ class SenderList(GroupedListAPIView):
 
     def filter_queryset(self, queryset):
         queryset = super().filter_queryset(queryset)
-        filtered_ids = tuple(queryset.values_list('pk'))
+        filtered_ids = tuple(queryset.values_list('pk', flat=True))
         if not filtered_ids:
             return []
 
@@ -555,7 +555,7 @@ class PrisonerList(GroupedListAPIView):
 
     def filter_queryset(self, queryset):
         queryset = super().filter_queryset(queryset)
-        filtered_ids = tuple(queryset.values_list('pk'))
+        filtered_ids = tuple(queryset.values_list('pk', flat=True))
         if not filtered_ids:
             return []
 
