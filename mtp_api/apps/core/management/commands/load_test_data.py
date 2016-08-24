@@ -32,7 +32,7 @@ class Command(BaseCommand):
         parser.add_argument('--protect-credits', action='store_true',
                             help='Prevents existing credits from being deleted')
         parser.add_argument('--prisons', nargs='*', default=['sample'],
-                            choices=['sample', 'nomis'],
+                            choices=['sample', 'nomis', 'mtp'],
                             help='Create prisons from these sets')
         parser.add_argument('--prisoners', nargs='*', default=['sample'],
                             choices=['sample', 'nomis'],
@@ -89,6 +89,8 @@ class Command(BaseCommand):
             fixtures.append('test_prisons.json')
         if 'nomis' in prisons:
             fixtures.append('test_nomis_prisons.json')
+        if 'mtp' in prisons:
+            fixtures.append('test_nomis_mtp_prisons.json')
         print_message('Loading default user group and selected prison fixtures')
         call_command('loaddata', *fixtures, verbosity=verbosity)
 
