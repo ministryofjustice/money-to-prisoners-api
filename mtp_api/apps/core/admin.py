@@ -44,9 +44,9 @@ class AdminSite(admin.AdminSite):
 site = AdminSite()
 
 
-@admin.register(models.ScheduledCommand)
 class ScheduledCommandAdmin(admin.ModelAdmin):
     list_display = ('name', 'arg_string', 'cron_entry', 'next_execution',)
+site.register(models.ScheduledCommand, ScheduledCommandAdmin)
 
 
 class FormFilter(admin.FieldListFilter):
