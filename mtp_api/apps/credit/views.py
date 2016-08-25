@@ -1,3 +1,4 @@
+import contextlib
 from functools import cmp_to_key, reduce
 import logging
 import re
@@ -7,6 +8,7 @@ from django.db import connection, models, transaction
 from django.forms import MultipleChoiceField
 import django_filters
 from django.http import HttpResponseRedirect
+from django.utils.crypto import get_random_string
 from django.views.generic import View
 from rest_framework import generics, filters, status as drf_status
 from rest_framework.views import APIView
@@ -23,6 +25,7 @@ from mtp_auth.permissions import (
     NomsOpsClientIDPermissions
 )
 from prison.models import Prison
+from transaction.models import Transaction
 from transaction.pagination import DateBasedPagination
 from .constants import CREDIT_STATUS, LOCK_LIMIT
 from .forms import SenderListFilterForm, PrisonerListFilterForm, SQLFragment
@@ -358,9 +361,20 @@ class UnlockCredits(CreditViewMixin, APIView):
 
 
 class GroupedListAPIView(CreditViewMixin, generics.ListAPIView):
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_class = CreditListFilter
     ordering_param = api_settings.ORDERING_PARAM
     ordering_fields = ()
     default_ordering = ()
+    action = 'list'
+
+    sender_identifiers = ('sender_name', 'sender_sort_code', 'sender_account_number', 'sender_roll_number')
+    prisoner_identifiers = ('prisoner_number',)
+
+    permission_classes = (
+        IsAuthenticated, NomsOpsClientIDPermissions,
+        CreditPermissions
+    )
 
     def get_ordering(self):
         params = self.request.query_params.get(self.ordering_param, '')
@@ -408,26 +422,103 @@ class GroupedListAPIView(CreditViewMixin, generics.ListAPIView):
 
         return sorted(queryset, key=cmp_to_key(compare))
 
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+        with self.create_caches(queryset) as (credit_table, grouped_credit_table):
+            return self.get_grouped_data(credit_table, grouped_credit_table)
+
+    @contextlib.contextmanager
+    def create_caches(self, queryset):
+        with connection.cursor() as cursor:
+            credit_table = self.cache_filtered_credits(cursor, queryset)
+            grouped_credit_table = self.cache_grouped_credits(cursor, credit_table)
+            yield credit_table, grouped_credit_table
+            cursor.execute('DROP TABLE "{table}"'.format(table=credit_table))
+            cursor.execute('DROP TABLE "{table}"'.format(table=grouped_credit_table))
+
+    @classmethod
+    def cache_filtered_credits(cls, cursor, queryset):
+        table = 'credit_credit_filtered_' + get_random_string(
+            allowed_chars='abcdefghijklmnopqrstuvwxyz0123456789'
+        )
+        queryset = queryset.values('id')
+        queryset.query.clear_ordering(True)
+        filtered_credits_sql, params = queryset.query.sql_with_params()
+        cursor.execute('CREATE TEMPORARY TABLE "{}" (id INTEGER PRIMARY KEY)'.format(table))
+        cursor.execute('INSERT INTO "{}" {}'.format(table, filtered_credits_sql), params)
+        return table
+
+    @classmethod
+    def cache_grouped_credits(cls, cursor, credit_table):
+        table = 'credit_credit_grouped_' + get_random_string(
+            allowed_chars='abcdefghijklmnopqrstuvwxyz0123456789'
+        )
+        field_types = {
+            field: Transaction._meta.get_field(field).db_type(connection)
+            for field in cls.sender_identifiers
+        }
+        field_types.update({
+            field: Credit._meta.get_field(field).db_type(connection)
+            for field in cls.prisoner_identifiers
+        })
+        cursor.execute(
+            '''
+            CREATE TEMPORARY TABLE "{table}" (
+                sender_name {sender_name},
+                sender_sort_code {sender_sort_code},
+                sender_account_number {sender_account_number},
+                sender_roll_number {sender_roll_number},
+                prisoner_number {prisoner_number},
+                credit_count integer,
+                credit_total bigint
+            )
+            '''.format(
+                table=table,
+                **field_types
+            )
+        )
+        cursor.execute(
+            '''
+            CREATE UNIQUE INDEX group_index
+            ON "{table}"
+            ({fields})
+            '''.format(
+                table=table,
+                fields=', '.join(cls.sender_identifiers + cls.prisoner_identifiers),
+            )
+        )
+        cursor.execute(
+            '''
+            INSERT INTO "{table}"
+            SELECT t.sender_name, t.sender_sort_code, t.sender_account_number, t.sender_roll_number,
+                c.prisoner_number,
+                COUNT(*), SUM(c.amount)
+            FROM credit_credit c
+            INNER JOIN transaction_transaction t ON t.credit_id = c.id
+            WHERE c.id IN (SELECT id FROM "{credit_table}") AND
+                c.prison_id IS NOT NULL
+            GROUP BY t.sender_name, t.sender_sort_code, t.sender_account_number, t.sender_roll_number,
+                c.prisoner_number
+            '''.format(
+                table=table,
+                credit_table=credit_table,
+            )
+        )
+        return table
+
+    def get_grouped_data(self, credit_table, grouped_credit_table):
+        raise NotImplementedError
+
+    def get_group_filters(self, grouped_credit_table):
+        raise NotImplementedError
+
 
 class SenderList(GroupedListAPIView):
     serializer_class = SenderSerializer
-    filter_backends = (filters.DjangoFilterBackend,)
-    filter_class = CreditListFilter
     ordering_fields = ('prisoner_count', 'credit_count', 'credit_total', 'sender_name')
     default_ordering = ('-prisoner_count',)
-    action = 'list'
 
-    permission_classes = (
-        IsAuthenticated, NomsOpsClientIDPermissions,
-        CreditPermissions
-    )
-
-    def filter_queryset(self, queryset):
-        queryset = super().filter_queryset(queryset)
-        filtered_ids = tuple(queryset.values_list('pk', flat=True))
-        if not filtered_ids:
-            return []
-
+    def get_grouped_data(self, credit_table, grouped_credit_table):
         sql = '''
             SELECT
                 t.sender_name AS sender_name,
@@ -444,26 +535,23 @@ class SenderList(GroupedListAPIView):
             LEFT JOIN prison_prisonerlocation pl ON c.prisoner_number=pl.prisoner_number
             LEFT JOIN prison_prison p on c.prison_id=p.nomis_id
             LEFT JOIN prison_prison cp on pl.prison_id=cp.nomis_id
-            WHERE c.id IN %s $$WHERE$$
+            WHERE c.id IN (SELECT id FROM "{credit_table}") {sql_where}
             GROUP BY t.sender_name, t.sender_sort_code, t.sender_account_number,
-            t.sender_roll_number, c.prisoner_number, c.prisoner_name, p.name, cp.name
+                t.sender_roll_number, c.prisoner_number, c.prisoner_name, p.name, cp.name
             ORDER BY t.sender_sort_code, t.sender_account_number,
-            t.sender_roll_number, t.sender_name;
+                t.sender_roll_number, t.sender_name
         '''
-        sql_params = [filtered_ids]
-
-        sql_where, where_params = self.get_raw_sql_filter(filtered_ids)
-        sql = sql.replace('$$WHERE$$', sql_where or '')
-        sql_params += where_params
-
-        cursor = connection.cursor()
-        cursor.execute(sql, sql_params)
-
-        grouped_credits = dictfetchall(cursor)
+        sql_where, where_params = self.get_group_filters(grouped_credit_table)
+        sql = sql.format(
+            credit_table=credit_table,
+            sql_where=sql_where or '',
+        )
+        with connection.cursor() as cursor:
+            cursor.execute(sql, where_params)
+            grouped_credits = dictfetchall(cursor)
 
         senders = []
         last_sender = None
-        sender_identifiers = ('sender_name', 'sender_sort_code', 'sender_account_number', 'sender_roll_number')
         for credit_group in grouped_credits:
             prisoner = {
                 'prisoner_number': credit_group['prisoner_number'],
@@ -477,7 +565,7 @@ class SenderList(GroupedListAPIView):
             if not prisoner['prison_name']:
                 prisoner['prisoner_number'] = None
             if last_sender and all(last_sender[key] == credit_group[key]
-                                   for key in sender_identifiers):
+                                   for key in self.sender_identifiers):
                 add_new_prisoner = True
                 if not prisoner['prison_name']:
                     for previous_prisoner in last_sender['prisoners']:
@@ -490,7 +578,7 @@ class SenderList(GroupedListAPIView):
             else:
                 last_sender = {
                     key: credit_group[key]
-                    for key in sender_identifiers
+                    for key in self.sender_identifiers
                 }
                 last_sender.update({
                     'prisoners': [prisoner],
@@ -511,54 +599,44 @@ class SenderList(GroupedListAPIView):
             )
         return senders
 
-    def get_raw_sql_filter(self, filtered_ids):
+    def get_group_filters(self, grouped_credit_table):
         form = SenderListFilterForm(data=self.request.query_params)
         if not form.is_valid():
-            return
+            return SQLFragment('AND FALSE', [])
 
         prisoner_count, pc_params = form.get_prisoner_count_sql_filter('COUNT(*)')
         credit_count, cc_params = form.get_credit_count_sql_filter('SUM(credit_count)')
         credit_total, ct_params = form.get_credit_total_sql_filter('SUM(credit_total)')
         sql_where = ' AND '.join(filter(None, [prisoner_count, credit_count, credit_total]))
         if sql_where:
-            where_params = pc_params + cc_params + ct_params + [filtered_ids]
             # NB: counts and totals are only summed for valid credits (those that reach a prisoner)
-            return SQLFragment(''' AND (
-                SELECT $$WHERE$$ FROM (
-                    SELECT COUNT(*) AS credit_count, SUM(c2.amount) AS credit_total
-                    FROM credit_credit c2
-                    INNER JOIN transaction_transaction t2 ON t2.credit_id = c2.id
-                    WHERE c2.id IN %s AND
-                          c2.prison_id IS NOT NULL AND
-                          t2.sender_name=t.sender_name AND
-                          t2.sender_sort_code=t.sender_sort_code AND
-                          t2.sender_account_number=t.sender_account_number AND
-                          t2.sender_roll_number=t.sender_roll_number
-                    GROUP BY c2.prisoner_number
-                ) AS s
-            )'''.replace('$$WHERE$$', sql_where), where_params)
+            return SQLFragment(
+                '''
+                AND (
+                    SELECT {sql_where} FROM (
+                        SELECT credit_count, credit_total
+                        FROM {table} gc
+                        WHERE gc.sender_name=t.sender_name AND
+                              gc.sender_sort_code=t.sender_sort_code AND
+                              gc.sender_account_number=t.sender_account_number AND
+                              gc.sender_roll_number=t.sender_roll_number
+                    ) AS s
+                )
+                '''.format(
+                    sql_where=sql_where,
+                    table=grouped_credit_table,
+                ),
+                pc_params + cc_params + ct_params
+            )
         return SQLFragment(None, [])
 
 
 class PrisonerList(GroupedListAPIView):
     serializer_class = PrisonerSerializer
-    filter_backends = (filters.DjangoFilterBackend,)
-    filter_class = CreditListFilter
     ordering_fields = ('sender_count', 'credit_count', 'credit_total', 'prisoner_name', 'prisoner_number')
     default_ordering = ('-sender_count',)
-    action = 'list'
 
-    permission_classes = (
-        IsAuthenticated, NomsOpsClientIDPermissions,
-        CreditPermissions
-    )
-
-    def filter_queryset(self, queryset):
-        queryset = super().filter_queryset(queryset)
-        filtered_ids = tuple(queryset.values_list('pk', flat=True))
-        if not filtered_ids:
-            return []
-
+    def get_grouped_data(self, credit_table, grouped_credit_table):
         sql = '''
             SELECT
                 t.sender_name AS sender_name,
@@ -575,25 +653,22 @@ class PrisonerList(GroupedListAPIView):
             LEFT JOIN prison_prisonerlocation pl ON c.prisoner_number=pl.prisoner_number
             LEFT JOIN prison_prison p on c.prison_id=p.nomis_id
             LEFT JOIN prison_prison cp on pl.prison_id=cp.nomis_id
-            WHERE c.id IN %s $$WHERE$$
+            WHERE c.id IN (SELECT id FROM "{credit_table}") {sql_where}
             GROUP BY t.sender_name, t.sender_sort_code, t.sender_account_number,
-            t.sender_roll_number, c.prisoner_number, c.prisoner_name, p.name, cp.name
-            ORDER BY c.prisoner_number;
+                t.sender_roll_number, c.prisoner_number, c.prisoner_name, p.name, cp.name
+            ORDER BY c.prisoner_number
         '''
-        sql_params = [filtered_ids]
-
-        sql_where, where_params = self.get_raw_sql_filter(filtered_ids)
-        sql = sql.replace('$$WHERE$$', sql_where or '')
-        sql_params += where_params
-
-        cursor = connection.cursor()
-        cursor.execute(sql, sql_params)
-
-        grouped_credits = dictfetchall(cursor)
+        sql_where, where_params = self.get_group_filters(grouped_credit_table)
+        sql = sql.format(
+            credit_table=credit_table,
+            sql_where=sql_where or '',
+        )
+        with connection.cursor() as cursor:
+            cursor.execute(sql, where_params)
+            grouped_credits = dictfetchall(cursor)
 
         prisoners = []
         last_prisoner = None
-        prisoner_identifiers = ('prisoner_number',)
         for credit_group in grouped_credits:
             sender = {
                 'sender_name': credit_group['sender_name'],
@@ -604,12 +679,12 @@ class PrisonerList(GroupedListAPIView):
                 'credit_total': credit_group['credit_total'],
             }
             if last_prisoner and all(last_prisoner[key] == credit_group[key]
-                                     for key in prisoner_identifiers):
+                                     for key in self.prisoner_identifiers):
                 last_prisoner['senders'].append(sender)
             else:
                 last_prisoner = {
                     key: credit_group[key]
-                    for key in prisoner_identifiers
+                    for key in self.prisoner_identifiers
                 }
                 last_prisoner.update({
                     'prisoner_name': credit_group['prisoner_name'],
@@ -631,25 +706,29 @@ class PrisonerList(GroupedListAPIView):
             )
         return prisoners
 
-    def get_raw_sql_filter(self, filtered_ids):
+    def get_group_filters(self, grouped_credit_table):
         form = PrisonerListFilterForm(data=self.request.query_params)
         if not form.is_valid():
-            return
+            return SQLFragment('AND FALSE', [])
 
         sender_count, sc_params = form.get_sender_count_sql_filter('COUNT(*)')
         credit_count, cc_params = form.get_credit_count_sql_filter('SUM(credit_count)')
         credit_total, ct_params = form.get_credit_total_sql_filter('SUM(credit_total)')
         sql_where = ' AND '.join(filter(None, [sender_count, credit_count, credit_total]))
         if sql_where:
-            where_params = sc_params + cc_params + ct_params + [filtered_ids]
-            return SQLFragment(''' AND (
-                SELECT $$WHERE$$ FROM (
-                    SELECT COUNT(*) AS credit_count, SUM(c2.amount) AS credit_total
-                    FROM credit_credit c2
-                    INNER JOIN transaction_transaction t2 ON t2.credit_id = c2.id
-                    WHERE c2.id IN %s AND c2.prisoner_number=c.prisoner_number
-                    GROUP BY t2.sender_name, t2.sender_sort_code,
-                    t2.sender_account_number, t2.sender_roll_number
-                ) AS s
-            )'''.replace('$$WHERE$$', sql_where), where_params)
+            return SQLFragment(
+                '''
+                AND (
+                    SELECT {sql_where} FROM (
+                        SELECT credit_count, credit_total
+                        FROM {table} gc
+                        WHERE gc.prisoner_number=c.prisoner_number
+                    ) AS s
+                )
+                '''.format(
+                    sql_where=sql_where,
+                    table=grouped_credit_table,
+                ),
+                sc_params + cc_params + ct_params
+            )
         return SQLFragment(None, [])

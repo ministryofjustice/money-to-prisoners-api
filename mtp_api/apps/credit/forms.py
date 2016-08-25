@@ -28,12 +28,12 @@ def range_field_decorations(field_name):
             if lower_value is None and upper_value is None:
                 return SQLFragment(None, [])
             if lower_value == upper_value:
-                return SQLFragment('%s = %%s' % (expression), [lower_value])
+                return SQLFragment('%s = %%s' % expression, [lower_value])
             if lower_value is None:
-                return SQLFragment('%s <= %%s' % (expression), [upper_value])
+                return SQLFragment('%s <= %%s' % expression, [upper_value])
             if upper_value is None:
-                return SQLFragment('%s >= %%s' % (expression), [lower_value])
-            return SQLFragment('%s BETWEEN %%s and %%s' % (expression), [lower_value, upper_value])
+                return SQLFragment('%s >= %%s' % expression, [lower_value])
+            return SQLFragment('%s BETWEEN %%s and %%s' % expression, [lower_value, upper_value])
 
         setattr(cls, get_range_attribute, get_range)
         setattr(cls, 'clean_' + upper, clean)
