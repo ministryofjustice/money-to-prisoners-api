@@ -45,6 +45,7 @@ INSTALLED_APPS = (
     'account',
     'payment',
     'credit',
+    'performance',
 
     # django admin
     'django.contrib.admin',
@@ -251,6 +252,9 @@ RUN_CLEANUP_TASKS = os.environ.get('RUN_CLEANUP_TASKS') == 'True'
 REF_CODE_BASE = 900001
 
 SURVEY_GIZMO_API_KEY = os.environ.get('SURVEY_GIZMO_API_KEY')
+
+PERFORMANCE_PLATFORM_API_URL = os.environ.get('PERFORMANCE_PLATFORM_API', 'http://localhost/')
+PERFORMANCE_PLATFORM_API_TOKEN = os.environ.get('PERFORMANCE_PLATFORM_API_TOKEN', 'not_a_token')
 
 try:
     from .local import *  # noqa
