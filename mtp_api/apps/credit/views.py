@@ -532,11 +532,13 @@ class SenderList(GroupedListAPIView):
                 cp.name AS current_prison_name,
                 COUNT(*) AS credit_count,
                 SUM(c.amount) AS credit_total
-            FROM credit_credit c INNER JOIN transaction_transaction t ON t.credit_id=c.id
+            FROM credit_credit c
+            INNER JOIN "{credit_table}" ct ON ct.id=c.id
+            INNER JOIN transaction_transaction t ON t.credit_id=c.id
             LEFT JOIN prison_prisonerlocation pl ON c.prisoner_number=pl.prisoner_number
             LEFT JOIN prison_prison p on c.prison_id=p.nomis_id
             LEFT JOIN prison_prison cp on pl.prison_id=cp.nomis_id
-            WHERE c.id IN (SELECT id FROM "{credit_table}") {sql_where}
+            {sql_where}
             GROUP BY t.sender_name, t.sender_sort_code, t.sender_account_number, t.sender_roll_number,
                 c.prisoner_number, c.prisoner_name,
                 c.prison_id, p.name, cp.name
@@ -544,9 +546,13 @@ class SenderList(GroupedListAPIView):
                 t.sender_roll_number, t.sender_name
         '''
         sql_where, where_params = self.get_group_filters(grouped_credit_table)
+        if sql_where:
+            sql_where = 'WHERE ' + sql_where
+        else:
+            sql_where = ''
         sql = sql.format(
             credit_table=credit_table,
-            sql_where=sql_where or '',
+            sql_where=sql_where,
         )
         with connection.cursor() as cursor:
             cursor.execute(sql, where_params)
@@ -605,7 +611,7 @@ class SenderList(GroupedListAPIView):
     def get_group_filters(self, grouped_credit_table):
         form = SenderListFilterForm(data=self.request.query_params)
         if not form.is_valid():
-            return SQLFragment('AND FALSE', [])
+            return SQLFragment('FALSE', [])
 
         prisoner_count, pc_params = form.get_prisoner_count_sql_filter('COUNT(*)')
         credit_count, cc_params = form.get_credit_count_sql_filter('SUM(credit_count)')
@@ -615,7 +621,7 @@ class SenderList(GroupedListAPIView):
             # NB: counts and totals are only summed for valid credits (those that reach a prisoner)
             return SQLFragment(
                 '''
-                AND (
+                (
                     SELECT {sql_where} FROM (
                         SELECT credit_count, credit_total
                         FROM {table} gc
@@ -653,20 +659,26 @@ class PrisonerList(GroupedListAPIView):
                 cp.name AS current_prison_name,
                 COUNT(*) AS credit_count,
                 SUM(c.amount) AS credit_total
-            FROM credit_credit c INNER JOIN transaction_transaction t ON t.credit_id=c.id
+            FROM credit_credit c
+            INNER JOIN "{credit_table}" ct ON ct.id=c.id
+            INNER JOIN transaction_transaction t ON t.credit_id=c.id
             LEFT JOIN prison_prisonerlocation pl ON c.prisoner_number=pl.prisoner_number
             LEFT JOIN prison_prison p on c.prison_id=p.nomis_id
             LEFT JOIN prison_prison cp on pl.prison_id=cp.nomis_id
-            WHERE c.id IN (SELECT id FROM "{credit_table}") {sql_where}
+            {sql_where}
             GROUP BY t.sender_name, t.sender_sort_code, t.sender_account_number, t.sender_roll_number,
                 c.prisoner_number, c.prisoner_name,
                 c.prison_id, p.name, cp.name
             ORDER BY c.prisoner_number
         '''
         sql_where, where_params = self.get_group_filters(grouped_credit_table)
+        if sql_where:
+            sql_where = 'WHERE ' + sql_where
+        else:
+            sql_where = ''
         sql = sql.format(
             credit_table=credit_table,
-            sql_where=sql_where or '',
+            sql_where=sql_where,
         )
         with connection.cursor() as cursor:
             cursor.execute(sql, where_params)
@@ -715,7 +727,7 @@ class PrisonerList(GroupedListAPIView):
     def get_group_filters(self, grouped_credit_table):
         form = PrisonerListFilterForm(data=self.request.query_params)
         if not form.is_valid():
-            return SQLFragment('AND FALSE', [])
+            return SQLFragment('FALSE', [])
 
         sender_count, sc_params = form.get_sender_count_sql_filter('COUNT(*)')
         credit_count, cc_params = form.get_credit_count_sql_filter('SUM(credit_count)')
@@ -724,7 +736,7 @@ class PrisonerList(GroupedListAPIView):
         if sql_where:
             return SQLFragment(
                 '''
-                AND (
+                (
                     SELECT {sql_where} FROM (
                         SELECT credit_count, credit_total
                         FROM {table} gc
