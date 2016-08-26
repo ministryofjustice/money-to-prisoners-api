@@ -102,6 +102,7 @@ class BaseSenderSerializer(serializers.Serializer):
 class BasePrisonerSerializer(serializers.Serializer):
     prisoner_number = serializers.CharField()
     prisoner_name = serializers.CharField()
+    prison_id = serializers.CharField()
     prison_name = serializers.CharField()
     current_prison_name = serializers.CharField()
 
