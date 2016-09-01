@@ -113,23 +113,27 @@ class GetUserTestCase(APITestCase, AuthTestCaseMixin):
             self.assertListEqual(response.data['applications'], applications)
 
     def test_all_valid_usernames_retrievable(self):
+        username = 'dotted.name'
         user_data = {
-            'username': 'dotted.name',
+            'username': username,
             'first_name': 'New',
             'last_name': 'User',
             'email': 'user@mtp.local'
         }
-        self.client.post(
+        response = self.client.post(
             reverse('user-list'),
             format='json',
             data=user_data,
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.bank_uas[0])
         )
-        self.client.get(
-            self._get_url(user_data['username']),
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        response = self.client.get(
+            self._get_url(username),
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.bank_uas[0])
         )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['username'], username)
 
 
 class ListUserTestCase(APITestCase, AuthTestCaseMixin):
