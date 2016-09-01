@@ -5,6 +5,8 @@ from django.core.management import call_command
 from django.core.urlresolvers import reverse
 from django.test import TestCase
 
+from core.tests.utils import quieten_mtp_logger
+
 
 class RecreateTestDataViewTestCase(TestCase):
     @property
@@ -50,13 +52,14 @@ class RecreateTestDataViewTestCase(TestCase):
 
         self.make_superuser(log_into_client=True)
         with mock.patch.object(Command, 'handle') as method:
-            response = self.client.post(self.url, data={
-                'scenario': 'random',
-                'number_of_transactions': '50',
-                'number_of_payments': '50',
-                'number_of_prisoners': '50',
-                'days_of_history': '7',
-            })
+            with quieten_mtp_logger():
+                response = self.client.post(self.url, data={
+                    'scenario': 'random',
+                    'number_of_transactions': '50',
+                    'number_of_payments': '50',
+                    'number_of_prisoners': '50',
+                    'days_of_history': '7',
+                })
             self.assertEqual(response.status_code, 200)
             self.assertEqual(method.call_count, 1)
             expected_options_subset = {

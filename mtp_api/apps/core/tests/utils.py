@@ -1,3 +1,5 @@
+import contextlib
+import logging
 from unittest import mock
 
 from django.contrib.auth import get_user_model
@@ -17,6 +19,15 @@ from mtp_auth.tests.mommy_recipes import (
     create_security_staff_user
 )
 from prison.models import Prison
+
+
+@contextlib.contextmanager
+def quieten_mtp_logger(level=logging.ERROR):
+    logger = logging.getLogger('mtp')
+    old_level = logger.level
+    logger.setLevel(level)
+    yield
+    logger.setLevel(old_level)
 
 
 class MockModelTimestamps:
