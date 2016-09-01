@@ -8,7 +8,7 @@ from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 
 from core.admin import DateRangeFilter
-from transaction.constants import TRANSACTION_STATUS
+from transaction.constants import TRANSACTION_CATEGORY, TRANSACTION_STATUS
 from transaction.models import Transaction
 from transaction.utils import format_amount
 
@@ -35,7 +35,7 @@ class TransactionAdmin(admin.ModelAdmin):
         'prisoner_name', 'prison', 'prisoner_number', 'formatted_amount',
         'transaction_type', 'sender_sort_code', 'sender_account_number',
         'sender_roll_number', 'sender_name', 'reference',
-        'received_at', 'status'
+        'received_at', 'formatted_status',
     )
     ordering = ('-received_at',)
     date_hierarchy = 'received_at'
@@ -66,7 +66,18 @@ class TransactionAdmin(admin.ModelAdmin):
         return format_amount(instance.amount)
 
     def transaction_type(self, instance):
-        return '%s/%s' % (instance.processor_type_code, instance.category)
+        category = instance.category
+        if TRANSACTION_CATEGORY.has_value(category):
+            category = TRANSACTION_CATEGORY.for_value(category).display
+        return '%s/%s' % (instance.processor_type_code, category)
+
+    def formatted_status(self, instance):
+        value = instance.status
+        if TRANSACTION_STATUS.has_value(value):
+            return TRANSACTION_STATUS.for_value(value).display
+        return value
+
+    formatted_status.short_description = _('Status')
 
     credit_link.short_description = _('Credit')
     formatted_amount.short_description = _('Amount')

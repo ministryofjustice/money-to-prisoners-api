@@ -1,4 +1,5 @@
 import datetime
+from types import MethodType
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -88,6 +89,12 @@ class FailedLoginAttempt(TimeStampedModel):
 
 def patch_user_model():
     user_model = get_user_model()
+
+    # patch natural lookup of usernames to be case insensitive
+    def get_by_natural_key(self, username):
+        return self.get(**{'%s__iexact' % user_model.USERNAME_FIELD: username})
+
+    user_model.objects.get_by_natural_key = MethodType(get_by_natural_key, user_model.objects)
 
     # add shortcut for chechking non-app-specific lock-outs
     user_model.is_locked_out = property(lambda u: FailedLoginAttempt.objects.is_locked_out(user=u))

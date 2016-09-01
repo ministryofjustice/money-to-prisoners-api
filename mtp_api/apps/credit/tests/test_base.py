@@ -31,7 +31,7 @@ class BaseCreditViewTestCase(AuthTestCaseMixin, APITestCase):
     transaction_batch = 50
 
     def setUp(self):
-        super(BaseCreditViewTestCase, self).setUp()
+        super().setUp()
         (
             self.prison_clerks, self.prisoner_location_admins,
             self.bank_admins, self.refund_bank_admins,
@@ -81,7 +81,7 @@ class BaseCreditViewTestCase(AuthTestCaseMixin, APITestCase):
         return Credit.objects.all().aggregate(models.Max('received_at'))['received_at__max']
 
 
-class CreditRejectsRequestsWithoutPermissionTestMixin(object):
+class CreditRejectsRequestsWithoutPermissionTestMixin:
 
     """
     Mixin for permission checks on the endpoint.

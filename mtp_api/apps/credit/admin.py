@@ -7,11 +7,11 @@ from django.core.exceptions import ValidationError
 from django.db.models import Sum
 from django.utils.translation import gettext_lazy as _
 
-from core.admin import DateRangeFilter, RelatedAnyFieldListFilter, ExactSearchFilter
+from core.admin import DateRangeFilter, RelatedAnyFieldListFilter, SearchFilter
 from payment.models import Payment
 from transaction.models import Transaction
 from transaction.utils import format_amount
-from .constants import CREDIT_STATUS, LOG_ACTIONS
+from .constants import CREDIT_SOURCE, CREDIT_STATUS, LOG_ACTIONS
 from .models import Credit, Log
 
 
@@ -73,7 +73,7 @@ class StatusFilter(admin.SimpleListFilter):
 class CreditAdmin(admin.ModelAdmin):
     list_display = (
         'prisoner_name', 'prison', 'prisoner_number', 'prisoner_dob',
-        'formatted_amount', 'source', 'received_at', 'status'
+        'formatted_amount', 'received_at', 'formatted_source', 'formatted_status'
     )
     ordering = ('-received_at',)
     date_hierarchy = 'received_at'
@@ -85,7 +85,7 @@ class CreditAdmin(admin.ModelAdmin):
         'reconciled',
         ('prison', RelatedAnyFieldListFilter),
         ('received_at', DateRangeFilter),
-        ('owner__username', ExactSearchFilter),
+        ('owner__username', SearchFilter),
     )
     search_fields = ('prisoner_name', 'prisoner_number')
     actions = [
@@ -97,6 +97,22 @@ class CreditAdmin(admin.ModelAdmin):
         return format_amount(instance.amount)
 
     formatted_amount.short_description = _('Amount')
+
+    def formatted_source(self, instance):
+        value = instance.source
+        if CREDIT_SOURCE.has_value(value):
+            return CREDIT_SOURCE.for_value(value).display
+        return value
+
+    formatted_source.short_description = _('Source')
+
+    def formatted_status(self, instance):
+        value = instance.status
+        if CREDIT_STATUS.has_value(value):
+            return CREDIT_STATUS.for_value(value).display
+        return value
+
+    formatted_status.short_description = _('Status')
 
     def display_total_amount(self, request, queryset):
         total = queryset.aggregate(Sum('amount'))['amount__sum']

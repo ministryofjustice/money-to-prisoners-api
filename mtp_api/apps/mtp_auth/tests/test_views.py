@@ -1,6 +1,7 @@
 import base64
 import datetime
 import json
+import random
 import re
 from unittest import mock
 
@@ -11,12 +12,13 @@ from django.core import mail
 from django.core.urlresolvers import reverse
 from django.test import override_settings
 from django.utils.timezone import now
-from oauth2_provider.models import Application
+from oauth2_provider.models import AccessToken, Application, RefreshToken
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from core.tests.utils import make_test_users, make_test_user_admins
+from core.tests.utils import make_test_users, make_test_user_admins, quieten_mtp_logger
 from mtp_auth.constants import (
+    ALL_OAUTH_CLIENT_IDS,
     BANK_ADMIN_OAUTH_CLIENT_ID, CASHBOOK_OAUTH_CLIENT_ID,
     NOMS_OPS_OAUTH_CLIENT_ID
 )
@@ -28,6 +30,89 @@ from prison.models import Prison
 User = get_user_model()
 
 
+def random_case(string):
+    return ''.join(
+        char.upper() if random.randrange(2) else char.lower()
+        for char in string
+    )
+
+
+class OauthTokenTestCase(APITestCase):
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
+
+    @classmethod
+    def create_test_methods(cls):
+        for client_id in ALL_OAUTH_CLIENT_IDS:
+            method_name = client_id.replace('-', '_')
+            setattr(cls, 'test_successful_login_with_%s' % method_name,
+                    cls.create_successful_test_method(client_id, False))
+            setattr(cls, 'test_successful_login_with_%s_without_case_sensitivity' % method_name,
+                    cls.create_successful_test_method(client_id, True))
+            setattr(cls, 'test_unsuccessful_login_with_%s' % method_name,
+                    cls.create_unsuccessful_test_method(client_id))
+
+    @classmethod
+    def create_successful_test_method(cls, client_id, randomise_username_case):
+        def test_successful_login(self):
+            client = Application.objects.get(client_id=client_id)
+            for mapping in client.applicationusermapping_set.all():
+                username = mapping.user.username
+                if randomise_username_case:
+                    username = random_case(username)
+                password = mapping.user.username
+                response = self.client.post(
+                    reverse('oauth2_provider:token'),
+                    {
+                        'grant_type': 'password',
+                        'username': username,
+                        'password': password,
+                        'client_id': client.client_id,
+                        'client_secret': client.client_secret,
+                    }
+                )
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                response_data = response.json()
+                self.assertEqual(AccessToken.objects.filter(token=response_data['access_token']).count(), 1)
+                self.assertEqual(RefreshToken.objects.filter(token=response_data['refresh_token']).count(), 1)
+            self.assertEqual(AccessToken.objects.count(), client.applicationusermapping_set.count())
+            self.assertEqual(RefreshToken.objects.count(), client.applicationusermapping_set.count())
+
+        return test_successful_login
+
+    @classmethod
+    def create_unsuccessful_test_method(cls, client_id):
+        def test_unsuccessful_login(self):
+            client = Application.objects.get(client_id=client_id)
+            for mapping in client.applicationusermapping_set.all():
+                username = mapping.user.username
+                with quieten_mtp_logger():
+                    response = self.client.post(
+                        reverse('oauth2_provider:token'),
+                        {
+                            'grant_type': 'password',
+                            'username': username,
+                            'password': 'incorrect-password',
+                            'client_id': client.client_id,
+                            'client_secret': client.client_secret,
+                        }
+                    )
+                self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+                response_data = response.json()
+                self.assertNotIn('access_token', response_data)
+                self.assertNotIn('refresh_token', response_data)
+            self.assertEqual(AccessToken.objects.count(), 0)
+            self.assertEqual(RefreshToken.objects.count(), 0)
+
+        return test_unsuccessful_login
+
+    def setUp(self):
+        super().setUp()
+        make_test_users(clerks_per_prison=1)
+
+
+OauthTokenTestCase.create_test_methods()
+
+
 class GetUserTestCase(APITestCase, AuthTestCaseMixin):
     fixtures = [
         'initial_groups.json',
@@ -36,7 +121,7 @@ class GetUserTestCase(APITestCase, AuthTestCaseMixin):
     ]
 
     def setUp(self):
-        super(GetUserTestCase, self).setUp()
+        super().setUp()
         (
             self.prison_clerks, self.prisoner_location_admins,
             self.bank_admins, self.refund_bank_admins,
@@ -54,7 +139,7 @@ class GetUserTestCase(APITestCase, AuthTestCaseMixin):
         return reverse('user-detail', kwargs={'username': username})
 
     def test_cannot_access_data_when_not_logged_in(self):
-        url = self._get_url('me')
+        url = self._get_url(self.prison_clerks[0].username)
         response = self.client.get(url, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -67,7 +152,7 @@ class GetUserTestCase(APITestCase, AuthTestCaseMixin):
         """
         logged_in_user = self.prison_clerks[0]
 
-        for user in self.prison_clerks[1:]:
+        for user in self.prison_clerks[1:] + self.prisoner_location_admins:
             url = self._get_url(user.username)
             response = self.client.get(
                 url, format='json',
@@ -85,6 +170,20 @@ class GetUserTestCase(APITestCase, AuthTestCaseMixin):
             self.assertEqual(response.status_code, status.HTTP_200_OK)
 
             self.assertEqual(response.data['pk'], user.pk)
+
+    def test_can_access_my_data_without_case_sensitivity(self):
+        for user in self.prison_clerks:
+            username = user.username
+            while username == user.username:
+                username = random_case(user.username)
+            url = self._get_url(username)
+            response = self.client.get(
+                url, format='json',
+                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+            )
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(response.data['pk'], user.pk)
+            self.assertNotEqual(response.data['username'], username)
 
     def test_correct_permissions_returned(self):
         for user in self.test_users:
@@ -113,23 +212,27 @@ class GetUserTestCase(APITestCase, AuthTestCaseMixin):
             self.assertListEqual(response.data['applications'], applications)
 
     def test_all_valid_usernames_retrievable(self):
+        username = 'dotted.name'
         user_data = {
-            'username': 'dotted.name',
+            'username': username,
             'first_name': 'New',
             'last_name': 'User',
             'email': 'user@mtp.local'
         }
-        self.client.post(
+        response = self.client.post(
             reverse('user-list'),
             format='json',
             data=user_data,
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.bank_uas[0])
         )
-        self.client.get(
-            self._get_url(user_data['username']),
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        response = self.client.get(
+            self._get_url(username),
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.bank_uas[0])
         )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['username'], username)
 
 
 class ListUserTestCase(APITestCase, AuthTestCaseMixin):
@@ -162,15 +265,13 @@ class ListUserTestCase(APITestCase, AuthTestCaseMixin):
         response = self.client.get(
             self.get_url(),
             format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(requester)
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(requester, client_id=client_id)
         )
 
         for user_item in response.data['results']:
             user = User.objects.get(username=user_item['username'])
-            self.assertTrue(
-                client_id in user.applicationusermapping_set.all()
-                .values_list('application__client_id', flat=True)
-            )
+            self.assertIn(client_id,
+                          user.applicationusermapping_set.values_list('application__client_id', flat=True))
             if hasattr(requester, 'prisonusermapping'):
                 matching_prison = False
                 for prison in requester.prisonusermapping.prisons.all():
@@ -210,8 +311,8 @@ class ListUserTestCase(APITestCase, AuthTestCaseMixin):
             applicationusermapping__application__client_id='bank-admin'
         )
         active_queryset = queryset.filter(is_active=True)
-        self.assertNotEqual(len(queryset), len(returned_users))
-        self.assertEqual(len(active_queryset), len(returned_users))
+        self.assertNotEqual(queryset.count(), len(returned_users))
+        self.assertEqual(active_queryset.count(), len(returned_users))
 
 
 class CreateUserTestCase(APITestCase, AuthTestCaseMixin):
@@ -243,17 +344,23 @@ class CreateUserTestCase(APITestCase, AuthTestCaseMixin):
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(bank_admins[0])
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(len(User.objects.filter(username=user_data['username'])), 0)
+        self.assertEqual(User.objects.filter(username=user_data['username']).count(), 0)
 
     @override_settings(ENVIRONMENT='prod')
     def _check_create_user_succeeds(self, requester, user_data, client_id, groups):
-        self.client.post(
+        response = self.client.post(
             self.get_url(),
             format='json',
             data=user_data,
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(requester,
                                                                     client_id=client_id)
         )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(all(
+            user_data[key] == value
+            for key, value in response.json().items()
+            if key in ('username', 'first_name', 'last_name', 'email')
+        ))
 
         make_user_admin = user_data.pop('user_admin', False)
         new_user = User.objects.get(**user_data)
@@ -358,6 +465,60 @@ class CreateUserTestCase(APITestCase, AuthTestCaseMixin):
              Group.objects.get(name='UserAdmin')]
         )
 
+    def test_cannot_create_non_unique_username(self):
+        user_data = {
+            'username': self.cashbook_uas[0].username,
+            'first_name': 'New',
+            'last_name': 'Cashbook User Admin 2',
+            'email': 'cua@mtp.local',
+            'user_admin': True
+        }
+        response = self.client.post(
+            self.get_url(),
+            format='json',
+            data=user_data,
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.cashbook_uas[0])
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(User.objects.filter(username=self.cashbook_uas[0].username).count(), 1)
+
+    def test_username_case_sensitivity(self):
+        requester = self.cashbook_uas[0]
+        username = 'A-User'
+        user_data = {
+            'username': username,
+            'first_name': 'Title',
+            'last_name': 'Case',
+            'email': 'title-case@mtp.local',
+        }
+        response = self.client.post(
+            self.get_url(),
+            format='json',
+            data=user_data,
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(requester)
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.json()['username'], username)
+        self.assertEqual(User.objects.filter(username__exact=username).count(), 1)
+
+        username = 'a-user'
+        user_data = {
+            'username': username,
+            'first_name': 'Lower',
+            'last_name': 'Case',
+            'email': 'lower-case@mtp.local',
+        }
+        response = self.client.post(
+            self.get_url(),
+            format='json',
+            data=user_data,
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(requester)
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('username', response.json())
+        self.assertEqual(User.objects.filter(username__exact=username).count(), 0)
+        self.assertEqual(User.objects.filter(username__iexact=username).count(), 1)
+
     def test_cannot_create_non_unique_email(self):
         user_data = {
             'username': 'new-cashbook-ua',
@@ -373,7 +534,7 @@ class CreateUserTestCase(APITestCase, AuthTestCaseMixin):
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.cashbook_uas[0])
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(len(User.objects.filter(username=user_data['username'])), 0)
+        self.assertEqual(User.objects.filter(username=user_data['username']).count(), 0)
 
     def test_cannot_create_with_missing_fields(self):
         user_data = {
@@ -393,7 +554,7 @@ class CreateUserTestCase(APITestCase, AuthTestCaseMixin):
                 HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.cashbook_uas[0])
             )
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-            self.assertEqual(len(User.objects.filter(username=data['username'])), 0)
+            self.assertEqual(User.objects.filter(username=data['username']).count(), 0)
 
 
 class UpdateUserTestCase(APITestCase, AuthTestCaseMixin):
@@ -413,7 +574,7 @@ class UpdateUserTestCase(APITestCase, AuthTestCaseMixin):
         return reverse('user-detail', kwargs={'username': username})
 
     def _update_user(self, requester, username, user_data):
-        self.client.patch(
+        return self.client.patch(
             self.get_url(username),
             format='json',
             data=user_data,
@@ -541,6 +702,43 @@ class UpdateUserTestCase(APITestCase, AuthTestCaseMixin):
             user_data
         )
 
+    def test_can_update_username_case(self):
+        requester = self.bank_uas[0]
+        existing_username = self.bank_uas[1].username
+        new_username = existing_username.upper()
+        response = self._update_user(requester, existing_username, {
+            'username': new_username
+        })
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()['username'], new_username)
+        self.assertEqual(User.objects.filter(username__exact=existing_username).count(), 0)
+        self.assertEqual(User.objects.filter(username__exact=new_username).count(), 1)
+
+    def test_cannot_update_username_to_non_unique(self):
+        requester = self.bank_uas[0]
+        existing_username = self.bank_uas[1].username
+        new_username = requester.username
+        response = self._update_user(requester, existing_username, {
+            'username': new_username
+        })
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('username', response.json())
+        self.assertEqual(User.objects.filter(username__exact=existing_username).count(), 1)
+        self.assertEqual(User.objects.filter(username__exact=new_username).count(), 1)
+
+    def test_cannot_update_username_to_non_unique_by_case(self):
+        requester = self.bank_uas[0]
+        existing_username = self.bank_uas[1].username
+        new_username = requester.username.upper()
+        response = self._update_user(requester, existing_username, {
+            'username': new_username
+        })
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('username', response.json())
+        self.assertEqual(User.objects.filter(username__exact=existing_username).count(), 1)
+        self.assertEqual(User.objects.filter(username__exact=new_username).count(), 0)
+        self.assertEqual(User.objects.filter(username__iexact=new_username).count(), 1)
+
     def test_cannot_update_non_unique_email(self):
         user_data = {
             'email': self.bank_uas[0].email
@@ -577,16 +775,22 @@ class DeleteUserTestCase(APITestCase, AuthTestCaseMixin):
 
     def _check_delete_user_succeeds(self, requester, username):
         self._delete_user(requester, username)
-        self.assertFalse(User.objects.get(username=username).is_active)
+        self.assertFalse(User.objects.get_by_natural_key(username).is_active)
 
     def _check_delete_user_fails(self, requester, username):
         self._delete_user(requester, username)
-        self.assertTrue(User.objects.get(username=username).is_active)
+        self.assertTrue(User.objects.get_by_natural_key(username).is_active)
 
     def test_delete_bank_admin_bank_user_admin_succeeds(self):
         self._check_delete_user_succeeds(
             self.bank_uas[0],
             self.refund_bank_admins[0].username
+        )
+
+    def test_delete_bank_admin_bank_user_admin_succeeds_without_case_sensitivity(self):
+        self._check_delete_user_succeeds(
+            self.bank_uas[0],
+            self.refund_bank_admins[0].username.upper()
         )
 
     def test_delete_bank_admin_as_cashbook_user_admin_fails(self):
@@ -607,6 +811,12 @@ class DeleteUserTestCase(APITestCase, AuthTestCaseMixin):
             self.prison_clerks[0].username
         )
 
+    def test_delete_prison_clerk_in_same_prison_succeeds_without_case_sensitivity(self):
+        self._check_delete_user_succeeds(
+            self.cashbook_uas[0],
+            self.prison_clerks[0].username.upper()
+        )
+
     def test_delete_prison_clerk_in_different_prison_fails(self):
         self._check_delete_user_fails(
             self.cashbook_uas[1],
@@ -624,7 +834,7 @@ class UserApplicationValidationTestCase(APITestCase):
     fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
     def setUp(self):
-        super(UserApplicationValidationTestCase, self).setUp()
+        super().setUp()
         self.prison_clerks, self.users, self.bank_admins, _, _, _ = make_test_users()
 
     def _create_basic_auth(self, client_id, client_secret):
@@ -718,6 +928,23 @@ class AccountLockoutTestCase(APITestCase):
         cashbook_client = Application.objects.get(client_id=CASHBOOK_OAUTH_CLIENT_ID)
 
         for _ in range(settings.MTP_AUTH_LOCKOUT_COUNT):
+            self.assertFalse(FailedLoginAttempt.objects.is_locked_out(prison_clerk, cashbook_client))
+            self.fail_login(prison_clerk, cashbook_client)
+
+        self.assertTrue(FailedLoginAttempt.objects.is_locked_out(prison_clerk, cashbook_client))
+        self.fail_login(prison_clerk, cashbook_client)
+
+    def test_account_lockout_on_too_many_attempts_without_case_sensitivity(self):
+        prison_clerk = self.prison_clerks[0]
+        cashbook_client = Application.objects.get(client_id=CASHBOOK_OAUTH_CLIENT_ID)
+
+        original_username = prison_clerk.username
+        usernames = set()
+        while len(usernames) < settings.MTP_AUTH_LOCKOUT_COUNT:
+            usernames.add(random_case(original_username))
+
+        for _ in range(settings.MTP_AUTH_LOCKOUT_COUNT):
+            prison_clerk.username = usernames.pop()
             self.assertFalse(FailedLoginAttempt.objects.is_locked_out(prison_clerk, cashbook_client))
             self.fail_login(prison_clerk, cashbook_client)
 

@@ -75,7 +75,7 @@ class ScheduledCommandsTestCase(TestCase):
         run_commands.handle()
 
         from prison.models import PrisonerLocation
-        self.assertEqual(len(PrisonerLocation.objects.all()), 60)
+        self.assertEqual(PrisonerLocation.objects.count(), 60)
 
         from transaction.models import Transaction
-        self.assertEqual(len(Transaction.objects.all()), 70)
+        self.assertEqual(Transaction.objects.count(), 70)

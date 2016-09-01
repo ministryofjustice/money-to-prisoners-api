@@ -3,6 +3,7 @@ import logging
 from django.contrib.auth import get_user_model, user_logged_in
 from oauth2_provider.oauth2_validators import OAuth2Validator
 from oauthlib.oauth2 import OAuth2Error
+from rest_framework.validators import UniqueValidator
 
 from .models import ApplicationUserMapping, FailedLoginAttempt
 
@@ -21,7 +22,11 @@ class RestrictedClientError(OAuth2Error):
 
 class ApplicationRequestValidator(OAuth2Validator):
     def validate_user(self, username, password, client, request, *args, **kwargs):
-        user = get_user_model().objects.filter(username=username).first()
+        user_model = get_user_model()
+        try:
+            user = user_model.objects.get_by_natural_key(username)
+        except user_model.DoesNotExist:
+            user = None
         try:
             if user and FailedLoginAttempt.objects.is_locked_out(user, client):
                 logger.info('User "%s" is locked out' % username)
@@ -45,3 +50,9 @@ class ApplicationRequestValidator(OAuth2Validator):
 
         request.user = None
         return False
+
+
+class CaseInsensitiveUniqueValidator(UniqueValidator):
+    def filter_queryset(self, value, queryset):
+        filter_kwargs = {'%s__iexact' % self.field_name: value}
+        return queryset.filter(**filter_kwargs)

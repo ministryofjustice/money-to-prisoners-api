@@ -54,10 +54,10 @@ class CreateBatchViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         batches = Batch.objects.all()
-        self.assertEqual(len(batches), 1)
+        self.assertEqual(batches.count(), 1)
         self.assertEqual(batches[0].label, 'BAI2')
         self.assertEqual(batches[0].user, user)
-        self.assertEqual(len(batches[0].transactions.all()), len(test_transactions))
+        self.assertEqual(batches[0].transactions.count(), len(test_transactions))
         for transaction in batches[0].transactions.all():
             self.assertTrue(transaction in test_transactions)
 
@@ -140,11 +140,8 @@ class UpdateBatchViewTestCase(AuthTestCaseMixin, APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         batches = Batch.objects.all()
-        self.assertEqual(len(batches), 1)
-        self.assertEqual(
-            len(batches[0].transactions.all()),
-            len(initial_transactions)
-        )
+        self.assertEqual(batches.count(), 1)
+        self.assertEqual(batches[0].transactions.count(), len(initial_transactions))
         for transaction in batches[0].transactions.all():
             self.assertTrue(transaction in initial_transactions and
                             transaction not in new_transactions)
@@ -167,13 +164,11 @@ class UpdateBatchViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         batches = Batch.objects.all()
-        self.assertEqual(len(batches), 1)
+        self.assertEqual(batches.count(), 1)
         self.assertEqual(batches[0].label, 'BAI2')
         self.assertEqual(batches[0].user, user)
-        self.assertEqual(
-            len(batches[0].transactions.all()),
-            len(initial_transactions) + len(new_transactions)
-        )
+        self.assertEqual(batches[0].transactions.count(),
+                         len(initial_transactions) + len(new_transactions))
         for transaction in batches[0].transactions.all():
             self.assertTrue(transaction in initial_transactions or
                             transaction in new_transactions)
@@ -293,7 +288,7 @@ class CreateBalanceTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         balances = Balance.objects.all()
-        self.assertEqual(len(balances), 1)
+        self.assertEqual(balances.count(), 1)
         self.assertEqual(balances[0].closing_balance, 20000)
         self.assertEqual(balances[0].date, date.today())
 
@@ -321,7 +316,7 @@ class CreateBalanceTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         balances = Balance.objects.all()
-        self.assertEqual(len(balances), 1)
+        self.assertEqual(balances.count(), 1)
         self.assertEqual(balances[0].closing_balance, 20000)
         self.assertEqual(balances[0].date, date.today())
 

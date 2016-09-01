@@ -22,7 +22,7 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
     fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
     def setUp(self):
-        super(PrisonerLocationViewTestCase, self).setUp()
+        super().setUp()
         (self.prison_clerks, self.users,
          self.bank_admins, self.refund_bank_admins,
          self.send_money_users, _) = make_test_users()

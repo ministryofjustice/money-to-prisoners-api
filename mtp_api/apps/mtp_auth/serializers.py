@@ -9,6 +9,7 @@ from rest_framework.validators import UniqueValidator
 from .models import (
     PrisonUserMapping, ApplicationGroupMapping, ApplicationUserMapping
 )
+from .validators import CaseInsensitiveUniqueValidator
 
 User = get_user_model()
 
@@ -31,13 +32,22 @@ class UserSerializer(serializers.ModelSerializer):
             'permissions',
             'user_admin',
         )
+        extra_kwargs = {
+            'first_name': {'required': True},
+            'last_name': {'required': True},
+            'email': {'required': True},
+        }
 
     def get_fields(self):
         fields = super().get_fields()
 
-        for field_name in ['first_name', 'last_name', 'email']:
-            field = fields[field_name]
-            field.required = True
+        username_validators = list(filter(lambda validator: not isinstance(validator, UniqueValidator),
+                                          fields['username'].validators))
+        username_validators.append(
+            CaseInsensitiveUniqueValidator(User.objects.all(),
+                                           User._meta.get_field('username').error_messages['unique'])
+        )
+        fields['username'].validators = username_validators
 
         fields['email'].validators.append(UniqueValidator(
             User.objects.all(),

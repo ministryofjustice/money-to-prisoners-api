@@ -1,3 +1,5 @@
+import contextlib
+import logging
 from unittest import mock
 
 from django.contrib.auth import get_user_model
@@ -17,6 +19,15 @@ from mtp_auth.tests.mommy_recipes import (
     create_security_staff_user
 )
 from prison.models import Prison
+
+
+@contextlib.contextmanager
+def quieten_mtp_logger(level=logging.ERROR):
+    logger = logging.getLogger('mtp')
+    old_level = logger.level
+    logger.setLevel(level)
+    yield
+    logger.setLevel(old_level)
 
 
 class MockModelTimestamps:
@@ -98,8 +109,9 @@ def make_test_users(clerks_per_prison=2):
         for _ in range(clerks_per_prison):
             prison_clerks.append(create_prison_clerk(prisons=[prison]))
 
-    # prisoner location admin
+    # noms-ops users
     prisoner_location_admins = [create_prisoner_location_admin()]
+    security_users = [create_security_staff_user(prisons=list(Prison.objects.all()))]
 
     # bank admin
     bank_admins = [create_bank_admin()]
@@ -107,8 +119,6 @@ def make_test_users(clerks_per_prison=2):
 
     # send money shared user
     send_money_users = [create_send_money_shared_user()]
-
-    security_users = [create_security_staff_user(prisons=list(Prison.objects.all()))]
 
     # create test oauth applications
     make_applications()

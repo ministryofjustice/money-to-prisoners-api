@@ -155,15 +155,14 @@ class DateFilter(BaseDateFilter):
         return _('Search')
 
 
-class ExactSearchFilter(FormFilter):
-
+class SearchFilter(FormFilter):
     def get_form_fields(self):
         return [
-            (self.field_path, forms.CharField())
+            ('%s__icontains' % self.field_path, forms.CharField())
         ]
 
     def get_submit_label(self):
-        return _('Exact %(fieldname)s') % {'fieldname': self.title}
+        return _('Search %(fieldname)s') % {'fieldname': self.title}
 
 
 class RelatedAnyFieldListFilter(admin.RelatedFieldListFilter):
