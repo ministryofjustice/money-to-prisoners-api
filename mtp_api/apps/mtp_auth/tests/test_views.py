@@ -210,8 +210,8 @@ class ListUserTestCase(APITestCase, AuthTestCaseMixin):
             applicationusermapping__application__client_id='bank-admin'
         )
         active_queryset = queryset.filter(is_active=True)
-        self.assertNotEqual(len(queryset), len(returned_users))
-        self.assertEqual(len(active_queryset), len(returned_users))
+        self.assertNotEqual(queryset.count(), len(returned_users))
+        self.assertEqual(active_queryset.count(), len(returned_users))
 
 
 class CreateUserTestCase(APITestCase, AuthTestCaseMixin):
@@ -243,7 +243,7 @@ class CreateUserTestCase(APITestCase, AuthTestCaseMixin):
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(bank_admins[0])
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(len(User.objects.filter(username=user_data['username'])), 0)
+        self.assertEqual(User.objects.filter(username=user_data['username']).count(), 0)
 
     @override_settings(ENVIRONMENT='prod')
     def _check_create_user_succeeds(self, requester, user_data, client_id, groups):
@@ -373,7 +373,7 @@ class CreateUserTestCase(APITestCase, AuthTestCaseMixin):
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.cashbook_uas[0])
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(len(User.objects.filter(username=user_data['username'])), 0)
+        self.assertEqual(User.objects.filter(username=user_data['username']).count(), 0)
 
     def test_cannot_create_with_missing_fields(self):
         user_data = {
@@ -393,7 +393,7 @@ class CreateUserTestCase(APITestCase, AuthTestCaseMixin):
                 HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.cashbook_uas[0])
             )
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-            self.assertEqual(len(User.objects.filter(username=data['username'])), 0)
+            self.assertEqual(User.objects.filter(username=data['username']).count(), 0)
 
 
 class UpdateUserTestCase(APITestCase, AuthTestCaseMixin):
