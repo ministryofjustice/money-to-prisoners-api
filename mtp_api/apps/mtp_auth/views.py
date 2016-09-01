@@ -26,7 +26,8 @@ logger = logging.getLogger('mtp')
 class UserViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin,
                   mixins.UpdateModelMixin, mixins.CreateModelMixin,
                   mixins.DestroyModelMixin, viewsets.GenericViewSet):
-    lookup_field = 'username'
+    lookup_field = 'username__iexact'
+    lookup_url_kwarg = 'username'
     lookup_value_regex = '[^/]+'
 
     queryset = User.objects.none()
@@ -57,9 +58,9 @@ class UserViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin,
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
         lookup = self.kwargs.get(lookup_url_kwarg, None)
 
-        if (lookup == self.request.user.username or
+        if (lookup.lower() == self.request.user.username.lower() or
                 self.request.user.has_perm('auth.change_user')):
-            return super(UserViewSet, self).get_object(*args, **kwargs)
+            return super().get_object(*args, **kwargs)
         else:
             raise Http404()
 
@@ -127,7 +128,6 @@ class ChangePasswordView(generics.GenericAPIView):
 
 class ResetPasswordView(generics.GenericAPIView):
     permission_classes = ()
-    queryset = User.objects.all()
     serializer_class = ResetPasswordSerializer
 
     error_messages = {
@@ -166,7 +166,7 @@ class ResetPasswordView(generics.GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             try:
-                user = self.queryset.get(username=serializer.validated_data['username'])
+                user = User.objects.get_by_natural_key(serializer.validated_data['username'])
             except User.DoesNotExist:
                 return self.failure_response('not_found', field='username')
             if user.is_locked_out:

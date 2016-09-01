@@ -9,7 +9,7 @@ from django.utils.translation import gettext_lazy as _
 from oauth2_provider.admin import RawIDAdmin
 from oauth2_provider.models import Grant, AccessToken, RefreshToken, get_application_model
 
-from mtp_auth.forms import RestrictedUserChangeForm
+from mtp_auth.forms import RestrictedUserCreationForm, RestrictedUserChangeForm
 from mtp_auth.models import ApplicationGroupMapping, ApplicationUserMapping, FailedLoginAttempt, PrisonUserMapping
 
 User = get_user_model()
@@ -82,6 +82,7 @@ class UserAdmin(DjangoUserAdmin):
         'applicationusermapping__application'
     )
     actions = DjangoUserAdmin.actions + ['remove_account_lockouts']
+    add_form = RestrictedUserCreationForm
     form = RestrictedUserChangeForm
 
     def remove_account_lockouts(self, request, instances):
