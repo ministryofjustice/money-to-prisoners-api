@@ -67,7 +67,7 @@ class GetUserTestCase(APITestCase, AuthTestCaseMixin):
         """
         logged_in_user = self.prison_clerks[0]
 
-        for user in self.prison_clerks[1:]:
+        for user in self.prison_clerks[1:] + self.prisoner_location_admins:
             url = self._get_url(user.username)
             response = self.client.get(
                 url, format='json',
