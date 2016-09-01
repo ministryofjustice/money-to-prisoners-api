@@ -18,7 +18,7 @@ class BaseTransactionViewTestCase(AuthTestCaseMixin, APITestCase):
     transaction_batch = 50
 
     def setUp(self):
-        super(BaseTransactionViewTestCase, self).setUp()
+        super().setUp()
         (
             self.prison_clerks, self.prisoner_location_admins,
             self.bank_admins, self.refund_bank_admins,

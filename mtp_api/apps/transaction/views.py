@@ -70,8 +70,7 @@ class TransactionView(mixins.CreateModelMixin, mixins.UpdateModelMixin,
 
     def get_serializer(self, *args, **kwargs):
         many = kwargs.pop('many', True)
-        return super(TransactionView, self).get_serializer(many=many,
-                                                           *args, **kwargs)
+        return super().get_serializer(many=many, *args, **kwargs)
 
     def get_object(self):
         """Return dummy object to allow for mass patching"""

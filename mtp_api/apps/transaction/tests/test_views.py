@@ -26,7 +26,7 @@ class CreateTransactionsTestCase(
     ENDPOINT_VERB = 'post'
 
     def setUp(self):
-        super(CreateTransactionsTestCase, self).setUp()
+        super().setUp()
 
         # delete all transactions and logs
         Transaction.objects.all().delete()
@@ -232,7 +232,7 @@ class UpdateRefundTransactionsTestCase(
     ENDPOINT_VERB = 'patch'
 
     def setUp(self):
-        super(UpdateRefundTransactionsTestCase, self).setUp()
+        super().setUp()
 
         # delete all transactions and logs
         Transaction.objects.all().delete()

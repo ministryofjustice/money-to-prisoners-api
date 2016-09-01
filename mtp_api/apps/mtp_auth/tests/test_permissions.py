@@ -12,7 +12,7 @@ class TestClientIDPermissions(ClientIDPermissions):
 class ClientIDPermissionsTestCase(TestCase):
 
     def setUp(self):
-        super(ClientIDPermissionsTestCase, self).setUp()
+        super().setUp()
         self.permissions = TestClientIDPermissions()
         self.request = mock.MagicMock()
         self.view = mock.MagicMock()

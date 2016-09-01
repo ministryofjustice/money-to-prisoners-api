@@ -1216,7 +1216,7 @@ class LockCreditTestCase(
         return reverse('credit-lock')
 
     def setUp(self):
-        super(LockCreditTestCase, self).setUp()
+        super().setUp()
 
         self.logged_in_user = self.prison_clerks[0]
         self.logged_in_user.prisonusermapping.prisons.add(*self.prisons)

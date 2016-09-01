@@ -30,7 +30,7 @@ class BaseUpdatePrisonsTestCase(TestCase):
         }
 
     def setUp(self):
-        super(BaseUpdatePrisonsTestCase, self).setUp()
+        super().setUp()
         make_test_users()
 
         self.credit = Credit.objects.create(
@@ -41,7 +41,7 @@ class BaseUpdatePrisonsTestCase(TestCase):
 class UpdatePrisonsOnAvailableTransactionsTestCase(BaseUpdatePrisonsTestCase):
 
     def _get_credit_data(self):
-        data = super(UpdatePrisonsOnAvailableTransactionsTestCase, self)._get_credit_data()
+        data = super()._get_credit_data()
         data.update({
             'prison': Prison.objects.first(),
             'prisoner_number': random_prisoner_number(),
@@ -84,7 +84,7 @@ class UpdatePrisonsOnAvailableTransactionsTestCase(BaseUpdatePrisonsTestCase):
 class UpdatePrisonsOnLockedTransactionsTestCase(BaseUpdatePrisonsTestCase):
 
     def _get_credit_data(self):
-        data = super(UpdatePrisonsOnLockedTransactionsTestCase, self)._get_credit_data()
+        data = super()._get_credit_data()
         data.update({
             'prison': Prison.objects.first(),
             'prisoner_name': random_prisoner_name(),
@@ -120,7 +120,7 @@ class UpdatePrisonsOnLockedTransactionsTestCase(BaseUpdatePrisonsTestCase):
 class UpdatePrisonsOnCreditedTransactionsTestcase(BaseUpdatePrisonsTestCase):
 
     def _get_credit_data(self):
-        data = super(UpdatePrisonsOnCreditedTransactionsTestcase, self)._get_credit_data()
+        data = super()._get_credit_data()
         data.update({
             'prison': Prison.objects.first(),
             'prisoner_name': random_prisoner_name(),
@@ -156,7 +156,7 @@ class UpdatePrisonsOnCreditedTransactionsTestcase(BaseUpdatePrisonsTestCase):
 class UpdatePrisonsOnRefundedTransactionsTestcase(BaseUpdatePrisonsTestCase):
 
     def _get_credit_data(self):
-        data = super(UpdatePrisonsOnRefundedTransactionsTestcase, self)._get_credit_data()
+        data = super()._get_credit_data()
         data.update({
             'prison': None,
             'prisoner_number': random_prisoner_number(),
@@ -192,7 +192,7 @@ class UpdatePrisonsOnRefundedTransactionsTestcase(BaseUpdatePrisonsTestCase):
 class UpdatePrisonsOnRefundPendingTransactionsTestcase(BaseUpdatePrisonsTestCase):
 
     def _get_credit_data(self):
-        data = super(UpdatePrisonsOnRefundPendingTransactionsTestcase, self)._get_credit_data()
+        data = super()._get_credit_data()
         data.update({
             'prison': None,
             'prisoner_number': random_prisoner_number(),
@@ -234,7 +234,7 @@ class UpdatePrisonsOnRefundPendingTransactionsTestcase(BaseUpdatePrisonsTestCase
 class UpdatePrisonsOnReconciledTransactionsTestcase(BaseUpdatePrisonsTestCase):
 
     def _get_credit_data(self):
-        data = super(UpdatePrisonsOnReconciledTransactionsTestcase, self)._get_credit_data()
+        data = super()._get_credit_data()
         data.update({
             'prison': Prison.objects.first(),
             'prisoner_name': random_prisoner_name(),

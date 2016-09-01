@@ -36,7 +36,7 @@ class GetUserTestCase(APITestCase, AuthTestCaseMixin):
     ]
 
     def setUp(self):
-        super(GetUserTestCase, self).setUp()
+        super().setUp()
         (
             self.prison_clerks, self.prisoner_location_admins,
             self.bank_admins, self.refund_bank_admins,
@@ -624,7 +624,7 @@ class UserApplicationValidationTestCase(APITestCase):
     fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
     def setUp(self):
-        super(UserApplicationValidationTestCase, self).setUp()
+        super().setUp()
         self.prison_clerks, self.users, self.bank_admins, _, _, _ = make_test_users()
 
     def _create_basic_auth(self, client_id, client_secret):
