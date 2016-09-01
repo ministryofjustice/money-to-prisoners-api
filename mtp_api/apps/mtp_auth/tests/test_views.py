@@ -54,7 +54,7 @@ class GetUserTestCase(APITestCase, AuthTestCaseMixin):
         return reverse('user-detail', kwargs={'username': username})
 
     def test_cannot_access_data_when_not_logged_in(self):
-        url = self._get_url('me')
+        url = self._get_url(self.prison_clerks[0].username)
         response = self.client.get(url, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
