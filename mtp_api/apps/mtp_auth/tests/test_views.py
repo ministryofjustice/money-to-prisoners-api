@@ -166,15 +166,13 @@ class ListUserTestCase(APITestCase, AuthTestCaseMixin):
         response = self.client.get(
             self.get_url(),
             format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(requester)
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(requester, client_id=client_id)
         )
 
         for user_item in response.data['results']:
             user = User.objects.get(username=user_item['username'])
-            self.assertTrue(
-                client_id in user.applicationusermapping_set.all()
-                .values_list('application__client_id', flat=True)
-            )
+            self.assertIn(client_id,
+                          user.applicationusermapping_set.values_list('application__client_id', flat=True))
             if hasattr(requester, 'prisonusermapping'):
                 matching_prison = False
                 for prison in requester.prisonusermapping.prisons.all():
