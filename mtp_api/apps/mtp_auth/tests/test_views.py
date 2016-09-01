@@ -249,13 +249,19 @@ class CreateUserTestCase(APITestCase, AuthTestCaseMixin):
 
     @override_settings(ENVIRONMENT='prod')
     def _check_create_user_succeeds(self, requester, user_data, client_id, groups):
-        self.client.post(
+        response = self.client.post(
             self.get_url(),
             format='json',
             data=user_data,
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(requester,
                                                                     client_id=client_id)
         )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(all(
+            user_data[key] == value
+            for key, value in response.json().items()
+            if key in ('username', 'first_name', 'last_name', 'email')
+        ))
 
         make_user_admin = user_data.pop('user_admin', False)
         new_user = User.objects.get(**user_data)
