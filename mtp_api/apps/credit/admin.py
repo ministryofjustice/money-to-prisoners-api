@@ -73,7 +73,7 @@ class StatusFilter(admin.SimpleListFilter):
 class CreditAdmin(admin.ModelAdmin):
     list_display = (
         'prisoner_name', 'prison', 'prisoner_number', 'prisoner_dob',
-        'formatted_amount', 'source', 'received_at', 'status'
+        'formatted_amount', 'received_at', 'formatted_source', 'formatted_status'
     )
     ordering = ('-received_at',)
     date_hierarchy = 'received_at'
@@ -97,6 +97,22 @@ class CreditAdmin(admin.ModelAdmin):
         return format_amount(instance.amount)
 
     formatted_amount.short_description = _('Amount')
+
+    def formatted_source(self, instance):
+        value = instance.source
+        if CREDIT_SOURCE.has_value(value):
+            return CREDIT_SOURCE.for_value(value).display
+        return value
+
+    formatted_source.short_description = _('Source')
+
+    def formatted_status(self, instance):
+        value = instance.status
+        if CREDIT_STATUS.has_value(value):
+            return CREDIT_STATUS.for_value(value).display
+        return value
+
+    formatted_status.short_description = _('Status')
 
     def display_total_amount(self, request, queryset):
         total = queryset.aggregate(Sum('amount'))['amount__sum']
