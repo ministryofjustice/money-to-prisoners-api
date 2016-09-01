@@ -21,8 +21,9 @@ from core import dictfetchall
 from core.filters import BlankStringFilter, StatusChoiceFilter
 from mtp_auth.models import PrisonUserMapping
 from mtp_auth.permissions import (
-    CashbookClientIDPermissions, NomsOpsCashbookClientIDPermissions,
-    NomsOpsClientIDPermissions
+    CashbookClientIDPermissions, NomsOpsClientIDPermissions,
+    get_client_permissions_class, CASHBOOK_OAUTH_CLIENT_ID,
+    NOMS_OPS_OAUTH_CLIENT_ID, BANK_ADMIN_OAUTH_CLIENT_ID
 )
 from prison.models import Prison
 from transaction.models import Transaction
@@ -165,8 +166,9 @@ class GetCredits(CreditViewMixin, generics.ListAPIView):
     action = 'list'
 
     permission_classes = (
-        IsAuthenticated, NomsOpsCashbookClientIDPermissions,
-        CreditPermissions
+        IsAuthenticated, CreditPermissions, get_client_permissions_class(
+            CASHBOOK_OAUTH_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID
+        )
     )
 
     def get_serializer_class(self):

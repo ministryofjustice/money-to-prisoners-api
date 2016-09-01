@@ -29,13 +29,17 @@ class ClientIDPermissions(BasePermission):
         return self.client_id == request.auth.application.client_id
 
 
+def get_client_permissions_class(*client_ids):
+    return type(
+        'CustomClientIDPermissions',
+        (ClientIDPermissions,),
+        {'client_id': tuple(client_ids)}
+    )
+
+
 class AnyAdminClientIDPermissions(ClientIDPermissions):
     client_id = (CASHBOOK_OAUTH_CLIENT_ID, BANK_ADMIN_OAUTH_CLIENT_ID,
                  NOMS_OPS_OAUTH_CLIENT_ID)
-
-
-class NomsOpsCashbookClientIDPermissions(ClientIDPermissions):
-    client_id = (CASHBOOK_OAUTH_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID)
 
 
 class CashbookClientIDPermissions(ClientIDPermissions):

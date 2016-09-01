@@ -40,7 +40,6 @@ class TransactionListFilter(django_filters.FilterSet):
 class TransactionView(mixins.CreateModelMixin, mixins.UpdateModelMixin,
                       mixins.ListModelMixin, viewsets.GenericViewSet):
 
-    queryset = Transaction.objects.all()
     filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter)
     filter_class = TransactionListFilter
     ordering_fields = ('received_at',)
@@ -48,6 +47,10 @@ class TransactionView(mixins.CreateModelMixin, mixins.UpdateModelMixin,
         IsAuthenticated, BankAdminClientIDPermissions,
         TransactionPermissions
     )
+
+    def get_queryset(self):
+        queryset = Transaction.objects.all()
+        return queryset.select_related('credit')
 
     def patch_processed(self, request, *args, **kwargs):
         try:
