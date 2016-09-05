@@ -1,4 +1,6 @@
+import logging
 from datetime import timedelta
+from time import perf_counter as pc
 
 from crontab import CronTab
 from django.core.exceptions import ValidationError
@@ -7,6 +9,8 @@ from django.db import models
 from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+
+logger = logging.getLogger('mtp')
 
 
 def validate_command_name(value):
@@ -28,12 +32,15 @@ class ScheduledCommand(models.Model):
     next_execution = models.DateTimeField(null=True, blank=True)
 
     def get_args(self):
-        return self.arg_string.split(' ')
+        return self.arg_string.split(' ') if self.arg_string else []
 
     def run(self):
+        logger.info('Running scheduled command "%s"' % (self))
         self.update_next_execution()
         self.save()
+        start = pc()
         call_command(self.name, *self.get_args())
+        logger.info('Completed scheduled command "%s" in %ss' % (self, pc() - start))
 
     def is_scheduled(self):
         return timezone.now() >= self.next_execution
