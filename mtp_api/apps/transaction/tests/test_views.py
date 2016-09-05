@@ -5,7 +5,6 @@ from django.core.urlresolvers import reverse
 from django.conf import settings
 from rest_framework import status as http_status
 
-from account.models import Batch
 from credit.constants import LOG_ACTIONS
 from credit.models import Credit, Log
 from transaction.models import Transaction
@@ -482,112 +481,6 @@ class GetTransactionsAsRefundBankAdminTestCase(GetTransactionsAsBankAdminTestCas
 
     def _assert_hidden_fields_absent(self, results):
         pass
-
-
-class GetTransactionsRelatedToBatchesTestCase(GetTransactionsBaseTestCase):
-
-    def test_get_list_for_batch(self):
-        url = self._get_url()
-        user = self._get_authorised_user()
-
-        adi_batch = Batch()
-        adi_batch.label = 'ADIREFUND'
-        adi_batch.save()
-
-        adi_batch.transactions = list(Transaction.objects.filter(
-            Transaction.STATUS_LOOKUP['refundable']))
-        adi_batch.save()
-
-        response = self.client.get(
-            url, {'batch': adi_batch.id, 'limit': 1000}, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
-        )
-        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
-
-        results = response.data['results']
-        self.assertEqual(len(results), len(adi_batch.transactions.all()))
-        for trans in results:
-            self.assertTrue(trans['id'] in [t.id for t in adi_batch.transactions.all()])
-
-    def get_list_for_invalid_batch_fails(self):
-        url = self._get_url()
-        user = self._get_authorised_user()
-
-        response = self.client.get(
-            url, {'batch': 3, 'limit': 1000}, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
-        )
-        self.assertEqual(response.status_code, http_status.HTTP_400_BAD_REQUEST)
-
-    def test_get_list_excluding_label(self):
-        """
-        Tests that only transactions not attached to a batch of the given type
-        will be returned.
-        """
-        url = self._get_url()
-        user = self._get_authorised_user()
-
-        adi_batch = Batch()
-        adi_batch.label = 'ADIREFUND'
-        adi_batch.save()
-
-        refunded_trans = list(Transaction.objects.filter(
-            Transaction.STATUS_LOOKUP['refundable']))
-        attached = [a for (i, a) in enumerate(refunded_trans) if i % 2]
-        unattached = [a for (i, a) in enumerate(refunded_trans) if not i % 2]
-        self.assertTrue(len(attached) >= 1)
-        self.assertTrue(len(unattached) >= 1)
-
-        adi_batch.transactions = attached
-        adi_batch.save()
-
-        response = self.client.get(
-            url, {'status': 'refundable',
-                  'exclude_batch_label': 'ADIREFUND',
-                  'limit': 1000}, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
-        )
-        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
-
-        results = response.data['results']
-        self.assertEqual(len(results), len(unattached))
-
-        attached_ids = [t.id for t in attached]
-        unattached_ids = [t.id for t in unattached]
-        for trans in results:
-            self.assertTrue(trans['id'] not in attached_ids)
-            self.assertTrue(trans['id'] in unattached_ids)
-
-    def test_get_list_excluding_invalid_label_includes_all(self):
-        url = self._get_url()
-        user = self._get_authorised_user()
-
-        adi_batch = Batch()
-        adi_batch.label = 'ADIREFUND'
-        adi_batch.save()
-
-        refunded_trans = list(Transaction.objects.filter(
-            Transaction.STATUS_LOOKUP['refundable']))
-        attached = [a for (i, a) in enumerate(refunded_trans) if i % 2]
-        self.assertTrue(len(attached) >= 1)
-
-        adi_batch.transactions = attached
-        adi_batch.save()
-
-        response = self.client.get(
-            url, {'status': 'refundable',
-                  'exclude_batch_label': 'WIBBLE',
-                  'limit': 1000}, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
-        )
-        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
-
-        results = response.data['results']
-        self.assertEqual(len(results), len(refunded_trans))
-
-        result_ids = [t['id'] for t in results]
-        for trans in refunded_trans:
-            self.assertTrue(trans.id in result_ids)
 
 
 class GetTransactionsFilteredByDateTestCase(GetTransactionsBaseTestCase):
