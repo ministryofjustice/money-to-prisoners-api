@@ -28,7 +28,7 @@ class ScheduledCommand(models.Model):
     next_execution = models.DateTimeField(null=True, blank=True)
 
     def get_args(self):
-        return self.arg_string.split(' ')
+        return self.arg_string.split(' ') if self.arg_string else []
 
     def run(self):
         self.update_next_execution()
