@@ -8,7 +8,7 @@ from mtp_auth.models import PrisonUserMapping
 from mtp_auth.permissions import (
     NomsOpsClientIDPermissions, SendMoneyClientIDPermissions
 )
-from prison.models import PrisonerLocation, Category, Population
+from prison.models import PrisonerLocation, Category, Population, Prison
 from prison.serializers import (
     PrisonerLocationSerializer, PrisonerValiditySerializer, PrisonSerializer,
     PopulationSerializer, CategorySerializer
@@ -73,10 +73,13 @@ class PrisonView(mixins.ListModelMixin, viewsets.GenericViewSet):
     serializer_class = PrisonSerializer
 
     def get_queryset(self):
-        return (
-            PrisonUserMapping.objects.get_prison_set_for_user(self.request.user)
-            .order_by('name')
-        )
+        if self.request.user.has_perm('credit.view_any_credit'):
+            return Prison.objects.all()
+        else:
+            return (
+                PrisonUserMapping.objects.get_prison_set_for_user(self.request.user)
+                .order_by('name')
+            )
 
 
 class PopulationView(mixins.ListModelMixin, viewsets.GenericViewSet):

@@ -164,12 +164,13 @@ class CreditListFilter(django_filters.FilterSet):
 class CreditViewMixin(object):
 
     def get_queryset(self):
-        queryset = Credit.objects.filter(
-            prison__in=PrisonUserMapping.objects.get_prison_set_for_user(self.request.user)
-        )
-        if self.request.query_params.get('include_invalid', '') == 'True':
-            queryset = queryset | Credit.objects.filter(prison=None)
-        return queryset
+        if self.request.user.has_perm('credit.view_any_credit'):
+            return Credit.objects.all()
+        else:
+            queryset = Credit.objects.filter(
+                prison__in=PrisonUserMapping.objects.get_prison_set_for_user(self.request.user)
+            )
+            return queryset
 
 
 class GetCredits(CreditViewMixin, generics.ListAPIView):
@@ -655,6 +656,9 @@ class PrisonerList(GroupedListAPIView):
     serializer_class = PrisonerSerializer
     ordering_fields = ('sender_count', 'credit_count', 'credit_total', 'prisoner_name', 'prisoner_number')
     default_ordering = ('-sender_count',)
+
+    def filter_queryset(self, queryset):
+        return super().filter_queryset(queryset.exclude(prison=None))
 
     def cache_grouped_credits(self, cursor, credit_table):
         table = 'credit_credit_prisoner_' + get_random_string(
