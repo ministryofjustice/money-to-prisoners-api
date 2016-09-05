@@ -121,6 +121,7 @@ class CreditListTestCase(
             'prison_category', 'prison.categories', filters, noop_checker
         )
         amount_pattern_checker = self._get_amount_pattern_checker(filters, noop_checker)
+        valid_checker = self._get_valid_checker(filters, noop_checker)
 
         if filters.get('include_invalid'):
             credits += self._get_invalid_credits()
@@ -141,7 +142,8 @@ class CreditListTestCase(
             prison_region_checker(c) and
             prison_population_checker(c) and
             prison_category_checker(c) and
-            amount_pattern_checker(c)
+            amount_pattern_checker(c) and
+            valid_checker(c)
         ]
 
         self.assertEqual(response.data['count'], len(expected_ids))
@@ -249,6 +251,20 @@ class CreditListTestCase(
         if 'amount' in filters:
             checkers.append(lambda c: c.amount == int(filters['amount']))
         return lambda c: all([checker(c) for checker in checkers])
+
+    def _get_valid_checker(self, filters, noop_checker):
+        if 'valid' in filters:
+            def valid_checker(c):
+                return (
+                    self.STATUS_FILTERS[CREDIT_STATUS.AVAILABLE](c) or
+                    self.STATUS_FILTERS[CREDIT_STATUS.LOCKED](c) or
+                    self.STATUS_FILTERS[CREDIT_STATUS.CREDITED](c)
+                )
+            if filters['valid'] in ('true', 'True', 1, True):
+                return valid_checker
+            else:
+                return lambda c: not valid_checker(c)
+        return noop_checker
 
 
 class CreditListWithDefaultsTestCase(CreditListTestCase):
@@ -505,6 +521,19 @@ class CreditListWithDefaultStatusAndPrisonTestCase(CreditListTestCase):
         """
         self._test_response_with_filters(filters={
             'user': self.prison_clerks[1].pk
+        })
+
+
+class CreditListWithValidFilterTestCase(CreditListTestCase):
+
+    def test_filter_by_invalidity(self):
+        self._test_response_with_filters(filters={
+            'valid': 'true'
+        })
+
+    def test_filter_by_validity(self):
+        self._test_response_with_filters(filters={
+            'valid': 'false'
         })
 
 

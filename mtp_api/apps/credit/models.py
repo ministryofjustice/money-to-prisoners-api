@@ -5,6 +5,7 @@ from django.db import models
 from django.db.models import Q
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils import timezone
 from model_utils.models import TimeStampedModel
 
 from credit.constants import LOG_ACTIONS, CREDIT_RESOLUTION, CREDIT_STATUS, CREDIT_SOURCE
@@ -205,6 +206,13 @@ class Credit(TimeStampedModel):
     @property
     def sender_roll_number(self):
         return self.transaction.sender_roll_number if hasattr(self, 'transaction') else None
+
+    @property
+    def reconciliation_code(self):
+        if hasattr(self, 'transaction'):
+            return self.transaction.ref_code
+        elif hasattr(self, 'payment'):
+            return 'Card payment'
 
     @property
     def credited_at(self):

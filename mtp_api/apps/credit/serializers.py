@@ -30,6 +30,7 @@ class CreditSerializer(serializers.ModelSerializer):
     source = serializers.CharField(read_only=True)
     intended_recipient = serializers.CharField(read_only=True)
     anonymous = serializers.SerializerMethodField()
+    reconciliation_code = serializers.CharField(read_only=True)
 
     class Meta:
         model = Credit
@@ -49,6 +50,7 @@ class CreditSerializer(serializers.ModelSerializer):
             'source',
             'intended_recipient',
             'anonymous',
+            'reconciliation_code',
         )
 
     def get_anonymous(self, obj):

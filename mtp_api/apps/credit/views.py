@@ -103,9 +103,23 @@ class MultipleValueFilter(django_filters.MultipleChoiceFilter):
     field_class = MultipleValueField
 
 
+class ValidCreditFilter(django_filters.BooleanFilter):
+    def filter(self, queryset, value):
+        valid_query = (
+            Credit.STATUS_LOOKUP[CREDIT_STATUS.AVAILABLE] |
+            Credit.STATUS_LOOKUP[CREDIT_STATUS.LOCKED] |
+            Credit.STATUS_LOOKUP[CREDIT_STATUS.CREDITED]
+        )
+        if value:
+            return queryset.filter(valid_query)
+        else:
+            return queryset.filter(~valid_query)
+
+
 class CreditListFilter(django_filters.FilterSet):
     status = StatusChoiceFilter(choices=CREDIT_STATUS.choices)
     user = django_filters.ModelChoiceFilter(name='owner', queryset=User.objects.all())
+    valid = ValidCreditFilter(widget=django_filters.widgets.BooleanWidget)
 
     prisoner_name = django_filters.CharFilter(name='prisoner_name', lookup_expr='icontains')
     prison = django_filters.ModelMultipleChoiceFilter(queryset=Prison.objects.all())
@@ -167,9 +181,13 @@ class GetCredits(CreditViewMixin, generics.ListAPIView):
 
     permission_classes = (
         IsAuthenticated, CreditPermissions, get_client_permissions_class(
-            CASHBOOK_OAUTH_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID
+            CASHBOOK_OAUTH_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID,
+            BANK_ADMIN_OAUTH_CLIENT_ID
         )
     )
+
+    def get_queryset(self):
+        return super().get_queryset().select_related('transaction').select_related('payment')
 
     def get_serializer_class(self):
         if self.request.user.has_perm(
