@@ -188,30 +188,21 @@ class CreditListTestCase(
                     continue
             raise ValueError('Cannot parse date %s' % date)
 
-        almost_one_day = datetime.timedelta(days=1) - datetime.timedelta(microseconds=1)
+        received_at__gte, received_at__lt = filters.get('received_at__gte'), filters.get('received_at__lt')
+        received_at__gte = parse_date(received_at__gte) if received_at__gte else None
+        received_at__lt = parse_date(received_at__lt) if received_at__lt else None
 
-        received_at_0, received_at_1 = filters.get('received_at_0'), filters.get('received_at_1')
-        received_at_0 = parse_date(received_at_0) if received_at_0 else None
-        received_at_1 = (parse_date(received_at_1) + almost_one_day) if received_at_1 else None
+        if received_at__gte:
+            received_at__gte = timezone.make_aware(received_at__gte)
+        if received_at__lt:
+            received_at__lt = timezone.make_aware(received_at__lt)
 
-        received_at = filters.get('received_at')
-        if received_at:
-            if received_at_0 or received_at_1:
-                raise NotImplementedError
-            received_at = parse_date(received_at)
-            received_at_0, received_at_1 = received_at, received_at + almost_one_day
-
-        if received_at_0:
-            received_at_0 = timezone.make_aware(received_at_0)
-        if received_at_1:
-            received_at_1 = timezone.make_aware(received_at_1)
-
-        if received_at_0 and received_at_1:
-            return lambda c: received_at_0 <= c.received_at <= received_at_1
-        elif received_at_0:
-            return lambda c: received_at_0 <= c.received_at
-        elif received_at_1:
-            return lambda c: c.received_at <= received_at_1
+        if received_at__gte and received_at__lt:
+            return lambda c: received_at__gte <= c.received_at < received_at__lt
+        elif received_at__gte:
+            return lambda c: received_at__gte <= c.received_at
+        elif received_at__lt:
+            return lambda c: c.received_at < received_at__lt
         return noop_checker
 
     def _get_search_checker(self, filters, noop_checker):
@@ -527,8 +518,8 @@ class CreditListWithReceivedAtFilterTestCase(CreditListTestCase):
         """
         yesterday = self._get_latest_date()
         self._test_response_with_filters(filters={
-            'received_at_0': self._format_date(yesterday),
-            'received_at_1': self._format_date(yesterday),
+            'received_at__gte': self._format_date(yesterday),
+            'received_at__lt': self._format_date(yesterday + datetime.timedelta(days=1)),
         })
 
     def test_filter_received_since_five_days_ago(self):
@@ -537,16 +528,16 @@ class CreditListWithReceivedAtFilterTestCase(CreditListTestCase):
         """
         five_days_ago = self._get_latest_date() - datetime.timedelta(days=5)
         self._test_response_with_filters(filters={
-            'received_at_0': self._format_date(five_days_ago),
+            'received_at__gte': self._format_date(five_days_ago),
         })
 
     def test_filter_received_until_five_days_ago(self):
         """
         Returns all credits received until 5 days ago
         """
-        five_days_ago = self._get_latest_date() - datetime.timedelta(days=5)
+        five_days_ago = self._get_latest_date() - datetime.timedelta(days=4)
         self._test_response_with_filters(filters={
-            'received_at_1': self._format_date(five_days_ago),
+            'received_at__lt': self._format_date(five_days_ago),
         })
 
 
@@ -829,9 +820,12 @@ class DateBasedPaginationTestCase(CreditListTestCase):
                                      'ordering': 'prisoner_number'})
 
     def test_invalid_pagination(self):
-        received_at_filter = self._get_random_credit_date().strftime('%Y-%m-%d')
+        received_at = self._get_random_credit_date()
+        received_at__gte = received_at.strftime('%Y-%m-%d')
+        received_at__lt = (received_at - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
         self._test_invalid_response({'page_by_date_field': 'prisoner_name',
-                                     'received_at': received_at_filter})
+                                     'received_at__gte': received_at__gte,
+                                     'received_at__lt': received_at__lt})
 
     def _get_random_credit(self):
         return random.choice(self.credits)
@@ -960,20 +954,23 @@ class DateBasedPaginationTestCase(CreditListTestCase):
             'page_count': self._get_page_count(credits),
             'credit_ids': self._get_page_of_credit_ids(credits),
         }
-        received_at_filter = received_at.strftime('%Y-%m-%d')
+        received_at__gte = received_at.strftime('%Y-%m-%d')
+        received_at__lt = (received_at + datetime.timedelta(days=1)).strftime('%Y-%m-%d')
         self._test_paginated_response(filters={'page_by_date_field': 'received_at',
                                                'ordering': '-received_at',
-                                               'received_at_0': received_at_filter,
-                                               'received_at_1': received_at_filter},
+                                               'received_at__gte': received_at__gte,
+                                               'received_at__lt': received_at__lt},
                                       **expected)
 
     def test_pagination_with_date_range(self):
-        received_at_0, received_at_1 = self._get_random_credit_date(), self._get_random_credit_date()
-        if received_at_0 > received_at_1:
-            received_at_0, received_at_1 = received_at_1, received_at_0
+        received_at__gte, received_at__lt = self._get_random_credit_date(), self._get_random_credit_date()
+        while received_at__lt == received_at__gte:
+            received_at__gte, received_at__lt = self._get_random_credit_date(), self._get_random_credit_date()
+        if received_at__gte > received_at__lt:
+            received_at__gte, received_at__lt = received_at__lt, received_at__gte
 
         def credit_filter(credit):
-            return received_at_0 <= self._get_date_of_credit(credit) <= received_at_1
+            return received_at__gte <= self._get_date_of_credit(credit) < received_at__lt
 
         credits = self._get_credits(credit_filter)
 
@@ -983,12 +980,12 @@ class DateBasedPaginationTestCase(CreditListTestCase):
             'page_count': self._get_page_count(credits),
             'credit_ids': self._get_page_of_credit_ids(credits),
         }
-        received_at_0_filter = received_at_0.strftime('%Y-%m-%d')
-        received_at_1_filter = received_at_1.strftime('%Y-%m-%d')
+        received_at__gte = received_at__gte.strftime('%Y-%m-%d')
+        received_at__lt = received_at__lt.strftime('%Y-%m-%d')
         self._test_paginated_response(filters={'page_by_date_field': 'received_at',
                                                'ordering': '-received_at',
-                                               'received_at_0': received_at_0_filter,
-                                               'received_at_1': received_at_1_filter},
+                                               'received_at__gte': received_at__gte,
+                                               'received_at__lt': received_at__lt},
                                       **expected)
 
     def test_pagination_beyond_page_1(self):
@@ -1729,8 +1726,8 @@ class SenderListTestCase(GroupedListTestCase):
         end_date = self._get_latest_date()
         start_date = end_date - datetime.timedelta(days=1)
         response = self._get_grouped_response(
-            received_at_0=format_date(start_date, 'Y-m-d'),
-            received_at_1=format_date(end_date, 'Y-m-d'),
+            received_at__gte=format_date(start_date, 'Y-m-d'),
+            received_at__lt=format_date(end_date, 'Y-m-d'),
             include_invalid=True,
         )
 
@@ -1838,8 +1835,8 @@ class PrisonerListTestCase(GroupedListTestCase):
         end_date = self._get_latest_date()
         start_date = end_date - datetime.timedelta(days=1)
         response = self._get_grouped_response(
-            received_at_0=format_date(start_date, 'Y-m-d'),
-            received_at_1=format_date(end_date, 'Y-m-d')
+            received_at__gte=format_date(start_date, 'Y-m-d'),
+            received_at__lt=format_date(end_date, 'Y-m-d')
         )
 
         for prisoner in response.data['results']:
