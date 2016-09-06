@@ -104,7 +104,6 @@ class MultipleValueFilter(django_filters.MultipleChoiceFilter):
 
 class CreditListFilter(django_filters.FilterSet):
     status = StatusChoiceFilter(choices=CREDIT_STATUS.choices)
-    received_at = django_filters.DateFromToRangeFilter()
     user = django_filters.ModelChoiceFilter(name='owner', queryset=User.objects.all())
 
     prisoner_name = django_filters.CharFilter(name='prisoner_name', lookup_expr='icontains')
@@ -142,7 +141,8 @@ class CreditListFilter(django_filters.FilterSet):
         model = Credit
         fields = {
             'prisoner_number': ['exact'],
-            'amount': ['exact', 'lte', 'gte']
+            'amount': ['exact', 'lte', 'gte'],
+            'received_at': ['lt', 'gte'],
         }
 
 
