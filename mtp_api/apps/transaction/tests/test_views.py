@@ -562,19 +562,23 @@ class ReconcileTransactionsTestCase(
         url = self._get_url()
         user = self._get_authorised_user()
 
+        start_date = (self._get_latest_date() - timedelta(days=2)).isoformat()
+        end_date = (self._get_latest_date() + timedelta(days=1)).isoformat()
+
         response = self.client.post(
-            url, {'date': self._get_latest_date().isoformat()}, format='json',
+            url, {'received_at__gte': start_date, 'received_at__lt': end_date},
+            format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
         self.assertEqual(response.status_code, http_status.HTTP_204_NO_CONTENT)
 
         yesterday = timezone.make_aware(datetime.combine(self._get_latest_date(), time.min))
-        transactions_yesterday = Transaction.objects.filter(
+        transactions_from_period = Transaction.objects.filter(
             received_at__lt=yesterday + timedelta(days=1),
-            received_at__gte=yesterday
+            received_at__gte=yesterday - timedelta(days=2)
         )
 
-        for transaction in transactions_yesterday:
+        for transaction in transactions_from_period:
             if transaction.credit:
                 self.assertTrue(transaction.credit.reconciled)
 
@@ -588,8 +592,12 @@ class ReconcileTransactionsTestCase(
         url = self._get_url()
         user = self._get_authorised_user()
 
+        start_date = self._get_latest_date().isoformat()
+        end_date = (self._get_latest_date() + timedelta(days=1)).isoformat()
+
         response = self.client.post(
-            url, {'date': self._get_latest_date().isoformat()}, format='json',
+            url, {'received_at__gte': start_date, 'received_at__lt': end_date},
+            format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
         self.assertEqual(response.status_code, http_status.HTTP_204_NO_CONTENT)
@@ -604,7 +612,8 @@ class ReconcileTransactionsTestCase(
         )
 
         response = self.client.post(
-            url, {'date': self._get_latest_date().isoformat()}, format='json',
+            url, {'received_at__gte': start_date, 'received_at__lt': end_date},
+            format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
         self.assertEqual(response.status_code, http_status.HTTP_204_NO_CONTENT)
@@ -633,7 +642,7 @@ class ReconcileTransactionsTestCase(
         user = self._get_authorised_user()
 
         response = self.client.post(
-            url, {'date': 'bleh'}, format='json',
+            url, {'start_date': 'bleh', 'end_date': 'yeeeah'}, format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
         self.assertEqual(response.status_code, http_status.HTTP_400_BAD_REQUEST)
@@ -642,8 +651,12 @@ class ReconcileTransactionsTestCase(
         url = self._get_url()
         user = self._get_authorised_user()
 
+        start_date = self._get_latest_date().isoformat()
+        end_date = (self._get_latest_date() + timedelta(days=1)).isoformat()
+
         response = self.client.post(
-            url, {'date': self._get_latest_date().isoformat()}, format='json',
+            url, {'received_at__gte': start_date, 'received_at__lt': end_date},
+            format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
         self.assertEqual(response.status_code, http_status.HTTP_204_NO_CONTENT)

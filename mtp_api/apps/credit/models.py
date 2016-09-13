@@ -5,7 +5,6 @@ from django.db import models
 from django.db.models import Q
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.utils import timezone
 from model_utils.models import TimeStampedModel
 
 from credit.constants import LOG_ACTIONS, CREDIT_RESOLUTION, CREDIT_STATUS, CREDIT_SOURCE

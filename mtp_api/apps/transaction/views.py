@@ -95,16 +95,20 @@ class ReconcileTransactionsView(generics.GenericAPIView):
     )
 
     def post(self, request, format=None):
-        date = request.data.get('date')
-        if not date:
-            return Response(data={'errors': _("'date' field is required")},
-                            status=400)
+        start_date = request.data.get('received_at__gte')
+        end_date = request.data.get('received_at__lt')
+        if not start_date or not end_date:
+            return Response(
+                data={'errors': _("'received_at__gte' and 'received_at__lt' fields are required")},
+                status=400
+            )
 
         try:
-            parsed_date = timezone.make_aware(datetime.strptime(date, '%Y-%m-%d'))
+            parsed_start_date = timezone.make_aware(datetime.strptime(start_date, '%Y-%m-%d'))
+            parsed_end_date = timezone.make_aware(datetime.strptime(end_date, '%Y-%m-%d'))
         except ValueError:
             return Response(data={'errors': _("Invalid date format")},
                             status=400)
 
-        Transaction.objects.reconcile(parsed_date, request.user)
+        Transaction.objects.reconcile(parsed_start_date, parsed_end_date, request.user)
         return Response(status=204)
