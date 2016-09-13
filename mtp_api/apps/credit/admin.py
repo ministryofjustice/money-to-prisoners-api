@@ -69,6 +69,27 @@ class StatusFilter(admin.SimpleListFilter):
                 raise IncorrectLookupParameters(e)
 
 
+class SourceFilter(admin.SimpleListFilter):
+    parameter_name = 'source'
+    title = _('source')
+
+    def lookups(self, request, model_admin):
+        return CREDIT_SOURCE
+
+    def queryset(self, request, queryset):
+        source = self.used_parameters.get(self.parameter_name)
+        if source in CREDIT_SOURCE:
+            try:
+                if source == CREDIT_SOURCE.BANK_TRANSFER:
+                    return queryset.filter(transaction__isnull=False)
+                elif source == CREDIT_SOURCE.ONLINE:
+                    return queryset.filter(payment__isnull=False)
+                else:
+                    return queryset.filter(payment__isnull=True, transaction__isnull=True)
+            except ValidationError as e:
+                raise IncorrectLookupParameters(e)
+
+
 @admin.register(Credit)
 class CreditAdmin(admin.ModelAdmin):
     list_display = (
@@ -81,6 +102,7 @@ class CreditAdmin(admin.ModelAdmin):
     readonly_fields = ('resolution', 'reconciled',)
     list_filter = (
         StatusFilter,
+        SourceFilter,
         'resolution',
         'reconciled',
         ('prison', RelatedAnyFieldListFilter),
