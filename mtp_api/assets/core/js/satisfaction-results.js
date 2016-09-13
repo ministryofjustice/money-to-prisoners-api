@@ -8,11 +8,8 @@ django.jQuery(function($) {
   var font = 'Roboto, "Lucida Grande", Verdana, Arial, sans-serif';
 
   google.charts.setOnLoadCallback(function() {
-    for(var question in satisfactionResultsData.questions) {
-      if (satisfactionResultsData.questions.hasOwnProperty(question)) {
-        question = satisfactionResultsData.questions[question];
-
-        var $chart = $('#satisfaction-results-chart-' + question.id),
+    $.each(satisfactionResultsData.questions, function(index, question) {
+        var $chart = $('#satisfaction-results-chart-' + index),
           chartData = new google.visualization.DataTable();
 
         for (var column in satisfactionResultsData.columns) {
@@ -22,9 +19,8 @@ django.jQuery(function($) {
         }
         chartData.addRows(question.rows);
 
-        drawTransactionReports($chart, chartData, [question.mean, null]);
-      }
-    }
+        drawTransactionReports($chart, chartData, question.means);
+    });
   });
 
   function drawTransactionReports($chart, chartData, means) {
@@ -72,6 +68,7 @@ django.jQuery(function($) {
         visibility: 'hidden'
       });
 
+      // draw coloured tabs
       for (i in colourScale) {
         if (colourScale.hasOwnProperty(i)) {
           var colour = colourScale[i];
@@ -80,7 +77,7 @@ django.jQuery(function($) {
           $rect.attr({
             x: barBounds.left,
             y: barBounds.top + barBounds.height + 2,
-            width: barBounds.width * 2,
+            width: barBounds.width * means.length,
             height: 3,
             fill: colour
           });
@@ -89,6 +86,7 @@ django.jQuery(function($) {
         }
       }
 
+      // draw mean bars
       for (i in means) {
         if (means.hasOwnProperty(i)) {
           var mean = means[i];
@@ -127,6 +125,7 @@ django.jQuery(function($) {
       }
       $svg.append($hideOnMouseover);
 
+      // add title to legend
       $title = $(document.createElementNS(svgNamespace, 'text'));
       $title.text($chart.data('title'));
       $title.attr({

@@ -8,14 +8,24 @@
         var satisfactionResultsData = {{ dashboard_module.get_chart_data }};
       </script>
       {% for question in dashboard_module.questions %}
-        <div id="satisfaction-results-chart-{{ question.id }}" class="satisfaction-results-chart" data-title="{{ question.title }}"></div>
+        <div id="satisfaction-results-chart-{{ forloop.counter0 }}" class="satisfaction-results-chart" data-title="{{ question.title }}"></div>
       {% endfor %}
     </td>
   </tr>
 {% endblock %}
 
 {% block module_tfoot %}
-  <tr>
-    <td><a href="{{ dashboard_module.survey_url }}">{% trans 'View complete survey results' %}</a></td>
-  </tr>
+  {% for survey in dashboard_module.surveys %}
+    {% if survey.url %}
+      <tr>
+        <td>
+          <a href="{{ survey.url }}" target="_blank">
+            {% blocktrans trimmed with title=survey.title %}
+              View complete results for {{ title }}
+            {% endblocktrans %}
+          </a>
+        </td>
+      </tr>
+    {% endif %}
+  {% endfor %}
 {% endblock %}
