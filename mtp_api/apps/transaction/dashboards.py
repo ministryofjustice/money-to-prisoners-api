@@ -246,6 +246,7 @@ class TransactionReport(DashboardModule):
         return format_amount(value, trim_empty_pence=True) or '—'
 
     def get_received_queryset(self):
+        # NB: includes administrative credits such as reimbursement of bank fees
         return self.queryset.filter(category=TRANSACTION_CATEGORY.CREDIT)
 
     @property

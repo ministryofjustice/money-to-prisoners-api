@@ -31,21 +31,9 @@ class Credit(TimeStampedModel):
 
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
 
-    class Meta:
-        ordering = ('received_at',)
-        get_latest_by = 'received_at'
-        permissions = (
-            ('view_credit', 'Can view credit'),
-            ('lock_credit', 'Can lock credit'),
-            ('unlock_credit', 'Can unlock credit'),
-            ('patch_credited_credit', 'Can patch credited credit'),
-        )
-        index_together = (
-            ('prisoner_number', 'prisoner_dob'),
-        )
-
     objects = CreditManager.from_queryset(CreditQuerySet)()
 
+    # NB: there are matching boolean fields or properties on the model instance for each
     STATUS_LOOKUP = {
         CREDIT_STATUS.LOCKED: (
             Q(owner__isnull=False) &
@@ -75,6 +63,19 @@ class Credit(TimeStampedModel):
             )
         ),
     }
+
+    class Meta:
+        ordering = ('received_at',)
+        get_latest_by = 'received_at'
+        permissions = (
+            ('view_credit', 'Can view credit'),
+            ('lock_credit', 'Can lock credit'),
+            ('unlock_credit', 'Can unlock credit'),
+            ('patch_credited_credit', 'Can patch credited credit'),
+        )
+        index_together = (
+            ('prisoner_number', 'prisoner_dob'),
+        )
 
     def __str__(self):
         return 'Credit {id}, {amount} {sender_name} > {prisoner_name}, {status}'.format(
