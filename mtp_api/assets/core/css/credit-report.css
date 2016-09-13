@@ -1,4 +1,4 @@
-.transaction_report-stat {
+.credit-stat {
   min-width: 20em;
   min-height: 6.8em;
   padding: 10px;
@@ -7,19 +7,19 @@
   font-size: 13px;
 }
 
-.transaction_report-stat strong {
+.credit-stat strong {
   display: block;
   font-size: 2.8em;
   line-height: normal;
   font-weight: bold;
 }
 
-.transaction_report-stat-valign {
+.credit-stat--valign {
   display: inline-block;
   vertical-align: text-top;
 }
 
-.transaction_report-stat-valign sub {
+.credit-stat--valign sub {
   display: block;
   margin-top: -0.2em;
   margin-bottom: 0.2em;
@@ -27,14 +27,14 @@
   color: #555;
 }
 
-.transaction_report-stat dl {
+.credit-stat dl {
   display: inline-block;
   overflow: hidden;
   margin: 0;
   padding: 0;
   min-width: 10em;
 }
-.transaction_report-stat dt {
+.credit-stat dt {
   float: left;
   clear: left;
   margin: 0;
@@ -42,7 +42,7 @@
   line-height: normal;
   font-weight: normal;
 }
-.transaction_report-stat dd {
+.credit-stat dd {
   float: left;
   margin: 0;
   padding: 0;
@@ -50,7 +50,7 @@
   font-weight: bold;
 }
 
-.transaction_report-stat dt + dd {
+.credit-stat dt + dd {
   padding-left: 10%;
 }
 
@@ -62,31 +62,31 @@
   font-size: 1.8em;
 }
 
-.mtp-dashboard-module-standout .transaction_report-stat {
+.mtp-dashboard-module-standout .credit-stat {
   background: #111;
   font-size: 2em;
 }
 
-.mtp-dashboard-module-standout .transaction_report-stat strong {
+.mtp-dashboard-module-standout .credit-stat strong {
   font-size: 2.8em;
   margin-bottom: 0.3em;
 }
 
-.mtp-dashboard-module-standout .transaction_report-stat-valign sub {
+.mtp-dashboard-module-standout .credit-stat--valign sub {
   margin-bottom: 0;
   color: #ccc;
 }
 
-.mtp-dashboard-module-standout .transaction_report-stat dt,
-.mtp-dashboard-module-standout .transaction_report-stat dd {
+.mtp-dashboard-module-standout .credit-stat dt,
+.mtp-dashboard-module-standout .credit-stat dd {
   font-size: 1em;
 }
 
-#transaction-report-chart {
+#credit-chart {
   width: 100%;
   height: 100%;
   background: #f9f9f9;
 }
-.mtp-dashboard-module-standout #transaction-report-chart {
+.mtp-dashboard-module-standout #credit-chart {
   background: #111;
 }

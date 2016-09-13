@@ -8,12 +8,11 @@ from django.utils.timezone import localtime
 from core.views import DashboardView
 from core.tests.test_dashboard import DashboardTestCase
 from core.tests.utils import make_test_users
-from transaction.constants import TRANSACTION_STATUS
-from transaction.models import Transaction
-from transaction.tests.utils import generate_transactions
-from transaction.dashboards import TransactionReport
-from transaction.utils import format_amount
+from credit.dashboards import CreditReport, CREDITABLE_FILTERS
+from credit.models import Credit
 from prison.tests.utils import load_random_prisoner_locations
+from transaction.tests.utils import generate_transactions
+from transaction.utils import format_amount
 
 User = get_user_model()
 
@@ -39,21 +38,18 @@ class TransactionDashboardTestCase(DashboardTestCase):
         url = reverse('admin:dashboard')
 
         response = self.client.get(url)
-        self.assertContains(response, 'Latest transactions received on')
-        transactions = Transaction.objects.filter(
-            Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.CREDITABLE],
-            received_at__date=localtime(Transaction.objects.latest().received_at).date()
+        self.assertContains(response, 'Latest credits received on')
+        credit_set = Credit.objects.filter(CREDITABLE_FILTERS).filter(
+            received_at__date=localtime(Credit.objects.latest().received_at).date()
         )
-        creditable_amount = transactions.aggregate(amount=models.Sum('amount'))['amount']
-        self.assertAmountInContent(creditable_amount, response)
+        credited_amount = credit_set.aggregate(amount=models.Sum('amount'))['amount']
+        self.assertAmountInContent(credited_amount, response)
 
         self.client.cookies[DashboardView.cookie_name] = json.dumps({
-            TransactionReport.cookie_key: 'date_range=all'
+            CreditReport.cookie_key: 'date_range=all'
         })
         response = self.client.get(url)
-        self.assertContains(response, 'All transactions')
-        transactions = Transaction.objects.filter(
-            Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.CREDITABLE]
-        )
-        creditable_amount = transactions.aggregate(amount=models.Sum('amount'))['amount']
-        self.assertAmountInContent(creditable_amount, response)
+        self.assertContains(response, 'All credits')
+        credit_set = Credit.objects.filter(CREDITABLE_FILTERS)
+        credited_amount = credit_set.aggregate(amount=models.Sum('amount'))['amount']
+        self.assertAmountInContent(credited_amount, response)

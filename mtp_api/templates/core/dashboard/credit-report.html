@@ -12,9 +12,9 @@
 {% block module_tbody %}
   <tr>
     <td>
-      <div class="transaction_report-stat transaction_report-stat-wide">
+      <div class="credit-stat">
         <strong>
-            <span class="transaction_report-stat-valign">
+            <span class="credit-stat--valign">
               {{ dashboard_module.received_count }}
               <sub>{{ dashboard_module.received_amount }}</sub>
             </span>
@@ -23,10 +23,10 @@
       </div>
     </td>
     <td>
-      <div class="transaction_report-stat transaction_report-stat-wide">
+      <div class="credit-stat">
         {% if dashboard_module.creditable_count == dashboard_module.credited_count %}
           <strong>
-            <span class="transaction_report-stat-valign">
+            <span class="credit-stat--valign">
               {{ dashboard_module.creditable_count }}
               <sub>{{ dashboard_module.creditable_amount }}</sub>
             </span>
@@ -36,7 +36,7 @@
           <strong>
             <span title="{% trans 'Marked as credited through the Cashbook tool' %}">{{ dashboard_module.credited_count }}</span>
             ／
-            <span class="transaction_report-stat-valign">
+            <span class="credit-stat--valign">
               {{ dashboard_module.creditable_count }}
               <sub>{{ dashboard_module.creditable_amount }}</sub>
             </span>
@@ -46,10 +46,10 @@
       </div>
     </td>
     <td>
-      <div class="transaction_report-stat transaction_report-stat-wide">
+      <div class="credit-stat">
         {% if dashboard_module.refundable_count == dashboard_module.refunded_count %}
           <strong>
-            <span class="transaction_report-stat-valign">
+            <span class="credit-stat--valign">
               {{ dashboard_module.refundable_count }}
               <sub>{{ dashboard_module.refundable_amount }}</sub>
             </span>
@@ -59,7 +59,7 @@
           <strong>
             <span title="{% trans 'Refunds file downloaded through the Bank Admin tool' %}">{{ dashboard_module.refunded_count }}</span>
             ／
-            <span class="transaction_report-stat-valign">
+            <span class="credit-stat--valign">
               {{ dashboard_module.refundable_count }}
               <sub>{{ dashboard_module.refundable_amount }}</sub>
             </span>
@@ -71,15 +71,15 @@
   </tr>
   <tr>
     <td>
-      <div class="transaction_report-stat" title="{% trans 'Proportion of incoming credits that cannot be credited' %}">
+      <div class="credit-stat" title="{% trans 'Proportion of incoming credits that cannot be credited' %}">
         <strong>{{ dashboard_module.error_rate }}</strong>
         {% trans 'Error rate' %}
       </div>
     </td>
     <td>
-      <div class="transaction_report-stat">
+      <div class="credit-stat">
         <dl>
-          <dd>{% trans 'References' %}</dd>
+          <dd>{% trans 'Bank transfer references' %}</dd>
 
           <dt title="{% trans 'All references that can be read as a prisoner number and date of birth' %}">{% trans 'Well-formed' %}:</dt>
           <dd>{{ dashboard_module.valid_reference_count }}</dd>
@@ -93,11 +93,11 @@
       </div>
     </td>
     <td>
-      <div class="transaction_report-stat">
+      <div class="credit-stat">
         <dl>
-          <dd>{% trans 'Issues' %}</dd>
+          <dd>{% trans 'Bank transfer issues' %}</dd>
 
-          <dt title="{% trans 'Transaction contained incomplete sender information' %}">{% trans 'Anonymous' %}:</dt>
+          <dt title="{% trans 'Bank transfers contained incomplete sender information' %}">{% trans 'Anonymous' %}:</dt>
           <dd>{{ dashboard_module.anonymous_count }}</dd>
 
           <dt title="{% trans 'Credits that do not match a prisoner and cannot be refunded' %}">{% trans 'Unidentified' %}:</dt>
@@ -110,16 +110,14 @@
     </td>
   </tr>
 
-  {% if dashboard_module.chart %}
-    <tr style="height: 50%">
-      <td colspan="{{ dashboard_module.column_count }}">
-        <script>
-          var transactionReportData = {{ dashboard_module.chart.data }};
-        </script>
-        <div id="transaction-report-chart"></div>
-      </td>
-    </tr>
-  {% endif %}
+  <tr style="height: 50%">
+    <td colspan="{{ dashboard_module.column_count }}">
+      <script>
+        var creditReportData = {{ dashboard_module.chart.data }};
+      </script>
+      <div id="credit-chart"></div>
+    </td>
+  </tr>
 {% endblock %}
 
 {% block module_tfoot %}

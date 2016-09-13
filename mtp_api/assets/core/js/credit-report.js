@@ -1,10 +1,10 @@
-/* globals django, google, transactionReportData */
+/* globals django, google, creditReportData */
 
 django.jQuery(function($) {
   'use strict';
 
-  var $module = $('#id_transaction_report');
-  var $chart = $('#transaction-report-chart');
+  var $module = $('#id_credit_report');
+  var $chart = $('#credit-chart');
   var normalStyles = {
       font: 'Roboto, "Lucida Grande", Verdana, Arial, sans-serif',
       lines: ['#79aec8', '#666'],
@@ -47,17 +47,17 @@ django.jQuery(function($) {
 
   google.charts.setOnLoadCallback(function() {
     chartData = new google.visualization.DataTable();
-    for (var column in transactionReportData.columns) {
-      if (transactionReportData.columns.hasOwnProperty(column)) {
-        chartData.addColumn(transactionReportData.columns[column]);
+    for (var column in creditReportData.columns) {
+      if (creditReportData.columns.hasOwnProperty(column)) {
+        chartData.addColumn(creditReportData.columns[column]);
       }
     }
-    chartData.addRows(transactionReportData.rows);
+    chartData.addRows(creditReportData.rows);
 
-    drawTransactionReports();
+    drawCreditReports();
   });
 
-  function drawTransactionReports() {
+  function drawCreditReports() {
     var chart = new google.visualization.ColumnChart($chart[0]);
     var styles = $module.hasClass('mtp-dashboard-module-standout') ? standoutStyles : normalStyles;
 
@@ -68,7 +68,7 @@ django.jQuery(function($) {
       },
       vAxis: {
         minValue: 0,
-        maxValue: transactionReportData.max,
+        maxValue: creditReportData.max,
         baselineColor: 'none',
         gridlines: {count: 0}
       },
@@ -95,7 +95,7 @@ django.jQuery(function($) {
       var $svg = $chart.find('svg');
       var cli = chart.getChartLayoutInterface();
       var bounds = cli.getChartAreaBoundingBox();
-      var dayWidth = bounds.width / transactionReportData.rows.length;
+      var dayWidth = bounds.width / creditReportData.rows.length;
       var dayHeight = bounds.height;
       var dayTop = bounds.top;
       var dayLeft;
@@ -104,7 +104,7 @@ django.jQuery(function($) {
       var $title;
 
       $title = $(document.createElementNS($svg[0].namespaceURI, 'text'));
-      $title.text(transactionReportData.title);
+      $title.text(creditReportData.title);
       $title.attr({
         'text-anchor': 'start',
         x: legendBounds.left,
@@ -126,11 +126,11 @@ django.jQuery(function($) {
       });
 
       if ($chartRect.size()) {
-        for (var weekend in transactionReportData.weekends) {
-          if (!transactionReportData.weekends.hasOwnProperty(weekend)) {
+        for (var weekend in creditReportData.weekends) {
+          if (!creditReportData.weekends.hasOwnProperty(weekend)) {
             continue;
           }
-          weekend = transactionReportData.weekends[weekend];
+          weekend = creditReportData.weekends[weekend];
           dayLeft = cli.getXLocation(weekend) - dayWidth / 2;
           var $rect = $(document.createElementNS($svg[0].namespaceURI, 'rect'));
           $rect.attr({
@@ -151,6 +151,6 @@ django.jQuery(function($) {
 
   $module.on('mtp.dashboard-standout', function() {
     $chart.empty();
-    drawTransactionReports();
+    drawCreditReports();
   })
 });
