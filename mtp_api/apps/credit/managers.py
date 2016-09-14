@@ -23,9 +23,10 @@ class CreditQuerySet(models.QuerySet):
     def locked_by(self, user):
         return self.filter(owner=user)
 
-    def reconcile(self, date, user):
+    def reconcile(self, start_date, end_date, user):
         update_set = self.filter(
-            received_at__date=date.date(),
+            received_at__gte=start_date,
+            received_at__lt=end_date,
             reconciled=False
         ).select_for_update()
 

@@ -1,26 +1,6 @@
 from rest_framework import serializers
 
-from .models import Batch, Balance
-
-
-class BatchSerializer(serializers.ModelSerializer):
-
-    def create(self, validated_data):
-        user = self.context['request'].user
-
-        transactions = validated_data.pop('transactions')
-        batch = Batch.objects.create(user=user, **validated_data)
-        batch.transactions.add(*transactions)
-        return batch
-
-    def update(self, instance, validated_data):
-        transactions = validated_data.pop('transactions')
-        instance.transactions.add(*transactions)
-        return super().update(instance, validated_data)
-
-    class Meta:
-        model = Batch
-        fields = '__all__'
+from .models import Balance
 
 
 class BalanceSerializer(serializers.ModelSerializer):

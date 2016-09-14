@@ -5,7 +5,6 @@ from django.core.urlresolvers import reverse
 from django.conf import settings
 from rest_framework import status as http_status
 
-from account.models import Batch
 from credit.constants import LOG_ACTIONS
 from credit.models import Credit, Log
 from transaction.models import Transaction
@@ -484,112 +483,6 @@ class GetTransactionsAsRefundBankAdminTestCase(GetTransactionsAsBankAdminTestCas
         pass
 
 
-class GetTransactionsRelatedToBatchesTestCase(GetTransactionsBaseTestCase):
-
-    def test_get_list_for_batch(self):
-        url = self._get_url()
-        user = self._get_authorised_user()
-
-        adi_batch = Batch()
-        adi_batch.label = 'ADIREFUND'
-        adi_batch.save()
-
-        adi_batch.transactions = list(Transaction.objects.filter(
-            Transaction.STATUS_LOOKUP['refundable']))
-        adi_batch.save()
-
-        response = self.client.get(
-            url, {'batch': adi_batch.id, 'limit': 1000}, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
-        )
-        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
-
-        results = response.data['results']
-        self.assertEqual(len(results), len(adi_batch.transactions.all()))
-        for trans in results:
-            self.assertTrue(trans['id'] in [t.id for t in adi_batch.transactions.all()])
-
-    def get_list_for_invalid_batch_fails(self):
-        url = self._get_url()
-        user = self._get_authorised_user()
-
-        response = self.client.get(
-            url, {'batch': 3, 'limit': 1000}, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
-        )
-        self.assertEqual(response.status_code, http_status.HTTP_400_BAD_REQUEST)
-
-    def test_get_list_excluding_label(self):
-        """
-        Tests that only transactions not attached to a batch of the given type
-        will be returned.
-        """
-        url = self._get_url()
-        user = self._get_authorised_user()
-
-        adi_batch = Batch()
-        adi_batch.label = 'ADIREFUND'
-        adi_batch.save()
-
-        refunded_trans = list(Transaction.objects.filter(
-            Transaction.STATUS_LOOKUP['refundable']))
-        attached = [a for (i, a) in enumerate(refunded_trans) if i % 2]
-        unattached = [a for (i, a) in enumerate(refunded_trans) if not i % 2]
-        self.assertTrue(len(attached) >= 1)
-        self.assertTrue(len(unattached) >= 1)
-
-        adi_batch.transactions = attached
-        adi_batch.save()
-
-        response = self.client.get(
-            url, {'status': 'refundable',
-                  'exclude_batch_label': 'ADIREFUND',
-                  'limit': 1000}, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
-        )
-        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
-
-        results = response.data['results']
-        self.assertEqual(len(results), len(unattached))
-
-        attached_ids = [t.id for t in attached]
-        unattached_ids = [t.id for t in unattached]
-        for trans in results:
-            self.assertTrue(trans['id'] not in attached_ids)
-            self.assertTrue(trans['id'] in unattached_ids)
-
-    def test_get_list_excluding_invalid_label_includes_all(self):
-        url = self._get_url()
-        user = self._get_authorised_user()
-
-        adi_batch = Batch()
-        adi_batch.label = 'ADIREFUND'
-        adi_batch.save()
-
-        refunded_trans = list(Transaction.objects.filter(
-            Transaction.STATUS_LOOKUP['refundable']))
-        attached = [a for (i, a) in enumerate(refunded_trans) if i % 2]
-        self.assertTrue(len(attached) >= 1)
-
-        adi_batch.transactions = attached
-        adi_batch.save()
-
-        response = self.client.get(
-            url, {'status': 'refundable',
-                  'exclude_batch_label': 'WIBBLE',
-                  'limit': 1000}, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
-        )
-        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
-
-        results = response.data['results']
-        self.assertEqual(len(results), len(refunded_trans))
-
-        result_ids = [t['id'] for t in results]
-        for trans in refunded_trans:
-            self.assertTrue(trans.id in result_ids)
-
-
 class GetTransactionsFilteredByDateTestCase(GetTransactionsBaseTestCase):
 
     def test_get_list_received_between_dates(self):
@@ -669,19 +562,23 @@ class ReconcileTransactionsTestCase(
         url = self._get_url()
         user = self._get_authorised_user()
 
+        start_date = (self._get_latest_date() - timedelta(days=2)).isoformat()
+        end_date = (self._get_latest_date() + timedelta(days=1)).isoformat()
+
         response = self.client.post(
-            url, {'date': self._get_latest_date().isoformat()}, format='json',
+            url, {'received_at__gte': start_date, 'received_at__lt': end_date},
+            format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
         self.assertEqual(response.status_code, http_status.HTTP_204_NO_CONTENT)
 
         yesterday = timezone.make_aware(datetime.combine(self._get_latest_date(), time.min))
-        transactions_yesterday = Transaction.objects.filter(
+        transactions_from_period = Transaction.objects.filter(
             received_at__lt=yesterday + timedelta(days=1),
-            received_at__gte=yesterday
+            received_at__gte=yesterday - timedelta(days=2)
         )
 
-        for transaction in transactions_yesterday:
+        for transaction in transactions_from_period:
             if transaction.credit:
                 self.assertTrue(transaction.credit.reconciled)
 
@@ -695,8 +592,12 @@ class ReconcileTransactionsTestCase(
         url = self._get_url()
         user = self._get_authorised_user()
 
+        start_date = self._get_latest_date().isoformat()
+        end_date = (self._get_latest_date() + timedelta(days=1)).isoformat()
+
         response = self.client.post(
-            url, {'date': self._get_latest_date().isoformat()}, format='json',
+            url, {'received_at__gte': start_date, 'received_at__lt': end_date},
+            format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
         self.assertEqual(response.status_code, http_status.HTTP_204_NO_CONTENT)
@@ -711,7 +612,8 @@ class ReconcileTransactionsTestCase(
         )
 
         response = self.client.post(
-            url, {'date': self._get_latest_date().isoformat()}, format='json',
+            url, {'received_at__gte': start_date, 'received_at__lt': end_date},
+            format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
         self.assertEqual(response.status_code, http_status.HTTP_204_NO_CONTENT)
@@ -740,7 +642,7 @@ class ReconcileTransactionsTestCase(
         user = self._get_authorised_user()
 
         response = self.client.post(
-            url, {'date': 'bleh'}, format='json',
+            url, {'start_date': 'bleh', 'end_date': 'yeeeah'}, format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
         self.assertEqual(response.status_code, http_status.HTTP_400_BAD_REQUEST)
@@ -749,8 +651,12 @@ class ReconcileTransactionsTestCase(
         url = self._get_url()
         user = self._get_authorised_user()
 
+        start_date = self._get_latest_date().isoformat()
+        end_date = (self._get_latest_date() + timedelta(days=1)).isoformat()
+
         response = self.client.post(
-            url, {'date': self._get_latest_date().isoformat()}, format='json',
+            url, {'received_at__gte': start_date, 'received_at__lt': end_date},
+            format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
         self.assertEqual(response.status_code, http_status.HTTP_204_NO_CONTENT)

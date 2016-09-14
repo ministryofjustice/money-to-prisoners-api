@@ -5,7 +5,6 @@ from rest_framework import routers
 from . import views
 
 router = routers.DefaultRouter()
-router.register(r'batches', views.BatchView)
 router.register(r'balances', views.BalanceView)
 
 urlpatterns = [

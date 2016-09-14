@@ -10,10 +10,11 @@ from .constants import TRANSACTION_STATUS
 class TransactionQuerySet(models.QuerySet):
 
     @atomic
-    def reconcile(self, date, user):
+    def reconcile(self, start_date, end_date, user):
         update_set = self.filter(
             self.model.STATUS_LOOKUP[TRANSACTION_STATUS.RECONCILABLE],
-            received_at__date=date.date(),
+            received_at__gte=start_date,
+            received_at__lt=end_date,
             credit__isnull=False,
             credit__reconciled=False
         ).order_by('id').select_for_update()
@@ -36,4 +37,4 @@ class TransactionQuerySet(models.QuerySet):
                           'ref_code=r.ref_code FROM refids r WHERE '
                           't.id=r.id;')
 
-        Credit.objects.reconcile(date, user)
+        Credit.objects.reconcile(start_date, end_date, user)

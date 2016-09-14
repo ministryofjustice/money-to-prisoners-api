@@ -31,9 +31,7 @@ class CashbookCreditRejectsRequestsWithoutPermissionTestMixin(
 ):
 
     def _get_unauthorised_application_users(self):
-        return [
-            self.bank_admins[0], self.prisoner_location_admins[0]
-        ]
+        return self.send_money_users
 
     def _get_authorised_user(self):
         return self.prison_clerks[0]
@@ -55,9 +53,12 @@ class CreditListTestCase(
 
     def _get_managed_prison_credits(self, logged_in_user=None):
         logged_in_user = logged_in_user or self._get_authorised_user()
-        logged_in_user.prisonusermapping.prisons.add(*self.prisons)
-        managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
-        return [c for c in self.credits if c.prison in managing_prisons]
+        if logged_in_user.has_perm('credit.view_any_credit'):
+            return self.credits
+        else:
+            logged_in_user.prisonusermapping.prisons.add(*self.prisons)
+            managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
+            return [c for c in self.credits if c.prison in managing_prisons]
 
     def _get_invalid_credits(self):
         return [c for c in self.credits if c.prison is None]
@@ -121,9 +122,8 @@ class CreditListTestCase(
             'prison_category', 'prison.categories', filters, noop_checker
         )
         amount_pattern_checker = self._get_amount_pattern_checker(filters, noop_checker)
+        valid_checker = self._get_valid_checker(filters, noop_checker)
 
-        if filters.get('include_invalid'):
-            credits += self._get_invalid_credits()
         expected_ids = [
             c.pk
             for c in credits
@@ -141,7 +141,8 @@ class CreditListTestCase(
             prison_region_checker(c) and
             prison_population_checker(c) and
             prison_category_checker(c) and
-            amount_pattern_checker(c)
+            amount_pattern_checker(c) and
+            valid_checker(c)
         ]
 
         self.assertEqual(response.data['count'], len(expected_ids))
@@ -249,6 +250,20 @@ class CreditListTestCase(
         if 'amount' in filters:
             checkers.append(lambda c: c.amount == int(filters['amount']))
         return lambda c: all([checker(c) for checker in checkers])
+
+    def _get_valid_checker(self, filters, noop_checker):
+        if 'valid' in filters:
+            def valid_checker(c):
+                return (
+                    self.STATUS_FILTERS[CREDIT_STATUS.AVAILABLE](c) or
+                    self.STATUS_FILTERS[CREDIT_STATUS.LOCKED](c) or
+                    self.STATUS_FILTERS[CREDIT_STATUS.CREDITED](c)
+                )
+            if filters['valid'] in ('true', 'True', 1, True):
+                return valid_checker
+            else:
+                return lambda c: not valid_checker(c)
+        return noop_checker
 
 
 class CreditListWithDefaultsTestCase(CreditListTestCase):
@@ -505,6 +520,19 @@ class CreditListWithDefaultStatusAndPrisonTestCase(CreditListTestCase):
         """
         self._test_response_with_filters(filters={
             'user': self.prison_clerks[1].pk
+        })
+
+
+class CreditListWithValidFilterTestCase(CreditListTestCase):
+
+    def test_filter_by_invalidity(self):
+        self._test_response_with_filters(filters={
+            'valid': 'true'
+        })
+
+    def test_filter_by_validity(self):
+        self._test_response_with_filters(filters={
+            'valid': 'false'
         })
 
 
@@ -1198,7 +1226,7 @@ class NoPrisonCreditListTestCase(SecurityCreditListTestCase):
 
     def test_no_prison_filter(self):
         self._test_response_with_filters(filters={
-            'prison__isnull': 'True', 'include_invalid': 'True'
+            'prison__isnull': 'True'
         })
 
 
@@ -1638,7 +1666,7 @@ class SenderListTestCase(GroupedListTestCase):
     ordering = ('-prisoner_count', '-credit_count', '-credit_total', 'sender_name')
 
     def test_get_senders_multiple_prisoners(self):
-        response = self._get_grouped_response(include_invalid=True)
+        response = self._get_grouped_response()
 
         for sender in response.data['results']:
             # check prisoner_count is correct (not including refunds)
@@ -1683,10 +1711,10 @@ class SenderListTestCase(GroupedListTestCase):
 
     def test_get_senders_prisoners_ordered_correctly(self):
         self._test_get_grouped_subset_ordered_correctly(
-            'prisoners', 'prisoner_number', include_invalid=True)
+            'prisoners', 'prisoner_number')
 
     def test_get_senders_prisoners_correct_credit_totals(self):
-        response = self._get_grouped_response(include_invalid=True)
+        response = self._get_grouped_response()
 
         for sender in response.data['results']:
             for prisoner in sender['prisoners']:
@@ -1715,7 +1743,6 @@ class SenderListTestCase(GroupedListTestCase):
         response = self._get_grouped_response(
             prisoner_count_0=min_prisoner_count,
             prison='IXB',
-            include_invalid=True,
         )
 
         for sender in response.data['results']:
@@ -1728,7 +1755,6 @@ class SenderListTestCase(GroupedListTestCase):
         response = self._get_grouped_response(
             received_at__gte=format_date(start_date, 'Y-m-d'),
             received_at__lt=format_date(end_date, 'Y-m-d'),
-            include_invalid=True,
         )
 
         for sender in response.data['results']:
@@ -1752,7 +1778,6 @@ class SenderListTestCase(GroupedListTestCase):
             prisoner_count_0=min_prisoner_count,
             credit_total_1=max_credit_total,
             prison='IXB',
-            include_invalid=True,
         )
         for sender in response.data['results']:
             self.assertGreaterEqual(sender['prisoner_count'], min_prisoner_count)

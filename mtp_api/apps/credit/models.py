@@ -69,6 +69,7 @@ class Credit(TimeStampedModel):
         get_latest_by = 'received_at'
         permissions = (
             ('view_credit', 'Can view credit'),
+            ('view_any_credit', 'Can view any credit'),
             ('lock_credit', 'Can lock credit'),
             ('unlock_credit', 'Can unlock credit'),
             ('patch_credited_credit', 'Can patch credited credit'),
@@ -205,6 +206,13 @@ class Credit(TimeStampedModel):
     @property
     def sender_roll_number(self):
         return self.transaction.sender_roll_number if hasattr(self, 'transaction') else None
+
+    @property
+    def reconciliation_code(self):
+        if hasattr(self, 'transaction'):
+            return self.transaction.ref_code
+        elif hasattr(self, 'payment'):
+            return 'Card payment'
 
     @property
     def credited_at(self):

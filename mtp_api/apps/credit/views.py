@@ -21,8 +21,9 @@ from core import dictfetchall
 from core.filters import BlankStringFilter, StatusChoiceFilter
 from mtp_auth.models import PrisonUserMapping
 from mtp_auth.permissions import (
-    CashbookClientIDPermissions, NomsOpsCashbookClientIDPermissions,
-    NomsOpsClientIDPermissions
+    CashbookClientIDPermissions, NomsOpsClientIDPermissions,
+    get_client_permissions_class, CASHBOOK_OAUTH_CLIENT_ID,
+    NOMS_OPS_OAUTH_CLIENT_ID, BANK_ADMIN_OAUTH_CLIENT_ID
 )
 from prison.models import Prison
 from transaction.models import Transaction
@@ -102,9 +103,23 @@ class MultipleValueFilter(django_filters.MultipleChoiceFilter):
     field_class = MultipleValueField
 
 
+class ValidCreditFilter(django_filters.BooleanFilter):
+    def filter(self, queryset, value):
+        valid_query = (
+            Credit.STATUS_LOOKUP[CREDIT_STATUS.AVAILABLE] |
+            Credit.STATUS_LOOKUP[CREDIT_STATUS.LOCKED] |
+            Credit.STATUS_LOOKUP[CREDIT_STATUS.CREDITED]
+        )
+        if value:
+            return queryset.filter(valid_query)
+        else:
+            return queryset.filter(~valid_query)
+
+
 class CreditListFilter(django_filters.FilterSet):
     status = StatusChoiceFilter(choices=CREDIT_STATUS.choices)
     user = django_filters.ModelChoiceFilter(name='owner', queryset=User.objects.all())
+    valid = ValidCreditFilter(widget=django_filters.widgets.BooleanWidget)
 
     prisoner_name = django_filters.CharFilter(name='prisoner_name', lookup_expr='icontains')
     prison = django_filters.ModelMultipleChoiceFilter(queryset=Prison.objects.all())
@@ -149,12 +164,13 @@ class CreditListFilter(django_filters.FilterSet):
 class CreditViewMixin(object):
 
     def get_queryset(self):
-        queryset = Credit.objects.filter(
-            prison__in=PrisonUserMapping.objects.get_prison_set_for_user(self.request.user)
-        )
-        if self.request.query_params.get('include_invalid', '') == 'True':
-            queryset = queryset | Credit.objects.filter(prison=None)
-        return queryset
+        if self.request.user.has_perm('credit.view_any_credit'):
+            return Credit.objects.all()
+        else:
+            queryset = Credit.objects.filter(
+                prison__in=PrisonUserMapping.objects.get_prison_set_for_user(self.request.user)
+            )
+            return queryset
 
 
 class GetCredits(CreditViewMixin, generics.ListAPIView):
@@ -165,9 +181,14 @@ class GetCredits(CreditViewMixin, generics.ListAPIView):
     action = 'list'
 
     permission_classes = (
-        IsAuthenticated, NomsOpsCashbookClientIDPermissions,
-        CreditPermissions
+        IsAuthenticated, CreditPermissions, get_client_permissions_class(
+            CASHBOOK_OAUTH_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID,
+            BANK_ADMIN_OAUTH_CLIENT_ID
+        )
     )
+
+    def get_queryset(self):
+        return super().get_queryset().select_related('transaction').select_related('payment')
 
     def get_serializer_class(self):
         if self.request.user.has_perm(
@@ -635,6 +656,9 @@ class PrisonerList(GroupedListAPIView):
     serializer_class = PrisonerSerializer
     ordering_fields = ('sender_count', 'credit_count', 'credit_total', 'prisoner_name', 'prisoner_number')
     default_ordering = ('-sender_count',)
+
+    def filter_queryset(self, queryset):
+        return super().filter_queryset(queryset.exclude(prison=None))
 
     def cache_grouped_credits(self, cursor, credit_table):
         table = 'credit_credit_prisoner_' + get_random_string(

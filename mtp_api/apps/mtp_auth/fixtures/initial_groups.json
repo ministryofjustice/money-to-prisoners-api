@@ -15,11 +15,11 @@
   "fields": {
     "name": "BankAdmin",
     "permissions": [
+      ["view_credit", "credit", "credit"],
+      ["view_any_credit", "credit", "credit"],
       ["add_transaction", "transaction", "transaction"],
       ["view_transaction", "transaction", "transaction"],
       ["patch_processed_transaction", "transaction", "transaction"],
-      ["add_batch", "account", "batch"],
-      ["change_batch", "account", "batch"],
       ["add_balance", "account", "balance"]
     ]
   }
@@ -78,6 +78,7 @@
     "name": "Security",
     "permissions": [
       ["view_credit", "credit", "credit"],
+      ["view_any_credit", "credit", "credit"],
       ["view_transaction", "transaction", "transaction"],
       ["view_payment", "payment", "payment"],
       ["view_bank_details_transaction", "transaction", "transaction"]

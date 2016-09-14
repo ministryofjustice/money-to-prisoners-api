@@ -4,7 +4,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management import BaseCommand, call_command
 
-from account.models import Batch, Balance
+from account.models import Balance
 from core.tests.utils import (
     make_test_users, make_test_user_admins, give_superusers_full_access
 )
@@ -70,7 +70,6 @@ class Command(BaseCommand):
         if not protect_credits:
             print_message('Deleting all credits')
             Balance.objects.all().delete()
-            Batch.objects.all().delete()
             Transaction.objects.all().delete()
             Payment.objects.all().delete()
             Credit.objects.all().delete()

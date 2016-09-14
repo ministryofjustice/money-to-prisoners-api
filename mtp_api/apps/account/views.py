@@ -3,22 +3,8 @@ from rest_framework.permissions import IsAuthenticated
 import django_filters
 
 from core.permissions import ActionsBasedPermissions
-from .models import Batch, Balance
-from .serializers import BatchSerializer, BalanceSerializer
-
-
-class BatchView(
-    mixins.CreateModelMixin, mixins.UpdateModelMixin,
-    mixins.ListModelMixin, viewsets.GenericViewSet
-):
-    queryset = Batch.objects.all().order_by('-created')
-    serializer_class = BatchSerializer
-    filter_backends = (filters.DjangoFilterBackend,)
-    filter_fields = ('label',)
-
-    permission_classes = (
-        IsAuthenticated, ActionsBasedPermissions
-    )
+from .models import Balance
+from .serializers import BalanceSerializer
 
 
 class BalanceListFilter(django_filters.FilterSet):

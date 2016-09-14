@@ -21,6 +21,10 @@ class PaymentView(
         IsAuthenticated, PaymentPermissions, SendMoneyClientIDPermissions
     )
 
+    def get_queryset(self):
+        queryset = Payment.objects.all()
+        return queryset.select_related('credit')
+
     def update(self, request, *args, **kwargs):
         try:
             return super().update(request, *args, **kwargs)

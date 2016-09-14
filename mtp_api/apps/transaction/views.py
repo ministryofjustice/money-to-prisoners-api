@@ -23,24 +23,15 @@ logger = logging.getLogger('mtp')
 
 class TransactionListFilter(django_filters.FilterSet):
     status = StatusChoiceFilter(choices=TRANSACTION_STATUS.choices)
-    batch = django_filters.MethodFilter(action='filter_batch')
-    exclude_batch_label = django_filters.MethodFilter(action='filter_exclude_batch_label')
 
     class Meta:
         model = Transaction
         fields = {'received_at': ['lt', 'gte']}
 
-    def filter_batch(self, queryset, value):
-        return queryset.filter(batch__id=value)
-
-    def filter_exclude_batch_label(self, queryset, value):
-        return queryset.exclude(batch__label=value)
-
 
 class TransactionView(mixins.CreateModelMixin, mixins.UpdateModelMixin,
                       mixins.ListModelMixin, viewsets.GenericViewSet):
 
-    queryset = Transaction.objects.all()
     filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter)
     filter_class = TransactionListFilter
     ordering_fields = ('received_at',)
@@ -48,6 +39,10 @@ class TransactionView(mixins.CreateModelMixin, mixins.UpdateModelMixin,
         IsAuthenticated, BankAdminClientIDPermissions,
         TransactionPermissions
     )
+
+    def get_queryset(self):
+        queryset = Transaction.objects.all()
+        return queryset.select_related('credit')
 
     def patch_processed(self, request, *args, **kwargs):
         try:
@@ -100,16 +95,20 @@ class ReconcileTransactionsView(generics.GenericAPIView):
     )
 
     def post(self, request, format=None):
-        date = request.data.get('date')
-        if not date:
-            return Response(data={'errors': _("'date' field is required")},
-                            status=400)
+        start_date = request.data.get('received_at__gte')
+        end_date = request.data.get('received_at__lt')
+        if not start_date or not end_date:
+            return Response(
+                data={'errors': _("'received_at__gte' and 'received_at__lt' fields are required")},
+                status=400
+            )
 
         try:
-            parsed_date = timezone.make_aware(datetime.strptime(date, '%Y-%m-%d'))
+            parsed_start_date = timezone.make_aware(datetime.strptime(start_date, '%Y-%m-%d'))
+            parsed_end_date = timezone.make_aware(datetime.strptime(end_date, '%Y-%m-%d'))
         except ValueError:
             return Response(data={'errors': _("Invalid date format")},
                             status=400)
 
-        Transaction.objects.reconcile(parsed_date, request.user)
+        Transaction.objects.reconcile(parsed_start_date, parsed_end_date, request.user)
         return Response(status=204)
