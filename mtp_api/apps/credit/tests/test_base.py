@@ -1,9 +1,13 @@
+from datetime import datetime, time
+
 from django.db import models
+from django.utils import timezone
 from oauth2_provider.models import AccessToken
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from core.tests.utils import make_test_users
+from mtp_auth.constants import CASHBOOK_OAUTH_CLIENT_ID
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from payment.tests.utils import generate_payments, latest_payment_date
 from prison.models import Prison
@@ -28,7 +32,7 @@ class BaseCreditViewTestCase(AuthTestCaseMixin, APITestCase):
         ),
         CREDIT_STATUS.CREDITED: lambda t: t.credited
     }
-    transaction_batch = 50
+    transaction_batch = 100
 
     def setUp(self):
         super().setUp()
@@ -42,13 +46,24 @@ class BaseCreditViewTestCase(AuthTestCaseMixin, APITestCase):
         self.latest_payment_date = latest_payment_date()
         load_random_prisoner_locations()
         transaction_credits = [t.credit for t in generate_transactions(
-            transaction_batch=self.transaction_batch
+            transaction_batch=self.transaction_batch, days_of_history=5
         ) if t.credit]
         payment_credits = [t.credit for t in generate_payments(
-            payment_batch=self.transaction_batch
+            payment_batch=self.transaction_batch, days_of_history=5
         ) if t.credit]
         self.credits = transaction_credits + payment_credits
         self.prisons = Prison.objects.all()
+
+    def _get_queryset(self, user=None, prisons=[]):
+        qs = Credit.objects.filter(prison__in=prisons)
+        if user and (user.applicationusermapping_set.first().application.client_id ==
+                     CASHBOOK_OAUTH_CLIENT_ID):
+            return qs.filter(
+                received_at__lt=timezone.make_aware(
+                    datetime.combine(timezone.now(), time.min)
+                )
+            )
+        return qs
 
     def _get_locked_credits_qs(self, prisons, user=None):
         params = {
@@ -60,20 +75,19 @@ class BaseCreditViewTestCase(AuthTestCaseMixin, APITestCase):
         else:
             params['owner__isnull'] = False
 
-        return Credit.objects.filter(**params)
+        return self._get_queryset(user, prisons).filter(**params)
 
-    def _get_available_credits_qs(self, prisons):
-        return Credit.objects.filter(
+    def _get_available_credits_qs(self, prisons, user=None):
+        return self._get_queryset(user, prisons).filter(
             (
                 models.Q(transaction__isnull=True) |
                 models.Q(transaction__incomplete_sender_info=False)
             ),
             owner__isnull=True, resolution=CREDIT_RESOLUTION.PENDING,
-            prison__in=prisons
         )
 
     def _get_credited_credits_qs(self, prisons, user=None):
-        return Credit.objects.filter(
+        return self._get_queryset(user, prisons).filter(
             owner=user, resolution=CREDIT_RESOLUTION.CREDITED, prison__in=prisons
         )
 

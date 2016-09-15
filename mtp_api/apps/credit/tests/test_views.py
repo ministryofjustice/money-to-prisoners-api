@@ -21,6 +21,7 @@ from credit.constants import CREDIT_STATUS, LOCK_LIMIT, LOG_ACTIONS
 from credit.tests.test_base import (
     BaseCreditViewTestCase, CreditRejectsRequestsWithoutPermissionTestMixin
 )
+from mtp_auth.constants import CASHBOOK_OAUTH_CLIENT_ID
 from mtp_auth.models import PrisonUserMapping
 from prison.models import Prison, PrisonerLocation
 from transaction.tests.utils import generate_transactions
@@ -52,13 +53,18 @@ class CreditListTestCase(
         )
 
     def _get_managed_prison_credits(self, logged_in_user=None):
+        credits = self.credits
         logged_in_user = logged_in_user or self._get_authorised_user()
         if logged_in_user.has_perm('credit.view_any_credit'):
-            return self.credits
+            return credits
         else:
-            logged_in_user.prisonusermapping.prisons.add(*self.prisons)
+            if (logged_in_user.applicationusermapping_set.first().application.client_id ==
+                    CASHBOOK_OAUTH_CLIENT_ID):
+                credits = [c for c in credits if c.received_at < timezone.make_aware(
+                    datetime.datetime.combine(timezone.now(), datetime.time.min)
+                )]
             managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
-            return [c for c in self.credits if c.prison in managing_prisons]
+            return [c for c in credits if c.prison in managing_prisons]
 
     def _get_invalid_credits(self):
         return [c for c in self.credits if c.prison is None]
@@ -473,31 +479,9 @@ class CreditListWithDefaultStatusAndUserTestCase(CreditListTestCase):
         """
         Returns all credits attached to the passed-in prisons.
         """
-
-        # logged-in user managing all the prisons
-        logged_in_user = self.prison_clerks[0]
-        logged_in_user.prisonusermapping.prisons.add(*self.prisons)
-        managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
-
-        url = self._get_url(**{
+        self._test_response_with_filters(filters={
             'prison[]': [p.pk for p in self.prisons]
         })
-        response = self.client.get(
-            url, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        expected_ids = [
-            c.pk
-            for c in self.credits
-            if c.prison in managing_prisons
-        ]
-        self.assertEqual(response.data['count'], len(expected_ids))
-        self.assertListEqual(
-            sorted([c['id'] for c in response.data['results']]),
-            sorted(expected_ids)
-        )
 
 
 class CreditListWithDefaultStatusTestCase(CreditListTestCase):
@@ -856,7 +840,7 @@ class DateBasedPaginationTestCase(CreditListTestCase):
                                      'received_at__lt': received_at__lt})
 
     def _get_random_credit(self):
-        return random.choice(self.credits)
+        return random.choice(self._get_managed_prison_credits())
 
     def _get_date_of_credit(self, credit):
         return localtime(credit.received_at).date()
@@ -1248,7 +1232,7 @@ class LockCreditTestCase(
 
     def _test_lock(self, already_locked_count, available_count=LOCK_LIMIT):
         locked_qs = self._get_locked_credits_qs(self.prisons, self.logged_in_user)
-        available_qs = self._get_available_credits_qs(self.prisons)
+        available_qs = self._get_available_credits_qs(self.prisons, self.logged_in_user)
 
         # set nr of credits locked by logged-in user to 'already_locked'
         locked = locked_qs.values_list('pk', flat=True)
@@ -1319,7 +1303,7 @@ class UnlockCreditTestCase(
     def test_can_unlock_somebody_else_s_credits(self):
         logged_in_user = self.prison_clerks[0]
         logged_in_user.prisonusermapping.prisons.add(*self.prisons)
-        locked_qs = self._get_locked_credits_qs(self.prisons)
+        locked_qs = self._get_locked_credits_qs(self.prisons, logged_in_user)
 
         to_unlock = list(locked_qs.values_list('id', flat=True))
         response = self.client.post(
@@ -1403,7 +1387,7 @@ class UnlockCreditTestCase(
     ):
         logged_in_user = self.prison_clerks[0]
         logged_in_user.prisonusermapping.prisons.add(*self.prisons)
-        locked_qs = self._get_locked_credits_qs(self.prisons)
+        locked_qs = self._get_locked_credits_qs(self.prisons, logged_in_user)
 
         response = self.client.post(
             self._get_url(),
@@ -1520,7 +1504,7 @@ class CreditCreditTestCase(
 
         locked_qs = self._get_locked_credits_qs(managing_prisons, logged_in_user)
         credited_qs = self._get_credited_credits_qs(self.prisons, logged_in_user)
-        available_qs = self._get_available_credits_qs(managing_prisons)
+        available_qs = self._get_available_credits_qs(managing_prisons, logged_in_user)
 
         credited = credited_qs.count()
 

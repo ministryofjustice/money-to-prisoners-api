@@ -8,6 +8,7 @@ from django.db import connection, models, transaction
 from django.forms import MultipleChoiceField
 import django_filters
 from django.http import HttpResponseRedirect
+from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.views.generic import View
 from rest_framework import generics, filters, status as drf_status
@@ -170,6 +171,10 @@ class CreditViewMixin(object):
             queryset = Credit.objects.filter(
                 prison__in=PrisonUserMapping.objects.get_prison_set_for_user(self.request.user)
             )
+            if self.request.auth.application.client_id == CASHBOOK_OAUTH_CLIENT_ID:
+                queryset = queryset.filter(
+                    received_at__date__lt=timezone.now().date()
+                )
             return queryset
 
 
