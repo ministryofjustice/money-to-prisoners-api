@@ -50,8 +50,11 @@ class CreditManager(models.Manager):
             "SET prison_id = pl.prison_id, prisoner_name = pl.prisoner_name "
             "FROM credit_credit AS c LEFT OUTER JOIN prison_prisonerlocation AS pl "
             "ON c.prisoner_number = pl.prisoner_number AND c.prisoner_dob = pl.prisoner_dob "
+            "LEFT OUTER JOIN payment_payment AS p ON p.credit_id=c.id "
             "WHERE c.owner_id IS NULL AND c.resolution = 'pending' "
             "AND c.reconciled is False AND credit_credit.id = c.id "
+            # don't remove a match from a debit card payment
+            "AND NOT (pl.prison_id IS NULL AND p.uuid IS NOT NULL) "
         )
 
 

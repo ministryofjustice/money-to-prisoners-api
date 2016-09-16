@@ -1011,7 +1011,7 @@ class DateBasedPaginationTestCase(CreditListTestCase):
                 break
             self.credits = [t.credit for t in generate_transactions(
                 transaction_batch=150
-            )]
+            ) if t.credit]
         self.assertGreater(page_count, 1,
                            'Could not generate enough pages for test in %d tries' % tries)
 
