@@ -8,6 +8,7 @@ from django.db import connection, models, transaction
 from django.forms import MultipleChoiceField
 import django_filters
 from django.http import HttpResponseRedirect
+from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.views.generic import View
 from rest_framework import generics, filters, status as drf_status
@@ -170,6 +171,10 @@ class CreditViewMixin(object):
             queryset = Credit.objects.filter(
                 prison__in=PrisonUserMapping.objects.get_prison_set_for_user(self.request.user)
             )
+            if self.request.auth.application.client_id == CASHBOOK_OAUTH_CLIENT_ID:
+                queryset = queryset.filter(
+                    received_at__date__lt=timezone.now().date()
+                )
             return queryset
 
 
@@ -310,11 +315,9 @@ class LockCredits(CreditViewMixin, APIView):
             locked_count = self.get_queryset().locked().filter(owner=self.request.user).count()
             if locked_count < LOCK_LIMIT:
                 slice_size = LOCK_LIMIT-locked_count
-                to_lock = self.get_queryset().available()
-                slice_pks = to_lock.values_list('pk', flat=True)[:slice_size]
+                to_lock = self.get_queryset().available()[:slice_size]
 
-                queryset = self.get_queryset().filter(pk__in=slice_pks)
-                for c in queryset:
+                for c in to_lock:
                     c.lock(by_user=request.user)
 
             redirect_url = '{url}?user={user}&status={status}'.format(
