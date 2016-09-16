@@ -73,9 +73,7 @@ class CreateTransactionsTestCase(
         self.assertEqual(len(data_list), Transaction.objects.count())
         for data in data_list:
             filters = filters_from_api_data(data)
-            self.assertEqual(
-                Transaction.objects.filter(**filters).count(), 1
-            )
+            self.assertTrue(Transaction.objects.filter(**filters).exists())
 
         # check logs
         self.assertEqual(
