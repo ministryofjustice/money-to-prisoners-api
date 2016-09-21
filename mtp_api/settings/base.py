@@ -46,6 +46,7 @@ INSTALLED_APPS = (
     'payment',
     'credit',
     'performance',
+    'service',
 
     # django admin
     'django.contrib.admin',
@@ -71,7 +72,7 @@ MIDDLEWARE_CLASSES = (
 )
 
 HEALTHCHECKS = ['moj_irat.healthchecks.database_healthcheck']
-AUTODISCOVER_HEALTHCHECKS = False
+AUTODISCOVER_HEALTHCHECKS = True
 
 # security tightening
 # some overridden in prod/docker settings where SSL is ensured
