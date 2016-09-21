@@ -49,10 +49,14 @@ class PrisonerValidityView(mixins.ListModelMixin, viewsets.GenericViewSet):
 
     def filter_queryset(self, queryset):
         queryset = super().filter_queryset(queryset)
-        return queryset.filter(
-            prisoner_number=self.request.GET['prisoner_number'],
-            prisoner_dob=self.request.GET['prisoner_dob'],
-        )
+        filters = {
+            'prisoner_number': self.request.GET['prisoner_number'],
+            'prisoner_dob': self.request.GET['prisoner_dob'],
+        }
+        prisons = set(filter(None, self.request.GET.get('prisons', '').split(',')))
+        if prisons:
+            filters['prison__nomis_id__in'] = prisons
+        return queryset.filter(**filters)
 
     def list(self, request, *args, **kwargs):
         prisoner_number = self.request.GET.get('prisoner_number', '')

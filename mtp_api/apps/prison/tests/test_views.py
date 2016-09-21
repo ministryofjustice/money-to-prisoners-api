@@ -245,6 +245,27 @@ class PrisonerValidityViewTestCase(AuthTestCaseMixin, APITestCase):
             if prisoner_dob != cannot_equal:
                 return prisoner_dob
 
+    def assertValidResponse(self, response, expected_data):  # noqa
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_data = response.json()
+        self.assertEqual(response_data['count'], 1)
+        self.assertSequenceEqual(response_data['results'], [expected_data])
+
+    def assertEmptyResponse(self, response):  # noqa
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_data = response.json()
+        self.assertEqual(response_data['count'], 0)
+        self.assertSequenceEqual(response_data['results'], [])
+
+    def call_authorised_endpoint(self, get_params):
+        http_auth_header = self.get_http_authorization_for_user(self.send_money_users[0])
+        return self.client.get(
+            self.url,
+            data=get_params,
+            format='json',
+            HTTP_AUTHORIZATION=http_auth_header,
+        )
+
     def test_fails_without_authentication(self):
         for method in [self.client.get, self.client.post]:
             response = method(
@@ -297,13 +318,7 @@ class PrisonerValidityViewTestCase(AuthTestCaseMixin, APITestCase):
     def test_missing_prisoner_number_fails(self):
         valid_data = self.get_valid_data()
         del valid_data['prisoner_number']
-        http_auth_header = self.get_http_authorization_for_user(self.send_money_users[0])
-        response = self.client.get(
-            self.url,
-            data=valid_data,
-            format='json',
-            HTTP_AUTHORIZATION=http_auth_header,
-        )
+        response = self.call_authorised_endpoint(valid_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.json()['errors'], "'prisoner_number' and 'prisoner_dob' fields are required")
 
@@ -322,17 +337,8 @@ class PrisonerValidityViewTestCase(AuthTestCaseMixin, APITestCase):
 
     def test_valid_prisoner_details_return_same_data(self):
         valid_data = self.get_valid_data()
-        http_auth_header = self.get_http_authorization_for_user(self.send_money_users[0])
-        response = self.client.get(
-            self.url,
-            data=valid_data,
-            format='json',
-            HTTP_AUTHORIZATION=http_auth_header,
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        response_data = response.json()
-        self.assertEqual(response_data['count'], 1)
-        self.assertSequenceEqual(response_data['results'], [valid_data])
+        response = self.call_authorised_endpoint(valid_data)
+        self.assertValidResponse(response, valid_data)
 
     def test_invalid_prisoner_details_return_nothing(self):
         invalid_data = []
@@ -347,17 +353,34 @@ class PrisonerValidityViewTestCase(AuthTestCaseMixin, APITestCase):
         )
         invalid_data.append(invalid_data_item)
         for data in invalid_data:
-            http_auth_header = self.get_http_authorization_for_user(self.send_money_users[0])
-            response = self.client.get(
-                self.url,
-                data=data,
-                format='json',
-                HTTP_AUTHORIZATION=http_auth_header,
-            )
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            response_data = response.json()
-            self.assertEqual(response_data['count'], 0)
-            self.assertSequenceEqual(response_data['results'], [])
+            response = self.call_authorised_endpoint(data)
+            self.assertEmptyResponse(response)
+
+    def test_valid_prisoner_found_with_correct_prison_filter(self):
+        valid_data = self.get_valid_data()
+        prisoner_location = PrisonerLocation.objects.get(prisoner_number=valid_data['prisoner_number'])
+        valid_data_with_filter = valid_data.copy()
+        valid_data_with_filter['prisons'] = prisoner_location.prison.nomis_id
+        response = self.call_authorised_endpoint(valid_data_with_filter)
+        self.assertValidResponse(response, valid_data)
+
+    def test_valid_prisoner_found_with_multiple_correct_prison_filter(self):
+        valid_data = self.get_valid_data()
+        valid_data_with_filter = valid_data.copy()
+        valid_data_with_filter['prisons'] = ','.join(Prison.objects.values_list('nomis_id', flat=True))
+        response = self.call_authorised_endpoint(valid_data_with_filter)
+        self.assertValidResponse(response, valid_data)
+
+    def test_valid_prisoner_not_found_with_incorrect_prison_filter(self):
+        valid_data = self.get_valid_data()
+        prisoner_location = PrisonerLocation.objects.get(prisoner_number=valid_data['prisoner_number'])
+        other_prisons = Prison.objects.exclude(nomis_id=prisoner_location.prison.nomis_id)
+        if other_prisons.count() == 0:
+            self.fail('Cannot test prisoner validity filtering as there are insufficient prisons')
+        valid_data_with_filter = valid_data.copy()
+        valid_data_with_filter['prisons'] = ','.join(other_prisons.values_list('nomis_id', flat=True))
+        response = self.call_authorised_endpoint(valid_data_with_filter)
+        self.assertEmptyResponse(response)
 
 
 class PrisonViewTestCase(AuthTestCaseMixin, APITestCase):
