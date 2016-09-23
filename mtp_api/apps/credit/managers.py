@@ -58,6 +58,12 @@ class CreditManager(models.Manager):
         Log.objects.bulk_create(logs)
 
 
+class CompletedCreditManager(CreditManager):
+
+    def get_queryset(self):
+        return super().get_queryset().exclude(resolution=CREDIT_RESOLUTION.INITIAL)
+
+
 class LogManager(models.Manager):
 
     def credit_created(self, credit, by_user=None):
