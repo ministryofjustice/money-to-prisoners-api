@@ -5,6 +5,7 @@ from rest_framework import status as http_status
 from rest_framework.test import APITestCase
 
 from core.tests.utils import make_test_users
+from credit.constants import CREDIT_RESOLUTION
 from credit.models import Credit
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from payment.models import Payment
@@ -59,7 +60,8 @@ class CreatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         new_credit = {
             'amount': new_payment['amount'],
             'prisoner_number': new_payment.pop('prisoner_number'),
-            'prisoner_dob': new_payment.pop('prisoner_dob')
+            'prisoner_dob': new_payment.pop('prisoner_dob'),
+            'resolution': CREDIT_RESOLUTION.INITIAL
         }
         self.assertEqual(Credit.objects.count(), 1)
         self.assertEqual(
@@ -117,6 +119,9 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(Payment.objects.count(), 1)
         self.assertEqual(Payment.objects.all()[0].status,
                          PAYMENT_STATUS.TAKEN)
+        self.assertEqual(Credit.objects.all()[0].resolution,
+                         CREDIT_RESOLUTION.PENDING)
+        self.assertIsNotNone(Credit.objects.all()[0].received_at)
 
     def test_update_status_failed_succeeds(self):
         response = self._test_update_status(PAYMENT_STATUS.FAILED)
@@ -128,6 +133,9 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(Payment.objects.count(), 1)
         self.assertEqual(Payment.objects.all()[0].status,
                          PAYMENT_STATUS.FAILED)
+        self.assertEqual(Credit.objects.all()[0].resolution,
+                         CREDIT_RESOLUTION.INITIAL)
+        self.assertIsNone(Credit.objects.all()[0].received_at)
 
     def test_update_status_failed_after_taken_fails(self):
         first_response = self._test_update_status(PAYMENT_STATUS.TAKEN)
@@ -154,6 +162,8 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(Payment.objects.count(), 1)
         self.assertEqual(Payment.objects.all()[0].status,
                          PAYMENT_STATUS.TAKEN)
+        self.assertEqual(Credit.objects.all()[0].resolution,
+                         CREDIT_RESOLUTION.PENDING)
 
 
 class GetPaymentViewTestCase(AuthTestCaseMixin, APITestCase):
