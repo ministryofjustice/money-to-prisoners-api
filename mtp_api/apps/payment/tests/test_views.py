@@ -57,21 +57,21 @@ class CreatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertTrue(response.data['uuid'] is not None)
 
         # check changes in db
-        new_credit = {
+        expected_credit = {
             'amount': new_payment['amount'],
             'prisoner_number': new_payment.pop('prisoner_number'),
             'prisoner_dob': new_payment.pop('prisoner_dob'),
-            'resolution': CREDIT_RESOLUTION.INITIAL
         }
-        self.assertEqual(Credit.objects.count(), 1)
-        self.assertEqual(
-            Credit.objects.filter(**new_credit).count(), 1
-        )
-        new_payment['credit'] = Credit.objects.get(**new_credit)
         self.assertEqual(Payment.objects.count(), 1)
         self.assertEqual(
             Payment.objects.filter(**new_payment).count(), 1
         )
+        credit = Payment.objects.get(**new_payment).credit
+        self.assertEqual(credit.amount, expected_credit['amount'])
+        self.assertEqual(credit.prisoner_number, expected_credit['prisoner_number'])
+        self.assertEqual(credit.prisoner_dob, expected_credit['prisoner_dob'])
+        self.assertEqual(credit.resolution, CREDIT_RESOLUTION.INITIAL)
+        self.assertEqual(Credit.objects.all().count(), 0)
 
 
 class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
@@ -133,9 +133,10 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(Payment.objects.count(), 1)
         self.assertEqual(Payment.objects.all()[0].status,
                          PAYMENT_STATUS.FAILED)
-        self.assertEqual(Credit.objects.all()[0].resolution,
+        self.assertEqual(Payment.objects.all()[0].credit.resolution,
                          CREDIT_RESOLUTION.INITIAL)
-        self.assertIsNone(Credit.objects.all()[0].received_at)
+        self.assertIsNone(Payment.objects.all()[0].credit.received_at)
+        self.assertEqual(Credit.objects.all().count(), 0)
 
     def test_update_status_failed_after_taken_fails(self):
         first_response = self._test_update_status(PAYMENT_STATUS.TAKEN)

@@ -1,6 +1,6 @@
 from django.db import models, connection
 
-from .constants import LOG_ACTIONS, CREDIT_STATUS
+from .constants import LOG_ACTIONS, CREDIT_STATUS, CREDIT_RESOLUTION
 
 
 class CreditQuerySet(models.QuerySet):
@@ -23,22 +23,6 @@ class CreditQuerySet(models.QuerySet):
     def locked_by(self, user):
         return self.filter(owner=user)
 
-    def reconcile(self, start_date, end_date, user):
-        update_set = self.filter(
-            received_at__gte=start_date,
-            received_at__lt=end_date,
-            reconciled=False
-        ).select_for_update()
-
-        from .models import Log
-        logs = []
-        for credit in update_set:
-            logs.append(Log(
-                credit=credit, action=LOG_ACTIONS.RECONCILED, user=user)
-            )
-        update_set.update(reconciled=True)
-        Log.objects.bulk_create(logs)
-
 
 class CreditManager(models.Manager):
 
@@ -56,6 +40,28 @@ class CreditManager(models.Manager):
             # don't remove a match from a debit card payment
             "AND NOT (pl.prison_id IS NULL AND p.uuid IS NOT NULL) "
         )
+
+    def reconcile(self, start_date, end_date, user):
+        update_set = self.get_queryset().filter(
+            received_at__gte=start_date,
+            received_at__lt=end_date,
+            reconciled=False
+        ).select_for_update()
+
+        from .models import Log
+        logs = []
+        for credit in update_set:
+            logs.append(Log(
+                credit=credit, action=LOG_ACTIONS.RECONCILED, user=user)
+            )
+        update_set.update(reconciled=True)
+        Log.objects.bulk_create(logs)
+
+
+class CompletedCreditManager(CreditManager):
+
+    def get_queryset(self):
+        return super().get_queryset().exclude(resolution=CREDIT_RESOLUTION.INITIAL)
 
 
 class LogManager(models.Manager):

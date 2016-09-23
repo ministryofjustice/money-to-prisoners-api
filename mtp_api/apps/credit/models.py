@@ -8,7 +8,7 @@ from django.dispatch import receiver
 from model_utils.models import TimeStampedModel
 
 from credit.constants import LOG_ACTIONS, CREDIT_RESOLUTION, CREDIT_STATUS, CREDIT_SOURCE
-from credit.managers import CreditManager, CreditQuerySet, LogManager
+from credit.managers import CompletedCreditManager, CreditQuerySet, LogManager
 from credit.signals import (
     credit_created, credit_locked, credit_unlocked, credit_credited,
     credit_refunded, credit_reconciled, credit_prisons_need_updating
@@ -31,7 +31,7 @@ class Credit(TimeStampedModel):
 
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
 
-    objects = CreditManager.from_queryset(CreditQuerySet)()
+    objects = CompletedCreditManager.from_queryset(CreditQuerySet)()
 
     # NB: there are matching boolean fields or properties on the model instance for each
     STATUS_LOOKUP = {

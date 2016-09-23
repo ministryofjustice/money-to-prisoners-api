@@ -7,11 +7,11 @@ from credit.models import Credit
 from .constants import TRANSACTION_STATUS
 
 
-class TransactionQuerySet(models.QuerySet):
+class TransactionManager(models.Manager):
 
     @atomic
     def reconcile(self, start_date, end_date, user):
-        update_set = self.filter(
+        update_set = self.get_queryset().filter(
             self.model.STATUS_LOOKUP[TRANSACTION_STATUS.RECONCILABLE],
             received_at__gte=start_date,
             received_at__lt=end_date,
