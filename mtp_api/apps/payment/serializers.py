@@ -1,6 +1,7 @@
 from django.db.transaction import atomic
 from rest_framework import serializers
 
+from credit.constants import CREDIT_RESOLUTION
 from credit.models import Credit
 from .models import Payment
 from .constants import PAYMENT_STATUS
@@ -16,7 +17,8 @@ class PaymentSerializer(serializers.ModelSerializer):
         new_credit = Credit(
             amount=validated_data['amount'],
             prisoner_number=validated_data.pop('prisoner_number'),
-            prisoner_dob=validated_data.pop('prisoner_dob')
+            prisoner_dob=validated_data.pop('prisoner_dob'),
+            resolution=CREDIT_RESOLUTION.INITIAL
         )
         new_credit.save()
         validated_data['credit'] = new_credit
