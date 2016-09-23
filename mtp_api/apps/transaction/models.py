@@ -8,7 +8,7 @@ from credit.models import Credit
 from transaction.constants import (
     TRANSACTION_STATUS, TRANSACTION_CATEGORY, TRANSACTION_SOURCE
 )
-from transaction.managers import TransactionQuerySet
+from transaction.managers import TransactionManager
 from transaction.utils import format_amount
 
 
@@ -76,7 +76,7 @@ class Transaction(TimeStampedModel):
         ~STATUS_LOOKUP[TRANSACTION_STATUS.ANOMALOUS]
     )
 
-    objects = TransactionQuerySet.as_manager()
+    objects = TransactionManager()
 
     class Meta:
         ordering = ('received_at',)
