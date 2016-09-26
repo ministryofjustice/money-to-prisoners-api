@@ -10,6 +10,7 @@ from credit.models import Credit
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from payment.models import Payment
 from payment.constants import PAYMENT_STATUS
+from prison.tests.utils import load_random_prisoner_locations
 
 
 class CreatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
@@ -18,14 +19,15 @@ class CreatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
     def setUp(self):
         super().setUp()
         self.prison_clerks, _, _, _, self.send_money_users, _ = make_test_users()
+        load_random_prisoner_locations(2)
 
     def test_permissions_required(self):
         user = self.prison_clerks[0]
 
         new_payment = {
-            'prisoner_number': 'A1234BY',
-            'prisoner_dob': date(1986, 12, 9),
-            'recipient_name': 'Alan Smith',
+            'prisoner_number': 'A1409AE',
+            'prisoner_dob': date(1989, 1, 21),
+            'recipient_name': 'James Halls',
             'amount': 1000,
             'service_charge': 24,
         }
@@ -41,9 +43,9 @@ class CreatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         user = self.send_money_users[0]
 
         new_payment = {
-            'prisoner_number': 'A1234BY',
-            'prisoner_dob': date(1986, 12, 9),
-            'recipient_name': 'Alan Smith',
+            'prisoner_number': 'A1409AE',
+            'prisoner_dob': date(1989, 1, 21),
+            'recipient_name': 'James Halls',
             'amount': 1000,
             'service_charge': 24,
             'email': 'sender@outside.local'
@@ -71,6 +73,8 @@ class CreatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(credit.prisoner_number, expected_credit['prisoner_number'])
         self.assertEqual(credit.prisoner_dob, expected_credit['prisoner_dob'])
         self.assertEqual(credit.resolution, CREDIT_RESOLUTION.INITIAL)
+        self.assertIsNotNone(credit.prison)
+        self.assertIsNotNone(credit.prisoner_name)
         self.assertEqual(Credit.objects.all().count(), 0)
 
 
@@ -80,14 +84,15 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
     def setUp(self):
         super().setUp()
         self.prison_clerks, _, _, _, self.send_money_users, _ = make_test_users()
+        load_random_prisoner_locations(2)
 
     def _test_update_status(self, new_outcome):
         user = self.send_money_users[0]
 
         new_payment = {
-            'prisoner_number': 'A1234BY',
-            'prisoner_dob': date(1986, 12, 9),
-            'recipient_name': 'Alan Smith',
+            'prisoner_number': 'A1409AE',
+            'prisoner_dob': date(1989, 1, 21),
+            'recipient_name': 'James Halls',
             'amount': 1000,
             'service_charge': 24,
             'email': 'sender@outside.local'
@@ -121,6 +126,8 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
                          PAYMENT_STATUS.TAKEN)
         self.assertEqual(Credit.objects.all()[0].resolution,
                          CREDIT_RESOLUTION.PENDING)
+        self.assertIsNotNone(Credit.objects.all()[0].prison)
+        self.assertIsNotNone(Credit.objects.all()[0].prisoner_name)
         self.assertIsNotNone(Credit.objects.all()[0].received_at)
 
     def test_update_status_failed_succeeds(self):
@@ -173,14 +180,15 @@ class GetPaymentViewTestCase(AuthTestCaseMixin, APITestCase):
     def setUp(self):
         super().setUp()
         self.prison_clerks, _, _, _, self.send_money_users, _ = make_test_users()
+        load_random_prisoner_locations(2)
 
     def test_get_payment(self):
         user = self.send_money_users[0]
 
         new_payment = {
-            'prisoner_number': 'A1234BY',
-            'prisoner_dob': date(1986, 12, 9),
-            'recipient_name': 'Alan Smith',
+            'prisoner_number': 'A1409AE',
+            'prisoner_dob': date(1989, 1, 21),
+            'recipient_name': 'James Halls',
             'amount': 1000,
             'service_charge': 24,
             'email': 'sender@outside.local'
