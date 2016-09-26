@@ -79,22 +79,25 @@ def generate_payments(payment_batch=50,
 def setup_payment(owner_status_chooser,
                   end_date, payment_counter, data):
     incomplete = payment_counter % 10
-    is_most_recent = data['created'].date() >= end_date.date()
+    older_than_yesterday = (
+        data['created'].date() < (end_date.date() - datetime.timedelta(days=1))
+    )
     if incomplete:
         owner, status = owner_status_chooser(data['prison'])
         data['processor_id'] = str(uuid.uuid1())
         data['status'] = PAYMENT_STATUS.TAKEN
-        if is_most_recent:
-            data.update({
-                'owner': None,
-                'credited': False
-            })
-        else:
+        if older_than_yesterday:
             data.update({
                 'owner': owner,
                 'credited': True,
                 'reconciled': True
             })
+        else:
+            data.update({
+                'owner': None,
+                'credited': False
+            })
+
     else:
         data['status'] = PAYMENT_STATUS.PENDING
 

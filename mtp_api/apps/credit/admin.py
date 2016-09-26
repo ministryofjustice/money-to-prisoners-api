@@ -115,6 +115,13 @@ class CreditAdmin(admin.ModelAdmin):
         'display_resolution_time'
     ]
 
+    def get_queryset(self, request):
+        qs = Credit.objects_all.get_queryset()
+        ordering = self.get_ordering(request)
+        if ordering:
+            qs = qs.order_by(*ordering)
+        return qs
+
     def formatted_amount(self, instance):
         return format_amount(instance.amount)
 
