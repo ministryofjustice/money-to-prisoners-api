@@ -48,7 +48,7 @@ class Command(BaseCommand):
             Balance.objects.all().delete()
             Transaction.objects.all().delete()
             Payment.objects.all().delete()
-            Credit.objects.all().delete()
+            Credit.objects_all.all().delete()
 
         if not protect_prisoner_locations:
             print_message('Deleting all prisoner locations')

@@ -72,7 +72,7 @@ class Command(BaseCommand):
             Balance.objects.all().delete()
             Transaction.objects.all().delete()
             Payment.objects.all().delete()
-            Credit.objects.all().delete()
+            Credit.objects_all.all().delete()
 
         user_set = get_user_model().objects.exclude(username__in=protect_usernames or [])
         if protect_superusers:
