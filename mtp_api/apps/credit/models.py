@@ -281,7 +281,8 @@ class Log(TimeStampedModel):
 def update_prison_for_credit(sender, instance, created, *args, **kwargs):
     if (created and
             instance.reconciled is False and
-            instance.resolution is CREDIT_RESOLUTION.PENDING and
+            (instance.resolution is CREDIT_RESOLUTION.INITIAL or
+             instance.resolution is CREDIT_RESOLUTION.PENDING) and
             instance.owner is None):
         try:
             location = PrisonerLocation.objects.get(
