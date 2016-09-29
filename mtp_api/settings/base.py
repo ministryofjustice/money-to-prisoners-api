@@ -257,6 +257,11 @@ SURVEY_GIZMO_API_KEY = os.environ.get('SURVEY_GIZMO_API_KEY')
 PERFORMANCE_PLATFORM_API_URL = os.environ.get('PERFORMANCE_PLATFORM_API_URL', 'http://localhost/')
 PERFORMANCE_PLATFORM_API_TOKEN = os.environ.get('PERFORMANCE_PLATFORM_API_TOKEN', 'not_a_token')
 
+ZENDESK_BASE_URL = 'https://ministryofjustice.zendesk.com'
+ZENDESK_API_USERNAME = os.environ.get('ZENDESK_API_USERNAME', '')
+ZENDESK_API_TOKEN = os.environ.get('ZENDESK_API_TOKEN', '')
+ZENDESK_GROUP_ID = 26417927
+
 try:
     from .local import *  # noqa
 except ImportError:
