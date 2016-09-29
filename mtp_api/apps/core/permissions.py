@@ -59,7 +59,7 @@ class ActionsBasedPermissions(BasePermission):
 
     def has_permission(self, request, view):
         if not hasattr(view, 'action'):
-            msg = ("%s has to have an 'action' property or you have to use a ViewSet")
+            msg = "%s has to have an 'action' property or you have to use a ViewSet"
             raise ImproperlyConfigured(msg % self.__class__.__name__)
 
         # Workaround to ensure DjangoModelPermissions are not applied

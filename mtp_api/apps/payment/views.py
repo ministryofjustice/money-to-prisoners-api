@@ -1,3 +1,4 @@
+from django.http import Http404
 from rest_framework import mixins, viewsets
 from rest_framework import status as http_status
 from rest_framework.permissions import IsAuthenticated
@@ -24,6 +25,9 @@ class PaymentView(
     def get_queryset(self):
         queryset = Payment.objects.all()
         return queryset.select_related('credit')
+
+    def list(self, request, *args, **kwargs):
+        raise Http404
 
     def update(self, request, *args, **kwargs):
         try:
