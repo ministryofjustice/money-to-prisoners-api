@@ -19,6 +19,8 @@ ALLOWED_HOSTS = [
 # security tightening
 if ENVIRONMENT != 'local':
     SECURE_SSL_REDIRECT = True  # also done at nginx level
-    SECURE_HSTS_SECONDS = 300
+    # strict-transport set at nginx level
+    # SECURE_HSTS_SECONDS = 31536000
+    # SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
