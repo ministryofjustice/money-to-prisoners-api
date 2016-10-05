@@ -13,6 +13,8 @@ from transaction.utils import format_amount
 class PaymentAdmin(admin.ModelAdmin):
     list_display = ('created', 'status',
                     'formatted_amount', 'formatted_service_charge')
+    ordering = ('-created',)
+    date_hierarchy = 'created'
     exclude = ('credit',)
     readonly_fields = ('credit_link',)
 
