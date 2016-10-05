@@ -9,6 +9,7 @@ from django.utils.translation import gettext_lazy as _
 from oauth2_provider.admin import RawIDAdmin
 from oauth2_provider.models import Grant, AccessToken, RefreshToken, get_application_model
 
+from core.admin import add_short_description
 from mtp_auth.forms import RestrictedUserCreationForm, RestrictedUserChangeForm
 from mtp_auth.models import ApplicationGroupMapping, ApplicationUserMapping, FailedLoginAttempt, PrisonUserMapping
 
@@ -104,7 +105,6 @@ class UserAdmin(DjangoUserAdmin):
         else:
             messages.info(request, 'No account lockouts to remove')
 
+    @add_short_description(_('account locked'))
     def account_locked(self, instance):
         return _boolean_icon(instance.is_locked_out)
-
-    account_locked.short_description = _('account locked')
