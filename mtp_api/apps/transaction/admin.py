@@ -15,7 +15,7 @@ from transaction.utils import format_amount
 
 class StatusFilter(admin.SimpleListFilter):
     parameter_name = 'status'
-    title = 'status'
+    title = _('status')
 
     def lookups(self, request, model_admin):
         return TRANSACTION_STATUS

@@ -15,6 +15,7 @@ class PaymentAdmin(admin.ModelAdmin):
                     'formatted_amount', 'formatted_service_charge')
     ordering = ('-created',)
     date_hierarchy = 'created'
+    list_filter = ('status',)
     exclude = ('credit',)
     readonly_fields = ('credit_link',)
 
