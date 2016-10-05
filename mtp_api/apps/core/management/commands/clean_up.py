@@ -20,5 +20,6 @@ class Command(BaseCommand):
                 self.stdout.write('Performing clean-up tasks')
             call_command('clearsessions', verbosity=verbosity)
             call_command('clear_oauth2_tokens', verbosity=verbosity)
+            call_command('clear_abandoned_payments', age=7, verbosity=verbosity)
         elif verbosity:
             self.stdout.write('Clean-up tasks disabled')

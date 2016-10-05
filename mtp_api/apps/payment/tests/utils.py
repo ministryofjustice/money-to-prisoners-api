@@ -78,11 +78,11 @@ def generate_payments(payment_batch=50,
 
 def setup_payment(owner_status_chooser,
                   end_date, payment_counter, data):
-    incomplete = payment_counter % 10
+    complete = bool(payment_counter % 10)
     older_than_yesterday = (
         data['created'].date() < (end_date.date() - datetime.timedelta(days=1))
     )
-    if incomplete:
+    if complete:
         owner, status = owner_status_chooser(data['prison'])
         data['processor_id'] = str(uuid.uuid1())
         data['status'] = PAYMENT_STATUS.TAKEN
