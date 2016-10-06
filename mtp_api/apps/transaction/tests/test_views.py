@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, time
+from datetime import date, datetime, timedelta, time
 
 from django.utils import timezone
 from django.core.urlresolvers import reverse
@@ -8,6 +8,7 @@ from rest_framework import status as http_status
 from core.tests.utils import silence_logger
 from credit.constants import LOG_ACTIONS
 from credit.models import Credit, Log
+from payment.models import Batch
 from transaction.models import Transaction
 from transaction.constants import TRANSACTION_CATEGORY, TRANSACTION_SOURCE
 from transaction.serializers import CreateTransactionSerializer
@@ -116,6 +117,25 @@ class CreateTransactionsTestCase(
         self.assertEqual(
             Transaction.objects.filter(source=TRANSACTION_SOURCE.ADMINISTRATIVE).count(), 1
         )
+
+    def test_create_with_related_payment_batch(self):
+        batch = Batch(date=date.today() - timedelta(days=3))
+        batch.save()
+
+        user = self.bank_admins[0]
+        data_list = self._get_transactions_data(tot=1)
+        data_list[0]['batch'] = batch.id
+
+        response = self.client.post(
+            self._get_url(), data=data_list, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_201_CREATED)
+
+        self.assertEqual(
+            Transaction.objects.filter(batch=batch).count(), 1
+        )
+        self.assertIsNotNone(Batch.objects.first().settlement_transaction)
 
 
 class CreateIncompleteTransactionsTestCase(
