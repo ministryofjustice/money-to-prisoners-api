@@ -13,25 +13,24 @@ from django.utils.translation import gettext, gettext_lazy as _
 
 from core.dashboards import DashboardModule
 from core.views import DashboardView
-from credit.constants import CREDIT_RESOLUTION, CREDIT_STATUS
-from credit.models import Credit
-from payment.constants import PAYMENT_STATUS
-from transaction.constants import TRANSACTION_SOURCE, TRANSACTION_STATUS
-from transaction.models import Transaction
-from transaction.utils import format_amount, format_number, format_percentage
+from credit.models import Credit, CREDIT_RESOLUTION, CREDIT_STATUS
+from payment.models import PAYMENT_STATUS
+from transaction.models import Transaction, TRANSACTION_CATEGORY, TRANSACTION_SOURCE, TRANSACTION_STATUS
 
 # credit-specific
-CREDITABLE_FILTERS = models.Q(prison__isnull=False) & \
-                     (models.Q(transaction__incomplete_sender_info=False) |
-                      models.Q(resolution=CREDIT_RESOLUTION.CREDITED))
+CREDITABLE_FILTERS = Credit.STATUS_LOOKUP[CREDIT_STATUS.CREDITED] | \
+                     Credit.STATUS_LOOKUP[CREDIT_STATUS.LOCKED] | \
+                     Credit.STATUS_LOOKUP[CREDIT_STATUS.AVAILABLE]
 CREDITED_FILTERS = Credit.STATUS_LOOKUP[CREDIT_STATUS.CREDITED]
-REFUNDABLE_FILTERS = models.Q(prison__isnull=True, transaction__incomplete_sender_info=False)
+REFUNDABLE_FILTERS = Credit.STATUS_LOOKUP[CREDIT_STATUS.REFUNDED] | \
+                     Credit.STATUS_LOOKUP[CREDIT_STATUS.REFUND_PENDING]
 # NB: refundable does not consider debit card payments since refunds there have not been worked out
 REFUNDED_FILTERS = Credit.STATUS_LOOKUP[CREDIT_STATUS.REFUNDED]
 ERROR_FILTERS = (models.Q(transaction__source=TRANSACTION_SOURCE.BANK_TRANSFER, prison__isnull=True) |
                  models.Q(payment__isnull=False) & ~models.Q(payment__status=PAYMENT_STATUS.TAKEN))
 
 # transaction-specific
+BANK_TRANSFER_CREDIT_FILTERS = models.Q(category=TRANSACTION_CATEGORY.CREDIT, source=TRANSACTION_SOURCE.BANK_TRANSFER)
 ANONYMOUS_FILTERS = Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.ANONYMOUS]
 UNIDENTIFIED_FILTERS = Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.UNIDENTIFIED]
 ANOMALOUS_FILTERS = Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.ANOMALOUS]
@@ -237,23 +236,36 @@ class CreditReport(DashboardModule):
         if self.dashboard_view and self.dashboard_view.request.user.has_perm('credit.change_credit'):
             self.change_list_url = reverse('admin:credit_credit_changelist') + '?' + filter_string
 
+    # statistic formatting methods
+
     @classmethod
     def get_count(cls, queryset):
-        value = queryset.count()
-        if value is None:
-            return '—'
-        if isinstance(value, (int, float)):
-            return format_number(value)
-        return value
+        return queryset.count()
 
     @classmethod
     def get_amount_sum(cls, queryset):
-        value = queryset.aggregate(amount=models.Sum('amount')).get('amount')
-        return format_amount(value, trim_empty_pence=True) or '—'
+        return queryset.aggregate(amount=models.Sum('amount')).get('amount')
+
+    @classmethod
+    def get_top_prisons(cls, queryset, top=3):
+        creditable_prisons = queryset.values('prison__name').annotate(count=models.Count('pk')).order_by('-count')[:top]
+        for creditable_prison in creditable_prisons:
+            yield {
+                'prison': creditable_prison['prison__name'],
+                'count': creditable_prison['count'],
+            }
+
+    # query set methods
 
     def get_received_queryset(self):
         # NB: includes only non-administrative bank transfers and debit card payments that are in progress or completed
         return self.credit_queryset.exclude(resolution=CREDIT_RESOLUTION.INITIAL)
+
+    def get_received_transaction_queryset(self):
+        return self.get_received_queryset().filter(transaction__isnull=False)
+
+    def get_received_payment_queryset(self):
+        return self.get_received_queryset().filter(payment__isnull=False)
 
     @property
     def received_count(self):
@@ -263,8 +275,25 @@ class CreditReport(DashboardModule):
     def received_amount(self):
         return self.get_amount_sum(self.get_received_queryset())
 
+    @property
+    def received_transaction_count(self):
+        return self.get_count(self.get_received_transaction_queryset())
+
+    @property
+    def received_payment_count(self):
+        return self.get_count(self.get_received_payment_queryset())
+
+    def get_top_recevied_by_prison(self, top=4):
+        return self.get_top_prisons(self.get_received_queryset(), top=top)
+
     def get_creditable_queryset(self):
         return self.credit_queryset.filter(CREDITABLE_FILTERS)
+
+    def get_creditable_transaction_queryset(self):
+        return self.get_creditable_queryset().filter(transaction__isnull=False)
+
+    def get_creditable_payment_queryset(self):
+        return self.get_creditable_queryset().filter(payment__isnull=False)
 
     @property
     def creditable_count(self):
@@ -273,6 +302,24 @@ class CreditReport(DashboardModule):
     @property
     def creditable_amount(self):
         return self.get_amount_sum(self.get_creditable_queryset())
+
+    @property
+    def creditable_transaction_count(self):
+        return self.get_count(self.get_creditable_transaction_queryset())
+
+    @property
+    def creditable_payment_count(self):
+        return self.get_count(self.get_creditable_payment_queryset())
+
+    @property
+    def creditable_payment_proportion(self):
+        creditable = self.get_creditable_queryset().count()
+        if creditable == 0:
+            return None
+        return self.get_creditable_payment_queryset().count() / creditable
+
+    def get_top_creditable_by_prison(self, top=4):
+        return self.get_top_prisons(self.get_creditable_queryset(), top=top)
 
     def get_credited_queryset(self):
         return self.credit_queryset.filter(CREDITED_FILTERS)
@@ -322,6 +369,7 @@ class CreditReport(DashboardModule):
 
     def get_valid_reference_queryset(self):
         return self.transaction_queryset.filter(
+            BANK_TRANSFER_CREDIT_FILTERS,
             credit__prisoner_dob__isnull=False,
             credit__prisoner_number__isnull=False,
         )
@@ -330,8 +378,20 @@ class CreditReport(DashboardModule):
     def valid_reference_count(self):
         return self.get_count(self.get_valid_reference_queryset())
 
+    def get_references_with_slash_queryset(self):
+        regex = r'^[A-Z]\d{4}[A-Z]{2}/\d{2}/\d{2}/\d{4}$'
+        return self.transaction_queryset.filter(
+            BANK_TRANSFER_CREDIT_FILTERS,
+            models.Q(reference__regex=regex) | models.Q(sender_name__regex=regex)
+        )
+
+    @property
+    def references_with_slash_count(self):
+        return self.get_count(self.get_references_with_slash_queryset())
+
     def get_unmatched_reference_queryset(self):
         return self.transaction_queryset.filter(
+            BANK_TRANSFER_CREDIT_FILTERS,
             credit__prison__isnull=True,
             credit__prisoner_dob__isnull=False,
             credit__prisoner_number__isnull=False,
@@ -343,6 +403,7 @@ class CreditReport(DashboardModule):
 
     def get_invalid_reference_queryset(self):
         return self.transaction_queryset.filter(
+            BANK_TRANSFER_CREDIT_FILTERS,
             credit__prisoner_dob__isnull=True,
             credit__prisoner_number__isnull=True,
         )
@@ -358,5 +419,5 @@ class CreditReport(DashboardModule):
     def error_rate(self):
         received = self.get_received_queryset().count()
         if received == 0:
-            return '–'
-        return format_percentage(self.get_error_queryset().count() / received)
+            return None
+        return self.get_error_queryset().count() / received
