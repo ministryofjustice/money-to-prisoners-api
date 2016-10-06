@@ -10,12 +10,22 @@ from model_utils.models import TimeStampedModel
 from credit.constants import CREDIT_RESOLUTION
 from credit.models import Credit
 from payment.constants import PAYMENT_STATUS
+from payment.managers import PaymentManager
 
 
-class PaymentManager(models.Manager):
-    def abandoned(self, created_before):
-        return self.get_queryset().filter(created__lt=created_before, status=PAYMENT_STATUS.PENDING,
-                                          credit__resolution=CREDIT_RESOLUTION.INITIAL)
+class Batch(TimeStampedModel):
+    date = models.DateField()
+    ref_code = models.CharField(max_length=12, help_text=_('For reconciliation'))
+    settlement_transaction = models.OneToOneField(
+        'transaction.Transaction', on_delete=models.SET_NULL, blank=True, null=True
+    )
+
+    class Meta:
+        ordering = ('date',)
+        get_latest_by = 'date'
+        permissions = (
+            ('view_batch', 'Can view batch'),
+        )
 
 
 class Payment(TimeStampedModel):
@@ -29,6 +39,7 @@ class Payment(TimeStampedModel):
     email = models.EmailField(null=True, blank=True,
                               help_text=_('Specified by sender for confirmation emails'))
     credit = models.OneToOneField(Credit, on_delete=models.CASCADE)
+    batch = models.ForeignKey(Batch, on_delete=models.SET_NULL, null=True, blank=True)
 
     objects = PaymentManager()
 
@@ -57,6 +68,10 @@ class Payment(TimeStampedModel):
     @property
     def prisoner_number(self):
         return self.credit.prisoner_number
+
+    @property
+    def ref_code(self):
+        return self.batch.ref_code if self.batch else None
 
 
 @receiver(pre_save, sender=Payment, dispatch_uid='update_credit_for_payment')

@@ -4,6 +4,7 @@ from django.db import models
 from django.db.transaction import atomic
 
 from credit.models import Credit
+from payment.models import Payment
 from .constants import TRANSACTION_STATUS
 
 
@@ -37,4 +38,5 @@ class TransactionManager(models.Manager):
                           'ref_code=r.ref_code FROM refids r WHERE '
                           't.id=r.id;')
 
+        Payment.objects.reconcile(start_date, end_date, user)
         Credit.objects.reconcile(start_date, end_date, user)

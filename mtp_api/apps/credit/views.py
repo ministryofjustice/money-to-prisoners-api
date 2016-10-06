@@ -193,7 +193,7 @@ class GetCredits(CreditViewMixin, generics.ListAPIView):
     )
 
     def get_queryset(self):
-        return super().get_queryset().select_related('transaction').select_related('payment')
+        return super().get_queryset().select_related('transaction').select_related('payment__batch')
 
     def get_serializer_class(self):
         if self.request.user.has_perm(

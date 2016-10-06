@@ -213,7 +213,7 @@ class Credit(TimeStampedModel):
         if hasattr(self, 'transaction'):
             return self.transaction.ref_code
         elif hasattr(self, 'payment'):
-            return 'Card payment'
+            return self.payment.ref_code
 
     @property
     def credited_at(self):
