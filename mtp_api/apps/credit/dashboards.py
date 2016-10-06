@@ -7,6 +7,7 @@ from django.db import models
 from django.utils import timezone
 from django.utils.dateformat import format as format_date
 from django.utils.encoding import force_text
+from django.utils.functional import cached_property
 from django.utils.html import escapejs
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext, gettext_lazy as _
@@ -39,15 +40,129 @@ ANOMALOUS_FILTERS = Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.ANOMALOUS]
 class CreditReportDateForm(forms.Form):
     date_range = forms.ChoiceField(
         label=_('Date range'),
-        choices=(
-            ('latest', _('Latest day')),
+        choices=[
+            ('this_week', _('This week')),
+            ('last_week', _('Last week')),
             ('four_weeks', _('Last 4 weeks')),
             ('this_month', _('This month')),
             ('last_month', _('Last month')),
             ('all', _('Since the beginning')),
-        ),
-        initial='latest',
+        ],
     )
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if not self.latest:
+            date_ranges = [
+                ('today', _('Today')),
+            ]
+            self['date_range'].field.initial = 'today'
+        elif self.latest == self.today:
+            date_ranges = [
+                ('latest', _('Latest')),
+                ('yesterday', _('Yesterday')),
+            ]
+            self['date_range'].field.initial = 'latest'
+        elif self.latest == self.yesterday:
+            date_ranges = [
+                ('today', _('Today')),
+                ('latest', _('Latest')),
+            ]
+            self['date_range'].field.initial = 'latest'
+        else:
+            date_ranges = [
+                ('latest', _('Latest')),
+            ]
+            self['date_range'].field.initial = 'latest'
+        self['date_range'].field.choices = date_ranges + self['date_range'].field.choices
+
+    @cached_property
+    def today(self):
+        return timezone.localtime(timezone.now()).date()
+
+    @cached_property
+    def yesterday(self):
+        return self.today - datetime.timedelta(days=1)
+
+    @cached_property
+    def latest(self):
+        try:
+            return timezone.localtime(Credit.objects.latest().received_at).date()
+        except Credit.DoesNotExist:
+            pass
+
+    @cached_property
+    def this_week(self):
+        monday = self.today - datetime.timedelta(days=self.today.weekday())
+        return monday, monday + datetime.timedelta(days=6)
+
+    @cached_property
+    def last_week(self):
+        monday = self.today - datetime.timedelta(days=self.today.weekday() + 7)
+        return monday, monday + datetime.timedelta(days=6)
+
+    @cached_property
+    def four_weeks(self):
+        return self.today - datetime.timedelta(days=4 * 7), self.today
+
+    @cached_property
+    def this_month(self):
+        return self.today.replace(day=1), self.today
+
+    @cached_property
+    def last_month(self):
+        last_day = self.today.replace(day=1) - datetime.timedelta(days=1)
+        return last_day.replace(day=1), last_day
+
+    def get_selected_range(self):
+        if self.is_valid():
+            date_range = self.cleaned_data['date_range']
+        else:
+            date_range = self['date_range'].field.initial
+        if date_range in ('this_week', 'last_week', 'four_weeks', 'this_month', 'last_month'):
+            received_at_start, received_at_end = getattr(self, date_range)
+            short_title = dict(self['date_range'].field.choices)[date_range]
+            if date_range in ('this_month', 'last_month'):
+                month = format_date(received_at_start, 'N Y')
+                title = '%(title)s, %(month)s' % {
+                    'title': short_title,
+                    'month': month,
+                }
+                short_title = month
+            else:
+                title = '%(title)s, commencing %(day)s' % {
+                    'title': short_title,
+                    'day': format_date(received_at_start, 'j N'),
+                }
+            return {
+                'range': 2,
+                'received_at_start': received_at_start,
+                'received_at_end': received_at_end,
+                'short_title': short_title,
+                'title': title,
+            }
+        elif date_range in ('latest', 'today', 'yesterday'):
+            received_at = getattr(self, date_range)
+            short_title = dict(self['date_range'].field.choices)[date_range]
+            return {
+                'range': 1,
+                'received_at_start': received_at,
+                'received_at_end': None,
+                'short_title': short_title,
+                'title': '%(title)s, %(day)s' % {
+                    'title': short_title,
+                    'day': format_date(received_at, 'j N'),
+                },
+            }
+
+        # all time
+        return {
+            'range': 0,
+            'received_at_start': None,
+            'received_at_end': None,
+            'short_title': _('All credits'),
+            'title': _('All credits'),
+        }
 
 
 class CreditReportChart:
@@ -161,80 +276,54 @@ class CreditReport(DashboardModule):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        today = timezone.localtime(timezone.now()).date()
-
-        def get_four_weeks():
-            return today - datetime.timedelta(days=4 * 7), today
-
-        def get_this_month():
-            return today.replace(day=1), today
-
-        def get_last_month():
-            last_day = today.replace(day=1) - datetime.timedelta(days=1)
-            return last_day.replace(day=1), last_day
-
         self.form = CreditReportDateForm(data=self.cookie_data)
-        date_range = self.form['date_range'].value()
         credit_queryset = Credit.objects.all()
         transaction_queryset = Transaction.objects.all()
-        queryset_filters = {}
-        if date_range == 'all':
-            self.range_title = _('All credits')
-            received_at_start, received_at_end = None, None
-            filter_string = ''
-            chart_title = self.range_title
-        elif date_range in ('four_weeks', 'this_month', 'last_month'):
-            if date_range == 'four_weeks':
-                received_at_start, received_at_end = get_four_weeks()
-                chart_title = _('Last 4 weeks')
-                self.range_title = chart_title
-            else:
-                if date_range == 'last_month':
-                    received_at_start, received_at_end = get_last_month()
-                else:
-                    received_at_start, received_at_end = get_this_month()
-                chart_title = format_date(received_at_start, 'N Y')
-                self.range_title = _('Credits received in %(month)s') % {
-                    'month': chart_title
-                }
 
+        date_range = self.form.get_selected_range()
+        if date_range['range'] == 2:
+            self.range_title = date_range['title']
+            received_at_start, received_at_end = date_range['received_at_start'], date_range['received_at_end']
             queryset_filters = {
                 'received_at__date__gte': received_at_start,
                 'received_at__date__lte': received_at_end,
             }
-            filter_string = 'received_at__date__gte=%s&' \
-                            'received_at__date__lte=%s' % (received_at_start.isoformat(),
-                                                           received_at_end.isoformat())
-        else:
-            try:
-                received_at = timezone.localtime(Credit.objects.latest().received_at).date()
-            except Credit.DoesNotExist:
-                received_at = (timezone.localtime(timezone.now()) - datetime.timedelta(days=1)).date()
-            self.range_title = _('Latest credits received on %(date)s') % {
-                'date':  format_date(received_at, 'j N')
+            admin_filter_string = 'received_at__date__gte=%s&' \
+                                  'received_at__date__lte=%s' % (received_at_start.isoformat(),
+                                                                 received_at_end.isoformat())
+            chart_title = date_range['short_title']
+            chart_filters = {
+                'start_date': received_at_start,
+                'end_date': received_at_end,
             }
+        elif date_range['range'] == 1:
+            self.range_title = date_range['title']
+            received_at = date_range['received_at_start']
             queryset_filters = {
                 'received_at__date': received_at
             }
-            filter_string = 'received_at__day=%d&' \
-                            'received_at__month=%d&' \
-                            'received_at__year=%d' % (received_at.day,
-                                                      received_at.month,
-                                                      received_at.year)
-
-            # display chart of last 4 weeks
-            received_at_start, received_at_end = get_four_weeks()
+            admin_filter_string = 'received_at__day=%d&' \
+                                  'received_at__month=%d&' \
+                                  'received_at__year=%d' % (received_at.day,
+                                                            received_at.month,
+                                                            received_at.year)
             chart_title = _('Last 4 weeks')
+            chart_filters = {
+                'start_date': self.form.four_weeks[0],
+                'end_date': self.form.four_weeks[1],
+            }
+        else:
+            self.range_title = date_range['title']
+            queryset_filters = {}
+            admin_filter_string = ''
+            chart_title = date_range['short_title']
+            chart_filters = {}
 
         self.credit_queryset = credit_queryset.filter(**queryset_filters)
         self.transaction_queryset = transaction_queryset.filter(**queryset_filters)
-        self.chart = CreditReportChart(
-            chart_title,
-            start_date=received_at_start,
-            end_date=received_at_end,
-        )
+        self.chart = CreditReportChart(chart_title, **chart_filters)
         if self.dashboard_view and self.dashboard_view.request.user.has_perm('credit.change_credit'):
-            self.change_list_url = reverse('admin:credit_credit_changelist') + '?' + filter_string
+            self.change_list_url = reverse('admin:credit_credit_changelist') + '?' + admin_filter_string
 
     # statistic formatting methods
 
