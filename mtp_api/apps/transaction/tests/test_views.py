@@ -5,6 +5,7 @@ from django.core.urlresolvers import reverse
 from django.conf import settings
 from rest_framework import status as http_status
 
+from core.tests.utils import silence_logger
 from credit.constants import LOG_ACTIONS
 from credit.models import Credit, Log
 from transaction.models import Transaction
@@ -262,7 +263,9 @@ class UpdateRefundTransactionsTestCase(
         return data_list
 
     def test_patch_refunded(self):
-        """PATCH on endpoint should update status of given transactions"""
+        """
+        PATCH on endpoint should update status of given transactions
+        """
 
         url = self._get_url()
         data_list = self._get_transactions()
@@ -300,10 +303,11 @@ class UpdateRefundTransactionsTestCase(
             [{'id': t.id, 'refunded': True} for t in invalid_transactions]
         )
 
-        return self.client.patch(
-            url, data=valid_data_list + invalid_data_list, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
-        )
+        with silence_logger():
+            return self.client.patch(
+                url, data=valid_data_list + invalid_data_list, format='json',
+                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+            )
 
     def test_patch_credited_creates_conflict(self):
         valid_data_list = self._get_transactions()
@@ -334,7 +338,9 @@ class UpdateRefundTransactionsTestCase(
                 )
 
     def test_patch_cannot_update_disallowed_fields(self):
-        """ PATCH should not update fields other than refunded """
+        """
+        PATCH should not update fields other than refunded
+        """
 
         url = self._get_url()
         data_list = self._get_transactions()

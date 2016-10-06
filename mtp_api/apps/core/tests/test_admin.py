@@ -5,7 +5,7 @@ from django.core.management import call_command
 from django.core.urlresolvers import reverse
 from django.test import TestCase
 
-from core.tests.utils import quieten_mtp_logger
+from core.tests.utils import silence_logger
 
 
 class RecreateTestDataViewTestCase(TestCase):
@@ -52,7 +52,7 @@ class RecreateTestDataViewTestCase(TestCase):
 
         self.make_superuser(log_into_client=True)
         with mock.patch.object(Command, 'handle') as method:
-            with quieten_mtp_logger():
+            with silence_logger():
                 response = self.client.post(self.url, data={
                     'scenario': 'random',
                     'number_of_transactions': '50',

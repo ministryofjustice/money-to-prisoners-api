@@ -22,8 +22,8 @@ from prison.models import Prison
 
 
 @contextlib.contextmanager
-def quieten_mtp_logger(level=logging.ERROR):
-    logger = logging.getLogger('mtp')
+def silence_logger(name='mtp', level=logging.CRITICAL):
+    logger = logging.getLogger(name)
     old_level = logger.level
     logger.setLevel(level)
     yield
