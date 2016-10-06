@@ -712,3 +712,34 @@ class ReconcileTransactionsTestCase(
         for trans in qs:
             self.assertEqual(trans.ref_code, str(expected_ref_code))
             expected_ref_code += 1
+
+    def test_reconciliation_populates_ref_code_from_batch(self):
+        url = self._get_url()
+        user = self._get_authorised_user()
+
+        administrative_trans = Transaction.objects.filter(
+            category=TRANSACTION_CATEGORY.CREDIT,
+            received_at__date=self._get_latest_date()
+        ).first()
+        administrative_trans.source = TRANSACTION_SOURCE.ADMINISTRATIVE
+        administrative_trans.save()
+        batch = Batch(date=self._get_latest_date() - timedelta(days=3),
+                      settlement_transaction=administrative_trans,
+                      ref_code='800003')
+        batch.save()
+
+        start_date = self._get_latest_date().isoformat()
+        end_date = (self._get_latest_date() + timedelta(days=1)).isoformat()
+
+        response = self.client.post(
+            url, {'received_at__gte': start_date, 'received_at__lt': end_date},
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_204_NO_CONTENT)
+
+        trans = Transaction.objects.get(
+            batch__isnull=False,
+            received_at__date=self._get_latest_date()
+        )
+        self.assertEqual(trans.ref_code, batch.ref_code)
