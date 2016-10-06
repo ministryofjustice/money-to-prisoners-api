@@ -2,10 +2,12 @@ from datetime import timedelta
 
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+from django.test.utils import captured_stdout
 from django.utils import timezone
 
 from core.models import ScheduledCommand
 from core.management.commands import run_scheduled_commands
+from core.tests.utils import silence_logger
 
 
 class ScheduledCommandsTestCase(TestCase):
@@ -72,7 +74,12 @@ class ScheduledCommandsTestCase(TestCase):
         )
         command.save()
         run_commands = run_scheduled_commands.Command()
-        run_commands.handle()
+        with captured_stdout() as stdout, silence_logger():
+            run_commands.handle()
+
+        stdout = stdout.getvalue()
+        self.assertIn('Making test users', stdout)
+        self.assertIn('random prisoner locations', stdout)
 
         from prison.models import PrisonerLocation
         self.assertEqual(PrisonerLocation.objects.count(), 60)

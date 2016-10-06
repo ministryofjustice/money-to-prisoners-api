@@ -12,6 +12,12 @@ from credit.models import Credit
 from payment.constants import PAYMENT_STATUS
 
 
+class PaymentManager(models.Manager):
+    def abandoned(self, created_before):
+        return self.get_queryset().filter(created__lt=created_before, status=PAYMENT_STATUS.PENDING,
+                                          credit__resolution=CREDIT_RESOLUTION.INITIAL)
+
+
 class Payment(TimeStampedModel):
     uuid = models.UUIDField(default=uuid.uuid4, primary_key=True, editable=False)
     status = models.CharField(max_length=50, choices=PAYMENT_STATUS, default=PAYMENT_STATUS.PENDING)
@@ -23,6 +29,8 @@ class Payment(TimeStampedModel):
     email = models.EmailField(null=True, blank=True,
                               help_text=_('Specified by sender for confirmation emails'))
     credit = models.OneToOneField(Credit, on_delete=models.CASCADE)
+
+    objects = PaymentManager()
 
     class Meta:
         ordering = ('created',)

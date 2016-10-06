@@ -44,6 +44,14 @@ class AdminSite(admin.AdminSite):
 site = AdminSite()
 
 
+def add_short_description(short_description):
+    def inner(func):
+        func.short_description = short_description
+        return func
+
+    return inner
+
+
 class ScheduledCommandAdmin(admin.ModelAdmin):
     list_display = ('name', 'arg_string', 'cron_entry', 'next_execution',)
 site.register(models.ScheduledCommand, ScheduledCommandAdmin)

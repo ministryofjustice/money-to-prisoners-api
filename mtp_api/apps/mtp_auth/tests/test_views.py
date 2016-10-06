@@ -16,7 +16,7 @@ from oauth2_provider.models import AccessToken, Application, RefreshToken
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from core.tests.utils import make_test_users, make_test_user_admins, quieten_mtp_logger
+from core.tests.utils import make_test_users, make_test_user_admins, silence_logger
 from mtp_auth.constants import (
     ALL_OAUTH_CLIENT_IDS,
     BANK_ADMIN_OAUTH_CLIENT_ID, CASHBOOK_OAUTH_CLIENT_ID,
@@ -85,7 +85,7 @@ class OauthTokenTestCase(APITestCase):
             client = Application.objects.get(client_id=client_id)
             for mapping in client.applicationusermapping_set.all():
                 username = mapping.user.username
-                with quieten_mtp_logger():
+                with silence_logger():
                     response = self.client.post(
                         reverse('oauth2_provider:token'),
                         {
@@ -911,16 +911,17 @@ class AccountLockoutTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def fail_login(self, user, client):
-        response = self.client.post(
-            reverse('oauth2_provider:token'),
-            {
-                'grant_type': 'password',
-                'username': user.username,
-                'password': 'incorrect-password',
-                'client_id': client.client_id,
-                'client_secret': client.client_secret,
-            }
-        )
+        with silence_logger():
+            response = self.client.post(
+                reverse('oauth2_provider:token'),
+                {
+                    'grant_type': 'password',
+                    'username': user.username,
+                    'password': 'incorrect-password',
+                    'client_id': client.client_id,
+                    'client_secret': client.client_secret,
+                }
+            )
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_account_lockout_on_too_many_attempts(self):

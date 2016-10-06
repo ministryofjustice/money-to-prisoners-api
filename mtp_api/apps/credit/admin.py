@@ -7,7 +7,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import Sum
 from django.utils.translation import gettext_lazy as _
 
-from core.admin import DateRangeFilter, RelatedAnyFieldListFilter, SearchFilter
+from core.admin import DateRangeFilter, RelatedAnyFieldListFilter, SearchFilter, add_short_description
 from payment.models import Payment
 from transaction.models import Transaction
 from transaction.utils import format_amount
@@ -122,31 +122,30 @@ class CreditAdmin(admin.ModelAdmin):
             qs = qs.order_by(*ordering)
         return qs
 
+    @add_short_description(_('amount'))
     def formatted_amount(self, instance):
         return format_amount(instance.amount)
 
-    formatted_amount.short_description = _('Amount')
-
+    @add_short_description(_('source'))
     def formatted_source(self, instance):
         value = instance.source
         if CREDIT_SOURCE.has_value(value):
             return CREDIT_SOURCE.for_value(value).display
         return value
 
-    formatted_source.short_description = _('Source')
-
+    @add_short_description(_('status'))
     def formatted_status(self, instance):
         value = instance.status
         if CREDIT_STATUS.has_value(value):
             return CREDIT_STATUS.for_value(value).display
         return value
 
-    formatted_status.short_description = _('Status')
-
+    @add_short_description(_('Display total of selected credits'))
     def display_total_amount(self, request, queryset):
         total = queryset.aggregate(Sum('amount'))['amount__sum']
         self.message_user(request, _('Total: %s') % format_amount(total, True))
 
+    @add_short_description(_('Display credit validity of selected credits'))
     def display_credit_validity(self, request, queryset):
         invalid_ref_count = queryset.filter(prison__isnull=True).count()
         total_count = queryset.count()
@@ -165,6 +164,7 @@ class CreditAdmin(admin.ModelAdmin):
                'valid_percent': valid_percent}
         )
 
+    @add_short_description(_('Display resolution time of selected credits'))
     def display_resolution_time(self, request, queryset):
         until_credited_times = []
         until_unlocked_times = []

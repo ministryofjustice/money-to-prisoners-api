@@ -15,6 +15,7 @@ from django.utils.timezone import localtime
 from rest_framework import status
 
 from core import getattr_path
+from core.tests.utils import silence_logger
 from credit.views import CreditTextSearchFilter
 from credit.models import Credit, Log
 from credit.constants import CREDIT_STATUS, LOCK_LIMIT, LOG_ACTIONS
@@ -1344,14 +1345,15 @@ class UnlockCreditTestCase(
 
         locked_qs = self._get_locked_credits_qs(self.prisons, other_user)
         locked_qs.update(prison=self.prisons[1])
-
         to_unlock = locked_qs.values_list('id', flat=True)
-        response = self.client.post(
-            self._get_url(),
-            {'credit_ids': to_unlock},
-            format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
-        )
+
+        with silence_logger():
+            response = self.client.post(
+                self._get_url(),
+                {'credit_ids': to_unlock},
+                format='json',
+                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+            )
 
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
         errors = response.data['errors']
@@ -1369,12 +1371,13 @@ class UnlockCreditTestCase(
         locked_ids = list(locked_qs.values_list('id', flat=True))
         credited_ids = list(credited_qs.values_list('id', flat=True)[:1])
 
-        response = self.client.post(
-            self._get_url(),
-            {'credit_ids': locked_ids + credited_ids},
-            format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
-        )
+        with silence_logger():
+            response = self.client.post(
+                self._get_url(),
+                {'credit_ids': locked_ids + credited_ids},
+                format='json',
+                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+            )
 
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
         errors = response.data['errors']
@@ -1484,11 +1487,12 @@ class CreditCreditTestCase(
             for t_id in locked_by_other_user_ids
         ]
 
-        response = self.client.patch(
-            self._get_url(), data=data,
-            format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
-        )
+        with silence_logger():
+            response = self.client.patch(
+                self._get_url(), data=data,
+                format='json',
+                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+            )
 
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
         errors = response.data['errors']
@@ -1518,11 +1522,12 @@ class CreditCreditTestCase(
             for t_id in available_ids
         ]
 
-        response = self.client.patch(
-            self._get_url(), data=data,
-            format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
-        )
+        with silence_logger():
+            response = self.client.patch(
+                self._get_url(), data=data,
+                format='json',
+                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+            )
 
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
         errors = response.data['errors']
