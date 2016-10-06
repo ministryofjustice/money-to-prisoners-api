@@ -8,9 +8,36 @@ from core.tests.utils import make_test_users
 from credit.constants import CREDIT_RESOLUTION
 from credit.models import Credit
 from mtp_auth.tests.utils import AuthTestCaseMixin
-from payment.models import Payment
+from payment.models import Batch, Payment
 from payment.constants import PAYMENT_STATUS
 from prison.tests.utils import load_random_prisoner_locations
+
+
+class GetBatchViewTestCase(AuthTestCaseMixin, APITestCase):
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
+
+    def setUp(self):
+        super().setUp()
+        _, _, self.bank_admins, _, _, _ = make_test_users()
+
+    def test_get_batch(self):
+        user = self.bank_admins[0]
+
+        batch = Batch(date=date(2016, 3, 3))
+        batch.save()
+
+        other_batch = Batch(date=date(2016, 3, 4))
+        other_batch.save()
+
+        response = self.client.get(
+            reverse('batch-list'), {'date': date(2016, 3, 3)}, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+
+        batches = response.data['results']
+        self.assertEqual(len(batches), 1)
+        self.assertEqual(batches[0]['id'], batch.id)
+        self.assertEqual(batches[0]['date'], batch.date.isoformat())
 
 
 class CreatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):

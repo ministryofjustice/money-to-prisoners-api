@@ -20,7 +20,8 @@
       ["add_transaction", "transaction", "transaction"],
       ["view_transaction", "transaction", "transaction"],
       ["patch_processed_transaction", "transaction", "transaction"],
-      ["add_balance", "account", "balance"]
+      ["add_balance", "account", "balance"],
+      ["view_batch", "payment", "batch"]
     ]
   }
 },
