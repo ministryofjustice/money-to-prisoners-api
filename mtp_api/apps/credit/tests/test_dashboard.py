@@ -38,7 +38,7 @@ class TransactionDashboardTestCase(DashboardTestCase):
         url = reverse('admin:dashboard')
 
         response = self.client.get(url)
-        self.assertContains(response, 'Latest credits received on')
+        self.assertContains(response, 'Latest')
         credit_set = Credit.objects.filter(CREDITABLE_FILTERS).filter(
             received_at__date=localtime(Credit.objects.latest().received_at).date()
         )
