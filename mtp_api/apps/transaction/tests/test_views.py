@@ -1,8 +1,8 @@
 from datetime import date, datetime, timedelta, time
 
-from django.utils import timezone
 from django.core.urlresolvers import reverse
 from django.conf import settings
+from django.utils import timezone
 from rest_framework import status as http_status
 
 from core.tests.utils import silence_logger
@@ -582,12 +582,22 @@ class ReconcileTransactionsTestCase(
     def _get_authorised_user(self):
         return self.bank_admins[0]
 
+    def _get_date_bounds(self):
+        start_date = datetime.combine(
+            self._get_latest_date() - timedelta(days=1),
+            time(23, 0, tzinfo=timezone.utc)
+        )
+        end_date = datetime.combine(
+            self._get_latest_date(),
+            time(23, 0, tzinfo=timezone.utc)
+        )
+        return start_date, end_date
+
     def test_reconcile_transactions(self):
         url = self._get_url()
         user = self._get_authorised_user()
 
-        start_date = (self._get_latest_date() - timedelta(days=2)).isoformat()
-        end_date = (self._get_latest_date() + timedelta(days=1)).isoformat()
+        start_date, end_date = self._get_date_bounds()
 
         response = self.client.post(
             url, {'received_at__gte': start_date, 'received_at__lt': end_date},
@@ -596,10 +606,9 @@ class ReconcileTransactionsTestCase(
         )
         self.assertEqual(response.status_code, http_status.HTTP_204_NO_CONTENT)
 
-        yesterday = timezone.make_aware(datetime.combine(self._get_latest_date(), time.min))
         transactions_from_period = Transaction.objects.filter(
-            received_at__lt=yesterday + timedelta(days=1),
-            received_at__gte=yesterday - timedelta(days=2)
+            received_at__lt=end_date,
+            received_at__gte=start_date
         )
 
         for transaction in transactions_from_period:
@@ -607,20 +616,20 @@ class ReconcileTransactionsTestCase(
                 self.assertTrue(transaction.credit.reconciled)
 
     def test_reconciliation_logs_are_not_duplicated(self):
-        yesterday = timezone.make_aware(datetime.combine(self._get_latest_date(), time.min))
+        start_date, end_date = self._get_date_bounds()
+
         credits_yesterday = Credit.objects.filter(
-            received_at__lt=yesterday + timedelta(days=1),
-            received_at__gte=yesterday
+            received_at__lt=end_date,
+            received_at__gte=start_date
         )
 
         url = self._get_url()
         user = self._get_authorised_user()
 
-        start_date = self._get_latest_date().isoformat()
-        end_date = (self._get_latest_date() + timedelta(days=1)).isoformat()
-
         response = self.client.post(
-            url, {'received_at__gte': start_date, 'received_at__lt': end_date},
+            url,
+            {'received_at__gte': start_date.isoformat(),
+             'received_at__lt': end_date.isoformat()},
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
@@ -636,7 +645,9 @@ class ReconcileTransactionsTestCase(
         )
 
         response = self.client.post(
-            url, {'received_at__gte': start_date, 'received_at__lt': end_date},
+            url,
+            {'received_at__gte': start_date.isoformat(),
+             'received_at__lt': end_date.isoformat()},
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
@@ -675,11 +686,12 @@ class ReconcileTransactionsTestCase(
         url = self._get_url()
         user = self._get_authorised_user()
 
-        start_date = self._get_latest_date().isoformat()
-        end_date = (self._get_latest_date() + timedelta(days=1)).isoformat()
+        start_date, end_date = self._get_date_bounds()
 
         response = self.client.post(
-            url, {'received_at__gte': start_date, 'received_at__lt': end_date},
+            url,
+            {'received_at__gte': start_date.isoformat(),
+             'received_at__lt': end_date.isoformat()},
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
@@ -688,7 +700,8 @@ class ReconcileTransactionsTestCase(
         # debits not given ref code
         qs = Transaction.objects.filter(
             category=TRANSACTION_CATEGORY.DEBIT,
-            received_at__date=self._get_latest_date()
+            received_at__gte=start_date,
+            received_at__lt=end_date
         )
         for trans in qs:
             self.assertEqual(trans.ref_code, None)
@@ -696,7 +709,8 @@ class ReconcileTransactionsTestCase(
         # anomalous not given ref code
         qs = Transaction.objects.filter(
             source=TRANSACTION_SOURCE.ADMINISTRATIVE,
-            received_at__date=self._get_latest_date()
+            received_at__gte=start_date,
+            received_at__lt=end_date
         )
         for trans in qs:
             self.assertEqual(trans.ref_code, None)
@@ -705,7 +719,8 @@ class ReconcileTransactionsTestCase(
         qs = Transaction.objects.filter(
             category=TRANSACTION_CATEGORY.CREDIT,
             source=TRANSACTION_SOURCE.BANK_TRANSFER,
-            received_at__date=self._get_latest_date()
+            received_at__gte=start_date,
+            received_at__lt=end_date
         ).order_by('id')
 
         expected_ref_code = settings.REF_CODE_BASE
@@ -717,9 +732,12 @@ class ReconcileTransactionsTestCase(
         url = self._get_url()
         user = self._get_authorised_user()
 
+        start_date, end_date = self._get_date_bounds()
+
         administrative_trans = Transaction.objects.filter(
             category=TRANSACTION_CATEGORY.CREDIT,
-            received_at__date=self._get_latest_date()
+            received_at__gte=start_date,
+            received_at__lt=end_date
         ).first()
         administrative_trans.source = TRANSACTION_SOURCE.ADMINISTRATIVE
         administrative_trans.save()
@@ -728,11 +746,10 @@ class ReconcileTransactionsTestCase(
                       ref_code='800003')
         batch.save()
 
-        start_date = self._get_latest_date().isoformat()
-        end_date = (self._get_latest_date() + timedelta(days=1)).isoformat()
-
         response = self.client.post(
-            url, {'received_at__gte': start_date, 'received_at__lt': end_date},
+            url,
+            {'received_at__gte': start_date.isoformat(),
+             'received_at__lt': end_date.isoformat()},
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
@@ -740,6 +757,7 @@ class ReconcileTransactionsTestCase(
 
         trans = Transaction.objects.get(
             batch__isnull=False,
-            received_at__date=self._get_latest_date()
+            received_at__gte=start_date,
+            received_at__lt=end_date
         )
         self.assertEqual(trans.ref_code, batch.ref_code)

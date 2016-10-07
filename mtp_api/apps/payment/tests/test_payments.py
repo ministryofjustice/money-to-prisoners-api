@@ -12,7 +12,7 @@ from prison.tests.utils import load_random_prisoner_locations
 
 
 def get_worldpay_cutoff(date):
-    return datetime.combine(date - timedelta(days=1), time(23, 0, tzinfo=utc))
+    return datetime.combine(date, time(23, 0, tzinfo=utc))
 
 
 class ReconcilePaymentsTestCase(TestCase):
@@ -23,15 +23,22 @@ class ReconcilePaymentsTestCase(TestCase):
         make_test_users()
         load_random_prisoner_locations()
 
+    def _get_date_bounds(self):
+        start_date = get_worldpay_cutoff(latest_payment_date() - timedelta(days=1))
+        end_date = get_worldpay_cutoff(latest_payment_date())
+        return start_date, end_date
+
     def test_batch_created_by_reconciliation(self):
         generate_payments(100)
 
-        start_date = latest_payment_date().date()
-        end_date = start_date + timedelta(days=1)
+        start_date, end_date = self._get_date_bounds()
 
         initial_batch_count = Batch.objects.all().count()
         for payment in Payment.objects.filter(
-                status=PAYMENT_STATUS.TAKEN, credit__received_at__date=start_date):
+            status=PAYMENT_STATUS.TAKEN,
+            credit__received_at__gte=start_date,
+            credit__received_at__lt=end_date
+        ):
             self.assertIsNone(payment.batch)
             self.assertIsNone(payment.ref_code)
 
@@ -41,21 +48,21 @@ class ReconcilePaymentsTestCase(TestCase):
         new_batch = Batch.objects.latest()
         for payment in Payment.objects.filter(
             status=PAYMENT_STATUS.TAKEN,
-            credit__received_at__gte=get_worldpay_cutoff(start_date),
-            credit__received_at__lt=get_worldpay_cutoff(end_date)
+            credit__received_at__gte=start_date,
+            credit__received_at__lt=end_date
         ):
             self.assertEqual(payment.batch, new_batch)
             self.assertEqual(payment.ref_code, str(settings.CARD_REF_CODE_BASE))
 
         for payment in Payment.objects.filter(
             status=PAYMENT_STATUS.TAKEN,
-            credit__received_at__lt=get_worldpay_cutoff(start_date),
+            credit__received_at__lt=start_date,
         ):
             self.assertNotEqual(payment.batch, new_batch)
 
         for payment in Payment.objects.filter(
             status=PAYMENT_STATUS.TAKEN,
-            credit__received_at__gte=get_worldpay_cutoff(end_date),
+            credit__received_at__gte=end_date,
         ):
             self.assertNotEqual(payment.batch, new_batch)
             self.assertFalse(payment.credit.reconciled)
@@ -63,25 +70,23 @@ class ReconcilePaymentsTestCase(TestCase):
     def test_ref_code_increments(self):
         generate_payments(100)
 
-        start_date = latest_payment_date().date()
-        end_date = start_date + timedelta(days=1)
+        start_date, end_date = self._get_date_bounds()
         previous_date = start_date - timedelta(days=1)
 
-        previous_batch = Batch(date=previous_date,
+        previous_batch = Batch(date=previous_date.date(),
                                ref_code=str(settings.CARD_REF_CODE_BASE))
         previous_batch.save()
 
         Payment.objects.reconcile(start_date, end_date, None)
         for payment in Payment.objects.filter(
             status=PAYMENT_STATUS.TAKEN,
-            credit__received_at__gte=get_worldpay_cutoff(start_date),
-            credit__received_at__lt=get_worldpay_cutoff(end_date)
+            credit__received_at__gte=start_date,
+            credit__received_at__lt=end_date
         ):
             self.assertEqual(payment.ref_code, str(settings.CARD_REF_CODE_BASE + 1))
 
     def test_no_new_batch_created_if_no_payments(self):
-        start_date = latest_payment_date().date()
-        end_date = start_date + timedelta(days=1)
+        start_date, end_date = self._get_date_bounds()
 
         initial_batch_count = Batch.objects.all().count()
         Payment.objects.reconcile(start_date, end_date, None)
