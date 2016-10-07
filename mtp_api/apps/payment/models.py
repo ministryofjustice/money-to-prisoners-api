@@ -21,6 +21,7 @@ class Batch(TimeStampedModel):
     )
 
     class Meta:
+        verbose_name_plural = 'batches'
         ordering = ('date',)
         get_latest_by = 'date'
         permissions = (
