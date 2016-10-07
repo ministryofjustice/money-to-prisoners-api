@@ -43,11 +43,12 @@ class CreditManager(models.Manager):
         )
 
     @atomic
-    def reconcile(self, start_date, end_date, user):
+    def reconcile(self, start_date, end_date, user, **kwargs):
         update_set = self.get_queryset().filter(
             received_at__gte=start_date,
             received_at__lt=end_date,
-            reconciled=False
+            reconciled=False,
+            **kwargs
         ).select_for_update()
 
         from .models import Log
