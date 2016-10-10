@@ -30,6 +30,7 @@ class ReconcilePaymentsTestCase(TestCase):
 
     def test_batch_created_by_reconciliation(self):
         generate_payments(100)
+        Batch.objects.all().delete()
 
         start_date, end_date = self._get_date_bounds()
 
@@ -69,6 +70,7 @@ class ReconcilePaymentsTestCase(TestCase):
 
     def test_ref_code_increments(self):
         generate_payments(100)
+        Batch.objects.all().delete()
 
         start_date, end_date = self._get_date_bounds()
         previous_date = start_date - timedelta(days=1)

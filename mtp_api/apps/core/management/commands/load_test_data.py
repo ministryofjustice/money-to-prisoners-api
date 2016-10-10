@@ -9,7 +9,7 @@ from core.tests.utils import (
     make_test_users, make_test_user_admins, give_superusers_full_access
 )
 from credit.models import Credit
-from payment.models import Payment
+from payment.models import Batch, Payment
 from payment.tests.utils import generate_payments
 from prison.models import Prison
 from prison.tests.utils import load_nomis_prisoner_locations, load_random_prisoner_locations
@@ -73,6 +73,7 @@ class Command(BaseCommand):
             Transaction.objects.all().delete()
             Payment.objects.all().delete()
             Credit.objects_all.all().delete()
+            Batch.objects.all().delete()
 
         user_set = get_user_model().objects.exclude(username__in=protect_usernames or [])
         if protect_superusers:
