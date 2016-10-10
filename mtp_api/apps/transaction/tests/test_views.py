@@ -549,7 +549,10 @@ class GetTransactionsFilteredByDateTestCase(GetTransactionsBaseTestCase):
         self.assertEqual(len(results), len(db_transactions))
 
         for db_trans, response_trans in zip(db_transactions, results):
-            self.assertEqual(db_trans.id, response_trans['id'])
+            self.assertEqual(
+                db_trans.received_at.strftime('%Y-%m-%dT%H:%M:%SZ'),
+                response_trans['received_at']
+            )
 
 
 class ReconcileTransactionsTestCase(
