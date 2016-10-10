@@ -1,14 +1,37 @@
 from django.http import Http404
-from rest_framework import mixins, viewsets
+import django_filters
+from rest_framework import mixins, viewsets, filters
 from rest_framework import status as http_status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from mtp_auth.permissions import SendMoneyClientIDPermissions
+from mtp_auth.permissions import (
+    BankAdminClientIDPermissions, SendMoneyClientIDPermissions
+)
 from .exceptions import InvalidStateForUpdateException
-from .models import Payment
-from .permissions import PaymentPermissions
-from .serializers import PaymentSerializer
+from .models import Batch, Payment
+from .permissions import BatchPermissions, PaymentPermissions
+from .serializers import BatchSerializer, PaymentSerializer
+
+
+class BatchListFilter(django_filters.FilterSet):
+
+    class Meta:
+        model = Batch
+        fields = ('date',)
+
+
+class BatchView(
+    mixins.ListModelMixin, viewsets.GenericViewSet
+):
+    queryset = Batch.objects.all()
+    serializer_class = BatchSerializer
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_class = BatchListFilter
+
+    permission_classes = (
+        IsAuthenticated, BatchPermissions, BankAdminClientIDPermissions
+    )
 
 
 class PaymentView(

@@ -5,6 +5,7 @@ from rest_framework import serializers, fields
 from credit.constants import CREDIT_RESOLUTION
 from credit.models import Credit
 from credit.signals import credit_refunded, credit_created
+from payment.models import Batch
 from prison.serializers import PrisonSerializer
 from .constants import TRANSACTION_CATEGORY, TRANSACTION_SOURCE
 from .models import Transaction
@@ -18,6 +19,7 @@ class CreateTransactionListSerializer(serializers.ListSerializer):
         user = self.context['request'].user
 
         for data in validated_data:
+            batch = data.pop('batch', None)
             prisoner_number = data.pop('prisoner_number', None)
             prisoner_dob = data.pop('prisoner_dob', None)
             if (data['category'] == TRANSACTION_CATEGORY.CREDIT and
@@ -38,6 +40,9 @@ class CreateTransactionListSerializer(serializers.ListSerializer):
                 )
 
             transaction = Transaction.objects.create(**data)
+            if batch:
+                batch.settlement_transaction = transaction
+                batch.save()
             transactions.append(transaction)
 
         return transactions
@@ -46,6 +51,7 @@ class CreateTransactionListSerializer(serializers.ListSerializer):
 class CreateTransactionSerializer(serializers.ModelSerializer):
     prisoner_dob = serializers.DateField(required=False)
     prisoner_number = serializers.CharField(required=False)
+    batch = serializers.PrimaryKeyRelatedField(queryset=Batch.objects.all(), required=False)
 
     class Meta:
         model = Transaction
@@ -65,7 +71,8 @@ class CreateTransactionSerializer(serializers.ModelSerializer):
             'source',
             'incomplete_sender_info',
             'processor_type_code',
-            'reference_in_sender_field'
+            'reference_in_sender_field',
+            'batch',
         )
 
 

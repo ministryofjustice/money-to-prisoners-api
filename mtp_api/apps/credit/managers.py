@@ -1,4 +1,5 @@
 from django.db import models, connection
+from django.db.transaction import atomic
 
 from .constants import LOG_ACTIONS, CREDIT_STATUS, CREDIT_RESOLUTION
 
@@ -41,11 +42,13 @@ class CreditManager(models.Manager):
             "AND NOT (pl.prison_id IS NULL AND p.uuid IS NOT NULL) "
         )
 
-    def reconcile(self, start_date, end_date, user):
+    @atomic
+    def reconcile(self, start_date, end_date, user, **kwargs):
         update_set = self.get_queryset().filter(
             received_at__gte=start_date,
             received_at__lt=end_date,
-            reconciled=False
+            reconciled=False,
+            **kwargs
         ).select_for_update()
 
         from .models import Log

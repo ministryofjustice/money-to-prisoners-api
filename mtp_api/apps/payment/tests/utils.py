@@ -73,6 +73,22 @@ def generate_payments(payment_batch=50,
 
     generate_payment_logs(payments)
 
+    earliest_payment = Payment.objects.all().order_by('credit__received_at').first()
+    reconciliation_date = earliest_payment.credit.received_at.date()
+    if earliest_payment.credit.received_at.timetz() > datetime.time(23, 0, tzinfo=timezone.utc):
+        reconciliation_date += datetime.timedelta(days=1)
+    while reconciliation_date < latest_payment_date().date() - datetime.timedelta(days=1):
+        start_date = datetime.datetime.combine(
+            reconciliation_date - datetime.timedelta(days=1),
+            datetime.time(23, 0, tzinfo=timezone.utc)
+        )
+        end_date = datetime.datetime.combine(
+            reconciliation_date,
+            datetime.time(23, 0, tzinfo=timezone.utc)
+        )
+        Payment.objects.reconcile(start_date, end_date, None)
+        reconciliation_date += datetime.timedelta(days=1)
+
     return payments
 
 
@@ -89,8 +105,7 @@ def setup_payment(owner_status_chooser,
         if older_than_yesterday:
             data.update({
                 'owner': owner,
-                'credited': True,
-                'reconciled': True
+                'credited': True
             })
         else:
             data.update({

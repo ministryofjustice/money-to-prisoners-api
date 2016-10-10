@@ -1,7 +1,7 @@
-from datetime import datetime
 import logging
 
-from django.utils import timezone
+from django.db.transaction import atomic
+from django.utils.dateparse import parse_datetime
 from django.utils.translation import gettext_lazy as _
 from rest_framework import mixins, viewsets, status, filters, generics
 from rest_framework.permissions import IsAuthenticated
@@ -11,6 +11,7 @@ import django_filters
 from core.filters import StatusChoiceFilter
 from credit.models import Credit
 from mtp_auth.permissions import BankAdminClientIDPermissions
+from payment.models import Payment
 from transaction.models import Transaction
 from .constants import TRANSACTION_STATUS
 from .permissions import TransactionPermissions
@@ -104,11 +105,15 @@ class ReconcileTransactionsView(generics.GenericAPIView):
             )
 
         try:
-            parsed_start_date = timezone.make_aware(datetime.strptime(start_date, '%Y-%m-%d'))
-            parsed_end_date = timezone.make_aware(datetime.strptime(end_date, '%Y-%m-%d'))
+            parsed_start_date = parse_datetime(start_date)
+            parsed_end_date = parse_datetime(end_date)
         except ValueError:
             return Response(data={'errors': _("Invalid date format")},
                             status=400)
 
-        Transaction.objects.reconcile(parsed_start_date, parsed_end_date, request.user)
+        with atomic():
+            Transaction.objects.reconcile(
+                parsed_start_date, parsed_end_date, request.user)
+            Payment.objects.reconcile(
+                parsed_start_date, parsed_end_date, request.user)
         return Response(status=204)

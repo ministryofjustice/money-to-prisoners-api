@@ -3,9 +3,16 @@ from rest_framework import serializers
 
 from credit.constants import CREDIT_RESOLUTION
 from credit.models import Credit
-from .models import Payment
+from .models import Batch, Payment
 from .constants import PAYMENT_STATUS
 from .exceptions import InvalidStateForUpdateException
+
+
+class BatchSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Batch
+        fields = '__all__'
 
 
 class PaymentSerializer(serializers.ModelSerializer):

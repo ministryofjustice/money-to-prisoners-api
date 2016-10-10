@@ -11,6 +11,16 @@ class TransactionManager(models.Manager):
 
     @atomic
     def reconcile(self, start_date, end_date, user):
+        with connection.cursor() as c:
+            c.execute(
+                'update transaction_transaction t '
+                'set ref_code=b.ref_code '
+                'from payment_batch b '
+                'where t.id=b.settlement_transaction_id and '
+                'received_at>=%s and received_at<%s',
+                [start_date, end_date]
+            )
+
         update_set = self.get_queryset().filter(
             self.model.STATUS_LOOKUP[TRANSACTION_STATUS.RECONCILABLE],
             received_at__gte=start_date,
@@ -37,4 +47,4 @@ class TransactionManager(models.Manager):
                           'ref_code=r.ref_code FROM refids r WHERE '
                           't.id=r.id;')
 
-        Credit.objects.reconcile(start_date, end_date, user)
+        Credit.objects.reconcile(start_date, end_date, user, transaction__isnull=False)
