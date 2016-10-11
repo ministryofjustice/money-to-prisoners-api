@@ -19,7 +19,7 @@ from rest_framework.reverse import reverse
 from rest_framework.settings import api_settings
 
 from core import dictfetchall
-from core.filters import BlankStringFilter, StatusChoiceFilter
+from core.filters import BlankStringFilter, StatusChoiceFilter, IsoDateTimeFilter
 from mtp_auth.models import PrisonUserMapping
 from mtp_auth.permissions import (
     CashbookClientIDPermissions, NomsOpsClientIDPermissions,
@@ -153,12 +153,18 @@ class CreditListFilter(django_filters.FilterSet):
         name='amount', lookup_expr='regex'
     )
 
+    received_at__lt = IsoDateTimeFilter(
+        name='received_at', lookup_expr='lt'
+    )
+    received_at__gte = IsoDateTimeFilter(
+        name='received_at', lookup_expr='gte'
+    )
+
     class Meta:
         model = Credit
         fields = {
             'prisoner_number': ['exact'],
             'amount': ['exact', 'lte', 'gte'],
-            'received_at': ['lt', 'gte'],
         }
 
 

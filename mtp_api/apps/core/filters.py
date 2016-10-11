@@ -1,3 +1,5 @@
+from django import forms
+from django.utils.dateparse import parse_datetime
 import django_filters
 
 
@@ -13,3 +15,14 @@ class StatusChoiceFilter(django_filters.ChoiceFilter):
         if value:
             qs = qs.filter(qs.model.STATUS_LOOKUP[value.lower()])
         return qs
+
+
+class IsoDateTimeField(forms.DateTimeField):
+
+    def strptime(self, value, format):
+        datetime = parse_datetime(value)
+        return datetime or super().strptime(value, format)
+
+
+class IsoDateTimeFilter(django_filters.DateTimeFilter):
+    field_class = IsoDateTimeField
