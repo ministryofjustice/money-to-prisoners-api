@@ -9,6 +9,7 @@ User = get_user_model()
 class RestrictedUserCreationForm(UserCreationForm):
     error_messages = {
         'non_unique_username': _('That username already exists'),
+        'password_mismatch': _('The two password fields didn’t match'),
     }
 
     def clean_username(self):
