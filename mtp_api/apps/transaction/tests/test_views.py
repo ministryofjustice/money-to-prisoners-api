@@ -554,6 +554,38 @@ class GetTransactionsFilteredByDateTestCase(GetTransactionsBaseTestCase):
                 response_trans['received_at']
             )
 
+    def test_get_list_received_between_datetimes(self):
+        url = self._get_url()
+        user = self._get_authorised_user()
+
+        start_date = datetime.combine(
+            self._get_latest_date() - timedelta(days=2),
+            time(10, 0, tzinfo=timezone.utc)
+        )
+        end_date = datetime.combine(
+            self._get_latest_date(),
+            time(22, 0, tzinfo=timezone.utc)
+        )
+
+        response = self.client.get(
+            url, {'received_at__lt': end_date.isoformat(),
+                  'received_at__gte': start_date.isoformat(),
+                  'limit': 1000}, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+
+        results = response.data['results']
+        result_ids = [t['id'] for t in results]
+        received_between_dates = Transaction.objects.filter(
+            received_at__lt=end_date,
+            received_at__gte=start_date
+        )
+        self.assertEqual(len(result_ids), len(received_between_dates))
+
+        for trans in received_between_dates:
+            self.assertTrue(trans.id in result_ids)
+
 
 class ReconcileTransactionsTestCase(
     TransactionRejectsRequestsWithoutPermissionTestMixin,
