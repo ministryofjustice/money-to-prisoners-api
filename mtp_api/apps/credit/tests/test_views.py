@@ -7,7 +7,7 @@ import urllib.parse
 
 from django.conf import settings
 from django.core.urlresolvers import reverse
-from django.db import models
+from django.db import connection, models
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.utils.dateformat import format as format_date
@@ -733,8 +733,28 @@ class CreditListInvalidValuesTestCase(CreditListTestCase):
 class CreditListOrderingTestCase(CreditListTestCase):
     transaction_batch = 200
 
+    @classmethod
+    def setUpClass(cls):
+        with connection.cursor() as cursor:
+            # forces C collation to order names without ignoring spaces on RDS
+            cursor.execute(
+                '''
+                ALTER TABLE %(table_name)s
+                ALTER COLUMN prisoner_name
+                SET DATA TYPE CHARACTER VARYING(%(prisoner_name_len)d) COLLATE "C";
+                ''' % {
+                    'table_name': Credit._meta.db_table,
+                    'prisoner_name_len': Credit._meta.get_field('prisoner_name').max_length,
+                }
+            )
+        super().setUpClass()
+
     def setUp(self):
         super().setUp()
+        credit_1 = Credit.objects.first()
+        credit_2 = Credit.objects.exclude(prisoner_name=credit_1.prisoner_name).first()
+        Credit.objects.filter(prisoner_name=credit_1.prisoner_name).update(prisoner_name='LEON PETERS')
+        Credit.objects.filter(prisoner_name=credit_2.prisoner_name).update(prisoner_name='LEONARD CARTER')
         self.logged_in_user = self._get_authorised_user()
 
     @classmethod
