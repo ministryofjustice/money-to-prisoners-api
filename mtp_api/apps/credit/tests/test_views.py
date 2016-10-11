@@ -10,6 +10,7 @@ from django.core.urlresolvers import reverse
 from django.db import models
 from django.utils import timezone
 from django.utils.crypto import get_random_string
+from django.utils.dateparse import parse_datetime
 from django.utils.dateformat import format as format_date
 from django.utils.timezone import localtime
 from rest_framework import status
@@ -190,7 +191,10 @@ class CreditListTestCase(
 
     def _get_received_at_checker(self, filters, noop_checker):
         def parse_date(date):
-            for date_format in settings.DATE_INPUT_FORMATS:
+            parsed_date = parse_datetime(date)
+            if parsed_date is not None:
+                return parsed_date
+            for date_format in settings.DATETIME_INPUT_FORMATS:
                 try:
                     return datetime.datetime.strptime(date, date_format)
                 except (ValueError, TypeError):
@@ -201,9 +205,9 @@ class CreditListTestCase(
         received_at__gte = parse_date(received_at__gte) if received_at__gte else None
         received_at__lt = parse_date(received_at__lt) if received_at__lt else None
 
-        if received_at__gte:
+        if received_at__gte and received_at__gte.tzinfo is None:
             received_at__gte = timezone.make_aware(received_at__gte)
-        if received_at__lt:
+        if received_at__lt and received_at__lt.tzinfo is None:
             received_at__lt = timezone.make_aware(received_at__lt)
 
         if received_at__gte and received_at__lt:
@@ -552,6 +556,24 @@ class CreditListWithReceivedAtFilterTestCase(CreditListTestCase):
         five_days_ago = self._get_latest_date() - datetime.timedelta(days=4)
         self._test_response_with_filters(filters={
             'received_at__lt': self._format_date(five_days_ago),
+        })
+
+    def test_filter_received_at_datetimes(self):
+        """
+        Returns all credits received between two time
+        """
+        start_date = datetime.datetime.combine(
+            self._get_latest_date() - datetime.timedelta(days=2),
+            datetime.time(10, 0, tzinfo=timezone.utc)
+        )
+        end_date = datetime.datetime.combine(
+            self._get_latest_date(),
+            datetime.time(22, 0, tzinfo=timezone.utc)
+        )
+
+        self._test_response_with_filters(filters={
+            'received_at__gte': start_date.isoformat(),
+            'received_at__lt': end_date.isoformat(),
         })
 
 
