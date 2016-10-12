@@ -13,8 +13,18 @@ from transaction.utils import format_amount
 
 @admin.register(Batch)
 class BatchAdmin(admin.ModelAdmin):
-    list_display = ('date', 'payment_count', 'payment_amount', 'ref_code', 'settled')
+    list_display = ('date', 'payment_count', 'payment_amount', 'ref_code', 'settled',)
     date_hierarchy = 'date'
+    exclude = ('settlement_transaction',)
+    readonly_fields = ('payment_link', 'payment_count', 'payment_amount', 'settlement_link',)
+
+    @add_short_description(_('payment set'))
+    def payment_link(self, instance):
+        link = reverse('admin:payment_payment_changelist')
+        return format_html(
+            '<a href="{}?batch_id={}">{}</a>',
+            link, instance.pk, 'Payments'
+        )
 
     @add_short_description(_('payment count'))
     def payment_count(self, instance):
@@ -29,6 +39,18 @@ class BatchAdmin(admin.ModelAdmin):
     @add_short_description(_('settled?'))
     def settled(self, instance):
         return instance.settlement_transaction is not None
+
+    @add_short_description(_('settlement transaction'))
+    def settlement_link(self, instance):
+        settlement = instance.settlement_transaction
+        if settlement is None:
+            return '–'
+        link = reverse('admin:transaction_transaction_change', args=(settlement.pk,))
+        description = '%(amount)s, %(date)s' % {
+            'amount': format_amount(settlement.amount),
+            'date': format_date(timezone.localtime(settlement.received_at), 'd/m/Y'),
+        }
+        return format_html('<a href="{}">{}</a>', link, description)
 
 
 @admin.register(Payment)
