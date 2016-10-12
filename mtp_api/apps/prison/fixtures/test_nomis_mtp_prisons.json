@@ -276,7 +276,7 @@
     "model": "prison.prison",
     "pk": "DVI",
     "fields": {
-      "name": "IMMIGRATION REMOVAL CENTRE DOVER",
+      "name": "IRC DOVER",
       "general_ledger_code": "047",
       "created": "2015-10-28T12:00:00Z",
       "modified": "2015-10-28T12:00:00Z",
@@ -536,7 +536,7 @@
     "model": "prison.prison",
     "pk": "HRI",
     "fields": {
-      "name": "IMMIGRATION REMOVAL CENTRE HASLAR",
+      "name": "IRC HASLAR",
       "general_ledger_code": "053",
       "created": "2015-10-28T12:00:00Z",
       "modified": "2015-10-28T12:00:00Z",
@@ -848,7 +848,7 @@
     "model": "prison.prison",
     "pk": "MDI",
     "fields": {
-      "name": "HMP & YOI MOORLAND (CLOSED)",
+      "name": "HMP & YOI MOORLAND",
       "general_ledger_code": "084",
       "created": "2015-10-28T12:00:00Z",
       "modified": "2015-10-28T12:00:00Z",
@@ -861,7 +861,7 @@
     "model": "prison.prison",
     "pk": "MHI",
     "fields": {
-      "name": "IMMIGRATION REMOVAL CENTRE MORTON HALL",
+      "name": "IRC MORTON HALL",
       "general_ledger_code": "085",
       "created": "2015-10-28T12:00:00Z",
       "modified": "2015-10-28T12:00:00Z",
@@ -1420,7 +1420,7 @@
     "model": "prison.prison",
     "pk": "ISI",
     "fields": {
-      "name": "HMP/YOI ISIS",
+      "name": "HMP & YOI ISIS",
       "general_ledger_code": "138",
       "created": "2015-10-28T12:00:00Z",
       "modified": "2015-10-28T12:00:00Z",
