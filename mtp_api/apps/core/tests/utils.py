@@ -147,7 +147,7 @@ def make_test_user_admins():
     prison_clerks = []
     for prison in Prison.objects.all():
         prison_clerks.append(create_user_admin(
-            create_prison_clerk, prisons=[prison], name_and_password='user-admin')
+            create_prison_clerk, prisons=[prison], name_and_password='ua')
         )
 
     # prisoner location user admins

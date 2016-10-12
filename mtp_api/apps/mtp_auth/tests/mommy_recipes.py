@@ -55,7 +55,7 @@ def name_generator(name):
 def create_prison_clerk(name_and_password=None, prisons=[]):
     prison_clerk_group = Group.objects.get(name='PrisonClerk')
 
-    base_clerk_name = 'test-' + slugify(prisons[0])
+    base_clerk_name = ('test-' + slugify(prisons[0]))[:27]
     if name_and_password:
         base_clerk_name += '-' + name_and_password
     name_and_password = base_clerk_name

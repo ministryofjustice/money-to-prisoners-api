@@ -57,6 +57,8 @@ class TransactionAdmin(admin.ModelAdmin):
 
     @add_short_description(_('credit'))
     def credit_link(self, instance):
+        if instance.credit is None:
+            return '–'
         link = reverse('admin:credit_credit_change', args=(instance.credit.pk,))
         description = '%(amount)s %(status)s, %(date)s' % {
             'amount': format_amount(instance.amount),
