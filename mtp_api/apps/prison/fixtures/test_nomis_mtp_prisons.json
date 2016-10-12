@@ -862,7 +862,7 @@
     "pk": "MHI",
     "fields": {
       "name": "IMMIGRATION REMOVAL CENTRE MORTON HALL",
-      "general_ledger_code": "085"
+      "general_ledger_code": "085",
       "created": "2015-10-28T12:00:00Z",
       "modified": "2015-10-28T12:00:00Z",
       "region": "East Midlands",
