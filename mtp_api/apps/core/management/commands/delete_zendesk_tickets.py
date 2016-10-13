@@ -17,7 +17,7 @@ class Command(BaseCommand):
             settings.ZENDESK_API_TOKEN
         )
 
-        query = 'type:ticket status:closed group_id:{group_id} updated<{two_weeks}'.format(
+        query = 'type:ticket status>=solved group_id:{group_id} updated<{two_weeks}'.format(
             group_id=settings.ZENDESK_GROUP_ID,
             two_weeks=(timezone.now() - timedelta(weeks=2)).strftime('%Y-%m-%d')
         )
