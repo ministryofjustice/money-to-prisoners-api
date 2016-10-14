@@ -29,7 +29,8 @@ from mtp_auth.permissions import (
 from prison.models import Prison
 from transaction.models import Transaction
 from transaction.pagination import DateBasedPagination
-from .constants import CREDIT_STATUS, LOCK_LIMIT
+from . import InvalidCreditStateException
+from .constants import CREDIT_STATUS
 from .forms import SenderListFilterForm, PrisonerListFilterForm, SQLFragment
 from .models import Credit
 from .permissions import CreditPermissions
@@ -38,7 +39,6 @@ from .serializers import (
     IdsCreditSerializer, LockedCreditSerializer, SenderSerializer,
     PrisonerSerializer
 )
-from .signals import credit_prisons_need_updating
 
 User = get_user_model()
 
@@ -234,35 +234,27 @@ class CreditCredits(CreditViewMixin, generics.GenericAPIView):
         deserialized = self.get_serializer(data=request.data, many=True)
         deserialized.is_valid(raise_exception=True)
 
-        credit_ids = [x['id'] for x in deserialized.data]
-        with transaction.atomic():
-            to_update = self.get_queryset().filter(
-                owner=request.user,
-                pk__in=credit_ids
-            ).select_for_update()
-
-            ids_to_update = [c.id for c in to_update]
-            conflict_ids = set(credit_ids) - set(ids_to_update)
-
-            if conflict_ids:
-                conflict_ids = sorted(conflict_ids)
-                logger.warning('Some credits were not credited: [%s]' %
-                               ', '.join(map(str, conflict_ids)))
-                return Response(
-                    data={
-                        'errors': [
-                            {
-                                'msg': 'Some credits could not be credited.',
-                                'ids': conflict_ids,
-                            }
-                        ]
-                    },
-                    status=drf_status.HTTP_409_CONFLICT
-                )
-
-            for item in deserialized.data:
-                obj = to_update.get(pk=item['id'])
-                obj.credit_prisoner(credited=item['credited'], by_user=request.user)
+        credit_ids = [x['id'] for x in deserialized.data if x['credited']]
+        uncredit_ids = [x['id'] for x in deserialized.data if not x['credited']]
+        try:
+            with transaction.atomic():
+                Credit.objects.credit(self.get_queryset(), credit_ids, request.user)
+                Credit.objects.uncredit(self.get_queryset(), uncredit_ids, request.user)
+        except InvalidCreditStateException as e:
+            conflict_ids = e.conflict_ids
+            logger.warning('Some credits were not credited: [%s]' %
+                           ', '.join(map(str, conflict_ids)))
+            return Response(
+                data={
+                    'errors': [
+                        {
+                            'msg': 'Some credits could not be credited.',
+                            'ids': conflict_ids,
+                        }
+                    ]
+                },
+                status=drf_status.HTTP_409_CONFLICT
+            )
 
         return Response(status=drf_status.HTTP_204_NO_CONTENT)
 
@@ -317,21 +309,30 @@ class LockCredits(CreditViewMixin, APIView):
     )
 
     def post(self, request, format=None):
-        with transaction.atomic():
-            locked_count = self.get_queryset().locked().filter(owner=self.request.user).count()
-            if locked_count < LOCK_LIMIT:
-                slice_size = LOCK_LIMIT-locked_count
-                to_lock = self.get_queryset().available()[:slice_size]
-
-                for c in to_lock:
-                    c.lock(by_user=request.user)
-
-            redirect_url = '{url}?user={user}&status={status}'.format(
-                url=reverse('credit-list'),
-                user=request.user.pk,
-                status=CREDIT_STATUS.LOCKED
+        try:
+            Credit.objects.lock(self.get_queryset(), request.user)
+        except InvalidCreditStateException as e:
+            conflict_ids = e.conflict_ids
+            logger.warning('Some credits could not be locked: [%s]' %
+                           ', '.join(map(str, conflict_ids)))
+            return Response(
+                data={
+                    'errors': [
+                        {
+                            'msg': 'Some credits could not be locked.',
+                            'ids': conflict_ids,
+                        }
+                    ]
+                },
+                status=drf_status.HTTP_409_CONFLICT
             )
-            return HttpResponseRedirect(redirect_url, status=drf_status.HTTP_303_SEE_OTHER)
+
+        redirect_url = '{url}?user={user}&status={status}'.format(
+            url=reverse('credit-list'),
+            user=request.user.pk,
+            status=CREDIT_STATUS.LOCKED
+        )
+        return HttpResponseRedirect(redirect_url, status=drf_status.HTTP_303_SEE_OTHER)
 
 
 class UnlockCredits(CreditViewMixin, APIView):
@@ -356,31 +357,23 @@ class UnlockCredits(CreditViewMixin, APIView):
         deserialized.is_valid(raise_exception=True)
 
         credit_ids = deserialized.data.get('credit_ids', [])
-        with transaction.atomic():
-            to_update = self.get_queryset().locked().filter(pk__in=credit_ids).select_for_update()
-
-            ids_to_update = [c.id for c in to_update]
-            conflict_ids = set(credit_ids) - set(ids_to_update)
-
-            if conflict_ids:
-                conflict_ids = sorted(conflict_ids)
-                logger.warning('Some credits were not unlocked: [%s]' %
-                               ', '.join(map(str, conflict_ids)))
-                return Response(
-                    data={
-                        'errors': [
-                            {
-                                'msg': 'Some credits could not be unlocked.',
-                                'ids': conflict_ids,
-                            }
-                        ]
-                    },
-                    status=drf_status.HTTP_409_CONFLICT
-                )
-            for c in to_update:
-                c.unlock(by_user=request.user)
-
-        credit_prisons_need_updating.send(sender=Credit)
+        try:
+            Credit.objects.unlock(self.get_queryset(), credit_ids, request.user)
+        except InvalidCreditStateException as e:
+            conflict_ids = e.conflict_ids
+            logger.warning('Some credits were not unlocked: [%s]' %
+                           ', '.join(map(str, conflict_ids)))
+            return Response(
+                data={
+                    'errors': [
+                        {
+                            'msg': 'Some credits could not be unlocked.',
+                            'ids': conflict_ids,
+                        }
+                    ]
+                },
+                status=drf_status.HTTP_409_CONFLICT
+            )
 
         redirect_url = '{url}?user={user}&status={status}'.format(
             url=reverse('credit-list'),
