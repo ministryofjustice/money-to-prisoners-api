@@ -299,32 +299,32 @@ def update_prison_for_credit(sender, instance, created, *args, **kwargs):
 
 @receiver(credit_created)
 def credit_created_receiver(sender, credit, by_user, **kwargs):
-    Log.objects.credit_created(credit, by_user)
+    Log.objects.credits_created([credit], by_user)
 
 
 @receiver(credit_locked)
 def credit_locked_receiver(sender, credit, by_user, **kwargs):
-    Log.objects.credit_locked(credit, by_user)
+    Log.objects.credits_locked([credit], by_user)
 
 
 @receiver(credit_unlocked)
 def credit_unlocked_receiver(sender, credit, by_user, **kwargs):
-    Log.objects.credit_unlocked(credit, by_user)
+    Log.objects.credits_unlocked([credit], by_user)
 
 
 @receiver(credit_credited)
 def credit_credited_receiver(sender, credit, by_user, credited=True, **kwargs):
-    Log.objects.credit_credited(credit, by_user, credited=credited)
+    Log.objects.credits_credited([credit], by_user, credited=credited)
 
 
 @receiver(credit_refunded)
 def credit_refunded_receiver(sender, credit, by_user, **kwargs):
-    Log.objects.credit_refunded(credit, by_user)
+    Log.objects.credits_refunded([credit], by_user)
 
 
 @receiver(credit_reconciled)
 def credit_reconciled_receiver(sender, credit, by_user, **kwargs):
-    Log.objects.credit_reconciled(credit, by_user)
+    Log.objects.credits_reconciled([credit], by_user)
 
 
 @receiver(credit_prisons_need_updating)

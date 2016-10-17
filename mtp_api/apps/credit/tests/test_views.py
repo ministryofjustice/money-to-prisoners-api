@@ -1432,7 +1432,7 @@ class UnlockCreditTestCase(
         self.assertEqual(errors[0]['msg'], 'Some credits could not be unlocked.')
         self.assertEqual(errors[0]['ids'], sorted(credited_ids))
 
-    @mock.patch('credit.views.credit_prisons_need_updating')
+    @mock.patch('credit.managers.credit_prisons_need_updating')
     def test_unlock_sends_credit_prisons_need_updating_signal(
         self, mocked_credit_prisons_need_updating
     ):
