@@ -75,9 +75,8 @@ class ReconcilePaymentsTestCase(TestCase):
         start_date, end_date = self._get_date_bounds()
         previous_date = start_date - timedelta(days=1)
 
-        previous_batch = Batch(date=previous_date.date(),
-                               ref_code=str(settings.CARD_REF_CODE_BASE))
-        previous_batch.save()
+        Batch(date=previous_date.date(), ref_code='800002').save()
+        Batch(date=previous_date.date() - timedelta(days=1), ref_code='800001').save()
 
         Payment.objects.reconcile(start_date, end_date, None)
         for payment in Payment.objects.filter(
@@ -85,7 +84,7 @@ class ReconcilePaymentsTestCase(TestCase):
             credit__received_at__gte=start_date,
             credit__received_at__lt=end_date
         ):
-            self.assertEqual(payment.ref_code, str(settings.CARD_REF_CODE_BASE + 1))
+            self.assertEqual(payment.ref_code, '800003')
 
     def test_no_new_batch_created_if_no_payments(self):
         start_date, end_date = self._get_date_bounds()

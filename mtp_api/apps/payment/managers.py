@@ -24,9 +24,10 @@ class PaymentManager(models.Manager):
 
         if update_set.count() > 0:
             from .models import Batch
-            try:
-                ref_code = int(Batch.objects.latest('created').ref_code) + 1
-            except Batch.DoesNotExist:
+            max_ref_code = Batch.objects.all().aggregate(models.Max('ref_code'))['ref_code__max']
+            if max_ref_code:
+                ref_code = int(max_ref_code) + 1
+            else:
                 ref_code = settings.CARD_REF_CODE_BASE
 
             new_batch = Batch(
