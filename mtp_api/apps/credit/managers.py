@@ -123,6 +123,21 @@ class CreditManager(models.Manager):
         Log.objects.credits_credited(to_update, user, credited=False)
         to_update.update(resolution=CREDIT_RESOLUTION.PENDING)
 
+    @atomic
+    def refund(self, transaction_ids, user):
+        from .models import Credit
+        update_set = self.get_queryset().filter(
+            Credit.STATUS_LOOKUP['refund_pending'],
+            transaction__pk__in=transaction_ids).select_for_update()
+        conflict_ids = set(transaction_ids) - {c.transaction.id for c in update_set}
+
+        if conflict_ids:
+            raise InvalidCreditStateException(sorted(conflict_ids))
+
+        from .models import Log
+        Log.objects.credits_refunded(update_set, user)
+        update_set.update(resolution=CREDIT_RESOLUTION.REFUNDED)
+
 
 class CompletedCreditManager(CreditManager):
 
