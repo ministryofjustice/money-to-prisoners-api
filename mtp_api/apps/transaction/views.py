@@ -9,15 +9,16 @@ from rest_framework.response import Response
 import django_filters
 
 from core.filters import StatusChoiceFilter, IsoDateTimeFilter
-from credit.models import Credit
+from credit import InvalidCreditStateException
 from mtp_auth.permissions import BankAdminClientIDPermissions
 from payment.models import Payment
 from transaction.models import Transaction
 from .constants import TRANSACTION_STATUS
 from .permissions import TransactionPermissions
-from .serializers import CreateTransactionSerializer, \
-    UpdateRefundedTransactionSerializer, TransactionSerializer, \
-    ReconcileTransactionSerializer
+from .serializers import (
+    CreateTransactionSerializer, UpdateRefundedTransactionSerializer,
+    TransactionSerializer, ReconcileTransactionSerializer
+)
 
 logger = logging.getLogger('mtp')
 
@@ -53,16 +54,15 @@ class TransactionView(mixins.CreateModelMixin, mixins.UpdateModelMixin,
     def patch_processed(self, request, *args, **kwargs):
         try:
             return self.partial_update(request, *args, **kwargs)
-        except Credit.DoesNotExist as e:
-            transaction_ids = sorted(e.args[0])
+        except InvalidCreditStateException as e:
             logger.warning('Some transactions failed to update: [%s]' %
-                           ', '.join(map(str, transaction_ids)))
+                           ', '.join(map(str, e.conflict_ids)))
             return Response(
                 data={
                     'errors': [
                         {
                             'msg': 'Some transactions could not be updated',
-                            'ids': transaction_ids,
+                            'ids': e.conflict_ids,
                         }
                     ]
                 },

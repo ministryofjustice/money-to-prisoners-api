@@ -2,9 +2,8 @@ from django.db import transaction as db_transaction
 
 from rest_framework import serializers, fields
 
-from credit.constants import CREDIT_RESOLUTION
 from credit.models import Credit
-from credit.signals import credit_refunded, credit_created
+from credit.signals import credit_created
 from payment.models import Batch
 from prison.serializers import PrisonSerializer
 from .constants import TRANSACTION_CATEGORY, TRANSACTION_SOURCE
@@ -78,7 +77,6 @@ class CreateTransactionSerializer(serializers.ModelSerializer):
 
 class UpdateTransactionListSerializer(serializers.ListSerializer):
 
-    @db_transaction.atomic
     def update(self, instance, validated_data):
         user = self.context['request'].user
 
@@ -86,32 +84,10 @@ class UpdateTransactionListSerializer(serializers.ListSerializer):
 
         updated_transactions = []
         if to_refund:
-            self.refund(user, to_refund)
+            Credit.objects.refund(to_refund, user)
             updated_transactions = Transaction.objects.filter(pk__in=to_refund)
 
         return updated_transactions
-
-    def refund(self, user, to_refund):
-        update_set = Credit.objects.filter(
-            Credit.STATUS_LOOKUP['refund_pending'],
-            transaction__pk__in=to_refund).select_for_update()
-        if len(update_set) != len(to_refund):
-            raise Credit.DoesNotExist(
-                list(set(to_refund) - {c.transaction.id for c in update_set})
-            )
-
-        updated_credits = list(update_set)
-        update_set.update(resolution=CREDIT_RESOLUTION.REFUNDED)
-
-        for credit in updated_credits:
-            credit.resolution = CREDIT_RESOLUTION.REFUNDED
-            credit_refunded.send(
-                sender=Credit,
-                credit=credit,
-                by_user=user
-            )
-
-        return updated_credits
 
 
 class UpdateRefundedTransactionSerializer(serializers.ModelSerializer):
