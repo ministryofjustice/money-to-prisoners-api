@@ -31,7 +31,7 @@ class PaymentManager(models.Manager):
                 ref_code = settings.CARD_REF_CODE_BASE
 
             new_batch = Batch(
-                date=end_date.date(), ref_code=ref_code
+                date=start_date.date(), ref_code=ref_code
             )
             new_batch.save()
             update_set.update(batch=new_batch)

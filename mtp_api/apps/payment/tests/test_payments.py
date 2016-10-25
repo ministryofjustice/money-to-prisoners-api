@@ -12,7 +12,7 @@ from prison.tests.utils import load_random_prisoner_locations
 
 
 def get_worldpay_cutoff(date):
-    return datetime.combine(date, time(23, 0, tzinfo=utc))
+    return datetime.combine(date, time(0, 0, 0, tzinfo=utc))
 
 
 class ReconcilePaymentsTestCase(TestCase):
@@ -24,8 +24,8 @@ class ReconcilePaymentsTestCase(TestCase):
         load_random_prisoner_locations()
 
     def _get_date_bounds(self):
-        start_date = get_worldpay_cutoff(latest_payment_date() - timedelta(days=1))
-        end_date = get_worldpay_cutoff(latest_payment_date())
+        start_date = get_worldpay_cutoff(latest_payment_date())
+        end_date = get_worldpay_cutoff(latest_payment_date() + timedelta(days=1))
         return start_date, end_date
 
     def test_batch_created_by_reconciliation(self):
@@ -47,6 +47,8 @@ class ReconcilePaymentsTestCase(TestCase):
 
         self.assertEqual(Batch.objects.all().count(), initial_batch_count + 1)
         new_batch = Batch.objects.latest()
+        self.assertEqual(new_batch.date, latest_payment_date().date())
+
         for payment in Payment.objects.filter(
             status=PAYMENT_STATUS.TAKEN,
             credit__received_at__gte=start_date,
@@ -75,8 +77,8 @@ class ReconcilePaymentsTestCase(TestCase):
         start_date, end_date = self._get_date_bounds()
         previous_date = start_date - timedelta(days=1)
 
-        Batch(date=previous_date.date(), ref_code='800002').save()
-        Batch(date=previous_date.date() - timedelta(days=1), ref_code='800001').save()
+        Batch(date=previous_date.date() - timedelta(days=1), ref_code='800002').save()
+        Batch(date=previous_date.date() - timedelta(days=2), ref_code='800001').save()
 
         Payment.objects.reconcile(start_date, end_date, None)
         for payment in Payment.objects.filter(
