@@ -52,8 +52,8 @@ def random_reference(prisoner_number=None, prisoner_dob=None):
     )
 
 
-def get_midnight(dt):
-    return dt.tzinfo.localize(dt.replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None))
+def get_noon(dt):
+    return dt.tzinfo.localize(dt.replace(hour=12, minute=0, second=0, microsecond=0, tzinfo=None))
 
 
 def latest_transaction_date():
@@ -130,11 +130,11 @@ def generate_initial_transactions_data(
             minutes=random.randint(0, 1440*days_of_history)
         )
         random_date = timezone.localtime(random_date)
-        midnight_random_date = get_midnight(random_date)
+        noon_random_date = get_noon(random_date)
         data = {
             'category': TRANSACTION_CATEGORY.CREDIT,
             'amount': random_amount(),
-            'received_at': midnight_random_date,
+            'received_at': noon_random_date,
             'owner': None,
             'credited': False,
             'refunded': False,
@@ -209,7 +209,7 @@ def generate_predetermined_transactions_data():
     a_week_ago = over_a_week_ago + datetime.timedelta(days=1)
     a_week_ago = timezone.localtime(a_week_ago)
     data = {
-        'received_at': get_midnight(over_a_week_ago),
+        'received_at': get_noon(over_a_week_ago),
         'created': over_a_week_ago,
         'modified': a_week_ago,
         'owner': None,

@@ -619,12 +619,12 @@ class ReconcileTransactionsTestCase(
 
     def _get_date_bounds(self):
         start_date = datetime.combine(
-            self._get_latest_date() - timedelta(days=1),
-            time(23, 0, tzinfo=timezone.utc)
+            self._get_latest_date(),
+            time(0, 0, tzinfo=timezone.utc)
         )
         end_date = datetime.combine(
-            self._get_latest_date(),
-            time(23, 0, tzinfo=timezone.utc)
+            self._get_latest_date() + timedelta(days=1),
+            time(0, 0, tzinfo=timezone.utc)
         )
         return start_date, end_date
 
