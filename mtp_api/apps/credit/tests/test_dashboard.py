@@ -32,9 +32,9 @@ class TransactionDashboardTestCase(DashboardTestCase):
         make_test_users(clerks_per_prison=1)
         load_random_prisoner_locations()
         generate_transactions(transaction_batch=50)
-        self.superuser = User.objects.create_superuser(username='admin', password='admin',
+        self.superuser = User.objects.create_superuser(username='admin', password='adminadmin',
                                                        email='admin@mtp.local')
-        self.client.login(username='admin', password='admin')
+        self.client.login(username='admin', password='adminadmin')
         url = reverse('admin:dashboard')
 
         response = self.client.get(url)
