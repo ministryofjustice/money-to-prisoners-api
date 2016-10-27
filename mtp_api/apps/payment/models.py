@@ -28,6 +28,9 @@ class Batch(TimeStampedModel):
             ('view_batch', 'Can view batch'),
         )
 
+    def __str__(self):
+        return '%s (%s)' % (self.ref_code, self.date)
+
 
 class Payment(TimeStampedModel):
     uuid = models.UUIDField(default=uuid.uuid4, primary_key=True, editable=False)
