@@ -82,7 +82,7 @@ class Command(TestServerCommand):
             admin_user = User.objects.create_superuser(
                 username='admin',
                 email='admin@mtp.local',
-                password='admin',
+                password='adminadmin',
                 first_name='Admin',
                 last_name='User',
             )
