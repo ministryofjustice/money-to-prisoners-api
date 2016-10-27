@@ -1,6 +1,7 @@
-from datetime import date
+from datetime import date, timedelta
 
 from django.core.urlresolvers import reverse
+from django.utils import timezone
 from rest_framework import status as http_status
 from rest_framework.test import APITestCase
 
@@ -11,6 +12,7 @@ from mtp_auth.tests.utils import AuthTestCaseMixin
 from payment.models import Batch, Payment
 from payment.constants import PAYMENT_STATUS
 from prison.tests.utils import load_random_prisoner_locations
+from payment.tests.utils import generate_payments
 
 
 class GetBatchViewTestCase(AuthTestCaseMixin, APITestCase):
@@ -236,3 +238,34 @@ class GetPaymentViewTestCase(AuthTestCaseMixin, APITestCase):
                          retrieved_payment['prisoner_number'])
         self.assertEqual(new_payment['prisoner_dob'].isoformat(),
                          retrieved_payment['prisoner_dob'])
+
+
+class ListPaymentViewTestCase(AuthTestCaseMixin, APITestCase):
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
+
+    def setUp(self):
+        super().setUp()
+        self.prison_clerks, _, _, _, self.send_money_users, _ = make_test_users()
+        load_random_prisoner_locations(50)
+        generate_payments(50, days_of_history=1)
+
+    def test_list_payments(self):
+        user = self.send_money_users[0]
+
+        five_hours_ago = timezone.now() - timedelta(hours=5)
+
+        response = self.client.get(
+            reverse('payment-list'), {'modified__lt': five_hours_ago.isoformat()},
+            format='json', HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        retrieved_payments = response.data['results']
+
+        self.assertEqual(
+            len(retrieved_payments),
+            Payment.objects.filter(
+                status=PAYMENT_STATUS.PENDING, modified__lt=five_hours_ago
+            ).count()
+        )
+
+        for payment in retrieved_payments:
+            Payment.objects.get(pk=payment['uuid'], status=PAYMENT_STATUS.PENDING)
