@@ -37,7 +37,7 @@ UNIDENTIFIED_FILTERS = Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.UNIDENTIFIED
 ANOMALOUS_FILTERS = Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.ANOMALOUS]
 
 
-class CreditReportDateForm(forms.Form):
+class CreditReportForm(forms.Form):
     date_range = forms.ChoiceField(
         label=_('Date range'),
         choices=[
@@ -114,7 +114,7 @@ class CreditReportDateForm(forms.Form):
         last_day = self.today.replace(day=1) - datetime.timedelta(days=1)
         return last_day.replace(day=1), last_day
 
-    def get_selected_range(self):
+    def get_date_range(self):
         if self.is_valid():
             date_range = self.cleaned_data['date_range']
         else:
@@ -135,9 +135,7 @@ class CreditReportDateForm(forms.Form):
                     'day': format_date(received_at_start, 'j N'),
                 }
             return {
-                'range': 2,
-                'received_at_start': received_at_start,
-                'received_at_end': received_at_end,
+                'range': (received_at_start, received_at_end),
                 'short_title': short_title,
                 'title': title,
             }
@@ -145,9 +143,7 @@ class CreditReportDateForm(forms.Form):
             received_at = getattr(self, date_range)
             short_title = dict(self['date_range'].field.choices)[date_range]
             return {
-                'range': 1,
-                'received_at_start': received_at,
-                'received_at_end': None,
+                'range': (received_at,),
                 'short_title': short_title,
                 'title': '%(title)s, %(day)s' % {
                     'title': short_title,
@@ -157,22 +153,74 @@ class CreditReportDateForm(forms.Form):
 
         # all time
         return {
-            'range': 0,
-            'received_at_start': None,
-            'received_at_end': None,
+            'range': (),
             'short_title': _('All credits'),
             'title': _('All credits'),
         }
 
+    def get_report_parameters(self):
+        credit_queryset = Credit.objects.all()
+        transaction_queryset = Transaction.objects.all()
+        chart_credit_queryset = Credit.objects.all()
+
+        date_range = self.get_date_range()
+        if len(date_range['range']) == 2:
+            title = date_range['title']
+            received_at_start, received_at_end = date_range['range']
+            date_filters = {
+                'received_at__date__gte': received_at_start,
+                'received_at__date__lte': received_at_end,
+            }
+            admin_filter_string = 'received_at__date__gte=%s&' \
+                                  'received_at__date__lte=%s' % (received_at_start.isoformat(),
+                                                                 received_at_end.isoformat())
+            chart_title = date_range['short_title']
+            chart_start_date = received_at_start
+            chart_end_date = received_at_end
+        elif len(date_range['range']) == 1:
+            title = date_range['title']
+            received_at, = date_range['range']
+            date_filters = {
+                'received_at__date': received_at
+            }
+            admin_filter_string = 'received_at__day=%d&' \
+                                  'received_at__month=%d&' \
+                                  'received_at__year=%d' % (received_at.day,
+                                                            received_at.month,
+                                                            received_at.year)
+            chart_title = _('Last 4 weeks')
+            chart_start_date = self.four_weeks[0]
+            chart_end_date = self.four_weeks[1]
+        else:
+            title = date_range['title']
+            date_filters = {}
+            admin_filter_string = ''
+            chart_title = date_range['short_title']
+            chart_start_date = None
+            chart_end_date = None
+
+        credit_queryset = credit_queryset.filter(**date_filters)
+        transaction_queryset = transaction_queryset.filter(**date_filters)
+        if chart_start_date:
+            chart_credit_queryset = chart_credit_queryset.filter(received_at__date__gte=chart_start_date)
+        if chart_end_date:
+            chart_credit_queryset = chart_credit_queryset.filter(received_at__date__lte=chart_end_date)
+
+        return {
+            'title': title,
+            'credit_queryset': credit_queryset,
+            'transaction_queryset': transaction_queryset,
+            'admin_filter_string': admin_filter_string,
+            'chart_title': chart_title,
+            'chart_credit_queryset': chart_credit_queryset,
+            'chart_start_date': chart_start_date,
+            'chart_end_date': chart_end_date,
+        }
+
 
 class CreditReportChart:
-    def __init__(self, title, start_date=None, end_date=None):
+    def __init__(self, title, credit_queryset, start_date, end_date):
         self.title = title
-        credit_queryset = Credit.objects.all()
-        if start_date:
-            credit_queryset = credit_queryset.filter(received_at__date__gte=start_date)
-        if end_date:
-            credit_queryset = credit_queryset.filter(received_at__date__lte=end_date)
         self.start_date = start_date or \
             timezone.localtime(credit_queryset.earliest().received_at).date()
         self.end_date = end_date or \
@@ -276,54 +324,18 @@ class CreditReport(DashboardModule):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.form = CreditReportDateForm(data=self.cookie_data)
-        credit_queryset = Credit.objects.all()
-        transaction_queryset = Transaction.objects.all()
-
-        date_range = self.form.get_selected_range()
-        if date_range['range'] == 2:
-            self.range_title = date_range['title']
-            received_at_start, received_at_end = date_range['received_at_start'], date_range['received_at_end']
-            queryset_filters = {
-                'received_at__date__gte': received_at_start,
-                'received_at__date__lte': received_at_end,
-            }
-            admin_filter_string = 'received_at__date__gte=%s&' \
-                                  'received_at__date__lte=%s' % (received_at_start.isoformat(),
-                                                                 received_at_end.isoformat())
-            chart_title = date_range['short_title']
-            chart_filters = {
-                'start_date': received_at_start,
-                'end_date': received_at_end,
-            }
-        elif date_range['range'] == 1:
-            self.range_title = date_range['title']
-            received_at = date_range['received_at_start']
-            queryset_filters = {
-                'received_at__date': received_at
-            }
-            admin_filter_string = 'received_at__day=%d&' \
-                                  'received_at__month=%d&' \
-                                  'received_at__year=%d' % (received_at.day,
-                                                            received_at.month,
-                                                            received_at.year)
-            chart_title = _('Last 4 weeks')
-            chart_filters = {
-                'start_date': self.form.four_weeks[0],
-                'end_date': self.form.four_weeks[1],
-            }
-        else:
-            self.range_title = date_range['title']
-            queryset_filters = {}
-            admin_filter_string = ''
-            chart_title = date_range['short_title']
-            chart_filters = {}
-
-        self.credit_queryset = credit_queryset.filter(**queryset_filters)
-        self.transaction_queryset = transaction_queryset.filter(**queryset_filters)
-        self.chart = CreditReportChart(chart_title, **chart_filters)
+        self.form = CreditReportForm(data=self.cookie_data)
+        report_parameters = self.form.get_report_parameters()
+        self.range_title = report_parameters['title']
+        self.credit_queryset = report_parameters['credit_queryset']
+        self.transaction_queryset = report_parameters['transaction_queryset']
+        self.chart = CreditReportChart(title=report_parameters['chart_title'],
+                                       credit_queryset=report_parameters['chart_credit_queryset'],
+                                       start_date=report_parameters['chart_start_date'],
+                                       end_date=report_parameters['chart_end_date'])
         if self.dashboard_view and self.dashboard_view.request.user.has_perm('credit.change_credit'):
-            self.change_list_url = reverse('admin:credit_credit_changelist') + '?' + admin_filter_string
+            self.change_list_url = '%s?%s' % (reverse('admin:credit_credit_changelist'),
+                                              report_parameters['admin_filter_string'])
 
     # statistic formatting methods
 
