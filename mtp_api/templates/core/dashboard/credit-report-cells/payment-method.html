@@ -1,0 +1,16 @@
+{% load i18n %}
+{% load credit %}
+
+<td>
+  <div class="credit-stat">
+    <dl>
+      <dd>{% trans 'Received by method' %}</dd>
+
+      <dt>{% trans 'Bank transfer' %}:</dt>
+      <dd>{{ dashboard_module.received_transaction_count|format_number }}</dd>
+
+      <dt>{% trans 'Debit card' %}:</dt>
+      <dd>{{ dashboard_module.received_payment_count|format_number }}</dd>
+    </dl>
+  </div>
+</td>

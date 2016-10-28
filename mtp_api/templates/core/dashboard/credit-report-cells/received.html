@@ -1,0 +1,14 @@
+{% load i18n %}
+{% load credit %}
+
+<td>
+  <div class="credit-stat">
+    <strong>
+        <span class="credit-stat--valign">
+          {{ dashboard_module.received_count|format_number }}
+          <sub>{{ dashboard_module.received_amount|format_amount }}</sub>
+        </span>
+      </strong>
+    {% trans 'Received' %}
+  </div>
+</td>

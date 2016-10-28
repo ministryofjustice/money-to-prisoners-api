@@ -16,6 +16,7 @@ from core.dashboards import DashboardModule
 from core.views import DashboardView
 from credit.models import Credit, CREDIT_RESOLUTION, CREDIT_STATUS
 from payment.models import PAYMENT_STATUS
+from prison.models import Prison
 from transaction.models import Transaction, TRANSACTION_CATEGORY, TRANSACTION_SOURCE, TRANSACTION_STATUS
 
 # credit-specific
@@ -50,6 +51,12 @@ class CreditReportForm(forms.Form):
             ('last_month', _('Last month')),
             ('all', _('Since the beginning')),
         ],
+    )
+    prison = forms.ModelChoiceField(
+        queryset=Prison.objects.all(),
+        label=_('Prison'),
+        empty_label=_('All prisons'),
+        required=False,
     )
 
     def __init__(self, **kwargs):
@@ -160,10 +167,18 @@ class CreditReportForm(forms.Form):
             'title': _('All credits'),
         }
 
+    def get_prison(self):
+        if self.is_valid():
+            return self.cleaned_data['prison']
+
     def get_report_parameters(self):
         credit_queryset = Credit.objects.all()
         transaction_queryset = Transaction.objects.all()
-        chart_credit_queryset = Credit.objects.all()
+        prison = self.get_prison()
+        if prison:
+            credit_queryset = credit_queryset.filter(prison=prison)
+            transaction_queryset = transaction_queryset.filter(credit__prison=prison)
+        chart_credit_queryset = credit_queryset.filter()
 
         date_range = self.get_date_range()
         if len(date_range['range']) == 2:
@@ -200,6 +215,9 @@ class CreditReportForm(forms.Form):
             chart_title = date_range['short_title']
             chart_start_date = None
             chart_end_date = None
+
+        if prison:
+            title += ' (' + _('only for %(prison)s') % {'prison': prison} + ')'
 
         credit_queryset = credit_queryset.filter(**date_filters)
         transaction_queryset = transaction_queryset.filter(**date_filters)

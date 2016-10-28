@@ -1,0 +1,9 @@
+{% load i18n %}
+{% load credit %}
+
+<td>
+  <div class="credit-stat" title="{% trans 'Proportion of creditable that is debit card payments' %}">
+    <strong>{{ dashboard_module.creditable_payment_proportion|format_percentage }}</strong>
+    {% trans 'Debit cards' %}
+  </div>
+</td>
