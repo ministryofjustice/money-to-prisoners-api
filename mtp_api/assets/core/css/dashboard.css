@@ -36,6 +36,13 @@
 .mtp-dashboard-module-standout caption span a {
   color: #fff;
 }
+.mtp-dashboard-module-standout thead th {
+  border: none;
+  background: #111;
+  color: #ccc;
+  text-align: center;
+  font-size: 1.8em;
+}
 .mtp-dashboard-module-standout td {
   border-bottom-color: #000;
 }

@@ -1,0 +1,17 @@
+{% load i18n %}
+{% load credit %}
+{% load prison %}
+
+<td>
+  <div class="credit-stat">
+    <dl>
+      <dd>{% trans 'Received by prison' %}</dd>
+      {% for creditable_prison in dashboard_module.get_top_recevied_by_prison %}
+        <dt>{{ creditable_prison.prison|short_prison_name|default_if_none:_('No prison') }}:</dt>
+        <dd>{{ creditable_prison.count|format_number }}</dd>
+      {% empty %}
+        <dt>–</dt>
+      {% endfor %}
+    </dl>
+  </div>
+</td>

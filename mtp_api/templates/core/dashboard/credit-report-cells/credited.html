@@ -1,0 +1,26 @@
+{% load i18n %}
+{% load credit %}
+
+<td>
+  <div class="credit-stat">
+    {% if dashboard_module.creditable_count == dashboard_module.credited_count %}
+      <strong>
+        <span class="credit-stat--valign">
+          {{ dashboard_module.creditable_count|format_number }}
+          <sub>{{ dashboard_module.creditable_amount|format_amount }}</sub>
+        </span>
+      </strong>
+      {% trans 'Credited' %}
+    {% else %}
+      <strong>
+        <span title="{% trans 'Marked as credited through the Cashbook tool' %}">{{ dashboard_module.credited_count|format_number }}</span>
+        ／
+        <span class="credit-stat--valign">
+          {{ dashboard_module.creditable_count|format_number }}
+          <sub>{{ dashboard_module.creditable_amount|format_amount }}</sub>
+        </span>
+      </strong>
+      {% trans 'Credited' %} / {% trans 'Creditable' %}
+    {% endif %}
+  </div>
+</td>

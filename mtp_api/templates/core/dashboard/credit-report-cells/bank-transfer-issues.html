@@ -1,0 +1,21 @@
+{% load i18n %}
+{% load credit %}
+
+<td>
+  <div class="credit-stat">
+    <dl>
+      <dd>{% trans 'Bank transfer issues' %}</dd>
+
+      <dt title="{% trans 'Bank transfers that contained incomplete sender information' %}">{% trans 'Anonymous' %}:</dt>
+      <dd>{{ dashboard_module.anonymous_count|format_number }}</dd>
+
+      <dt title="{% trans 'Bank transfers that do not match a prisoner and cannot be refunded' %}">{% trans 'Unidentified' %}:</dt>
+      <dd>{{ dashboard_module.unidentified_count|format_number }}</dd>
+
+      {% if not prison %}
+        <dt title="{% trans 'Bank transfers marked as administrative, e.g. WorldPay settlements or NOMS reimbursing a payment out to a supplier' %}">{% trans 'Administrative' %}:</dt>
+        <dd>{{ dashboard_module.anomalous_count|format_number }}</dd>
+      {% endif %}
+    </dl>
+  </div>
+</td>
