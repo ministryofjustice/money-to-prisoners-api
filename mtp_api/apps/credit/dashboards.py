@@ -28,6 +28,8 @@ REFUNDABLE_FILTERS = Credit.STATUS_LOOKUP[CREDIT_STATUS.REFUNDED] | \
 # NB: refundable does not consider debit card payments since refunds there have not been worked out
 REFUNDED_FILTERS = Credit.STATUS_LOOKUP[CREDIT_STATUS.REFUNDED]
 ERROR_FILTERS = (models.Q(transaction__source=TRANSACTION_SOURCE.BANK_TRANSFER, prison__isnull=True) |
+                 models.Q(transaction__source=TRANSACTION_SOURCE.BANK_TRANSFER,
+                          transaction__incomplete_sender_info=True) |
                  models.Q(payment__isnull=False) & ~models.Q(payment__status=PAYMENT_STATUS.TAKEN))
 
 # transaction-specific
