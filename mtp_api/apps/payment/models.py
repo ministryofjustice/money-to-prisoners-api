@@ -77,11 +77,16 @@ class Payment(TimeStampedModel):
     def ref_code(self):
         return self.batch.ref_code if self.batch else None
 
+    @property
+    def received_at(self):
+        return self.credit.received_at
+
 
 @receiver(pre_save, sender=Payment, dispatch_uid='update_credit_for_payment')
 def update_credit_for_payment(sender, instance, **kwargs):
     if (instance.status == PAYMENT_STATUS.TAKEN and
             instance.credit.resolution == CREDIT_RESOLUTION.INITIAL):
+        if instance.credit.received_at is None:
+            instance.credit.received_at = timezone.now()
         instance.credit.resolution = CREDIT_RESOLUTION.PENDING
-        instance.credit.received_at = timezone.now()
         instance.credit.save()

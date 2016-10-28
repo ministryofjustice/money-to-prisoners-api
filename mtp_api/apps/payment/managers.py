@@ -10,7 +10,7 @@ from .constants import PAYMENT_STATUS
 class PaymentManager(models.Manager):
 
     def abandoned(self, created_before):
-        return self.get_queryset().filter(created__lt=created_before, status=PAYMENT_STATUS.PENDING,
+        return self.get_queryset().filter(created__lt=created_before, status=PAYMENT_STATUS.FAILED,
                                           credit__resolution=CREDIT_RESOLUTION.INITIAL)
 
     @atomic

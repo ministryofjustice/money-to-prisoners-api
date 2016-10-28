@@ -1,6 +1,7 @@
-from datetime import date
+from datetime import datetime, date, timedelta
 
 from django.core.urlresolvers import reverse
+from django.utils import timezone
 from rest_framework import status as http_status
 from rest_framework.test import APITestCase
 
@@ -11,6 +12,7 @@ from mtp_auth.tests.utils import AuthTestCaseMixin
 from payment.models import Batch, Payment
 from payment.constants import PAYMENT_STATUS
 from prison.tests.utils import load_random_prisoner_locations
+from payment.tests.utils import generate_payments
 
 
 class GetBatchViewTestCase(AuthTestCaseMixin, APITestCase):
@@ -113,7 +115,7 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         self.prison_clerks, _, _, _, self.send_money_users, _ = make_test_users()
         load_random_prisoner_locations(2)
 
-    def _test_update_status(self, new_outcome):
+    def _test_update_status(self, new_outcome, received_at=None):
         user = self.send_money_users[0]
 
         new_payment = {
@@ -133,6 +135,8 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         update = {
             'status': new_outcome
         }
+        if received_at is not None:
+            update['received_at'] = received_at.isoformat()
 
         response = self.client.patch(
             reverse('payment-detail', args=[payment_uuid]),
@@ -156,6 +160,23 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertIsNotNone(Credit.objects.all()[0].prison)
         self.assertIsNotNone(Credit.objects.all()[0].prisoner_name)
         self.assertIsNotNone(Credit.objects.all()[0].received_at)
+
+    def test_update_received_at_succeeds(self):
+        received_at = datetime(2016, 9, 22, 23, 12, tzinfo=timezone.utc)
+        response = self._test_update_status(PAYMENT_STATUS.TAKEN, received_at=received_at)
+
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+        self.assertTrue(response.data['uuid'] is not None)
+
+        # check changes in db
+        self.assertEqual(Payment.objects.count(), 1)
+        self.assertEqual(Payment.objects.all()[0].status,
+                         PAYMENT_STATUS.TAKEN)
+        self.assertEqual(Credit.objects.all()[0].resolution,
+                         CREDIT_RESOLUTION.PENDING)
+        self.assertIsNotNone(Credit.objects.all()[0].prison)
+        self.assertIsNotNone(Credit.objects.all()[0].prisoner_name)
+        self.assertEqual(Credit.objects.all()[0].received_at, received_at)
 
     def test_update_status_failed_succeeds(self):
         response = self._test_update_status(PAYMENT_STATUS.FAILED)
@@ -236,3 +257,34 @@ class GetPaymentViewTestCase(AuthTestCaseMixin, APITestCase):
                          retrieved_payment['prisoner_number'])
         self.assertEqual(new_payment['prisoner_dob'].isoformat(),
                          retrieved_payment['prisoner_dob'])
+
+
+class ListPaymentViewTestCase(AuthTestCaseMixin, APITestCase):
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
+
+    def setUp(self):
+        super().setUp()
+        self.prison_clerks, _, _, _, self.send_money_users, _ = make_test_users()
+        load_random_prisoner_locations(50)
+        generate_payments(50, days_of_history=1)
+
+    def test_list_payments(self):
+        user = self.send_money_users[0]
+
+        five_hours_ago = timezone.now() - timedelta(hours=5)
+
+        response = self.client.get(
+            reverse('payment-list'), {'modified__lt': five_hours_ago.isoformat()},
+            format='json', HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        retrieved_payments = response.data['results']
+
+        self.assertEqual(
+            len(retrieved_payments),
+            Payment.objects.filter(
+                status=PAYMENT_STATUS.PENDING, modified__lt=five_hours_ago
+            ).count()
+        )
+
+        for payment in retrieved_payments:
+            Payment.objects.get(pk=payment['uuid'], status=PAYMENT_STATUS.PENDING)

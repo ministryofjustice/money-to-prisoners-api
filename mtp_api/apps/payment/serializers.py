@@ -18,6 +18,7 @@ class BatchSerializer(serializers.ModelSerializer):
 class PaymentSerializer(serializers.ModelSerializer):
     prisoner_dob = serializers.DateField()
     prisoner_number = serializers.CharField()
+    received_at = serializers.DateTimeField(required=False)
 
     @atomic
     def create(self, validated_data):
@@ -38,6 +39,10 @@ class PaymentSerializer(serializers.ModelSerializer):
                 'Payment cannot be updated in status "%s"'
                 % instance.status
             )
+        received_at = validated_data.pop('received_at', None)
+        if received_at:
+            instance.credit.received_at = received_at
+            instance.credit.save()
         return super().update(instance, validated_data)
 
     class Meta:
@@ -52,5 +57,6 @@ class PaymentSerializer(serializers.ModelSerializer):
             'recipient_name',
             'email',
             'prisoner_dob',
-            'prisoner_number'
+            'prisoner_number',
+            'received_at'
         )
