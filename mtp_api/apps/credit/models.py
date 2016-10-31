@@ -278,6 +278,23 @@ class Log(TimeStampedModel):
         )
 
 
+class Comment(TimeStampedModel):
+    credit = models.ForeignKey(
+        Credit, on_delete=models.CASCADE, related_name='comments'
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL
+    )
+    comment = models.TextField(max_length=3000)
+
+    def __str__(self):
+        return 'Comment on credit {credit_id} by {user}'.format(
+            credit_id=self.credit.pk,
+            user='<None>' if not self.user else self.user.username,
+        )
+
+
 @receiver(post_save, sender=Credit, dispatch_uid='update_prison_for_credit')
 def update_prison_for_credit(sender, instance, created, *args, **kwargs):
     if (created and
