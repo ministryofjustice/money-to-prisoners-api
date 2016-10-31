@@ -105,14 +105,15 @@ class CreditAdmin(admin.ModelAdmin):
     ordering = ('-received_at',)
     date_hierarchy = 'received_at'
     inlines = (TransactionAdminInline, PaymentAdminInline, CommentAdminInline, LogAdminInline)
-    readonly_fields = ('resolution', 'reconciled',)
+    readonly_fields = ('resolution', 'reconciled', 'reviewed',)
     list_filter = (
         StatusFilter,
         SourceFilter,
         'resolution',
-        'reconciled',
         ('prison', RelatedAnyFieldListFilter),
         ('received_at', DateRangeFilter),
+        'reconciled',
+        'reviewed',
         ('owner__username', SearchFilter),
     )
     search_fields = ('prisoner_name', 'prisoner_number')

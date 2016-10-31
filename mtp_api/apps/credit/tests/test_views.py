@@ -1629,6 +1629,47 @@ class CreditCreditTestCase(
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
 
+class ReviewCreditTestCase(
+    CashbookCreditRejectsRequestsWithoutPermissionTestMixin,
+    BaseCreditViewTestCase
+):
+    ENDPOINT_VERB = 'post'
+
+    def _get_authorised_user(self):
+        return self.security_staff[0]
+
+    def _get_url(self):
+        return reverse('credit-review')
+
+    def test_can_mark_credits_reviewed(self):
+        logged_in_user = self._get_authorised_user()
+        reviewed = Credit.objects.available()[:10].values_list('id', flat=True)
+
+        response = self.client.post(
+            self._get_url(),
+            {'credit_ids': reviewed},
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        self.assertEqual(
+            set(reviewed),
+            set(Credit.objects.filter(reviewed=True).values_list('id', flat=True))
+        )
+
+        # check logs
+        self.assertEqual(
+            Log.objects.filter(
+                user=logged_in_user,
+                action=LOG_ACTIONS.REVIEWED,
+                credit__id__in=reviewed
+            ).count(),
+            len(reviewed)
+        )
+
+
 class GroupedListTestCase(BaseCreditViewTestCase):
     grouped_response_url = NotImplemented
     ordering = ()

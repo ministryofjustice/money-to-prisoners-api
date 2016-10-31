@@ -66,6 +66,7 @@ class CreditSerializer(serializers.ModelSerializer):
             'anonymous',
             'reconciliation_code',
             'comments',
+            'reviewed',
         )
 
     def get_anonymous(self, obj):

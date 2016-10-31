@@ -166,6 +166,7 @@ class CreditListFilter(django_filters.FilterSet):
         fields = {
             'prisoner_number': ['exact'],
             'amount': ['exact', 'lte', 'gte'],
+            'reviewed': ['exact'],
         }
 
 
@@ -382,6 +383,33 @@ class UnlockCredits(CreditViewMixin, APIView):
             status=CREDIT_STATUS.AVAILABLE
         )
         return HttpResponseRedirect(redirect_url, status=drf_status.HTTP_303_SEE_OTHER)
+
+
+class ReviewCredits(CreditViewMixin, APIView):
+    serializer_class = IdsCreditSerializer
+    action = 'review'
+
+    permission_classes = (
+        IsAuthenticated, NomsOpsClientIDPermissions,
+        CreditPermissions
+    )
+
+    def get_serializer(self, *args, **kwargs):
+        kwargs['context'] = {
+            'request': self.request,
+            'format': self.format_kwarg,
+            'view': self
+        }
+        return self.serializer_class(*args, **kwargs)
+
+    def post(self, request, format=None):
+        deserialized = self.get_serializer(data=request.data)
+        deserialized.is_valid(raise_exception=True)
+
+        credit_ids = deserialized.data.get('credit_ids', [])
+        Credit.objects.review(credit_ids, request.user)
+
+        return Response(status=drf_status.HTTP_204_NO_CONTENT)
 
 
 class GroupedListAPIView(CreditViewMixin, generics.ListAPIView):

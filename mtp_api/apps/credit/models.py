@@ -11,7 +11,8 @@ from credit.constants import LOG_ACTIONS, CREDIT_RESOLUTION, CREDIT_STATUS, CRED
 from credit.managers import CreditManager, CompletedCreditManager, CreditQuerySet, LogManager
 from credit.signals import (
     credit_created, credit_locked, credit_unlocked, credit_credited,
-    credit_refunded, credit_reconciled, credit_prisons_need_updating
+    credit_refunded, credit_reconciled, credit_prisons_need_updating,
+    credit_reviewed
 )
 from prison.models import Prison, PrisonerLocation
 from transaction.utils import format_amount
@@ -28,6 +29,7 @@ class Credit(TimeStampedModel):
 
     resolution = models.CharField(max_length=50, choices=CREDIT_RESOLUTION, default=CREDIT_RESOLUTION.PENDING)
     reconciled = models.BooleanField(default=False)
+    reviewed = models.BooleanField(default=False)
 
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
 
@@ -74,6 +76,7 @@ class Credit(TimeStampedModel):
             ('lock_credit', 'Can lock credit'),
             ('unlock_credit', 'Can unlock credit'),
             ('patch_credited_credit', 'Can patch credited credit'),
+            ('review_credit', 'Can review credit'),
         )
         index_together = (
             ('prisoner_number', 'prisoner_dob'),
@@ -342,6 +345,11 @@ def credit_refunded_receiver(sender, credit, by_user, **kwargs):
 @receiver(credit_reconciled)
 def credit_reconciled_receiver(sender, credit, by_user, **kwargs):
     Log.objects.credits_reconciled([credit], by_user)
+
+
+@receiver(credit_reviewed)
+def credit_reviewed_receiver(sender, credit, by_user, **kwargs):
+    Log.objects.credits_reviewed([credit], by_user)
 
 
 @receiver(credit_prisons_need_updating)

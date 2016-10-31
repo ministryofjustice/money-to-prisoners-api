@@ -138,6 +138,16 @@ class CreditManager(models.Manager):
         Log.objects.credits_refunded(update_set, user)
         update_set.update(resolution=CREDIT_RESOLUTION.REFUNDED)
 
+    @atomic
+    def review(self, credit_ids, user):
+        to_update = self.get_queryset().filter(
+            pk__in=credit_ids
+        ).select_for_update()
+
+        from .models import Log
+        Log.objects.credits_reviewed(to_update, user)
+        to_update.update(reviewed=True)
+
 
 class CompletedCreditManager(CreditManager):
 
@@ -176,3 +186,6 @@ class LogManager(models.Manager):
 
     def credits_reconciled(self, credits, by_user):
         self._log_action(LOG_ACTIONS.RECONCILED, credits, by_user)
+
+    def credits_reviewed(self, credits, by_user):
+        self._log_action(LOG_ACTIONS.REVIEWED, credits, by_user)
