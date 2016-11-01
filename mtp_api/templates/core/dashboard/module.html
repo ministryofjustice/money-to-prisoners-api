@@ -24,8 +24,11 @@
         {% if dashboard_module.form %}
           <tr class="mtp-dashboard-change">
             <th colspan="{{ dashboard_module.column_count }}">
-              <form data-cookie-key="{{ dashboard_module.cookie_key }}">
+              <form {% if not dashboard_module.form.prevent_auto_reload %}class="mtp-auto-reload"{% endif %} data-cookie-key="{{ dashboard_module.cookie_key }}">
                 {{ dashboard_module.form.as_p }}
+                {% if dashboard_module.form.prevent_auto_reload %}
+                  <input type="submit" value="{% trans 'Update' %}">
+                {% endif %}
               </form>
             </th>
           </tr>

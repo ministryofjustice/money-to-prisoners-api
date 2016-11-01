@@ -1,7 +1,9 @@
 import datetime
 import json
+import types
 
 from django import forms
+from django.contrib.admin import widgets as admin_widgets
 from django.core.urlresolvers import reverse
 from django.db import models
 from django.utils import timezone
@@ -40,6 +42,21 @@ UNIDENTIFIED_FILTERS = Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.UNIDENTIFIED
 ANOMALOUS_FILTERS = Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.ANOMALOUS]
 
 
+class DateField(forms.DateField):
+    widget = admin_widgets.AdminDateWidget
+
+    def get_bound_field(self, form, field_name):
+        bound_field = super().get_bound_field(form, field_name)
+        super_css_classes = bound_field.css_classes
+
+        def css_classes(_, extra_classes=None):
+            classes = super_css_classes(extra_classes=extra_classes)
+            return (classes + ' row_%s' % field_name).strip()
+
+        bound_field.css_classes = types.MethodType(css_classes, bound_field)
+        return bound_field
+
+
 class CreditReportForm(forms.Form):
     date_range = forms.ChoiceField(
         label=_('Date range'),
@@ -50,14 +67,22 @@ class CreditReportForm(forms.Form):
             ('this_month', _('This month')),
             ('last_month', _('Last month')),
             ('all', _('Since the beginning')),
+            ('custom', _('Specify a range…')),
         ],
     )
+    start_date = DateField(label=_('From date'), required=False)
+    end_date = DateField(label=_('To date'), required=False)
     prison = forms.ModelChoiceField(
         queryset=Prison.objects.all(),
         label=_('Prison'),
         empty_label=_('All prisons'),
         required=False,
     )
+
+    prevent_auto_reload = True
+    error_messages = {
+        'date_order': _('End date must be after start date'),
+    }
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -85,6 +110,13 @@ class CreditReportForm(forms.Form):
             self['date_range'].field.initial = 'latest'
         self['date_range'].field.choices = date_ranges + self['date_range'].field.choices
 
+    def clean_end_date(self):
+        start_date = self.cleaned_data.get('start_date')
+        end_date = self.cleaned_data.get('end_date')
+        if start_date and end_date and end_date < start_date:
+            raise forms.ValidationError(self.error_messages['date_order'], code='date_order')
+        return end_date
+
     @cached_property
     def today(self):
         return timezone.localtime(timezone.now()).date()
@@ -92,6 +124,13 @@ class CreditReportForm(forms.Form):
     @cached_property
     def yesterday(self):
         return self.today - datetime.timedelta(days=1)
+
+    @cached_property
+    def earliest(self):
+        try:
+            return timezone.localtime(Credit.objects.earliest().received_at).date()
+        except Credit.DoesNotExist:
+            pass
 
     @cached_property
     def latest(self):
@@ -128,7 +167,28 @@ class CreditReportForm(forms.Form):
             date_range = self.cleaned_data['date_range']
         else:
             date_range = self['date_range'].field.initial
-        if date_range in ('this_week', 'last_week', 'four_weeks', 'this_month', 'last_month'):
+        if date_range == 'custom' and (self.cleaned_data.get('start_date') or self.cleaned_data.get('end_date')):
+            received_at_start = max((self.cleaned_data.get('start_date', self.earliest), self.earliest))
+            received_at_end = min((self.cleaned_data.get('end_date', self.latest), self.latest))
+            if received_at_start == received_at_end:
+                short_title = format_date(received_at_start, 'j M Y')
+            else:
+                if received_at_start.replace(day=1) == received_at_end.replace(day=1):
+                    from_date_format = 'j'
+                elif received_at_start.replace(month=1, day=1) == received_at_end.replace(month=1, day=1):
+                    from_date_format = 'j M'
+                else:
+                    from_date_format = 'j M Y'
+                short_title = _('%(from)s to %(to)s') % {
+                    'from': format_date(received_at_start, from_date_format),
+                    'to': format_date(received_at_end, 'j M Y')
+                }
+            return {
+                'range': (received_at_start, received_at_end),
+                'short_title': short_title,
+                'title': short_title,
+            }
+        elif date_range in ('this_week', 'last_week', 'four_weeks', 'this_month', 'last_month'):
             received_at_start, received_at_end = getattr(self, date_range)
             short_title = dict(self['date_range'].field.choices)[date_range]
             if date_range in ('this_month', 'last_month'):
@@ -337,6 +397,7 @@ class CreditReport(DashboardModule):
             'all': ('core/css/credit-report.css',)
         }
         js = (
+            'admin/js/core.js',
             'https://www.gstatic.com/charts/loader.js',
             'core/js/google-charts.js',
             'core/js/credit-report.js',

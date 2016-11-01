@@ -1,10 +1,17 @@
 {% extends "admin/base_site.html" %}
 {% load i18n %}
+{% load static %}
 
 {% block extrahead %}
   {{ block.super }}
 
+  <script type="text/javascript" src="{% url 'admin:jsi18n' %}"></script>
   {{ combined_media }}
+{% endblock %}
+{% block extrastyle %}
+  {{ block.super }}
+
+  <link rel="stylesheet" type="text/css" href="{% static 'admin/css/forms.css' %}" />
 {% endblock %}
 
 {% block content %}
