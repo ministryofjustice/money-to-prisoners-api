@@ -33,6 +33,7 @@ class PrisonSerializer(serializers.ModelSerializer):
             'region',
             'populations',
             'categories',
+            'pre_approval_required',
         )
 
 
