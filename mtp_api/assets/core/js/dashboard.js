@@ -44,8 +44,11 @@ django.jQuery(function($) {
     });
   });
 
-  $moduleForms.change(function() {
+  function saveDashboardFormsAndReload(e) {
     // save forms as cookie
+    if(e && e.preventDefault) {
+      e.preventDefault();
+    }
     var moduleFormCookie = {};
     $moduleForms.each(function() {
       var $form = $(this),
@@ -58,7 +61,10 @@ django.jQuery(function($) {
 
     // reload page
     window.location.reload();
-  });
+  }
+
+  $moduleForms.filter('.mtp-auto-reload').change(saveDashboardFormsAndReload);
+  $moduleForms.filter(':not(.mtp-auto-reload)').on('click', ':submit', saveDashboardFormsAndReload);
 
 
   // dashboard module stand-out

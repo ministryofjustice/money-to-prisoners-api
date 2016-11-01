@@ -105,6 +105,8 @@ class DashboardView(AdminViewMixin, TemplateView, metaclass=MediaDefiningClass):
         combined_media = self.media
         for dashboard_module in dashboard_modules:
             combined_media += dashboard_module.media
+            if hasattr(dashboard_module, 'form'):
+                combined_media += dashboard_module.form.media
         context.update({
             'dashboard_modules': dashboard_modules,
             'combined_media': combined_media,

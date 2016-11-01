@@ -3,6 +3,19 @@
 django.jQuery(function($) {
   'use strict';
 
+  // change form
+
+  var $customDateRows = $('.row_start_date, .row_end_date');
+  $('#id_date_range').change(function () {
+    if ($(this).val() == 'custom') {
+      $customDateRows.show();
+    } else {
+      $customDateRows.hide();
+    }
+  }).change();
+
+  // chart
+
   var $module = $('#id_credit_report');
   var $chart = $('#credit-chart');
   var normalStyles = {
