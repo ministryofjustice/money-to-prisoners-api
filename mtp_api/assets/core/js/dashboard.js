@@ -42,6 +42,9 @@ django.jQuery(function($) {
       e.preventDefault();
       $changeWrapper.toggle();
     });
+    if($changeWrapper.find('form').is('.invalid')) {
+      $changeWrapper.show();
+    }
   });
 
   function saveDashboardFormsAndReload(e) {

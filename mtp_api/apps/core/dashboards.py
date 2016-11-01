@@ -4,7 +4,7 @@ import itertools
 from django.conf import settings
 from django.contrib import messages
 from django.core.cache import cache
-from django.forms import MediaDefiningClass
+from django.forms import Form, MediaDefiningClass
 from django.http.request import QueryDict
 from django.utils.safestring import mark_safe
 from django.utils.text import re_camel_case
@@ -33,6 +33,12 @@ class DashboardModule(metaclass=MediaDefiningClass):
         html_id = re_camel_case.sub(r'_\1', self.__class__.__name__)
         html_id = html_id.strip().lower()
         return 'id' + html_id
+
+
+class DashboardChangeForm(Form):
+    prevent_auto_reload = False
+    error_css_class = 'errors'
+    required_css_class = 'required'
 
 
 @DashboardView.register_dashboard
