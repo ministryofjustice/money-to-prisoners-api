@@ -14,7 +14,7 @@ from django.utils.html import escapejs
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext, gettext_lazy as _
 
-from core.dashboards import DashboardModule
+from core.dashboards import DashboardChangeForm, DashboardModule
 from core.views import DashboardView
 from credit.models import Credit, CREDIT_RESOLUTION, CREDIT_STATUS
 from payment.models import PAYMENT_STATUS
@@ -57,7 +57,7 @@ class DateField(forms.DateField):
         return bound_field
 
 
-class CreditReportForm(forms.Form):
+class CreditReportForm(DashboardChangeForm):
     date_range = forms.ChoiceField(
         label=_('Date range'),
         choices=[

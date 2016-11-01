@@ -12,6 +12,10 @@
 .mtp-dashboard-change {
   display: none;
 }
+.mtp-dashboard-change p label {
+  display: inline-block;
+  min-width: 10em;
+}
 
 .mtp-dashboard-module-standout {
   position: fixed;
