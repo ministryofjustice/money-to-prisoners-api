@@ -11,7 +11,7 @@ from django.http import HttpResponseRedirect
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.views.generic import View
-from rest_framework import generics, filters, status as drf_status
+from rest_framework import generics, filters, mixins, status as drf_status, viewsets
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -20,6 +20,7 @@ from rest_framework.settings import api_settings
 
 from core import dictfetchall
 from core.filters import BlankStringFilter, StatusChoiceFilter, IsoDateTimeFilter
+from core.permissions import ActionsBasedPermissions
 from mtp_auth.models import PrisonUserMapping
 from mtp_auth.permissions import (
     CashbookClientIDPermissions, NomsOpsClientIDPermissions,
@@ -32,12 +33,12 @@ from transaction.pagination import DateBasedPagination
 from . import InvalidCreditStateException
 from .constants import CREDIT_STATUS
 from .forms import SenderListFilterForm, PrisonerListFilterForm, SQLFragment
-from .models import Credit
+from .models import Credit, Comment
 from .permissions import CreditPermissions
 from .serializers import (
     CreditSerializer, SecurityCreditSerializer, CreditedOnlyCreditSerializer,
     IdsCreditSerializer, LockedCreditSerializer, SenderSerializer,
-    PrisonerSerializer
+    PrisonerSerializer, CommentSerializer
 )
 
 User = get_user_model()
@@ -165,6 +166,7 @@ class CreditListFilter(django_filters.FilterSet):
         fields = {
             'prisoner_number': ['exact'],
             'amount': ['exact', 'lte', 'gte'],
+            'reviewed': ['exact'],
         }
 
 
@@ -381,6 +383,33 @@ class UnlockCredits(CreditViewMixin, APIView):
             status=CREDIT_STATUS.AVAILABLE
         )
         return HttpResponseRedirect(redirect_url, status=drf_status.HTTP_303_SEE_OTHER)
+
+
+class ReviewCredits(CreditViewMixin, APIView):
+    serializer_class = IdsCreditSerializer
+    action = 'review'
+
+    permission_classes = (
+        IsAuthenticated, NomsOpsClientIDPermissions,
+        CreditPermissions
+    )
+
+    def get_serializer(self, *args, **kwargs):
+        kwargs['context'] = {
+            'request': self.request,
+            'format': self.format_kwarg,
+            'view': self
+        }
+        return self.serializer_class(*args, **kwargs)
+
+    def post(self, request, format=None):
+        deserialized = self.get_serializer(data=request.data)
+        deserialized.is_valid(raise_exception=True)
+
+        credit_ids = deserialized.data.get('credit_ids', [])
+        Credit.objects.review(credit_ids, request.user)
+
+        return Response(status=drf_status.HTTP_204_NO_CONTENT)
 
 
 class GroupedListAPIView(CreditViewMixin, generics.ListAPIView):
@@ -823,3 +852,18 @@ class PrisonerList(GroupedListAPIView):
                 params
             )
         return SQLFragment(None, [])
+
+
+class CommentView(
+    mixins.CreateModelMixin, viewsets.GenericViewSet
+):
+    queryset = Comment.objects.all()
+    serializer_class = CommentSerializer
+
+    permission_classes = (
+        IsAuthenticated, ActionsBasedPermissions, NomsOpsClientIDPermissions
+    )
+
+    def get_serializer(self, *args, **kwargs):
+        many = kwargs.pop('many', True)
+        return super().get_serializer(many=many, *args, **kwargs)

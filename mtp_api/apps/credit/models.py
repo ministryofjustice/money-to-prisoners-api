@@ -11,7 +11,8 @@ from credit.constants import LOG_ACTIONS, CREDIT_RESOLUTION, CREDIT_STATUS, CRED
 from credit.managers import CreditManager, CompletedCreditManager, CreditQuerySet, LogManager
 from credit.signals import (
     credit_created, credit_locked, credit_unlocked, credit_credited,
-    credit_refunded, credit_reconciled, credit_prisons_need_updating
+    credit_refunded, credit_reconciled, credit_prisons_need_updating,
+    credit_reviewed
 )
 from prison.models import Prison, PrisonerLocation
 from transaction.utils import format_amount
@@ -28,6 +29,7 @@ class Credit(TimeStampedModel):
 
     resolution = models.CharField(max_length=50, choices=CREDIT_RESOLUTION, default=CREDIT_RESOLUTION.PENDING)
     reconciled = models.BooleanField(default=False)
+    reviewed = models.BooleanField(default=False)
 
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
 
@@ -74,6 +76,7 @@ class Credit(TimeStampedModel):
             ('lock_credit', 'Can lock credit'),
             ('unlock_credit', 'Can unlock credit'),
             ('patch_credited_credit', 'Can patch credited credit'),
+            ('review_credit', 'Can review credit'),
         )
         index_together = (
             ('prisoner_number', 'prisoner_dob'),
@@ -278,6 +281,23 @@ class Log(TimeStampedModel):
         )
 
 
+class Comment(TimeStampedModel):
+    credit = models.ForeignKey(
+        Credit, on_delete=models.CASCADE, related_name='comments'
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL
+    )
+    comment = models.TextField(max_length=3000)
+
+    def __str__(self):
+        return 'Comment on credit {credit_id} by {user}'.format(
+            credit_id=self.credit.pk,
+            user='<None>' if not self.user else self.user.username,
+        )
+
+
 @receiver(post_save, sender=Credit, dispatch_uid='update_prison_for_credit')
 def update_prison_for_credit(sender, instance, created, *args, **kwargs):
     if (created and
@@ -325,6 +345,11 @@ def credit_refunded_receiver(sender, credit, by_user, **kwargs):
 @receiver(credit_reconciled)
 def credit_reconciled_receiver(sender, credit, by_user, **kwargs):
     Log.objects.credits_reconciled([credit], by_user)
+
+
+@receiver(credit_reviewed)
+def credit_reviewed_receiver(sender, credit, by_user, **kwargs):
+    Log.objects.credits_reviewed([credit], by_user)
 
 
 @receiver(credit_prisons_need_updating)

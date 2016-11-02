@@ -12,7 +12,7 @@ from payment.models import Payment
 from transaction.models import Transaction
 from transaction.utils import format_amount
 from .constants import CREDIT_SOURCE, CREDIT_STATUS, LOG_ACTIONS
-from .models import Credit, Log
+from .models import Credit, Log, Comment
 
 
 class LogAdminInline(admin.TabularInline):
@@ -27,6 +27,12 @@ class LogAdminInline(admin.TabularInline):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+class CommentAdminInline(admin.StackedInline):
+    model = Comment
+    extra = 0
+    readonly_fields = ('credit',)
 
 
 class TransactionAdminInline(admin.StackedInline):
@@ -98,15 +104,16 @@ class CreditAdmin(admin.ModelAdmin):
     )
     ordering = ('-received_at',)
     date_hierarchy = 'received_at'
-    inlines = (TransactionAdminInline, PaymentAdminInline, LogAdminInline)
-    readonly_fields = ('resolution', 'reconciled',)
+    inlines = (TransactionAdminInline, PaymentAdminInline, CommentAdminInline, LogAdminInline)
+    readonly_fields = ('resolution', 'reconciled', 'reviewed',)
     list_filter = (
         StatusFilter,
         SourceFilter,
         'resolution',
-        'reconciled',
         ('prison', RelatedAnyFieldListFilter),
         ('received_at', DateRangeFilter),
+        'reconciled',
+        'reviewed',
         ('owner__username', SearchFilter),
     )
     search_fields = ('prisoner_name', 'prisoner_number')
@@ -210,3 +217,8 @@ class CreditAdmin(admin.ModelAdmin):
         else:
             self.message_user(request, _('No credits have been unlocked yet.'),
                               messages.WARNING)
+
+
+@admin.register(Comment)
+class CommentAdmin(admin.ModelAdmin):
+    pass

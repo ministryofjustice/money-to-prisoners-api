@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from prison.models import Prison
-from .models import Credit
+from .models import Credit, Comment
 
 
 class CreditedOnlyCreditSerializer(serializers.ModelSerializer):
@@ -22,6 +22,19 @@ class IdsCreditSerializer(serializers.Serializer):
     )
 
 
+class CommentSerializer(serializers.ModelSerializer):
+
+    def create(self, validated_data):
+        user = self.context['request'].user
+        validated_data['user'] = user
+        super().create(validated_data)
+
+    class Meta:
+        model = Comment
+        read_only = ('user',)
+        fields = ('credit', 'user', 'comment',)
+
+
 class CreditSerializer(serializers.ModelSerializer):
     sender_name = serializers.CharField(read_only=True)
     owner_name = serializers.CharField(read_only=True)
@@ -31,6 +44,7 @@ class CreditSerializer(serializers.ModelSerializer):
     intended_recipient = serializers.CharField(read_only=True)
     anonymous = serializers.SerializerMethodField()
     reconciliation_code = serializers.CharField(read_only=True)
+    comments = CommentSerializer(many=True, read_only=True)
 
     class Meta:
         model = Credit
@@ -51,6 +65,8 @@ class CreditSerializer(serializers.ModelSerializer):
             'intended_recipient',
             'anonymous',
             'reconciliation_code',
+            'comments',
+            'reviewed',
         )
 
     def get_anonymous(self, obj):

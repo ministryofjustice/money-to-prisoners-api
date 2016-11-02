@@ -18,6 +18,7 @@ class UserSerializer(serializers.ModelSerializer):
     applications = serializers.SerializerMethodField()
     permissions = serializers.SerializerMethodField()
     user_admin = serializers.SerializerMethodField()
+    prisons = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -31,6 +32,7 @@ class UserSerializer(serializers.ModelSerializer):
             'applications',
             'permissions',
             'user_admin',
+            'prisons',
         )
         extra_kwargs = {
             'first_name': {'required': True},
@@ -56,19 +58,26 @@ class UserSerializer(serializers.ModelSerializer):
 
         return fields
 
-    @classmethod
-    def get_applications(cls, obj):
+    def get_applications(self, obj):
         return sorted(application.application.name for application in ApplicationUserMapping.objects.filter(user=obj))
 
-    @classmethod
-    def get_permissions(cls, obj):
+    def get_permissions(self, obj):
         return obj.get_all_permissions()
 
-    @classmethod
-    def get_user_admin(cls, obj):
+    def get_user_admin(self, obj):
         return (obj.has_perm('auth.change_user') and
                 obj.has_perm('auth.delete_user') and
                 obj.has_perm('auth.add_user'))
+
+    def get_prisons(self, obj):
+        return (
+            {
+                'nomis_id': prison.pk,
+                'name': prison.name,
+                'pre_approval_required': prison.pre_approval_required
+            }
+            for prison in PrisonUserMapping.objects.get_prison_set_for_user(obj)
+        )
 
     @atomic
     def create(self, validated_data):

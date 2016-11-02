@@ -82,7 +82,9 @@
       ["view_any_credit", "credit", "credit"],
       ["view_transaction", "transaction", "transaction"],
       ["view_payment", "payment", "payment"],
-      ["view_bank_details_transaction", "transaction", "transaction"]
+      ["view_bank_details_transaction", "transaction", "transaction"],
+      ["add_comment", "credit", "comment"],
+      ["review_credit", "credit", "credit"]
     ]
   }
 }

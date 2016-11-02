@@ -34,6 +34,7 @@ class Prison(TimeStampedModel):
     region = models.CharField(max_length=255, blank=True)
     populations = models.ManyToManyField(Population)
     categories = models.ManyToManyField(Category)
+    pre_approval_required = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name
