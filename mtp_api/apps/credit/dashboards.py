@@ -6,6 +6,7 @@ from django import forms
 from django.contrib.admin import widgets as admin_widgets
 from django.core.urlresolvers import reverse
 from django.db import models
+from django.db.models.expressions import RawSQL
 from django.utils import timezone
 from django.utils.dateformat import format as format_date
 from django.utils.encoding import force_text
@@ -16,7 +17,7 @@ from django.utils.translation import gettext, gettext_lazy as _
 
 from core.dashboards import DashboardChangeForm, DashboardModule
 from core.views import DashboardView
-from credit.models import Credit, CREDIT_RESOLUTION, CREDIT_STATUS
+from credit.models import Credit, CREDIT_RESOLUTION, CREDIT_STATUS, LOG_ACTIONS
 from payment.models import PAYMENT_STATUS
 from prison.models import Prison
 from transaction.models import Transaction, TRANSACTION_CATEGORY, TRANSACTION_SOURCE, TRANSACTION_STATUS
@@ -505,6 +506,37 @@ class CreditReport(DashboardModule):
 
     def get_credited_queryset(self):
         return self.credit_queryset.filter(CREDITED_FILTERS)
+
+    def get_crediting_time_queryset(self):
+        return self.get_credited_queryset().annotate(
+            crediting_time=RawSQL(
+                'SELECT credit_log.created - credit_credit.received_at '
+                'FROM credit_log '
+                'WHERE credit_log.action=%s AND credit_log.credit_id=credit_credit.id '
+                'ORDER BY credit_log.created DESC '
+                'LIMIT 1',
+                (LOG_ACTIONS.CREDITED,)
+            ),
+            received_at_day_of_week=RawSQL(
+                'EXTRACT(ISODOW FROM credit_credit.received_at)', ()
+            ),
+        )
+
+    @property
+    def crediting_time(self):
+        queryset = self.get_crediting_time_queryset()
+        count = queryset.count()
+        if count == 0:
+            return
+        summed_crediting_time = queryset.aggregate(sum=models.Sum('crediting_time')).get('sum') or datetime.timedelta()
+        # crediting is not expected on weekends so subtract days to account for this
+        counts_per_day = queryset.values('received_at_day_of_week').order_by('received_at_day_of_week')
+        counts_per_day = {
+            int(count_per_day['received_at_day_of_week']): count_per_day['count']
+            for count_per_day in counts_per_day.annotate(count=models.Count('received_at_day_of_week'))
+        }
+        summed_crediting_time -= datetime.timedelta(days=2 * counts_per_day.get(5, 0) + counts_per_day.get(6, 0))
+        return summed_crediting_time / count
 
     @property
     def credited_count(self):
