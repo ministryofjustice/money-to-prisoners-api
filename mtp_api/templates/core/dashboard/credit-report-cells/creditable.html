@@ -9,8 +9,8 @@
       <dt title="{% trans 'Proportion of creditable that is debit card payments, i.e. ignores rejected bank transfers' %}">{% trans 'Debit cards' %}:</dt>
       <dd>{{ dashboard_module.creditable_payment_proportion|format_percentage }}</dd>
 
-      <dt title="{% trans 'The time between receipt and crediting in the Digital Cashbook' %}">{% trans 'Time to credit' %}:</dt>
-      <dd>{{ dashboard_module.crediting_time|format_timedelta }}</dd>
+      <dt title="{% trans 'The average time between receipt and crediting in the Digital Cashbook' %}">{% trans 'Time to credit' %}:</dt>
+      <dd>{{ dashboard_module.average_crediting_time|format_timedelta }}</dd>
     </dl>
   </div>
 </td>

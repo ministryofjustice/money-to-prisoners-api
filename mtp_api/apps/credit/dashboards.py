@@ -4,9 +4,9 @@ import types
 
 from django import forms
 from django.contrib.admin import widgets as admin_widgets
+from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
 from django.db import models
-from django.db.models.expressions import RawSQL
 from django.utils import timezone
 from django.utils.dateformat import format as format_date
 from django.utils.encoding import force_text
@@ -17,7 +17,7 @@ from django.utils.translation import gettext, gettext_lazy as _
 
 from core.dashboards import DashboardChangeForm, DashboardModule
 from core.views import DashboardView
-from credit.models import Credit, CREDIT_RESOLUTION, CREDIT_STATUS, LOG_ACTIONS
+from credit.models import Credit, CreditingTime, CREDIT_RESOLUTION, CREDIT_STATUS
 from payment.models import PAYMENT_STATUS
 from prison.models import Prison
 from transaction.models import Transaction, TRANSACTION_CATEGORY, TRANSACTION_SOURCE, TRANSACTION_STATUS
@@ -58,6 +58,27 @@ class DateField(forms.DateField):
         return bound_field
 
 
+class SimpleDurationField(forms.FloatField):
+    default_error_messages = {
+        'invalid': _('Enter number of days'),
+    }
+
+    def prepare_value(self, value):
+        if isinstance(value, datetime.timedelta):
+            return value.days + value.seconds / 86400
+        return super().prepare_value(value)
+
+    def to_python(self, value):
+        if value in self.empty_values:
+            return None
+        if isinstance(value, datetime.timedelta):
+            return value
+        try:
+            return datetime.timedelta(days=float(value))
+        except ValueError:
+            raise ValidationError(self.error_messages['invalid'], code='invalid')
+
+
 class CreditReportForm(DashboardChangeForm):
     date_range = forms.ChoiceField(
         label=_('Date range'),
@@ -79,6 +100,7 @@ class CreditReportForm(DashboardChangeForm):
         empty_label=_('All prisons'),
         required=False,
     )
+    min_crediting_time = SimpleDurationField(label=_('Min. time to credit'), required=False)
 
     prevent_auto_reload = True
     error_messages = {
@@ -224,21 +246,36 @@ class CreditReportForm(DashboardChangeForm):
         # all time
         return {
             'range': (),
-            'short_title': _('All credits'),
-            'title': _('All credits'),
+            'short_title': _('Since the beginning'),
+            'title': _('Since the beginning'),
         }
 
     def get_prison(self):
         if self.is_valid():
             return self.cleaned_data['prison']
 
+    def get_min_crediting_time(self):
+        if self.is_valid():
+            return self.cleaned_data['min_crediting_time']
+
     def get_report_parameters(self):
         credit_queryset = Credit.objects.all()
         transaction_queryset = Transaction.objects.all()
+
         prison = self.get_prison()
         if prison:
             credit_queryset = credit_queryset.filter(prison=prison)
             transaction_queryset = transaction_queryset.filter(credit__prison=prison)
+
+        min_crediting_time = self.get_min_crediting_time()
+        if min_crediting_time:
+            credit_queryset = credit_queryset.filter(
+                creditingtime__crediting_time__gte=min_crediting_time
+            )
+            transaction_queryset = transaction_queryset.filter(
+                credit__creditingtime__crediting_time__gte=min_crediting_time
+            )
+
         chart_credit_queryset = credit_queryset.filter()
 
         date_range = self.get_date_range()
@@ -277,8 +314,15 @@ class CreditReportForm(DashboardChangeForm):
             chart_start_date = None
             chart_end_date = None
 
+        extra_titles = []
         if prison:
-            title += ' (' + _('only for %(prison)s') % {'prison': prison} + ')'
+            extra_titles.append(_('only for %(prison)s') % {'prison': prison})
+        if min_crediting_time:
+            extra_titles.append(_('time to credit at least %(days)s days') % {
+                'days': min_crediting_time.days + min_crediting_time.seconds / 86400
+            })
+        if extra_titles:
+            title += ' (%s)' % ', '.join(extra_titles)
 
         credit_queryset = credit_queryset.filter(**date_filters)
         transaction_queryset = transaction_queryset.filter(**date_filters)
@@ -406,6 +450,8 @@ class CreditReport(DashboardModule):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        if CreditingTime.is_stale():
+            CreditingTime.recalculate_crediting_times()
         self.form = CreditReportForm(data=self.cookie_data)
         report_parameters = self.form.get_report_parameters()
         self.range_title = report_parameters['title']
@@ -507,36 +553,10 @@ class CreditReport(DashboardModule):
     def get_credited_queryset(self):
         return self.credit_queryset.filter(CREDITED_FILTERS)
 
-    def get_crediting_time_queryset(self):
-        return self.get_credited_queryset().annotate(
-            crediting_time=RawSQL(
-                'SELECT credit_log.created - credit_credit.received_at '
-                'FROM credit_log '
-                'WHERE credit_log.action=%s AND credit_log.credit_id=credit_credit.id '
-                'ORDER BY credit_log.created DESC '
-                'LIMIT 1',
-                (LOG_ACTIONS.CREDITED,)
-            ),
-            received_at_day_of_week=RawSQL(
-                'EXTRACT(ISODOW FROM credit_credit.received_at)', ()
-            ),
-        )
-
     @property
-    def crediting_time(self):
-        queryset = self.get_crediting_time_queryset()
-        count = queryset.count()
-        if count == 0:
-            return
-        summed_crediting_time = queryset.aggregate(sum=models.Sum('crediting_time')).get('sum') or datetime.timedelta()
-        # crediting is not expected on weekends so subtract days to account for this
-        counts_per_day = queryset.values('received_at_day_of_week').order_by('received_at_day_of_week')
-        counts_per_day = {
-            int(count_per_day['received_at_day_of_week']): count_per_day['count']
-            for count_per_day in counts_per_day.annotate(count=models.Count('received_at_day_of_week'))
-        }
-        summed_crediting_time -= datetime.timedelta(days=2 * counts_per_day.get(5, 0) + counts_per_day.get(6, 0))
-        return summed_crediting_time / count
+    def average_crediting_time(self):
+        return self.get_credited_queryset().aggregate(avg=models.Avg('creditingtime__crediting_time',
+                                                                     output_field=models.DurationField())).get('avg')
 
     @property
     def credited_count(self):
