@@ -49,7 +49,7 @@ class TransactionDashboardTestCase(DashboardTestCase):
             CreditReport.cookie_key: 'date_range=all'
         })
         response = self.client.get(url)
-        self.assertContains(response, 'All credits')
+        self.assertContains(response, 'Since the beginning')
         credit_set = Credit.objects.filter(CREDITABLE_FILTERS)
         credited_amount = credit_set.aggregate(amount=models.Sum('amount'))['amount']
         self.assertAmountInContent(credited_amount, response)

@@ -1,10 +1,11 @@
 import warnings
 
 from django.conf import settings
-from django.db import models
+from django.db import connection, models
 from django.db.models import Q
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils.crypto import get_random_string
 from model_utils.models import TimeStampedModel
 
 from credit.constants import LOG_ACTIONS, CREDIT_RESOLUTION, CREDIT_STATUS, CREDIT_SOURCE
@@ -262,6 +263,13 @@ class Credit(TimeStampedModel):
             return None
         return log_action.created
 
+    @property
+    def crediting_time(self):
+        try:
+            return self.creditingtime.crediting_time
+        except CreditingTime.DoesNotExist:
+            pass
+
 
 class Log(TimeStampedModel):
     credit = models.ForeignKey(Credit, on_delete=models.CASCADE)
@@ -279,6 +287,56 @@ class Log(TimeStampedModel):
             user='<None>' if not self.user else self.user.username,
             action=self.action
         )
+
+
+class CreditingTime(models.Model):
+    credit = models.OneToOneField(Credit, primary_key=True, on_delete=models.CASCADE)
+    crediting_time = models.DurationField(null=True)
+
+    @classmethod
+    def recalculate_crediting_times(cls):
+        tables = {
+            'crediting': cls._meta.db_table,
+            'adjustments': 'creditingadjustments_' + get_random_string(
+                allowed_chars='abcdefghijklmnopqrstuvwxyz0123456789'
+            ),
+        }
+        with connection.cursor() as cursor:
+            sql = ('CREATE TEMPORARY TABLE {adjustments} ('
+                   'day_of_week INTEGER PRIMARY KEY, '
+                   'adjustment INTERVAL)')
+            cursor.execute(sql.format(**tables))
+
+            sql = ('INSERT INTO {adjustments} VALUES '
+                   "(1, INTERVAL '0'), (2, INTERVAL '0'), (3, INTERVAL '0'), (4, INTERVAL '0'), "
+                   "(5, INTERVAL '2 days'), (6, INTERVAL '1 day'), (7, INTERVAL '0')")
+            cursor.execute(sql.format(**tables))
+
+            sql = 'TRUNCATE {crediting}'
+            cursor.execute(sql.format(**tables))
+
+            sql = ('WITH credited_log AS ('
+                   '    SELECT credit_id, MAX(created) AS created '
+                   '    FROM credit_log '
+                   '    WHERE credit_log.action=%s '
+                   '    GROUP BY credit_id'
+                   ') '
+                   'INSERT INTO {crediting} '
+                   'SELECT credited_log.credit_id, '
+                   '    credited_log.created - credit_credit.received_at - {adjustments}.adjustment '
+                   'FROM credited_log '
+                   'JOIN credit_credit ON credit_credit.id = credited_log.credit_id '
+                   'JOIN {adjustments} ON {adjustments}.day_of_week = EXTRACT(ISODOW FROM credit_credit.received_at)')
+            cursor.execute(sql.format(**tables), (LOG_ACTIONS.CREDITED,))
+
+    @classmethod
+    def is_stale(cls):
+        return Credit.objects.credited().exclude(pk__in=cls.objects.values('pk')).exists()
+
+    def __str__(self):
+        if self.crediting_time is None:
+            return 'Credit %s not credited' % self.credit.pk
+        return 'Credit %s credited in %s' % (self.credit.pk, self.crediting_time)
 
 
 class Comment(TimeStampedModel):
