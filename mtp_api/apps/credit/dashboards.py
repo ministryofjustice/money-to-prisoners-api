@@ -450,8 +450,8 @@ class CreditReport(DashboardModule):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        if CreditingTime.is_stale():
-            CreditingTime.recalculate_crediting_times()
+        if CreditingTime.objects.is_stale():
+            CreditingTime.objects.recalculate_crediting_times()
         self.form = CreditReportForm(data=self.cookie_data)
         report_parameters = self.form.get_report_parameters()
         self.range_title = report_parameters['title']
