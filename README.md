@@ -110,6 +110,14 @@ As well as the management command mentioned above (`python manage.py load_test_d
 
 These scenarios create a different set of test users for the client applications – see the user list in the Django admin tool.
 
+### Translating
+
+Update translation files with `cd mtp_api; ../manage.py makemessages --all --keep-pot --no-wrap`.
+
+Push latest English to Transifex with `tx push -s`. NB: always pull updates before pushing to merge correctly.
+
+Pull updates from Transifex with `tx pull`. You'll need to update translation files afterwards.
+
 ### Using the API
 #### Getting an access token
 ```
