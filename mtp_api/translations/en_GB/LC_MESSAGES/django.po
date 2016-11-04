@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: MTP api\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-11-04 11:52+0000\n"
+"POT-Creation-Date: 2016-11-04 12:41+0000\n"
 "PO-Revision-Date: 2016-11-04 10:00+0000\n"
 "Last-Translator: Welsh Language Unit <welsh.language.unit.manager@hmcts.gsi.gov.uk>\n"
 "Language-Team: Welsh (http://www.transifex.com/ministry-of-justice/mtp/language/cy/)\n"
@@ -838,41 +838,24 @@ msgstr ""
 msgid "These actions will delete and recreate sample data. They cannot be undone."
 msgstr ""
 
-#: templates/mtp_auth/new_user.html:6
+#: templates/mtp_auth/new_user.html:6 templates/mtp_auth/new_user.txt.py:2
 #, python-format
 msgid "Your new Money To Prisoners %(app|default_if_none:'')s account has been created for you."
 msgstr ""
 
-#: templates/mtp_auth/new_user.html:13
+#: templates/mtp_auth/new_user.html:13 templates/mtp_auth/new_user.txt.py:6
 #: templates/mtp_auth/reset_password.html:11
+#: templates/mtp_auth/reset_password.txt:4
 msgid "Username"
 msgstr ""
 
-#: templates/mtp_auth/new_user.html:17
+#: templates/mtp_auth/new_user.html:17 templates/mtp_auth/new_user.txt.py:7
 #: templates/mtp_auth/reset_password.html:15
+#: templates/mtp_auth/reset_password.txt:5
 msgid "Password"
 msgstr ""
 
-#: templates/mtp_auth/new_user.txt:2
-#, python-format
-msgid ""
-"\n"
-"Your new Money To Prisoners %(app)s account has been created for you.\n"
-"\n"
-"Username: %(username)s\n"
-"Password: %(password)s\n"
-msgstr ""
-
 #: templates/mtp_auth/reset_password.html:6
-msgid "Your new Money To Prisoners password has been created for you."
-msgstr ""
-
 #: templates/mtp_auth/reset_password.txt:2
-#, python-format
-msgid ""
-"\n"
-"Your new Money To Prisoners password has been created for you.\n"
-"\n"
-"Username: %(username)s\n"
-"Password: %(password)s\n"
+msgid "Your new Money To Prisoners password has been created for you."
 msgstr ""
