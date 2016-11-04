@@ -22,7 +22,9 @@ def validate_cron_entry(value):
     try:
         CronTab(value)
     except ValueError as e:
-        raise ValidationError(_('"%s" is not a valid cron entry: %s') % (value, e))
+        raise ValidationError(_('"%(entry)s" is not a valid cron entry: %(error)s') % {
+            'entry': value, 'error': e
+        })
 
 
 class ScheduledCommand(models.Model):

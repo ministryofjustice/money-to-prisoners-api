@@ -98,6 +98,11 @@ DATABASES = {
 
 # Internationalization
 LANGUAGE_CODE = 'en-gb'
+LANGUAGES = (
+    ('en-gb', 'English'),
+    ('cy', 'Cymraeg'),
+)
+LOCALE_PATHS = (os.path.join(BASE_DIR, 'translations'),)
 TIME_ZONE = 'Europe/London'
 USE_I18N = True
 USE_L10N = True

@@ -1,4 +1,6 @@
-*.pyc
+*.py[cod]
+*.mo
+*.pot
 include/
 lib/
 static/

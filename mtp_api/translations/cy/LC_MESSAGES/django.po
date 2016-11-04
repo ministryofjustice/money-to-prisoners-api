@@ -1,0 +1,878 @@
+# MTP api
+msgid ""
+msgstr ""
+"Project-Id-Version: MTP api\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2016-11-04 11:52+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: Igor U <igor.ushkarev@digital.justice.gov.uk>, 2016\n"
+"Language-Team: Welsh (https://www.transifex.com/ministry-of-justice/teams/34553/cy/)\n"
+"Language: cy\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=4; plural=(n==1) ? 0 : (n==2) ? 1 : (n != 8 && n != 11) ? 2 : 3;\n"
+
+#: apps/account/app.py:7
+msgid "Bank account management"
+msgstr ""
+
+#: apps/core/admin.py:16 apps/core/admin.py:17
+#: templates/admin/base_site.html:14
+msgid "Send money to a prisoner"
+msgstr ""
+
+#: apps/core/admin.py:99
+msgid "All"
+msgstr ""
+
+#: apps/core/admin.py:142
+msgid "Start date"
+msgstr ""
+
+#: apps/core/admin.py:145
+msgid "End date"
+msgstr ""
+
+#: apps/core/admin.py:150
+msgid "Date in range"
+msgstr ""
+
+#: apps/core/admin.py:158 apps/credit/dashboards.py:385
+msgid "Date"
+msgstr ""
+
+#: apps/core/admin.py:163
+msgid "Search"
+msgstr ""
+
+#: apps/core/admin.py:173
+#, python-format
+msgid "Search %(fieldname)s"
+msgstr ""
+
+#: apps/core/admin.py:200
+msgid "Any"
+msgstr ""
+
+#: apps/core/app.py:7
+msgid "MTP"
+msgstr ""
+
+#: apps/core/dashboards.py:21 apps/core/views.py:57
+#: templates/core/index.html:14
+msgid "Dashboard"
+msgstr ""
+
+#: apps/core/dashboards.py:48
+msgid "External dashboards and logs"
+msgstr ""
+
+#: apps/core/dashboards.py:79
+msgid "Application dashboard"
+msgstr ""
+
+#: apps/core/dashboards.py:82 apps/core/dashboards.py:102
+msgid "All apps"
+msgstr ""
+
+#: apps/core/dashboards.py:88
+msgid "Application logs"
+msgstr ""
+
+#: apps/core/dashboards.py:94
+msgid "Sentry error monitors"
+msgstr ""
+
+#: apps/core/dashboards.py:99
+msgid "Sensu monitoring checks"
+msgstr ""
+
+#: apps/core/dashboards.py:109
+msgid "Host machine dashboards"
+msgstr ""
+
+#: apps/core/dashboards.py:139
+msgid "User satisfaction"
+msgstr ""
+
+#: apps/core/dashboards.py:143
+msgid "Money by post"
+msgstr ""
+
+#: apps/core/dashboards.py:149
+msgid "MTP service"
+msgstr ""
+
+#: apps/core/dashboards.py:156
+msgid "Easy"
+msgstr ""
+
+#: apps/core/dashboards.py:157
+msgid "Unreasonably slow"
+msgstr ""
+
+#: apps/core/dashboards.py:158
+msgid "Cheap"
+msgstr ""
+
+#: apps/core/dashboards.py:159
+msgid "Rating"
+msgstr ""
+
+#: apps/core/dashboards.py:233
+msgid "Response"
+msgstr ""
+
+#: apps/core/dashboards.py:266
+#, python-format
+msgid "Satisfaction survey question %(question_id)s has unexpected number of options"
+msgstr ""
+
+#: apps/core/dashboards.py:272
+#, python-format
+msgid "Satisfaction survey question %(question_id)s does not have \"Not applicable\" option"
+msgstr ""
+
+#: apps/core/forms.py:9
+msgid "User testing the Cashbook service"
+msgstr ""
+
+#: apps/core/forms.py:10
+msgid "Training data for the Cashbook service"
+msgstr ""
+
+#: apps/core/forms.py:11
+msgid "Random set of credits"
+msgstr ""
+
+#: apps/core/forms.py:12
+msgid "Delete prisoner location and credit data"
+msgstr ""
+
+#: apps/core/models.py:18
+#, python-format
+msgid "\"%s\" is not a recognised command"
+msgstr ""
+
+#: apps/core/models.py:25
+#, python-format
+msgid "\"%(entry)s\" is not a valid cron entry: %(error)s"
+msgstr ""
+
+#: apps/core/password_validation.py:12
+#, python-format
+msgid "This password is too weak (use at least %(min_length)d characters)"
+msgstr ""
+
+#: apps/core/password_validation.py:24
+#, python-format
+msgid "This password is too weak (similar to %(verbose_name)s)"
+msgstr ""
+
+#: apps/core/password_validation.py:36
+msgid "This password is too weak (too common)"
+msgstr ""
+
+#: apps/core/password_validation.py:48
+msgid "This password is too weak (use numbers and letters)"
+msgstr ""
+
+#: apps/core/views.py:121
+msgid "Recreate test data"
+msgstr ""
+
+#: apps/core/views.py:183
+#, python-format
+msgid "Data reset to %(scenario)s scenario"
+msgstr ""
+
+#: apps/credit/admin.py:64 apps/credit/admin.py:143
+#: apps/transaction/admin.py:19 apps/transaction/admin.py:81
+msgid "status"
+msgstr ""
+
+#: apps/credit/admin.py:80 apps/credit/admin.py:136
+msgid "source"
+msgstr ""
+
+#: apps/credit/admin.py:132 apps/payment/admin.py:78
+#: apps/transaction/admin.py:70
+msgid "amount"
+msgstr ""
+
+#: apps/credit/admin.py:150
+msgid "Display total of selected credits"
+msgstr ""
+
+#: apps/credit/admin.py:153 apps/payment/admin.py:89
+#: apps/transaction/admin.py:91
+#, python-format
+msgid "Total: %s"
+msgstr ""
+
+#: apps/credit/admin.py:155
+msgid "Display credit validity of selected credits"
+msgstr ""
+
+#: apps/credit/admin.py:166
+#, python-format
+msgid "Of %(total)s credits: %(valid_count)s (%(valid_percent)0.2f%%) can be credited to a prisoner, %(invalid_count)s (%(invalid_percent)0.2f%%) cannot be credited."
+msgstr ""
+
+#: apps/credit/admin.py:174
+msgid "Display resolution time of selected credits"
+msgstr ""
+
+#: apps/credit/admin.py:197
+#, python-format
+msgid "Time until credit after lock: AVG (%(avg)s), MAX (%(max)s), MIN (%(min)s)"
+msgstr ""
+
+#: apps/credit/admin.py:203
+msgid "No credits have been credited yet."
+msgstr ""
+
+#: apps/credit/admin.py:212
+#, python-format
+msgid "Time until unlock after lock: AVG (%(avg)s), MAX (%(max)s), MIN (%(min)s)"
+msgstr ""
+
+#: apps/credit/admin.py:218
+msgid "No credits have been unlocked yet."
+msgstr ""
+
+#: apps/credit/app.py:7
+msgid "Credits"
+msgstr ""
+
+#: apps/credit/constants.py:5
+msgid "Initial"
+msgstr ""
+
+#: apps/credit/constants.py:6 apps/payment/constants.py:5
+msgid "Pending"
+msgstr ""
+
+#: apps/credit/constants.py:7 apps/credit/constants.py:14
+#: apps/credit/constants.py:31
+#: templates/core/dashboard/credit-report-cells/credited.html:13
+#: templates/core/dashboard/credit-report-cells/credited.html:23
+msgid "Credited"
+msgstr ""
+
+#: apps/credit/constants.py:8 apps/credit/constants.py:15
+#: apps/credit/constants.py:33
+#: templates/core/dashboard/credit-report-cells/refunded.html:13
+#: templates/core/dashboard/credit-report-cells/refunded.html:23
+msgid "Refunded"
+msgstr ""
+
+#: apps/credit/constants.py:12
+msgid "Available"
+msgstr ""
+
+#: apps/credit/constants.py:13 apps/credit/constants.py:29
+msgid "Locked"
+msgstr ""
+
+#: apps/credit/constants.py:16
+msgid "Refund pending"
+msgstr ""
+
+#: apps/credit/constants.py:20 apps/transaction/constants.py:31
+#: templates/core/dashboard/credit-report-cells/payment-method.html:9
+msgid "Bank transfer"
+msgstr ""
+
+#: apps/credit/constants.py:21
+msgid "Online"
+msgstr ""
+
+#: apps/credit/constants.py:22
+msgid "Unknown"
+msgstr ""
+
+#: apps/credit/constants.py:28
+msgid "Created"
+msgstr ""
+
+#: apps/credit/constants.py:30
+msgid "Unlocked"
+msgstr ""
+
+#: apps/credit/constants.py:32
+msgid "Uncredited"
+msgstr ""
+
+#: apps/credit/constants.py:34
+msgid "Reconciled"
+msgstr ""
+
+#: apps/credit/constants.py:35
+msgid "Reviewed"
+msgstr ""
+
+#: apps/credit/dashboards.py:63
+msgid "Enter number of days"
+msgstr ""
+
+#: apps/credit/dashboards.py:84
+msgid "Date range"
+msgstr ""
+
+#: apps/credit/dashboards.py:86
+msgid "This week"
+msgstr ""
+
+#: apps/credit/dashboards.py:87
+msgid "Last week"
+msgstr ""
+
+#: apps/credit/dashboards.py:88 apps/credit/dashboards.py:306
+msgid "Last 4 weeks"
+msgstr ""
+
+#: apps/credit/dashboards.py:89
+msgid "This month"
+msgstr ""
+
+#: apps/credit/dashboards.py:90
+msgid "Last month"
+msgstr ""
+
+#: apps/credit/dashboards.py:91 apps/credit/dashboards.py:249
+#: apps/credit/dashboards.py:250
+msgid "Since the beginning"
+msgstr ""
+
+#: apps/credit/dashboards.py:92
+msgid "Specify a range…"
+msgstr ""
+
+#: apps/credit/dashboards.py:95
+msgid "From date"
+msgstr ""
+
+#: apps/credit/dashboards.py:96
+msgid "To date"
+msgstr ""
+
+#: apps/credit/dashboards.py:99
+msgid "Prison"
+msgstr ""
+
+#: apps/credit/dashboards.py:100
+msgid "All prisons"
+msgstr ""
+
+#: apps/credit/dashboards.py:103
+msgid "Min. time to credit"
+msgstr ""
+
+#: apps/credit/dashboards.py:107
+msgid "End date must be after start date"
+msgstr ""
+
+#: apps/credit/dashboards.py:114 apps/credit/dashboards.py:125
+msgid "Today"
+msgstr ""
+
+#: apps/credit/dashboards.py:119 apps/credit/dashboards.py:126
+#: apps/credit/dashboards.py:131
+msgid "Latest"
+msgstr ""
+
+#: apps/credit/dashboards.py:120
+msgid "Yesterday"
+msgstr ""
+
+#: apps/credit/dashboards.py:205
+#, python-format
+msgid "%(from)s to %(to)s"
+msgstr ""
+
+#: apps/credit/dashboards.py:319
+#, python-format
+msgid "only for %(prison)s"
+msgstr ""
+
+#: apps/credit/dashboards.py:321
+#, python-format
+msgid "time to credit at least %(days)s days"
+msgstr ""
+
+#: apps/credit/dashboards.py:386
+msgid "Valid credits"
+msgstr ""
+
+#: apps/credit/dashboards.py:388
+msgid "Credits to refund"
+msgstr ""
+
+#: apps/credit/dashboards.py:435
+msgid "Credit report"
+msgstr ""
+
+#: apps/credit/templatetags/credit.py:34
+#, python-format
+msgid "%0.1f days"
+msgstr ""
+
+#: apps/mtp_auth/admin.py:98
+msgid "Remove lockouts"
+msgstr ""
+
+#: apps/mtp_auth/admin.py:108
+msgid "account locked"
+msgstr ""
+
+#: apps/mtp_auth/app.py:7
+msgid "MTP Authorisation"
+msgstr ""
+
+#: apps/mtp_auth/forms.py:11 apps/mtp_auth/forms.py:29
+#: apps/mtp_auth/models.py:104
+msgid "That username already exists"
+msgstr ""
+
+#: apps/mtp_auth/forms.py:12
+msgid "The two password fields didn’t match"
+msgstr ""
+
+#: apps/mtp_auth/forms.py:30 apps/mtp_auth/serializers.py:56
+msgid "That email address already exists"
+msgstr ""
+
+#: apps/mtp_auth/serializers.py:123
+#, python-format
+msgid "Your new %(app)s account is ready to use"
+msgstr ""
+
+#: apps/mtp_auth/views.py:89
+msgid "You cannot delete yourself"
+msgstr ""
+
+#: apps/mtp_auth/views.py:118
+msgid "You’ve entered an incorrect password"
+msgstr ""
+
+#: apps/mtp_auth/views.py:134
+msgid "There has been a system error. Please try again later"
+msgstr ""
+
+#: apps/mtp_auth/views.py:135
+msgid "Username doesn’t match any user account"
+msgstr ""
+
+#: apps/mtp_auth/views.py:136
+msgid "Your account is locked, please contact the person who set it up"
+msgstr ""
+
+#: apps/mtp_auth/views.py:138
+msgid "We don’t have your email address, please contact the person who set up the account"
+msgstr ""
+
+#: apps/mtp_auth/views.py:187
+msgid "Your new Money To Prisoners password"
+msgstr ""
+
+#: apps/payment/admin.py:21
+msgid "payment set"
+msgstr ""
+
+#: apps/payment/admin.py:29
+msgid "payment count"
+msgstr ""
+
+#: apps/payment/admin.py:33
+msgid "payment amount"
+msgstr ""
+
+#: apps/payment/admin.py:39
+msgid "settled?"
+msgstr ""
+
+#: apps/payment/admin.py:43
+msgid "settlement transaction"
+msgstr ""
+
+#: apps/payment/admin.py:68 apps/transaction/admin.py:58
+msgid "credit"
+msgstr ""
+
+#: apps/payment/admin.py:82
+msgid "service charge"
+msgstr ""
+
+#: apps/payment/admin.py:86
+msgid "Display total of selected payments"
+msgstr ""
+
+#: apps/payment/app.py:7
+msgid "Online Payments from GOV.UK Pay"
+msgstr ""
+
+#: apps/payment/constants.py:6
+msgid "Failed"
+msgstr ""
+
+#: apps/payment/constants.py:7
+msgid "Taken"
+msgstr ""
+
+#: apps/payment/models.py:18 apps/transaction/models.py:34
+msgid "For reconciliation"
+msgstr ""
+
+#: apps/payment/models.py:42
+msgid "As specified by the sender"
+msgstr ""
+
+#: apps/payment/models.py:44
+msgid "Specified by sender for confirmation emails"
+msgstr ""
+
+#: apps/prison/app.py:7
+msgid "Prisoner management"
+msgstr ""
+
+#: apps/prison/serializers.py:71
+#, python-brace-format
+msgid "No prison found with code \"{pk_value}\""
+msgstr ""
+
+#: apps/service/app.py:7
+msgid "Service availability"
+msgstr ""
+
+#: apps/transaction/admin.py:74
+msgid "type"
+msgstr ""
+
+#: apps/transaction/admin.py:88
+msgid "Display total of selected transactions"
+msgstr ""
+
+#: apps/transaction/app.py:7
+msgid "Transactions from bank statement"
+msgstr ""
+
+#: apps/transaction/constants.py:7
+#: templates/core/dashboard/credit-report-cells/credited.html:23
+msgid "Creditable"
+msgstr ""
+
+#: apps/transaction/constants.py:10
+#: templates/core/dashboard/credit-report-cells/refunded.html:23
+msgid "Refundable"
+msgstr ""
+
+#: apps/transaction/constants.py:13
+#: templates/core/dashboard/credit-report-cells/bank-transfer-issues.html:9
+msgid "Anonymous"
+msgstr ""
+
+#: apps/transaction/constants.py:16
+#: templates/core/dashboard/credit-report-cells/bank-transfer-issues.html:12
+msgid "Unidentified"
+msgstr ""
+
+#: apps/transaction/constants.py:19
+msgid "Anomalous"
+msgstr ""
+
+#: apps/transaction/constants.py:22
+msgid "Reconcilable"
+msgstr ""
+
+#: apps/transaction/constants.py:26
+msgid "Debit"
+msgstr ""
+
+#: apps/transaction/constants.py:27
+msgid "Credit"
+msgstr ""
+
+#: apps/transaction/constants.py:32
+#: templates/core/dashboard/credit-report-cells/bank-transfer-issues.html:16
+msgid "Administrative"
+msgstr ""
+
+#: apps/transaction/views.py:108
+msgid "'received_at__gte' and 'received_at__lt' fields are required"
+msgstr ""
+
+#: apps/transaction/views.py:116
+msgid "Invalid date format"
+msgstr ""
+
+#: templates/admin/auth/user/change_form.html:6
+msgid "This user is locked out"
+msgstr ""
+
+#: templates/admin/auth/user/change_form.html:13
+msgid "MTP Authorisations"
+msgstr ""
+
+#: templates/admin/auth/user/change_form.html:20
+msgid "This user has access to the following MTP applications:"
+msgstr ""
+
+#: templates/admin/auth/user/change_form.html:24
+#: templates/admin/auth/user/change_form.html:42
+msgid "Edit"
+msgstr ""
+
+#: templates/admin/auth/user/change_form.html:28
+msgid "This user has no access to MTP applications."
+msgstr ""
+
+#: templates/admin/auth/user/change_form.html:29
+#: templates/admin/auth/user/change_form.html:44 templates/core/index.html:40
+msgid "Add"
+msgstr ""
+
+#: templates/admin/auth/user/change_form.html:35
+#, python-format
+msgid "This user has access to <strong>%(count)s</strong> prison in the cashbook."
+msgid_plural "This user has access to <strong>%(count)s</strong> prisons in the cashbook."
+msgstr[0] ""
+msgstr[1] ""
+
+#: templates/admin/base_site.html:6
+#, python-format
+msgid "App version %(version)s"
+msgstr ""
+
+#: templates/admin/base_site.html:10
+msgid "App version not known"
+msgstr ""
+
+#: templates/admin/base_site.html:21
+#, python-format
+msgid "Logged in as <strong>%(user_name)s</strong>."
+msgstr ""
+
+#: templates/core/admin_form_filter.html:2
+#, python-format
+msgid " By %(filter_title)s "
+msgstr ""
+
+#: templates/core/dashboard/credit-report-cells/bank-transfer-issues.html:7
+msgid "Bank transfer issues"
+msgstr ""
+
+#: templates/core/dashboard/credit-report-cells/bank-transfer-issues.html:9
+msgid "Bank transfers that contained incomplete sender information"
+msgstr ""
+
+#: templates/core/dashboard/credit-report-cells/bank-transfer-issues.html:12
+msgid "Bank transfers that do not match a prisoner and cannot be refunded"
+msgstr ""
+
+#: templates/core/dashboard/credit-report-cells/bank-transfer-issues.html:16
+msgid "Bank transfers marked as administrative, e.g. WorldPay settlements or NOMS reimbursing a payment out to a supplier"
+msgstr ""
+
+#: templates/core/dashboard/credit-report-cells/bank-transfer-references.html:7
+msgid "Bank transfer references"
+msgstr ""
+
+#: templates/core/dashboard/credit-report-cells/bank-transfer-references.html:9
+msgid "References that can be read as a prisoner number and date of birth"
+msgstr ""
+
+#: templates/core/dashboard/credit-report-cells/bank-transfer-references.html:9
+msgid "Readable"
+msgstr ""
+
+#: templates/core/dashboard/credit-report-cells/bank-transfer-references.html:12
+msgid "References using the / delimited format as generated by send-money"
+msgstr ""
+
+#: templates/core/dashboard/credit-report-cells/bank-transfer-references.html:12
+msgid "Slash-format"
+msgstr ""
+
+#: templates/core/dashboard/credit-report-cells/bank-transfer-references.html:16
+msgid "Unmatched"
+msgstr ""
+
+#: templates/core/dashboard/credit-report-cells/bank-transfer-references.html:19
+msgid "References that cannot be read as a prisoner number and date of birth"
+msgstr ""
+
+#: templates/core/dashboard/credit-report-cells/bank-transfer-references.html:19
+msgid "Invalid"
+msgstr ""
+
+#: templates/core/dashboard/credit-report-cells/creditable.html:7
+msgid "Crediting"
+msgstr ""
+
+#: templates/core/dashboard/credit-report-cells/creditable.html:9
+msgid "Proportion of creditable that is debit card payments, i.e. ignores rejected bank transfers"
+msgstr ""
+
+#: templates/core/dashboard/credit-report-cells/creditable.html:9
+msgid "Debit cards"
+msgstr ""
+
+#: templates/core/dashboard/credit-report-cells/creditable.html:12
+msgid "The average time between receipt and crediting in the Digital Cashbook"
+msgstr ""
+
+#: templates/core/dashboard/credit-report-cells/creditable.html:12
+msgid "Time to credit"
+msgstr ""
+
+#: templates/core/dashboard/credit-report-cells/credited.html:16
+msgid "Marked as credited through the Cashbook tool"
+msgstr ""
+
+#: templates/core/dashboard/credit-report-cells/error-rate.html:5
+msgid "Proportion of incoming credits that cannot be credited. NB: debit card error rate is not well tracked"
+msgstr ""
+
+#: templates/core/dashboard/credit-report-cells/error-rate.html:7
+msgid "Error rate"
+msgstr ""
+
+#: templates/core/dashboard/credit-report-cells/payment-method.html:7
+msgid "Received by method"
+msgstr ""
+
+#: templates/core/dashboard/credit-report-cells/payment-method.html:12
+msgid "Debit card"
+msgstr ""
+
+#: templates/core/dashboard/credit-report-cells/received.html:12
+msgid "Received"
+msgstr ""
+
+#: templates/core/dashboard/credit-report-cells/refunded.html:16
+msgid "Refunds file downloaded through the Bank Admin tool"
+msgstr ""
+
+#: templates/core/dashboard/credit-report-cells/top-prisons.html:8
+msgid "Received by prison"
+msgstr ""
+
+#: templates/core/dashboard/credit-report-cells/top-prisons.html:10
+msgid "No prison"
+msgstr ""
+
+#: templates/core/dashboard/credit-report.html:58
+msgid "View credits list"
+msgstr ""
+
+#: templates/core/dashboard/index.html:21
+#, python-format
+msgid "Reloads every %(count)s seconds"
+msgstr ""
+
+#: templates/core/dashboard/index.html:23
+msgid "Auto-reload"
+msgstr ""
+
+#: templates/core/dashboard/module.html:6
+msgid "Hide"
+msgstr ""
+
+#: templates/core/dashboard/module.html:13
+msgid "Stand out"
+msgstr ""
+
+#: templates/core/dashboard/module.html:16 templates/core/index.html.py:46
+msgid "Change"
+msgstr ""
+
+#: templates/core/dashboard/module.html:30
+msgid "Update"
+msgstr ""
+
+#: templates/core/dashboard/satisfaction-results.html:23
+#, python-format
+msgid "View complete results for %(title)s"
+msgstr ""
+
+#: templates/core/index.html:10
+msgid "Reports"
+msgstr ""
+
+#: templates/core/index.html:29
+#, python-format
+msgid "Models in the %(name)s application"
+msgstr ""
+
+#: templates/core/index.html:56
+msgid "You don't have permission to edit anything."
+msgstr ""
+
+#: templates/core/index.html:62
+msgid "Testing tools"
+msgstr ""
+
+#: templates/core/index.html:65
+msgid "Delete and recreate sample data for user testing"
+msgstr ""
+
+#: templates/core/index.html:67
+msgid "This cannot be undone!"
+msgstr ""
+
+#: templates/core/index.html:68 templates/core/recreate_test_data.html.py:25
+msgid "Recreate"
+msgstr ""
+
+#: templates/core/recreate_test_data.html:11
+msgid "Run again"
+msgstr ""
+
+#: templates/core/recreate_test_data.html:13
+msgid "Output log"
+msgstr ""
+
+#: templates/core/recreate_test_data.html:19
+msgid "These actions will delete and recreate sample data. They cannot be undone."
+msgstr ""
+
+#: templates/mtp_auth/new_user.html:6
+#, python-format
+msgid "Your new Money To Prisoners %(app|default_if_none:'')s account has been created for you."
+msgstr ""
+
+#: templates/mtp_auth/new_user.html:13
+#: templates/mtp_auth/reset_password.html:11
+msgid "Username"
+msgstr ""
+
+#: templates/mtp_auth/new_user.html:17
+#: templates/mtp_auth/reset_password.html:15
+msgid "Password"
+msgstr ""
+
+#: templates/mtp_auth/new_user.txt:2
+#, python-format
+msgid ""
+"\n"
+"Your new Money To Prisoners %(app)s account has been created for you.\n"
+"\n"
+"Username: %(username)s\n"
+"Password: %(password)s\n"
+msgstr ""
+
+#: templates/mtp_auth/reset_password.html:6
+msgid "Your new Money To Prisoners password has been created for you."
+msgstr ""
+
+#: templates/mtp_auth/reset_password.txt:2
+#, python-format
+msgid ""
+"\n"
+"Your new Money To Prisoners password has been created for you.\n"
+"\n"
+"Username: %(username)s\n"
+"Password: %(password)s\n"
+msgstr ""
