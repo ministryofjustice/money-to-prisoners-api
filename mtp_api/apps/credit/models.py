@@ -212,6 +212,10 @@ class Credit(TimeStampedModel):
         return self.transaction.sender_roll_number if hasattr(self, 'transaction') else None
 
     @property
+    def sender_email(self):
+        return self.payment.email if hasattr(self, 'payment') else None
+
+    @property
     def reconciliation_code(self):
         if hasattr(self, 'transaction'):
             return self.transaction.ref_code

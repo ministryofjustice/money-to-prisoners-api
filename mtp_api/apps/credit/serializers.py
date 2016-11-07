@@ -81,6 +81,7 @@ class SecurityCreditSerializer(CreditSerializer):
     sender_sort_code = serializers.CharField(read_only=True)
     sender_account_number = serializers.CharField(read_only=True)
     sender_roll_number = serializers.CharField(read_only=True)
+    sender_email = serializers.CharField(read_only=True)
 
     class Meta:
         model = Credit
@@ -89,6 +90,7 @@ class SecurityCreditSerializer(CreditSerializer):
             'sender_sort_code',
             'sender_account_number',
             'sender_roll_number',
+            'sender_email',
         )
 
     @classmethod
