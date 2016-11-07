@@ -9,6 +9,8 @@ django_settings ?= mtp_api.settings
 python_requirements ?= requirements/dev.txt
 verbosity ?= 1
 
+MTP_APP_PATH := mtp_api
+
 ifeq ($(shell [ $(verbosity) -gt 1 ] && echo true),true)
 TASK_OUTPUT_REDIRECTION := &1
 PYTHON_WARNINGS := "-W default"
@@ -44,6 +46,12 @@ migrate_db: venv/bin/python
 static_assets: venv/bin/python
 	@echo Collecting static Django assets
 	@venv/bin/python manage.py collectstatic --verbosity=$(verbosity) --noinput >$(TASK_OUTPUT_REDIRECTION)
+
+# compile translation messages
+.PHONY: makemessages
+makemessages:
+	@echo Compiling translation strings
+	@cd $(MTP_APP_PATH) && ../venv/bin/python ../manage.py compilemessages --verbosity=$(verbosity) >$(TASK_OUTPUT_REDIRECTION)
 
 # run the server normally
 .PHONY: serve
@@ -87,7 +95,7 @@ update: venv/bin/pip
 
 # update environment and collect static files
 .PHONY: build
-build: update static_assets
+build: update static_assets makemessages
 
 ##########################
 #### INTERNAL RECIPES ####
