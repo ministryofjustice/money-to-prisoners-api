@@ -45,10 +45,7 @@ class PrisonerLocationListSerializer(serializers.ListSerializer):
             PrisonerLocation(**item) for item in validated_data
         ]
 
-        # delete all current records and insert new batch
-        PrisonerLocation.objects.all().delete()
         objects = PrisonerLocation.objects.bulk_create(locations)
-
         credit_prisons_need_updating.send(sender=PrisonerLocation)
 
         return objects

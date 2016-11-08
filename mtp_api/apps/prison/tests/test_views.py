@@ -130,9 +130,9 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        # test that total prisoner location records is now 3
+        # test that total prisoner location records is now 5
         latest_created = PrisonerLocation.objects.all()
-        self.assertEqual(latest_created.count(), len(data))
+        self.assertEqual(latest_created.count(), 5)
         for item in data:
             self.assertEqual(latest_created.filter(**item).count(), 1)
 
@@ -206,6 +206,46 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         mocked_credit_prisons_need_updating.send.assert_called_with(sender=PrisonerLocation)
+
+
+class DeleteAllPrisonerLocationsViewTestCase(AuthTestCaseMixin, APITestCase):
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
+
+    def setUp(self):
+        super().setUp()
+        (self.prison_clerks, self.users,
+         self.bank_admins, self.refund_bank_admins,
+         self.send_money_users, _) = make_test_users()
+        load_random_prisoner_locations(50)
+        self.assertEqual(PrisonerLocation.objects.all().count(), 50)
+
+    @property
+    def url(self):
+        return reverse('prisonerlocation-delete-all')
+
+    def test_cannot_delete_if_not_logged_in(self):
+        response = self.client.post(
+            self.url, format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_fails_without_action_permissions(self):
+        response = self.client.post(
+            self.url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.prison_clerks[0])
+        )
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN
+        )
+
+    def test_destroy(self):
+        self.client.post(
+            self.url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.users[0])
+        )
+
+        self.assertEqual(PrisonerLocation.objects.all().count(), 0)
 
 
 class PrisonerValidityViewTestCase(AuthTestCaseMixin, APITestCase):

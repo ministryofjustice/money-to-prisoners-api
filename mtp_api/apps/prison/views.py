@@ -1,5 +1,5 @@
 from django.utils.dateparse import parse_date
-from rest_framework import mixins, viewsets, status
+from rest_framework import generics, mixins, viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -38,6 +38,20 @@ class PrisonerLocationView(
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
+
+
+class DeleteAllPrisonerLocationsView(generics.GenericAPIView):
+    queryset = PrisonerLocation.objects.all()
+    action = 'destroy'
+
+    permission_classes = (
+        IsAuthenticated, NomsOpsClientIDPermissions,
+        ActionsBasedPermissions
+    )
+
+    def post(self, request, *args, **kwargs):
+        self.get_queryset().delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class PrisonerValidityView(mixins.ListModelMixin, viewsets.GenericViewSet):
