@@ -62,6 +62,7 @@ WSGI_APPLICATION = 'mtp_api.wsgi.application'
 ROOT_URLCONF = 'mtp_api.urls'
 MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',

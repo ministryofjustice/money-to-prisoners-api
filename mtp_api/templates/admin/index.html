@@ -1,0 +1,62 @@
+{% extends 'admin/index.html' %}
+{% load i18n %}
+{% load log %}
+
+{% block sidebar %}
+  <div id="content-related">
+    <div class="module" id="mtp-locale-module">
+      <h2>{% trans 'Language' %}</h2>
+      <form action="{% url 'set_language' %}" method="post">
+        <p class="form-row">
+          {% csrf_token %}
+          <input name="next" value="{{ request.build_absolute_uri }}" type="hidden">
+          <label>
+            {% trans 'Select a language' %}
+            <select name="language">
+              {% get_available_languages as available_languages %}
+              {% get_current_language as current_language %}
+              {% for lang_code, lang_name in available_languages %}
+                <option value="{{ lang_code }}" {% if current_language == lang_code %}selected{% endif %}>{{ lang_code|language_name_local }}</option>
+              {% endfor %}
+            </select>
+          </label>
+        </p>
+        <p class="form-row">
+          <input type="submit" value="{% trans 'Switch' %}">
+        </p>
+      </form>
+    </div>
+
+    {% if user.is_superuser %}
+      {% get_admin_log 10 as admin_log %}
+    {% else %}
+      {% get_admin_log 10 as admin_log for_user user %}
+    {% endif %}
+    {% if admin_log %}
+      <div class="module" id="recent-actions-module">
+        <h2>{% trans 'Recent Actions' %}</h2>
+        <ul class="actionlist">
+          {% for entry in admin_log %}
+            <li class="{% if entry.is_addition %}addlink{% elif entry.is_change %}changelink{% elif entry.is_deletion %}deletelink{% endif %}">
+              {% if entry.is_deletion or not entry.get_admin_url %}
+                {{ entry.object_repr }}
+              {% else %}
+                <a href="{{ entry.get_admin_url }}">{{ entry.object_repr }}</a>
+              {% endif %}
+              <br/>
+              {% if entry.content_type %}
+                <span class="mini quiet">{% filter capfirst %}{{ entry.content_type }}{% endfilter %}</span>
+              {% else %}
+                <span class="mini quiet">{% trans 'Unknown content' %}</span>
+              {% endif %}
+              {% if user.is_superuser %}
+                <span class="mini">{{ entry.user.get_full_name }}</span>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+  </div>
+
+{% endblock %}
