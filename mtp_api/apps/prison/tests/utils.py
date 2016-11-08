@@ -42,6 +42,7 @@ def load_random_prisoner_locations(number_of_prisoners=50):
             'prisoner_number': random_prisoner_number(),
             'prisoner_dob': random_prisoner_dob(),
             'prison': next(prisons),
+            'active': True,
         } for n in range(number_of_prisoners-2)
     ]
     PrisonerLocation.objects.bulk_create(
@@ -63,6 +64,7 @@ def load_nomis_prisoner_locations():
         prisoner_location['created_by'] = created_by
         prisoner_location['prison'] = Prison.objects.get(nomis_id=prisoner_location['prison'])
         prisoner_location['prisoner_dob'] = parse_date(prisoner_location['prisoner_dob'])
+        prisoner_location['active'] = True
 
     PrisonerLocation.objects.bulk_create(
         map(lambda data: PrisonerLocation(**data), prisoner_locations)
@@ -84,6 +86,7 @@ def generate_predefined_prisoner_locations():
             'prisoner_dob': datetime.date(1989, 1, 21),
             'prison': next(prisons),
             'created_by': created_by,
+            'active': True,
         },
         {
             'prisoner_name': 'RICKIE RIPPIN',
@@ -91,6 +94,7 @@ def generate_predefined_prisoner_locations():
             'prisoner_dob': datetime.date(1975, 6, 30),
             'prison': next(prisons),
             'created_by': created_by,
+            'active': True,
         },
     ]
 

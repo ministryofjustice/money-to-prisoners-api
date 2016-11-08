@@ -88,13 +88,44 @@ class UpdatePrisonsOnAvailableCreditsTestMixin:
             prisoner_name=prisoner_name,
             prisoner_number=self.credit.prisoner_number,
             prisoner_dob=self.credit.prisoner_dob,
-            prison=new_prison
+            prison=new_prison,
+            active=True
         )
 
         credit_prisons_need_updating.send(sender=None)
 
         self.credit.refresh_from_db()
         self.assertEqual(self.credit.prison.pk, new_prison.pk)
+        self.assertEqual(self.credit.prisoner_name, prisoner_name)
+
+    def test_updates_to_active_location_when_inactive_duplicate_exists(self):
+        self.assertNotEqual(self.credit.prison, None)
+
+        existing_prison = self.credit.prison
+        new_prison = Prison.objects.exclude(pk=existing_prison.pk).first()
+        prisoner_name = random_prisoner_name()
+
+        PrisonerLocation.objects.create(
+            created_by=User.objects.first(),
+            prisoner_name=prisoner_name,
+            prisoner_number=self.credit.prisoner_number,
+            prisoner_dob=self.credit.prisoner_dob,
+            prison=new_prison,
+            active=False
+        )
+        PrisonerLocation.objects.create(
+            created_by=User.objects.first(),
+            prisoner_name=prisoner_name,
+            prisoner_number=self.credit.prisoner_number,
+            prisoner_dob=self.credit.prisoner_dob,
+            prison=existing_prison,
+            active=True
+        )
+
+        credit_prisons_need_updating.send(sender=None)
+
+        self.credit.refresh_from_db()
+        self.assertEqual(self.credit.prison.pk, existing_prison.pk)
         self.assertEqual(self.credit.prisoner_name, prisoner_name)
 
 
@@ -109,12 +140,54 @@ class UpdatePrisonsOnAvailableTransactionsTestCase(
         self.credit.refresh_from_db()
         self.assertEqual(self.credit.prison, None)
 
+    def test_with_inactive_prisoner_locations_sets_prison_to_none(self):
+        self.assertNotEqual(self.credit.prison, None)
+
+        existing_prison = self.credit.prison
+        new_prison = Prison.objects.exclude(pk=existing_prison.pk).first()
+        prisoner_name = random_prisoner_name()
+
+        PrisonerLocation.objects.create(
+            created_by=User.objects.first(),
+            prisoner_name=prisoner_name,
+            prisoner_number=self.credit.prisoner_number,
+            prisoner_dob=self.credit.prisoner_dob,
+            prison=new_prison,
+            active=False
+        )
+
+        credit_prisons_need_updating.send(sender=None)
+
+        self.credit.refresh_from_db()
+        self.assertEqual(self.credit.prison, None)
+
 
 class UpdatePrisonsOnAvailablePaymentsTestCase(
         UpdatePrisonsOnAvailableCreditsTestMixin, BaseUpdatePrisonsForPaymentsTestCase):
 
     def test_without_prisoner_locations_does_not_set_prison_to_none(self):
         self.assertNotEqual(self.credit.prison, None)
+
+        credit_prisons_need_updating.send(sender=None)
+
+        self.credit.refresh_from_db()
+        self.assertNotEqual(self.credit.prison, None)
+
+    def test_with_inactive_prisoner_locations_does_not_set_prison_to_none(self):
+        self.assertNotEqual(self.credit.prison, None)
+
+        existing_prison = self.credit.prison
+        new_prison = Prison.objects.exclude(pk=existing_prison.pk).first()
+        prisoner_name = random_prisoner_name()
+
+        PrisonerLocation.objects.create(
+            created_by=User.objects.first(),
+            prisoner_name=prisoner_name,
+            prisoner_number=self.credit.prisoner_number,
+            prisoner_dob=self.credit.prisoner_dob,
+            prison=new_prison,
+            active=False
+        )
 
         credit_prisons_need_updating.send(sender=None)
 
@@ -146,7 +219,8 @@ class UpdatePrisonsOnLockedCreditsTestCase(BaseUpdatePrisonsForPaymentsTestCase)
             prisoner_name=new_prisoner_name,
             prisoner_number=self.credit.prisoner_number,
             prisoner_dob=self.credit.prisoner_dob,
-            prison=other_prison
+            prison=other_prison,
+            active=True
         )
 
         credit_prisons_need_updating.send(sender=None)
@@ -180,7 +254,8 @@ class UpdatePrisonsOnCreditedCreditsTestcase(BaseUpdatePrisonsForTransactionsTes
             prisoner_name=new_prisoner_name,
             prisoner_number=self.credit.prisoner_number,
             prisoner_dob=self.credit.prisoner_dob,
-            prison=other_prison
+            prison=other_prison,
+            active=True
         )
 
         credit_prisons_need_updating.send(sender=None)
@@ -213,7 +288,8 @@ class UpdatePrisonsOnRefundedCreditsTestcase(BaseUpdatePrisonsForTransactionsTes
             prisoner_name=prisoner_name,
             prisoner_number=self.credit.prisoner_number,
             prisoner_dob=self.credit.prisoner_dob,
-            prison=prison
+            prison=prison,
+            active=True
         )
 
         credit_prisons_need_updating.send(sender=None)
@@ -254,7 +330,8 @@ class UpdatePrisonsOnRefundPendingCreditsTestcase(BaseUpdatePrisonsForTransactio
             prisoner_name=prisoner_name,
             prisoner_number=self.credit.prisoner_number,
             prisoner_dob=self.credit.prisoner_dob,
-            prison=prison
+            prison=prison,
+            active=True
         )
 
         credit_prisons_need_updating.send(sender=None)
@@ -287,7 +364,8 @@ class UpdatePrisonsOnReconciledCreditsTestcase(BaseUpdatePrisonsForTransactionsT
             prisoner_name=new_prisoner_name,
             prisoner_number=self.credit.prisoner_number,
             prisoner_dob=self.credit.prisoner_dob,
-            prison=other_prison
+            prison=other_prison,
+            active=True
         )
 
         credit_prisons_need_updating.send(sender=None)

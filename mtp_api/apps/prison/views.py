@@ -4,6 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from core.permissions import ActionsBasedPermissions
+from credit.signals import credit_prisons_need_updating
 from mtp_auth.models import PrisonUserMapping
 from mtp_auth.permissions import (
     NomsOpsClientIDPermissions, SendMoneyClientIDPermissions
@@ -40,7 +41,7 @@ class PrisonerLocationView(
         serializer.save(created_by=self.request.user)
 
 
-class DeleteAllPrisonerLocationsView(generics.GenericAPIView):
+class DeleteOldPrisonerLocationsView(generics.GenericAPIView):
     queryset = PrisonerLocation.objects.all()
     action = 'destroy'
 
@@ -50,12 +51,14 @@ class DeleteAllPrisonerLocationsView(generics.GenericAPIView):
     )
 
     def post(self, request, *args, **kwargs):
-        self.get_queryset().delete()
+        self.get_queryset().filter(active=True).delete()
+        self.get_queryset().filter(active=False).update(active=True)
+        credit_prisons_need_updating.send(sender=PrisonerLocation)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class PrisonerValidityView(mixins.ListModelMixin, viewsets.GenericViewSet):
-    queryset = PrisonerLocation.objects.all()
+    queryset = PrisonerLocation.objects.filter(active=True)
     permission_classes = (
         IsAuthenticated, SendMoneyClientIDPermissions,
     )
