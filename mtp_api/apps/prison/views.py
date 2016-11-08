@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.utils.dateparse import parse_date
 from rest_framework import generics, mixins, viewsets, status
 from rest_framework.permissions import IsAuthenticated
@@ -50,10 +51,25 @@ class DeleteOldPrisonerLocationsView(generics.GenericAPIView):
         ActionsBasedPermissions
     )
 
+    @transaction.atomic
     def post(self, request, *args, **kwargs):
         self.get_queryset().filter(active=True).delete()
         self.get_queryset().filter(active=False).update(active=True)
         credit_prisons_need_updating.send(sender=PrisonerLocation)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class DeleteInactivePrisonerLocationsView(generics.GenericAPIView):
+    queryset = PrisonerLocation.objects.filter(active=False)
+    action = 'destroy'
+
+    permission_classes = (
+        IsAuthenticated, NomsOpsClientIDPermissions,
+        ActionsBasedPermissions
+    )
+
+    def post(self, request, *args, **kwargs):
+        self.get_queryset().delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

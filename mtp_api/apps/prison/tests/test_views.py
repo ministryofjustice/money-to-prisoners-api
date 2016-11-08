@@ -33,8 +33,12 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
         return reverse('prisonerlocation-list')
 
     @property
-    def delete_url(self):
+    def delete_old_url(self):
         return reverse('prisonerlocation-delete-old')
+
+    @property
+    def delete_inactive_url(self):
+        return reverse('prisonerlocation-delete-inactive')
 
     def test_fails_without_application_permissions(self):
         """
@@ -142,9 +146,12 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
         for item in data:
             self.assertEqual(latest_created.filter(**item).count(), 1)
 
-        # test that deleting deletes old and activates new
-        response = self.client.post(
-            self.delete_url, format='json',
+        return data
+
+    def test_create_and_delete_old(self):
+        data = self.test_create()
+        self.client.post(
+            self.delete_old_url, format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.users[0])
         )
         self.assertEqual(PrisonerLocation.objects.filter(active=True).count(), 3)
@@ -153,6 +160,20 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
             self.assertEqual(
                 PrisonerLocation.objects.filter(active=True).filter(**item).count(),
                 1
+            )
+
+    def test_create_and_delete_inactive(self):
+        data = self.test_create()
+        self.client.post(
+            self.delete_inactive_url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.users[0])
+        )
+        self.assertEqual(PrisonerLocation.objects.filter(active=True).count(), 2)
+        self.assertEqual(PrisonerLocation.objects.filter(active=False).count(), 0)
+        for item in data:
+            self.assertEqual(
+                PrisonerLocation.objects.filter(active=True).filter(**item).count(),
+                0
             )
 
     def _test_validation_error(self, data, assert_error_msg):

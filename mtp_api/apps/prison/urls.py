@@ -16,4 +16,7 @@ urlpatterns = [
     url(r'^prisoner_locations/actions/delete_old/$',
         views.DeleteOldPrisonerLocationsView.as_view(),
         name='prisonerlocation-delete-old'),
+    url(r'^prisoner_locations/actions/delete_inactive/$',
+        views.DeleteInactivePrisonerLocationsView.as_view(),
+        name='prisonerlocation-delete-inactive'),
 ]
