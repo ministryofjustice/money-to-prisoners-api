@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: MTP api\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-11-04 12:41+0000\n"
+"POT-Creation-Date: 2016-11-08 18:14+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Igor U <igor.ushkarev@digital.justice.gov.uk>, 2016\n"
 "Language-Team: Welsh (https://www.transifex.com/ministry-of-justice/teams/34553/cy/)\n"
@@ -537,7 +537,7 @@ msgstr ""
 msgid "Prisoner management"
 msgstr ""
 
-#: apps/prison/serializers.py:71
+#: apps/prison/serializers.py:64
 #, python-brace-format
 msgid "No prison found with code \"{pk_value}\""
 msgstr ""
@@ -652,6 +652,26 @@ msgstr ""
 #: templates/admin/base_site.html:21
 #, python-format
 msgid "Logged in as <strong>%(user_name)s</strong>."
+msgstr ""
+
+#: templates/admin/index.html:8
+msgid "Language"
+msgstr ""
+
+#: templates/admin/index.html:14
+msgid "Select a language"
+msgstr ""
+
+#: templates/admin/index.html:25
+msgid "Switch"
+msgstr ""
+
+#: templates/admin/index.html:37
+msgid "Recent Actions"
+msgstr ""
+
+#: templates/admin/index.html:50
+msgid "Unknown content"
 msgstr ""
 
 #: templates/core/admin_form_filter.html:2
