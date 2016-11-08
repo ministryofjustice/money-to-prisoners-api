@@ -2,7 +2,6 @@ from django.db import transaction
 from django.utils.translation import ugettext as _
 from rest_framework import serializers
 
-from credit.signals import credit_prisons_need_updating
 from .models import PrisonerLocation, Prison, Category, Population
 
 
@@ -44,13 +43,7 @@ class PrisonerLocationListSerializer(serializers.ListSerializer):
         locations = [
             PrisonerLocation(**item) for item in validated_data
         ]
-
-        # delete all current records and insert new batch
-        PrisonerLocation.objects.all().delete()
         objects = PrisonerLocation.objects.bulk_create(locations)
-
-        credit_prisons_need_updating.send(sender=PrisonerLocation)
-
         return objects
 
 

@@ -1,9 +1,11 @@
+from django.db import transaction
 from django.utils.dateparse import parse_date
-from rest_framework import mixins, viewsets, status
+from rest_framework import generics, mixins, viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from core.permissions import ActionsBasedPermissions
+from credit.signals import credit_prisons_need_updating
 from mtp_auth.models import PrisonUserMapping
 from mtp_auth.permissions import (
     NomsOpsClientIDPermissions, SendMoneyClientIDPermissions
@@ -40,8 +42,39 @@ class PrisonerLocationView(
         serializer.save(created_by=self.request.user)
 
 
-class PrisonerValidityView(mixins.ListModelMixin, viewsets.GenericViewSet):
+class DeleteOldPrisonerLocationsView(generics.GenericAPIView):
     queryset = PrisonerLocation.objects.all()
+    action = 'destroy'
+
+    permission_classes = (
+        IsAuthenticated, NomsOpsClientIDPermissions,
+        ActionsBasedPermissions
+    )
+
+    @transaction.atomic
+    def post(self, request, *args, **kwargs):
+        self.get_queryset().filter(active=True).delete()
+        self.get_queryset().filter(active=False).update(active=True)
+        credit_prisons_need_updating.send(sender=PrisonerLocation)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class DeleteInactivePrisonerLocationsView(generics.GenericAPIView):
+    queryset = PrisonerLocation.objects.filter(active=False)
+    action = 'destroy'
+
+    permission_classes = (
+        IsAuthenticated, NomsOpsClientIDPermissions,
+        ActionsBasedPermissions
+    )
+
+    def post(self, request, *args, **kwargs):
+        self.get_queryset().delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PrisonerValidityView(mixins.ListModelMixin, viewsets.GenericViewSet):
+    queryset = PrisonerLocation.objects.filter(active=True)
     permission_classes = (
         IsAuthenticated, SendMoneyClientIDPermissions,
     )

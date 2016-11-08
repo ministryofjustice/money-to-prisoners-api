@@ -5,7 +5,8 @@
   "fields": {
     "name": "PrisonerLocationAdmin",
     "permissions": [
-      ["add_prisonerlocation", "prison", "prisonerlocation"]
+      ["add_prisonerlocation", "prison", "prisonerlocation"],
+      ["delete_prisonerlocation", "prison", "prisonerlocation"]
     ]
   }
 },

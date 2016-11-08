@@ -13,4 +13,10 @@ router.register(r'prison_categories', views.CategoryView, base_name='prison_cate
 
 urlpatterns = [
     url(r'^', include(router.urls)),
+    url(r'^prisoner_locations/actions/delete_old/$',
+        views.DeleteOldPrisonerLocationsView.as_view(),
+        name='prisonerlocation-delete-old'),
+    url(r'^prisoner_locations/actions/delete_inactive/$',
+        views.DeleteInactivePrisonerLocationsView.as_view(),
+        name='prisonerlocation-delete-inactive'),
 ]

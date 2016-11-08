@@ -1659,15 +1659,13 @@ class ReviewCreditTestCase(
             set(Credit.objects.filter(reviewed=True).values_list('id', flat=True))
         )
 
-        # check logs
-        self.assertEqual(
-            Log.objects.filter(
+        reviewed_logs = Log.objects.filter(
                 user=logged_in_user,
                 action=LOG_ACTIONS.REVIEWED,
-                credit__id__in=reviewed
-            ).count(),
-            len(reviewed)
         )
+        self.assertEqual(len(reviewed_logs), len(reviewed))
+        for log in reviewed_logs:
+            self.assertTrue(log.credit.id in reviewed)
 
 
 class GroupedListTestCase(BaseCreditViewTestCase):

@@ -32,6 +32,14 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
     def list_url(self):
         return reverse('prisonerlocation-list')
 
+    @property
+    def delete_old_url(self):
+        return reverse('prisonerlocation-delete-old')
+
+    @property
+    def delete_inactive_url(self):
+        return reverse('prisonerlocation-delete-inactive')
+
     def test_fails_without_application_permissions(self):
         """
         Tests that if the user logs in via a different application,
@@ -99,10 +107,11 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
         repeated_p_num_2 = random_prisoner_number()
         # create two pre-existing PrisonerLocations so that we test the overwrite
         mommy.make(PrisonerLocation, prisoner_number=repeated_p_num_1,
-                   prison=self.prisons[0])
+                   prison=self.prisons[0], active=True)
         mommy.make(PrisonerLocation, prisoner_number=repeated_p_num_2,
-                   prison=self.prisons[0])
-        self.assertEqual(PrisonerLocation.objects.count(), 2)
+                   prison=self.prisons[0], active=True)
+        self.assertEqual(PrisonerLocation.objects.filter(active=True).count(), 2)
+        self.assertEqual(PrisonerLocation.objects.filter(active=False).count(), 0)
 
         data = [
             {
@@ -130,11 +139,42 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        # test that total prisoner location records is now 3
-        latest_created = PrisonerLocation.objects.all()
-        self.assertEqual(latest_created.count(), len(data))
+        self.assertEqual(PrisonerLocation.objects.filter(active=True).count(), 2)
+        # test that inactive prisoner location records is now 3
+        latest_created = PrisonerLocation.objects.filter(active=False)
+        self.assertEqual(latest_created.count(), 3)
         for item in data:
             self.assertEqual(latest_created.filter(**item).count(), 1)
+
+        return data
+
+    def test_create_and_delete_old(self):
+        data = self.test_create()
+        self.client.post(
+            self.delete_old_url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.users[0])
+        )
+        self.assertEqual(PrisonerLocation.objects.filter(active=True).count(), 3)
+        self.assertEqual(PrisonerLocation.objects.filter(active=False).count(), 0)
+        for item in data:
+            self.assertEqual(
+                PrisonerLocation.objects.filter(active=True).filter(**item).count(),
+                1
+            )
+
+    def test_create_and_delete_inactive(self):
+        data = self.test_create()
+        self.client.post(
+            self.delete_inactive_url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.users[0])
+        )
+        self.assertEqual(PrisonerLocation.objects.filter(active=True).count(), 2)
+        self.assertEqual(PrisonerLocation.objects.filter(active=False).count(), 0)
+        for item in data:
+            self.assertEqual(
+                PrisonerLocation.objects.filter(active=True).filter(**item).count(),
+                0
+            )
 
     def _test_validation_error(self, data, assert_error_msg):
         response = self.client.post(
@@ -185,25 +225,56 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
             assert_error_msg='Should fail because invalid prison'
         )
 
-    @mock.patch('prison.serializers.credit_prisons_need_updating')
-    def test_create_sends_credit_prisons_need_updating_signal(
+
+class DeleteOldPrisonerLocationsViewTestCase(AuthTestCaseMixin, APITestCase):
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
+
+    def setUp(self):
+        super().setUp()
+        (self.prison_clerks, self.users,
+         self.bank_admins, self.refund_bank_admins,
+         self.send_money_users, _) = make_test_users()
+        load_random_prisoner_locations(50)
+        self.assertEqual(PrisonerLocation.objects.filter(active=True).count(), 50)
+
+    @property
+    def url(self):
+        return reverse('prisonerlocation-delete-old')
+
+    def test_cannot_delete_if_not_logged_in(self):
+        response = self.client.post(
+            self.url, format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_fails_without_action_permissions(self):
+        response = self.client.post(
+            self.url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.prison_clerks[0])
+        )
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN
+        )
+
+    def test_delete_old(self):
+        response = self.client.post(
+            self.url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.users[0])
+        )
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        self.assertEqual(PrisonerLocation.objects.all().count(), 0)
+
+    @mock.patch('prison.views.credit_prisons_need_updating')
+    def test_delete_old_sends_credit_prisons_need_updating_signal(
         self, mocked_credit_prisons_need_updating
     ):
-        user = self.users[0]
-
-        data = [
-            {
-                'prisoner_name': random_prisoner_name(),
-                'prisoner_number': random_prisoner_number(),
-                'prisoner_dob': random_prisoner_dob(),
-                'prison': self.prisons[0].pk
-            }
-        ]
         response = self.client.post(
-            self.list_url, data=data, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+            self.url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.users[0])
         )
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
         mocked_credit_prisons_need_updating.send.assert_called_with(sender=PrisonerLocation)
 

@@ -46,8 +46,8 @@ class PrisonerLocation(TimeStampedModel):
     prisoner_name = models.CharField(blank=True, max_length=250)
     prisoner_number = models.CharField(max_length=250)  # TODO: shouldn't this be unique?
     prisoner_dob = models.DateField()
-
     prison = models.ForeignKey(Prison, on_delete=models.CASCADE)
+    active = models.BooleanField(default=False)
 
     class Meta:
         index_together = (
