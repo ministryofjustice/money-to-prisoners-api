@@ -331,7 +331,8 @@ def update_prison_for_credit(sender, instance, created, *args, **kwargs):
         try:
             location = PrisonerLocation.objects.get(
                 prisoner_number=instance.prisoner_number,
-                prisoner_dob=instance.prisoner_dob
+                prisoner_dob=instance.prisoner_dob,
+                active=True
             )
             instance.prisoner_name = location.prisoner_name
             instance.prison = location.prison
