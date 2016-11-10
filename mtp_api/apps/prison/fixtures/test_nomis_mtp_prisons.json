@@ -328,7 +328,7 @@
     "model": "prison.prison",
     "pk": "ESI",
     "fields": {
-      "name": "HMP & YOI EAST SUTTON PK",
+      "name": "HMP & YOI EAST SUTTON PARK",
       "general_ledger_code": "035",
       "created": "2015-10-28T12:00:00Z",
       "modified": "2015-10-28T12:00:00Z",
