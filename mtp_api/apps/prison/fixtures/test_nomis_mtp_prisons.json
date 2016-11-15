@@ -846,6 +846,19 @@
   },
   {
     "model": "prison.prison",
+    "pk": "MWI",
+    "fields": {
+      "name": "HMP MEDWAY",
+      "general_ledger_code": "158",
+      "created": "2015-10-28T12:00:00Z",
+      "modified": "2015-10-28T12:00:00Z",
+      "region": "North West",
+      "populations": [1,3,4],
+      "categories": [5]
+    }
+  },
+  {
+    "model": "prison.prison",
     "pk": "MDI",
     "fields": {
       "name": "HMP & YOI MOORLAND",
