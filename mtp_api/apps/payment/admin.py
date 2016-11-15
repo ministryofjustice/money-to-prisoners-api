@@ -55,12 +55,11 @@ class BatchAdmin(admin.ModelAdmin):
 
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
-    list_display = ('created', 'status',
-                    'formatted_amount', 'formatted_service_charge')
+    list_display = ('email', 'created', 'status', 'formatted_amount')
     ordering = ('-created',)
     date_hierarchy = 'created'
     list_filter = ('status',)
-    search_fields = ('uuid', 'recipient_name')
+    search_fields = ('uuid', 'recipient_name', 'email')
     exclude = ('credit',)
     readonly_fields = ('credit_link',)
     actions = ['display_total_amount']
