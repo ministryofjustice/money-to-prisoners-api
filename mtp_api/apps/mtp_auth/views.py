@@ -39,7 +39,7 @@ class UserViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin,
         queryset = User.objects.filter(
             applicationusermapping__application__client_id=client_id,
             is_active=True
-        )
+        ).order_by('username')
 
         user_prisons = PrisonUserMapping.objects.get_prison_set_for_user(self.request.user)
         if len(user_prisons) > 0:
