@@ -137,6 +137,8 @@ class ResetPasswordView(generics.GenericAPIView):
                         'please contact the person who set it up'),
         'no_email': _('We don’t have your email address, '
                       'please contact the person who set up the account'),
+        'multiple_found': _('That email address matches multiple user accounts, '
+                            'please enter your unique username'),
     }
 
     @classmethod
@@ -165,10 +167,16 @@ class ResetPasswordView(generics.GenericAPIView):
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
+            user_identifier = serializer.validated_data['username']
             try:
-                user = User.objects.get_by_natural_key(serializer.validated_data['username'])
+                user = User.objects.get_by_natural_key(user_identifier)
             except User.DoesNotExist:
-                return self.failure_response('not_found', field='username')
+                try:
+                    user = User.objects.get(email=user_identifier)
+                except User.DoesNotExist:
+                    return self.failure_response('not_found', field='username')
+                except User.MultipleObjectsReturned:
+                    return self.failure_response('multiple_found', field='username')
             if user.is_locked_out:
                 return self.failure_response('locked_out', field='username')
             if not user.email:

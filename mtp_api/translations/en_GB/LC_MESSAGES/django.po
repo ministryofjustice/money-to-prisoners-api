@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: MTP api\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-11-08 18:14+0000\n"
+"POT-Creation-Date: 2016-11-16 14:09+0000\n"
 "PO-Revision-Date: 2016-11-04 10:00+0000\n"
 "Last-Translator: Welsh Language Unit <welsh.language.unit.manager@hmcts.gsi.gov.uk>\n"
 "Language-Team: Welsh (http://www.transifex.com/ministry-of-justice/mtp/language/cy/)\n"
@@ -196,7 +196,7 @@ msgstr ""
 msgid "source"
 msgstr ""
 
-#: apps/credit/admin.py:132 apps/payment/admin.py:78
+#: apps/credit/admin.py:132 apps/payment/admin.py:77
 #: apps/transaction/admin.py:70
 msgid "amount"
 msgstr ""
@@ -205,7 +205,7 @@ msgstr ""
 msgid "Display total of selected credits"
 msgstr ""
 
-#: apps/credit/admin.py:153 apps/payment/admin.py:89
+#: apps/credit/admin.py:153 apps/payment/admin.py:88
 #: apps/transaction/admin.py:91
 #, python-format
 msgid "Total: %s"
@@ -473,7 +473,11 @@ msgstr ""
 msgid "We don’t have your email address, please contact the person who set up the account"
 msgstr ""
 
-#: apps/mtp_auth/views.py:187
+#: apps/mtp_auth/views.py:140
+msgid "That email address matches multiple user accounts, please enter your unique username"
+msgstr ""
+
+#: apps/mtp_auth/views.py:195
 msgid "Your new Money To Prisoners password"
 msgstr ""
 
@@ -497,15 +501,15 @@ msgstr ""
 msgid "settlement transaction"
 msgstr ""
 
-#: apps/payment/admin.py:68 apps/transaction/admin.py:58
+#: apps/payment/admin.py:67 apps/transaction/admin.py:58
 msgid "credit"
 msgstr ""
 
-#: apps/payment/admin.py:82
+#: apps/payment/admin.py:81
 msgid "service charge"
 msgstr ""
 
-#: apps/payment/admin.py:86
+#: apps/payment/admin.py:85
 msgid "Display total of selected payments"
 msgstr ""
 
