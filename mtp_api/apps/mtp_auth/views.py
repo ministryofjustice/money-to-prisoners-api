@@ -8,7 +8,9 @@ from django.db.models import Q
 from django.db.transaction import atomic
 from django.forms import ValidationError
 from django.http import Http404
+from django.utils.decorators import method_decorator
 from django.utils.translation import gettext, gettext_lazy as _
+from django.views.decorators.debug import sensitive_post_parameters, sensitive_variables
 from mtp_common.email import send_email
 from rest_framework import viewsets, mixins, generics, status
 from rest_framework.permissions import IsAuthenticated
@@ -91,11 +93,13 @@ class UserViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin,
             )
 
 
+@method_decorator(sensitive_post_parameters('old_password', 'new_password'), name='dispatch')
 class ChangePasswordView(generics.GenericAPIView):
     permission_classes = (IsAuthenticated, AnyAdminClientIDPermissions)
     serializer_class = ChangePasswordSerializer
 
     @atomic
+    @method_decorator(sensitive_variables('old_password', 'new_password'))
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
@@ -164,6 +168,7 @@ class ResetPasswordView(generics.GenericAPIView):
         )
 
     @atomic
+    @method_decorator(sensitive_variables('password'))
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
