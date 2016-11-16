@@ -23,16 +23,20 @@ class IdsCreditSerializer(serializers.Serializer):
 
 
 class CommentSerializer(serializers.ModelSerializer):
+    user_full_name = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Comment
+        read_only = ('user',)
+        fields = ('credit', 'user', 'user_full_name', 'comment',)
 
     def create(self, validated_data):
         user = self.context['request'].user
         validated_data['user'] = user
         super().create(validated_data)
 
-    class Meta:
-        model = Comment
-        read_only = ('user',)
-        fields = ('credit', 'user', 'comment',)
+    def get_user_full_name(self, obj):
+        return obj.user.get_full_name() if obj.user else None
 
 
 class CreditSerializer(serializers.ModelSerializer):
