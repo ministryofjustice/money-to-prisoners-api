@@ -101,6 +101,10 @@ def setup_payment(owner_status_chooser,
         owner, status = owner_status_chooser(data['prison'])
         data['processor_id'] = str(uuid.uuid1())
         data['status'] = PAYMENT_STATUS.TAKEN
+        data['cardholder_name'] = ' '.join([fake.first_name(), fake.last_name()])
+        data['card_number_last_digits'] = ''.join([str(random.randint(0, 9)) for _ in range(4)])
+        expiry_date = fake.date_time_between(start_date='now', end_date='+5y')
+        data['card_expiry_date'] = expiry_date.strftime('%m/%y')
         if older_than_yesterday:
             data.update({
                 'owner': owner,

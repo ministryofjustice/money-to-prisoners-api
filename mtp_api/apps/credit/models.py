@@ -197,7 +197,10 @@ class Credit(TimeStampedModel):
 
     @property
     def sender_name(self):
-        return self.transaction.sender_name if hasattr(self, 'transaction') else None
+        if hasattr(self, 'transaction'):
+            return self.transaction.sender_name
+        elif hasattr(self, 'payment'):
+            return self.payment.cardholder_name
 
     @property
     def sender_sort_code(self):
@@ -214,6 +217,13 @@ class Credit(TimeStampedModel):
     @property
     def sender_email(self):
         return self.payment.email if hasattr(self, 'payment') else None
+
+    @property
+    def card_number_last_digits(self):
+        return self.payment.card_number_last_digits if hasattr(self, 'payment') else None
+
+    def card_expiry_date(self):
+        return self.payment.card_expiry_date if hasattr(self, 'payment') else None
 
     @property
     def reconciliation_code(self):

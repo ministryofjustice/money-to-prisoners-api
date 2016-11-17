@@ -55,7 +55,7 @@ class BatchAdmin(admin.ModelAdmin):
 
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
-    list_display = ('email', 'created', 'status', 'formatted_amount')
+    list_display = ('cardholder_name', 'email', 'formatted_amount', 'status', 'created')
     ordering = ('-created',)
     date_hierarchy = 'created'
     list_filter = ('status',)
