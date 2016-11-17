@@ -1,7 +1,7 @@
 # Dependencies needed for all environments
 # NB: this is not the complete set needed to run the app
-Django==1.9.4
-psycopg2==2.6
+Django>=1.9,<1.10
+psycopg2>=2.6,<2.7
 djangorestframework==3.3.3
 django-model-utils==2.4
 django-filter==0.13.0
@@ -11,9 +11,9 @@ django-rest-swagger==0.3.5
 django-extended-choices==1.0.7
 fake-factory>=0.5,<0.6
 model-mommy==1.2.6
-pytz>=2016.3
+pytz>=2016.7
 git+git://github.com/ministryofjustice/django-moj-irat.git
 django-mailgun==0.8.0
 crontab==0.21.3
-requests>=2.11.0,<2.12.0
+requests>=2.12,<3
 transifex-client>=0.12
