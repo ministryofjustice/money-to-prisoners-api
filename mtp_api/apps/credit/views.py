@@ -19,7 +19,9 @@ from rest_framework.reverse import reverse
 from rest_framework.settings import api_settings
 
 from core import dictfetchall
-from core.filters import BlankStringFilter, StatusChoiceFilter, IsoDateTimeFilter
+from core.filters import (
+    BlankStringFilter, StatusChoiceFilter, IsoDateTimeFilter, MultipleFieldCharFilter
+)
 from core.permissions import ActionsBasedPermissions
 from mtp_auth.models import PrisonUserMapping
 from mtp_auth.permissions import (
@@ -82,7 +84,10 @@ class CreditTextSearchFilter(django_filters.CharFilter):
                     else:
                         return models.Q(**{'%s__startswith' % field: amount})
                 elif field == 'sender_name':
-                    return models.Q(**{'transaction__%s__icontains' % field: word})
+                    return (
+                        models.Q(**{'transaction__sender_name__icontains': word})
+                        | models.Q(**{'payment__cardholder_name__icontains': word})
+                    )
 
                 return models.Q(**{'%s__icontains' % field: word})
 
@@ -131,8 +136,10 @@ class CreditListFilter(django_filters.FilterSet):
     prison_population = MultipleValueFilter(name='prison__populations__name')
 
     search = CreditTextSearchFilter()
-    sender_name = django_filters.CharFilter(name='transaction__sender_name',
-                                            lookup_expr='icontains')
+    sender_name = MultipleFieldCharFilter(
+        name=('transaction__sender_name', 'payment__cardholder_name',),
+        lookup_expr='icontains'
+    )
     sender_sort_code = django_filters.CharFilter(name='transaction__sender_sort_code')
     sender_account_number = django_filters.CharFilter(name='transaction__sender_account_number')
     sender_roll_number = django_filters.CharFilter(name='transaction__sender_roll_number')
