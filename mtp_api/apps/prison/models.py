@@ -36,6 +36,9 @@ class Prison(TimeStampedModel):
     categories = models.ManyToManyField(Category)
     pre_approval_required = models.BooleanField(default=False)
 
+    class Meta:
+        ordering = ('name',)
+
     def __str__(self):
         return self.name
 

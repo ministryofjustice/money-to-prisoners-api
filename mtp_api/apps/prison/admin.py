@@ -17,7 +17,6 @@ class CategoryAdmin(ModelAdmin):
 
 @admin.register(Prison)
 class PrisonAdmin(ModelAdmin):
-    ordering = ('name',)
     list_display = ('name', 'nomis_id', 'general_ledger_code')
     list_filter = ('region', 'populations', 'categories')
     search_fields = ('nomis_id', 'general_ledger_code', 'name', 'region')
