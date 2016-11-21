@@ -17,4 +17,8 @@ class Migration(migrations.Migration):
             name='active',
             field=models.BooleanField(default=False),
         ),
+        migrations.AlterModelOptions(
+            name='prison',
+            options={'ordering': ('name',)},
+        ),
     ]
