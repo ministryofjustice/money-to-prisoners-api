@@ -1,0 +1,33 @@
+{% if graph %}
+  <div class="xfull" style="height: {{ height }}px; background: #f6f6f6; padding: 8px">
+    <svg version="1.1" baseProfile="full" width="{{ width }}" height="{{ height }}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <style type="text/css">
+          path {
+            stroke-width: 1px;
+            stroke-linejoin: round;
+            fill: none;
+          }
+        </style>
+        {% if clip %}
+          <clipPath id="tick-chart-{{ graph_id }}-positive-clip">
+            <rect x="{{ clip.positive.0 }}" y="{{ clip.positive.1 }}" width="{{ clip.positive.2 }}" height="{{ clip.positive.3 }}"/>
+          </clipPath>
+          <clipPath id="tick-chart-{{ graph_id }}-negative-clip">
+            <rect x="{{ clip.negative.0 }}" y="{{ clip.negative.1 }}" width="{{ clip.negative.2 }}" height="{{ clip.negative.3 }}"/>
+          </clipPath>
+        {% endif %}
+      </defs>
+      {% if axes %}
+        <g transform="translate({{ inset }},{{ inset }})">
+          <path d="M0,0 v{{ inner_height }}" stroke="#ccc"/>
+          <path d="M0,{{ axes.zero_height }} h{{ inner_width }}" stroke="#ccc"/>
+        </g>
+      {% endif %}
+      <path d="{{ graph }}" clip-path="url(#tick-chart-{{ graph_id }}-positive-clip)" stroke="#447e9b"/>
+      {% if clip %}
+        <path d="{{ graph }}" clip-path="url(#tick-chart-{{ graph_id }}-negative-clip)" stroke="#d9534f"/>
+      {% endif %}
+    </svg>
+  </div>
+{% endif %}
