@@ -180,17 +180,20 @@ class CreditListFilter(django_filters.FilterSet):
 class CreditViewMixin(object):
 
     def get_queryset(self):
-        if self.request.user.has_perm('credit.view_any_credit'):
-            return Credit.objects.all()
-        else:
-            queryset = Credit.objects.filter(
-                prison__in=PrisonUserMapping.objects.get_prison_set_for_user(self.request.user)
-            )
-            if self.request.auth.application.client_id == CASHBOOK_OAUTH_CLIENT_ID:
-                queryset = queryset.filter(
-                    received_at__date__lt=timezone.now().date()
-                )
+        queryset = Credit.objects.all()
+        cashbook_client = self.request.auth.application.client_id == CASHBOOK_OAUTH_CLIENT_ID
+
+        if self.request.user.has_perm('credit.view_any_credit') and not cashbook_client:
             return queryset
+
+        if cashbook_client:
+            queryset = queryset.filter(
+                received_at__date__lt=timezone.now().date()
+            )
+
+        return queryset.filter(
+            prison__in=PrisonUserMapping.objects.get_prison_set_for_user(self.request.user)
+        )
 
 
 class GetCredits(CreditViewMixin, generics.ListAPIView):
