@@ -44,7 +44,7 @@ class CreateTransactionsTestCase(
     def _get_url(self, *args, **kwargs):
         return reverse('transaction-list')
 
-    def _get_transactions_data(self, tot=80):
+    def _get_transactions_data(self, tot=100):
         data_list = generate_initial_transactions_data(tot=tot)
 
         serializer = CreateTransactionSerializer()
@@ -162,7 +162,7 @@ class CreateIncompleteTransactionsTestCase(
     def _get_url(self, *args, **kwargs):
         return reverse('transaction-list')
 
-    def _get_transactions_data(self, tot=30):
+    def _get_transactions_data(self, tot=100):
         data_list = generate_initial_transactions_data(tot=tot)
 
         serializer = CreateTransactionSerializer()
@@ -270,7 +270,7 @@ class UpdateRefundTransactionsTestCase(
     def _get_url(self, *args, **kwargs):
         return reverse('transaction-list')
 
-    def _get_transactions(self, tot=30):
+    def _get_transactions(self, tot=100):
         transactions = generate_transactions(transaction_batch=tot)
 
         data_list = []
@@ -406,7 +406,7 @@ class GetTransactionsBaseTestCase(
     def _get_url(self, *args, **kwargs):
         return reverse('transaction-list')
 
-    def _populate_transactions(self, tot=80):
+    def _populate_transactions(self, tot=100):
         return generate_transactions(transaction_batch=tot)
 
     def _get_authorised_user(self):

@@ -24,13 +24,13 @@ class BaseCreditViewTestCase(AuthTestCaseMixin, APITestCase):
         'test_prisons.json'
     ]
     STATUS_FILTERS = {
-        None: lambda t: True,
-        CREDIT_STATUS.LOCKED: lambda t: t.owner and t.resolution == CREDIT_RESOLUTION.PENDING,
-        CREDIT_STATUS.AVAILABLE: lambda t: (
-            t.prison and not t.owner and t.resolution == CREDIT_RESOLUTION.PENDING and not
-            (hasattr(t, 'transaction') and t.transaction.incomplete_sender_info)
+        None: lambda c: True,
+        CREDIT_STATUS.LOCKED: lambda c: c.owner and c.resolution == CREDIT_RESOLUTION.PENDING,
+        CREDIT_STATUS.AVAILABLE: lambda c: (
+            c.prison and not c.owner and c.resolution == CREDIT_RESOLUTION.PENDING and
+            not c.blocked
         ),
-        CREDIT_STATUS.CREDITED: lambda t: t.credited
+        CREDIT_STATUS.CREDITED: lambda c: c.credited
     }
     transaction_batch = 100
 
@@ -79,11 +79,7 @@ class BaseCreditViewTestCase(AuthTestCaseMixin, APITestCase):
 
     def _get_available_credits_qs(self, prisons, user=None):
         return self._get_queryset(user, prisons).filter(
-            (
-                models.Q(transaction__isnull=True) |
-                models.Q(transaction__incomplete_sender_info=False)
-            ),
-            owner__isnull=True, resolution=CREDIT_RESOLUTION.PENDING,
+            blocked=False, owner__isnull=True, resolution=CREDIT_RESOLUTION.PENDING
         )
 
     def _get_credited_credits_qs(self, prisons, user=None):
