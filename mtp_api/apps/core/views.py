@@ -120,7 +120,7 @@ class RecreateTestDataView(AdminViewMixin, FormView):
     """
     title = _('Recreate test data')
     form_class = RecreateTestDataForm
-    template_name = 'core/recreate_test_data.html'
+    template_name = 'core/recreate-test-data.html'
     success_url = reverse_lazy('admin:recreate_test_data')
     disable_in_production = True
     superuser_required = True
