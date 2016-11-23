@@ -18,7 +18,6 @@ from django.utils.translation import gettext, gettext_lazy as _
 from core.dashboards import DashboardChangeForm, DashboardModule
 from core.views import DashboardView
 from credit.models import Credit, CreditingTime, CREDIT_RESOLUTION, CREDIT_STATUS
-from payment.models import PAYMENT_STATUS
 from prison.models import Prison
 from transaction.models import Transaction, TRANSACTION_CATEGORY, TRANSACTION_SOURCE, TRANSACTION_STATUS
 
@@ -31,10 +30,12 @@ REFUNDABLE_FILTERS = Credit.STATUS_LOOKUP[CREDIT_STATUS.REFUNDED] | \
                      Credit.STATUS_LOOKUP[CREDIT_STATUS.REFUND_PENDING]
 # NB: refundable does not consider debit card payments since refunds there have not been worked out
 REFUNDED_FILTERS = Credit.STATUS_LOOKUP[CREDIT_STATUS.REFUNDED]
-ERROR_FILTERS = (models.Q(transaction__source=TRANSACTION_SOURCE.BANK_TRANSFER, prison__isnull=True) |
-                 models.Q(transaction__source=TRANSACTION_SOURCE.BANK_TRANSFER,
-                          transaction__incomplete_sender_info=True) |
-                 models.Q(payment__isnull=False) & ~models.Q(payment__status=PAYMENT_STATUS.TAKEN))
+TRANSACTION_ERROR_FILTERS = (
+    models.Q(transaction__source=TRANSACTION_SOURCE.BANK_TRANSFER,
+             prison__isnull=True) |
+    models.Q(transaction__source=TRANSACTION_SOURCE.BANK_TRANSFER,
+             transaction__blocked=True)
+)
 
 # transaction-specific
 BANK_TRANSFER_CREDIT_FILTERS = models.Q(category=TRANSACTION_CATEGORY.CREDIT, source=TRANSACTION_SOURCE.BANK_TRANSFER)
@@ -646,12 +647,12 @@ class CreditReport(DashboardModule):
     def invalid_reference_count(self):
         return self.get_count(self.get_invalid_reference_queryset())
 
-    def get_error_queryset(self):
-        return self.credit_queryset.filter(ERROR_FILTERS)
+    def get_transaction_error_queryset(self):
+        return self.credit_queryset.filter(TRANSACTION_ERROR_FILTERS)
 
     @property
-    def error_rate(self):
-        received = self.get_received_queryset().count()
+    def transaction_error_rate(self):
+        received = self.received_transaction_count
         if received == 0:
             return None
         return self.get_error_queryset().count() / received

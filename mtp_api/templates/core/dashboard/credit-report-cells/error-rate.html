@@ -2,8 +2,8 @@
 {% load credit %}
 
 <td>
-  <div class="credit-stat" title="{% trans 'Proportion of incoming credits that cannot be credited. NB: debit card error rate is not well tracked' %}">
-    <strong>{{ dashboard_module.error_rate|format_percentage }}</strong>
-    {% trans 'Error rate' %}
+  <div class="credit-stat" title="{% trans 'Proportion of incoming bank transfers that cannot be credited.' %}">
+    <strong>{{ dashboard_module.transaction_error_rate|format_percentage }}</strong>
+    {% trans 'Bank transfer error rate' %}
   </div>
 </td>
