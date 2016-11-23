@@ -1,3 +1,5 @@
+import re
+
 from django.conf import settings
 from django.db import models
 
@@ -36,11 +38,25 @@ class Prison(TimeStampedModel):
     categories = models.ManyToManyField(Category)
     pre_approval_required = models.BooleanField(default=False)
 
+    re_prefixes = re.compile(r'^(%s)?' % '|'.join(('HMP & YOI', 'HMP', 'HMYOI & RC', 'HMYOI', 'IRC')))
+
     class Meta:
         ordering = ('name',)
 
+    @classmethod
+    def shorten_name(cls, name):
+        name = name.upper()
+        name = cls.re_prefixes.sub('', name).strip()
+        if name == 'ISIS':
+            return name
+        return name.title()
+
     def __str__(self):
         return self.name
+
+    @property
+    def short_name(self):
+        return self.shorten_name(self.name)
 
 
 class PrisonerLocation(TimeStampedModel):
