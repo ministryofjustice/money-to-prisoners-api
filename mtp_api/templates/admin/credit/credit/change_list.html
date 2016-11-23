@@ -2,7 +2,7 @@
 {% load tick_charts %}
 
 {% block filters %}
-  {% tick_chart queryset=cl.queryset.counts_per_day stride_field='received_at_date' value_field='count_per_day' grouping_method='sum' %}
+  {% tick_chart values=cl.queryset.counts_per_day stride_field='received_at_date' value_field='count_per_day' grouping_method='sum' %}
 
   {{ block.super }}
 {% endblock %}

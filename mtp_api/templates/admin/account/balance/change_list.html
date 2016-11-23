@@ -2,7 +2,7 @@
 {% load tick_charts %}
 
 {% block filters %}
-  {% tick_chart queryset=cl.queryset stride_field='date' value_field='closing_balance' %}
+  {% tick_chart values=cl.queryset stride_field='date' value_field='closing_balance' %}
 
   {{ block.super }}
 {% endblock %}
