@@ -34,7 +34,7 @@ TRANSACTION_ERROR_FILTERS = (
     models.Q(transaction__source=TRANSACTION_SOURCE.BANK_TRANSFER,
              prison__isnull=True) |
     models.Q(transaction__source=TRANSACTION_SOURCE.BANK_TRANSFER,
-             transaction__blocked=True)
+             blocked=True)
 )
 
 # transaction-specific
@@ -655,4 +655,4 @@ class CreditReport(DashboardModule):
         received = self.received_transaction_count
         if received == 0:
             return None
-        return self.get_error_queryset().count() / received
+        return self.get_transaction_error_queryset().count() / received
