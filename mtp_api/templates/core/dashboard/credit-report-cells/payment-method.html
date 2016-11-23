@@ -7,10 +7,22 @@
       <dd>{% trans 'Received by method' %}</dd>
 
       <dt>{% trans 'Bank transfer' %}:</dt>
-      <dd>{{ dashboard_module.received_transaction_count|format_number }}</dd>
+      <dd>
+        <small>
+          {{ dashboard_module.received_transaction_count|format_number }}
+          <br>
+          {{ dashboard_module.received_transaction_amount|format_amount }}
+        </small>
+      </dd>
 
       <dt>{% trans 'Debit card' %}:</dt>
-      <dd>{{ dashboard_module.received_payment_count|format_number }}</dd>
+      <dd>
+        <small>
+          {{ dashboard_module.received_payment_count|format_number }}
+          <br>
+          {{ dashboard_module.received_payment_amount|format_amount }}
+        </small>
+      </dd>
     </dl>
   </div>
 </td>
