@@ -510,8 +510,16 @@ class CreditReport(DashboardModule):
         return self.get_count(self.get_received_transaction_queryset())
 
     @property
+    def received_transaction_amount(self):
+        return self.get_amount_sum(self.get_received_transaction_queryset())
+
+    @property
     def received_payment_count(self):
         return self.get_count(self.get_received_payment_queryset())
+
+    @property
+    def received_payment_amount(self):
+        return self.get_amount_sum(self.get_received_payment_queryset())
 
     def get_top_recevied_by_prison(self, top=4):
         return self.get_top_prisons(self.get_received_queryset(), top=top)
