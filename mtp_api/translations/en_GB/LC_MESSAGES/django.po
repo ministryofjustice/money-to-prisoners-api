@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: MTP api\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-11-16 14:09+0000\n"
+"POT-Creation-Date: 2016-11-23 16:56+0000\n"
 "PO-Revision-Date: 2016-11-04 10:00+0000\n"
 "Last-Translator: Welsh Language Unit <welsh.language.unit.manager@hmcts.gsi.gov.uk>\n"
 "Language-Team: Welsh (http://www.transifex.com/ministry-of-justice/mtp/language/cy/)\n"
@@ -17,50 +17,46 @@ msgstr ""
 msgid "Bank account management"
 msgstr ""
 
-#: apps/core/admin.py:16 apps/core/admin.py:17
+#: apps/core/admin.py:16 apps/core/admin.py:17 apps/core/app.py:7
 #: templates/admin/base_site.html:14
 msgid "Send money to a prisoner"
 msgstr ""
 
-#: apps/core/admin.py:99
+#: apps/core/admin.py:100
 msgid "All"
 msgstr ""
 
-#: apps/core/admin.py:142
+#: apps/core/admin.py:143
 msgid "Start date"
 msgstr ""
 
-#: apps/core/admin.py:145
+#: apps/core/admin.py:146
 msgid "End date"
 msgstr ""
 
-#: apps/core/admin.py:150
+#: apps/core/admin.py:151
 msgid "Date in range"
 msgstr ""
 
-#: apps/core/admin.py:158 apps/credit/dashboards.py:385
+#: apps/core/admin.py:159 apps/credit/dashboards.py:386
 msgid "Date"
 msgstr ""
 
-#: apps/core/admin.py:163
+#: apps/core/admin.py:164
 msgid "Search"
 msgstr ""
 
-#: apps/core/admin.py:173
+#: apps/core/admin.py:174
 #, python-format
 msgid "Search %(fieldname)s"
 msgstr ""
 
-#: apps/core/admin.py:200
+#: apps/core/admin.py:201
 msgid "Any"
 msgstr ""
 
-#: apps/core/app.py:7
-msgid "MTP"
-msgstr ""
-
 #: apps/core/dashboards.py:21 apps/core/views.py:57
-#: templates/core/index.html:14
+#: templates/admin/index.html:16
 msgid "Dashboard"
 msgstr ""
 
@@ -313,104 +309,104 @@ msgstr ""
 msgid "Reviewed"
 msgstr ""
 
-#: apps/credit/dashboards.py:63
+#: apps/credit/dashboards.py:64
 msgid "Enter number of days"
 msgstr ""
 
-#: apps/credit/dashboards.py:84
+#: apps/credit/dashboards.py:85
 msgid "Date range"
 msgstr ""
 
-#: apps/credit/dashboards.py:86
+#: apps/credit/dashboards.py:87
 msgid "This week"
 msgstr ""
 
-#: apps/credit/dashboards.py:87
+#: apps/credit/dashboards.py:88
 msgid "Last week"
 msgstr ""
 
-#: apps/credit/dashboards.py:88 apps/credit/dashboards.py:306
+#: apps/credit/dashboards.py:89 apps/credit/dashboards.py:307
 msgid "Last 4 weeks"
 msgstr ""
 
-#: apps/credit/dashboards.py:89
+#: apps/credit/dashboards.py:90
 msgid "This month"
 msgstr ""
 
-#: apps/credit/dashboards.py:90
+#: apps/credit/dashboards.py:91
 msgid "Last month"
 msgstr ""
 
-#: apps/credit/dashboards.py:91 apps/credit/dashboards.py:249
-#: apps/credit/dashboards.py:250
+#: apps/credit/dashboards.py:92 apps/credit/dashboards.py:250
+#: apps/credit/dashboards.py:251
 msgid "Since the beginning"
 msgstr ""
 
-#: apps/credit/dashboards.py:92
+#: apps/credit/dashboards.py:93
 msgid "Specify a range…"
 msgstr ""
 
-#: apps/credit/dashboards.py:95
+#: apps/credit/dashboards.py:96
 msgid "From date"
 msgstr ""
 
-#: apps/credit/dashboards.py:96
+#: apps/credit/dashboards.py:97
 msgid "To date"
 msgstr ""
 
-#: apps/credit/dashboards.py:99
+#: apps/credit/dashboards.py:100
 msgid "Prison"
 msgstr ""
 
-#: apps/credit/dashboards.py:100
+#: apps/credit/dashboards.py:101
 msgid "All prisons"
 msgstr ""
 
-#: apps/credit/dashboards.py:103
+#: apps/credit/dashboards.py:104
 msgid "Min. time to credit"
 msgstr ""
 
-#: apps/credit/dashboards.py:107
+#: apps/credit/dashboards.py:108
 msgid "End date must be after start date"
 msgstr ""
 
-#: apps/credit/dashboards.py:114 apps/credit/dashboards.py:125
+#: apps/credit/dashboards.py:115 apps/credit/dashboards.py:126
 msgid "Today"
 msgstr ""
 
-#: apps/credit/dashboards.py:119 apps/credit/dashboards.py:126
-#: apps/credit/dashboards.py:131
+#: apps/credit/dashboards.py:120 apps/credit/dashboards.py:127
+#: apps/credit/dashboards.py:132
 msgid "Latest"
 msgstr ""
 
-#: apps/credit/dashboards.py:120
+#: apps/credit/dashboards.py:121
 msgid "Yesterday"
 msgstr ""
 
-#: apps/credit/dashboards.py:205
+#: apps/credit/dashboards.py:206
 #, python-format
 msgid "%(from)s to %(to)s"
 msgstr ""
 
-#: apps/credit/dashboards.py:319
+#: apps/credit/dashboards.py:320
 #, python-format
 msgid "only for %(prison)s"
 msgstr ""
 
-#: apps/credit/dashboards.py:321
+#: apps/credit/dashboards.py:322
 #, python-format
 msgid "time to credit at least %(days)s days"
 msgstr ""
 
-#: apps/credit/dashboards.py:386
+#: apps/credit/dashboards.py:387
 msgid "Valid credits"
 msgstr ""
 
-#: apps/credit/dashboards.py:388
+#: apps/credit/dashboards.py:389
 msgid "Credits to refund"
 msgstr ""
 
-#: apps/credit/dashboards.py:435
+#: apps/credit/dashboards.py:436
 msgid "Credit report"
 msgstr ""
 
@@ -449,35 +445,35 @@ msgstr ""
 msgid "Your new %(app)s account is ready to use"
 msgstr ""
 
-#: apps/mtp_auth/views.py:89
+#: apps/mtp_auth/views.py:91
 msgid "You cannot delete yourself"
 msgstr ""
 
-#: apps/mtp_auth/views.py:118
+#: apps/mtp_auth/views.py:122
 msgid "You’ve entered an incorrect password"
 msgstr ""
 
-#: apps/mtp_auth/views.py:134
+#: apps/mtp_auth/views.py:138
 msgid "There has been a system error. Please try again later"
 msgstr ""
 
-#: apps/mtp_auth/views.py:135
+#: apps/mtp_auth/views.py:139
 msgid "Username doesn’t match any user account"
 msgstr ""
 
-#: apps/mtp_auth/views.py:136
+#: apps/mtp_auth/views.py:140
 msgid "Your account is locked, please contact the person who set it up"
 msgstr ""
 
-#: apps/mtp_auth/views.py:138
+#: apps/mtp_auth/views.py:142
 msgid "We don’t have your email address, please contact the person who set up the account"
 msgstr ""
 
-#: apps/mtp_auth/views.py:140
+#: apps/mtp_auth/views.py:144
 msgid "That email address matches multiple user accounts, please enter your unique username"
 msgstr ""
 
-#: apps/mtp_auth/views.py:195
+#: apps/mtp_auth/views.py:200
 msgid "Your new Money To Prisoners password"
 msgstr ""
 
@@ -525,7 +521,7 @@ msgstr ""
 msgid "Taken"
 msgstr ""
 
-#: apps/payment/models.py:18 apps/transaction/models.py:34
+#: apps/payment/models.py:18 apps/transaction/models.py:33
 msgid "For reconciliation"
 msgstr ""
 
@@ -535,6 +531,61 @@ msgstr ""
 
 #: apps/payment/models.py:44
 msgid "Specified by sender for confirmation emails"
+msgstr ""
+
+#: apps/performance/admin.py:16 apps/performance/models.py:64
+msgid "digital take-up"
+msgstr ""
+
+#: apps/performance/app.py:7
+msgid "Performance"
+msgstr ""
+
+#: apps/performance/forms.py:17
+msgid "Excel file"
+msgstr ""
+
+#: apps/performance/forms.py:19
+msgid "Please upload a Microsoft Excel 97-2003 .xls file"
+msgstr ""
+
+#: apps/performance/forms.py:20
+msgid "The spreadsheet does not contain the expected structure"
+msgstr ""
+
+#: apps/performance/forms.py:21
+#, python-format
+msgid "Cannot look up prison ‘%(prison_name)s’"
+msgstr ""
+
+#: apps/performance/models.py:55
+msgid "Credits by post"
+msgstr ""
+
+#: apps/performance/models.py:56
+msgid "Credits sent digitally"
+msgstr ""
+
+#: apps/performance/views.py:18
+#: templates/admin/performance/digitaltakeup/change_list.html:7
+msgid "Upload spreadsheet"
+msgstr ""
+
+#: apps/performance/views.py:23
+#, python-format
+msgid "Digital take-up saved for %(prison_count)d prisons"
+msgstr ""
+
+#: apps/performance/views.py:75
+msgid "We received credits at these prisons, but spreadsheet is missing them:"
+msgstr ""
+
+#: apps/performance/views.py:79
+msgid "We did not receive credits at these prisons, but spreadsheet has them:"
+msgstr ""
+
+#: apps/performance/views.py:83
+msgid "Credits received do not match those in the spreadsheet:"
 msgstr ""
 
 #: apps/prison/app.py:7
@@ -633,7 +684,7 @@ msgid "This user has no access to MTP applications."
 msgstr ""
 
 #: templates/admin/auth/user/change_form.html:29
-#: templates/admin/auth/user/change_form.html:44 templates/core/index.html:40
+#: templates/admin/auth/user/change_form.html:44 templates/admin/index.html:42
 msgid "Add"
 msgstr ""
 
@@ -658,27 +709,68 @@ msgstr ""
 msgid "Logged in as <strong>%(user_name)s</strong>."
 msgstr ""
 
-#: templates/admin/index.html:8
+#: templates/admin/index.html:12
+msgid "Reports"
+msgstr ""
+
+#: templates/admin/index.html:31
+#, python-format
+msgid "Models in the %(name)s application"
+msgstr ""
+
+#: templates/admin/index.html:48 templates/core/dashboard/module.html:16
+msgid "Change"
+msgstr ""
+
+#: templates/admin/index.html:58
+msgid "You don’t have permission to edit anything."
+msgstr ""
+
+#: templates/admin/index.html:64
+msgid "Testing tools"
+msgstr ""
+
+#: templates/admin/index.html:67
+msgid "Delete and recreate sample data for user testing"
+msgstr ""
+
+#: templates/admin/index.html:69
+msgid "This cannot be undone!"
+msgstr ""
+
+#: templates/admin/index.html:70 templates/core/recreate-test-data.html:25
+msgid "Recreate"
+msgstr ""
+
+#: templates/admin/index.html:86
 msgid "Language"
 msgstr ""
 
-#: templates/admin/index.html:14
+#: templates/admin/index.html:92
 msgid "Select a language"
 msgstr ""
 
-#: templates/admin/index.html:25
+#: templates/admin/index.html:103
 msgid "Switch"
 msgstr ""
 
-#: templates/admin/index.html:37
+#: templates/admin/index.html:115
 msgid "Recent Actions"
 msgstr ""
 
-#: templates/admin/index.html:50
+#: templates/admin/index.html:128
 msgid "Unknown content"
 msgstr ""
 
-#: templates/core/admin_form_filter.html:2
+#: templates/admin/performance/digitaltakeup/upload.html:16
+msgid "Home"
+msgstr ""
+
+#: templates/admin/performance/digitaltakeup/upload.html:38
+msgid "Upload"
+msgstr ""
+
+#: templates/core/admin-form-filter.html:2
 #, python-format
 msgid " By %(filter_title)s "
 msgstr ""
@@ -756,18 +848,18 @@ msgid "Marked as credited through the Cashbook tool"
 msgstr ""
 
 #: templates/core/dashboard/credit-report-cells/error-rate.html:5
-msgid "Proportion of incoming credits that cannot be credited. NB: debit card error rate is not well tracked"
+msgid "Proportion of incoming bank transfers that cannot be credited."
 msgstr ""
 
 #: templates/core/dashboard/credit-report-cells/error-rate.html:7
-msgid "Error rate"
+msgid "Bank transfer error rate"
 msgstr ""
 
 #: templates/core/dashboard/credit-report-cells/payment-method.html:7
 msgid "Received by method"
 msgstr ""
 
-#: templates/core/dashboard/credit-report-cells/payment-method.html:12
+#: templates/core/dashboard/credit-report-cells/payment-method.html:18
 msgid "Debit card"
 msgstr ""
 
@@ -808,10 +900,6 @@ msgstr ""
 msgid "Stand out"
 msgstr ""
 
-#: templates/core/dashboard/module.html:16 templates/core/index.html.py:46
-msgid "Change"
-msgstr ""
-
 #: templates/core/dashboard/module.html:30
 msgid "Update"
 msgstr ""
@@ -821,59 +909,30 @@ msgstr ""
 msgid "View complete results for %(title)s"
 msgstr ""
 
-#: templates/core/index.html:10
-msgid "Reports"
-msgstr ""
-
-#: templates/core/index.html:29
-#, python-format
-msgid "Models in the %(name)s application"
-msgstr ""
-
-#: templates/core/index.html:56
-msgid "You don't have permission to edit anything."
-msgstr ""
-
-#: templates/core/index.html:62
-msgid "Testing tools"
-msgstr ""
-
-#: templates/core/index.html:65
-msgid "Delete and recreate sample data for user testing"
-msgstr ""
-
-#: templates/core/index.html:67
-msgid "This cannot be undone!"
-msgstr ""
-
-#: templates/core/index.html:68 templates/core/recreate_test_data.html.py:25
-msgid "Recreate"
-msgstr ""
-
-#: templates/core/recreate_test_data.html:11
+#: templates/core/recreate-test-data.html:11
 msgid "Run again"
 msgstr ""
 
-#: templates/core/recreate_test_data.html:13
+#: templates/core/recreate-test-data.html:13
 msgid "Output log"
 msgstr ""
 
-#: templates/core/recreate_test_data.html:19
+#: templates/core/recreate-test-data.html:19
 msgid "These actions will delete and recreate sample data. They cannot be undone."
 msgstr ""
 
-#: templates/mtp_auth/new_user.html:6 templates/mtp_auth/new_user.txt.py:2
+#: templates/mtp_auth/new_user.html:6 templates/mtp_auth/new_user.txt:2
 #, python-format
 msgid "Your new Money To Prisoners %(app|default_if_none:'')s account has been created for you."
 msgstr ""
 
-#: templates/mtp_auth/new_user.html:13 templates/mtp_auth/new_user.txt.py:6
+#: templates/mtp_auth/new_user.html:13 templates/mtp_auth/new_user.txt:6
 #: templates/mtp_auth/reset_password.html:11
 #: templates/mtp_auth/reset_password.txt:4
 msgid "Username"
 msgstr ""
 
-#: templates/mtp_auth/new_user.html:17 templates/mtp_auth/new_user.txt.py:7
+#: templates/mtp_auth/new_user.html:17 templates/mtp_auth/new_user.txt:7
 #: templates/mtp_auth/reset_password.html:15
 #: templates/mtp_auth/reset_password.txt:5
 msgid "Password"
