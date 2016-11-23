@@ -3,7 +3,6 @@ from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from model_utils.models import TimeStampedModel
 
-from credit.constants import CREDIT_RESOLUTION
 from credit.models import Credit
 from transaction.constants import (
     TRANSACTION_STATUS, TRANSACTION_CATEGORY, TRANSACTION_SOURCE
@@ -42,17 +41,15 @@ class Transaction(TimeStampedModel):
     STATUS_LOOKUP = {
         TRANSACTION_STATUS.CREDITABLE: (
             Q(credit__prison__isnull=False) &
-            (
-                # for historical consistency, include unidentified that are
-                # already credited
-                Q(incomplete_sender_info=False) |
-                Q(credit__resolution=CREDIT_RESOLUTION.CREDITED)
-            )
+            Q(credit__blocked=False)
         ),
         TRANSACTION_STATUS.REFUNDABLE: (
-            Q(credit__isnull=False) &
-            Q(credit__prison__isnull=True) &
-            Q(incomplete_sender_info=False)
+            Q(incomplete_sender_info=False) & (
+                Q(credit__isnull=False) & (
+                    Q(credit__prison__isnull=True) |
+                    Q(credit__blocked=True)
+                )
+            )
         ),
         TRANSACTION_STATUS.ANONYMOUS: (
             Q(incomplete_sender_info=True) &
@@ -60,9 +57,13 @@ class Transaction(TimeStampedModel):
             Q(source=TRANSACTION_SOURCE.BANK_TRANSFER)
         ),
         TRANSACTION_STATUS.UNIDENTIFIED: (
-            # exclude those which have been credited in the past
-            ~Q(credit__resolution=CREDIT_RESOLUTION.CREDITED) &
             Q(incomplete_sender_info=True) &
+            (
+                Q(credit__isnull=False) & (
+                    Q(credit__prison__isnull=True) |
+                    Q(credit__blocked=True)
+                )
+            ) &
             Q(category=TRANSACTION_CATEGORY.CREDIT) &
             Q(source=TRANSACTION_SOURCE.BANK_TRANSFER)
         ),
@@ -110,6 +111,10 @@ class Transaction(TimeStampedModel):
         return self.credit.refunded if self.credit else False
 
     @property
+    def blocked(self):
+        return self.credit.blocked if self.credit else False
+
+    @property
     def prison(self):
         return self.credit.prison if self.credit else None
 
@@ -127,20 +132,23 @@ class Transaction(TimeStampedModel):
 
     @property
     def refundable(self):
-        return self.credit and self.prison is None and not self.incomplete_sender_info
-
-    @property
-    def creditable(self):
-        return self.prison is not None and (
-            not self.incomplete_sender_info or self.credited
+        return (
+            self.credit and (self.prison is None or self.blocked) and
+            not self.incomplete_sender_info
         )
 
     @property
+    def creditable(self):
+        return self.credit and self.prison is not None and not self.blocked
+
+    @property
     def unidentified(self):
-        return (not self.credited and
-                self.incomplete_sender_info and
-                self.category == TRANSACTION_CATEGORY.CREDIT and
-                self.source == TRANSACTION_SOURCE.BANK_TRANSFER)
+        return (
+            self.incomplete_sender_info and
+            (self.prison is None or self.blocked) and
+            self.category == TRANSACTION_CATEGORY.CREDIT and
+            self.source == TRANSACTION_SOURCE.BANK_TRANSFER
+        )
 
     @property
     def anomalous(self):

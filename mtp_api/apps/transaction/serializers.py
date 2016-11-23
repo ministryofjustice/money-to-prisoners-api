@@ -21,13 +21,15 @@ class CreateTransactionListSerializer(serializers.ListSerializer):
             batch = data.pop('batch', None)
             prisoner_number = data.pop('prisoner_number', None)
             prisoner_dob = data.pop('prisoner_dob', None)
+            blocked = data.pop('blocked', False)
             if (data['category'] == TRANSACTION_CATEGORY.CREDIT and
                     data['source'] == TRANSACTION_SOURCE.BANK_TRANSFER):
                 new_credit = Credit(
                     amount=data['amount'],
                     prisoner_number=prisoner_number,
                     prisoner_dob=prisoner_dob,
-                    received_at=data['received_at']
+                    received_at=data['received_at'],
+                    blocked=blocked
                 )
                 new_credit.save()
                 data['credit'] = new_credit
@@ -50,6 +52,7 @@ class CreateTransactionListSerializer(serializers.ListSerializer):
 class CreateTransactionSerializer(serializers.ModelSerializer):
     prisoner_dob = serializers.DateField(required=False)
     prisoner_number = serializers.CharField(required=False)
+    blocked = serializers.BooleanField(required=False)
     batch = serializers.PrimaryKeyRelatedField(queryset=Batch.objects.all(), required=False)
 
     class Meta:
@@ -72,6 +75,7 @@ class CreateTransactionSerializer(serializers.ModelSerializer):
             'processor_type_code',
             'reference_in_sender_field',
             'batch',
+            'blocked',
         )
 
 
@@ -107,6 +111,7 @@ class TransactionSerializer(serializers.ModelSerializer):
     prison = PrisonSerializer(required=False)
     credited = fields.BooleanField()
     refunded = fields.BooleanField()
+    blocked = fields.BooleanField()
 
     class Meta:
         model = Transaction
@@ -126,6 +131,7 @@ class TransactionSerializer(serializers.ModelSerializer):
             'source',
             'ref_code',
             'reference_in_sender_field',
+            'blocked',
         )
 
 

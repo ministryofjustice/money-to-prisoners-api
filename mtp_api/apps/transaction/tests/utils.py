@@ -105,7 +105,7 @@ def get_sender_prisoner_pairs():
 
 
 def generate_initial_transactions_data(
-        tot=50,
+        tot=100,
         prisoner_location_generator=None,
         include_debits=True,
         include_administrative_credits=True,
@@ -166,12 +166,15 @@ def generate_initial_transactions_data(
                 data['prisoner_dob'] = prisoner.prisoner_dob
                 data['prison'] = prisoner.prison
 
-            if omit_sender_details:
+            if (omit_sender_details or (
+                    'sender_roll_number' in data and
+                    transaction_counter % 3 == 0)):
                 data['incomplete_sender_info'] = True
-                del data['sender_name']
                 if data.get('sender_roll_number'):
                     del data['sender_roll_number']
                 else:
+                    data['blocked'] = True
+                    del data['sender_name']
                     del data['sender_account_number']
                     if transaction_counter % 2 == 0:
                         del data['sender_sort_code']
@@ -236,7 +239,7 @@ def generate_predetermined_transactions_data():
 
 
 def generate_transactions(
-    transaction_batch=50,
+    transaction_batch=100,
     predetermined_transactions=False,
     consistent_history=False,
     include_debits=True,
@@ -358,6 +361,7 @@ def save_transaction(data):
     prison = data.pop('prison', None)
     reconciled = data.pop('reconciled', False)
     owner = data.pop('owner', None)
+    blocked = data.pop('blocked', False)
 
     if (data['category'] == TRANSACTION_CATEGORY.CREDIT and
             data['source'] == TRANSACTION_SOURCE.BANK_TRANSFER):
@@ -370,7 +374,8 @@ def save_transaction(data):
             reconciled=reconciled,
             owner=owner,
             received_at=data['received_at'],
-            resolution=resolution
+            resolution=resolution,
+            blocked=blocked
         )
         credit.save()
         data['credit'] = credit

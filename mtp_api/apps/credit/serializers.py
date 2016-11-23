@@ -75,7 +75,7 @@ class CreditSerializer(serializers.ModelSerializer):
 
     def get_anonymous(self, obj):
         try:
-            return obj.transaction.incomplete_sender_info
+            return obj.transaction.incomplete_sender_info and obj.blocked
         except AttributeError:
             return False
 

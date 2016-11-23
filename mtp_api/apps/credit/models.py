@@ -30,6 +30,7 @@ class Credit(TimeStampedModel):
     resolution = models.CharField(max_length=50, choices=CREDIT_RESOLUTION, default=CREDIT_RESOLUTION.PENDING)
     reconciled = models.BooleanField(default=False)
     reviewed = models.BooleanField(default=False)
+    blocked = models.BooleanField(default=False)
 
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
 
@@ -43,13 +44,10 @@ class Credit(TimeStampedModel):
             Q(resolution=CREDIT_RESOLUTION.PENDING)
         ),
         CREDIT_STATUS.AVAILABLE: (
+            Q(blocked=False) &
             Q(prison__isnull=False) &
             Q(owner__isnull=True) &
-            Q(resolution=CREDIT_RESOLUTION.PENDING) &
-            (
-                Q(transaction__incomplete_sender_info=False) |
-                Q(transaction__isnull=True)
-            )
+            Q(resolution=CREDIT_RESOLUTION.PENDING)
         ),
         CREDIT_STATUS.CREDITED: (
             Q(resolution=CREDIT_RESOLUTION.CREDITED)
@@ -58,7 +56,7 @@ class Credit(TimeStampedModel):
             Q(resolution=CREDIT_RESOLUTION.REFUNDED)
         ),
         CREDIT_STATUS.REFUND_PENDING: (
-            Q(prison__isnull=True) &
+            (Q(prison__isnull=True) | Q(blocked=True)) &
             Q(resolution=CREDIT_RESOLUTION.PENDING) &
             (
                 Q(transaction__isnull=True) |
@@ -148,10 +146,7 @@ class Credit(TimeStampedModel):
         return (
             self.owner is None and self.prison is not None and
             self.resolution == CREDIT_RESOLUTION.PENDING and
-            (
-                not hasattr(self, 'transaction') or
-                not self.transaction.incomplete_sender_info
-            )
+            not self.blocked
         )
 
     @property
@@ -171,7 +166,8 @@ class Credit(TimeStampedModel):
     @property
     def refund_pending(self):
         return (
-            self.prison is None and self.resolution == CREDIT_RESOLUTION.PENDING and
+            (self.prison is None or self.blocked) and
+            self.resolution == CREDIT_RESOLUTION.PENDING and
             (
                 not hasattr(self, 'transaction') or
                 not self.transaction.incomplete_sender_info
