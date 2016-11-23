@@ -2,6 +2,83 @@
 {% load i18n %}
 {% load log %}
 
+
+{% block content %}
+  <div id="content-main">
+
+    {% if show_reports %}
+      <div class="module">
+        <table>
+          <caption>{% trans 'Reports' %}</caption>
+          <tbody>
+            <tr>
+              <th scope="row" colspan="2">
+                <a href="{% url 'admin:dashboard' %}">{% trans 'Dashboard' %}</a>
+              </th>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+
+    {# if app_list block copied from super template as it cannot be extended #}
+    {% if app_list %}
+      {% for app in app_list %}
+        <div class="app-{{ app.app_label }} module">
+          <table>
+            <caption>
+              <a href="{{ app.app_url }}" class="section" title="{% blocktrans with name=app.name %}Models in the {{ name }} application{% endblocktrans %}">{{ app.name }}</a>
+            </caption>
+            {% for model in app.models %}
+              <tr class="model-{{ model.object_name|lower }}">
+                {% if model.admin_url %}
+                  <th scope="row"><a href="{{ model.admin_url }}">{{ model.name }}</a></th>
+                {% else %}
+                  <th scope="row">{{ model.name }}</th>
+                {% endif %}
+
+                {% if model.add_url %}
+                  <td><a href="{{ model.add_url }}" class="addlink">{% trans 'Add' %}</a></td>
+                {% else %}
+                  <td>&nbsp;</td>
+                {% endif %}
+
+                {% if model.admin_url %}
+                  <td><a href="{{ model.admin_url }}" class="changelink">{% trans 'Change' %}</a></td>
+                {% else %}
+                  <td>&nbsp;</td>
+                {% endif %}
+              </tr>
+            {% endfor %}
+          </table>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p>{% trans 'You don’t have permission to edit anything.' %}</p>
+    {% endif %}
+
+    {% if show_recreate_test_data %}
+      <div class="module">
+        <table>
+          <caption>{% trans 'Testing tools' %}</caption>
+          <tbody>
+            <tr>
+              <th scope="row">{% trans 'Delete and recreate sample data for user testing' %}</th>
+              <td>
+                <a href="{% url 'admin:recreate_test_data' %}" class="deletelink" title="{% trans 'This cannot be undone!' %}">
+                  {% trans 'Recreate' %}
+                </a>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+
+  </div>
+{% endblock %}
+
+
 {% block sidebar %}
   <div id="content-related">
     <div class="module" id="mtp-locale-module">

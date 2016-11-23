@@ -16,7 +16,6 @@ class AdminSite(admin.AdminSite):
     site_title = _('Send money to a prisoner')
     site_header = _('Send money to a prisoner')
     site_url = None
-    index_template = 'core/index.html'
 
     def get_urls(self):
         from core.views import DashboardView, RecreateTestDataView
@@ -58,7 +57,7 @@ site.register(models.ScheduledCommand, ScheduledCommandAdmin)
 
 
 class FormFilter(admin.FieldListFilter):
-    template = 'core/admin_form_filter.html'
+    template = 'core/admin-form-filter.html'
 
     def __init__(self, field, request, params, model, model_admin, field_path):
         self.field_generic = '%s__' % field_path

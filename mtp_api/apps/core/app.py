@@ -4,7 +4,7 @@ from django.utils.translation import gettext_lazy as _
 
 class AppConfig(DjangoAppConfig):
     name = 'core'
-    verbose_name = _('MTP')
+    verbose_name = _('Send money to a prisoner')
 
     def ready(self):
         from django.contrib import admin
