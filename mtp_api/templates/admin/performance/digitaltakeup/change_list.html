@@ -1,0 +1,23 @@
+{% extends 'admin/change_list.html' %}
+{% load i18n %}
+{% load tick_charts %}
+
+{% block object-tools-items %}
+  <li>
+    <a href="{% url 'admin:digital_takeup_upload' %}" class="addlink">{% trans 'Upload spreadsheet' %}</a>
+  </li>
+  {{ block.super }}
+{% endblock %}
+
+{% block filters %}
+
+{#  {% for dd in cl.queryset.digital_takeup_per_day %}#}
+{#    §{{ dd.start_date }}-{{ dd.digital_takeup_per_day }}#}
+{#  {% endfor %}#}
+
+{#  {{ cl.queryset.digital_takeup_per_day }}#}
+
+    {% tick_chart values=cl.queryset.digital_takeup_per_day stride_field='start_date' value_field='digital_takeup_per_day' max_value=1.0 %}
+
+  {{ block.super }}
+{% endblock %}

@@ -113,9 +113,11 @@ class InvalidCompletionRateUpdater(CompletionRateUpdater):
             ~Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.CREDITABLE]
         ).count()
 
-registry = {}
-registry['completion-rate'] = [
-    TotalCompletionRateUpdater,
-    ValidCompletionRateUpdater,
-    InvalidCompletionRateUpdater
-]
+
+registry = {
+    'completion-rate': [
+        TotalCompletionRateUpdater,
+        ValidCompletionRateUpdater,
+        InvalidCompletionRateUpdater
+    ],
+}
