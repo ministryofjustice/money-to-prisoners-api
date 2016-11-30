@@ -7,7 +7,7 @@
       <strong>
         <span class="credit-stat--valign">
           {{ dashboard_module.refundable_count|format_number }}
-          <sub>{{ dashboard_module.refundable_amount|format_amount }}</sub>
+          <sub class="credit-stat--quiet">{{ dashboard_module.refundable_amount|format_amount }}</sub>
         </span>
       </strong>
       {% trans 'Refunded' %}
@@ -17,7 +17,7 @@
         ／
         <span class="credit-stat--valign">
           {{ dashboard_module.refundable_count|format_number }}
-          <sub>{{ dashboard_module.refundable_amount|format_amount }}</sub>
+          <sub class="credit-stat--quiet">{{ dashboard_module.refundable_amount|format_amount }}</sub>
         </span>
       </strong>
       {% trans 'Refunded' %} / {% trans 'Refundable' %}

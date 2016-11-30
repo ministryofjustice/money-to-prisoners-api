@@ -3,14 +3,19 @@
 
 <td>
   <div class="credit-stat">
-    <dl>
-      <dd>{% trans 'Crediting' %}</dd>
+    <table>
+      <caption>{% trans 'Crediting' %}</caption>
+      <tbody>
+        <tr title="{% trans 'Proportion of creditable that is debit card payments, i.e. ignores rejected bank transfers' %}">
+          <th>{% trans 'Debit cards' %}:</th>
+          <td>{{ dashboard_module.creditable_payment_proportion|format_percentage }}</td>
+        </tr>
 
-      <dt title="{% trans 'Proportion of creditable that is debit card payments, i.e. ignores rejected bank transfers' %}">{% trans 'Debit cards' %}:</dt>
-      <dd>{{ dashboard_module.creditable_payment_proportion|format_percentage }}</dd>
-
-      <dt title="{% trans 'The average time between receipt and crediting in the Digital Cashbook' %}">{% trans 'Time to credit' %}:</dt>
-      <dd>{{ dashboard_module.average_crediting_time|format_timedelta }}</dd>
-    </dl>
+        <tr title="{% trans 'The average time between receipt and crediting in the Digital Cashbook' %}">
+          <th>{% trans 'Time to credit' %}:</th>
+          <td>{{ dashboard_module.average_crediting_time|format_timedelta }}</td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 </td>
