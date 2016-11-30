@@ -3,19 +3,26 @@
 
 <td>
   <div class="credit-stat">
-    <dl>
-      <dd>{% trans 'Bank transfer issues' %}</dd>
+    <table>
+      <caption>{% trans 'Bank transfer issues' %}</caption>
+      <tbody>
+        <tr title="{% trans 'Bank transfers that contained incomplete sender information' %}">
+          <th>{% trans 'Anonymous' %}:</th>
+          <td>{{ dashboard_module.anonymous_count|format_number }}</td>
+        </tr>
 
-      <dt title="{% trans 'Bank transfers that contained incomplete sender information' %}">{% trans 'Anonymous' %}:</dt>
-      <dd>{{ dashboard_module.anonymous_count|format_number }}</dd>
+        <tr title="{% trans 'Bank transfers that do not match a prisoner and cannot be refunded' %}">
+          <th>{% trans 'Unidentified' %}:</th>
+          <td>{{ dashboard_module.unidentified_count|format_number }}</td>
+        </tr>
 
-      <dt title="{% trans 'Bank transfers that do not match a prisoner and cannot be refunded' %}">{% trans 'Unidentified' %}:</dt>
-      <dd>{{ dashboard_module.unidentified_count|format_number }}</dd>
-
-      {% if not prison %}
-        <dt title="{% trans 'Bank transfers marked as administrative, e.g. WorldPay settlements or NOMS reimbursing a payment out to a supplier' %}">{% trans 'Administrative' %}:</dt>
-        <dd>{{ dashboard_module.anomalous_count|format_number }}</dd>
-      {% endif %}
-    </dl>
+        {% if not prison %}
+          <tr title="{% trans 'Bank transfers marked as administrative, e.g. WorldPay settlements or NOMS reimbursing a payment out to a supplier' %}">
+            <th>{% trans 'Administrative' %}:</th>
+            <td>{{ dashboard_module.anomalous_count|format_number }}</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
   </div>
 </td>

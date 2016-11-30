@@ -3,26 +3,25 @@
 
 <td>
   <div class="credit-stat">
-    <dl>
-      <dd>{% trans 'Received by method' %}</dd>
+    <table>
+      <caption>{% trans 'Received by method' %}</caption>
+      <tbody>
+        <tr>
+          <th>{% trans 'Bank transfer' %}:</th>
+          <td>{{ dashboard_module.received_transaction_count|format_number }}</td>
+        </tr>
+        <tr>
+          <td colspan="2" class="credit-stat--quiet">{{ dashboard_module.received_transaction_amount|format_amount }}</td>
+        </tr>
 
-      <dt>{% trans 'Bank transfer' %}:</dt>
-      <dd>
-        <small>
-          {{ dashboard_module.received_transaction_count|format_number }}
-          <br>
-          {{ dashboard_module.received_transaction_amount|format_amount }}
-        </small>
-      </dd>
-
-      <dt>{% trans 'Debit card' %}:</dt>
-      <dd>
-        <small>
-          {{ dashboard_module.received_payment_count|format_number }}
-          <br>
-          {{ dashboard_module.received_payment_amount|format_amount }}
-        </small>
-      </dd>
-    </dl>
+        <tr>
+          <th>{% trans 'Debit card' %}:</th>
+          <td>{{ dashboard_module.received_payment_count|format_number }}</td>
+        </tr>
+        <tr>
+          <td colspan="2" class="credit-stat--quiet">{{ dashboard_module.received_payment_amount|format_amount }}</td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 </td>

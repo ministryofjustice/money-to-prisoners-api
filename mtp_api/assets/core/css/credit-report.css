@@ -1,4 +1,4 @@
-#id_credit_report table {
+#id_credit_report > table {
   min-width: 880px;
 }
 
@@ -28,34 +28,41 @@
   margin-top: -0.2em;
   margin-bottom: 0.2em;
   font-size: 0.5em;
+}
+
+.credit-stat .credit-stat--quiet {
   color: #555;
 }
 
-.credit-stat dl {
-  display: inline-block;
-  overflow: hidden;
-  margin: 0;
-  padding: 0;
+.credit-stat table {
+  margin: 0 auto;
   min-width: 12em;
 }
-.credit-stat dt {
-  float: left;
-  clear: left;
-  margin: 0;
-  padding: 0;
-  line-height: normal;
+
+.credit-stat caption, .credit-stat th, .credit-stat td {
+  background: inherit;
+  border: none;
+  color: inherit;
+  font-size: inherit;
   font-weight: normal;
-}
-.credit-stat dd {
-  float: left;
-  margin: 0;
-  padding: 0;
   line-height: normal;
-  font-weight: bold;
+  padding: 0;
 }
 
-.credit-stat dt + dd {
-  padding-left: 10%;
+.credit-stat caption {
+  font-weight: bold;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.credit-stat th {
+  padding-right: 1em;
+  text-align: left;
+}
+
+.credit-stat td {
+  font-weight: bold;
+  text-align: right;
 }
 
 .mtp-dashboard-module-standout .credit-stat {
@@ -70,12 +77,10 @@
 
 .mtp-dashboard-module-standout .credit-stat--valign sub {
   margin-bottom: 0;
-  color: #ccc;
 }
 
-.mtp-dashboard-module-standout .credit-stat dt,
-.mtp-dashboard-module-standout .credit-stat dd {
-  font-size: 1em;
+.mtp-dashboard-module-standout .credit-stat .credit-stat--quiet {
+  color: #ccc;
 }
 
 #credit-chart {
