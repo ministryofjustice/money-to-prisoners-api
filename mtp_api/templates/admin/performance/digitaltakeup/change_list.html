@@ -10,14 +10,7 @@
 {% endblock %}
 
 {% block filters %}
-
-{#  {% for dd in cl.queryset.digital_takeup_per_day %}#}
-{#    §{{ dd.start_date }}-{{ dd.digital_takeup_per_day }}#}
-{#  {% endfor %}#}
-
-{#  {{ cl.queryset.digital_takeup_per_day }}#}
-
-    {% tick_chart values=cl.queryset.digital_takeup_per_day stride_field='start_date' value_field='digital_takeup_per_day' max_value=1.0 %}
+    {% tick_chart values=cl.queryset.digital_takeup_per_day stride_field='date' value_field='digital_takeup_per_day' max_value=1.0 %}
 
   {{ block.super }}
 {% endblock %}

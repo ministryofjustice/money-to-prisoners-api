@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: MTP api\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-11-23 16:56+0000\n"
+"POT-Creation-Date: 2016-11-30 16:27+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Igor U <igor.ushkarev@digital.justice.gov.uk>, 2016\n"
 "Language-Team: Welsh (https://www.transifex.com/ministry-of-justice/teams/34553/cy/)\n"
@@ -533,7 +533,7 @@ msgstr ""
 msgid "Specified by sender for confirmation emails"
 msgstr ""
 
-#: apps/performance/admin.py:16 apps/performance/models.py:64
+#: apps/performance/admin.py:16 apps/performance/models.py:63
 msgid "digital take-up"
 msgstr ""
 
@@ -554,15 +554,19 @@ msgid "The spreadsheet does not contain the expected structure"
 msgstr ""
 
 #: apps/performance/forms.py:21
+msgid "The report data should be for one day only"
+msgstr ""
+
+#: apps/performance/forms.py:22
 #, python-format
 msgid "Cannot look up prison ‘%(prison_name)s’"
 msgstr ""
 
-#: apps/performance/models.py:55
+#: apps/performance/models.py:54
 msgid "Credits by post"
 msgstr ""
 
-#: apps/performance/models.py:56
+#: apps/performance/models.py:55
 msgid "Credits sent digitally"
 msgstr ""
 
@@ -576,15 +580,15 @@ msgstr ""
 msgid "Digital take-up saved for %(prison_count)d prisons"
 msgstr ""
 
-#: apps/performance/views.py:75
+#: apps/performance/views.py:74
 msgid "We received credits at these prisons, but spreadsheet is missing them:"
 msgstr ""
 
-#: apps/performance/views.py:79
+#: apps/performance/views.py:78
 msgid "We did not receive credits at these prisons, but spreadsheet has them:"
 msgstr ""
 
-#: apps/performance/views.py:83
+#: apps/performance/views.py:82
 msgid "Credits received do not match those in the spreadsheet:"
 msgstr ""
 
@@ -941,4 +945,12 @@ msgstr ""
 #: templates/mtp_auth/reset_password.html:6
 #: templates/mtp_auth/reset_password.txt:2
 msgid "Your new Money To Prisoners password has been created for you."
+msgstr ""
+
+#: urls.py:33
+msgid "Page not found"
+msgstr ""
+
+#: urls.py:35
+msgid "Sorry, something went wrong"
 msgstr ""

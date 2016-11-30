@@ -11,20 +11,17 @@ class DigitalUptakeTestCase(TestCase):
 
     def test_calculate_uptake(self):
         self.assertIsNone(DigitalTakeup.objects.mean_digital_takeup())
-        tuesday = datetime.date(2016, 10, 26)
-        wednesday = tuesday + datetime.timedelta(days=6)
+        date = datetime.date(2016, 10, 26)
         prison1 = Prison.objects.get(pk='INP')
         prison2 = Prison.objects.get(pk='IXB')
         DigitalTakeup.objects.create(
-            start_date=tuesday,
-            end_date=wednesday,
+            date=date,
             prison=prison1,
             credits_by_post=21,
             credits_by_mtp=13,
         )
         DigitalTakeup.objects.create(
-            start_date=tuesday,
-            end_date=wednesday,
+            date=date,
             prison=prison2,
             credits_by_post=19,
             credits_by_mtp=23,

@@ -28,28 +28,27 @@ class DigitalTakeupUploadView(AdminViewMixin, FormView):
         return context_data
 
     def form_valid(self, form):
-        self.check_takeup(form.start_date, form.end_date, form.credits_by_prison)
+        self.check_takeup(form.date, form.credits_by_prison)
         form.save()
         LogEntry.objects.log_action(
             user_id=self.request.user.pk,
             content_type_id=None, object_id=None,
             object_repr=self.save_message % {
-                'date': date_format(form.start_date, 'DATE_FORMAT'),
+                'date': date_format(form.date, 'DATE_FORMAT'),
                 'prison_count': len(form.credits_by_prison),
             },
             action_flag=ADDITION_LOG_ENTRY,
         )
         messages.success(self.request, self.save_message % {
-            'date': date_format(form.start_date, 'DATE_FORMAT'),
+            'date': date_format(form.date, 'DATE_FORMAT'),
             'prison_count': len(form.credits_by_prison),
         })
         return super().form_valid(form)
 
-    def check_takeup(self, start_date, end_date, credits_in_spreadsheet):
+    def check_takeup(self, date, credits_in_spreadsheet):
         from credit.models import Log, LOG_ACTIONS
 
-        credited = Log.objects.filter(created__date__range=(start_date, end_date),
-                                      action=LOG_ACTIONS.CREDITED) \
+        credited = Log.objects.filter(created__date=date, action=LOG_ACTIONS.CREDITED) \
             .values('credit__prison__nomis_id') \
             .order_by('credit__prison__nomis_id') \
             .annotate(count=models.Count('credit__prison__nomis_id'))

@@ -25,10 +25,10 @@ class DigitalTakeupQueryset(models.QuerySet):
         :return: generator
         """
         values = self.digital_takeup().exclude(digital_takeup__isnull=True) \
-            .values('start_date', 'digital_takeup').order_by('start_date')
-        for start_date, group in itertools.groupby(values, key=lambda value: value['start_date']):
+            .values('date', 'digital_takeup').order_by('date')
+        for date, group in itertools.groupby(values, key=lambda value: value['date']):
             yield {
-                'start_date': start_date,
+                'date': date,
                 'digital_takeup_per_day': mean(value['digital_takeup'] for value in group),
             }
 
@@ -49,8 +49,7 @@ class DigitalTakeupQueryset(models.QuerySet):
 
 
 class DigitalTakeup(models.Model):
-    start_date = models.DateField()
-    end_date = models.DateField()
+    date = models.DateField()
     prison = models.ForeignKey('prison.Prison', on_delete=models.CASCADE)
     credits_by_post = models.IntegerField(verbose_name=_('Credits by post'))
     credits_by_mtp = models.IntegerField(verbose_name=_('Credits sent digitally'))
@@ -58,9 +57,9 @@ class DigitalTakeup(models.Model):
     objects = DigitalTakeupQueryset.as_manager()
 
     class Meta:
-        unique_together = ('start_date', 'end_date', 'prison')
-        ordering = ('start_date',)
-        get_latest_by = 'start_date'
+        unique_together = ('date', 'prison')
+        ordering = ('date',)
+        get_latest_by = 'date'
         verbose_name = verbose_name_plural = _('digital take-up')
 
     def __init__(self, *args, **kwargs):
@@ -68,7 +67,7 @@ class DigitalTakeup(models.Model):
         self._digital_takeup = NotImplemented
 
     def __str__(self):
-        return '%s–%s %s' % (self.start_date, self.end_date, self.prison_id)
+        return '%s %s' % (self.date, self.prison_id)
 
     @property
     def credits_total(self):
