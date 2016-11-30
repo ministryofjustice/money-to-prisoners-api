@@ -18,6 +18,7 @@ class DigitalTakeupUploadForm(forms.Form):
     error_messages = {
         'cannot_read': _('Please upload a Microsoft Excel 97-2003 .xls file'),
         'invalid': _('The spreadsheet does not contain the expected structure'),
+        'invalid_date': _('The report data should be for one day only'),
         'unknown_prison': _('Cannot look up prison ‘%(prison_name)s’'),
     }
     credit_type_mtp = 'MRPR'
@@ -25,8 +26,7 @@ class DigitalTakeupUploadForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.start_date = None
-        self.end_date = None
+        self.date = None
         self.credits_by_prison = {}
 
         from prison.models import Prison
@@ -74,8 +74,11 @@ class DigitalTakeupUploadForm(forms.Form):
                     continue
             raise ValueError('Cannot parse date header %s' % date_str)
 
-        self.start_date = parse_date(sheet.cell_value(2, 0), sheet.cell_value(2, 1))
-        self.end_date = parse_date(sheet.cell_value(3, 0), sheet.cell_value(3, 1))
+        start_date = parse_date(sheet.cell_value(2, 0), sheet.cell_value(2, 1))
+        end_date = parse_date(sheet.cell_value(3, 0), sheet.cell_value(3, 1))
+        if start_date != end_date:
+            raise ValidationError(self.error_messages['invalid_date'], code='invalid_date')
+        self.date = start_date
 
         row = data_start_row
         while row < sheet.nrows:
@@ -107,13 +110,14 @@ class DigitalTakeupUploadForm(forms.Form):
         excel_file = self.cleaned_data.get('excel_file')
         if excel_file:
             from xlrd import open_workbook, XLRDError
+            from xlrd.compdoc import CompDocError
 
             try:
                 with open_workbook(filename=excel_file.name, file_contents=excel_file.read(),
                                    on_demand=True) as work_book:
                     sheet = work_book.get_sheet(0)
                     self.parse_excel_sheet(sheet)
-            except XLRDError:
+            except (IndexError, CompDocError, XLRDError):
                 raise ValidationError(self.error_messages['cannot_read'], code='cannot_read')
             except ValueError:
                 logger.warning('Cannot parse spreadsheet', exc_info=True)
@@ -130,8 +134,7 @@ class DigitalTakeupUploadForm(forms.Form):
                     credits_by_post=credit_by_prison[DigitalTakeupUploadForm.credit_type_post],
                     credits_by_mtp=credit_by_prison[DigitalTakeupUploadForm.credit_type_mtp],
                 ),
-                start_date=self.start_date,
-                end_date=self.end_date,
+                date=self.date,
                 prison_id=nomis_id,
             )[0]
             for nomis_id, credit_by_prison in self.credits_by_prison.items()
