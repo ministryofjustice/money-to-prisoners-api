@@ -3,10 +3,10 @@
     "model": "prison.prison",
     "pk": "HDI",
     "fields": {
-      "name": "HMP & YOI HATFIELD",
+      "name": "HMP & YOI Hatfield",
       "general_ledger_code": "150",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "Yorkshire and Humberside",
       "populations": [1,3,4],
       "categories": [4,5]
@@ -16,10 +16,10 @@
     "model": "prison.prison",
     "pk": "IWI",
     "fields": {
-      "name": "HMP ISLE OF WIGHT",
+      "name": "HMP Isle Of Wight",
       "general_ledger_code": "137",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "South Central",
       "populations": [1,3],
       "categories": [2]
@@ -29,10 +29,10 @@
     "model": "prison.prison",
     "pk": "HMI",
     "fields": {
-      "name": "HMP HUMBER",
+      "name": "HMP Humber",
       "general_ledger_code": "039",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "Yorkshire and Humberside",
       "populations": [1,3],
       "categories": [3]
@@ -42,10 +42,10 @@
     "model": "prison.prison",
     "pk": "KTI",
     "fields": {
-      "name": "HMP KENNET",
+      "name": "HMP Kennet",
       "general_ledger_code": "004",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "North West",
       "populations": [1,3],
       "categories": [3]
@@ -55,10 +55,10 @@
     "model": "prison.prison",
     "pk": "HEI",
     "fields": {
-      "name": "HMP HEWELL",
+      "name": "HMP Hewell",
       "general_ledger_code": "005",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "West Midlands",
       "populations": [1,3],
       "categories": [2,3,4]
@@ -68,10 +68,10 @@
     "model": "prison.prison",
     "pk": "AGI",
     "fields": {
-      "name": "HMP & YOI ASKHAM GRANGE",
+      "name": "HMP & YOI Askham Grange",
       "general_ledger_code": "004",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "Yorkshire and Humberside",
       "populations": [1,2,4],
       "categories": [4,5]
@@ -81,10 +81,10 @@
     "model": "prison.prison",
     "pk": "AYI",
     "fields": {
-      "name": "HMP AYLESBURY",
+      "name": "HMP Aylesbury",
       "general_ledger_code": "005",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "South Central",
       "populations": [3,4],
       "categories": [5]
@@ -94,10 +94,10 @@
     "model": "prison.prison",
     "pk": "BFI",
     "fields": {
-      "name": "HMP BEDFORD",
+      "name": "HMP Bedford",
       "general_ledger_code": "006",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "East of England",
       "populations": [1,3],
       "categories": [2]
@@ -107,10 +107,10 @@
     "model": "prison.prison",
     "pk": "BAI",
     "fields": {
-      "name": "HMP BELMARSH",
+      "name": "HMP Belmarsh",
       "general_ledger_code": "007",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "London",
       "populations": [1,3],
       "categories": [1]
@@ -120,10 +120,10 @@
     "model": "prison.prison",
     "pk": "BHI",
     "fields": {
-      "name": "HMP BLANTYRE HOUSE",
+      "name": "HMP Blantyre House",
       "general_ledger_code": "010",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "Kent and Sussex",
       "populations": [1,3],
       "categories": [3,4]
@@ -133,10 +133,10 @@
     "model": "prison.prison",
     "pk": "BSI",
     "fields": {
-      "name": "HMP BRINSFORD",
+      "name": "HMP Brinsford",
       "general_ledger_code": "012",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "West Midlands",
       "populations": [3,4],
       "categories": [5]
@@ -146,10 +146,10 @@
     "model": "prison.prison",
     "pk": "BLI",
     "fields": {
-      "name": "HMP BRISTOL",
+      "name": "HMP Bristol",
       "general_ledger_code": "013",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "South West",
       "populations": [1,3,4],
       "categories": [2]
@@ -159,10 +159,10 @@
     "model": "prison.prison",
     "pk": "BXI",
     "fields": {
-      "name": "HMP BRIXTON",
+      "name": "HMP Brixton",
       "general_ledger_code": "014",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "London",
       "populations": [1,3],
       "categories": [3]
@@ -172,10 +172,10 @@
     "model": "prison.prison",
     "pk": "BCI",
     "fields": {
-      "name": "HMP BUCKLEY HALL",
+      "name": "HMP Buckley Hall",
       "general_ledger_code": "016",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "North West",
       "populations": [1,3],
       "categories": [3]
@@ -185,10 +185,10 @@
     "model": "prison.prison",
     "pk": "BNI",
     "fields": {
-      "name": "HMP BULLINGDON",
+      "name": "HMP Bullingdon",
       "general_ledger_code": "017",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "South Central",
       "populations": [1,3],
       "categories": [2,3]
@@ -198,10 +198,10 @@
     "model": "prison.prison",
     "pk": "CFI",
     "fields": {
-      "name": "HMP CARDIFF",
+      "name": "HMP Cardiff",
       "general_ledger_code": "021",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "Wales",
       "populations": [1,3],
       "categories": [2]
@@ -211,10 +211,10 @@
     "model": "prison.prison",
     "pk": "CWI",
     "fields": {
-      "name": "HMP CHANNINGS WOOD",
+      "name": "HMP Channings Wood",
       "general_ledger_code": "023",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "South West",
       "populations": [1,3],
       "categories": [3]
@@ -224,10 +224,10 @@
     "model": "prison.prison",
     "pk": "CLI",
     "fields": {
-      "name": "HMP COLDINGLEY",
+      "name": "HMP Coldingley",
       "general_ledger_code": "025",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "London",
       "populations": [1,3],
       "categories": [3]
@@ -237,10 +237,10 @@
     "model": "prison.prison",
     "pk": "CKI",
     "fields": {
-      "name": "HMP COOKHAM WOOD",
+      "name": "HMP Cookham Wood",
       "general_ledger_code": "026",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "Kent and Sussex",
       "populations": [3,4],
       "categories": [5]
@@ -250,10 +250,10 @@
     "model": "prison.prison",
     "pk": "DAI",
     "fields": {
-      "name": "HMP DARTMOOR",
+      "name": "HMP Dartmoor",
       "general_ledger_code": "027",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "South West",
       "populations": [1,3],
       "categories": [3]
@@ -263,10 +263,10 @@
     "model": "prison.prison",
     "pk": "DTI",
     "fields": {
-      "name": "HMYOI DEERBOLT",
+      "name": "HMYOI Deerbolt",
       "general_ledger_code": "044",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "North East",
       "populations": [3,4],
       "categories": [5]
@@ -276,10 +276,10 @@
     "model": "prison.prison",
     "pk": "DVI",
     "fields": {
-      "name": "IRC DOVER",
+      "name": "IRC Dover",
       "general_ledger_code": "047",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "Kent and Sussex",
       "populations": [1,3],
       "categories": [6]
@@ -289,10 +289,10 @@
     "model": "prison.prison",
     "pk": "DWI",
     "fields": {
-      "name": "HMP DOWNVIEW",
+      "name": "HMP Downview",
       "general_ledger_code": "031",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "London",
       "populations": [1,2,4],
       "categories": [3,5]
@@ -302,10 +302,10 @@
     "model": "prison.prison",
     "pk": "DHI",
     "fields": {
-      "name": "HMP & YOI DRAKE HALL",
+      "name": "HMP & YOI Drake Hall",
       "general_ledger_code": "032",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "West Midlands",
       "populations": [2,3,4],
       "categories": [3,5]
@@ -315,10 +315,10 @@
     "model": "prison.prison",
     "pk": "DMI",
     "fields": {
-      "name": "HMP DURHAM",
+      "name": "HMP Durham",
       "general_ledger_code": "033",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "North East",
       "populations": [1,3],
       "categories": [2]
@@ -328,10 +328,10 @@
     "model": "prison.prison",
     "pk": "ESI",
     "fields": {
-      "name": "HMP & YOI EAST SUTTON PARK",
+      "name": "HMP & YOI East Sutton Park",
       "general_ledger_code": "035",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "Kent and Sussex",
       "populations": [1,2,4],
       "categories": [4,5]
@@ -341,10 +341,10 @@
     "model": "prison.prison",
     "pk": "EWI",
     "fields": {
-      "name": "HMP EASTWOOD PARK",
+      "name": "HMP Eastwood Park",
       "general_ledger_code": "036",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "South West",
       "populations": [1,2],
       "categories": []
@@ -354,10 +354,10 @@
     "model": "prison.prison",
     "pk": "EYI",
     "fields": {
-      "name": "HMP ELMLEY",
+      "name": "HMP Elmley",
       "general_ledger_code": "037",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "Kent and Sussex",
       "populations": [1,3,4],
       "categories": [2,3]
@@ -367,10 +367,10 @@
     "model": "prison.prison",
     "pk": "EEI",
     "fields": {
-      "name": "HMP ERLESTOKE",
+      "name": "HMP Erlestoke",
       "general_ledger_code": "038",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "South West",
       "populations": [1,3],
       "categories": [3]
@@ -380,10 +380,10 @@
     "model": "prison.prison",
     "pk": "EXI",
     "fields": {
-      "name": "HMP EXETER",
+      "name": "HMP Exeter",
       "general_ledger_code": "040",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "South West",
       "populations": [1,3],
       "categories": []
@@ -393,10 +393,10 @@
     "model": "prison.prison",
     "pk": "FSI",
     "fields": {
-      "name": "HMP FEATHERSTONE",
+      "name": "HMP Featherstone",
       "general_ledger_code": "041",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "West Midlands",
       "populations": [1,3],
       "categories": [3]
@@ -406,10 +406,10 @@
     "model": "prison.prison",
     "pk": "FMI",
     "fields": {
-      "name": "HMP & YOI FELTHAM",
+      "name": "HMP & YOI Feltham",
       "general_ledger_code": "042",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "London",
       "populations": [3,4],
       "categories": [5]
@@ -419,10 +419,10 @@
     "model": "prison.prison",
     "pk": "FDI",
     "fields": {
-      "name": "HMP FORD",
+      "name": "HMP Ford",
       "general_ledger_code": "043",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "Kent and Sussex",
       "populations": [1,3],
       "categories": [4]
@@ -432,10 +432,10 @@
     "model": "prison.prison",
     "pk": "FHI",
     "fields": {
-      "name": "HMP FOSTON HALL",
+      "name": "HMP Foston Hall",
       "general_ledger_code": "044",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "East Midlands",
       "populations": [2,4],
       "categories": [2,5]
@@ -445,10 +445,10 @@
     "model": "prison.prison",
     "pk": "FKI",
     "fields": {
-      "name": "HMP FRANKLAND",
+      "name": "HMP Frankland",
       "general_ledger_code": "045",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "North East",
       "populations": [1,3],
       "categories": [1]
@@ -458,10 +458,10 @@
     "model": "prison.prison",
     "pk": "FNI",
     "fields": {
-      "name": "HMP FULL SUTTON",
+      "name": "HMP Full Sutton",
       "general_ledger_code": "046",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "Yorkshire and Humberside",
       "populations": [1,3],
       "categories": [1]
@@ -471,10 +471,10 @@
     "model": "prison.prison",
     "pk": "GHI",
     "fields": {
-      "name": "HMP GARTH",
+      "name": "HMP Garth",
       "general_ledger_code": "047",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "North West",
       "populations": [1,3],
       "categories": [2]
@@ -484,10 +484,10 @@
     "model": "prison.prison",
     "pk": "GTI",
     "fields": {
-      "name": "HMP GARTREE",
+      "name": "HMP Gartree",
       "general_ledger_code": "048",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "East Midlands",
       "populations": [1,3],
       "categories": [2]
@@ -497,10 +497,10 @@
     "model": "prison.prison",
     "pk": "GPI",
     "fields": {
-      "name": "HMYOI & RC GLEN PARVA",
+      "name": "HMYOI & RC Glen Parva",
       "general_ledger_code": "049",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "East Midlands",
       "populations": [3,4],
       "categories": [5]
@@ -510,10 +510,10 @@
     "model": "prison.prison",
     "pk": "GNI",
     "fields": {
-      "name": "HMP GRENDON",
+      "name": "HMP Grendon",
       "general_ledger_code": "051",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "South Central",
       "populations": [1,3],
       "categories": [2]
@@ -523,10 +523,10 @@
     "model": "prison.prison",
     "pk": "GMI",
     "fields": {
-      "name": "HMP GUYS MARSH",
+      "name": "HMP Guys Marsh",
       "general_ledger_code": "052",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "South West",
       "populations": [1,3],
       "categories": [3]
@@ -536,10 +536,10 @@
     "model": "prison.prison",
     "pk": "HRI",
     "fields": {
-      "name": "IRC HASLAR",
+      "name": "IRC Haslar",
       "general_ledger_code": "053",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "South Central",
       "populations": [1,3],
       "categories": [6]
@@ -549,10 +549,10 @@
     "model": "prison.prison",
     "pk": "HVI",
     "fields": {
-      "name": "HMP HAVERIGG",
+      "name": "HMP Haverigg",
       "general_ledger_code": "054",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "North West",
       "populations": [1,3],
       "categories": [3]
@@ -562,10 +562,10 @@
     "model": "prison.prison",
     "pk": "HOI",
     "fields": {
-      "name": "HMP HIGH DOWN",
+      "name": "HMP High Down",
       "general_ledger_code": "056",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "London",
       "populations": [1,3],
       "categories": [2]
@@ -575,10 +575,10 @@
     "model": "prison.prison",
     "pk": "HPI",
     "fields": {
-      "name": "HMP HIGHPOINT",
+      "name": "HMP Highpoint",
       "general_ledger_code": "058",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "East of England",
       "populations": [1,3],
       "categories": [3]
@@ -588,10 +588,10 @@
     "model": "prison.prison",
     "pk": "HBI",
     "fields": {
-      "name": "HMP HOLLESLEY BAY",
+      "name": "HMP Hollesley Bay",
       "general_ledger_code": "060",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "East of England",
       "populations": [1,3],
       "categories": [4]
@@ -601,10 +601,10 @@
     "model": "prison.prison",
     "pk": "HYI",
     "fields": {
-      "name": "HMP HOLLOWAY",
+      "name": "HMP Holloway",
       "general_ledger_code": "061",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "London",
       "populations": [2,3,4],
       "categories": [2,5]
@@ -614,10 +614,10 @@
     "model": "prison.prison",
     "pk": "HHI",
     "fields": {
-      "name": "HMP HOLME HOUSE",
+      "name": "HMP Holme House",
       "general_ledger_code": "062",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "North East",
       "populations": [1,3],
       "categories": [2]
@@ -627,10 +627,10 @@
     "model": "prison.prison",
     "pk": "HLI",
     "fields": {
-      "name": "HMP HULL",
+      "name": "HMP Hull",
       "general_ledger_code": "063",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "Yorkshire and Humberside",
       "populations": [1,3],
       "categories": [2]
@@ -640,10 +640,10 @@
     "model": "prison.prison",
     "pk": "HCI",
     "fields": {
-      "name": "HMP HUNTERCOMBE",
+      "name": "HMP Huntercombe",
       "general_ledger_code": "064",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "South Central",
       "populations": [1,3],
       "categories": [3]
@@ -653,10 +653,10 @@
     "model": "prison.prison",
     "pk": "KMI",
     "fields": {
-      "name": "HMP KIRKHAM",
+      "name": "HMP Kirkham",
       "general_ledger_code": "066",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "North West",
       "populations": [1,3],
       "categories": [4]
@@ -666,10 +666,10 @@
     "model": "prison.prison",
     "pk": "KVI",
     "fields": {
-      "name": "HMP KIRKLEVINGTON GRANGE",
+      "name": "HMP Kirklevington Grange",
       "general_ledger_code": "067",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "North East",
       "populations": [1,3],
       "categories": [3,4]
@@ -679,10 +679,10 @@
     "model": "prison.prison",
     "pk": "LFI",
     "fields": {
-      "name": "HMYOI LANCASTER FARMS",
+      "name": "HMYOI Lancaster Farms",
       "general_ledger_code": "069",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "North West",
       "populations": [3,4],
       "categories": [5]
@@ -692,10 +692,10 @@
     "model": "prison.prison",
     "pk": "LEI",
     "fields": {
-      "name": "HMP LEEDS",
+      "name": "HMP Leeds",
       "general_ledger_code": "071",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "Yorkshire and Humberside",
       "populations": [1,3],
       "categories": [2]
@@ -705,10 +705,10 @@
     "model": "prison.prison",
     "pk": "LCI",
     "fields": {
-      "name": "HMP LEICESTER",
+      "name": "HMP Leicester",
       "general_ledger_code": "072",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "East Midlands",
       "populations": [1,3],
       "categories": [2]
@@ -718,10 +718,10 @@
     "model": "prison.prison",
     "pk": "LWI",
     "fields": {
-      "name": "HMP LEWES",
+      "name": "HMP Lewes",
       "general_ledger_code": "073",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "Kent and Sussex",
       "populations": [1,3,4],
       "categories": [2,5]
@@ -731,10 +731,10 @@
     "model": "prison.prison",
     "pk": "LYI",
     "fields": {
-      "name": "HMP LEYHILL",
+      "name": "HMP Leyhill",
       "general_ledger_code": "074",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "South West",
       "populations": [1,3],
       "categories": [4]
@@ -744,10 +744,10 @@
     "model": "prison.prison",
     "pk": "LII",
     "fields": {
-      "name": "HMP LINCOLN",
+      "name": "HMP Lincoln",
       "general_ledger_code": "075",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "East Midlands",
       "populations": [1,3],
       "categories": [2]
@@ -757,10 +757,10 @@
     "model": "prison.prison",
     "pk": "LHI",
     "fields": {
-      "name": "HMP LINDHOLME",
+      "name": "HMP Lindholme",
       "general_ledger_code": "076",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "Yorkshire and Humberside",
       "populations": [1,3],
       "categories": [3,4]
@@ -770,10 +770,10 @@
     "model": "prison.prison",
     "pk": "LTI",
     "fields": {
-      "name": "HMP LITTLEHEY",
+      "name": "HMP Littlehey",
       "general_ledger_code": "078",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "East of England",
       "populations": [1,3],
       "categories": [3]
@@ -783,10 +783,10 @@
     "model": "prison.prison",
     "pk": "LPI",
     "fields": {
-      "name": "HMP LIVERPOOL",
+      "name": "HMP Liverpool",
       "general_ledger_code": "079",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "North West",
       "populations": [1,3],
       "categories": [2,3]
@@ -796,10 +796,10 @@
     "model": "prison.prison",
     "pk": "LLI",
     "fields": {
-      "name": "HMP LONG LARTIN",
+      "name": "HMP Long Lartin",
       "general_ledger_code": "080",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "West Midlands",
       "populations": [1,3],
       "categories": [1]
@@ -809,10 +809,10 @@
     "model": "prison.prison",
     "pk": "LNI",
     "fields": {
-      "name": "HMP LOW NEWTON",
+      "name": "HMP Low Newton",
       "general_ledger_code": "081",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "North East",
       "populations": [2,3,4],
       "categories": [3,5]
@@ -822,10 +822,10 @@
     "model": "prison.prison",
     "pk": "MSI",
     "fields": {
-      "name": "HMP MAIDSTONE",
+      "name": "HMP Maidstone",
       "general_ledger_code": "082",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "Kent and Sussex",
       "populations": [1,3],
       "categories": [3]
@@ -835,10 +835,10 @@
     "model": "prison.prison",
     "pk": "MRI",
     "fields": {
-      "name": "HMP MANCHESTER",
+      "name": "HMP Manchester",
       "general_ledger_code": "083",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "North West",
       "populations": [1,3],
       "categories": [1]
@@ -848,10 +848,10 @@
     "model": "prison.prison",
     "pk": "MWI",
     "fields": {
-      "name": "HMP MEDWAY",
+      "name": "HMP Medway",
       "general_ledger_code": "158",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "North West",
       "populations": [1,3,4],
       "categories": [5]
@@ -861,10 +861,10 @@
     "model": "prison.prison",
     "pk": "MDI",
     "fields": {
-      "name": "HMP & YOI MOORLAND",
+      "name": "HMP & YOI Moorland",
       "general_ledger_code": "084",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "Yorkshire and Humberside",
       "populations": [1,3,4],
       "categories": [3,5]
@@ -874,10 +874,10 @@
     "model": "prison.prison",
     "pk": "MHI",
     "fields": {
-      "name": "IRC MORTON HALL",
+      "name": "IRC Morton Hall",
       "general_ledger_code": "085",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "East Midlands",
       "populations": [1,3],
       "categories": [6]
@@ -887,10 +887,10 @@
     "model": "prison.prison",
     "pk": "NHI",
     "fields": {
-      "name": "HMP NEW HALL",
+      "name": "HMP New Hall",
       "general_ledger_code": "087",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "Yorkshire and Humberside",
       "populations": [1,2,4],
       "categories": [3,5]
@@ -900,10 +900,10 @@
     "model": "prison.prison",
     "pk": "NSI",
     "fields": {
-      "name": "HMP NORTH SEA CAMP",
+      "name": "HMP North Sea Camp",
       "general_ledger_code": "088",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "East Midlands",
       "populations": [1,3],
       "categories": [4]
@@ -913,10 +913,10 @@
     "model": "prison.prison",
     "pk": "NWI",
     "fields": {
-      "name": "HMP & YOI NORWICH",
+      "name": "HMP & YOI Norwich",
       "general_ledger_code": "090",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "East of England",
       "populations": [1,3,4],
       "categories": [2,3,5]
@@ -926,10 +926,10 @@
     "model": "prison.prison",
     "pk": "ONI",
     "fields": {
-      "name": "HMP ONLEY",
+      "name": "HMP Onley",
       "general_ledger_code": "092",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "East Midlands",
       "populations": [1,3],
       "categories": [3]
@@ -939,10 +939,10 @@
     "model": "prison.prison",
     "pk": "PVI",
     "fields": {
-      "name": "HMP PENTONVILLE",
+      "name": "HMP Pentonville",
       "general_ledger_code": "094",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "London",
       "populations": [1,3],
       "categories": [2,3]
@@ -952,10 +952,10 @@
     "model": "prison.prison",
     "pk": "PDI",
     "fields": {
-      "name": "HMYOI PORTLAND",
+      "name": "HMYOI Portland",
       "general_ledger_code": "095",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "South West",
       "populations": [3,4],
       "categories": [5]
@@ -965,10 +965,10 @@
     "model": "prison.prison",
     "pk": "PNI",
     "fields": {
-      "name": "HMP PRESTON",
+      "name": "HMP Preston",
       "general_ledger_code": "096",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "North West",
       "populations": [1,3],
       "categories": [2]
@@ -978,10 +978,10 @@
     "model": "prison.prison",
     "pk": "RNI",
     "fields": {
-      "name": "HMP RANBY",
+      "name": "HMP Ranby",
       "general_ledger_code": "097",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "East Midlands",
       "populations": [1,3],
       "categories": [3]
@@ -991,10 +991,10 @@
     "model": "prison.prison",
     "pk": "RSI",
     "fields": {
-      "name": "HMP RISLEY",
+      "name": "HMP Risley",
       "general_ledger_code": "099",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "North West",
       "populations": [1,3],
       "categories": [3]
@@ -1004,10 +1004,10 @@
     "model": "prison.prison",
     "pk": "RCI",
     "fields": {
-      "name": "HMP & YOI ROCHESTER",
+      "name": "HMP & YOI Rochester",
       "general_ledger_code": "100",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "Kent and Sussex",
       "populations": [1,3,4],
       "categories": [3,5]
@@ -1017,10 +1017,10 @@
     "model": "prison.prison",
     "pk": "SDI",
     "fields": {
-      "name": "HMP SEND",
+      "name": "HMP Send",
       "general_ledger_code": "101",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "London",
       "populations": [1,2],
       "categories": [3]
@@ -1030,10 +1030,10 @@
     "model": "prison.prison",
     "pk": "SFI",
     "fields": {
-      "name": "HMP STAFFORD",
+      "name": "HMP Stafford",
       "general_ledger_code": "104",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "West Midlands",
       "populations": [1,3],
       "categories": [3]
@@ -1043,10 +1043,10 @@
     "model": "prison.prison",
     "pk": "EHI",
     "fields": {
-      "name": "HMP STANDFORD HILL",
+      "name": "HMP Standford Hill",
       "general_ledger_code": "105",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "Kent and Sussex",
       "populations": [1,3],
       "categories": [4]
@@ -1056,10 +1056,10 @@
     "model": "prison.prison",
     "pk": "SKI",
     "fields": {
-      "name": "HMP STOCKEN",
+      "name": "HMP Stocken",
       "general_ledger_code": "106",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "East Midlands",
       "populations": [1,3],
       "categories": [3]
@@ -1069,10 +1069,10 @@
     "model": "prison.prison",
     "pk": "SHI",
     "fields": {
-      "name": "HMYOI STOKE HEATH",
+      "name": "HMYOI Stoke Heath",
       "general_ledger_code": "107",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "West Midlands",
       "populations": [1,3,4],
       "categories": [3,5]
@@ -1082,10 +1082,10 @@
     "model": "prison.prison",
     "pk": "STI",
     "fields": {
-      "name": "HMP & YOI STYAL",
+      "name": "HMP & YOI Styal",
       "general_ledger_code": "108",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "North West",
       "populations": [1,2,4],
       "categories": [3,5]
@@ -1095,10 +1095,10 @@
     "model": "prison.prison",
     "pk": "SUI",
     "fields": {
-      "name": "HMP SUDBURY",
+      "name": "HMP Sudbury",
       "general_ledger_code": "109",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "East Midlands",
       "populations": [1,3],
       "categories": [4]
@@ -1108,10 +1108,10 @@
     "model": "prison.prison",
     "pk": "SLI",
     "fields": {
-      "name": "HMP SWALESIDE",
+      "name": "HMP Swaleside",
       "general_ledger_code": "110",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "Kent and Sussex",
       "populations": [1,3],
       "categories": [2]
@@ -1121,10 +1121,10 @@
     "model": "prison.prison",
     "pk": "SWI",
     "fields": {
-      "name": "HMP SWANSEA",
+      "name": "HMP Swansea",
       "general_ledger_code": "111",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "Wales",
       "populations": [1,3],
       "categories": [2,3]
@@ -1134,10 +1134,10 @@
     "model": "prison.prison",
     "pk": "SNI",
     "fields": {
-      "name": "HMP SWINFEN HALL",
+      "name": "HMP Swinfen Hall",
       "general_ledger_code": "112",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "West Midlands",
       "populations": [1,3,4],
       "categories": [3,5]
@@ -1147,10 +1147,10 @@
     "model": "prison.prison",
     "pk": "MTI",
     "fields": {
-      "name": "HMP THE MOUNT",
+      "name": "HMP The Mount",
       "general_ledger_code": "086",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "East of England",
       "populations": [1,3],
       "categories": [3]
@@ -1160,10 +1160,10 @@
     "model": "prison.prison",
     "pk": "VEI",
     "fields": {
-      "name": "HMP THE VERNE",
+      "name": "HMP The Verne",
       "general_ledger_code": "115",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "South West",
       "populations": [1,3],
       "categories": [6]
@@ -1173,10 +1173,10 @@
     "model": "prison.prison",
     "pk": "TCI",
     "fields": {
-      "name": "HMYOI THORN CROSS",
+      "name": "HMYOI Thorn Cross",
       "general_ledger_code": "113",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "North West",
       "populations": [3,4],
       "categories": [5]
@@ -1186,10 +1186,10 @@
     "model": "prison.prison",
     "pk": "UKI",
     "fields": {
-      "name": "HMP USK",
+      "name": "HMP Usk",
       "general_ledger_code": "114",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "Wales",
       "populations": [1,3],
       "categories": [3]
@@ -1199,10 +1199,10 @@
     "model": "prison.prison",
     "pk": "UPI",
     "fields": {
-      "name": "HMP PRESCOED",
+      "name": "HMP Prescoed",
       "general_ledger_code": "114",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "Wales",
       "populations": [1,3],
       "categories": [4]
@@ -1212,10 +1212,10 @@
     "model": "prison.prison",
     "pk": "WWI",
     "fields": {
-      "name": "HMP WANDSWORTH",
+      "name": "HMP Wandsworth",
       "general_ledger_code": "117",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "London",
       "populations": [1,3],
       "categories": [2]
@@ -1225,10 +1225,10 @@
     "model": "prison.prison",
     "pk": "WII",
     "fields": {
-      "name": "HMP & YOI WARREN HILL",
+      "name": "HMP & YOI Warren Hill",
       "general_ledger_code": "118",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "East of England",
       "populations": [3,4],
       "categories": [5]
@@ -1238,10 +1238,10 @@
     "model": "prison.prison",
     "pk": "WLI",
     "fields": {
-      "name": "HMP WAYLAND",
+      "name": "HMP Wayland",
       "general_ledger_code": "119",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "East of England",
       "populations": [1,3],
       "categories": [3]
@@ -1251,10 +1251,10 @@
     "model": "prison.prison",
     "pk": "WEI",
     "fields": {
-      "name": "HMP WEALSTUN",
+      "name": "HMP Wealstun",
       "general_ledger_code": "120",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "Yorkshire and Humberside",
       "populations": [1,3],
       "categories": [3]
@@ -1264,10 +1264,10 @@
     "model": "prison.prison",
     "pk": "WNI",
     "fields": {
-      "name": "HMYOI WERRINGTON",
+      "name": "HMYOI Werrington",
       "general_ledger_code": "123",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "West Midlands",
       "populations": [3,4],
       "categories": [5]
@@ -1277,10 +1277,10 @@
     "model": "prison.prison",
     "pk": "WTI",
     "fields": {
-      "name": "HMP WHATTON",
+      "name": "HMP Whatton",
       "general_ledger_code": "125",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "East Midlands",
       "populations": [1,3],
       "categories": [3]
@@ -1290,10 +1290,10 @@
     "model": "prison.prison",
     "pk": "WRI",
     "fields": {
-      "name": "HMP WHITEMOOR",
+      "name": "HMP Whitemoor",
       "general_ledger_code": "126",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "East of England",
       "populations": [1,3],
       "categories": [1]
@@ -1303,10 +1303,10 @@
     "model": "prison.prison",
     "pk": "WCI",
     "fields": {
-      "name": "HMP WINCHESTER",
+      "name": "HMP Winchester",
       "general_ledger_code": "127",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "South Central",
       "populations": [1,3],
       "categories": [2]
@@ -1316,10 +1316,10 @@
     "model": "prison.prison",
     "pk": "WHI",
     "fields": {
-      "name": "HMP WOODHILL",
+      "name": "HMP Woodhill",
       "general_ledger_code": "129",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "South Central",
       "populations": [1,3],
       "categories": [1]
@@ -1329,10 +1329,10 @@
     "model": "prison.prison",
     "pk": "WSI",
     "fields": {
-      "name": "HMP WORMWOOD SCRUBS",
+      "name": "HMP Wormwood Scrubs",
       "general_ledger_code": "130",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "London",
       "populations": [1,3],
       "categories": [2]
@@ -1342,10 +1342,10 @@
     "model": "prison.prison",
     "pk": "WMI",
     "fields": {
-      "name": "HMP WYMOTT",
+      "name": "HMP Wymott",
       "general_ledger_code": "131",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "North West",
       "populations": [1,3],
       "categories": [3]
@@ -1355,10 +1355,10 @@
     "model": "prison.prison",
     "pk": "CDI",
     "fields": {
-      "name": "HMP CHELMSFORD",
+      "name": "HMP Chelmsford",
       "general_ledger_code": "024",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "East of England",
       "populations": [1,3,4],
       "categories": [2,5]
@@ -1368,10 +1368,10 @@
     "model": "prison.prison",
     "pk": "HII",
     "fields": {
-      "name": "HMP & YOI HINDLEY",
+      "name": "HMP & YOI Hindley",
       "general_ledger_code": "059",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "North West",
       "populations": [3,4],
       "categories": [5]
@@ -1381,10 +1381,10 @@
     "model": "prison.prison",
     "pk": "NMI",
     "fields": {
-      "name": "HMP NOTTINGHAM",
+      "name": "HMP Nottingham",
       "general_ledger_code": "091",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "East Midlands",
       "populations": [1,3],
       "categories": [2]
@@ -1394,10 +1394,10 @@
     "model": "prison.prison",
     "pk": "WDI",
     "fields": {
-      "name": "HMP WAKEFIELD",
+      "name": "HMP Wakefield",
       "general_ledger_code": "116",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "Yorkshire and Humberside",
       "populations": [1,3],
       "categories": [1]
@@ -1407,10 +1407,10 @@
     "model": "prison.prison",
     "pk": "WYI",
     "fields": {
-      "name": "HMYOI WETHERBY",
+      "name": "HMYOI Wetherby",
       "general_ledger_code": "124",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "Yorkshire and Humberside",
       "populations": [3,4],
       "categories": [5]
@@ -1420,10 +1420,10 @@
     "model": "prison.prison",
     "pk": "SPI",
     "fields": {
-      "name": "HMP SPRING HILL",
+      "name": "HMP Spring Hill",
       "general_ledger_code": "051",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "South Central",
       "populations": [1,3],
       "categories": [4]
@@ -1433,10 +1433,10 @@
     "model": "prison.prison",
     "pk": "BRI",
     "fields": {
-      "name": "HMP BURE",
+      "name": "HMP Bure",
       "general_ledger_code": "136",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "East of England",
       "populations": [1,3],
       "categories": [3]
@@ -1449,7 +1449,7 @@
       "name": "HMP & YOI ISIS",
       "general_ledger_code": "138",
       "created": "2015-10-28T12:00:00Z",
-      "modified": "2015-10-28T12:00:00Z",
+      "modified": "2016-12-01T12:00:00Z",
       "region": "London",
       "populations": [3,4],
       "categories": [5]
