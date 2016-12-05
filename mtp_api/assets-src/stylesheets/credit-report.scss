@@ -1,0 +1,96 @@
+#id_credit_report > table {
+  min-width: 880px;
+}
+
+.credit-stat {
+  min-width: 20em;
+  min-height: 6.8em;
+  padding: 10px;
+  background: #f9f9f9;
+  text-align: center;
+  font-size: 13px;
+
+  strong {
+    display: block;
+    font-size: 2.8em;
+    line-height: normal;
+    font-weight: bold;
+  }
+
+  .credit-stat--quiet {
+    color: #555;
+  }
+
+  table {
+    margin: 0 auto;
+    min-width: 12em;
+  }
+
+  caption, th, td {
+    background: inherit;
+    border: 0;
+    color: inherit;
+    font-size: inherit;
+    font-weight: normal;
+    line-height: normal;
+    padding: 0;
+  }
+
+  caption {
+    font-weight: bold;
+    letter-spacing: normal;
+    text-transform: none;
+  }
+
+  th {
+    padding-right: 1em;
+    text-align: left;
+  }
+
+  td {
+    font-weight: bold;
+    text-align: right;
+  }
+}
+
+.credit-stat--valign {
+  display: inline-block;
+  vertical-align: text-top;
+
+  sub {
+    display: block;
+    margin-top: -0.2em;
+    margin-bottom: 0.2em;
+    font-size: 0.5em;
+  }
+}
+
+.mtp-dashboard-module-standout {
+  .credit-stat {
+    background: #111;
+    font-size: 2em;
+  }
+
+  .credit-stat strong {
+    font-size: 2.8em;
+    margin-bottom: 0.3em;
+  }
+
+  .credit-stat--valign sub {
+    margin-bottom: 0;
+  }
+
+  .credit-stat .credit-stat--quiet {
+    color: #ccc;
+  }
+}
+
+#credit-chart {
+  width: 100%;
+  height: 100%;
+  background: #f9f9f9;
+
+  .mtp-dashboard-module-standout & {
+    background: #111;
+  }
+}

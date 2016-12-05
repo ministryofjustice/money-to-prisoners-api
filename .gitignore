@@ -1,31 +1,24 @@
+*.DS_Store
 *.py[cod]
 *.mo
 *.pot
-include/
-lib/
-static/
-media/
-.build
-
-# Sass-cache
-*.sass-cache/
-
-# sqlite3 db
-*.db
-*.sqlite3
-
-# sublime stuff
-*.sublime-workspace
-*.sublime-project
-
-# Virtual env
 venv/
 
-# Mac crap
-*.DS_Store
+# sass & node.js
+*.sass-cache/
+.eslintcache/
+node_modules/
+npm-debug.log
 
-# Ignore settings/local.py
-*/settings/local.py
+# app-specific
+docker-compose.yml
+package.json
+webpack.config.js
+mtp_api/assets/
+mtp_api/settings/local.py
+static/
+media/
 
-# Node Stuff
-node_modules
+# selenium
+geckodriver.log
+ghostdriver.log

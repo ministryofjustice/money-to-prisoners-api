@@ -162,12 +162,12 @@ class SatisfactionDashboard(DashboardModule):
 
     class Media:
         css = {
-            'all': ('core/css/satisfaction-results.css',)
+            'all': ('stylesheets/satisfaction-results.css',)
         }
         js = (
             'https://www.gstatic.com/charts/loader.js',
-            'core/js/google-charts.js',
-            'core/js/satisfaction-results.js',
+            'javascripts/google-charts.js',
+            'javascripts/satisfaction-results.js',
         )
 
     def __init__(self, dashboard_view):

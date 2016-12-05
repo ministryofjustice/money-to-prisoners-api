@@ -1,4 +1,6 @@
-# NB: this is only used for local development
+# do not run docker-compose directly, see README.md
+
+# NB: this is only used for *local development*
 # see Dockerfile for deployed version
 
 db:
@@ -19,7 +21,6 @@ django:
     ENV: local
     DEBUG: "True"
     DJANGO_SECRET_KEY: CHANGE_ME
-    DJANGO_SETTINGS_MODULE: mtp_api.settings.docker
     DB_NAME: mtp_api
     DB_USERNAME: postgres
     DB_PASSWORD: postgres

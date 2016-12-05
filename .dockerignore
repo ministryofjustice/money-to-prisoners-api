@@ -3,14 +3,25 @@
 *.py?
 *.pot
 *~
-__pycache__
 
 # editors
 .idea/
 *.sublime-workspace
 *.sublime-project
 
+# sass & node.js
+*.sass-cache/
+.eslintcache/
+node_modules/
+npm-debug.log
+
 # project
+Dockerfile
+docker-compose.yml
+package.json
+webpack.config.js
+mtp_api/assets/
 mtp_api/settings/local.py
 static/
+media/
 venv/

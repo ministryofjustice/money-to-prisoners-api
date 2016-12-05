@@ -440,13 +440,13 @@ class CreditReport(DashboardModule):
 
     class Media:
         css = {
-            'all': ('core/css/credit-report.css',)
+            'all': ('stylesheets/credit-report.css',)
         }
         js = (
             'admin/js/core.js',
             'https://www.gstatic.com/charts/loader.js',
-            'core/js/google-charts.js',
-            'core/js/credit-report.js',
+            'javascripts/google-charts.js',
+            'javascripts/credit-report.js',
         )
 
     def __init__(self, **kwargs):

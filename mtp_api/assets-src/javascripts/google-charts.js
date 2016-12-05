@@ -1,6 +1,6 @@
 /* globals django, google */
 
-django.jQuery(function() {
+django.jQuery(function () {
   'use strict';
 
   google.charts.load('current', {packages: ['corechart']});

@@ -1,13 +1,13 @@
 /* globals django, google, creditReportData */
 
-django.jQuery(function($) {
+django.jQuery(function ($) {
   'use strict';
 
   // change form
 
   var $customDateRows = $('.row_start_date, .row_end_date');
   $('#id_date_range').change(function () {
-    if ($(this).val() == 'custom') {
+    if ($(this).val() === 'custom') {
       $customDateRows.show();
     } else {
       $customDateRows.hide();
@@ -19,58 +19,46 @@ django.jQuery(function($) {
   var $module = $('#id_credit_report');
   var $chart = $('#credit-chart');
   var normalStyles = {
-      font: 'Roboto, "Lucida Grande", Verdana, Arial, sans-serif',
-      lines: ['#79aec8', '#666'],
-      lineWidth: 4,
-      background: '#f9f9f9',
-      weekendBackground: '#ebebeb',
-      bar: {
-        groupWidth: '70%'
-      },
-      annotationTextStyle: {},
-      lengendTextStyle: {
-        color: '#000',
-        fontSize: 13
-      }
-    };
+    font: 'Roboto, "Lucida Grande", Verdana, Arial, sans-serif',
+    lines: ['#79aec8', '#666'],
+    lineWidth: 4,
+    background: '#f9f9f9',
+    weekendBackground: '#ebebeb',
+    bar: {
+      groupWidth: '70%'
+    },
+    annotationTextStyle: {},
+    lengendTextStyle: {
+      color: '#000',
+      fontSize: 13
+    }
+  };
   var standoutStyles = {
-      // colours and sizes optimised for philips tv
-      font: 'Roboto, "Lucida Grande", Verdana, Arial, sans-serif',
-      lines: ['#6f6', '#F3513F'],
-      lineWidth: 10,
-      background: '#111',
-      weekendBackground: '#2b2b2b',
-      bar: {
-        groupWidth: '95%'
-      },
-      annotationTextStyle: {
-        fontSize: 36,
-        fontWeight: 'bold'
-      },
-      lengendTextStyle: {
-        color: '#fff',
-        fontSize: 26
-      }
-    };
-  var chartData;
+    // colours and sizes optimised for philips tv
+    font: 'Roboto, "Lucida Grande", Verdana, Arial, sans-serif',
+    lines: ['#6f6', '#F3513F'],
+    lineWidth: 10,
+    background: '#111',
+    weekendBackground: '#2b2b2b',
+    bar: {
+      groupWidth: '95%'
+    },
+    annotationTextStyle: {
+      fontSize: 36,
+      fontWeight: 'bold'
+    },
+    lengendTextStyle: {
+      color: '#fff',
+      fontSize: 26
+    }
+  };
+  var chartData = null;
 
   if (!$chart.size()) {
     return;
   }
 
-  google.charts.setOnLoadCallback(function() {
-    chartData = new google.visualization.DataTable();
-    for (var column in creditReportData.columns) {
-      if (creditReportData.columns.hasOwnProperty(column)) {
-        chartData.addColumn(creditReportData.columns[column]);
-      }
-    }
-    chartData.addRows(creditReportData.rows);
-
-    drawCreditReports();
-  });
-
-  function drawCreditReports() {
+  function drawCreditReports () {
     var chart = new google.visualization.ColumnChart($chart[0]);
     var styles = $module.hasClass('mtp-dashboard-module-standout') ? standoutStyles : normalStyles;
 
@@ -104,19 +92,19 @@ django.jQuery(function($) {
       colors: styles.lines
     });
 
-    google.visualization.events.addListener(chart, 'ready', function() {
+    google.visualization.events.addListener(chart, 'ready', function () {
       var $svg = $chart.find('svg');
+      var svgNamespace = $svg[0].namespaceURI;
       var cli = chart.getChartLayoutInterface();
       var bounds = cli.getChartAreaBoundingBox();
       var dayWidth = bounds.width / creditReportData.rows.length;
       var dayHeight = bounds.height;
       var dayTop = bounds.top;
-      var dayLeft;
-      var $chartRect;
+      var dayLeft = 0;
+      var $chartRect = null;
       var legendBounds = cli.getBoundingBox('legend');
-      var $title;
+      var $title = $(document.createElementNS(svgNamespace, 'text'));
 
-      $title = $(document.createElementNS($svg[0].namespaceURI, 'text'));
       $title.text(creditReportData.title);
       $title.attr({
         'text-anchor': 'start',
@@ -129,11 +117,11 @@ django.jQuery(function($) {
       });
       $svg.append($title);
 
-      $chart.find('rect').each(function() {
-        if (this.x.baseVal.value == bounds.left &&
-          this.y.baseVal.value == bounds.top &&
-          this.width.baseVal.value == bounds.width &&
-          this.height.baseVal.value == bounds.height) {
+      $chart.find('rect').each(function () {
+        if (this.x.baseVal.value === bounds.left &&
+          this.y.baseVal.value === bounds.top &&
+          this.width.baseVal.value === bounds.width &&
+          this.height.baseVal.value === bounds.height) {
           $chartRect = $(this);
         }
       });
@@ -145,7 +133,7 @@ django.jQuery(function($) {
           }
           weekend = creditReportData.weekends[weekend];
           dayLeft = cli.getXLocation(weekend) - dayWidth / 2;
-          var $rect = $(document.createElementNS($svg[0].namespaceURI, 'rect'));
+          var $rect = $(document.createElementNS(svgNamespace, 'rect'));
           $rect.attr({
             x: dayLeft,
             y: dayTop,
@@ -162,8 +150,20 @@ django.jQuery(function($) {
     });
   }
 
-  $module.on('mtp.dashboard-standout', function() {
+  $module.on('mtp.dashboard-standout', function () {
     $chart.empty();
     drawCreditReports();
-  })
+  });
+
+  google.charts.setOnLoadCallback(function () {
+    chartData = new google.visualization.DataTable();
+    for (var column in creditReportData.columns) {
+      if (creditReportData.columns.hasOwnProperty(column)) {
+        chartData.addColumn(creditReportData.columns[column]);
+      }
+    }
+    chartData.addRows(creditReportData.rows);
+
+    drawCreditReports();
+  });
 });
