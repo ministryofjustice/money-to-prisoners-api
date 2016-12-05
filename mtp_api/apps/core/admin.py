@@ -55,6 +55,8 @@ def add_short_description(short_description):
 
 class ScheduledCommandAdmin(admin.ModelAdmin):
     list_display = ('name', 'arg_string', 'cron_entry', 'next_execution',)
+
+
 site.register(models.ScheduledCommand, ScheduledCommandAdmin)
 
 
