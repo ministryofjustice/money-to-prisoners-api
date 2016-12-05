@@ -12,7 +12,9 @@ def get_service_downtime_healthcheck(service):
             if active_downtime.end is not None:
                 status['downtime_end'] = active_downtime.end.isoformat()
         return HealthcheckResponse(**status)
+
     return check_downtime
+
 
 for service, _ in SERVICES:
     registry.register_healthcheck(get_service_downtime_healthcheck(service))
