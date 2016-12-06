@@ -18,7 +18,7 @@ if __name__ == '__main__':
             raise SystemExit('setuptools and pip are required')
 
         print('Pre-installing MTP-common')
-        pip_main(['--quiet', 'install', 'money-to-prisoners-common'])
+        pip_main(['--quiet', 'install', '--upgrade', 'money-to-prisoners-common'])
 
     from mtp_common.build_tasks.executor import Executor
     import mtp_api.apps.core.build_tasks  # noqa
