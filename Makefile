@@ -22,6 +22,9 @@ TASK_OUTPUT_REDIRECTION := /dev/null
 PYTHON_WARNINGS := "-W once"
 endif
 
+GOVUK_TEMPLATE_VERSION = 0.19.1
+GOVUK_TEMPLATE_TGZ = https://github.com/alphagov/govuk_template/releases/download/v${GOVUK_TEMPLATE_VERSION}/django_govuk_template-$(GOVUK_TEMPLATE_VERSION).tgz
+
 #################
 #### RECIPES ####
 #################
@@ -40,6 +43,15 @@ print_usage:
 .PHONY: migrate_db
 migrate_db: venv/bin/python
 	@venv/bin/python manage.py migrate --verbosity=$(verbosity) --noinput >$(TASK_OUTPUT_REDIRECTION)
+
+# get gov.uk templates
+.PHONY: retrieve_govuk_templates
+retrieve_govuk_templates:
+	@echo Retrieving GOV.UK stylesheets
+	@curl -Ls $(GOVUK_TEMPLATE_TGZ) | tar xzf - ./govuk_template \
+	  && rsync -r govuk_template/static/images/ static/images/ \
+	  && rsync -r govuk_template/templates/ $(MTP_APP_PATH)/templates/ \
+	  && rm -rf ./govuk_template
 
 # collect django static assets
 .PHONY: static_assets
@@ -95,7 +107,13 @@ update: venv/bin/pip
 
 # update environment and collect static files
 .PHONY: build
-build: update static_assets makemessages
+build: update static_assets retrieve_govuk_templates makemessages
+
+# remove all the assets
+.PHONY: clean
+clean:
+	@echo Cleaning build products
+	@rm -rf static $(MTP_APP_PATH)/templates/govuk_template
 
 ##########################
 #### INTERNAL RECIPES ####
