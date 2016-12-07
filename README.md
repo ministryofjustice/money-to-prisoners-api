@@ -112,11 +112,11 @@ These scenarios create a different set of test users for the client applications
 
 ### Translating
 
-Update translation files with `cd mtp_api; ../manage.py makemessages --all --keep-pot --no-wrap`.
+Update translation files with `./run.py make_messages` – you need to do this every time any translatable text is updated.
 
-Push latest English to Transifex with `tx push -s`. NB: always pull updates before pushing to merge correctly.
+Pull updates from Transifex with ``./run.py translations --pull``. You'll need to update translation files afterwards and manually check that the merges occurred correctly.
 
-Pull updates from Transifex with `tx pull`. You'll need to update translation files afterwards.
+Push latest English to Transifex with ``./run.py translations --push``. NB: you should pull updates before pushing to merge correctly.
 
 ### Using the API
 #### Getting an access token
