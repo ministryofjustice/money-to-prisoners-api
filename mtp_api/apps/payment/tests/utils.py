@@ -10,7 +10,8 @@ from core.tests.utils import MockModelTimestamps
 from credit.constants import CREDIT_RESOLUTION
 from credit.models import Credit
 from credit.tests.utils import (
-    get_owner_and_status_chooser, create_credit_log, random_amount
+    get_owner_and_status_chooser, create_credit_log, random_amount,
+    build_sender_prisoner_pairs
 )
 from payment.constants import PAYMENT_STATUS
 from payment.models import Payment
@@ -23,11 +24,28 @@ def latest_payment_date():
     return timezone.now()
 
 
+def get_sender_prisoner_pairs():
+    number_of_prisoners = PrisonerLocation.objects.all().count()
+    number_of_senders = number_of_prisoners
+
+    expiry_date = fake.date_time_between(start_date='now', end_date='+5y')
+    senders = [
+        {
+            'cardholder_name': ' '.join([fake.first_name(), fake.last_name()]),
+            'card_number_last_digits': ''.join([str(random.randint(0, 9)) for _ in range(4)]),
+            'card_expiry_date': expiry_date.strftime('%m/%y'),
+            'email': fake.email(),
+        } for n in range(number_of_senders)
+    ]
+
+    prisoners = list(PrisonerLocation.objects.all())
+
+    sender_prisoner_pairs = build_sender_prisoner_pairs(senders, prisoners)
+    return cycle(sender_prisoner_pairs)
+
+
 def generate_initial_payment_data(tot=50,
                                   days_of_history=7):
-
-    prisoners = cycle(list(PrisonerLocation.objects.all()))
-
     data_list = []
     for i in range(1, tot+1):
         random_date = latest_payment_date() - datetime.timedelta(
@@ -35,7 +53,8 @@ def generate_initial_payment_data(tot=50,
         )
         random_date = timezone.localtime(random_date)
         amount = random_amount()
-        prisoner = next(prisoners)
+        sender_prisoner_pairs = get_sender_prisoner_pairs()
+        sender, prisoner = next(sender_prisoner_pairs)
         data = {
             'amount': amount,
             'service_charge': int(amount * 0.025),
@@ -44,10 +63,10 @@ def generate_initial_payment_data(tot=50,
             'prisoner_dob': prisoner.prisoner_dob,
             'prison': prisoner.prison,
             'recipient_name': prisoner.prisoner_name,
-            'email': fake.email(),
             'created': random_date,
             'modified': random_date,
         }
+        data.update(sender)
         data_list.append(data)
 
     return data_list
@@ -62,6 +81,10 @@ def generate_payments(payment_batch=50,
         days_of_history=days_of_history
     )
 
+    return create_payments(data_list, consistent_history)
+
+
+def create_payments(data_list, consistent_history=False):
     owner_status_chooser = get_owner_and_status_chooser()
     payments = []
     for payment_counter, data in enumerate(data_list, start=1):
@@ -87,7 +110,6 @@ def generate_payments(payment_batch=50,
             )
             Payment.objects.reconcile(start_date, end_date, None)
             reconciliation_date += datetime.timedelta(days=1)
-
     return payments
 
 
@@ -101,10 +123,6 @@ def setup_payment(owner_status_chooser,
         owner, status = owner_status_chooser(data['prison'])
         data['processor_id'] = str(uuid.uuid1())
         data['status'] = PAYMENT_STATUS.TAKEN
-        data['cardholder_name'] = ' '.join([fake.first_name(), fake.last_name()])
-        data['card_number_last_digits'] = ''.join([str(random.randint(0, 9)) for _ in range(4)])
-        expiry_date = fake.date_time_between(start_date='now', end_date='+5y')
-        data['card_expiry_date'] = expiry_date.strftime('%m/%y')
         if older_than_yesterday:
             data.update({
                 'owner': owner,
@@ -118,6 +136,9 @@ def setup_payment(owner_status_chooser,
 
     else:
         data['status'] = PAYMENT_STATUS.PENDING
+        del data['cardholder_name']
+        del data['card_number_last_digits']
+        del data['card_expiry_date']
 
     with MockModelTimestamps(data['created'], data['modified']):
         new_payment = save_payment(data)

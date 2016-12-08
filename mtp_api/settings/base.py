@@ -48,6 +48,7 @@ INSTALLED_APPS = (
     'credit',
     'performance',
     'service',
+    'security',
 
     # django admin
     'django.contrib.admin',

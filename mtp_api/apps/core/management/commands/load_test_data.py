@@ -131,6 +131,7 @@ class Command(BaseCommand):
                 consistent_history=True,
                 days_of_history=days_of_history
             )
+        call_command('update_security_profiles')
 
     def handle_prod(self, **options):
         self.stderr.write(self.style.WARNING(

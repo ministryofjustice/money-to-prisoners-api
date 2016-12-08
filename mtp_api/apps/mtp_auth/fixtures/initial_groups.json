@@ -85,7 +85,9 @@
       ["view_payment", "payment", "payment"],
       ["view_bank_details_transaction", "transaction", "transaction"],
       ["add_comment", "credit", "comment"],
-      ["review_credit", "credit", "credit"]
+      ["review_credit", "credit", "credit"],
+      ["view_senderprofile", "security", "senderprofile"],
+      ["view_prisonerprofile", "security", "prisonerprofile"]
     ]
   }
 }
