@@ -1,13 +1,17 @@
-import signal
 import socketserver
 import threading
 
+from django.conf import settings
 from django.core.management import BaseCommand, call_command
 
 from . import synchronised
 
 
 class Command(BaseCommand):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.listener = None
+        self.verbosity = 1
 
     def add_arguments(self, parser):
         super().add_arguments(parser)
@@ -15,16 +19,22 @@ class Command(BaseCommand):
                             type=int, default=8800,
                             help='Open listener socket at this port.')
 
-    def handle(self, *fixture_labels, **options):
-        listener_port = options.pop('port')
-        self.start_listener(listener_port)
+    def handle(self, *args, **options):
+        if settings.ENVIRONMENT == 'prod':
+            self.stderr.write(self.style.WARNING('Disabled in prod environment'))
+            return
+        self.verbosity = options['verbosity']
+        self.start_listener(options['port'])
 
     def start_listener(self, listener_port):
+        self.stdout.write(self.style.SUCCESS('Listening on port %d' % listener_port))
         self.listener = socketserver.TCPServer(('0', listener_port), self.listener_request)
         self.listener.serve_forever()
 
     def listener_request(self, request, client_address, server):
         action = request.recv(1024).strip()
+        if self.verbosity > 1:
+            self.stdout.write('Message received: %s' % action)
         if action == b'load_test_data':
             self.load_test_data(verbosity=1)
             request.sendall(b'done')
@@ -43,5 +53,3 @@ class Command(BaseCommand):
         self.stdout.write(self.style.WARNING('Shutting down'))
         if self.listener:
             self.listener.shutdown()
-        if self.current_thread:
-            signal.pthread_kill(self.current_thread.ident, signal.SIGINT)
