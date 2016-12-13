@@ -42,4 +42,4 @@ RUN venv/bin/python run.py --requirements-file requirements/docker.txt build
 EXPOSE 8080
 EXPOSE 8800
 ENV DJANGO_SETTINGS_MODULE=mtp_api.settings.docker
-CMD venv/bin/uwsgi --ini conf/uwsgi/api.ini
+CMD venv/bin/python manage.py migrate && venv/bin/uwsgi --ini conf/uwsgi/api.ini
