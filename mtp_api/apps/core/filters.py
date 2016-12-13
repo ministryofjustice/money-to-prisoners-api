@@ -1,11 +1,11 @@
 from django import forms
-
 from django.db.models import Q
 from django.utils import six
 from django.utils.dateparse import parse_datetime
 from django.utils.formats import get_format
 from django.utils.functional import lazy
 import django_filters
+from rest_framework.filters import OrderingFilter
 
 
 class MultipleFieldCharFilter(django_filters.CharFilter):
@@ -75,3 +75,12 @@ class IsoDateTimeField(forms.DateTimeField):
 
 class IsoDateTimeFilter(django_filters.DateTimeFilter):
     field_class = IsoDateTimeField
+
+
+class SafeOrderingFilter(OrderingFilter):
+
+    def get_ordering(self, request, queryset, view):
+        ordering = super().get_ordering(request, queryset, view)
+        if ordering and 'id' not in ordering:
+            return list(ordering) + ['id']
+        return ordering

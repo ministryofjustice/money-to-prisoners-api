@@ -20,7 +20,8 @@ from rest_framework.settings import api_settings
 
 from core import dictfetchall
 from core.filters import (
-    BlankStringFilter, StatusChoiceFilter, IsoDateTimeFilter, MultipleFieldCharFilter
+    BlankStringFilter, StatusChoiceFilter, IsoDateTimeFilter,
+    MultipleFieldCharFilter, SafeOrderingFilter
 )
 from core.permissions import ActionsBasedPermissions
 from mtp_auth.models import PrisonUserMapping
@@ -197,7 +198,7 @@ class CreditViewMixin(object):
 
 
 class GetCredits(CreditViewMixin, generics.ListAPIView):
-    filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter)
+    filter_backends = (filters.DjangoFilterBackend, SafeOrderingFilter)
     filter_class = CreditListFilter
     ordering_fields = ('created', 'received_at', 'amount',
                        'prisoner_number', 'prisoner_name')

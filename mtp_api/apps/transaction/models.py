@@ -80,7 +80,7 @@ class Transaction(TimeStampedModel):
     objects = TransactionManager()
 
     class Meta:
-        ordering = ('received_at',)
+        ordering = ('received_at', 'id',)
         get_latest_by = 'received_at'
         permissions = (
             ('view_transaction', 'Can view transaction'),
