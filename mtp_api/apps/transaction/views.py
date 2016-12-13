@@ -8,7 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 import django_filters
 
-from core.filters import StatusChoiceFilter, IsoDateTimeFilter
+from core.filters import StatusChoiceFilter, IsoDateTimeFilter, SafeOrderingFilter
 from credit import InvalidCreditStateException
 from mtp_auth.permissions import BankAdminClientIDPermissions
 from payment.models import Payment
@@ -39,7 +39,7 @@ class TransactionListFilter(django_filters.FilterSet):
 class TransactionView(mixins.CreateModelMixin, mixins.UpdateModelMixin,
                       mixins.ListModelMixin, viewsets.GenericViewSet):
 
-    filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter)
+    filter_backends = (filters.DjangoFilterBackend, SafeOrderingFilter)
     filter_class = TransactionListFilter
     ordering_fields = ('received_at',)
     permission_classes = (

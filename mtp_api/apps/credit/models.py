@@ -66,7 +66,7 @@ class Credit(TimeStampedModel):
     }
 
     class Meta:
-        ordering = ('received_at',)
+        ordering = ('received_at', 'id',)
         get_latest_by = 'received_at'
         permissions = (
             ('view_credit', 'Can view credit'),
