@@ -1,9 +1,11 @@
 from django.core.management import call_command
 from mtp_common.build_tasks.executor import Context
-from mtp_common.build_tasks.tasks import tasks
+from mtp_common.build_tasks.tasks import serve, tasks
+
+serve.dependencies += ('migrate',)
 
 
-@tasks.register('build')
+@tasks.register('build', 'migrate')
 def start(context: Context, port=8000, test_mode=False):
     """
     Starts a development server with test data
@@ -15,10 +17,20 @@ def start(context: Context, port=8000, test_mode=False):
     return call_command('testserver', 'initial_groups', 'test_prisons', addrport='0:%s' % port, interactive=False)
 
 
+@tasks.register('python_dependencies')
+def migrate(context: Context):
+    """
+    Migrates the database models
+    Use `./manage.py migrate` for fine-grained options
+    """
+    context.management_command('migrate', interactive=False)
+
+
 @tasks.register(hidden=True)
 def bundle_javascript(context: Context):
     """
-    Performs no actions
+    Copies javascript sources
+    No compilation is necessary
     """
     rsync_flags = '-avz' if context.verbosity == 2 else '-az'
     context.shell('rsync %s %s %s/' % (rsync_flags, context.app.javascript_source_path, context.app.asset_build_path))
