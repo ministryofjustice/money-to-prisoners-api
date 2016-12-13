@@ -4,14 +4,14 @@
 # see Dockerfile for deployed version
 
 db:
-  image: postgres
+  build: conf/local-postgres
   environment:
     POSTGRES_USER: postgres
     POSTGRES_PASSWORD: postgres
 
 django:
   build: .
-  command: make testserve
+  command: ./venv/bin/python run.py --requirements-file requirements/docker.txt --print-task-names --verbosity 2 start --test-mode
   ports:
     - "8000:8000"
     - "8800:8800"
