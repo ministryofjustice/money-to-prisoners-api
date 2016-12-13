@@ -1,112 +1,33 @@
-# Money to Prisoners API Server
-The API Server for the Money to Prisoners Project
+# Money to Prisoners API
 
-## Dependencies
-### Docker
-To run this project locally on a Mac you need to have
-[Virtualbox](https://www.virtualbox.org/wiki/Downloads)
-[Docker](http://docs.docker.com/installation/mac/) and
-[Docker Compose](https://docs.docker.com/compose/install/) installed.
+The API app for the Money to Prisoners service. Currently, there are no APIs that are used by applications other than those that make up the Money to Prisoners Service.
 
-### Other Repositories
-Alongside this repository you might need the [Cashbook UI](https://github.com/ministryofjustice/money-to-prisoners-cashbook)
-and if you're planning to deploy then you'll need the [deployment repository](https://github.com/ministryofjustice/money-to-prisoners-deploy)
+[Apps and libraries used as part of this service](https://github.com/orgs/ministryofjustice/teams/money-to-prisoners/repositories)
 
-## Developing
-### Development Server
-#### docker-machine
-> If you're developing on a Mac then Docker won't run natively, you'll be running
-> a single VM with linux installed where your Docker containers run. To start the vm
-> run the following first before continuing:
-> ```
-> $ docker-machine create -d virtualbox default
-> $ eval "$(docker-machine env default)"
-> ```
+## Requirements
 
-In a terminal `cd` into the directory you checked this project out into, then
+- Unix-like platform with Python 3.4+ and NodeJS
+- PostgreSQL 9.4+
+- [Docker](https://www.docker.com/products/docker) is used for deployment, optional for development
 
-```
-$ docker-compose build && docker-compose up
-```
+## Developing locally
 
-Wait while Docker does it's stuff and you'll soon see something like:
+Create a PostgreSQL database called `mtp_api`. It's recommended that you use a python virtual environment to isolate each application. Create a Django settings file for your local installation at `mtp_api/settings/local.py` and override the defaults as necessary.
 
-```
-django_1 | Running migrations:
-django_1 |   No migrations to apply.
-```
+All build/development actions can be listed with `./run.py help`.
 
-#### Using Make
+Use `./run.py start` to run against the database configured in your local settings or `./run.py start --test-mode` to run it with auto-generated data (use this mode for running functional tests in client apps).
 
-For convenience you can run this using the Makefile provided:
-
-```shell
-$ make build # initialise the server
-$ make # run the server
-```
-
-You should be able to point your browser at the VM's url
-You can find it by typing `docker-machine ip` in a terminal. Then visit http://**docker-machine ip**:8000/.
-You should see an `HTTP 401 Unauthorized` page.
-
-
-#### Without Docker
-
-If you don't want to use Docker, follow these steps to set up your environment:
-
-Install `virtualenv`:
-
-```
-pip install virtualenv
-```
-
-Create and activate a new environment:
-
-```
-virtualenv --python=python3 venv
-source venv/bin/activate
-```
-
-Install dependencies:
-
-```
-pip install -r requirements/dev.txt
-```
-
-Install postgres, connect to it and run:
-
-```
-create database mtp_api;
-```
-
-By default the project uses the 'postgres' user with no password. This can be 
-overridden by setting the `DB_USERNAME` and `DB_PASSWORD` environment variables
-and creating a new user as follows:
-
-```
-create user <whatever> with password '<whatever else>';
-alter database mtp_api owner to <whatever>;
-alter user <whatever> with superuser;
-```
-
-To set up the database with sample data:
-
-```
-python manage.py migrate
-python manage.py load_test_data
-```
-
-Start the dev server, listening on port 8000:
-
-```
-python manage.py runserver 8000
-```
+A dockerised version can be run locally with `./run.py local_docker`, but this does not run uWSGI like the deployed version does.
 
 ### Sample data generation
-As well as the management command mentioned above (`python manage.py load_test_data`), the entire data set can also be regenerated from the Django admin tool (found at http://[api-host-domain]/admin/). Currently there are 2 scenarios:
+
+As well as the management command (`./manage.py load_test_data`), the entire data set can also be regenerated from the Django admin tool (found at http://localhost:8000/admin/). Currently there are 2 scenarios:
 
 * Random transaction – the standard scenario for integration testing and development (the `load_test_data` command does this by default)
 * User testing the Cashbook – generates random uncredited transactions using offender names and locations from test NOMIS
+* Training data for the Cashbook
+* Delete prisoner location and credit data
 
 These scenarios create a different set of test users for the client applications – see the user list in the Django admin tool.
 
@@ -118,17 +39,19 @@ Pull updates from Transifex with ``./run.py translations --pull``. You'll need t
 
 Push latest English to Transifex with ``./run.py translations --push``. NB: you should pull updates before pushing to merge correctly.
 
-### Using the API
-#### Getting an access token
+## Using the API
+### Getting an access token
+
 ```
 curl -X POST -d "grant_type=password&username=<user_name>&password=<password>&client_id=<client_id>&client_secret=<client_secret>" http://localhost:8000/oauth2/token/
 ```
-If you have executed the `./manage.py load_test_data` command then you'll have
-some users and a test oauth2 application already created. In which case execute the following command:
+
+If you have executed the `./manage.py load_test_data` command then you'll have some users and a test oauth2 application already created. In which case execute the following command:
 
 ```
 curl -X POST -d "grant_type=password&username=test_prison_1&password=test_prison_1&client_id=cashbook&client_secret=cashbook" http://localhost:8000/oauth2/token/
 ```
+
 Which will return something like:
 
 ```
@@ -140,4 +63,5 @@ Which will return something like:
     "refresh_token": "s57NweoHvPXahvmGklsrdDFMxxNSaf"
 }
 ```
+
 Use the `access_token` in the response in subsequent requests.
