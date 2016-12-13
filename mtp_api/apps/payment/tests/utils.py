@@ -47,13 +47,13 @@ def get_sender_prisoner_pairs():
 def generate_initial_payment_data(tot=50,
                                   days_of_history=7):
     data_list = []
+    sender_prisoner_pairs = get_sender_prisoner_pairs()
     for i in range(1, tot+1):
         random_date = latest_payment_date() - datetime.timedelta(
             minutes=random.randint(0, 1440*days_of_history)
         )
         random_date = timezone.localtime(random_date)
         amount = random_amount()
-        sender_prisoner_pairs = get_sender_prisoner_pairs()
         sender, prisoner = next(sender_prisoner_pairs)
         data = {
             'amount': amount,

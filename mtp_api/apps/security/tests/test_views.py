@@ -36,8 +36,8 @@ class SecurityViewTestCase(APITestCase, AuthTestCaseMixin):
     def _get_authorised_user(self):
         return self.security_staff[0]
 
-    def _get_list(self, user, **filters):
-        url = self._get_url()
+    def _get_list(self, user, path_params=[], **filters):
+        url = self._get_url(*path_params)
 
         if 'limit' not in filters:
             filters['limit'] = 1000
@@ -58,27 +58,26 @@ class SenderProfileListTestCase(SecurityViewTestCase):
     def test_filter_by_prisoner_count(self):
         data = self._get_list(self._get_authorised_user(), prisoner_count__gte=3)['results']
         bank_prisoner_counts = Credit.objects.filter(transaction__isnull=False).values(
-                'transaction__sender_name',
-                'transaction__sender_sort_code',
-                'transaction__sender_account_number',
-                'transaction__sender_roll_number',
-            ).order_by(
-                'transaction__sender_name',
-                'transaction__sender_sort_code',
-                'transaction__sender_account_number',
-                'transaction__sender_roll_number'
-            ).annotate(prisoner_count=Count('prisoner_number', distinct=True)
-        )
+            'transaction__sender_name',
+            'transaction__sender_sort_code',
+            'transaction__sender_account_number',
+            'transaction__sender_roll_number',
+        ).order_by(
+            'transaction__sender_name',
+            'transaction__sender_sort_code',
+            'transaction__sender_account_number',
+            'transaction__sender_roll_number'
+        ).annotate(prisoner_count=Count('prisoner_number', distinct=True))
+
         bank_prisoner_counts = bank_prisoner_counts.filter(prisoner_count__gte=3)
 
         card_prisoner_counts = Credit.objects.filter(payment__isnull=False).values(
-                'payment__card_expiry_date',
-                'payment__card_number_last_digits',
-            ).order_by(
-                'payment__card_expiry_date',
-                'payment__card_number_last_digits'
-            ).annotate(prisoner_count=Count('prisoner_number', distinct=True)
-        )
+            'payment__card_expiry_date',
+            'payment__card_number_last_digits',
+        ).order_by(
+            'payment__card_expiry_date',
+            'payment__card_number_last_digits'
+        ).annotate(prisoner_count=Count('prisoner_number', distinct=True))
         card_prisoner_counts = card_prisoner_counts.filter(prisoner_count__gte=3)
 
         self.assertEqual(
@@ -107,6 +106,26 @@ class SenderProfileListTestCase(SecurityViewTestCase):
         self.assertEqual(len(data), sender_profiles.count())
         for sender in sender_profiles:
             self.assertTrue(sender.id in [d['id'] for d in data])
+
+
+class SenderCreditListTestCase(SecurityViewTestCase):
+
+    def _get_url(self, *args, **kwargs):
+        return reverse('sender-credits-list', args=args)
+
+    def test_list_credits_for_sender(self):
+        sender = SenderProfile.objects.first()
+        data = self._get_list(
+            self._get_authorised_user(), path_params=[sender.id]
+        )['results']
+        self.assertTrue(len(data) > 0)
+
+        credits = Credit.objects.filter(sender.credit_filters)
+        self.assertEqual(
+            len(credits), len(data)
+        )
+        for credit in credits:
+            self.assertTrue(credit.id in [d['id'] for d in data])
 
 
 class PrisonerProfileListTestCase(SecurityViewTestCase):
@@ -156,3 +175,23 @@ class PrisonerProfileListTestCase(SecurityViewTestCase):
         self.assertEqual(
             greater_than_3_count, len(data)
         )
+
+
+class PrisonerCreditListTestCase(SecurityViewTestCase):
+
+    def _get_url(self, *args, **kwargs):
+        return reverse('prisoner-credits-list', args=args)
+
+    def test_list_credits_for_prisoner(self):
+        prisoner = PrisonerProfile.objects.first()
+        data = self._get_list(
+            self._get_authorised_user(), path_params=[prisoner.id]
+        )['results']
+        self.assertTrue(len(data) > 0)
+
+        credits = Credit.objects.filter(prisoner.credit_filters)
+        self.assertEqual(
+            len(credits), len(data)
+        )
+        for credit in credits:
+            self.assertTrue(credit.id in [d['id'] for d in data])
