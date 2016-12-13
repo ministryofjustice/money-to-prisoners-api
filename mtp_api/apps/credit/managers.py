@@ -29,14 +29,14 @@ class CreditQuerySet(models.QuerySet):
 
     def counts_per_day(self):
         return self.exclude(received_at__isnull=True) \
-            .extra({'received_at_date': 'received_at::date'}) \
+            .extra({'received_at_date': 'credit_credit.received_at::date'}) \
             .values('received_at_date') \
             .order_by('received_at_date') \
             .annotate(count_per_day=models.Count('pk'))
 
     def amounts_per_day(self):
         return self.exclude(received_at__isnull=True) \
-            .extra({'received_at_date': 'received_at::date'}) \
+            .extra({'received_at_date': 'credit_credit.received_at::date'}) \
             .values('received_at_date') \
             .order_by('received_at_date') \
             .annotate(amount_per_day=models.Sum('amount'))
