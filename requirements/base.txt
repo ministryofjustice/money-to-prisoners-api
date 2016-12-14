@@ -7,6 +7,7 @@ django-model-utils==2.4
 django-filter==0.13.0
 django-oauth-toolkit==0.10.0
 drf-extensions==0.2.8
+drf-nested-routers==0.11.1
 django-rest-swagger==0.3.5
 django-extended-choices==1.0.7
 fake-factory>=0.5,<0.6
@@ -17,4 +18,4 @@ django-mailgun==0.8.0
 crontab==0.21.3
 requests>=2.12,<3
 transifex-client>=0.12
-xlrd>=1.0.0<2
+xlrd>=1.0.0,<2

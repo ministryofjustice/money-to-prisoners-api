@@ -197,7 +197,7 @@ class CreditViewMixin(object):
         )
 
 
-class GetCredits(CreditViewMixin, generics.ListAPIView):
+class GetCredits(CreditViewMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
     filter_backends = (filters.DjangoFilterBackend, SafeOrderingFilter)
     filter_class = CreditListFilter
     ordering_fields = ('created', 'received_at', 'amount',
@@ -289,7 +289,7 @@ class CreditList(View):
             view = DatePaginatedCredits
         else:
             view = GetCredits
-        return view.as_view()(request, *args, **kwargs)
+        return view.as_view({'get': 'list'}, suffix='List')(request, *args, **kwargs)
 
     def patch(self, request, *args, **kwargs):
         return CreditCredits.as_view()(request, *args, **kwargs)

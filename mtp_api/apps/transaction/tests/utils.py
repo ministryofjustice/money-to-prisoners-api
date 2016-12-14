@@ -14,7 +14,8 @@ from core.tests.utils import MockModelTimestamps
 from credit.constants import CREDIT_RESOLUTION, CREDIT_STATUS
 from credit.models import Credit
 from credit.tests.utils import (
-    get_owner_and_status_chooser, create_credit_log, random_amount
+    get_owner_and_status_chooser, create_credit_log, random_amount,
+    build_sender_prisoner_pairs
 )
 from prison.models import PrisonerLocation
 from transaction.models import Transaction
@@ -84,23 +85,7 @@ def get_sender_prisoner_pairs():
 
     prisoners = list(PrisonerLocation.objects.all())
 
-    sender_prisoner_pairs = []
-    for i in range(number_of_senders*3):
-        prisoner_fraction = number_of_prisoners
-        if i <= number_of_senders:
-            sender_fraction = number_of_senders
-            if i % 3 == 1:
-                prisoner_fraction = ceil(number_of_prisoners/2)
-            elif i % 3 == 2:
-                prisoner_fraction = ceil(number_of_prisoners/15)
-        elif i <= number_of_senders*2:
-            sender_fraction = ceil(number_of_senders/2)
-        else:
-            sender_fraction = ceil(number_of_senders/15)
-
-        sender_prisoner_pairs.append(
-            (senders[i % sender_fraction], prisoners[i % prisoner_fraction])
-        )
+    sender_prisoner_pairs = build_sender_prisoner_pairs(senders, prisoners)
     return cycle(sender_prisoner_pairs)
 
 
@@ -247,6 +232,14 @@ def generate_transactions(
     include_unidentified_credits=True,
     days_of_history=7
 ):
+    transactions = []
+    if predetermined_transactions:
+        for data in generate_predetermined_transactions_data():
+            with MockModelTimestamps(data['created'], data['modified']):
+                new_transaction = save_transaction(data)
+            transactions.append(new_transaction)
+        generate_transaction_logs(transactions)
+
     data_list = generate_initial_transactions_data(
         tot=transaction_batch,
         include_debits=include_debits,
@@ -255,6 +248,11 @@ def generate_transactions(
         days_of_history=days_of_history
     )
 
+    transactions += create_transactions(data_list, consistent_history)
+    return transactions
+
+
+def create_transactions(data_list, consistent_history=False):
     owner_status_chooser = get_owner_and_status_chooser()
     transactions = []
     if consistent_history:
@@ -271,15 +269,7 @@ def generate_transactions(
     for transaction_counter, data in enumerate(data_list, start=1):
         new_transaction = create_transaction(transaction_counter, data)
         transactions.append(new_transaction)
-
-    if predetermined_transactions:
-        for data in generate_predetermined_transactions_data():
-            with MockModelTimestamps(data['created'], data['modified']):
-                new_transaction = save_transaction(data)
-            transactions.append(new_transaction)
-
     generate_transaction_logs(transactions)
-
     return transactions
 
 

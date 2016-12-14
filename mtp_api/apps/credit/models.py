@@ -218,6 +218,7 @@ class Credit(TimeStampedModel):
     def card_number_last_digits(self):
         return self.payment.card_number_last_digits if hasattr(self, 'payment') else None
 
+    @property
     def card_expiry_date(self):
         return self.payment.card_expiry_date if hasattr(self, 'payment') else None
 
