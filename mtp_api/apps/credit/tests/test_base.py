@@ -48,9 +48,9 @@ class BaseCreditViewTestCase(AuthTestCaseMixin, APITestCase):
         transaction_credits = [t.credit for t in generate_transactions(
             transaction_batch=self.transaction_batch, days_of_history=5
         ) if t.credit]
-        payment_credits = [t.credit for t in generate_payments(
+        payment_credits = [p.credit for p in generate_payments(
             payment_batch=self.transaction_batch, days_of_history=5
-        ) if t.credit]
+        ) if p.credit and p.credit.resolution != 'initial']
         self.credits = transaction_credits + payment_credits
         self.prisons = Prison.objects.all()
 
