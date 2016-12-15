@@ -39,6 +39,9 @@ class SenderProfile(TimeStampedModel):
             ('view_senderprofile', 'Can view sender profile'),
         )
 
+    def __str__(self):
+        return 'Sender %s' % self.id
+
 
 class BankTransferSenderDetails(TimeStampedModel):
     sender_name = models.CharField(max_length=250, blank=True)
@@ -54,6 +57,9 @@ class BankTransferSenderDetails(TimeStampedModel):
             ('sender_name', 'sender_sort_code', 'sender_account_number', 'sender_roll_number'),
         )
 
+    def __str__(self):
+        return self.sender_name
+
 
 class DebitCardSenderDetails(TimeStampedModel):
     card_number_last_digits = models.CharField(max_length=4, blank=True, null=True)
@@ -67,6 +73,9 @@ class DebitCardSenderDetails(TimeStampedModel):
             ('card_number_last_digits', 'card_expiry_date',),
         )
 
+    def __str__(self):
+        return '%s %s' % (self.card_number_last_digits, self.card_expiry_date)
+
 
 class CardholderName(models.Model):
     name = models.CharField(max_length=250)
@@ -74,6 +83,9 @@ class CardholderName(models.Model):
         DebitCardSenderDetails, on_delete=models.CASCADE,
         related_name='cardholder_names', related_query_name='cardholder_name'
     )
+
+    def __str__(self):
+        return self.name
 
 
 class PrisonerProfile(TimeStampedModel):
@@ -98,6 +110,9 @@ class PrisonerProfile(TimeStampedModel):
             ('view_prisonerprofile', 'Can view prisoner profile'),
         )
 
+    def __str__(self):
+        return self.prisoner_number
+
 
 class SecurityDataUpdate(models.Model):
     max_credit_pk = models.IntegerField()
@@ -105,3 +120,6 @@ class SecurityDataUpdate(models.Model):
     class Meta:
         ordering = ('-max_credit_pk',)
         get_latest_by = 'max_credit_pk'
+
+    def __str__(self):
+        return 'Last security update for credit %s' % self.max_credit_pk
