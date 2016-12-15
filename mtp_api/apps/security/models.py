@@ -11,6 +11,11 @@ class SenderProfile(TimeStampedModel):
     credit_count = models.IntegerField(default=0)
     credit_total = models.IntegerField(default=0)
 
+    class Meta:
+        permissions = (
+            ('view_senderprofile', 'Can view sender profile'),
+        )
+
     @property
     def credit_filters(self):
         return (
@@ -34,11 +39,6 @@ class SenderProfile(TimeStampedModel):
             )
         )
 
-    class Meta:
-        permissions = (
-            ('view_senderprofile', 'Can view sender profile'),
-        )
-
     def __str__(self):
         return 'Sender %s' % self.id
 
@@ -53,6 +53,7 @@ class BankTransferSenderDetails(TimeStampedModel):
     )
 
     class Meta:
+        verbose_name_plural = 'bank transfer sender details'
         unique_together = (
             ('sender_name', 'sender_sort_code', 'sender_account_number', 'sender_roll_number'),
         )
@@ -69,6 +70,7 @@ class DebitCardSenderDetails(TimeStampedModel):
     )
 
     class Meta:
+        verbose_name_plural = 'debit card sender details'
         unique_together = (
             ('card_number_last_digits', 'card_expiry_date',),
         )
