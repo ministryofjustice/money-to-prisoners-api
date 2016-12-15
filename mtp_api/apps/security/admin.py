@@ -49,7 +49,7 @@ class SenderProfileAdmin(admin.ModelAdmin):
     def recipients(self, instance):
         return ', '.join(map(str, instance.prisoners.all()))
 
-    @add_short_description(_('credit_total'))
+    @add_short_description(_('credit total'))
     def formatted_credit_total(self, instance):
         return format_amount(instance.credit_total)
 
@@ -60,7 +60,7 @@ class PrisonerProfileAdmin(admin.ModelAdmin):
     search_fields = ('prisoner_name', 'prisoner_number', 'prisons__name')
     readonly_fields = ('prisons', 'senders',)
 
-    @add_short_description(_('credit_total'))
+    @add_short_description(_('credit total'))
     def formatted_credit_total(self, instance):
         return format_amount(instance.credit_total)
 
