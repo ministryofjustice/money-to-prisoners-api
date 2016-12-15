@@ -40,7 +40,6 @@ class UserViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin,
         client_id = self.request.auth.application.client_id
         queryset = User.objects.filter(
             applicationusermapping__application__client_id=client_id,
-            is_active=True
         ).order_by('username')
 
         user_prisons = PrisonUserMapping.objects.get_prison_set_for_user(self.request.user)
@@ -81,16 +80,19 @@ class UserViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin,
     def destroy(self, request, *args, **kwargs):
         user = self.get_object()
         if user != request.user:
-            user.is_active = False
-            user.save()
+            self.perform_destroy(user)
             return Response(status=status.HTTP_204_NO_CONTENT)
         else:
             return Response(
                 status=status.HTTP_400_BAD_REQUEST,
                 data={
-                    '__all__': [_('You cannot delete yourself')]
+                    '__all__': [_('You cannot disable yourself')]
                 },
             )
+
+    def perform_destroy(self, instance):
+        instance.is_active = False
+        instance.save()
 
 
 @method_decorator(sensitive_post_parameters('old_password', 'new_password'), name='dispatch')

@@ -296,7 +296,7 @@ class ListUserTestCase(APITestCase, AuthTestCaseMixin):
             'cashbook'
         )
 
-    def test_list_users_excludes_deactivated_users(self):
+    def test_list_users_includes_deactivated_users(self):
         self.client.delete(
             reverse('user-detail', kwargs={'username': self.bank_admins[0].username}),
             format='json',
@@ -310,9 +310,8 @@ class ListUserTestCase(APITestCase, AuthTestCaseMixin):
         queryset = User.objects.filter(
             applicationusermapping__application__client_id='bank-admin'
         )
-        active_queryset = queryset.filter(is_active=True)
-        self.assertNotEqual(queryset.count(), len(returned_users))
-        self.assertEqual(active_queryset.count(), len(returned_users))
+        self.assertEqual(queryset.count(), len(returned_users))
+        self.assertEqual(queryset.filter(is_active=False).count(), 1)
 
 
 class CreateUserTestCase(APITestCase, AuthTestCaseMixin):
