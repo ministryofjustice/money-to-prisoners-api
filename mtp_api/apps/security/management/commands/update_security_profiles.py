@@ -1,3 +1,5 @@
+import logging
+
 from django.db.models import Max
 from django.core.management import BaseCommand
 
@@ -6,6 +8,8 @@ from security.models import (
     SenderProfile, BankTransferSenderDetails, DebitCardSenderDetails,
     PrisonerProfile, SecurityDataUpdate, CardholderName
 )
+
+logger = logging.getLogger('mtp')
 
 
 class Command(BaseCommand):
@@ -51,6 +55,7 @@ class Command(BaseCommand):
                     bulk=False
                 )
         elif hasattr(credit, 'payment'):
+            sender_name = credit.sender_name or ''
             try:
                 sender_details = DebitCardSenderDetails.objects.get(
                     card_number_last_digits=credit.card_number_last_digits,
@@ -59,11 +64,11 @@ class Command(BaseCommand):
                 sender_profile = sender_details.sender
                 try:
                     sender_details.cardholder_names.get(
-                        name=credit.sender_name
+                        name=sender_name
                     )
                 except CardholderName.DoesNotExist:
                     sender_details.cardholder_names.add(
-                        CardholderName(name=credit.sender_name),
+                        CardholderName(name=sender_name),
                         bulk=False
                     )
             except DebitCardSenderDetails.DoesNotExist:
@@ -77,8 +82,11 @@ class Command(BaseCommand):
                     bulk=False
                 )
                 sender_profile.debit_card_details.first().cardholder_names.add(
-                    CardholderName(name=credit.sender_name), bulk=False
+                    CardholderName(name=sender_name), bulk=False
                 )
+        else:
+            logger.error('Credit %s does not have a payment nor transaction' % credit.pk)
+            return
 
         sender_profile.credit_count += 1
         sender_profile.credit_total += credit.amount
