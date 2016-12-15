@@ -1,0 +1,15 @@
+{% extends 'admin/change_form.html' %}
+{% load i18n %}
+
+{% block after_related_objects %}
+  <div class="inline-group">
+    <h2>{% trans 'Prisoner profiles' %}</h2>
+    <ul>
+      {% for prisoner in original.prisoners.all %}
+        <li>
+          <a href="{% url 'admin:security_prisonerprofile_change' prisoner.pk %}">{{ prisoner }}</a>
+        </li>
+    {% endfor %}
+    </ul>
+  </div>
+{% endblock %}
