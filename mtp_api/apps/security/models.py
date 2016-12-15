@@ -2,6 +2,7 @@ from functools import reduce
 from itertools import chain
 
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 from model_utils.models import TimeStampedModel
 
 from prison.models import Prison
@@ -41,6 +42,14 @@ class SenderProfile(TimeStampedModel):
 
     def __str__(self):
         return 'Sender %s' % self.id
+
+    def get_sender_names(self):
+        yield from (details.sender_name for details in self.bank_transfer_details.all())
+        for details in self.debit_card_details.all():
+            yield from (cardholder.name for cardholder in details.cardholder_names.all())
+
+    def get_sorted_sender_names(self):
+        return sorted(set(filter(lambda name: (name or '').strip() or _('(Unknown)'), self.get_sender_names())))
 
 
 class BankTransferSenderDetails(TimeStampedModel):

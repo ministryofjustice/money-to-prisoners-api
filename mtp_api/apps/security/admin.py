@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext, gettext_lazy as _
 
 from core.admin import add_short_description
 from security.models import (
@@ -36,18 +36,14 @@ class SenderProfileAdmin(admin.ModelAdmin):
         'debit_card_details__card_expiry_date',
         'debit_card_details__cardholder_name__name',
     )
-    readonly_fields = ('recipients',)
 
     def sender_type(self, instance):
         sender_types = []
         if instance.bank_transfer_details.exists():
-            sender_types.append('Bank transfer')
+            sender_types.append(gettext('Bank transfer'))
         if instance.debit_card_details.exists():
-            sender_types.append('Debit card')
+            sender_types.append(gettext('Debit card'))
         return ', '.join(sender_types)
-
-    def recipients(self, instance):
-        return ', '.join(map(str, instance.prisoners.all()))
 
     @add_short_description(_('credit total'))
     def formatted_credit_total(self, instance):
@@ -58,7 +54,8 @@ class SenderProfileAdmin(admin.ModelAdmin):
 class PrisonerProfileAdmin(admin.ModelAdmin):
     list_display = ('prisoner_number', 'credit_count', 'formatted_credit_total')
     search_fields = ('prisoner_name', 'prisoner_number', 'prisons__name')
-    readonly_fields = ('prisons', 'senders',)
+    readonly_fields = ('prisons',)
+    exclude = ('senders',)
 
     @add_short_description(_('credit total'))
     def formatted_credit_total(self, instance):
