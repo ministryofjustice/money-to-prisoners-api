@@ -314,6 +314,16 @@ class ListUserTestCase(APITestCase, AuthTestCaseMixin):
         self.assertEqual(queryset.count(), len(returned_users))
         self.assertEqual(queryset.filter(is_active=False).count(), 1)
 
+    def test_list_users_includes_locked_users(self):
+        cashbook_app = Application.objects.get(client_id='cashbook')
+        prison_clerk = self.prison_clerks[0]
+        for _ in range(settings.MTP_AUTH_LOCKOUT_COUNT):
+            FailedLoginAttempt.objects.create(application=cashbook_app, user=prison_clerk)
+        response = self.client.get(self.get_url(), format='json',
+                                   HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.cashbook_uas[0]))
+        users = response.json()['results']
+        self.assertEqual(sum(1 if user['is_locked_out'] else 0 for user in users), 1)
+
 
 class CreateUserTestCase(APITestCase, AuthTestCaseMixin):
     fixtures = [
@@ -748,6 +758,21 @@ class UpdateUserTestCase(APITestCase, AuthTestCaseMixin):
             self.refund_bank_admins[0].username,
             user_data
         )
+
+    def test_can_unlock_user(self):
+        cashbook_app = Application.objects.get(client_id='cashbook')
+        prison_clerk = self.prison_clerks[0]
+        for _ in range(settings.MTP_AUTH_LOCKOUT_COUNT):
+            FailedLoginAttempt.objects.create(application=cashbook_app, user=prison_clerk)
+        detail_url = self.get_url(prison_clerk.username)
+        response = self.client.get(detail_url, format='json',
+                                   HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.cashbook_uas[0]))
+        self.assertTrue(response.json()['is_locked_out'])
+        response = self.client.patch(detail_url, format='json',
+                                     data={'is_locked_out': False},
+                                     HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.cashbook_uas[0]))
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()['is_locked_out'])
 
 
 class DeleteUserTestCase(APITestCase, AuthTestCaseMixin):

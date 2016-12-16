@@ -65,17 +65,19 @@ class UserViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin,
         else:
             raise Http404()
 
+    def perform_create_or_update(self, serializer):
+        kwargs = {
+            key: self.request.data[key]
+            for key in ('user_admin', 'is_locked_out')
+            if key in self.request.data
+        }
+        serializer.save(**kwargs)
+
     def perform_create(self, serializer):
-        if 'user_admin' in self.request.data:
-            serializer.save(user_admin=self.request.data['user_admin'])
-        else:
-            serializer.save()
+        self.perform_create_or_update(serializer)
 
     def perform_update(self, serializer):
-        if 'user_admin' in self.request.data:
-            serializer.save(user_admin=self.request.data['user_admin'])
-        else:
-            serializer.save()
+        self.perform_create_or_update(serializer)
 
     def destroy(self, request, *args, **kwargs):
         user = self.get_object()
