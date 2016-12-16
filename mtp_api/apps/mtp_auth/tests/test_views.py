@@ -12,11 +12,12 @@ from django.core import mail
 from django.core.urlresolvers import reverse
 from django.test import override_settings
 from django.utils.timezone import now
+from mtp_common.test_utils import silence_logger
 from oauth2_provider.models import AccessToken, Application, RefreshToken
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from core.tests.utils import make_test_users, make_test_user_admins, silence_logger
+from core.tests.utils import make_test_users, make_test_user_admins
 from mtp_auth.constants import (
     ALL_OAUTH_CLIENT_IDS,
     BANK_ADMIN_OAUTH_CLIENT_ID, CASHBOOK_OAUTH_CLIENT_ID,
