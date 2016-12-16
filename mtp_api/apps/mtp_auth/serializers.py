@@ -1,13 +1,14 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.db.transaction import atomic
-from django.utils.translation import ugettext as _
+from django.utils.translation import gettext as _
 from mtp_common.email import send_email
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
 from .models import (
-    PrisonUserMapping, ApplicationGroupMapping, ApplicationUserMapping
+    PrisonUserMapping, ApplicationGroupMapping, ApplicationUserMapping,
+    FailedLoginAttempt,
 )
 from .validators import CaseInsensitiveUniqueValidator
 
@@ -19,6 +20,7 @@ class UserSerializer(serializers.ModelSerializer):
     permissions = serializers.SerializerMethodField()
     user_admin = serializers.SerializerMethodField()
     prisons = serializers.SerializerMethodField()
+    is_locked_out = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -34,6 +36,7 @@ class UserSerializer(serializers.ModelSerializer):
             'permissions',
             'user_admin',
             'prisons',
+            'is_locked_out',
         )
         extra_kwargs = {
             'first_name': {'required': True},
@@ -58,6 +61,9 @@ class UserSerializer(serializers.ModelSerializer):
         ))
 
         return fields
+
+    def get_is_locked_out(self, obj):
+        return FailedLoginAttempt.objects.is_locked_out(user=obj)
 
     def get_applications(self, obj):
         return sorted(application.application.name for application in ApplicationUserMapping.objects.filter(user=obj))
@@ -84,6 +90,7 @@ class UserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         creating_user = self.context['request'].user
         make_user_admin = validated_data.pop('user_admin', False)
+        validated_data.pop('is_locked_out', None)
         new_user = super().create(validated_data)
 
         password = User.objects.make_random_password(length=10)
@@ -130,6 +137,7 @@ class UserSerializer(serializers.ModelSerializer):
     @atomic
     def update(self, user, validated_data):
         make_user_admin = validated_data.pop('user_admin', None)
+        is_locked_out = validated_data.pop('is_locked_out', None)
         updated_user = super().update(user, validated_data)
 
         if make_user_admin is not None:
@@ -139,6 +147,9 @@ class UserSerializer(serializers.ModelSerializer):
             else:
                 updated_user.groups.remove(user_admin_group)
         updated_user.save()
+
+        if is_locked_out is False:
+            FailedLoginAttempt.objects.filter(user=updated_user).delete()
 
         return updated_user
 
