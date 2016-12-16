@@ -13,10 +13,10 @@ from django.utils.crypto import get_random_string
 from django.utils.dateparse import parse_datetime
 from django.utils.dateformat import format as format_date
 from django.utils.timezone import localtime
+from mtp_common.test_utils import silence_logger
 from rest_framework import status
 
 from core import getattr_path
-from core.tests.utils import silence_logger
 from credit.views import CreditTextSearchFilter
 from credit.models import Credit, Log
 from credit.constants import CREDIT_STATUS, LOCK_LIMIT, LOG_ACTIONS

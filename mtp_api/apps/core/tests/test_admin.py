@@ -4,8 +4,7 @@ from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.core.urlresolvers import reverse
 from django.test import TestCase
-
-from core.tests.utils import silence_logger
+from mtp_common.test_utils import silence_logger
 
 
 class RecreateTestDataViewTestCase(TestCase):

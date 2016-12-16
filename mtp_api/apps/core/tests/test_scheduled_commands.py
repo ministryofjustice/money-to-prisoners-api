@@ -4,10 +4,10 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.test.utils import captured_stdout
 from django.utils import timezone
+from mtp_common.test_utils import silence_logger
 
 from core.models import ScheduledCommand
 from core.management.commands import run_scheduled_commands
-from core.tests.utils import silence_logger
 
 
 class ScheduledCommandsTestCase(TestCase):
