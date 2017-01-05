@@ -5,7 +5,6 @@ import re
 
 from django.contrib.auth import get_user_model
 from django.db import connection, models, transaction
-from django.forms import MultipleChoiceField
 import django_filters
 from django.http import HttpResponseRedirect
 from django.utils import timezone
@@ -21,7 +20,7 @@ from rest_framework.settings import api_settings
 from core import dictfetchall
 from core.filters import (
     BlankStringFilter, StatusChoiceFilter, IsoDateTimeFilter,
-    MultipleFieldCharFilter, SafeOrderingFilter
+    MultipleFieldCharFilter, SafeOrderingFilter, MultipleValueFilter
 )
 from core.permissions import ActionsBasedPermissions
 from mtp_auth.models import PrisonUserMapping
@@ -99,16 +98,6 @@ class CreditTextSearchFilter(django_filters.CharFilter):
                 )
             )
         return qs
-
-
-class MultipleValueField(MultipleChoiceField):
-
-    def valid_value(self, value):
-        return True
-
-
-class MultipleValueFilter(django_filters.MultipleChoiceFilter):
-    field_class = MultipleValueField
 
 
 class ValidCreditFilter(django_filters.BooleanFilter):

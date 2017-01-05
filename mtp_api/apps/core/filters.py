@@ -84,3 +84,13 @@ class SafeOrderingFilter(OrderingFilter):
         if ordering and 'id' not in ordering:
             return list(ordering) + ['id']
         return ordering
+
+
+class MultipleValueField(forms.MultipleChoiceField):
+
+    def valid_value(self, value):
+        return True
+
+
+class MultipleValueFilter(django_filters.MultipleChoiceFilter):
+    field_class = MultipleValueField
