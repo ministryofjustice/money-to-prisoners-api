@@ -37,6 +37,7 @@ class SenderProfileSerializer(serializers.ModelSerializer):
     bank_transfer_details = BankTransferSenderDetailsSerializer(many=True)
     debit_card_details = DebitCardSenderDetailsSerializer(many=True)
     prisoner_count = serializers.IntegerField()
+    prison_count = serializers.IntegerField()
 
     class Meta:
         model = SenderProfile
@@ -45,6 +46,7 @@ class SenderProfileSerializer(serializers.ModelSerializer):
             'credit_count',
             'credit_total',
             'prisoner_count',
+            'prison_count',
             'bank_transfer_details',
             'debit_card_details',
             'created',

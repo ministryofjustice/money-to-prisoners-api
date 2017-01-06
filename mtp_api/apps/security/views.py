@@ -3,8 +3,9 @@ import django_filters
 from rest_framework import mixins, viewsets, filters
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.settings import api_settings
 
-from core.filters import MultipleFieldCharFilter
+from core.filters import MultipleFieldCharFilter, MultipleValueFilter
 from credit.views import GetCredits
 from mtp_auth.permissions import NomsOpsClientIDPermissions
 from prison.models import Prison
@@ -33,25 +34,39 @@ class SenderProfileListFilter(django_filters.FilterSet):
         name='prisoner_count', lookup_expr='lte')
     prisoner_count__gte = django_filters.NumberFilter(
         name='prisoner_count', lookup_expr='gte')
+    prisoners = django_filters.ModelMultipleChoiceFilter(
+        name='prisoners', queryset=PrisonerProfile.objects.all()
+    )
+
     prison = django_filters.ModelMultipleChoiceFilter(
         name='prisoners__prisons', queryset=Prison.objects.all()
     )
+    prison_region = django_filters.CharFilter(name='prisoners__prisons__region')
+    prison_population = MultipleValueFilter(name='prisoners__prisons__populations__name')
+    prison_category = MultipleValueFilter(name='prisoners__prisons__categories__name')
 
     class Meta:
         model = SenderProfile
         fields = {
             'credit_count': ['lte', 'gte'],
             'credit_total': ['lte', 'gte'],
+            'modified': ['lt', 'gte'],
         }
 
 
 class SenderProfileView(
     mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
 ):
-    queryset = SenderProfile.objects.all().annotate(prisoner_count=Count('prisoners'))
-    filter_backends = (filters.DjangoFilterBackend,)
+    queryset = SenderProfile.objects.all().annotate(
+        prisoner_count=Count('prisoners'),
+        prison_count=Count('prisoners__prisons'),
+    )
+    filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter,)
     filter_class = SenderProfileListFilter
     serializer_class = SenderProfileSerializer
+    ordering_param = api_settings.ORDERING_PARAM
+    ordering_fields = ('prisoner_count', 'credit_count', 'credit_total',)
+    default_ordering = ('-prisoner_count',)
 
     permission_classes = (
         IsAuthenticated, SecurityProfilePermissions, NomsOpsClientIDPermissions
@@ -85,6 +100,9 @@ class PrisonerProfileListFilter(django_filters.FilterSet):
         name='sender_count', lookup_expr='lte')
     sender_count__gte = django_filters.NumberFilter(
         name='sender_count', lookup_expr='gte')
+    senders = django_filters.ModelMultipleChoiceFilter(
+        name='senders', queryset=SenderProfile.objects.all()
+    )
 
     class Meta:
         model = PrisonerProfile
@@ -93,7 +111,7 @@ class PrisonerProfileListFilter(django_filters.FilterSet):
             'prisoner_dob': ['exact'],
             'credit_count': ['lte', 'gte'],
             'credit_total': ['lte', 'gte'],
-            'senders': ['exact'],
+            'modified': ['lt', 'gte'],
         }
 
 
@@ -101,9 +119,11 @@ class PrisonerProfileView(
     mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
 ):
     queryset = PrisonerProfile.objects.all().annotate(sender_count=Count('senders'))
-    filter_backends = (filters.DjangoFilterBackend,)
+    filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter,)
     filter_class = PrisonerProfileListFilter
     serializer_class = PrisonerProfileSerializer
+    ordering_fields = ('sender_count', 'credit_count', 'credit_total', 'prisoner_name', 'prisoner_number')
+    default_ordering = ('-sender_count',)
 
     permission_classes = (
         IsAuthenticated, SecurityProfilePermissions, NomsOpsClientIDPermissions
