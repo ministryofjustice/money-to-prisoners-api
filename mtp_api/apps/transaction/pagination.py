@@ -58,7 +58,7 @@ class DateBasedPagination(BasePagination):
         dates = queryset.annotate(converted_date=DateTimeDateTransform(page_by_date_field)). \
             values_list('converted_date', flat=True)
         # count distinct dates for this field
-        date_count = dates.aggregate(count=models.Count('converted_date', distinct=True))['count']
+        date_count = dates.aggregate(count=models.Count('converted_date', distinct=True))['count'] or 0
 
         self.page_count = int(math.ceil(date_count / self.page_size))
         if self.page_count > 1:
