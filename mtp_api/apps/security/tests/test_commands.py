@@ -106,6 +106,7 @@ class UpdateSecurityProfilesTestCase(TestCase):
         initial_sender_credit_count = sender_to_update.credit_count
         initial_sender_credit_total = sender_to_update.credit_total
         initial_sender_cardholder_names = list(card_details.cardholder_names.values_list('name', flat=True))
+        initial_sender_emails = list(card_details.sender_emails.values_list('email', flat=True))
         initial_prisoner_credit_count = prisoner_to_update.credit_count
         initial_prisoner_credit_total = prisoner_to_update.credit_total
 
@@ -113,6 +114,7 @@ class UpdateSecurityProfilesTestCase(TestCase):
 
         new_payments[0]['received_at'] = timezone.now()
 
+        new_payments[0]['email'] = 'dude@mtp.local'
         new_payments[0]['cardholder_name'] = 'other name'
         new_payments[0]['card_number_last_digits'] = card_details.card_number_last_digits
         new_payments[0]['card_expiry_date'] = card_details.card_expiry_date
@@ -135,6 +137,10 @@ class UpdateSecurityProfilesTestCase(TestCase):
         self.assertEqual(
             sorted(card_details.cardholder_names.values_list('name', flat=True)),
             sorted(initial_sender_cardholder_names + ['other name'])
+        )
+        self.assertEqual(
+            sorted(card_details.sender_emails.values_list('email', flat=True)),
+            sorted(initial_sender_emails + ['dude@mtp.local'])
         )
 
         prisoner_to_update.refresh_from_db()

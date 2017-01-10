@@ -99,6 +99,17 @@ class CardholderName(models.Model):
         return self.name
 
 
+class SenderEmail(models.Model):
+    email = models.CharField(max_length=250)
+    debit_card_sender_details = models.ForeignKey(
+        DebitCardSenderDetails, on_delete=models.CASCADE,
+        related_name='sender_emails', related_query_name='sender_email'
+    )
+
+    def __str__(self):
+        return self.email
+
+
 class PrisonerProfile(TimeStampedModel):
     prisoner_name = models.CharField(max_length=250)
     prisoner_number = models.CharField(max_length=250)

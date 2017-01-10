@@ -6,7 +6,7 @@ from django.core.management import BaseCommand
 from credit.models import Credit
 from security.models import (
     SenderProfile, BankTransferSenderDetails, DebitCardSenderDetails,
-    PrisonerProfile, SecurityDataUpdate, CardholderName
+    PrisonerProfile, SecurityDataUpdate, CardholderName, SenderEmail
 )
 
 logger = logging.getLogger('mtp')
@@ -56,21 +56,33 @@ class Command(BaseCommand):
                 )
         elif hasattr(credit, 'payment'):
             sender_name = credit.sender_name or ''
+            sender_email = credit.payment.email or ''
             try:
                 sender_details = DebitCardSenderDetails.objects.get(
                     card_number_last_digits=credit.card_number_last_digits,
                     card_expiry_date=credit.card_expiry_date
                 )
                 sender_profile = sender_details.sender
-                try:
-                    sender_details.cardholder_names.get(
-                        name=sender_name
-                    )
-                except CardholderName.DoesNotExist:
-                    sender_details.cardholder_names.add(
-                        CardholderName(name=sender_name),
-                        bulk=False
-                    )
+                if sender_name:
+                    try:
+                        sender_details.cardholder_names.get(
+                            name=sender_name
+                        )
+                    except CardholderName.DoesNotExist:
+                        sender_details.cardholder_names.add(
+                            CardholderName(name=sender_name),
+                            bulk=False
+                        )
+                if sender_email:
+                    try:
+                        sender_details.sender_emails.get(
+                            email=sender_email
+                        )
+                    except SenderEmail.DoesNotExist:
+                        sender_details.sender_emails.add(
+                            SenderEmail(email=sender_email),
+                            bulk=False
+                        )
             except DebitCardSenderDetails.DoesNotExist:
                 sender_profile = SenderProfile()
                 sender_profile.save()
@@ -81,9 +93,14 @@ class Command(BaseCommand):
                     ),
                     bulk=False
                 )
-                sender_profile.debit_card_details.first().cardholder_names.add(
-                    CardholderName(name=sender_name), bulk=False
-                )
+                if sender_name:
+                    sender_profile.debit_card_details.first().cardholder_names.add(
+                        CardholderName(name=sender_name), bulk=False
+                    )
+                if sender_email:
+                    sender_profile.debit_card_details.first().sender_emails.add(
+                        SenderEmail(email=sender_email), bulk=False
+                    )
         else:
             logger.error('Credit %s does not have a payment nor transaction' % credit.pk)
             return
