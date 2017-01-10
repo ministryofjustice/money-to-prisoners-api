@@ -138,6 +138,13 @@ class CreditListFilter(django_filters.FilterSet):
     sender_account_number__isblank = BlankStringFilter(name='transaction__sender_account_number')
     sender_roll_number__isblank = BlankStringFilter(name='transaction__sender_roll_number')
 
+    card_expiry_date = django_filters.CharFilter(
+        name='payment__card_expiry_date')
+    card_number_last_digits = django_filters.CharFilter(
+        name='payment__card_number_last_digits')
+    sender_email = django_filters.CharFilter(
+        name='payment__email')
+
     exclude_amount__endswith = django_filters.CharFilter(
         name='amount', lookup_expr='endswith', exclude=True
     )
