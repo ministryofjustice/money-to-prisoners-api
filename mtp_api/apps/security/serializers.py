@@ -20,6 +20,7 @@ class BankTransferSenderDetailsSerializer(serializers.ModelSerializer):
 
 class DebitCardSenderDetailsSerializer(serializers.ModelSerializer):
     cardholder_names = serializers.SerializerMethodField()
+    sender_emails = serializers.SerializerMethodField()
 
     class Meta:
         model = DebitCardSenderDetails
@@ -27,10 +28,14 @@ class DebitCardSenderDetailsSerializer(serializers.ModelSerializer):
             'card_number_last_digits',
             'card_expiry_date',
             'cardholder_names',
+            'sender_emails',
         )
 
     def get_cardholder_names(self, obj):
         return list(obj.cardholder_names.values_list('name', flat=True))
+
+    def get_sender_emails(self, obj):
+        return list(obj.sender_emails.values_list('email', flat=True))
 
 
 class SenderProfileSerializer(serializers.ModelSerializer):
