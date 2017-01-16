@@ -266,9 +266,10 @@ class DeleteOldPrisonerLocationsViewTestCase(AuthTestCaseMixin, APITestCase):
 
         self.assertEqual(PrisonerLocation.objects.all().count(), 0)
 
+    @mock.patch('prison.views.prisoner_profile_current_prisons_need_updating')
     @mock.patch('prison.views.credit_prisons_need_updating')
-    def test_delete_old_sends_credit_prisons_need_updating_signal(
-        self, mocked_credit_prisons_need_updating
+    def test_delete_old_sends_prisons_need_updating_signals(
+        self, mocked_credit_prisons_need_updating, mocked_prisoner_profiles_need_updating
     ):
         response = self.client.post(
             self.url, format='json',
@@ -277,6 +278,7 @@ class DeleteOldPrisonerLocationsViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
         mocked_credit_prisons_need_updating.send.assert_called_with(sender=PrisonerLocation)
+        mocked_prisoner_profiles_need_updating.send.assert_called_with(sender=PrisonerLocation)
 
 
 class PrisonerValidityViewTestCase(AuthTestCaseMixin, APITestCase):

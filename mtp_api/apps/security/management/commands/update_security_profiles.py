@@ -1,6 +1,7 @@
 import logging
 
 from django.db.models import Max
+from django.db.transaction import atomic
 from django.core.management import BaseCommand
 
 from credit.models import Credit
@@ -21,12 +22,15 @@ class Command(BaseCommand):
         except SecurityDataUpdate.DoesNotExist:
             new_credits = Credit.objects.all()
 
-        for credit in new_credits:
-            self.create_or_update_profiles(credit)
+        with atomic():
+            for credit in new_credits:
+                self.create_or_update_profiles(credit)
 
-        if len(new_credits):
-            new_max_pk = new_credits.aggregate(Max('pk'))['pk__max']
-            SecurityDataUpdate(max_credit_pk=new_max_pk).save()
+            if len(new_credits):
+                new_max_pk = new_credits.aggregate(Max('pk'))['pk__max']
+                SecurityDataUpdate(max_credit_pk=new_max_pk).save()
+
+        PrisonerProfile.objects.update_current_prisons()
 
     def create_or_update_profiles(self, credit):
         sender_profile = self.create_or_update_sender_profile(credit)

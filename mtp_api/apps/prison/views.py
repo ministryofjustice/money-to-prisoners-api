@@ -15,6 +15,7 @@ from prison.serializers import (
     PrisonerLocationSerializer, PrisonerValiditySerializer, PrisonSerializer,
     PopulationSerializer, CategorySerializer
 )
+from security.signals import prisoner_profile_current_prisons_need_updating
 
 
 class PrisonerLocationView(
@@ -56,6 +57,7 @@ class DeleteOldPrisonerLocationsView(generics.GenericAPIView):
         self.get_queryset().filter(active=True).delete()
         self.get_queryset().filter(active=False).update(active=True)
         credit_prisons_need_updating.send(sender=PrisonerLocation)
+        prisoner_profile_current_prisons_need_updating.send(sender=PrisonerLocation)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
