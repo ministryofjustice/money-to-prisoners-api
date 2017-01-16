@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from prison.models import Prison
 from .models import (
     SenderProfile, BankTransferSenderDetails, DebitCardSenderDetails,
     PrisonerProfile
@@ -59,8 +60,20 @@ class SenderProfileSerializer(serializers.ModelSerializer):
         )
 
 
+class PrisonSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Prison
+        fields = (
+            'nomis_id',
+            'name'
+        )
+
+
 class PrisonerProfileSerializer(serializers.ModelSerializer):
     sender_count = serializers.IntegerField()
+    prisons = PrisonSerializer(many=True)
+    current_prison = PrisonSerializer()
 
     class Meta:
         model = PrisonerProfile
@@ -72,7 +85,8 @@ class PrisonerProfileSerializer(serializers.ModelSerializer):
             'prisoner_name',
             'prisoner_number',
             'prisoner_dob',
-            'prisons',
             'created',
             'modified',
+            'prisons',
+            'current_prison'
         )
