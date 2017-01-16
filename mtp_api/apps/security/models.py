@@ -2,10 +2,14 @@ from functools import reduce
 from itertools import chain
 
 from django.db import models
+from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
 from model_utils.models import TimeStampedModel
 
+from core.models import ScheduledCommand
 from prison.models import Prison
+from .managers import PrisonProfileManager
+from .signals import prisoner_profile_current_prisons_need_updating
 
 
 class SenderProfile(TimeStampedModel):
@@ -116,9 +120,14 @@ class PrisonerProfile(TimeStampedModel):
     prisoner_dob = models.DateField()
     credit_count = models.IntegerField(default=0)
     credit_total = models.IntegerField(default=0)
+    current_prison = models.ForeignKey(
+        Prison, on_delete=models.SET_NULL, null=True, related_name='current_prisoners'
+    )
 
-    prisons = models.ManyToManyField(Prison, related_name='prisoners')
+    prisons = models.ManyToManyField(Prison, related_name='historic_prisoners')
     senders = models.ManyToManyField(SenderProfile, related_name='prisoners')
+
+    objects = PrisonProfileManager()
 
     @property
     def credit_filters(self):
@@ -145,3 +154,14 @@ class SecurityDataUpdate(models.Model):
 
     def __str__(self):
         return 'Last security update for credit %s' % self.max_credit_pk
+
+
+@receiver(prisoner_profile_current_prisons_need_updating)
+def update_current_prisons(*args, **kwargs):
+    job = ScheduledCommand(
+        name='update_current_prisons',
+        arg_string='',
+        cron_entry='*/10 * * * *',
+        delete_after_next=True
+    )
+    job.save()

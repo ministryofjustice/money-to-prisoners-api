@@ -86,3 +86,17 @@ class ScheduledCommandsTestCase(TestCase):
 
         from transaction.models import Transaction
         self.assertEqual(Transaction.objects.count(), 70)
+
+    def test_command_deleted_when_flag_set(self):
+        command = ScheduledCommand(
+            name='load_test_data',
+            arg_string='--number-of-prisoners 60 --number-of-transactions 70',
+            cron_entry='* * * * *',
+            next_execution=timezone.now(),
+            delete_after_next=True
+        )
+        command.save()
+        run_commands = run_scheduled_commands.Command()
+        with captured_stdout(), silence_logger():
+            run_commands.handle()
+        self.assertEqual(ScheduledCommand.objects.all().count(), 0)

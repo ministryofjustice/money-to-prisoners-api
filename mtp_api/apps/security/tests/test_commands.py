@@ -7,6 +7,7 @@ from credit.models import Credit
 from payment.tests.utils import (
     create_payments, generate_payments, generate_initial_payment_data
 )
+from prison.models import PrisonerLocation, Prison
 from prison.tests.utils import load_random_prisoner_locations
 from security.models import SenderProfile, PrisonerProfile
 from transaction.tests.utils import (
@@ -151,3 +152,33 @@ class UpdateSecurityProfilesTestCase(TestCase):
             prisoner_to_update.credit_total,
             initial_prisoner_credit_total + new_payments[0]['amount']
         )
+
+
+class UpdateCurrentPrisonsTestCase(TestCase):
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
+
+    def setUp(self):
+        super().setUp()
+        self.prison_clerks, _, _, _, _, self.security_staff = make_test_users()
+        load_random_prisoner_locations()
+
+    def test_update_current_prisons(self):
+        generate_transactions(transaction_batch=100, days_of_history=5)
+        generate_payments(payment_batch=100, days_of_history=5)
+        call_command('update_security_profiles')
+
+        def check_locations():
+            for prisoner_profile in PrisonerProfile.objects.all():
+                current_location = PrisonerLocation.objects.get(
+                    prisoner_number=prisoner_profile.prisoner_number,
+                    active=True
+                )
+                self.assertEqual(prisoner_profile.current_prison, current_location.prison)
+
+        check_locations()
+
+        for location in PrisonerLocation.objects.all():
+            location.prison = Prison.objects.all().order_by('?').first()
+
+        call_command('update_current_prisons')
+        check_locations()

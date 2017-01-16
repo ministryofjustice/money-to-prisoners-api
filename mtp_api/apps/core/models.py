@@ -32,6 +32,7 @@ class ScheduledCommand(models.Model):
     arg_string = models.CharField(max_length=255, blank=True)
     cron_entry = models.CharField(max_length=255, validators=[validate_cron_entry])
     next_execution = models.DateTimeField(null=True, blank=True)
+    delete_after_next = models.BooleanField(default=False)
 
     def get_args(self):
         return self.arg_string.split(' ') if self.arg_string else []
@@ -43,6 +44,8 @@ class ScheduledCommand(models.Model):
         start = pc()
         call_command(self.name, *self.get_args())
         logger.info('Completed scheduled command "%s" in %ss' % (self, pc() - start))
+        if self.delete_after_next:
+            self.delete()
 
     def is_scheduled(self):
         return timezone.now() >= self.next_execution
