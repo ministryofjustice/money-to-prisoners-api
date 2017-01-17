@@ -31,7 +31,7 @@ class Category(models.Model):
 
 class Prison(TimeStampedModel):
     nomis_id = models.CharField(max_length=3, primary_key=True, verbose_name='NOMIS id')
-    general_ledger_code = models.CharField(max_length=3)
+    general_ledger_code = models.CharField(max_length=8)
     name = models.CharField(max_length=500)
     region = models.CharField(max_length=255, blank=True)
     populations = models.ManyToManyField(Population)
