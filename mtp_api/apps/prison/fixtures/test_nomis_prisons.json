@@ -4,7 +4,7 @@
     "pk": "ALI",
     "fields": {
       "name": "HMP ALBANY",
-      "general_ledger_code": "137",
+      "general_ledger_code": "10200530",
       "created": "2015-12-09T12:00:00Z",
       "modified": "2015-12-09T12:00:00Z",
       "region": "South Central",
@@ -17,7 +17,7 @@
     "pk": "BXI",
     "fields": {
       "name": "HMP BRIXTON",
-      "general_ledger_code": "014",
+      "general_ledger_code": "10200080",
       "created": "2015-12-09T12:00:00Z",
       "modified": "2015-12-09T12:00:00Z",
       "region": "London",
@@ -30,7 +30,7 @@
     "pk": "ISI",
     "fields": {
       "name": "HMP/YOI ISIS",
-      "general_ledger_code": "138",
+      "general_ledger_code": "10200520",
       "created": "2015-12-09T12:00:00Z",
       "modified": "2015-12-09T12:00:00Z",
       "region": "London",
@@ -43,7 +43,7 @@
     "pk": "LEI",
     "fields": {
       "name": "HMP LEEDS",
-      "general_ledger_code": "071",
+      "general_ledger_code": "10200590",
       "created": "2015-12-09T12:00:00Z",
       "modified": "2015-12-09T12:00:00Z",
       "region": "Yorkshire and Humberside",
