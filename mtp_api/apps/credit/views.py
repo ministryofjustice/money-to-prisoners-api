@@ -33,7 +33,7 @@ from prison.models import Prison
 from transaction.models import Transaction
 from transaction.pagination import DateBasedPagination
 from . import InvalidCreditStateException
-from .constants import CREDIT_STATUS
+from .constants import CREDIT_STATUS, CREDIT_SOURCE
 from .forms import SenderListFilterForm, PrisonerListFilterForm, SQLFragment
 from .models import Credit, Comment
 from .permissions import CreditPermissions
@@ -113,6 +113,22 @@ class ValidCreditFilter(django_filters.BooleanFilter):
             return queryset.filter(~valid_query)
 
 
+class CreditSourceFilter(django_filters.ChoiceFilter):
+
+    def __init__(self, *args, **kwargs):
+        kwargs['choices'] = CREDIT_SOURCE.choices
+        super().__init__(*args, **kwargs)
+
+    def filter(self, qs, value):
+        if value == CREDIT_SOURCE.BANK_TRANSFER:
+            qs = qs.filter(transaction__isnull=False)
+        elif value == CREDIT_SOURCE.ONLINE:
+            qs = qs.filter(payment__isnull=False)
+        elif value == CREDIT_SOURCE.UNKNOWN:
+            qs = qs.filter(payment__isnull=True, transaction__isnull=True)
+        return qs
+
+
 class CreditListFilter(django_filters.FilterSet):
     status = StatusChoiceFilter(choices=CREDIT_STATUS.choices)
     user = django_filters.ModelChoiceFilter(name='owner', queryset=User.objects.all())
@@ -166,6 +182,7 @@ class CreditListFilter(django_filters.FilterSet):
     received_at__gte = IsoDateTimeFilter(
         name='received_at', lookup_expr='gte'
     )
+    source = CreditSourceFilter()
 
     class Meta:
         model = Credit
