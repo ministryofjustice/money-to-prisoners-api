@@ -14,23 +14,56 @@ logger = logging.getLogger('mtp')
 
 
 class Command(BaseCommand):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.verbose = False
 
-    def handle(self, *args, **kwargs):
+    def add_arguments(self, parser):
+        super().add_arguments(parser)
+        parser.add_argument('--batch-size', type=int, default=200,
+                            help='Number of credits to process in one atomic transaction')
+
+    def handle(self, **options):
+        self.verbose = options['verbosity'] > 1
+        batch_size = options['batch_size']
+        assert batch_size > 0
+
         try:
             last_updated_pk = SecurityDataUpdate.objects.latest().max_credit_pk
             new_credits = Credit.objects.filter(pk__gt=last_updated_pk)
         except SecurityDataUpdate.DoesNotExist:
             new_credits = Credit.objects.all()
 
-        with atomic():
-            for credit in new_credits:
-                self.create_or_update_profiles(credit)
+        new_credits_count = new_credits.count()
+        if not new_credits_count:
+            self.stdout.write(self.style.SUCCESS('No new credits'))
+            return
+        else:
+            self.stdout.write('Updating profiles for %d new credits' % new_credits_count)
 
-            if len(new_credits):
-                new_max_pk = new_credits.aggregate(Max('pk'))['pk__max']
-                SecurityDataUpdate(max_credit_pk=new_max_pk).save()
+        try:
+            processed_count = 0
+            for batch in range(1 + new_credits_count // batch_size):
+                batch = slice(batch * batch_size, (batch + 1) * batch_size)
+                processed_count += self.process_batch(new_credits[batch])
+                if self.verbose:
+                    self.stdout.write('Processed %d credits' % processed_count)
+        finally:
+            self.stdout.write('Updating prisoner profiles for current locations')
+            PrisonerProfile.objects.update_current_prisons()
 
-        PrisonerProfile.objects.update_current_prisons()
+        self.stdout.write(self.style.SUCCESS('Done'))
+
+    @atomic()
+    def process_batch(self, new_credits):
+        for credit in new_credits:
+            self.create_or_update_profiles(credit)
+
+        count = len(new_credits)
+        if count:
+            new_max_pk = new_credits.aggregate(Max('pk'))['pk__max']
+            SecurityDataUpdate(max_credit_pk=new_max_pk).save()
+        return count
 
     def create_or_update_profiles(self, credit):
         sender_profile = self.create_or_update_sender_profile(credit)
@@ -47,6 +80,8 @@ class Command(BaseCommand):
                     bank_transfer_details__sender_roll_number=credit.sender_roll_number
                 )
             except SenderProfile.DoesNotExist:
+                if self.verbose:
+                    self.stdout.write('Creating bank transfer profile for %s' % credit.sender_name)
                 sender_profile = SenderProfile()
                 sender_profile.save()
                 sender_profile.bank_transfer_details.add(
@@ -88,6 +123,9 @@ class Command(BaseCommand):
                             bulk=False
                         )
             except DebitCardSenderDetails.DoesNotExist:
+                if self.verbose:
+                    self.stdout.write('Creating debit card profile for ****%s, %s' % (credit.card_number_last_digits,
+                                                                                      sender_name))
                 sender_profile = SenderProfile()
                 sender_profile.save()
                 sender_profile.debit_card_details.add(
@@ -121,6 +159,8 @@ class Command(BaseCommand):
                 prisoner_dob=credit.prisoner_dob
             )
         except PrisonerProfile.DoesNotExist:
+            if self.verbose:
+                self.stdout.write('Creating prisoner profile for %s' % credit.prisoner_number)
             prisoner_profile = PrisonerProfile(
                 prisoner_name=credit.prisoner_name,
                 prisoner_number=credit.prisoner_number,
