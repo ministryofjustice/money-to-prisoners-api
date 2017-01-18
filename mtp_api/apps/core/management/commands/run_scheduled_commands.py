@@ -1,14 +1,26 @@
+import logging
+
 from django.core.management import BaseCommand
-from django.db import transaction
+from django.db import DatabaseError, transaction
 
 from core.models import ScheduledCommand
+
+logger = logging.getLogger('mtp')
 
 
 class Command(BaseCommand):
 
     def handle(self, *args, **options):
-        with transaction.atomic():
-            commands = ScheduledCommand.objects.select_for_update().all()
-            for command in commands:
-                if command.is_scheduled():
-                    command.run()
+        commands = ScheduledCommand.objects.all()
+        for command in commands:
+            if command.is_scheduled():
+                try:
+                    with transaction.atomic():
+                        locked_command = (
+                            ScheduledCommand.objects.select_for_update(nowait=True)
+                            .get(pk=command.pk)
+                        )
+                        if locked_command.is_scheduled():
+                            locked_command.run()
+                except DatabaseError:
+                    logger.exception('Scheduled command "%s" failed to run' % command)
