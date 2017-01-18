@@ -25,7 +25,8 @@ class DebitCardSenderDetailsAdminInline(admin.StackedInline):
 
 @admin.register(SenderProfile)
 class SenderProfileAdmin(admin.ModelAdmin):
-    list_display = ('id', 'credit_count', 'formatted_credit_total', 'sender_type')
+    ordering = ('-credit_count',)
+    list_display = ('sender_names', 'sender_type', 'credit_count', 'formatted_credit_total')
     inlines = (BankTransferSenderDetailsAdminInline, DebitCardSenderDetailsAdminInline)
     search_fields = (
         'bank_transfer_details__sender_name',
@@ -37,6 +38,11 @@ class SenderProfileAdmin(admin.ModelAdmin):
         'debit_card_details__cardholder_name__name',
     )
 
+    @add_short_description(_('sender names'))
+    def sender_names(self, instance):
+        return ', '.join(instance.get_sorted_sender_names())
+
+    @add_short_description(_('payment method'))
     def sender_type(self, instance):
         sender_types = []
         if instance.bank_transfer_details.exists():
@@ -52,6 +58,7 @@ class SenderProfileAdmin(admin.ModelAdmin):
 
 @admin.register(PrisonerProfile)
 class PrisonerProfileAdmin(admin.ModelAdmin):
+    ordering = ('-credit_count',)
     list_display = ('prisoner_number', 'credit_count', 'formatted_credit_total')
     search_fields = ('prisoner_name', 'prisoner_number', 'prisons__name')
     readonly_fields = ('prisons',)
