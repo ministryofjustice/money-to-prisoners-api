@@ -6,12 +6,32 @@ from rest_framework.response import Response
 from rest_framework.settings import api_settings
 
 from core.filters import MultipleFieldCharFilter, MultipleValueFilter
+from credit.constants import CREDIT_SOURCE
 from credit.views import GetCredits
 from mtp_auth.permissions import NomsOpsClientIDPermissions
 from prison.models import Prison
 from .models import SenderProfile, PrisonerProfile
 from .permissions import SecurityProfilePermissions
 from .serializers import SenderProfileSerializer, PrisonerProfileSerializer
+
+
+class SenderCreditSourceFilter(django_filters.ChoiceFilter):
+
+    def __init__(self, *args, **kwargs):
+        kwargs['choices'] = CREDIT_SOURCE.choices
+        super().__init__(*args, **kwargs)
+
+    def filter(self, qs, value):
+        if value == CREDIT_SOURCE.BANK_TRANSFER:
+            qs = qs.filter(bank_transfer_details__isnull=False)
+        elif value == CREDIT_SOURCE.ONLINE:
+            qs = qs.filter(debit_card_details__isnull=False)
+        elif value == CREDIT_SOURCE.UNKNOWN:
+            qs = qs.filter(
+                debit_card_details__isnull=True,
+                bank_transfer_details__isnull=True
+            )
+        return qs
 
 
 class SenderProfileListFilter(django_filters.FilterSet):
@@ -48,6 +68,7 @@ class SenderProfileListFilter(django_filters.FilterSet):
     prison_region = django_filters.CharFilter(name='prisoners__prisons__region')
     prison_population = MultipleValueFilter(name='prisoners__prisons__populations__name')
     prison_category = MultipleValueFilter(name='prisoners__prisons__categories__name')
+    source = SenderCreditSourceFilter()
 
     class Meta:
         model = SenderProfile
