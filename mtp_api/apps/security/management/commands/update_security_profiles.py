@@ -1,6 +1,5 @@
 import logging
 
-from django.db.models import Max
 from django.db.transaction import atomic
 from django.core.management import BaseCommand
 
@@ -31,11 +30,12 @@ class Command(BaseCommand):
         batch_size = options['batch_size']
         assert batch_size > 0
 
+        queryset = Credit.objects.order_by('pk')
         try:
             last_updated_pk = SecurityDataUpdate.objects.latest().max_credit_pk
-            new_credits = Credit.objects.filter(pk__gt=last_updated_pk)
+            new_credits = queryset.filter(pk__gt=last_updated_pk)
         except SecurityDataUpdate.DoesNotExist:
-            new_credits = Credit.objects.all()
+            new_credits = queryset.all()
 
         new_credits_count = new_credits.count()
         if not new_credits_count:
@@ -46,8 +46,8 @@ class Command(BaseCommand):
 
         try:
             processed_count = 0
-            for batch in range(1 + new_credits_count // batch_size):
-                batch = slice(batch * batch_size, (batch + 1) * batch_size)
+            for offset in range(0, new_credits_count, batch_size):
+                batch = slice(offset, min(offset + batch_size, new_credits_count))
                 processed_count += self.process_batch(new_credits[batch])
                 if self.verbose:
                     self.stdout.write('Processed %d credits' % processed_count)
@@ -59,14 +59,12 @@ class Command(BaseCommand):
 
     @atomic()
     def process_batch(self, new_credits):
+        credit = None
         for credit in new_credits:
             self.create_or_update_profiles(credit)
-
-        count = len(new_credits)
-        if count:
-            new_max_pk = new_credits.aggregate(Max('pk'))['pk__max']
-            SecurityDataUpdate(max_credit_pk=new_max_pk).save()
-        return count
+        if credit:
+            SecurityDataUpdate(max_credit_pk=credit.pk).save()
+        return len(new_credits)
 
     def create_or_update_profiles(self, credit):
         sender_profile = self.create_or_update_sender_profile(credit)
