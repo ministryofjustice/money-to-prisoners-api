@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: MTP api\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-12-07 12:22+0000\n"
+"POT-Creation-Date: 2017-01-19 17:20+0000\n"
 "PO-Revision-Date: 2016-11-04 10:00+0000\n"
 "Last-Translator: Welsh Language Unit <welsh.language.unit.manager@hmcts.gsi.gov.uk>\n"
 "Language-Team: Welsh (http://www.transifex.com/ministry-of-justice/mtp/language/cy/)\n"
@@ -276,7 +276,8 @@ msgstr ""
 msgid "Refund pending"
 msgstr ""
 
-#: apps/credit/constants.py:20 apps/transaction/constants.py:31
+#: apps/credit/constants.py:20 apps/security/admin.py:49
+#: apps/transaction/constants.py:31
 #: templates/core/dashboard/credit-report-cells/payment-method.html:10
 msgid "Bank transfer"
 msgstr ""
@@ -436,44 +437,44 @@ msgstr ""
 msgid "The two password fields didn’t match"
 msgstr ""
 
-#: apps/mtp_auth/forms.py:30 apps/mtp_auth/serializers.py:56
+#: apps/mtp_auth/forms.py:30 apps/mtp_auth/serializers.py:60
 msgid "That email address already exists"
 msgstr ""
 
-#: apps/mtp_auth/serializers.py:123
+#: apps/mtp_auth/serializers.py:131
 #, python-format
 msgid "Your new %(app)s account is ready to use"
 msgstr ""
 
 #: apps/mtp_auth/views.py:91
-msgid "You cannot delete yourself"
+msgid "You cannot disable yourself"
 msgstr ""
 
-#: apps/mtp_auth/views.py:122
+#: apps/mtp_auth/views.py:126
 msgid "You’ve entered an incorrect password"
 msgstr ""
 
-#: apps/mtp_auth/views.py:138
+#: apps/mtp_auth/views.py:142
 msgid "There has been a system error. Please try again later"
 msgstr ""
 
-#: apps/mtp_auth/views.py:139
+#: apps/mtp_auth/views.py:143
 msgid "Username doesn’t match any user account"
 msgstr ""
 
-#: apps/mtp_auth/views.py:140
+#: apps/mtp_auth/views.py:144
 msgid "Your account is locked, please contact the person who set it up"
 msgstr ""
 
-#: apps/mtp_auth/views.py:142
+#: apps/mtp_auth/views.py:146
 msgid "We don’t have your email address, please contact the person who set up the account"
 msgstr ""
 
-#: apps/mtp_auth/views.py:144
+#: apps/mtp_auth/views.py:148
 msgid "That email address matches multiple user accounts, please enter your unique username"
 msgstr ""
 
-#: apps/mtp_auth/views.py:200
+#: apps/mtp_auth/views.py:204
 msgid "Your new Money To Prisoners password"
 msgstr ""
 
@@ -599,6 +600,31 @@ msgstr ""
 #: apps/prison/serializers.py:64
 #, python-brace-format
 msgid "No prison found with code \"{pk_value}\""
+msgstr ""
+
+#: apps/security/admin.py:41
+msgid "sender names"
+msgstr ""
+
+#: apps/security/admin.py:45
+msgid "payment method"
+msgstr ""
+
+#: apps/security/admin.py:51
+#: templates/core/dashboard/credit-report-cells/payment-method.html:18
+msgid "Debit card"
+msgstr ""
+
+#: apps/security/admin.py:54 apps/security/admin.py:67
+msgid "credit total"
+msgstr ""
+
+#: apps/security/app.py:7
+msgid "Security data"
+msgstr ""
+
+#: apps/security/models.py:56
+msgid "(Unknown)"
 msgstr ""
 
 #: apps/service/app.py:7
@@ -774,6 +800,14 @@ msgstr ""
 msgid "Upload"
 msgstr ""
 
+#: templates/admin/security/prisonerprofile/change_form.html:6
+msgid "Sender profiles"
+msgstr ""
+
+#: templates/admin/security/senderprofile/change_form.html:6
+msgid "Prisoner profiles"
+msgstr ""
+
 #: templates/core/admin-form-filter.html:2
 #, python-format
 msgid " By %(filter_title)s "
@@ -863,10 +897,6 @@ msgstr ""
 msgid "Received by method"
 msgstr ""
 
-#: templates/core/dashboard/credit-report-cells/payment-method.html:18
-msgid "Debit card"
-msgstr ""
-
 #: templates/core/dashboard/credit-report-cells/received.html:12
 msgid "Received"
 msgstr ""
@@ -947,10 +977,10 @@ msgstr ""
 msgid "Your new Money To Prisoners password has been created for you."
 msgstr ""
 
-#: urls.py:33
+#: urls.py:34
 msgid "Page not found"
 msgstr ""
 
-#: urls.py:35
+#: urls.py:36
 msgid "Sorry, something went wrong"
 msgstr ""
