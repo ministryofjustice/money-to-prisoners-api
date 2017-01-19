@@ -22,9 +22,12 @@ class Command(BaseCommand):
         super().add_arguments(parser)
         parser.add_argument('--batch-size', type=int, default=200,
                             help='Number of credits to process in one atomic transaction')
+        parser.add_argument('--recreate', action='store_true', help='Deletes existing sender and prisoner profiles')
 
     def handle(self, **options):
         self.verbose = options['verbosity'] > 1
+        if options['recreate']:
+            self.delete_profiles()
         batch_size = options['batch_size']
         assert batch_size > 0
 
@@ -174,3 +177,18 @@ class Command(BaseCommand):
         prisoner_profile.senders.add(sender)
         prisoner_profile.save()
         return prisoner_profile
+
+    @atomic()
+    def delete_profiles(self):
+        from django.apps import apps
+        from django.core.management.color import no_style
+        from django.db import connection
+
+        PrisonerProfile.objects.all().delete()
+        SenderProfile.objects.all().delete()
+        SecurityDataUpdate.objects.all().delete()
+
+        security_app = apps.app_configs['security']
+        with connection.cursor() as cursor:
+            for reset_sql in connection.ops.sequence_reset_sql(no_style(), security_app.get_models()):
+                cursor.execute(reset_sql)
