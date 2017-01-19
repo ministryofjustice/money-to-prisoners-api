@@ -73,77 +73,9 @@ class Command(BaseCommand):
 
     def create_or_update_sender_profile(self, credit):
         if hasattr(credit, 'transaction'):
-            try:
-                sender_profile = SenderProfile.objects.get(
-                    bank_transfer_details__sender_name=credit.sender_name,
-                    bank_transfer_details__sender_sort_code=credit.sender_sort_code,
-                    bank_transfer_details__sender_account_number=credit.sender_account_number,
-                    bank_transfer_details__sender_roll_number=credit.sender_roll_number
-                )
-            except SenderProfile.DoesNotExist:
-                if self.verbose:
-                    self.stdout.write('Creating bank transfer profile for %s' % credit.sender_name)
-                sender_profile = SenderProfile()
-                sender_profile.save()
-                sender_profile.bank_transfer_details.add(
-                    BankTransferSenderDetails(
-                        sender_name=credit.sender_name,
-                        sender_sort_code=credit.sender_sort_code,
-                        sender_account_number=credit.sender_account_number,
-                        sender_roll_number=credit.sender_roll_number
-                    ),
-                    bulk=False
-                )
+            sender_profile = self.create_or_update_bank_transfer(credit)
         elif hasattr(credit, 'payment'):
-            sender_name = credit.sender_name or ''
-            sender_email = credit.payment.email or ''
-            try:
-                sender_details = DebitCardSenderDetails.objects.get(
-                    card_number_last_digits=credit.card_number_last_digits,
-                    card_expiry_date=credit.card_expiry_date
-                )
-                sender_profile = sender_details.sender
-                if sender_name:
-                    try:
-                        sender_details.cardholder_names.get(
-                            name=sender_name
-                        )
-                    except CardholderName.DoesNotExist:
-                        sender_details.cardholder_names.add(
-                            CardholderName(name=sender_name),
-                            bulk=False
-                        )
-                if sender_email:
-                    try:
-                        sender_details.sender_emails.get(
-                            email=sender_email
-                        )
-                    except SenderEmail.DoesNotExist:
-                        sender_details.sender_emails.add(
-                            SenderEmail(email=sender_email),
-                            bulk=False
-                        )
-            except DebitCardSenderDetails.DoesNotExist:
-                if self.verbose:
-                    self.stdout.write('Creating debit card profile for ****%s, %s' % (credit.card_number_last_digits,
-                                                                                      sender_name))
-                sender_profile = SenderProfile()
-                sender_profile.save()
-                sender_profile.debit_card_details.add(
-                    DebitCardSenderDetails(
-                        card_number_last_digits=credit.card_number_last_digits,
-                        card_expiry_date=credit.card_expiry_date,
-                    ),
-                    bulk=False
-                )
-                if sender_name:
-                    sender_profile.debit_card_details.first().cardholder_names.add(
-                        CardholderName(name=sender_name), bulk=False
-                    )
-                if sender_email:
-                    sender_profile.debit_card_details.first().sender_emails.add(
-                        SenderEmail(email=sender_email), bulk=False
-                    )
+            sender_profile = self.create_or_update_debit_card(credit)
         else:
             logger.error('Credit %s does not have a payment nor transaction' % credit.pk)
             return
@@ -151,6 +83,82 @@ class Command(BaseCommand):
         sender_profile.credit_count += 1
         sender_profile.credit_total += credit.amount
         sender_profile.save()
+        return sender_profile
+
+    def create_or_update_bank_transfer(self, credit):
+        try:
+            sender_profile = SenderProfile.objects.get(
+                bank_transfer_details__sender_name=credit.sender_name,
+                bank_transfer_details__sender_sort_code=credit.sender_sort_code,
+                bank_transfer_details__sender_account_number=credit.sender_account_number,
+                bank_transfer_details__sender_roll_number=credit.sender_roll_number
+            )
+        except SenderProfile.DoesNotExist:
+            if self.verbose:
+                self.stdout.write('Creating bank transfer profile for %s' % credit.sender_name)
+            sender_profile = SenderProfile()
+            sender_profile.save()
+            sender_profile.bank_transfer_details.add(
+                BankTransferSenderDetails(
+                    sender_name=credit.sender_name,
+                    sender_sort_code=credit.sender_sort_code,
+                    sender_account_number=credit.sender_account_number,
+                    sender_roll_number=credit.sender_roll_number
+                ),
+                bulk=False
+            )
+        return sender_profile
+
+    def create_or_update_debit_card(self, credit):
+        sender_name = credit.sender_name or ''
+        sender_email = credit.payment.email or ''
+        try:
+            sender_details = DebitCardSenderDetails.objects.get(
+                card_number_last_digits=credit.card_number_last_digits,
+                card_expiry_date=credit.card_expiry_date
+            )
+            sender_profile = sender_details.sender
+            if sender_name:
+                try:
+                    sender_details.cardholder_names.get(
+                        name=sender_name
+                    )
+                except CardholderName.DoesNotExist:
+                    sender_details.cardholder_names.add(
+                        CardholderName(name=sender_name),
+                        bulk=False
+                    )
+            if sender_email:
+                try:
+                    sender_details.sender_emails.get(
+                        email=sender_email
+                    )
+                except SenderEmail.DoesNotExist:
+                    sender_details.sender_emails.add(
+                        SenderEmail(email=sender_email),
+                        bulk=False
+                    )
+        except DebitCardSenderDetails.DoesNotExist:
+            if self.verbose:
+                self.stdout.write('Creating debit card profile for ****%s, %s' % (credit.card_number_last_digits,
+                                                                                  sender_name))
+            sender_profile = SenderProfile()
+            sender_profile.save()
+            sender_profile.debit_card_details.add(
+                DebitCardSenderDetails(
+                    card_number_last_digits=credit.card_number_last_digits,
+                    card_expiry_date=credit.card_expiry_date,
+                ),
+                bulk=False
+            )
+            if sender_name:
+                sender_profile.debit_card_details.first().cardholder_names.add(
+                    CardholderName(name=sender_name), bulk=False
+                )
+            if sender_email:
+                sender_profile.debit_card_details.first().sender_emails.add(
+                    SenderEmail(email=sender_email), bulk=False
+                )
         return sender_profile
 
     def create_or_update_prisoner_profile(self, credit, sender):
