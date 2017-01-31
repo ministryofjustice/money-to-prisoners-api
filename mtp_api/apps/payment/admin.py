@@ -13,10 +13,14 @@ from transaction.utils import format_amount
 
 @admin.register(Batch)
 class BatchAdmin(admin.ModelAdmin):
-    list_display = ('date', 'payment_count', 'payment_amount', 'ref_code', 'settled',)
+    list_display = (
+        'date', 'payment_count', 'formatted_payment_amount', 'ref_code', 'settled',
+    )
     date_hierarchy = 'date'
     exclude = ('settlement_transaction',)
-    readonly_fields = ('payment_link', 'payment_count', 'payment_amount', 'settlement_link',)
+    readonly_fields = (
+        'payment_link', 'payment_count', 'formatted_payment_amount', 'settlement_link',
+    )
 
     @add_short_description(_('payment set'))
     def payment_link(self, instance):
@@ -31,10 +35,8 @@ class BatchAdmin(admin.ModelAdmin):
         return instance.payment_set.count()
 
     @add_short_description(_('payment amount'))
-    def payment_amount(self, instance):
-        return format_amount(
-            instance.payment_set.aggregate(total_amount=models.Sum('amount'))['total_amount']
-        )
+    def formatted_payment_amount(self, instance):
+        return format_amount(instance.payment_amount)
 
     @add_short_description(_('settled?'))
     def settled(self, instance):

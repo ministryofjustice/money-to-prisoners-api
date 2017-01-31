@@ -9,6 +9,7 @@ from .exceptions import InvalidStateForUpdateException
 
 
 class BatchSerializer(serializers.ModelSerializer):
+    payment_amount = serializers.IntegerField()
 
     class Meta:
         model = Batch

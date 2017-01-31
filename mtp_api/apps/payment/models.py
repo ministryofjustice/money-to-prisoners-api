@@ -31,6 +31,10 @@ class Batch(TimeStampedModel):
     def __str__(self):
         return '%s (%s)' % (self.ref_code, self.date)
 
+    @property
+    def payment_amount(self):
+        return self.payment_set.aggregate(total_amount=models.Sum('amount'))['total_amount']
+
 
 class Payment(TimeStampedModel):
     uuid = models.UUIDField(default=uuid.uuid4, primary_key=True, editable=False)

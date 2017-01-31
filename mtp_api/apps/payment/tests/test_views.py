@@ -21,6 +21,7 @@ class GetBatchViewTestCase(AuthTestCaseMixin, APITestCase):
     def setUp(self):
         super().setUp()
         _, _, self.bank_admins, _, _, _ = make_test_users()
+        load_random_prisoner_locations(2)
 
     def test_get_batch(self):
         user = self.bank_admins[0]
@@ -31,6 +32,13 @@ class GetBatchViewTestCase(AuthTestCaseMixin, APITestCase):
         other_batch = Batch(date=date(2016, 3, 4))
         other_batch.save()
 
+        for i, payment in enumerate(generate_payments(50, days_of_history=1)):
+            if i % 2:
+                payment.batch = batch
+            else:
+                payment.batch = other_batch
+            payment.save()
+
         response = self.client.get(
             reverse('batch-list'), {'date': date(2016, 3, 3)}, format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
@@ -40,6 +48,7 @@ class GetBatchViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(len(batches), 1)
         self.assertEqual(batches[0]['id'], batch.id)
         self.assertEqual(batches[0]['date'], batch.date.isoformat())
+        self.assertEqual(batches[0]['payment_amount'], batch.payment_amount)
 
 
 class CreatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
