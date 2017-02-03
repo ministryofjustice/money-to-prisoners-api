@@ -20,7 +20,7 @@
   "pk": 3,
   "fields": {
     "name": "adult",
-    "description": "Adults"
+    "description": "Adult"
   }
 },
 {
@@ -28,7 +28,7 @@
   "pk": 4,
   "fields": {
     "name": "young",
-    "description": "Young people"
+    "description": "Young offender"
   }
 },
 {
