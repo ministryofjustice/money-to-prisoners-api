@@ -22,6 +22,7 @@ class CategorySerializer(serializers.ModelSerializer):
 class PrisonSerializer(serializers.ModelSerializer):
     populations = PopulationSerializer(many=True)
     categories = CategorySerializer(many=True)
+    short_name = serializers.CharField(read_only=True)
 
     class Meta:
         model = Prison
@@ -29,6 +30,7 @@ class PrisonSerializer(serializers.ModelSerializer):
             'nomis_id',
             'general_ledger_code',
             'name',
+            'short_name',
             'region',
             'populations',
             'categories',
