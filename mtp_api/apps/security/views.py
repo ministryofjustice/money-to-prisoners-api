@@ -40,35 +40,23 @@ class SenderProfileListFilter(django_filters.FilterSet):
               'debit_card_details__cardholder_name__name',),
         lookup_expr='icontains'
     )
-    sender_sort_code = django_filters.CharFilter(
-        name='bank_transfer_details__sender_sort_code')
-    sender_account_number = django_filters.CharFilter(
-        name='bank_transfer_details__sender_account_number')
-    sender_roll_number = django_filters.CharFilter(
-        name='bank_transfer_details__sender_roll_number')
-    card_expiry_date = django_filters.CharFilter(
-        name='debit_card_details__card_expiry_date')
-    card_number_last_digits = django_filters.CharFilter(
-        name='debit_card_details__card_number_last_digits')
-    sender_email = django_filters.CharFilter(
-        name='debit_card_details__sender_email__email',
-        lookup_expr='icontains'
-    )
-    prisoner_count__lte = django_filters.NumberFilter(
-        name='prisoner_count', lookup_expr='lte')
-    prisoner_count__gte = django_filters.NumberFilter(
-        name='prisoner_count', lookup_expr='gte')
-    prisoners = django_filters.ModelMultipleChoiceFilter(
-        name='prisoners', queryset=PrisonerProfile.objects.all()
-    )
 
-    prison = django_filters.ModelMultipleChoiceFilter(
-        name='prisoners__prisons', queryset=Prison.objects.all()
-    )
+    source = SenderCreditSourceFilter()
+    sender_sort_code = django_filters.CharFilter(name='bank_transfer_details__sender_sort_code')
+    sender_account_number = django_filters.CharFilter(name='bank_transfer_details__sender_account_number')
+    sender_roll_number = django_filters.CharFilter(name='bank_transfer_details__sender_roll_number')
+    card_expiry_date = django_filters.CharFilter(name='debit_card_details__card_expiry_date')
+    card_number_last_digits = django_filters.CharFilter(name='debit_card_details__card_number_last_digits')
+    sender_email = django_filters.CharFilter(name='debit_card_details__sender_email__email', lookup_expr='icontains')
+
+    prisoners = django_filters.ModelMultipleChoiceFilter(name='prisoners', queryset=PrisonerProfile.objects.all())
+    prisoner_count__lte = django_filters.NumberFilter(name='prisoner_count', lookup_expr='lte')
+    prisoner_count__gte = django_filters.NumberFilter(name='prisoner_count', lookup_expr='gte')
+
+    prison = django_filters.ModelMultipleChoiceFilter(name='prisoners__prisons', queryset=Prison.objects.all())
     prison_region = django_filters.CharFilter(name='prisoners__prisons__region')
     prison_population = MultipleValueFilter(name='prisoners__prisons__populations__name')
     prison_category = MultipleValueFilter(name='prisoners__prisons__categories__name')
-    source = SenderCreditSourceFilter()
 
     class Meta:
         model = SenderProfile
@@ -119,20 +107,14 @@ class SenderProfileCreditsView(
 class PrisonerProfileListFilter(django_filters.FilterSet):
     prisoner_name = django_filters.CharFilter(name='prisoner_name', lookup_expr='icontains')
 
-    prison = django_filters.ModelMultipleChoiceFilter(
-        name='prisons', queryset=Prison.objects.all()
-    )
+    prison = django_filters.ModelMultipleChoiceFilter(name='prisons', queryset=Prison.objects.all())
     prison_region = django_filters.CharFilter(name='prisons__region')
     prison_population = MultipleValueFilter(name='prisons__populations__name')
     prison_category = MultipleValueFilter(name='prisons__categories__name')
 
-    sender_count__lte = django_filters.NumberFilter(
-        name='sender_count', lookup_expr='lte')
-    sender_count__gte = django_filters.NumberFilter(
-        name='sender_count', lookup_expr='gte')
-    senders = django_filters.ModelMultipleChoiceFilter(
-        name='senders', queryset=SenderProfile.objects.all()
-    )
+    senders = django_filters.ModelMultipleChoiceFilter(name='senders', queryset=SenderProfile.objects.all())
+    sender_count__lte = django_filters.NumberFilter(name='sender_count', lookup_expr='lte')
+    sender_count__gte = django_filters.NumberFilter(name='sender_count', lookup_expr='gte')
 
     class Meta:
         model = PrisonerProfile
