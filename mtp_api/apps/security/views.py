@@ -118,9 +118,14 @@ class SenderProfileCreditsView(
 
 class PrisonerProfileListFilter(django_filters.FilterSet):
     prisoner_name = django_filters.CharFilter(name='prisoner_name', lookup_expr='icontains')
+
     prison = django_filters.ModelMultipleChoiceFilter(
         name='prisons', queryset=Prison.objects.all()
     )
+    prison_region = django_filters.CharFilter(name='prisons__region')
+    prison_population = MultipleValueFilter(name='prisons__populations__name')
+    prison_category = MultipleValueFilter(name='prisons__categories__name')
+
     sender_count__lte = django_filters.NumberFilter(
         name='sender_count', lookup_expr='lte')
     sender_count__gte = django_filters.NumberFilter(
