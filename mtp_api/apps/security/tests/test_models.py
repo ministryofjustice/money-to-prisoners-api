@@ -9,7 +9,7 @@ from security.models import SenderProfile, BankTransferSenderDetails, DebitCardS
 from transaction.tests.utils import generate_transactions
 
 
-class SenderrProfileTestCase(TestCase):
+class SenderProfileTestCase(TestCase):
     fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
     def setUp(self):
