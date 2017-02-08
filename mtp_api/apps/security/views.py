@@ -6,13 +6,16 @@ from rest_framework.response import Response
 from rest_framework.settings import api_settings
 
 from core.filters import MultipleFieldCharFilter, MultipleValueFilter
+from core.permissions import ActionsBasedPermissions
 from credit.constants import CREDIT_SOURCE
 from credit.views import GetCredits
 from mtp_auth.permissions import NomsOpsClientIDPermissions
 from prison.models import Prison
-from .models import SenderProfile, PrisonerProfile
+from .models import SenderProfile, PrisonerProfile, SavedSearch
 from .permissions import SecurityProfilePermissions
-from .serializers import SenderProfileSerializer, PrisonerProfileSerializer
+from .serializers import (
+    SenderProfileSerializer, PrisonerProfileSerializer, SavedSearchSerializer
+)
 
 
 class SenderCreditSourceFilter(django_filters.ChoiceFilter):
@@ -157,3 +160,18 @@ class PrisonerProfileCreditsView(
 
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+
+
+class SavedSearchView(
+    mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin,
+    mixins.ListModelMixin, viewsets.GenericViewSet
+):
+    queryset = SavedSearch.objects.all()
+    serializer_class = SavedSearchSerializer
+
+    permission_classes = (
+        IsAuthenticated, ActionsBasedPermissions, NomsOpsClientIDPermissions
+    )
+
+    def get_queryset(self):
+        return self.queryset.filter(user=self.request.user)

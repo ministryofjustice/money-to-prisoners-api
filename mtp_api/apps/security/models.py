@@ -1,6 +1,7 @@
 from functools import reduce
 from itertools import chain
 
+from django.contrib.auth.models import User
 from django.db import models
 from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
@@ -154,6 +155,28 @@ class SecurityDataUpdate(models.Model):
 
     def __str__(self):
         return 'Last security update for credit %s' % self.max_credit_pk
+
+
+class SavedSearch(TimeStampedModel):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    description = models.CharField(max_length=255)
+    endpoint = models.CharField(max_length=255)
+    last_result_count = models.IntegerField(default=0)
+    site_url = models.CharField(max_length=255, null=True, blank=True)
+
+    def __str__(self):
+        return '{user}: {title}'.format(user=self.user.username, title=self.description)
+
+
+class SearchFilter(models.Model):
+    field = models.CharField(max_length=255)
+    value = models.CharField(max_length=255)
+    saved_search = models.ForeignKey(
+        SavedSearch, on_delete=models.CASCADE, related_name='filters'
+    )
+
+    def __str__(self):
+        return '{field}={value}'.format(field=self.field, value=self.value)
 
 
 @receiver(prisoner_profile_current_prisons_need_updating)
