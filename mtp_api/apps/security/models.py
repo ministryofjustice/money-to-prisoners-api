@@ -162,7 +162,7 @@ class SavedSearch(TimeStampedModel):
     description = models.CharField(max_length=255)
     endpoint = models.CharField(max_length=255)
     last_result_count = models.IntegerField(default=0)
-    site_url = models.CharField(max_length=255, null=True, blank=True)
+    site_url = models.CharField(max_length=1000, null=True, blank=True)
 
     def __str__(self):
         return '{user}: {title}'.format(user=self.user.username, title=self.description)
