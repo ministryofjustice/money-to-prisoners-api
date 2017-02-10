@@ -72,7 +72,6 @@ class SenderProfileView(
 ):
     queryset = SenderProfile.objects.all().annotate(
         prisoner_count=Count('prisoners'),
-        prison_count=Count('prisoners__prisons'),
     )
     filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter,)
     filter_class = SenderProfileListFilter
