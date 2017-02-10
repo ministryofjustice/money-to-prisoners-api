@@ -295,6 +295,16 @@
   },
   {
     "model": "prison.prison",
+    "pk": "BWI",
+    "fields": {
+      "name": "HMP Berwyn",
+      "general_ledger_code": "10201160",
+      "created": "2017-01-23T12:00:00Z",
+      "modified": "2017-01-23T12:00:00Z"
+    }
+  },
+  {
+    "model": "prison.prison",
     "pk": "BUI",
     "fields": {
       "name": "HMP BULLWOOD HALL",
