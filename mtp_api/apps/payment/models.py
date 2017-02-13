@@ -53,6 +53,8 @@ class Payment(TimeStampedModel):
     card_number_last_digits = models.CharField(max_length=4, blank=True, null=True)
     card_expiry_date = models.CharField(max_length=5, blank=True, null=True)
 
+    ip_address = models.GenericIPAddressField(blank=True, null=True)
+
     objects = PaymentManager()
 
     class Meta:
