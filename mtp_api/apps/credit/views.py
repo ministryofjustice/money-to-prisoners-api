@@ -190,6 +190,7 @@ class CreditListFilter(django_filters.FilterSet):
             'prisoner_number': ['exact'],
             'amount': ['exact', 'lte', 'gte'],
             'reviewed': ['exact'],
+            'resolution': ['exact'],
         }
 
 
