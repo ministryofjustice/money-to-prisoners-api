@@ -21,6 +21,26 @@ class PaymentSerializer(serializers.ModelSerializer):
     prisoner_number = serializers.CharField()
     received_at = serializers.DateTimeField(required=False)
 
+    class Meta:
+        model = Payment
+        read_only = ('uuid', 'prisoner_dob', 'prisoner_number')
+        fields = (
+            'uuid',
+            'status',
+            'processor_id',
+            'amount',
+            'service_charge',
+            'recipient_name',
+            'email',
+            'prisoner_dob',
+            'prisoner_number',
+            'received_at',
+            'cardholder_name',
+            'card_number_last_digits',
+            'card_expiry_date',
+            'ip_address',
+        )
+
     @atomic
     def create(self, validated_data):
         new_credit = Credit(
@@ -45,22 +65,3 @@ class PaymentSerializer(serializers.ModelSerializer):
             instance.credit.received_at = received_at
             instance.credit.save()
         return super().update(instance, validated_data)
-
-    class Meta:
-        model = Payment
-        read_only = ('uuid', 'prisoner_dob', 'prisoner_number')
-        fields = (
-            'uuid',
-            'status',
-            'processor_id',
-            'amount',
-            'service_charge',
-            'recipient_name',
-            'email',
-            'prisoner_dob',
-            'prisoner_number',
-            'received_at',
-            'cardholder_name',
-            'card_number_last_digits',
-            'card_expiry_date',
-        )

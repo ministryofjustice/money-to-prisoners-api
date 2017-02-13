@@ -34,6 +34,7 @@ def get_sender_prisoner_pairs():
             'cardholder_name': ' '.join([fake.first_name(), fake.last_name()]),
             'card_number_last_digits': ''.join([str(random.randint(0, 9)) for _ in range(4)]),
             'card_expiry_date': expiry_date.strftime('%m/%y'),
+            'ip_address': fake.ipv4(),
             'email': fake.email(),
         } for n in range(number_of_senders)
     ]
@@ -48,9 +49,9 @@ def generate_initial_payment_data(tot=50,
                                   days_of_history=7):
     data_list = []
     sender_prisoner_pairs = get_sender_prisoner_pairs()
-    for i in range(1, tot+1):
+    for _ in range(tot):
         random_date = latest_payment_date() - datetime.timedelta(
-            minutes=random.randint(0, 1440*days_of_history)
+            minutes=random.randint(0, 1440 * days_of_history)
         )
         random_date = timezone.localtime(random_date)
         amount = random_amount()

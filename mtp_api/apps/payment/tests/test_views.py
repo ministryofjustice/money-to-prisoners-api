@@ -68,6 +68,8 @@ class CreatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
             'recipient_name': 'James Halls',
             'amount': 1000,
             'service_charge': 24,
+            'email': 'sender@outside.local',
+            'ip_address': '151.101.16.144',
         }
 
         response = self.client.post(
@@ -86,7 +88,8 @@ class CreatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
             'recipient_name': 'James Halls',
             'amount': 1000,
             'service_charge': 24,
-            'email': 'sender@outside.local'
+            'email': 'sender@outside.local',
+            'ip_address': '151.101.16.144',
         }
 
         response = self.client.post(
@@ -106,7 +109,10 @@ class CreatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(
             Payment.objects.filter(**new_payment).count(), 1
         )
-        credit = Payment.objects.get(**new_payment).credit
+        payment = Payment.objects.get(**new_payment)
+        self.assertEqual(payment.recipient_name, new_payment['recipient_name'])
+        self.assertEqual(payment.ip_address, new_payment['ip_address'])
+        credit = payment.credit
         self.assertEqual(credit.amount, expected_credit['amount'])
         self.assertEqual(credit.prisoner_number, expected_credit['prisoner_number'])
         self.assertEqual(credit.prisoner_dob, expected_credit['prisoner_dob'])
@@ -114,6 +120,33 @@ class CreatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertIsNotNone(credit.prison)
         self.assertIsNotNone(credit.prisoner_name)
         self.assertEqual(Credit.objects.all().count(), 0)
+
+    def test_create_with_missing_ip_address(self):
+        user = self.send_money_users[0]
+        new_payment = {
+            'prisoner_number': 'A1409AE',
+            'prisoner_dob': date(1989, 1, 21),
+            'recipient_name': 'James Halls',
+            'amount': 1000,
+            'service_charge': 24,
+            'email': 'sender@outside.local',
+        }
+        response = self.client.post(
+            reverse('payment-list'), data=new_payment, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_201_CREATED,
+                         'Should allow payment creation without IP address')
+        self.assertTrue(response.data['uuid'] is not None)
+
+        new_payment['ip_address'] = None
+        response = self.client.post(
+            reverse('payment-list'), data=new_payment, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_201_CREATED,
+                         'Should allow payment creation with unknown IP address')
+        self.assertTrue(response.data['uuid'] is not None)
 
 
 class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
@@ -133,7 +166,8 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
             'recipient_name': 'James Halls',
             'amount': 1000,
             'service_charge': 24,
-            'email': 'sender@outside.local'
+            'email': 'sender@outside.local',
+            'ip_address': '151.101.16.144',
         }
         response = self.client.post(
             reverse('payment-list'), data=new_payment, format='json',
@@ -248,7 +282,8 @@ class GetPaymentViewTestCase(AuthTestCaseMixin, APITestCase):
             'recipient_name': 'James Halls',
             'amount': 1000,
             'service_charge': 24,
-            'email': 'sender@outside.local'
+            'email': 'sender@outside.local',
+            'ip_address': '151.101.16.144',
         }
         response = self.client.post(
             reverse('payment-list'), data=new_payment, format='json',
@@ -266,6 +301,7 @@ class GetPaymentViewTestCase(AuthTestCaseMixin, APITestCase):
                          retrieved_payment['prisoner_number'])
         self.assertEqual(new_payment['prisoner_dob'].isoformat(),
                          retrieved_payment['prisoner_dob'])
+        self.assertEqual(new_payment['ip_address'], retrieved_payment['ip_address'])
 
 
 class ListPaymentViewTestCase(AuthTestCaseMixin, APITestCase):
