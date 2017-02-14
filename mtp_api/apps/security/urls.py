@@ -13,6 +13,8 @@ router.register(r'prisoners', views.PrisonerProfileView)
 prisoner_router = routers.NestedSimpleRouter(router, r'prisoners', lookup='prisoner')
 prisoner_router.register(r'credits', views.PrisonerProfileCreditsView, base_name='prisoner-credits')
 
+router.register(r'searches', views.SavedSearchView)
+
 urlpatterns = [
     url(r'^', include(router.urls)),
     url(r'^', include(sender_router.urls)),

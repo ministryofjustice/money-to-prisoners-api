@@ -4,7 +4,7 @@ from django.utils.translation import gettext, gettext_lazy as _
 from core.admin import add_short_description
 from security.models import (
     SenderProfile, PrisonerProfile, BankTransferSenderDetails,
-    DebitCardSenderDetails, SecurityDataUpdate
+    DebitCardSenderDetails, SecurityDataUpdate, SavedSearch, SearchFilter
 )
 from transaction.utils import format_amount
 
@@ -72,3 +72,22 @@ class PrisonerProfileAdmin(admin.ModelAdmin):
 @admin.register(SecurityDataUpdate)
 class SecurityDataUpdateAdmin(admin.ModelAdmin):
     pass
+
+
+class SearchFilterAdminInline(admin.StackedInline):
+    model = SearchFilter
+    extra = 0
+    readonly_fields = ('saved_search',)
+
+
+@admin.register(SavedSearch)
+class SavedSearchAdmin(admin.ModelAdmin):
+    inlines = (SearchFilterAdminInline,)
+    list_display = ('user', 'description', 'formatted_filters', 'site_url',)
+
+    def formatted_filters(self, instance):
+        filters = instance.filters.all()
+
+        if len(filters) == 0:
+            return ''
+        return ', '.join([str(searchfilter) for searchfilter in filters])
