@@ -17,7 +17,7 @@
           <p>
             {% if original.applicationusermapping_set.count %}
 
-              {% trans 'This user has access to the following MTP applications:' %}
+              {% trans 'Can access the following applications:' %}
               {% for application in original.applicationusermapping_set.all %}
                 <strong>{{ application.application }}</strong>{% if forloop.last %}.{% else %},{% endif %}
               {% endfor %}
@@ -25,23 +25,31 @@
 
             {% else %}
 
-              {% trans 'This user has no access to MTP applications.' %}
-              <a href="{% url 'admin:mtp_auth_applicationusermapping_add' %}">{% trans 'Add' %}</a>
+              {% trans 'Has no access to any applications.' %}
+              <a href="{% url 'admin:mtp_auth_applicationusermapping_add' %}?user={{ object_id }}">{% trans 'Add' %}</a>
 
             {% endif %}
           </p>
 
           <p>
-            {% blocktrans trimmed count count=original.prisonusermapping.prisons.count|default:0 %}
-              This user has access to <strong>{{ count }}</strong> prison in the cashbook.
-              {% plural %}
-              This user has access to <strong>{{ count }}</strong> prisons in the cashbook.
-            {% endblocktrans %}
+            {% with prison_count=original.prisonusermapping.prisons.count|default:0 %}
+              {% if prison_count == 0 %}
+                {% trans 'Not registered at any prison.' %}
+              {% elif prison_count == 1 %}
+                {% blocktrans trimmed with prison_name=original.prisonusermapping.prisons.first.name %}
+                  Registered at {{ prison_name }}.
+                {% endblocktrans %}
+              {% else %}
+                {% blocktrans trimmed %}
+                  Registered at <strong>{{ prison_count }}</strong> prisons.
+                {% endblocktrans %}
+              {% endif %}
+            {% endwith %}
 
             {% if original.prisonusermapping.pk %}
               <a href="{% url 'admin:mtp_auth_prisonusermapping_change' original.prisonusermapping.pk %}">{% trans 'Edit' %}</a>
             {% else %}
-              <a href="{% url 'admin:mtp_auth_prisonusermapping_add' %}">{% trans 'Add' %}</a>
+              <a href="{% url 'admin:mtp_auth_prisonusermapping_add' %}?user={{ object_id }}">{% trans 'Add' %}</a>
             {% endif %}
           </p>
         </div>
