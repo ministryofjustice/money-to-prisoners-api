@@ -146,6 +146,17 @@ class PrisonerProfile(TimeStampedModel):
         )
 
 
+class PrisonerRecipientName(models.Model):
+    name = models.CharField(max_length=250)
+    prisoner = models.ForeignKey(
+        PrisonerProfile, on_delete=models.CASCADE,
+        related_name='recipient_names', related_query_name='recipient_name',
+    )
+
+    def __str__(self):
+        return self.name
+
+
 class SecurityDataUpdate(models.Model):
     max_credit_pk = models.IntegerField()
 
