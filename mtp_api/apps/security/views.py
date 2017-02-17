@@ -74,7 +74,7 @@ class SenderProfileView(
     mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
 ):
     queryset = SenderProfile.objects.all().annotate(
-        prisoner_count=Count('prisoners'),
+        prisoner_count=Count('prisoners', distinct=True),
     )
     filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter,)
     filter_class = SenderProfileListFilter
@@ -132,7 +132,9 @@ class PrisonerProfileListFilter(django_filters.FilterSet):
 class PrisonerProfileView(
     mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
 ):
-    queryset = PrisonerProfile.objects.all().annotate(sender_count=Count('senders'))
+    queryset = PrisonerProfile.objects.all().annotate(
+        sender_count=Count('senders', distinct=True)
+    )
     filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter,)
     filter_class = PrisonerProfileListFilter
     serializer_class = PrisonerProfileSerializer
