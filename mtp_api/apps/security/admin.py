@@ -19,6 +19,7 @@ class DebitCardSenderDetailsAdminInline(admin.StackedInline):
     extra = 0
     readonly_fields = ('cardholder_names',)
 
+    @add_short_description(_('cardholder names'))
     def cardholder_names(self, instance):
         return ', '.join(instance.cardholder_names.values_list('name', flat=True))
 
@@ -85,6 +86,7 @@ class SavedSearchAdmin(admin.ModelAdmin):
     inlines = (SearchFilterAdminInline,)
     list_display = ('user', 'description', 'formatted_filters', 'site_url',)
 
+    @add_short_description(_('filters'))
     def formatted_filters(self, instance):
         filters = instance.filters.all()
 
