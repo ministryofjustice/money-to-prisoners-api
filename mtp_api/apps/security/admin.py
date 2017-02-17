@@ -61,13 +61,17 @@ class SenderProfileAdmin(admin.ModelAdmin):
 class PrisonerProfileAdmin(admin.ModelAdmin):
     ordering = ('-credit_count',)
     list_display = ('prisoner_number', 'credit_count', 'formatted_credit_total')
-    search_fields = ('prisoner_name', 'prisoner_number', 'prisons__name')
-    readonly_fields = ('prisons',)
+    search_fields = ('prisoner_name', 'prisoner_number', 'prisons__name', 'recipient_name__name')
+    readonly_fields = ('prisons', 'recipient_names')
     exclude = ('senders',)
 
     @add_short_description(_('credit total'))
     def formatted_credit_total(self, instance):
         return format_amount(instance.credit_total)
+
+    @add_short_description(_('names specified by senders'))
+    def recipient_names(self, instance):
+        return ', '.join(instance.recipient_names.values_list('name', flat=True))
 
 
 @admin.register(SecurityDataUpdate)

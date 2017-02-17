@@ -77,6 +77,7 @@ class PrisonerProfileSerializer(serializers.ModelSerializer):
     sender_count = serializers.IntegerField()
     prisons = PrisonSerializer(many=True)
     current_prison = PrisonSerializer()
+    recipient_names = serializers.SerializerMethodField()
 
     class Meta:
         model = PrisonerProfile
@@ -91,8 +92,12 @@ class PrisonerProfileSerializer(serializers.ModelSerializer):
             'created',
             'modified',
             'prisons',
-            'current_prison'
+            'current_prison',
+            'recipient_names',
         )
+
+    def get_recipient_names(self, obj):
+        return list(obj.recipient_names.values_list('name', flat=True))
 
 
 class SearchFilterSerializer(serializers.ModelSerializer):

@@ -4,6 +4,7 @@ from django.utils import timezone
 
 from core.tests.utils import make_test_users
 from credit.models import Credit
+from payment.constants import PAYMENT_STATUS
 from payment.tests.utils import (
     create_payments, generate_payments, generate_initial_payment_data
 )
@@ -26,7 +27,7 @@ class UpdateSecurityProfilesTestCase(TestCase):
     def test_update_security_profiles_initial(self):
         generate_transactions(transaction_batch=100, days_of_history=5)
         generate_payments(payment_batch=100, days_of_history=5)
-        call_command('update_security_profiles')
+        call_command('update_security_profiles', verbosity=0)
 
         for sender_profile in SenderProfile.objects.all():
             credits = Credit.objects.filter(sender_profile.credit_filters)
@@ -41,7 +42,7 @@ class UpdateSecurityProfilesTestCase(TestCase):
     def test_update_security_profiles_subsequent_bank_transfer(self):
         generate_transactions(transaction_batch=100, days_of_history=5)
         generate_payments(payment_batch=100, days_of_history=5)
-        call_command('update_security_profiles')
+        call_command('update_security_profiles', verbosity=0)
 
         sender_to_update = SenderProfile.objects.filter(
             bank_transfer_details__isnull=False,
@@ -72,7 +73,7 @@ class UpdateSecurityProfilesTestCase(TestCase):
         new_transactions[0]['prisoner_dob'] = prisoner_to_update.prisoner_dob
 
         create_transactions(new_transactions)
-        call_command('update_security_profiles')
+        call_command('update_security_profiles', verbosity=0)
 
         sender_to_update.refresh_from_db()
         self.assertEqual(
@@ -95,7 +96,7 @@ class UpdateSecurityProfilesTestCase(TestCase):
     def test_update_security_profiles_subsequent_card_payment(self):
         generate_transactions(transaction_batch=100, days_of_history=5)
         generate_payments(payment_batch=100, days_of_history=5)
-        call_command('update_security_profiles')
+        call_command('update_security_profiles', verbosity=0)
 
         sender_to_update = SenderProfile.objects.filter(
             debit_card_details__isnull=False,
@@ -124,7 +125,7 @@ class UpdateSecurityProfilesTestCase(TestCase):
         new_payments[0]['prisoner_dob'] = prisoner_to_update.prisoner_dob
 
         create_payments(new_payments)
-        call_command('update_security_profiles')
+        call_command('update_security_profiles', verbosity=0)
 
         sender_to_update.refresh_from_db()
         self.assertEqual(
@@ -153,6 +154,42 @@ class UpdateSecurityProfilesTestCase(TestCase):
             initial_prisoner_credit_total + new_payments[0]['amount']
         )
 
+    def test_update_prisoner_profiles(self):
+        payments = generate_payments(payment_batch=100, days_of_history=5)
+        call_command('update_security_profiles', verbosity=0)
+
+        valid_payments = filter(lambda payment: payment.status == PAYMENT_STATUS.TAKEN and payment.credit.prison,
+                                payments)
+        prisoner_numbers = set(payment.prisoner_number for payment in valid_payments)
+        self.assertEqual(PrisonerProfile.objects.all().count(), len(prisoner_numbers))
+
+        sender_profile = SenderProfile.objects.filter(
+            debit_card_details__isnull=False,
+            prisoners__isnull=False,
+        ).first()
+        debit_card_details = sender_profile.debit_card_details.first()
+        prisoner_profile = PrisonerProfile.objects.first()
+
+        new_payments = generate_initial_payment_data(tot=1, days_of_history=0)
+
+        new_payments[0]['received_at'] = timezone.now()
+
+        new_payments[0]['email'] = 'dude@mtp.local'
+        new_payments[0]['cardholder_name'] = 'other name'
+        new_payments[0]['card_number_last_digits'] = debit_card_details.card_number_last_digits
+        new_payments[0]['card_expiry_date'] = debit_card_details.card_expiry_date
+        new_payments[0]['recipient_name'] = 'Mr. John Doe'
+
+        new_payments[0]['prisoner_number'] = prisoner_profile.prisoner_number
+        new_payments[0]['prisoner_dob'] = prisoner_profile.prisoner_dob
+
+        create_payments(new_payments)
+        call_command('update_security_profiles', verbosity=0)
+
+        prisoner_profile.refresh_from_db()
+        recipient_names = list(recipient_name.name for recipient_name in prisoner_profile.recipient_names.all())
+        self.assertEqual(recipient_names[-1], 'Mr. John Doe')
+
 
 class UpdateCurrentPrisonsTestCase(TestCase):
     fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
@@ -165,7 +202,7 @@ class UpdateCurrentPrisonsTestCase(TestCase):
     def test_update_current_prisons(self):
         generate_transactions(transaction_batch=100, days_of_history=5)
         generate_payments(payment_batch=100, days_of_history=5)
-        call_command('update_security_profiles')
+        call_command('update_security_profiles', verbosity=0)
 
         def check_locations():
             for prisoner_profile in PrisonerProfile.objects.all():

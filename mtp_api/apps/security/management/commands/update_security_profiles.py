@@ -5,8 +5,9 @@ from django.core.management import BaseCommand
 
 from credit.models import Credit
 from security.models import (
-    SenderProfile, BankTransferSenderDetails, DebitCardSenderDetails,
-    PrisonerProfile, SecurityDataUpdate, CardholderName, SenderEmail
+    SenderProfile, BankTransferSenderDetails, DebitCardSenderDetails, CardholderName, SenderEmail,
+    PrisonerProfile, PrisonerRecipientName,
+    SecurityDataUpdate,
 )
 
 logger = logging.getLogger('mtp')
@@ -162,11 +163,24 @@ class Command(BaseCommand):
         return sender_profile
 
     def create_or_update_prisoner_profile(self, credit, sender):
+        recipient_name = ''
+        if hasattr(credit, 'payment'):
+            recipient_name = credit.payment.recipient_name or recipient_name
         try:
             prisoner_profile = PrisonerProfile.objects.get(
                 prisoner_number=credit.prisoner_number,
                 prisoner_dob=credit.prisoner_dob
             )
+            if recipient_name:
+                try:
+                    prisoner_profile.recipient_names.get(
+                        name=recipient_name
+                    )
+                except PrisonerRecipientName.DoesNotExist:
+                    prisoner_profile.recipient_names.add(
+                        PrisonerRecipientName(name=recipient_name),
+                        bulk=False
+                    )
         except PrisonerProfile.DoesNotExist:
             if self.verbose:
                 self.stdout.write('Creating prisoner profile for %s' % credit.prisoner_number)
@@ -176,6 +190,10 @@ class Command(BaseCommand):
                 prisoner_dob=credit.prisoner_dob
             )
             prisoner_profile.save()
+            if recipient_name:
+                prisoner_profile.recipient_names.add(
+                    PrisonerRecipientName(name=recipient_name), bulk=False
+                )
 
         prisoner_profile.credit_count += 1
         prisoner_profile.credit_total += credit.amount
