@@ -130,13 +130,6 @@ class PrisonerProfile(TimeStampedModel):
 
     objects = PrisonProfileManager()
 
-    @property
-    def credit_filters(self):
-        return (
-            models.Q(prisoner_name=self.prisoner_name) &
-            models.Q(prisoner_dob=self.prisoner_dob)
-        )
-
     class Meta:
         permissions = (
             ('view_prisonerprofile', 'Can view prisoner profile'),
@@ -144,6 +137,13 @@ class PrisonerProfile(TimeStampedModel):
 
     def __str__(self):
         return self.prisoner_number
+
+    @property
+    def credit_filters(self):
+        return (
+            models.Q(prisoner_name=self.prisoner_name) &
+            models.Q(prisoner_dob=self.prisoner_dob)
+        )
 
 
 class SecurityDataUpdate(models.Model):
