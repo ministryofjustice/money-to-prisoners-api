@@ -1,4 +1,5 @@
 from django.db.models import Count
+from django.shortcuts import get_object_or_404
 import django_filters
 from rest_framework import mixins, viewsets, filters
 from rest_framework.permissions import IsAuthenticated
@@ -93,7 +94,7 @@ class SenderProfileCreditsView(
 ):
 
     def list(self, request, sender_pk=None):
-        sender = SenderProfile.objects.get(pk=sender_pk)
+        sender = get_object_or_404(SenderProfile, pk=sender_pk)
         queryset = self.filter_queryset(self.get_queryset())
         queryset = queryset.filter(sender.credit_filters)
 
@@ -151,7 +152,7 @@ class PrisonerProfileCreditsView(
 ):
 
     def list(self, request, prisoner_pk=None):
-        prisoner = PrisonerProfile.objects.get(pk=prisoner_pk)
+        prisoner = get_object_or_404(PrisonerProfile, pk=prisoner_pk)
         queryset = self.filter_queryset(self.get_queryset())
         queryset = queryset.filter(prisoner.credit_filters)
 
