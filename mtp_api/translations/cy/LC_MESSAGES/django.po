@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: MTP api\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-02-15 17:19+0000\n"
+"POT-Creation-Date: 2017-02-20 10:45+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Igor U <igor.ushkarev@digital.justice.gov.uk>, 2016\n"
 "Language-Team: Welsh (https://www.transifex.com/ministry-of-justice/teams/34553/cy/)\n"
@@ -276,7 +276,7 @@ msgstr ""
 msgid "Refund pending"
 msgstr ""
 
-#: apps/credit/constants.py:20 apps/security/admin.py:49
+#: apps/credit/constants.py:20 apps/security/admin.py:50
 #: apps/transaction/constants.py:31
 #: templates/core/dashboard/credit-report-cells/payment-method.html:10
 msgid "Bank transfer"
@@ -602,28 +602,40 @@ msgstr ""
 msgid "No prison found with code \"{pk_value}\""
 msgstr ""
 
-#: apps/security/admin.py:41
+#: apps/security/admin.py:22
+msgid "cardholder names"
+msgstr ""
+
+#: apps/security/admin.py:42
 msgid "sender names"
 msgstr ""
 
-#: apps/security/admin.py:45
+#: apps/security/admin.py:46
 msgid "payment method"
 msgstr ""
 
-#: apps/security/admin.py:51
+#: apps/security/admin.py:52
 #: templates/core/dashboard/credit-report-cells/payment-method.html:18
 msgid "Debit card"
 msgstr ""
 
-#: apps/security/admin.py:54 apps/security/admin.py:67
+#: apps/security/admin.py:55 apps/security/admin.py:68
 msgid "credit total"
+msgstr ""
+
+#: apps/security/admin.py:72
+msgid "names specified by senders"
+msgstr ""
+
+#: apps/security/admin.py:93
+msgid "filters"
 msgstr ""
 
 #: apps/security/app.py:7
 msgid "Security data"
 msgstr ""
 
-#: apps/security/models.py:57
+#: apps/security/models.py:58
 msgid "(Unknown)"
 msgstr ""
 
