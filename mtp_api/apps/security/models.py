@@ -18,6 +18,7 @@ class SenderProfile(TimeStampedModel):
     credit_total = models.IntegerField(default=0)
 
     class Meta:
+        ordering = ('created',)
         permissions = (
             ('view_senderprofile', 'Can view sender profile'),
         )
@@ -67,6 +68,7 @@ class BankTransferSenderDetails(TimeStampedModel):
     )
 
     class Meta:
+        ordering = ('created',)
         verbose_name_plural = 'bank transfer sender details'
         unique_together = (
             ('sender_name', 'sender_sort_code', 'sender_account_number', 'sender_roll_number'),
@@ -84,6 +86,7 @@ class DebitCardSenderDetails(TimeStampedModel):
     )
 
     class Meta:
+        ordering = ('created',)
         verbose_name_plural = 'debit card sender details'
         unique_together = (
             ('card_number_last_digits', 'card_expiry_date',),
@@ -100,6 +103,9 @@ class CardholderName(models.Model):
         related_name='cardholder_names', related_query_name='cardholder_name'
     )
 
+    class Meta:
+        ordering = ('pk',)
+
     def __str__(self):
         return self.name
 
@@ -110,6 +116,9 @@ class SenderEmail(models.Model):
         DebitCardSenderDetails, on_delete=models.CASCADE,
         related_name='sender_emails', related_query_name='sender_email'
     )
+
+    class Meta:
+        ordering = ('pk',)
 
     def __str__(self):
         return self.email
@@ -131,6 +140,7 @@ class PrisonerProfile(TimeStampedModel):
     objects = PrisonProfileManager()
 
     class Meta:
+        ordering = ('created',)
         permissions = (
             ('view_prisonerprofile', 'Can view prisoner profile'),
         )
@@ -153,6 +163,9 @@ class PrisonerRecipientName(models.Model):
         related_name='recipient_names', related_query_name='recipient_name',
     )
 
+    class Meta:
+        ordering = ('pk',)
+
     def __str__(self):
         return self.name
 
@@ -174,6 +187,9 @@ class SavedSearch(TimeStampedModel):
     endpoint = models.CharField(max_length=255)
     last_result_count = models.IntegerField(default=0)
     site_url = models.CharField(max_length=1000, null=True, blank=True)
+
+    class Meta:
+        ordering = ('created',)
 
     def __str__(self):
         return '{user}: {title}'.format(user=self.user.username, title=self.description)
