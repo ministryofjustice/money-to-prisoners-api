@@ -57,12 +57,14 @@ class ApplicationUserMappingAdmin(ModelAdmin):
     ordering = ('user__username', 'application')
     list_display = ('user', 'application')
     list_filter = ('application',)
+    search_fields = ('user__username',)
 
 
 @admin.register(PrisonUserMapping)
 class PrisonUserMappingAdmin(ModelAdmin):
     ordering = ('user__username',)
     list_display = ('user', 'prison_names')
+    search_fields = ('user__username',)
 
     @classmethod
     def prison_names(cls, mapping):
