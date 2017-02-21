@@ -61,7 +61,7 @@ class PaymentAdmin(admin.ModelAdmin):
     ordering = ('-created',)
     date_hierarchy = 'created'
     list_filter = ('status',)
-    search_fields = ('uuid', 'recipient_name', 'email')
+    search_fields = ('uuid', 'recipient_name', 'email', 'card_number_last_digits',)
     exclude = ('credit',)
     readonly_fields = ('credit_link',)
     actions = ['display_total_amount']
