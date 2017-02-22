@@ -1,6 +1,8 @@
 from datetime import datetime, date, timedelta
 
-from django.core.urlresolvers import reverse
+from django.contrib.auth import get_user_model
+from django.core.urlresolvers import reverse, reverse_lazy
+from django.test import TestCase
 from django.utils import timezone
 from rest_framework import status as http_status
 from rest_framework.test import APITestCase
@@ -11,8 +13,10 @@ from credit.models import Credit
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from payment.models import Batch, Payment
 from payment.constants import PAYMENT_STATUS
-from prison.tests.utils import load_random_prisoner_locations
 from payment.tests.utils import generate_payments
+from prison.tests.utils import load_random_prisoner_locations
+
+User = get_user_model()
 
 
 class GetBatchViewTestCase(AuthTestCaseMixin, APITestCase):
@@ -333,3 +337,40 @@ class ListPaymentViewTestCase(AuthTestCaseMixin, APITestCase):
 
         for payment in retrieved_payments:
             Payment.objects.get(pk=payment['uuid'], status=PAYMENT_STATUS.PENDING)
+
+
+class PaymentSearchAdminView(TestCase):
+    url = reverse_lazy('admin:payment_search')
+
+    def assertCannotAccessPaymentSearch(self, msg):  # noqa
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 302, msg=msg)
+
+    def test_access_denied_to_admins(self):
+        self.assertCannotAccessPaymentSearch('Should not be able to access without login')
+
+        User.objects.create_user('user', 'user@mtp.local', 'user')
+        self.assertTrue(self.client.login(
+            username='user',
+            password='user',
+        ))
+        self.assertCannotAccessPaymentSearch('Should not be able to access as a non-staff')
+        self.client.logout()
+
+        User.objects.create_user('staffuser', 'staffuser@mtp.local', 'staffuser')
+        self.assertTrue(self.client.login(
+            username='staffuser',
+            password='staffuser',
+            is_staff=True,
+        ))
+        self.assertCannotAccessPaymentSearch('Should not be able to access as a plain staff user')
+        self.client.logout()
+
+    def test_accessible_by_superusers(self):
+        User.objects.create_superuser('superuser', 'superuser@mtp.local', 'superuser')
+        self.assertTrue(self.client.login(
+            username='superuser',
+            password='superuser',
+        ))
+        response = self.client.get(self.url)
+        self.assertContains(response, 'Payment search')
