@@ -19,6 +19,10 @@
   }
 }
 
+.mtp-dashboard-standout-show {
+  display: none;
+}
+
 .mtp-dashboard-module-standout {
   position: fixed;
   top: 0;
@@ -60,17 +64,16 @@
   tfoot {
     display: none;
   }
+
+  .mtp-dashboard-standout-show {
+    display: block;
+  }
+
+  .mtp-dashboard-standout-hide {
+    display: none;
+  }
 }
 
-.mtp-dashboard-standout-show {
-  display: none;
-}
-.mtp-dashboard-module-standout .mtp-dashboard-standout-show {
-  display: block;
-}
-.mtp-dashboard-module-standout .mtp-dashboard-standout-hide {
-  display: none;
-}
 .mtp-dashboard-module > a.mtp-dashboard-standout-show {
   position: fixed;
   top: 0;
