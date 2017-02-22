@@ -1,9 +1,13 @@
 import re
 
 from django.conf import settings
+from django.core.validators import RegexValidator
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 from model_utils.models import TimeStampedModel
+
+validate_prisoner_number = RegexValidator(r'^A\d{4}[A-Z]{2}$', message=_('Invalid prisoner number'))
 
 
 class Population(models.Model):

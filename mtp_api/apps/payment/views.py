@@ -1,13 +1,18 @@
 import django_filters
+from django.core.urlresolvers import reverse_lazy
+from django.utils.translation import gettext_lazy as _
+from django.views.generic import FormView
 from rest_framework import mixins, viewsets, filters
 from rest_framework import status as http_status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from core.filters import IsoDateTimeFilter
+from core.views import AdminViewMixin
 from mtp_auth.permissions import (
     BankAdminClientIDPermissions, SendMoneyClientIDPermissions
 )
+from payment.forms import PaymentSearchForm
 from .constants import PAYMENT_STATUS
 from .exceptions import InvalidStateForUpdateException
 from .models import Batch, Payment
@@ -80,3 +85,19 @@ class PaymentView(
                 data={'errors': [str(e)]},
                 status=http_status.HTTP_409_CONFLICT
             )
+
+
+class PaymentSearchView(AdminViewMixin, FormView):
+    title = _('Payment search')
+    form_class = PaymentSearchForm
+    template_name = 'admin/payment/payment/search.html'
+    success_url = reverse_lazy('admin:payment_search')
+    superuser_required = True
+
+    def get_context_data(self, **kwargs):
+        context_data = super().get_context_data(**kwargs)
+        context_data['opts'] = Payment._meta
+        return context_data
+
+    def form_valid(self, form):
+        return self.render_to_response(self.get_context_data(form=form))

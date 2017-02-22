@@ -19,12 +19,14 @@ class AdminSite(admin.AdminSite):
 
     def get_urls(self):
         from core.views import DashboardView, RecreateTestDataView
+        from payment.views import PaymentSearchView
         from performance.views import DigitalTakeupUploadView
 
         return [
             url(r'^dashboard/$', DashboardView.as_view(), name='dashboard'),
             url(r'^digital-takeup-upload/$', DigitalTakeupUploadView.as_view(), name='digital_takeup_upload'),
             url(r'^recreate-test-data/$', RecreateTestDataView.as_view(), name='recreate_test_data'),
+            url(r'^payment/payment/search/$', PaymentSearchView.as_view(), name='payment_search'),
         ] + super().get_urls()
 
     def index(self, request, extra_context=None):

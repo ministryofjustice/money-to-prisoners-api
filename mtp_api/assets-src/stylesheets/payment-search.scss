@@ -1,0 +1,17 @@
+.payment-search-list {
+  label {
+    width: auto;
+  }
+
+  textarea {
+    display: block;
+    clear: left;
+    overflow: scroll;
+    resize: vertical;
+    box-sizing: border-box;
+    width: 100%;
+    font-family: Menlo, Consolas, Courier, 'Bitstream Vera Sans Mono', 'Courier New', monospace;
+    font-size: 10px;
+    tab-size: 4;
+  }
+}
