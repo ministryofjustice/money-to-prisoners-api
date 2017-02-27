@@ -2,8 +2,7 @@ import math
 
 from django.conf import settings
 from django.db import models
-from django.db.models import DateTimeField
-from django.db.models.lookups import DateTimeDateTransform
+from django.db.models import DateTimeField, Func
 from django.template import Context, loader
 from rest_framework.exceptions import NotFound
 from rest_framework.pagination import BasePagination, _get_count as get_count
@@ -55,8 +54,9 @@ class DateBasedPagination(BasePagination):
         self.page_size = self.get_int_query_param('page_size', default=self.page_size, min_value=1, max_value=7)
 
         # convert field into date and select only this field
-        dates = queryset.annotate(converted_date=DateTimeDateTransform(page_by_date_field)). \
-            values_list('converted_date', flat=True)
+        dates = queryset.annotate(
+            converted_date=Func(page_by_date_field, function='DATE')
+        ).values_list('converted_date', flat=True)
         # count distinct dates for this field
         date_count = dates.aggregate(count=models.Count('converted_date', distinct=True))['count'] or 0
 

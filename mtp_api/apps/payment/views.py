@@ -47,6 +47,7 @@ class PaymentListFilter(django_filters.FilterSet):
 
     class Meta:
         model = Payment
+        fields = ('modified__lt',)
 
 
 class PaymentView(

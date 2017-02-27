@@ -9,7 +9,7 @@ from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.models import Group
 from django.core import mail
-from django.core.urlresolvers import reverse
+from django.core.urlresolvers import reverse, reverse_lazy
 from django.test import override_settings
 from django.utils.timezone import now
 from mtp_common.test_utils import silence_logger
@@ -1119,7 +1119,7 @@ class ChangePasswordTestCase(APITestCase, AuthTestCaseMixin):
 
 class ResetPasswordTestCase(APITestCase):
     fixtures = ['initial_groups.json', 'initial_types.json', 'test_prisons.json']
-    reset_url = reverse('user-reset-password')
+    reset_url = reverse_lazy('user-reset-password')
 
     def setUp(self):
         super().setUp()

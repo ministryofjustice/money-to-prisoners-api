@@ -34,6 +34,7 @@ class TransactionListFilter(django_filters.FilterSet):
 
     class Meta:
         model = Transaction
+        fields = ('status', 'received_at__lt', 'received_at__gte',)
 
 
 class TransactionView(mixins.CreateModelMixin, mixins.UpdateModelMixin,
