@@ -70,6 +70,7 @@ class Command(BaseCommand):
     def create_or_update_profiles(self, credit):
         sender_profile = self.create_or_update_sender_profile(credit)
         if credit.prison:
+            sender_profile.prisons.add(credit.prison)
             self.create_or_update_prisoner_profile(credit, sender_profile)
 
     def create_or_update_sender_profile(self, credit):
