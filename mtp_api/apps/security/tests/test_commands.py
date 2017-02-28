@@ -114,7 +114,7 @@ class UpdateSecurityProfilesTestCase(TestCase):
 
         new_payments = generate_initial_payment_data(tot=1, days_of_history=0)
 
-        new_payments[0]['received_at'] = timezone.now()
+        new_payments[0]['created'] = timezone.now()
 
         new_payments[0]['email'] = 'dude@mtp.local'
         new_payments[0]['cardholder_name'] = 'other name'
@@ -172,7 +172,7 @@ class UpdateSecurityProfilesTestCase(TestCase):
 
         new_payments = generate_initial_payment_data(tot=1, days_of_history=0)
 
-        new_payments[0]['received_at'] = timezone.now()
+        new_payments[0]['created'] = timezone.now()
 
         new_payments[0]['email'] = 'dude@mtp.local'
         new_payments[0]['cardholder_name'] = 'other name'

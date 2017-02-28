@@ -338,12 +338,11 @@ def setup_transaction(owner_status_chooser,
 
 
 def save_transaction(data):
+    resolution = CREDIT_RESOLUTION.PENDING
     if data.pop('credited', False):
         resolution = CREDIT_RESOLUTION.CREDITED
-    elif data.pop('refunded', False):
+    if data.pop('refunded', False):
         resolution = CREDIT_RESOLUTION.REFUNDED
-    else:
-        resolution = CREDIT_RESOLUTION.PENDING
 
     prisoner_dob = data.pop('prisoner_dob', None)
     prisoner_number = data.pop('prisoner_number', None)

@@ -39,6 +39,22 @@ class MultipleFieldCharFilter(django_filters.CharFilter):
             return self.get_method(qs)(q).distinct()
         return self.get_method(qs)(q)
 
+    @property
+    def label(self):
+        if self._label is None and hasattr(self, 'parent'):
+            model = self.parent._meta.model
+            fields = []
+            for name in self.name:
+                fields.append(django_filters.utils.label_for_filter(
+                    model, name, self.lookup_expr, self.exclude
+                ))
+            self._label = ', '.join(fields)
+        return self._label
+
+    @label.setter
+    def label(self, value):
+        self._label = value
+
 
 class BlankStringFilter(django_filters.BooleanFilter):
     def filter(self, qs, value):
