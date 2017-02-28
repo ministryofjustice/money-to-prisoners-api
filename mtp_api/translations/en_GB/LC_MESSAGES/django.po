@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: MTP api\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-02-20 10:45+0000\n"
+"POT-Creation-Date: 2017-02-28 14:34+0000\n"
 "PO-Revision-Date: 2016-11-04 10:00+0000\n"
 "Last-Translator: Welsh Language Unit <welsh.language.unit.manager@hmcts.gsi.gov.uk>\n"
 "Language-Team: Welsh (http://www.transifex.com/ministry-of-justice/mtp/language/cy/)\n"
@@ -22,36 +22,36 @@ msgstr ""
 msgid "Send money to a prisoner"
 msgstr ""
 
-#: apps/core/admin.py:102
+#: apps/core/admin.py:104
 msgid "All"
 msgstr ""
 
-#: apps/core/admin.py:145
+#: apps/core/admin.py:147
 msgid "Start date"
 msgstr ""
 
-#: apps/core/admin.py:148
+#: apps/core/admin.py:150
 msgid "End date"
 msgstr ""
 
-#: apps/core/admin.py:153
+#: apps/core/admin.py:155
 msgid "Date in range"
 msgstr ""
 
-#: apps/core/admin.py:161 apps/credit/dashboards.py:386
+#: apps/core/admin.py:163 apps/credit/dashboards.py:386
 msgid "Date"
 msgstr ""
 
-#: apps/core/admin.py:166
+#: apps/core/admin.py:168
 msgid "Search"
 msgstr ""
 
-#: apps/core/admin.py:176
+#: apps/core/admin.py:178
 #, python-format
 msgid "Search %(fieldname)s"
 msgstr ""
 
-#: apps/core/admin.py:203
+#: apps/core/admin.py:205
 msgid "Any"
 msgstr ""
 
@@ -416,11 +416,11 @@ msgstr ""
 msgid "%0.1f days"
 msgstr ""
 
-#: apps/mtp_auth/admin.py:98
+#: apps/mtp_auth/admin.py:100
 msgid "Remove lockouts"
 msgstr ""
 
-#: apps/mtp_auth/admin.py:108
+#: apps/mtp_auth/admin.py:110
 msgid "account locked"
 msgstr ""
 
@@ -522,6 +522,22 @@ msgstr ""
 msgid "Taken"
 msgstr ""
 
+#: apps/payment/forms.py:14
+msgid "Payment date"
+msgstr ""
+
+#: apps/payment/forms.py:15
+msgid "Card number"
+msgstr ""
+
+#: apps/payment/forms.py:15
+msgid "Only last 4 digits are required"
+msgstr ""
+
+#: apps/payment/forms.py:17
+msgid "Prisoner number"
+msgstr ""
+
 #: apps/payment/models.py:18 apps/transaction/models.py:33
 msgid "For reconciliation"
 msgstr ""
@@ -532,6 +548,10 @@ msgstr ""
 
 #: apps/payment/models.py:48
 msgid "Specified by sender for confirmation emails"
+msgstr ""
+
+#: apps/payment/views.py:92 templates/admin/payment/payment/change_list.html:6
+msgid "Payment search"
 msgstr ""
 
 #: apps/performance/admin.py:16 apps/performance/models.py:63
@@ -595,6 +615,10 @@ msgstr ""
 
 #: apps/prison/app.py:7
 msgid "Prisoner management"
+msgstr ""
+
+#: apps/prison/models.py:10
+msgid "Invalid prisoner number"
 msgstr ""
 
 #: apps/prison/serializers.py:66
@@ -696,11 +720,11 @@ msgstr ""
 msgid "Administrative"
 msgstr ""
 
-#: apps/transaction/views.py:108
+#: apps/transaction/views.py:109
 msgid "'received_at__gte' and 'received_at__lt' fields are required"
 msgstr ""
 
-#: apps/transaction/views.py:116
+#: apps/transaction/views.py:117
 msgid "Invalid date format"
 msgstr ""
 
@@ -811,8 +835,18 @@ msgstr ""
 msgid "Unknown content"
 msgstr ""
 
+#: templates/admin/payment/payment/search.html:25
 #: templates/admin/performance/digitaltakeup/upload.html:16
 msgid "Home"
+msgstr ""
+
+#: templates/admin/payment/payment/search.html:48
+#, python-format
+msgid "Payments by card expiring %(card_expiry)s"
+msgstr ""
+
+#: templates/admin/payment/payment/search.html:59
+msgid "Find"
 msgstr ""
 
 #: templates/admin/performance/digitaltakeup/upload.html:38
@@ -996,10 +1030,10 @@ msgstr ""
 msgid "Your new Money To Prisoners password has been created for you."
 msgstr ""
 
-#: urls.py:34
+#: urls.py:33
 msgid "Page not found"
 msgstr ""
 
-#: urls.py:36
+#: urls.py:35
 msgid "Sorry, something went wrong"
 msgstr ""
