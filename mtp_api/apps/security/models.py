@@ -17,6 +17,8 @@ class SenderProfile(TimeStampedModel):
     credit_count = models.IntegerField(default=0)
     credit_total = models.IntegerField(default=0)
 
+    prisons = models.ManyToManyField(Prison, related_name='senders')
+
     class Meta:
         ordering = ('created',)
         permissions = (
