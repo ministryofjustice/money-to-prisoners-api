@@ -61,6 +61,8 @@ class SenderProfileListFilter(django_filters.FilterSet):
     prison_region = django_filters.CharFilter(name='prisoners__prisons__region')
     prison_population = MultipleValueFilter(name='prisoners__prisons__populations__name')
     prison_category = MultipleValueFilter(name='prisoners__prisons__categories__name')
+    prison_count__lte = django_filters.NumberFilter(name='prison_count', lookup_expr='lte')
+    prison_count__gte = django_filters.NumberFilter(name='prison_count', lookup_expr='gte')
 
     class Meta:
         model = SenderProfile
@@ -82,7 +84,7 @@ class SenderProfileView(
     filter_class = SenderProfileListFilter
     serializer_class = SenderProfileSerializer
     ordering_param = api_settings.ORDERING_PARAM
-    ordering_fields = ('prisoner_count', 'credit_count', 'credit_total',)
+    ordering_fields = ('prisoner_count', 'prison_count', 'credit_count', 'credit_total',)
     default_ordering = ('-prisoner_count',)
 
     permission_classes = (
