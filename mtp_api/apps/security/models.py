@@ -146,6 +146,9 @@ class PrisonerProfile(TimeStampedModel):
         permissions = (
             ('view_prisonerprofile', 'Can view prisoner profile'),
         )
+        unique_together = (
+            ('prisoner_number', 'prisoner_dob',),
+        )
 
     def __str__(self):
         return self.prisoner_number
