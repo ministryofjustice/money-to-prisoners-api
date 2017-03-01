@@ -25,26 +25,26 @@ class SenderProfile(TimeStampedModel):
 
     @property
     def credit_filters(self):
-        return (
-            reduce(
-                lambda x, y: x | y,
+        try:
+            return reduce(
+                models.Q.__or__,
                 chain(
                     (
-                        models.Q(transaction__sender_name=d.sender_name) &
-                        models.Q(transaction__sender_sort_code=d.sender_sort_code) &
-                        models.Q(transaction__sender_account_number=d.sender_account_number) &
-                        models.Q(transaction__sender_roll_number=d.sender_roll_number)
+                        models.Q(transaction__sender_name=d.sender_name,
+                                 transaction__sender_sort_code=d.sender_sort_code,
+                                 transaction__sender_account_number=d.sender_account_number,
+                                 transaction__sender_roll_number=d.sender_roll_number)
                         for d in self.bank_transfer_details.all()
                     ),
                     (
-                        models.Q(payment__card_number_last_digits=d.card_number_last_digits) &
-                        models.Q(payment__card_expiry_date=d.card_expiry_date)
+                        models.Q(payment__card_number_last_digits=d.card_number_last_digits,
+                                 payment__card_expiry_date=d.card_expiry_date)
                         for d in self.debit_card_details.all()
                     )
-                ),
-                models.Q(pk=None)
+                )
             )
-        )
+        except TypeError:
+            return models.Q(pk=None)
 
     def __str__(self):
         return 'Sender %s' % self.id
@@ -150,10 +150,7 @@ class PrisonerProfile(TimeStampedModel):
 
     @property
     def credit_filters(self):
-        return (
-            models.Q(prisoner_name=self.prisoner_name) &
-            models.Q(prisoner_dob=self.prisoner_dob)
-        )
+        return models.Q(prisoner_name=self.prisoner_name, prisoner_dob=self.prisoner_dob)
 
 
 class PrisonerRecipientName(models.Model):
