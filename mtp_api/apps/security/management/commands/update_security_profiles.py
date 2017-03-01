@@ -1,7 +1,8 @@
 import logging
 
+from django.db import models
 from django.db.transaction import atomic
-from django.core.management import BaseCommand
+from django.core.management import BaseCommand, CommandError
 
 from credit.models import Credit
 from security.models import (
@@ -22,14 +23,27 @@ class Command(BaseCommand):
         super().add_arguments(parser)
         parser.add_argument('--batch-size', type=int, default=200,
                             help='Number of credits to process in one atomic transaction')
+        parser.add_argument('--totals', action='store_true', help='Recalculates the credit counts and totals only')
         parser.add_argument('--recreate', action='store_true', help='Deletes existing sender and prisoner profiles')
 
     def handle(self, **options):
+        if options['totals'] and options['recreate']:
+            raise CommandError('Cannot recalculate totals when deleting all profiles')
+
         self.verbose = options['verbosity'] > 1
-        if options['recreate']:
-            self.delete_profiles()
+
         batch_size = options['batch_size']
-        assert batch_size > 0
+        if batch_size < 1:
+            raise CommandError('Batch size must be at least 1')
+
+        if options['totals']:
+            self.handle_totals(batch_size=batch_size)
+        else:
+            self.handle_update(batch_size=batch_size, recreate=options['recreate'])
+
+    def handle_update(self, batch_size, recreate):
+        if recreate:
+            self.delete_profiles()
 
         queryset = Credit.objects.order_by('pk')
         try:
@@ -202,6 +216,41 @@ class Command(BaseCommand):
         prisoner_profile.senders.add(sender)
         prisoner_profile.save()
         return prisoner_profile
+
+    def handle_totals(self, batch_size):
+        profiles = (
+            (SenderProfile, 'sender'),
+            (PrisonerProfile, 'prisoner'),
+        )
+        for model, name in profiles:
+            queryset = model.objects.order_by('pk').all()
+            count = queryset.count()
+            if not count:
+                self.stdout.write(self.style.SUCCESS('No %s profiles to update' % name))
+                return
+            else:
+                self.stdout.write('Updating %d %s profile totals' % (count, name))
+
+            processed_count = 0
+            for offset in range(0, count, batch_size):
+                batch = slice(offset, min(offset + batch_size, count))
+                processed_count += self.process_totals_batch(queryset[batch])
+                if self.verbose:
+                    self.stdout.write('Processed %d %s profiles' % (processed_count, name))
+
+        self.stdout.write(self.style.SUCCESS('Done'))
+
+    @atomic()
+    def process_totals_batch(self, profile_batch):
+        for profile in profile_batch:
+            queryset = Credit.objects.filter(profile.credit_filters)
+            totals = queryset.aggregate(credit_count=models.Count('pk'),
+                                        credit_total=models.Sum('amount'))
+            profile.credit_count = totals.get('credit_count') or 0
+            profile.credit_total = totals.get('credit_total') or 0
+            profile.save()
+            # TODO: maybe profile should be deleted if totals are 0?
+        return len(profile_batch)
 
     @atomic()
     def delete_profiles(self):
