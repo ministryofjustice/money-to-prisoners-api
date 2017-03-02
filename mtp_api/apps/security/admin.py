@@ -4,7 +4,7 @@ from django.utils.translation import gettext, gettext_lazy as _
 from core.admin import add_short_description
 from security.models import (
     SenderProfile, PrisonerProfile, BankTransferSenderDetails,
-    DebitCardSenderDetails, SecurityDataUpdate, SavedSearch, SearchFilter
+    DebitCardSenderDetails, SavedSearch, SearchFilter,
 )
 from transaction.utils import format_amount
 
@@ -72,11 +72,6 @@ class PrisonerProfileAdmin(admin.ModelAdmin):
     @add_short_description(_('names specified by senders'))
     def recipient_names(self, instance):
         return ', '.join(instance.recipient_names.values_list('name', flat=True))
-
-
-@admin.register(SecurityDataUpdate)
-class SecurityDataUpdateAdmin(admin.ModelAdmin):
-    pass
 
 
 class SearchFilterAdminInline(admin.StackedInline):

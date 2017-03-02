@@ -86,6 +86,8 @@ class SecurityCreditSerializer(CreditSerializer):
     sender_email = serializers.CharField(read_only=True)
     card_number_last_digits = serializers.CharField(read_only=True)
     card_expiry_date = serializers.CharField(read_only=True)
+    sender_profile = serializers.PrimaryKeyRelatedField(read_only=True)
+    prisoner_profile = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = Credit
@@ -97,6 +99,8 @@ class SecurityCreditSerializer(CreditSerializer):
             'sender_email',
             'card_number_last_digits',
             'card_expiry_date',
+            'sender_profile',
+            'prisoner_profile',
         )
 
     @classmethod

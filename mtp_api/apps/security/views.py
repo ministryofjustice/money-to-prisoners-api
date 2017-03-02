@@ -98,8 +98,8 @@ class SenderProfileCreditsView(
 
     def list(self, request, sender_pk=None):
         sender = get_object_or_404(SenderProfile, pk=sender_pk)
-        queryset = self.filter_queryset(self.get_queryset())
-        queryset = queryset.filter(sender.credit_filters)
+        queryset = self.get_queryset().filter(sender_profile=sender)
+        queryset = self.filter_queryset(queryset)
 
         page = self.paginate_queryset(queryset)
         if page is not None:
@@ -156,8 +156,8 @@ class PrisonerProfileCreditsView(
 
     def list(self, request, prisoner_pk=None):
         prisoner = get_object_or_404(PrisonerProfile, pk=prisoner_pk)
-        queryset = self.filter_queryset(self.get_queryset())
-        queryset = queryset.filter(prisoner.credit_filters)
+        queryset = self.get_queryset().filter(prisoner_profile=prisoner)
+        queryset = self.filter_queryset(queryset)
 
         page = self.paginate_queryset(queryset)
         if page is not None:

@@ -8,6 +8,7 @@ from django.utils.translation import gettext_lazy as _
 from model_utils.models import TimeStampedModel
 
 from core.models import ScheduledCommand
+from credit.models import Credit
 from prison.models import Prison
 from .managers import PrisonProfileManager
 from .signals import prisoner_profile_current_prisons_need_updating
@@ -24,6 +25,9 @@ class SenderProfile(TimeStampedModel):
         permissions = (
             ('view_senderprofile', 'Can view sender profile'),
         )
+
+    def __str__(self):
+        return 'Sender %s' % self.id
 
     @property
     def credit_filters(self):
@@ -48,8 +52,13 @@ class SenderProfile(TimeStampedModel):
         except TypeError:
             return models.Q(pk=None)
 
-    def __str__(self):
-        return 'Sender %s' % self.id
+    def update_totals(self):
+        queryset = Credit.objects.filter(self.credit_filters)
+        totals = queryset.aggregate(credit_count=models.Count('pk'),
+                                    credit_total=models.Sum('amount'))
+        self.credit_count = totals.get('credit_count') or 0
+        self.credit_total = totals.get('credit_total') or 0
+        self.save()
 
     def get_sender_names(self):
         yield from (details.sender_name for details in self.bank_transfer_details.all())
@@ -157,6 +166,14 @@ class PrisonerProfile(TimeStampedModel):
     def credit_filters(self):
         return models.Q(prisoner_name=self.prisoner_name, prisoner_dob=self.prisoner_dob)
 
+    def update_totals(self):
+        queryset = Credit.objects.filter(self.credit_filters)
+        totals = queryset.aggregate(credit_count=models.Count('pk'),
+                                    credit_total=models.Sum('amount'))
+        self.credit_count = totals.get('credit_count') or 0
+        self.credit_total = totals.get('credit_total') or 0
+        self.save()
+
 
 class PrisonerRecipientName(models.Model):
     name = models.CharField(max_length=250)
@@ -170,17 +187,6 @@ class PrisonerRecipientName(models.Model):
 
     def __str__(self):
         return self.name
-
-
-class SecurityDataUpdate(models.Model):
-    max_credit_pk = models.IntegerField()
-
-    class Meta:
-        ordering = ('-max_credit_pk',)
-        get_latest_by = 'max_credit_pk'
-
-    def __str__(self):
-        return 'Last security update for credit %s' % self.max_credit_pk
 
 
 class SavedSearch(TimeStampedModel):

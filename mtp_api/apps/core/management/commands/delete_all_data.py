@@ -8,9 +8,7 @@ from account.models import Balance
 from credit.models import Credit
 from payment.models import Batch, Payment
 from prison.models import Prison, PrisonerLocation
-from security.models import (
-    SenderProfile, PrisonerProfile, SecurityDataUpdate, SavedSearch
-)
+from security.models import SenderProfile, PrisonerProfile, SavedSearch
 from transaction.models import Transaction
 
 
@@ -55,7 +53,6 @@ class Command(BaseCommand):
             Batch.objects.all().delete()
             SenderProfile.objects.all().delete()
             PrisonerProfile.objects.all().delete()
-            SecurityDataUpdate.objects.all().delete()
             SavedSearch.objects.all().delete()
 
         if not protect_prisoner_locations:
