@@ -13,7 +13,5 @@ urlpatterns = [
     url(r'^credits/actions/lock/$', views.LockCredits.as_view(), name='credit-lock'),
     url(r'^credits/actions/unlock/$', views.UnlockCredits.as_view(), name='credit-unlock'),
     url(r'^credits/actions/review/$', views.ReviewCredits.as_view(), name='credit-review'),
-    url(r'^credits/senders/$', csrf_exempt(views.SenderList.as_view()), name='sender-list'),
-    url(r'^credits/prisoners/$', csrf_exempt(views.PrisonerList.as_view()), name='prisoner-list'),
     url(r'^credits/', include(router.urls)),
 ]
