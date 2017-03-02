@@ -20,10 +20,10 @@ from transaction.utils import format_amount
 
 class Credit(TimeStampedModel):
     amount = models.PositiveIntegerField()
-    prisoner_number = models.CharField(blank=True, null=True, max_length=250)
-    prisoner_dob = models.DateField(blank=True, null=True)
     received_at = models.DateTimeField(auto_now=False, blank=True, null=True)
 
+    prisoner_number = models.CharField(blank=True, null=True, max_length=250)
+    prisoner_dob = models.DateField(blank=True, null=True)
     prisoner_name = models.CharField(blank=True, null=True, max_length=250)
     prison = models.ForeignKey(Prison, blank=True, null=True, on_delete=models.SET_NULL)
 
@@ -33,6 +33,9 @@ class Credit(TimeStampedModel):
     blocked = models.BooleanField(default=False)
 
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+
+    sender_profile = models.ForeignKey('security.SenderProfile', related_name='credits', blank=True, null=True)
+    prisoner_profile = models.ForeignKey('security.PrisonerProfile', related_name='credits', blank=True, null=True)
 
     objects = CompletedCreditManager.from_queryset(CreditQuerySet)()
     objects_all = CreditManager.from_queryset(CreditQuerySet)()

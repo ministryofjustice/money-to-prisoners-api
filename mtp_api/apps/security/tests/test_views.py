@@ -115,11 +115,11 @@ class SenderCreditListTestCase(SecurityViewTestCase):
         return reverse('sender-credits-list', args=args)
 
     def test_list_credits_for_sender(self):
-        sender = SenderProfile.objects.first()
+        sender = SenderProfile.objects.last()  # first is anonymous
         data = self._get_list(
             self._get_authorised_user(), path_params=[sender.id]
         )['results']
-        self.assertTrue(len(data) > 0)
+        self.assertGreater(len(data), 0)
 
         credits = Credit.objects.filter(sender.credit_filters)
         self.assertEqual(

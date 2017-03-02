@@ -1,6 +1,5 @@
 import logging
 
-from django.db import models
 from django.db.transaction import atomic
 from django.core.management import BaseCommand, CommandError
 
@@ -8,13 +7,14 @@ from credit.models import Credit
 from security.models import (
     SenderProfile, BankTransferSenderDetails, DebitCardSenderDetails, CardholderName, SenderEmail,
     PrisonerProfile, PrisonerRecipientName,
-    SecurityDataUpdate,
 )
 
 logger = logging.getLogger('mtp')
 
 
 class Command(BaseCommand):
+    anonymous_sender = None
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.verbose = False
@@ -45,25 +45,31 @@ class Command(BaseCommand):
         if recreate:
             self.delete_profiles()
 
-        queryset = Credit.objects.order_by('pk')
-        try:
-            last_updated_pk = SecurityDataUpdate.objects.latest().max_credit_pk
-            new_credits = queryset.filter(pk__gt=last_updated_pk)
-        except SecurityDataUpdate.DoesNotExist:
-            new_credits = queryset.all()
-
+        new_credits = Credit.objects.filter(sender_profile__isnull=True).order_by('pk')
         new_credits_count = new_credits.count()
         if not new_credits_count:
             self.stdout.write(self.style.SUCCESS('No new credits'))
             return
         else:
-            self.stdout.write('Updating profiles for %d new credits' % new_credits_count)
+            self.stdout.write('Updating profiles for (at least) %d new credits' % new_credits_count)
+
+        try:
+            self.anonymous_sender = SenderProfile.objects.get(bank_transfer_details__isnull=True,
+                                                              debit_card_details__isnull=True)
+        except SenderProfile.DoesNotExist:
+            if self.verbose:
+                self.stdout.write('Creating anonymous sender')
+            self.anonymous_sender = SenderProfile.objects.create()
+        except SenderProfile.MultipleObjectsReturned:
+            raise CommandError('Multiple sender profiles exist with no linked debit card or bank transfer details')
 
         try:
             processed_count = 0
-            for offset in range(0, new_credits_count, batch_size):
-                batch = slice(offset, min(offset + batch_size, new_credits_count))
-                processed_count += self.process_batch(new_credits[batch])
+            while True:
+                count = self.process_batch(new_credits[0:batch_size])
+                if count == 0:
+                    break
+                processed_count += count
                 if self.verbose:
                     self.stdout.write('Processed %d credits' % processed_count)
         finally:
@@ -74,18 +80,18 @@ class Command(BaseCommand):
 
     @atomic()
     def process_batch(self, new_credits):
-        credit = None
         for credit in new_credits:
             self.create_or_update_profiles(credit)
-        if credit:
-            SecurityDataUpdate(max_credit_pk=credit.pk).save()
         return len(new_credits)
 
     def create_or_update_profiles(self, credit):
         sender_profile = self.create_or_update_sender_profile(credit)
+        credit.sender_profile = sender_profile
         if credit.prison:
             sender_profile.prisons.add(credit.prison)
-            self.create_or_update_prisoner_profile(credit, sender_profile)
+            prisoner_profile = self.create_or_update_prisoner_profile(credit, sender_profile)
+            credit.prisoner_profile = prisoner_profile
+        credit.save()
 
     def create_or_update_sender_profile(self, credit):
         if hasattr(credit, 'transaction'):
@@ -94,7 +100,7 @@ class Command(BaseCommand):
             sender_profile = self.create_or_update_debit_card(credit)
         else:
             logger.error('Credit %s does not have a payment nor transaction' % credit.pk)
-            return
+            sender_profile = self.anonymous_sender
 
         sender_profile.credit_count += 1
         sender_profile.credit_total += credit.amount
@@ -243,13 +249,7 @@ class Command(BaseCommand):
     @atomic()
     def process_totals_batch(self, profile_batch):
         for profile in profile_batch:
-            queryset = Credit.objects.filter(profile.credit_filters)
-            totals = queryset.aggregate(credit_count=models.Count('pk'),
-                                        credit_total=models.Sum('amount'))
-            profile.credit_count = totals.get('credit_count') or 0
-            profile.credit_total = totals.get('credit_total') or 0
-            profile.save()
-            # TODO: maybe profile should be deleted if totals are 0?
+            profile.update_totals()
         return len(profile_batch)
 
     @atomic()
@@ -260,7 +260,6 @@ class Command(BaseCommand):
 
         PrisonerProfile.objects.all().delete()
         SenderProfile.objects.all().delete()
-        SecurityDataUpdate.objects.all().delete()
 
         security_app = apps.app_configs['security']
         with connection.cursor() as cursor:
