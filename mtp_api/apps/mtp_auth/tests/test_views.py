@@ -1144,12 +1144,34 @@ class ResetPasswordTestCase(APITestCase):
             'username': [ResetPasswordView.error_messages['not_found']],
         })
 
+    def test_incorrect_username(self):
+        username = self.user.username
+        if '-' in username:
+            username = username.replace('-', '_')
+        elif '_' in username:
+            username = username.replace('_', '-')
+        else:
+            username += '_'
+        response = self.client.post(self.reset_url, {'username': username})
+        self.assertErrorResponse(response, {
+            'username': [ResetPasswordView.error_messages['not_found']],
+        })
+
     def test_user_with_no_email(self):
         self.user.email = ''
         self.user.save()
         response = self.client.post(self.reset_url, {'username': self.user.username})
         self.assertErrorResponse(response, {
             'username': [ResetPasswordView.error_messages['no_email']],
+        })
+
+    def test_user_with_non_unique_email(self):
+        other_user = User.objects.exclude(pk=self.user.pk).first()
+        self.user.email = other_user.email.title()
+        self.user.save()
+        response = self.client.post(self.reset_url, {'username': self.user.email})
+        self.assertErrorResponse(response, {
+            'username': [ResetPasswordView.error_messages['multiple_found']],
         })
 
     def test_locked_user(self):
@@ -1162,8 +1184,8 @@ class ResetPasswordTestCase(APITestCase):
         })
 
     @override_settings(ENVIRONMENT='prod')
-    def test_password_reset(self):
-        response = self.client.post(self.reset_url, {'username': self.user.username})
+    def assertPasswordReset(self, username):  # noqa
+        response = self.client.post(self.reset_url, {'username': username})
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         user = authenticate(username=self.user.username, password=self.current_password)
         self.assertIsNone(user, msg='Password was not changed')
@@ -1177,3 +1199,15 @@ class ResetPasswordTestCase(APITestCase):
                             password=password_match.group('password'))
         self.assertEqual(self.user.username, getattr(user, 'username', None),
                          msg='Cannot log in with new password')
+
+    def test_password_reset_by_username(self):
+        self.assertPasswordReset(self.user.username)
+
+    def test_password_reset_by_username_case_insensitive(self):
+        self.assertPasswordReset(self.user.username.swapcase())
+
+    def test_password_reset_by_email(self):
+        self.assertPasswordReset(self.user.email)
+
+    def test_password_reset_by_email_case_insensitive(self):
+        self.assertPasswordReset(self.user.email.title())

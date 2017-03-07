@@ -180,12 +180,13 @@ class ResetPasswordView(generics.GenericAPIView):
             try:
                 user = User.objects.get_by_natural_key(user_identifier)
             except User.DoesNotExist:
-                try:
-                    user = User.objects.get(email=user_identifier)
-                except User.DoesNotExist:
+                users = User.objects.filter(email__iexact=user_identifier)
+                user_count = users.count()
+                if user_count == 0:
                     return self.failure_response('not_found', field='username')
-                except User.MultipleObjectsReturned:
+                elif user_count > 1:
                     return self.failure_response('multiple_found', field='username')
+                user = users[0]
             if user.is_locked_out:
                 return self.failure_response('locked_out', field='username')
             if not user.email:
