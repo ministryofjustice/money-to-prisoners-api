@@ -17,7 +17,7 @@ from django.utils.translation import gettext, gettext_lazy as _
 
 from core.dashboards import DashboardChangeForm, DashboardModule
 from core.views import DashboardView
-from credit.models import Credit, CreditingTime, CREDIT_RESOLUTION, CREDIT_STATUS
+from credit.models import Credit, CREDIT_RESOLUTION, CREDIT_STATUS
 from prison.models import Prison
 from transaction.models import Transaction, TRANSACTION_CATEGORY, TRANSACTION_SOURCE, TRANSACTION_STATUS
 
@@ -451,8 +451,6 @@ class CreditReport(DashboardModule):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        if CreditingTime.objects.is_stale():
-            CreditingTime.objects.recalculate_crediting_times()
         self.form = CreditReportForm(data=self.cookie_data)
         report_parameters = self.form.get_report_parameters()
         self.range_title = report_parameters['title']
