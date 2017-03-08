@@ -8,9 +8,8 @@ from django.utils.timezone import localtime
 from core.views import DashboardView
 from core.tests.test_dashboard import DashboardTestCase
 from core.tests.utils import make_test_users
-from credit.constants import CREDIT_RESOLUTION
 from credit.dashboards import CreditReport, CREDITABLE_FILTERS
-from credit.models import Credit, CreditingTime
+from credit.models import Credit
 from prison.tests.utils import load_random_prisoner_locations
 from transaction.tests.utils import generate_transactions
 from transaction.utils import format_amount
@@ -56,11 +55,3 @@ class TransactionDashboardTestCase(DashboardTestCase):
         credit_set = Credit.objects.filter(CREDITABLE_FILTERS)
         credited_amount = credit_set.aggregate(amount=models.Sum('amount'))['amount']
         self.assertAmountInContent(credited_amount, response)
-
-    def test_crediting_times_updated(self):
-        self.assertEqual(CreditingTime.objects.count(), 0)
-        self.client.get(self.url)
-        credited = Credit.objects.filter(resolution=CREDIT_RESOLUTION.CREDITED)
-        if not credited.exists():
-            self.fail('Random data contains no credited credits')
-        self.assertEqual(CreditingTime.objects.count(), credited.count())
