@@ -1,6 +1,5 @@
 from django.db import connection, models
 from django.db.transaction import atomic
-from django.utils.crypto import get_random_string
 
 from . import InvalidCreditStateException
 from .constants import LOG_ACTIONS, CREDIT_STATUS, CREDIT_RESOLUTION, LOCK_LIMIT
@@ -208,51 +207,28 @@ class LogManager(models.Manager):
 
 
 class CreditingTimeManager(models.Manager):
-    def is_stale(self):
-        """
-        True if there are credited credits that are not present in this table
-        """
-        from credit.models import Credit
-
-        return Credit.objects.credited().exclude(pk__in=self.values('pk')).exists()
-
-    def recalculate_crediting_times(self):
+    @classmethod
+    def recalculate_crediting_times(cls):
         """
         Recalculate all crediting times, the time from receipt until a credited status is logged
         NB: crediting does not happen at weekends so an adjustment is needed
         :return: the number of credits with calculated times
         """
-        tables = {
-            'crediting': self.model._meta.db_table,
-            'adjustments': 'creditingadjustments_' + get_random_string(
-                allowed_chars='abcdefghijklmnopqrstuvwxyz0123456789'
-            ),
-        }
         with connection.cursor() as cursor:
-            sql = ('CREATE TEMPORARY TABLE {adjustments} ('
-                   'day_of_week INTEGER PRIMARY KEY, '
-                   'adjustment INTERVAL)')
-            cursor.execute(sql.format(**tables))
-
-            sql = ('INSERT INTO {adjustments} VALUES '
-                   "(1, INTERVAL '0'), (2, INTERVAL '0'), (3, INTERVAL '0'), (4, INTERVAL '0'), "
-                   "(5, INTERVAL '2 days'), (6, INTERVAL '1 day'), (7, INTERVAL '0')")
-            cursor.execute(sql.format(**tables))
-
-            sql = 'TRUNCATE {crediting}'
-            cursor.execute(sql.format(**tables))
-
-            sql = ('WITH credited_log AS ('
-                   '    SELECT credit_id, MAX(created) AS created '
-                   '    FROM credit_log '
-                   '    WHERE credit_log.action=%s '
-                   '    GROUP BY credit_id'
-                   ') '
-                   'INSERT INTO {crediting} '
-                   'SELECT credited_log.credit_id, '
-                   '    credited_log.created - credit_credit.received_at - {adjustments}.adjustment '
-                   'FROM credited_log '
-                   'JOIN credit_credit ON credit_credit.id = credited_log.credit_id '
-                   'JOIN {adjustments} ON {adjustments}.day_of_week = EXTRACT(ISODOW FROM credit_credit.received_at)')
-            cursor.execute(sql.format(**tables), (LOG_ACTIONS.CREDITED,))
+            cursor.execute('''
+                TRUNCATE credit_creditingtime;
+                WITH adjustments (day_of_week, adjustment) AS (
+                    VALUES (1, INTERVAL '0'), (2, INTERVAL '0'), (3, INTERVAL '0'), (4, INTERVAL '0'),
+                        (5, INTERVAL '2 days'), (6, INTERVAL '1 day'), (7, INTERVAL '0')),
+                credited_log AS (
+                    SELECT credit_id, MAX(created) AS created
+                    FROM credit_log
+                    WHERE credit_log.action = %s
+                    GROUP BY credit_id)
+                INSERT INTO credit_creditingtime
+                SELECT credited_log.credit_id, credited_log.created - credit_credit.received_at - adjustments.adjustment
+                FROM credited_log
+                JOIN credit_credit ON credit_credit.id = credited_log.credit_id
+                JOIN adjustments ON adjustments.day_of_week = EXTRACT(ISODOW FROM credit_credit.received_at);
+            ''', (LOG_ACTIONS.CREDITED,))
             return cursor.rowcount
