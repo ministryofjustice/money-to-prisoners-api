@@ -2,7 +2,6 @@ import datetime
 import math
 import random
 import re
-import unittest
 from unittest import mock
 import urllib.parse
 
@@ -1050,7 +1049,6 @@ class DateBasedPaginationTestCase(CreditListTestCase):
                                                'received_at__lt': received_at__lt},
                                       **expected)
 
-    @unittest.skip('TEMPORARY SOLUTION TO GET JENKINS TO BUILD DOCKER IMAGE')
     def test_pagination_beyond_page_1(self):
         tries = 6
         page_count = 0
