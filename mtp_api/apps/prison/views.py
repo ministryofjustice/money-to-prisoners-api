@@ -6,7 +6,6 @@ from rest_framework.response import Response
 
 from core.permissions import ActionsBasedPermissions
 from credit.signals import credit_prisons_need_updating
-from mtp_auth.models import PrisonUserMapping
 from mtp_auth.permissions import (
     NomsOpsClientIDPermissions, SendMoneyClientIDPermissions
 )
@@ -110,15 +109,7 @@ class PrisonerValidityView(mixins.ListModelMixin, viewsets.GenericViewSet):
 class PrisonView(mixins.ListModelMixin, viewsets.GenericViewSet):
     permission_classes = (IsAuthenticated,)
     serializer_class = PrisonSerializer
-
-    def get_queryset(self):
-        if self.request.user.has_perm('credit.view_any_credit'):
-            return Prison.objects.all()
-        else:
-            return (
-                PrisonUserMapping.objects.get_prison_set_for_user(self.request.user)
-                .order_by('name')
-            )
+    queryset = Prison.objects.all()
 
 
 class PopulationView(mixins.ListModelMixin, viewsets.GenericViewSet):
