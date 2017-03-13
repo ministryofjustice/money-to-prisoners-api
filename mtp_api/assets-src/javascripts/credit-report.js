@@ -54,7 +54,7 @@ django.jQuery(function ($) {
   };
   var chartData = null;
 
-  if (!$chart.size()) {
+  if (!$chart.size() || !creditReportData.length) {
     return;
   }
 
