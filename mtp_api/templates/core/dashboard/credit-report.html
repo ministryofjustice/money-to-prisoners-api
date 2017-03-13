@@ -10,45 +10,47 @@
 {% endblock %}
 
 {% block module_tbody %}
-  {% if dashboard_module.form.get_prison %}
-    <tr>
-      {% include 'core/dashboard/credit-report-cells/received.html' %}
-      {% include 'core/dashboard/credit-report-cells/credited.html' %}
-    </tr>
-    <tr>
-      {% include 'core/dashboard/credit-report-cells/payment-method.html' %}
-      {% include 'core/dashboard/credit-report-cells/creditable.html' %}
-    </tr>
-    <tr>
-      {% include 'core/dashboard/credit-report-cells/bank-transfer-references.html' %}
-      {% include 'core/dashboard/credit-report-cells/bank-transfer-issues.html' %}
-    </tr>
-  {% else %}
-    <tr>
-      {% include 'core/dashboard/credit-report-cells/received.html' %}
-      {% include 'core/dashboard/credit-report-cells/credited.html' %}
-      {% include 'core/dashboard/credit-report-cells/refunded.html' %}
-    </tr>
-    <tr>
-      {% include 'core/dashboard/credit-report-cells/payment-method.html' %}
-      {% include 'core/dashboard/credit-report-cells/creditable.html' %}
-      {% include 'core/dashboard/credit-report-cells/error-rate.html' %}
-    </tr>
-    <tr>
-      {% include 'core/dashboard/credit-report-cells/top-prisons.html' %}
-      {% include 'core/dashboard/credit-report-cells/bank-transfer-references.html' %}
-      {% include 'core/dashboard/credit-report-cells/bank-transfer-issues.html' %}
+  {% if dashboard_module.form.is_valid %}
+    {% if dashboard_module.form.get_prison %}
+      <tr>
+        {% include 'core/dashboard/credit-report-cells/received.html' %}
+        {% include 'core/dashboard/credit-report-cells/credited.html' %}
+      </tr>
+      <tr>
+        {% include 'core/dashboard/credit-report-cells/payment-method.html' %}
+        {% include 'core/dashboard/credit-report-cells/creditable.html' %}
+      </tr>
+      <tr>
+        {% include 'core/dashboard/credit-report-cells/bank-transfer-references.html' %}
+        {% include 'core/dashboard/credit-report-cells/bank-transfer-issues.html' %}
+      </tr>
+    {% else %}
+      <tr>
+        {% include 'core/dashboard/credit-report-cells/received.html' %}
+        {% include 'core/dashboard/credit-report-cells/credited.html' %}
+        {% include 'core/dashboard/credit-report-cells/refunded.html' %}
+      </tr>
+      <tr>
+        {% include 'core/dashboard/credit-report-cells/payment-method.html' %}
+        {% include 'core/dashboard/credit-report-cells/creditable.html' %}
+        {% include 'core/dashboard/credit-report-cells/error-rate.html' %}
+      </tr>
+      <tr>
+        {% include 'core/dashboard/credit-report-cells/top-prisons.html' %}
+        {% include 'core/dashboard/credit-report-cells/bank-transfer-references.html' %}
+        {% include 'core/dashboard/credit-report-cells/bank-transfer-issues.html' %}
+      </tr>
+    {% endif %}
+
+    <tr style="height: 50%">
+      <td colspan="{{ dashboard_module.column_count }}">
+        <script>
+          var creditReportData = {{ dashboard_module.chart.data|default:'{}' }};
+        </script>
+        <div id="credit-chart"></div>
+      </td>
     </tr>
   {% endif %}
-
-  <tr style="height: 50%">
-    <td colspan="{{ dashboard_module.column_count }}">
-      <script>
-        var creditReportData = {{ dashboard_module.chart.data }};
-      </script>
-      <div id="credit-chart"></div>
-    </td>
-  </tr>
 {% endblock %}
 
 {% block module_tfoot %}

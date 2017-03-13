@@ -1,9 +1,10 @@
+import datetime
 import json
 
 from django.contrib.auth import get_user_model
 from django.core.urlresolvers import reverse_lazy
 from django.db import models
-from django.utils.timezone import localtime
+from django.utils.timezone import now
 
 from core.views import DashboardView
 from core.tests.test_dashboard import DashboardTestCase
@@ -40,9 +41,12 @@ class TransactionDashboardTestCase(DashboardTestCase):
 
     def test_transaction_report(self):
         response = self.client.get(self.url)
-        self.assertContains(response, 'Latest')
+        self.assertContains(response, 'This week')
+        start_of_week = now()
+        start_of_week = start_of_week - datetime.timedelta(days=start_of_week.isoweekday() - 1)
+        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
         credit_set = Credit.objects.filter(CREDITABLE_FILTERS).filter(
-            received_at__date=localtime(Credit.objects.latest().received_at).date()
+            received_at__range=(start_of_week, now())
         )
         credited_amount = credit_set.aggregate(amount=models.Sum('amount'))['amount']
         self.assertAmountInContent(credited_amount, response)

@@ -84,6 +84,8 @@ class CreditReportForm(DashboardChangeForm):
     date_range = forms.ChoiceField(
         label=_('Date range'),
         choices=[
+            ('today', _('Today')),
+            ('yesterday', _('Yesterday')),
             ('this_week', _('This week')),
             ('last_week', _('Last week')),
             ('four_weeks', _('Last 4 weeks')),
@@ -92,6 +94,8 @@ class CreditReportForm(DashboardChangeForm):
             ('all', _('Since the beginning')),
             ('custom', _('Specify a range…')),
         ],
+        initial='this_week',
+        required=False,
     )
     start_date = DateField(label=_('From date'), required=False)
     end_date = DateField(label=_('To date'), required=False)
@@ -107,32 +111,6 @@ class CreditReportForm(DashboardChangeForm):
     error_messages = {
         'date_order': _('End date must be after start date'),
     }
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        if not self.latest:
-            date_ranges = [
-                ('today', _('Today')),
-            ]
-            self['date_range'].field.initial = 'today'
-        elif self.latest == self.today:
-            date_ranges = [
-                ('latest', _('Latest')),
-                ('yesterday', _('Yesterday')),
-            ]
-            self['date_range'].field.initial = 'latest'
-        elif self.latest == self.yesterday:
-            date_ranges = [
-                ('today', _('Today')),
-                ('latest', _('Latest')),
-            ]
-            self['date_range'].field.initial = 'latest'
-        else:
-            date_ranges = [
-                ('latest', _('Latest')),
-            ]
-            self['date_range'].field.initial = 'latest'
-        self['date_range'].field.choices = date_ranges + self['date_range'].field.choices
 
     def clean_end_date(self):
         start_date = self.cleaned_data.get('start_date')
@@ -187,13 +165,10 @@ class CreditReportForm(DashboardChangeForm):
         return last_day.replace(day=1), last_day
 
     def get_date_range(self):
-        if self.is_valid():
-            date_range = self.cleaned_data['date_range']
-        else:
-            date_range = self['date_range'].field.initial
+        date_range = self.cleaned_data['date_range'] or self['date_range'].field.initial
         if date_range == 'custom' and (self.cleaned_data.get('start_date') or self.cleaned_data.get('end_date')):
-            received_at_start = max((self.cleaned_data.get('start_date', self.earliest), self.earliest))
-            received_at_end = min((self.cleaned_data.get('end_date', self.latest), self.latest))
+            received_at_start = self.cleaned_data.get('start_date', self.earliest)
+            received_at_end = self.cleaned_data.get('end_date', self.latest)
             if received_at_start == received_at_end:
                 short_title = format_date(received_at_start, 'j M Y')
             else:
@@ -232,7 +207,7 @@ class CreditReportForm(DashboardChangeForm):
                 'short_title': short_title,
                 'title': title,
             }
-        elif date_range in ('latest', 'today', 'yesterday'):
+        elif date_range in ('today', 'yesterday'):
             received_at = getattr(self, date_range)
             short_title = dict(self['date_range'].field.choices)[date_range]
             return {
@@ -451,7 +426,11 @@ class CreditReport(DashboardModule):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.form = CreditReportForm(data=self.cookie_data)
+        self.form = CreditReportForm(data=self.cookie_data or {})
+        if not self.form.is_valid():
+            self.credit_queryset = Credit.objects.none()
+            self.transaction_queryset = Transaction.objects.none()
+            return
         report_parameters = self.form.get_report_parameters()
         self.range_title = report_parameters['title']
         self.credit_queryset = report_parameters['credit_queryset']
