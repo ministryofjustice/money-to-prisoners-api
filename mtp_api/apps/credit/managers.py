@@ -105,7 +105,7 @@ class CreditManager(models.Manager):
         credit_prisons_need_updating.send(sender=Credit)
 
     @atomic
-    def credit(self, queryset, credit_ids, user):
+    def mark_credited(self, queryset, credit_ids, user):
         to_update = queryset.filter(
             owner=user,
             pk__in=credit_ids
@@ -122,21 +122,20 @@ class CreditManager(models.Manager):
         to_update.update(resolution=CREDIT_RESOLUTION.CREDITED)
 
     @atomic
-    def uncredit(self, queryset, credit_ids, user):
+    def credit(self, queryset, credit_ids, user):
         to_update = queryset.filter(
-            owner=user,
-            pk__in=credit_ids
+            resolution=CREDIT_RESOLUTION.PENDING,
+            pk__in=credit_ids,
         ).select_for_update()
 
         ids_to_update = [c.id for c in to_update]
         conflict_ids = set(credit_ids) - set(ids_to_update)
 
-        if conflict_ids:
-            raise InvalidCreditStateException(sorted(conflict_ids))
-
         from .models import Log
-        Log.objects.credits_credited(to_update, user, credited=False)
-        to_update.update(resolution=CREDIT_RESOLUTION.PENDING)
+        Log.objects.credits_credited(to_update, user)
+        to_update.update(resolution=CREDIT_RESOLUTION.CREDITED, owner=user)
+
+        return sorted(conflict_ids)
 
     @atomic
     def refund(self, transaction_ids, user):

@@ -1452,7 +1452,7 @@ class UnlockCreditTestCase(
         mocked_credit_prisons_need_updating.send.assert_called_with(sender=Credit)
 
 
-class CreditCreditTestCase(
+class MarkCreditsCreditedTestCase(
     CashbookCreditRejectsRequestsWithoutPermissionTestMixin,
     BaseCreditViewTestCase
 ):
@@ -1461,7 +1461,7 @@ class CreditCreditTestCase(
     def _get_url(self, **filters):
         return reverse('credit-list')
 
-    def test_credit_uncredit_credits(self):
+    def test_mark_credits_credited(self):
         logged_in_user = self.prison_clerks[0]
         managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
 
@@ -1469,17 +1469,12 @@ class CreditCreditTestCase(
         credited_qs = self._get_credited_credits_qs(managing_prisons, logged_in_user)
 
         self.assertTrue(locked_qs.count() > 0)
-        self.assertTrue(credited_qs.count() > 0)
 
         to_credit = list(locked_qs.values_list('id', flat=True))
-        to_uncredit = list(credited_qs.values_list('id', flat=True))
 
         data = [
             {'id': t_id, 'credited': True} for t_id in to_credit
-        ] + [
-            {'id': t_id, 'credited': False} for t_id in to_uncredit
         ]
-
         response = self.client.patch(
             self._get_url(), data=data,
             format='json',
@@ -1492,10 +1487,6 @@ class CreditCreditTestCase(
         self.assertEqual(
             credited_qs.filter(id__in=to_credit).count(), len(to_credit)
         )
-        self.assertEqual(
-            locked_qs.filter(id__in=to_uncredit).count(), len(to_uncredit)
-        )
-
         # check logs
         self.assertEqual(
             Log.objects.filter(
@@ -1506,16 +1497,7 @@ class CreditCreditTestCase(
             len(to_credit)
         )
 
-        self.assertEqual(
-            Log.objects.filter(
-                user=logged_in_user,
-                action=LOG_ACTIONS.UNCREDITED,
-                credit__id__in=to_uncredit
-            ).count(),
-            len(to_uncredit)
-        )
-
-    def test_cannot_credit_somebody_else_s_credits(self):
+    def test_cannot_mark_somebody_else_s_credits_credited(self):
         logged_in_user = self.prison_clerks[0]
         other_user = self.prison_clerks[1]
 
@@ -1544,13 +1526,13 @@ class CreditCreditTestCase(
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
         errors = response.data['errors']
         self.assertEqual(len(errors), 1)
-        self.assertEqual(errors[0]['msg'], 'Some credits could not be credited.')
+        self.assertEqual(errors[0]['msg'], 'Some credits could not be marked credited.')
         self.assertEqual(errors[0]['ids'], sorted(locked_by_other_user_ids))
 
         # nothing changed in db
         self.assertEqual(credited_qs.count(), credited)
 
-    def test_cannot_credit_non_locked_credits(self):
+    def test_cannot_mark_non_locked_credits_credited(self):
         logged_in_user = self.prison_clerks[0]
         managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
 
@@ -1579,7 +1561,7 @@ class CreditCreditTestCase(
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
         errors = response.data['errors']
         self.assertEqual(len(errors), 1)
-        self.assertEqual(errors[0]['msg'], 'Some credits could not be credited.')
+        self.assertEqual(errors[0]['msg'], 'Some credits could not be marked credited.')
         self.assertEqual(errors[0]['ids'], sorted(available_ids))
 
         # nothing changed in db
@@ -1622,6 +1604,76 @@ class CreditCreditTestCase(
 
         response = self.client.patch(
             self._get_url(), data=data,
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class CreditCreditsTestCase(
+    CashbookCreditRejectsRequestsWithoutPermissionTestMixin,
+    BaseCreditViewTestCase
+):
+    ENDPOINT_VERB = 'post'
+
+    def _get_url(self, **filters):
+        return reverse('credit-credit')
+
+    def test_credit_credits(self):
+        logged_in_user = self.prison_clerks[0]
+        managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
+
+        available_qs = self._get_available_credits_qs(managing_prisons, logged_in_user)
+        credited_qs = self._get_credited_credits_qs(managing_prisons, logged_in_user)
+
+        self.assertTrue(available_qs.count() > 0)
+
+        to_credit = list(available_qs.values_list('id', flat=True))
+
+        data = {
+            'credit_ids': to_credit
+        }
+        response = self.client.post(
+            self._get_url(), data=data,
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        # check db
+        self.assertEqual(
+            credited_qs.filter(id__in=to_credit).count(), len(to_credit)
+        )
+        # check logs
+        self.assertEqual(
+            Log.objects.filter(
+                user=logged_in_user,
+                action=LOG_ACTIONS.CREDITED,
+                credit__id__in=to_credit
+            ).count(),
+            len(to_credit)
+        )
+
+    def test_missing_ids(self):
+        logged_in_user = self.prison_clerks[0]
+
+        response = self.client.post(
+            self._get_url(), data={
+                'credit_ids': []
+            },
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_invalid_format(self):
+        logged_in_user = self.prison_clerks[0]
+
+        response = self.client.post(
+            self._get_url(), data={},
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
         )
