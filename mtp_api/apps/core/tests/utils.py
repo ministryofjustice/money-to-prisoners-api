@@ -48,13 +48,13 @@ class MockModelTimestamps:
 
 
 def make_applications():
-    def make_application(user, client_id, groups):
+    def make_application(user, client_id, name, groups):
         Application.objects.get_or_create(
             client_id=client_id,
             client_type='confidential',
             authorization_grant_type='password',
             client_secret=client_id,
-            name=client_id,
+            name=name,
             user=user
         )
         new_app = Application.objects.get(client_id=client_id)
@@ -66,15 +66,15 @@ def make_applications():
 
     user = get_user_model().objects.first()
 
-    make_application(user, CASHBOOK_OAUTH_CLIENT_ID,
+    make_application(user, CASHBOOK_OAUTH_CLIENT_ID, 'Digital cashbook',
                      [Group.objects.get(name='PrisonClerk')])
-    make_application(user, NOMS_OPS_OAUTH_CLIENT_ID,
+    make_application(user, NOMS_OPS_OAUTH_CLIENT_ID, 'Prisoner money intelligence',
                      [Group.objects.get(name='PrisonerLocationAdmin'),
                       Group.objects.get(name='Security')])
-    make_application(user, BANK_ADMIN_OAUTH_CLIENT_ID,
+    make_application(user, BANK_ADMIN_OAUTH_CLIENT_ID, 'Bank admin',
                      [Group.objects.get(name='BankAdmin'),
                       Group.objects.get(name='RefundBankAdmin')])
-    make_application(user, SEND_MONEY_CLIENT_ID,
+    make_application(user, SEND_MONEY_CLIENT_ID, 'Send money to a prisoner',
                      [Group.objects.get(name='SendMoney')])
 
 
