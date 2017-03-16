@@ -8,6 +8,7 @@ from django.utils.translation import gettext_lazy as _
 from moj_irat.views import HealthcheckView, PingJsonView
 
 urlpatterns = [
+    url(r'^$', lambda request: HttpResponse(content_type='text/plain', status=204)),
     url(r'^', include('prison.urls')),
     url(r'^', include('mtp_auth.urls')),
     url(r'^', include('transaction.urls')),
