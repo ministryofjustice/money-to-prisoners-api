@@ -12,7 +12,7 @@ from django.utils.decorators import method_decorator
 from django.utils.translation import gettext, gettext_lazy as _
 from django.views.decorators.debug import sensitive_post_parameters, sensitive_variables
 from mtp_common.email import send_email
-from rest_framework import viewsets, mixins, generics, status
+from rest_framework import viewsets, generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -25,9 +25,7 @@ User = get_user_model()
 logger = logging.getLogger('mtp')
 
 
-class UserViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin,
-                  mixins.UpdateModelMixin, mixins.CreateModelMixin,
-                  mixins.DestroyModelMixin, viewsets.GenericViewSet):
+class UserViewSet(viewsets.ModelViewSet):
     lookup_field = 'username__iexact'
     lookup_url_kwarg = 'username'
     lookup_value_regex = '[^/]+'
@@ -51,7 +49,7 @@ class UserViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin,
                 reduce(lambda a, b: a | b, prison_filters)).distinct()
         return queryset
 
-    def get_object(self, *args, **kwargs):
+    def get_object(self):
         """
         Make sure that you can only access your own user data,
         unless the user is a UserAdmin.
@@ -61,7 +59,7 @@ class UserViewSet(mixins.RetrieveModelMixin, mixins.ListModelMixin,
 
         if (lookup.lower() == self.request.user.username.lower() or
                 self.request.user.has_perm('auth.change_user')):
-            return super().get_object(*args, **kwargs)
+            return super().get_object()
         else:
             raise Http404()
 

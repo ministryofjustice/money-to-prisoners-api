@@ -16,8 +16,8 @@ User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
-    applications = serializers.SerializerMethodField()
-    permissions = serializers.SerializerMethodField()
+    applications = serializers.SerializerMethodField(read_only=True)
+    permissions = serializers.SerializerMethodField(read_only=True)
     user_admin = serializers.SerializerMethodField()
     prisons = serializers.SerializerMethodField()
     is_locked_out = serializers.SerializerMethodField()
