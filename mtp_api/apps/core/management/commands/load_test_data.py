@@ -12,7 +12,7 @@ from credit.models import Credit
 from payment.models import Batch, Payment
 from payment.tests.utils import generate_payments
 from prison.models import Prison
-from prison.tests.utils import load_nomis_prisoner_locations, load_random_prisoner_locations
+from prison.tests.utils import load_prisoner_locations_from_file, load_random_prisoner_locations
 from security.models import SenderProfile, PrisonerProfile, SavedSearch
 from transaction.models import Transaction
 from transaction.tests.utils import generate_transactions
@@ -33,10 +33,10 @@ class Command(BaseCommand):
         parser.add_argument('--protect-credits', action='store_true',
                             help='Prevents existing credits from being deleted')
         parser.add_argument('--prisons', nargs='*', default=['sample'],
-                            choices=['sample', 'nomis', 'mtp'],
+                            choices=['sample', 'nomis', 'mtp', 'nomis-api-dev'],
                             help='Create prisons from these sets')
         parser.add_argument('--prisoners', nargs='*', default=['sample'],
-                            choices=['sample', 'nomis'],
+                            choices=['sample', 'nomis', 'nomis-api-dev'],
                             help='Create prisoners from these sets')
         parser.add_argument('--number-of-prisoners', default=50, type=int,
                             help='Number of sample prisoners to create (no effect for nomis)')
@@ -95,6 +95,8 @@ class Command(BaseCommand):
             fixtures.append('test_nomis_prisons.json')
         if 'mtp' in prisons:
             fixtures.append('test_nomis_mtp_prisons.json')
+        if 'nomis-api-dev' in prisons:
+            fixtures.append('dev_nomis_api_prisons.json')
         print_message('Loading default user group and selected prison fixtures')
         call_command('loaddata', *fixtures, verbosity=verbosity)
 
@@ -107,7 +109,9 @@ class Command(BaseCommand):
         make_test_user_admins()
 
         if 'nomis' in prisoners:
-            load_nomis_prisoner_locations()
+            load_prisoner_locations_from_file('test_nomis_prisoner_locations.csv')
+        if 'nomis-api-dev' in prisoners:
+            load_prisoner_locations_from_file('dev_nomis_api_prisoner_locations.csv')
         if 'sample' in prisoners:
             load_random_prisoner_locations(number_of_prisoners=number_of_prisoners)
 
@@ -115,12 +119,11 @@ class Command(BaseCommand):
         number_of_payments = options['number_of_payments']
         days_of_history = options['days_of_history']
         if credits == 'random':
-            print_message('Generating pre-defined prisoner locations')
-            print_message('Generating random prisoner locations and credits')
+            print_message('Generating random credits')
             generate_transactions(transaction_batch=number_of_transactions)
             generate_payments(payment_batch=number_of_payments)
         elif credits == 'nomis':
-            print_message('Generating test NOMIS prisoner locations and credits')
+            print_message('Generating test NOMIS credits')
             generate_transactions(
                 transaction_batch=number_of_transactions,
                 predetermined_transactions=True,
