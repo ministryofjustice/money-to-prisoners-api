@@ -50,13 +50,13 @@ def load_random_prisoner_locations(number_of_prisoners=50):
     )
 
 
-def load_nomis_prisoner_locations():
+def load_prisoner_locations_from_file(filename):
     """
     Load prisoner locations matching test NOMIS data
     """
     created_by = get_user_model().objects.first()
     csv_path = os.path.join(os.path.dirname(__file__), os.path.pardir,
-                            'fixtures', 'test_nomis_prisoner_locations.csv')
+                            'fixtures', filename)
     with open(csv_path) as f:
         csv_reader = csv.DictReader(f)
         prisoner_locations = list(csv_reader)

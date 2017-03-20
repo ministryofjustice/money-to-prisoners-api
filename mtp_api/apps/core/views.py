@@ -139,7 +139,7 @@ class RecreateTestDataView(AdminViewMixin, FormView):
             'days_of_history': form.cleaned_data['days_of_history'],
         }
 
-        if scenario in ('random', 'cashbook', 'training'):
+        if scenario in ('random', 'cashbook', 'training', 'nomis-api-dev'):
             options.update({
                 'protect_superusers': True,
                 'protect_usernames': ['transaction-uploader'],
@@ -162,6 +162,12 @@ class RecreateTestDataView(AdminViewMixin, FormView):
                 options.update({
                     'prisons': ['nomis'],
                     'prisoners': ['sample'],
+                    'credits': 'nomis',
+                })
+            elif scenario == 'nomis-api-dev':
+                options.update({
+                    'prisons': ['nomis-api-dev'],
+                    'prisoners': ['nomis-api-dev'],
                     'credits': 'nomis',
                 })
             call_command('load_test_data', **options)

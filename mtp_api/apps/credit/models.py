@@ -78,6 +78,7 @@ class Credit(TimeStampedModel):
             ('unlock_credit', 'Can unlock credit'),
             ('patch_credited_credit', 'Can patch credited credit'),
             ('review_credit', 'Can review credit'),
+            ('credit_credit', 'Can credit credit'),
         )
         index_together = (
             ('prisoner_number', 'prisoner_dob'),

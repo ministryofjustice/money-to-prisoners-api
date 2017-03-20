@@ -235,7 +235,7 @@ class DatePaginatedCredits(GetCredits):
     pagination_class = DateBasedPagination
 
 
-class CreditCredits(CreditViewMixin, generics.GenericAPIView):
+class MarkCreditedCredits(CreditViewMixin, generics.GenericAPIView):
     serializer_class = CreditedOnlyCreditSerializer
     action = 'patch_credited'
 
@@ -257,20 +257,22 @@ class CreditCredits(CreditViewMixin, generics.GenericAPIView):
         deserialized.is_valid(raise_exception=True)
 
         credit_ids = [x['id'] for x in deserialized.data if x['credited']]
-        uncredit_ids = [x['id'] for x in deserialized.data if not x['credited']]
         try:
             with transaction.atomic():
-                Credit.objects.credit(self.get_queryset(), credit_ids, request.user)
-                Credit.objects.uncredit(self.get_queryset(), uncredit_ids, request.user)
+                Credit.objects.mark_credited(
+                    self.get_queryset().filter(owner=request.user),
+                    credit_ids,
+                    request.user
+                )
         except InvalidCreditStateException as e:
             conflict_ids = e.conflict_ids
-            logger.warning('Some credits were not credited: [%s]' %
+            logger.warning('Some credits were not marked credited: [%s]' %
                            ', '.join(map(str, conflict_ids)))
             return Response(
                 data={
                     'errors': [
                         {
-                            'msg': 'Some credits could not be credited.',
+                            'msg': 'Some credits could not be marked credited.',
                             'ids': conflict_ids,
                         }
                     ]
@@ -283,7 +285,7 @@ class CreditCredits(CreditViewMixin, generics.GenericAPIView):
 
 class CreditList(View):
     """
-    Dispatcher View that dispatches to GetCredits or CreditCredits
+    Dispatcher View that dispatches to GetCredits or MarkCreditedCredits
     depending on the method.
 
     The standard logic would not work in this case as:
@@ -301,7 +303,7 @@ class CreditList(View):
         return view.as_view({'get': 'list'}, suffix='List')(request, *args, **kwargs)
 
     def patch(self, request, *args, **kwargs):
-        return CreditCredits.as_view()(request, *args, **kwargs)
+        return MarkCreditedCredits.as_view()(request, *args, **kwargs)
 
 
 class LockedCreditList(CreditViewMixin, generics.ListAPIView):
@@ -403,6 +405,38 @@ class UnlockCredits(CreditViewMixin, APIView):
             status=CREDIT_STATUS.AVAILABLE
         )
         return HttpResponseRedirect(redirect_url, status=drf_status.HTTP_303_SEE_OTHER)
+
+
+class CreditCredits(CreditViewMixin, APIView):
+    serializer_class = IdsCreditSerializer
+    action = 'credit'
+
+    permission_classes = (
+        IsAuthenticated, CashbookClientIDPermissions,
+        CreditPermissions
+    )
+
+    def get_serializer(self, *args, **kwargs):
+        kwargs['context'] = {
+            'request': self.request,
+            'format': self.format_kwarg,
+            'view': self
+        }
+        return self.serializer_class(*args, **kwargs)
+
+    def post(self, request, format=None):
+        deserialized = self.get_serializer(data=request.data)
+        deserialized.is_valid(raise_exception=True)
+
+        credit_ids = deserialized.data.get('credit_ids', [])
+        with transaction.atomic():
+            Credit.objects.credit(
+                self.get_queryset(),
+                credit_ids,
+                request.user
+            )
+
+        return Response(status=drf_status.HTTP_204_NO_CONTENT)
 
 
 class ReviewCredits(CreditViewMixin, APIView):

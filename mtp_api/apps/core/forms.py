@@ -8,6 +8,7 @@ class RecreateTestDataForm(forms.Form):
         choices=(
             ('cashbook', _('User testing the Cashbook service')),
             ('training', _('Training data for the Cashbook service')),
+            ('nomis-api-dev', _('NOMIS API dev env data')),
             ('random', _('Random set of credits')),
             ('delete-locations-credits', _('Delete prisoner location and credit data')),
         ),

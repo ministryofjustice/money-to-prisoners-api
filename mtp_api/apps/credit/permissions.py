@@ -10,4 +10,5 @@ class CreditPermissions(ActionsBasedPermissions):
         'unlock': ['%(app_label)s.unlock_%(model_name)s'],
         'patch_credited': ['%(app_label)s.patch_credited_%(model_name)s'],
         'review': ['%(app_label)s.review_%(model_name)s'],
+        'credit': ['%(app_label)s.credit_%(model_name)s'],
     })

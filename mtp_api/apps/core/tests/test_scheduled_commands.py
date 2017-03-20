@@ -79,7 +79,7 @@ class ScheduledCommandsTestCase(TestCase):
 
         stdout = stdout.getvalue()
         self.assertIn('Making test users', stdout)
-        self.assertIn('random prisoner locations', stdout)
+        self.assertIn('random credits', stdout)
 
         from prison.models import PrisonerLocation
         self.assertEqual(PrisonerLocation.objects.count(), 60)
