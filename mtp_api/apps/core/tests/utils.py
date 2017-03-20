@@ -8,9 +8,7 @@ from mtp_auth.constants import (
     CASHBOOK_OAUTH_CLIENT_ID, BANK_ADMIN_OAUTH_CLIENT_ID,
     NOMS_OPS_OAUTH_CLIENT_ID, SEND_MONEY_CLIENT_ID
 )
-from mtp_auth.models import (
-    ApplicationUserMapping, ApplicationGroupMapping, PrisonUserMapping
-)
+from mtp_auth.models import Role, ApplicationUserMapping, PrisonUserMapping
 from mtp_auth.tests.mommy_recipes import (
     create_prison_clerk, create_prisoner_location_admin, create_bank_admin,
     create_refund_bank_admin, create_send_money_shared_user, create_user_admin,
@@ -48,34 +46,45 @@ class MockModelTimestamps:
 
 
 def make_applications():
-    def make_application(user, client_id, name, groups):
-        Application.objects.get_or_create(
+    owner = get_user_model().objects.first()
+
+    def make_application_and_roles(client_id, name, *roles):
+        new_app, _ = Application.objects.get_or_create(
             client_id=client_id,
             client_type='confidential',
             authorization_grant_type='password',
             client_secret=client_id,
             name=name,
-            user=user
+            user=owner,
         )
-        new_app = Application.objects.get(client_id=client_id)
-        for group in groups:
-            ApplicationGroupMapping.objects.get_or_create(
+        for role in roles:
+            groups = [Group.objects.get_or_create(name=group)[0] for group in role['groups']]
+            key_group, groups = groups[0], groups[1:]
+            role, _ = Role.objects.get_or_create(
+                name=role['name'],
                 application=new_app,
-                group=group
+                key_group=key_group,
             )
+            role.other_groups.set(groups)
 
-    user = get_user_model().objects.first()
+    make_application_and_roles(
+        CASHBOOK_OAUTH_CLIENT_ID, 'Digital cashbook',
+        {'name': 'prison-clerk', 'groups': ['PrisonClerk']},
+    )
+    make_application_and_roles(
+        NOMS_OPS_OAUTH_CLIENT_ID, 'Prisoner money intelligence',
+        {'name': 'prisoner-location-admin', 'groups': ['PrisonerLocationAdmin']},
+        {'name': 'security', 'groups': ['Security']},
+    )
+    make_application_and_roles(
+        BANK_ADMIN_OAUTH_CLIENT_ID, 'Bank admin',
+        {'name': 'bank-admin', 'groups': ['RefundBankAdmin', 'BankAdmin']},
+    )
+    make_application_and_roles(
+        SEND_MONEY_CLIENT_ID, 'Send money to a prisoner',
+    )
 
-    make_application(user, CASHBOOK_OAUTH_CLIENT_ID, 'Digital cashbook',
-                     [Group.objects.get(name='PrisonClerk')])
-    make_application(user, NOMS_OPS_OAUTH_CLIENT_ID, 'Prisoner money intelligence',
-                     [Group.objects.get(name='PrisonerLocationAdmin'),
-                      Group.objects.get(name='Security')])
-    make_application(user, BANK_ADMIN_OAUTH_CLIENT_ID, 'Bank admin',
-                     [Group.objects.get(name='BankAdmin'),
-                      Group.objects.get(name='RefundBankAdmin')])
-    make_application(user, SEND_MONEY_CLIENT_ID, 'Send money to a prisoner',
-                     [Group.objects.get(name='SendMoney')])
+    Role.objects.get(name='prison-clerk').managed_roles.add(Role.objects.get(name='security'))
 
 
 def give_superusers_full_access():
@@ -100,7 +109,10 @@ def make_test_users(clerks_per_prison=2):
 
     # noms-ops users
     prisoner_location_admins = [create_prisoner_location_admin()]
-    security_users = [create_security_staff_user(prisons=list(Prison.objects.all()))]
+    security_users = [
+        create_security_staff_user(),
+        create_security_staff_user(name_and_password='prison-security', prisons=[Prison.objects.first()]),
+    ]
 
     # bank admin
     bank_admins = [create_bank_admin()]
@@ -139,22 +151,23 @@ def make_test_user_admins():
             create_prison_clerk, prisons=[prison], name_and_password='ua')
         )
 
-    # prisoner location user admins
-    security_users = [
-        create_user_admin(create_security_staff_user, prisons=list(Prison.objects.all()),
-                          name_and_password='security-user-admin')]
-
     # security staff user admins
+    security_users = [
+        create_user_admin(create_security_staff_user, name_and_password='security-user-admin'),
+        create_user_admin(create_security_staff_user, name_and_password='prison-security-ua',
+                          prisons=[Prison.objects.first()]),
+    ]
+
+    # prisoner location user admins
     prisoner_location_admins = [
-        create_user_admin(create_prisoner_location_admin,
-                          name_and_password='pla-user-admin')]
+        create_user_admin(create_prisoner_location_admin, name_and_password='pla-user-admin'),
+    ]
 
     # bank admin user admins
     refund_bank_admins = [
-        create_user_admin(create_refund_bank_admin,
-                          name_and_password='rba-user-admin-1'),
-        create_user_admin(create_refund_bank_admin,
-                          name_and_password='rba-user-admin-2')]
+        create_user_admin(create_refund_bank_admin, name_and_password='rba-user-admin-1'),
+        create_user_admin(create_refund_bank_admin, name_and_password='rba-user-admin-2'),
+    ]
 
     # create test oauth applications
     make_applications()
@@ -171,4 +184,4 @@ def make_test_user_admins():
     link_users_with_client(refund_bank_admins, BANK_ADMIN_OAUTH_CLIENT_ID)
     link_users_with_client(security_users, NOMS_OPS_OAUTH_CLIENT_ID)
 
-    return (prison_clerks, prisoner_location_admins, refund_bank_admins, security_users)
+    return prison_clerks, prisoner_location_admins, refund_bank_admins, security_users

@@ -6,18 +6,33 @@ from mtp_common.email import send_email
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
-from .models import (
-    PrisonUserMapping, ApplicationGroupMapping, ApplicationUserMapping,
-    FailedLoginAttempt,
-)
+from .models import PrisonUserMapping, Role, ApplicationUserMapping, FailedLoginAttempt
 from .validators import CaseInsensitiveUniqueValidator
 
 User = get_user_model()
 
 
+class RoleSerializer(serializers.ModelSerializer):
+    application = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Role
+        fields = (
+            'name',
+            'application',
+        )
+
+    def get_application(self, role):
+        application = role.application
+        return {
+            'client_id': application.client_id,
+            'name': application.name,
+        }
+
+
 class UserSerializer(serializers.ModelSerializer):
-    applications = serializers.SerializerMethodField(read_only=True)
-    permissions = serializers.SerializerMethodField(read_only=True)
+    roles = serializers.SerializerMethodField()
+    permissions = serializers.SerializerMethodField()
     user_admin = serializers.SerializerMethodField()
     prisons = serializers.SerializerMethodField()
     is_locked_out = serializers.SerializerMethodField()
@@ -32,7 +47,7 @@ class UserSerializer(serializers.ModelSerializer):
             'last_name',
             'email',
             'is_active',
-            'applications',
+            'roles',
             'permissions',
             'user_admin',
             'prisons',
@@ -65,16 +80,14 @@ class UserSerializer(serializers.ModelSerializer):
     def get_is_locked_out(self, obj):
         return FailedLoginAttempt.objects.is_locked_out(user=obj)
 
-    def get_applications(self, obj):
-        return sorted(application.application.name for application in ApplicationUserMapping.objects.filter(user=obj))
+    def get_roles(self, obj):
+        return sorted(Role.objects.get_roles_for_user(obj).values_list('name', flat=True))
 
     def get_permissions(self, obj):
         return obj.get_all_permissions()
 
     def get_user_admin(self, obj):
-        return (obj.has_perm('auth.change_user') and
-                obj.has_perm('auth.delete_user') and
-                obj.has_perm('auth.add_user'))
+        return obj.groups.filter(name='UserAdmin').exists()
 
     def get_prisons(self, obj):
         return (
@@ -86,49 +99,63 @@ class UserSerializer(serializers.ModelSerializer):
             for prison in PrisonUserMapping.objects.get_prison_set_for_user(obj)
         )
 
+    def validate(self, attrs):
+        roles = self.initial_data.get('roles', ())
+        if roles:
+            user = self.context['request'].user
+            managed_roles = {
+                role.name: role
+                for role in Role.objects.get_managed_roles_for_user(user)
+            }
+            try:
+                self.initial_data['roles'] = [managed_roles[role] for role in roles]
+            except KeyError:
+                raise serializers.ValidationError({'roles': 'Invalid role(s)'})
+
+        return super().validate(attrs)
+
     @atomic
     def create(self, validated_data):
         creating_user = self.context['request'].user
+
+        roles = validated_data.pop('roles', ())
         make_user_admin = validated_data.pop('user_admin', False)
         validated_data.pop('is_locked_out', None)
+
+        if not roles:
+            raise serializers.ValidationError({'roles': 'Roles not specified'})
+
         new_user = super().create(validated_data)
 
         password = User.objects.make_random_password(length=10)
         new_user.set_password(password)
+        new_user.save()
 
-        # add application-user mapping
-        client_application = self.context['request'].auth.application
-        usermapping = ApplicationUserMapping.objects.create(
-            user=new_user, application=client_application
-        )
-        new_user.applicationusermapping_set.add(usermapping)
-
-        # add auth groups for application
-        groupmappings = ApplicationGroupMapping.objects.filter(
-            application__client_id=client_application.client_id
-        )
-        for groupmapping in groupmappings:
-            if groupmapping.group in creating_user.groups.all():
-                new_user.groups.add(groupmapping.group)
         if make_user_admin:
             new_user.groups.add(Group.objects.get(name='UserAdmin'))
-        new_user.save()
 
         prisons = PrisonUserMapping.objects.get_prison_set_for_user(creating_user)
         if len(prisons) > 0:
             pu = PrisonUserMapping.objects.create(user=new_user)
             for prison in prisons:
                 pu.prisons.add(prison)
-            pu.save()
+
+        main_application_name = roles[0].application.name
+        for application in {role.application for role in roles}:
+            ApplicationUserMapping.objects.create(user=new_user, application=application)
+        for group in {group for role in roles for group in role.groups}:
+            new_user.groups.add(group)
 
         context = {
             'username': new_user.username,
             'password': password,
-            'app': client_application.name
+            'service_name': main_application_name,
         }
         send_email(
             new_user.email, 'mtp_auth/new_user.txt',
-            _('Your new %(app)s account is ready to use') % {'app': client_application.name},
+            _('Your new %(service_name)s account is ready to use') % {
+                'service_name': main_application_name
+            },
             context=context, html_template='mtp_auth/new_user.html'
         )
 
@@ -136,17 +163,37 @@ class UserSerializer(serializers.ModelSerializer):
 
     @atomic
     def update(self, user, validated_data):
-        make_user_admin = validated_data.pop('user_admin', None)
+        user_admin_group = Group.objects.get(name='UserAdmin')
+
+        updating_user = self.context['request'].user
+        was_user_admin = user.groups.filter(pk=user_admin_group.pk).exists()
+
+        if user.pk == updating_user.pk and ('user_admin' in validated_data or 'roles' in validated_data):
+            # cannot edit one's own roles or admin status
+            raise serializers.ValidationError('Cannot change own access permissions')
+
+        roles = validated_data.pop('roles', ())
+        make_user_admin = validated_data.pop('user_admin', was_user_admin)
         is_locked_out = validated_data.pop('is_locked_out', None)
+
         updated_user = super().update(user, validated_data)
 
-        if make_user_admin is not None:
-            user_admin_group = Group.objects.get(name='UserAdmin')
+        if roles:
+            updated_user.applicationusermapping_set.all().delete()
+            updated_user.groups.clear()
+
+            if make_user_admin:
+                updated_user.groups.add(user_admin_group)
+
+            for role in roles:
+                ApplicationUserMapping.objects.create(user=updated_user, application=role.application)
+                for group in role.groups:
+                    updated_user.groups.add(group)
+        elif was_user_admin != make_user_admin:
             if make_user_admin:
                 updated_user.groups.add(user_admin_group)
             else:
                 updated_user.groups.remove(user_admin_group)
-        updated_user.save()
 
         if is_locked_out is False:
             FailedLoginAttempt.objects.filter(user=updated_user).delete()

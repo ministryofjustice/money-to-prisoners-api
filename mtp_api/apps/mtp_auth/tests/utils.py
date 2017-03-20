@@ -1,14 +1,16 @@
 import datetime
+
 from django.utils import timezone
 from django.utils.crypto import get_random_string
-
 from oauth2_provider.models import Application, AccessToken
-from mtp_auth.constants import CASHBOOK_OAUTH_CLIENT_ID, \
-    BANK_ADMIN_OAUTH_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID, \
-    SEND_MONEY_CLIENT_ID
+
+from mtp_auth.constants import (
+    CASHBOOK_OAUTH_CLIENT_ID, BANK_ADMIN_OAUTH_CLIENT_ID,
+    NOMS_OPS_OAUTH_CLIENT_ID, SEND_MONEY_CLIENT_ID,
+)
 
 
-class AuthTestCaseMixin(object):
+class AuthTestCaseMixin:
     APPLICATION_ID_MAP = {
         'PrisonerLocationAdmin': NOMS_OPS_OAUTH_CLIENT_ID,
         'Security': NOMS_OPS_OAUTH_CLIENT_ID,
@@ -19,10 +21,10 @@ class AuthTestCaseMixin(object):
 
     def _get_http_authorization_token_for_user(self, user, client_id=None):
         if not client_id:
-            group = user.groups.first()
+            group = user.groups.filter(name__in=self.APPLICATION_ID_MAP.keys()).first()
             if not group:
                 return None
-            client_id = self.APPLICATION_ID_MAP.get(group.name)
+            client_id = self.APPLICATION_ID_MAP[group.name]
         application = Application.objects.get(client_id=client_id)
 
         token = get_random_string()

@@ -1,10 +1,8 @@
-from functools import reduce
 import logging
 
 from django.contrib.auth import password_validation, get_user_model
 from django.contrib.auth.password_validation import get_default_password_validators
 from django.core.exceptions import NON_FIELD_ERRORS
-from django.db.models import Q
 from django.db.transaction import atomic
 from django.forms import ValidationError
 from django.http import Http404
@@ -16,13 +14,27 @@ from rest_framework import viewsets, generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import FailedLoginAttempt, PrisonUserMapping
+from .models import FailedLoginAttempt, PrisonUserMapping, Role
 from .permissions import UserPermissions, AnyAdminClientIDPermissions
-from .serializers import UserSerializer, ChangePasswordSerializer, ResetPasswordSerializer
+from .serializers import RoleSerializer, UserSerializer, ChangePasswordSerializer, ResetPasswordSerializer
 
 User = get_user_model()
 
 logger = logging.getLogger('mtp')
+
+
+class RoleViewSet(viewsets.mixins.ListModelMixin, viewsets.GenericViewSet):
+    queryset = Role.objects.all()
+    permission_classes = (IsAuthenticated,)
+    serializer_class = RoleSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if 'managed' in self.request.query_params:
+            user = self.request.user
+            managed_roles = Role.objects.get_managed_roles_for_user(user)
+            queryset = queryset.filter(pk__in=set(role.pk for role in managed_roles))
+        return queryset
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -35,19 +47,28 @@ class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
 
     def get_queryset(self):
-        client_id = self.request.auth.application.client_id
-        queryset = User.objects.filter(
-            applicationusermapping__application__client_id=client_id,
-        ).order_by('username')
+        """
+        Set of users for user account management AND looking up details of self.
+        Set is determined by matching set of prisons if some exist OR by key group as determined by Role models.
+        If a user falls into multiple roles, they can only edit themselves.
+        """
+        user = self.request.user
+        queryset = User.objects.filter(is_superuser=user.is_superuser).order_by('username')
 
-        user_prisons = PrisonUserMapping.objects.get_prison_set_for_user(self.request.user)
-        if len(user_prisons) > 0:
-            prison_filters = []
-            for prison in user_prisons:
-                prison_filters.append(Q(prisonusermapping__prisons=prison))
-            queryset = queryset.filter(
-                reduce(lambda a, b: a | b, prison_filters)).distinct()
-        return queryset
+        prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(user).values_list('pk', flat=True))
+        if prisons:
+            for prison in prisons:
+                queryset = queryset.filter(prisonusermapping__prisons=prison)
+            return queryset
+
+        key_groups = set(Role.objects.values_list('key_group', flat=True))
+        user_groups = set(user.groups.values_list('pk', flat=True))
+        user_key_groups = list(key_groups.intersection(user_groups))
+        if len(user_key_groups) == 1:
+            queryset = queryset.filter(prisonusermapping__isnull=True)
+            return queryset.filter(groups=user_key_groups[0])
+
+        return User.objects.filter(pk=user.pk)
 
     def get_object(self):
         """
@@ -66,7 +87,7 @@ class UserViewSet(viewsets.ModelViewSet):
     def perform_create_or_update(self, serializer):
         kwargs = {
             key: self.request.data[key]
-            for key in ('user_admin', 'is_locked_out')
+            for key in ('user_admin', 'is_locked_out', 'roles')
             if key in self.request.data
         }
         serializer.save(**kwargs)
@@ -200,7 +221,7 @@ class ResetPasswordView(generics.GenericAPIView):
 
             send_email(
                 user.email, 'mtp_auth/reset_password.txt',
-                gettext('Your new Money To Prisoners password'),
+                gettext('Your new Prisoner Money password'),
                 context={'username': user.username, 'password': password},
                 html_template='mtp_auth/reset_password.html'
             )

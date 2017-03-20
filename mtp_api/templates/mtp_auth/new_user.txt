@@ -1,6 +1,6 @@
 {% load i18n %}
-{% blocktrans trimmed %}
-Your new Money To Prisoners {{ app|default_if_none:'' }} account has been created for you.
+{% blocktrans trimmed with service_name=service_name|default:'Prisoner Money' %}
+Your new {{ service_name }} account has been created for you.
 {% endblocktrans %}
 
 {% trans 'Username' %}: {{ username }}
