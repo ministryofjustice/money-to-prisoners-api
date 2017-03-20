@@ -52,7 +52,7 @@ def name_generator(name):
         yield from gen
 
 
-def create_prison_clerk(name_and_password=None, prisons=[]):
+def create_prison_clerk(name_and_password=None, prisons=()):
     prison_clerk_group = Group.objects.get(name='PrisonClerk')
 
     base_clerk_name = ('test-' + slugify(prisons[0]))[:27]
@@ -90,7 +90,7 @@ def create_prisoner_location_admin(name_and_password='prisoner-location-admin'):
     return plu
 
 
-def create_security_staff_user(name_and_password='security-staff', prisons=[]):
+def create_security_staff_user(name_and_password='security-staff', prisons=()):
     security_staff_group = Group.objects.get(name='Security')
     ssu = create_basic_user(
         name_and_password,

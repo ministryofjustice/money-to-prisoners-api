@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: MTP api\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-02-28 14:34+0000\n"
+"POT-Creation-Date: 2017-03-22 18:07+0000\n"
 "PO-Revision-Date: 2016-11-04 10:00+0000\n"
 "Last-Translator: Welsh Language Unit <welsh.language.unit.manager@hmcts.gsi.gov.uk>\n"
 "Language-Team: Welsh (http://www.transifex.com/ministry-of-justice/mtp/language/cy/)\n"
@@ -38,7 +38,7 @@ msgstr ""
 msgid "Date in range"
 msgstr ""
 
-#: apps/core/admin.py:163 apps/credit/dashboards.py:386
+#: apps/core/admin.py:163 apps/credit/dashboards.py:361
 msgid "Date"
 msgstr ""
 
@@ -139,10 +139,14 @@ msgid "Training data for the Cashbook service"
 msgstr ""
 
 #: apps/core/forms.py:11
-msgid "Random set of credits"
+msgid "NOMIS API dev env data"
 msgstr ""
 
 #: apps/core/forms.py:12
+msgid "Random set of credits"
+msgstr ""
+
+#: apps/core/forms.py:13
 msgid "Delete prisoner location and credit data"
 msgstr ""
 
@@ -178,7 +182,7 @@ msgstr ""
 msgid "Recreate test data"
 msgstr ""
 
-#: apps/core/views.py:183
+#: apps/core/views.py:189
 #, python-format
 msgid "Data reset to %(scenario)s scenario"
 msgstr ""
@@ -319,95 +323,90 @@ msgid "Date range"
 msgstr ""
 
 #: apps/credit/dashboards.py:87
-msgid "This week"
-msgstr ""
-
-#: apps/credit/dashboards.py:88
-msgid "Last week"
-msgstr ""
-
-#: apps/credit/dashboards.py:89 apps/credit/dashboards.py:307
-msgid "Last 4 weeks"
-msgstr ""
-
-#: apps/credit/dashboards.py:90
-msgid "This month"
-msgstr ""
-
-#: apps/credit/dashboards.py:91
-msgid "Last month"
-msgstr ""
-
-#: apps/credit/dashboards.py:92 apps/credit/dashboards.py:250
-#: apps/credit/dashboards.py:251
-msgid "Since the beginning"
-msgstr ""
-
-#: apps/credit/dashboards.py:93
-msgid "Specify a range…"
-msgstr ""
-
-#: apps/credit/dashboards.py:96
-msgid "From date"
-msgstr ""
-
-#: apps/credit/dashboards.py:97
-msgid "To date"
-msgstr ""
-
-#: apps/credit/dashboards.py:100
-msgid "Prison"
-msgstr ""
-
-#: apps/credit/dashboards.py:101
-msgid "All prisons"
-msgstr ""
-
-#: apps/credit/dashboards.py:104
-msgid "Min. time to credit"
-msgstr ""
-
-#: apps/credit/dashboards.py:108
-msgid "End date must be after start date"
-msgstr ""
-
-#: apps/credit/dashboards.py:115 apps/credit/dashboards.py:126
 msgid "Today"
 msgstr ""
 
-#: apps/credit/dashboards.py:120 apps/credit/dashboards.py:127
-#: apps/credit/dashboards.py:132
-msgid "Latest"
-msgstr ""
-
-#: apps/credit/dashboards.py:121
+#: apps/credit/dashboards.py:88
 msgid "Yesterday"
 msgstr ""
 
-#: apps/credit/dashboards.py:206
+#: apps/credit/dashboards.py:89
+msgid "This week"
+msgstr ""
+
+#: apps/credit/dashboards.py:90
+msgid "Last week"
+msgstr ""
+
+#: apps/credit/dashboards.py:91 apps/credit/dashboards.py:282
+msgid "Last 4 weeks"
+msgstr ""
+
+#: apps/credit/dashboards.py:92
+msgid "This month"
+msgstr ""
+
+#: apps/credit/dashboards.py:93
+msgid "Last month"
+msgstr ""
+
+#: apps/credit/dashboards.py:94 apps/credit/dashboards.py:225
+#: apps/credit/dashboards.py:226
+msgid "Since the beginning"
+msgstr ""
+
+#: apps/credit/dashboards.py:95
+msgid "Specify a range…"
+msgstr ""
+
+#: apps/credit/dashboards.py:100
+msgid "From date"
+msgstr ""
+
+#: apps/credit/dashboards.py:101
+msgid "To date"
+msgstr ""
+
+#: apps/credit/dashboards.py:104
+msgid "Prison"
+msgstr ""
+
+#: apps/credit/dashboards.py:105
+msgid "All prisons"
+msgstr ""
+
+#: apps/credit/dashboards.py:108
+msgid "Min. time to credit"
+msgstr ""
+
+#: apps/credit/dashboards.py:112
+msgid "End date must be after start date"
+msgstr ""
+
+#: apps/credit/dashboards.py:181
 #, python-format
 msgid "%(from)s to %(to)s"
 msgstr ""
 
-#: apps/credit/dashboards.py:320
+#: apps/credit/dashboards.py:295
 #, python-format
 msgid "only for %(prison)s"
 msgstr ""
 
-#: apps/credit/dashboards.py:322
+#: apps/credit/dashboards.py:297
 #, python-format
 msgid "time to credit at least %(days)s days"
 msgstr ""
 
-#: apps/credit/dashboards.py:387
+#: apps/credit/dashboards.py:362
 msgid "Valid credits"
 msgstr ""
 
-#: apps/credit/dashboards.py:389
+#: apps/credit/dashboards.py:364
 msgid "Credits to refund"
 msgstr ""
 
-#: apps/credit/dashboards.py:436
+#: apps/credit/dashboards.py:411
 msgid "Credit report"
 msgstr ""
 
@@ -416,11 +415,11 @@ msgstr ""
 msgid "%0.1f days"
 msgstr ""
 
-#: apps/mtp_auth/admin.py:100
+#: apps/mtp_auth/admin.py:102
 msgid "Remove lockouts"
 msgstr ""
 
-#: apps/mtp_auth/admin.py:110
+#: apps/mtp_auth/admin.py:112
 msgid "account locked"
 msgstr ""
 
@@ -429,7 +428,7 @@ msgid "MTP Authorisation"
 msgstr ""
 
 #: apps/mtp_auth/forms.py:11 apps/mtp_auth/forms.py:29
-#: apps/mtp_auth/models.py:104
+#: apps/mtp_auth/models.py:131
 msgid "That username already exists"
 msgstr ""
 
@@ -437,45 +436,45 @@ msgstr ""
 msgid "The two password fields didn’t match"
 msgstr ""
 
-#: apps/mtp_auth/forms.py:30 apps/mtp_auth/serializers.py:60
+#: apps/mtp_auth/forms.py:30 apps/mtp_auth/serializers.py:75
 msgid "That email address already exists"
 msgstr ""
 
-#: apps/mtp_auth/serializers.py:131
+#: apps/mtp_auth/serializers.py:156
 #, python-format
-msgid "Your new %(app)s account is ready to use"
+msgid "Your new %(service_name)s account is ready to use"
 msgstr ""
 
-#: apps/mtp_auth/views.py:91
+#: apps/mtp_auth/views.py:110
 msgid "You cannot disable yourself"
 msgstr ""
 
-#: apps/mtp_auth/views.py:126
+#: apps/mtp_auth/views.py:145
 msgid "You’ve entered an incorrect password"
 msgstr ""
 
-#: apps/mtp_auth/views.py:142
+#: apps/mtp_auth/views.py:161
 msgid "There has been a system error. Please try again later"
 msgstr ""
 
-#: apps/mtp_auth/views.py:143
+#: apps/mtp_auth/views.py:162
 msgid "Username doesn’t match any user account"
 msgstr ""
 
-#: apps/mtp_auth/views.py:144
+#: apps/mtp_auth/views.py:163
 msgid "Your account is locked, please contact the person who set it up"
 msgstr ""
 
-#: apps/mtp_auth/views.py:146
+#: apps/mtp_auth/views.py:165
 msgid "We don’t have your email address, please contact the person who set up the account"
 msgstr ""
 
-#: apps/mtp_auth/views.py:148
+#: apps/mtp_auth/views.py:167
 msgid "That email address matches multiple user accounts, please enter your unique username"
 msgstr ""
 
-#: apps/mtp_auth/views.py:204
-msgid "Your new Money To Prisoners password"
+#: apps/mtp_auth/views.py:224
+msgid "Your new Prisoner Money password"
 msgstr ""
 
 #: apps/payment/admin.py:25
@@ -651,7 +650,7 @@ msgstr ""
 msgid "names specified by senders"
 msgstr ""
 
-#: apps/security/admin.py:93
+#: apps/security/admin.py:88
 msgid "filters"
 msgstr ""
 
@@ -659,7 +658,7 @@ msgstr ""
 msgid "Security data"
 msgstr ""
 
-#: apps/security/models.py:58
+#: apps/security/models.py:69
 msgid "(Unknown)"
 msgstr ""
 
@@ -966,7 +965,7 @@ msgstr ""
 msgid "No prison"
 msgstr ""
 
-#: templates/core/dashboard/credit-report.html:58
+#: templates/core/dashboard/credit-report.html:60
 msgid "View credits list"
 msgstr ""
 
@@ -1010,7 +1009,7 @@ msgstr ""
 
 #: templates/mtp_auth/new_user.html:6 templates/mtp_auth/new_user.txt:2
 #, python-format
-msgid "Your new Money To Prisoners %(app|default_if_none:'')s account has been created for you."
+msgid "Your new %(service_name)s account has been created for you."
 msgstr ""
 
 #: templates/mtp_auth/new_user.html:13 templates/mtp_auth/new_user.txt:6
@@ -1027,13 +1026,13 @@ msgstr ""
 
 #: templates/mtp_auth/reset_password.html:6
 #: templates/mtp_auth/reset_password.txt:2
-msgid "Your new Money To Prisoners password has been created for you."
+msgid "Your new Prisoner Money password has been created for you."
 msgstr ""
 
-#: urls.py:33
+#: urls.py:34
 msgid "Page not found"
 msgstr ""
 
-#: urls.py:35
+#: urls.py:36
 msgid "Sorry, something went wrong"
 msgstr ""

@@ -11,7 +11,7 @@ from oauth2_provider.models import Grant, AccessToken, RefreshToken, get_applica
 
 from core.admin import add_short_description
 from mtp_auth.forms import RestrictedUserCreationForm, RestrictedUserChangeForm
-from mtp_auth.models import ApplicationGroupMapping, ApplicationUserMapping, FailedLoginAttempt, PrisonUserMapping
+from mtp_auth.models import Role, ApplicationUserMapping, FailedLoginAttempt, PrisonUserMapping
 
 User = get_user_model()
 Application = get_application_model()
@@ -45,11 +45,13 @@ class AccessTokenAdmin(RawIDAdmin):
     inlines = (RefreshTokenInline,)
 
 
-@admin.register(ApplicationGroupMapping)
-class ApplicationGroupMappingAdmin(ModelAdmin):
-    ordering = ('group__name', 'application')
-    list_display = ('group', 'application')
-    list_filter = ('application',)
+@admin.register(Role)
+class RoleAdmin(ModelAdmin):
+    list_display = ('name', 'key_group', 'all_groups', 'application')
+    list_filter = ('key_group', 'application')
+
+    def all_groups(self, instance):
+        return ', '.join(sorted(group.name for group in instance.groups))
 
 
 @admin.register(ApplicationUserMapping)
