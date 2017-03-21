@@ -39,6 +39,7 @@ class CommentSerializer(serializers.ModelSerializer):
 
 class CreditSerializer(serializers.ModelSerializer):
     sender_name = serializers.CharField(read_only=True)
+    sender_email = serializers.CharField(read_only=True)
     owner_name = serializers.CharField(read_only=True)
     credited_at = serializers.DateTimeField(read_only=True)
     refunded_at = serializers.DateTimeField(read_only=True)
@@ -57,6 +58,7 @@ class CreditSerializer(serializers.ModelSerializer):
             'amount',
             'received_at',
             'sender_name',
+            'sender_email',
             'prison',
             'owner',
             'owner_name',
@@ -83,7 +85,6 @@ class SecurityCreditSerializer(CreditSerializer):
     sender_sort_code = serializers.CharField(read_only=True)
     sender_account_number = serializers.CharField(read_only=True)
     sender_roll_number = serializers.CharField(read_only=True)
-    sender_email = serializers.CharField(read_only=True)
     card_number_last_digits = serializers.CharField(read_only=True)
     card_expiry_date = serializers.CharField(read_only=True)
     sender_profile = serializers.PrimaryKeyRelatedField(read_only=True)
@@ -96,7 +97,6 @@ class SecurityCreditSerializer(CreditSerializer):
             'sender_sort_code',
             'sender_account_number',
             'sender_roll_number',
-            'sender_email',
             'card_number_last_digits',
             'card_expiry_date',
             'sender_profile',
