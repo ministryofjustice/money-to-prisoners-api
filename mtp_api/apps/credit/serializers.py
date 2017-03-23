@@ -48,6 +48,7 @@ class CreditSerializer(serializers.ModelSerializer):
     anonymous = serializers.SerializerMethodField()
     reconciliation_code = serializers.CharField(read_only=True)
     comments = CommentSerializer(many=True, read_only=True)
+    short_payment_ref = serializers.SerializerMethodField()
 
     class Meta:
         model = Credit
@@ -71,6 +72,7 @@ class CreditSerializer(serializers.ModelSerializer):
             'reconciliation_code',
             'comments',
             'reviewed',
+            'short_payment_ref',
         )
 
     def get_anonymous(self, obj):
@@ -78,6 +80,12 @@ class CreditSerializer(serializers.ModelSerializer):
             return obj.transaction.incomplete_sender_info and obj.blocked
         except AttributeError:
             return False
+
+    def get_short_payment_ref(self, obj):
+        try:
+            return str(obj.payment.uuid)[:8].upper()
+        except AttributeError:
+            return None
 
 
 class SecurityCreditSerializer(CreditSerializer):
