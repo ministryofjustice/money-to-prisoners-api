@@ -87,7 +87,7 @@ class UserViewSet(viewsets.ModelViewSet):
     def perform_create_or_update(self, serializer):
         kwargs = {
             key: self.request.data[key]
-            for key in ('user_admin', 'is_locked_out', 'roles')
+            for key in ('user_admin', 'is_locked_out', 'role')
             if key in self.request.data
         }
         serializer.save(**kwargs)

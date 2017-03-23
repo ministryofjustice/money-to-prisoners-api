@@ -301,7 +301,7 @@ class GetUserTestCase(AuthBaseTestCase):
             'first_name': 'New',
             'last_name': 'User',
             'email': 'user@mtp.local',
-            'roles': ['bank-admin'],
+            'role': 'bank-admin',
         }
         response = self.client.post(
             reverse('user-list'),
@@ -436,7 +436,7 @@ class CreateUserTestCase(AuthBaseTestCase):
             'first_name': 'New',
             'last_name': 'Bank Admin',
             'email': 'nba@mtp.local',
-            'roles': ['bank-admin'],
+            'role': 'bank-admin',
         }
         response = self.client.post(
             self.get_url(),
@@ -464,7 +464,7 @@ class CreateUserTestCase(AuthBaseTestCase):
         ))
 
         make_user_admin = user_data.pop('user_admin', False)
-        user_data.pop('roles', [])
+        user_data.pop('role', None)
         new_user = User.objects.get(**user_data)
         self.assertEqual(
             list(
@@ -496,7 +496,7 @@ class CreateUserTestCase(AuthBaseTestCase):
             'first_name': 'New',
             'last_name': 'Bank Admin',
             'email': 'nba@mtp.local',
-            'roles': ['bank-admin'],
+            'role': 'bank-admin',
         }
         self.assertUserCreated(
             self.bank_uas[0],
@@ -512,7 +512,7 @@ class CreateUserTestCase(AuthBaseTestCase):
             'first_name': 'New',
             'last_name': 'Location Admin',
             'email': 'nla@mtp.local',
-            'roles': ['prisoner-location-admin'],
+            'role': 'prisoner-location-admin',
         }
         self.assertUserCreated(
             self.pla_uas[0],
@@ -527,7 +527,7 @@ class CreateUserTestCase(AuthBaseTestCase):
             'first_name': 'New',
             'last_name': 'Security Staff',
             'email': 'nss@mtp.local',
-            'roles': ['security'],
+            'role': 'security',
         }
         self.assertUserCreated(
             self.security_uas[0],
@@ -542,7 +542,7 @@ class CreateUserTestCase(AuthBaseTestCase):
             'first_name': 'New',
             'last_name': 'Prison Clerk',
             'email': 'pc@mtp.local',
-            'roles': ['prison-clerk'],
+            'role': 'prison-clerk',
         }
         self.assertUserCreated(
             self.cashbook_uas[0],
@@ -558,7 +558,7 @@ class CreateUserTestCase(AuthBaseTestCase):
             'last_name': 'Cashbook User Admin',
             'email': 'cua@mtp.local',
             'user_admin': True,
-            'roles': ['prison-clerk'],
+            'role': 'prison-clerk',
         }
         self.assertUserCreated(
             self.cashbook_uas[0],
@@ -585,7 +585,7 @@ class CreateUserTestCase(AuthBaseTestCase):
             'last_name': 'Cashbook User Admin 2',
             'email': 'cua@mtp.local',
             'user_admin': True,
-            'roles': ['prison-clerk'],
+            'role': 'prison-clerk',
         }
         self.assertUserNotCreated(self.cashbook_uas[0], user_data)
         self.assertEqual(User.objects.filter(username=self.cashbook_uas[0].username).count(), 1)
@@ -598,7 +598,7 @@ class CreateUserTestCase(AuthBaseTestCase):
             'first_name': 'Title',
             'last_name': 'Case',
             'email': 'title-case@mtp.local',
-            'roles': ['prison-clerk'],
+            'role': 'prison-clerk',
         }
         response = self.client.post(
             self.get_url(),
@@ -616,7 +616,7 @@ class CreateUserTestCase(AuthBaseTestCase):
             'first_name': 'Lower',
             'last_name': 'Case',
             'email': 'lower-case@mtp.local',
-            'roles': ['prison-clerk'],
+            'role': 'prison-clerk',
         }
         response = self.assertUserNotCreated(requester, user_data)
         self.assertIn('username', response.json())
@@ -630,7 +630,7 @@ class CreateUserTestCase(AuthBaseTestCase):
             'last_name': 'Cashbook User Admin',
             'email': self.cashbook_uas[0].email,
             'user_admin': True,
-            'roles': ['prison-clerk'],
+            'role': 'prison-clerk',
         }
         self.assertUserNotCreated(self.cashbook_uas[0], user_data)
         self.assertEqual(User.objects.filter(username=user_data['username']).count(), 0)
@@ -642,7 +642,7 @@ class CreateUserTestCase(AuthBaseTestCase):
             'last_name': 'Cashbook User Admin',
             'email': self.cashbook_uas[0].email,
             'user_admin': True,
-            'roles': ['prison-clerk'],
+            'role': 'prison-clerk',
         }
         for field in ['first_name', 'last_name', 'email']:
             data = user_data.copy()
@@ -656,11 +656,11 @@ class CreateUserTestCase(AuthBaseTestCase):
             'first_name': 'New',
             'last_name': 'User',
             'email': 'user@mtp.local',
-            'roles': [],
+            'role': None,
         }
         response = self.assertUserNotCreated(self.cashbook_uas[0], user_data)
-        self.assertIn('roles', response.data)
-        self.assertIn('Roles not specified', response.data['roles'])
+        self.assertIn('role', response.data)
+        self.assertIn('Role must be specified', response.data['role'])
         self.assertEqual(User.objects.filter(username=user_data['username']).count(), 0)
 
     def test_cannot_create_with_unknown_role(self):
@@ -669,11 +669,11 @@ class CreateUserTestCase(AuthBaseTestCase):
             'first_name': 'New',
             'last_name': 'User',
             'email': 'user@mtp.local',
-            'roles': ['unknown'],
+            'role': 'unknown',
         }
         response = self.assertUserNotCreated(self.cashbook_uas[0], user_data)
-        self.assertIn('roles', response.data)
-        self.assertIn('Invalid role(s)', response.data['roles'])
+        self.assertIn('role', response.data)
+        self.assertIn('Invalid role: unknown', response.data['role'])
         self.assertEqual(User.objects.filter(username=user_data['username']).count(), 0)
 
     def test_cannot_create_with_unmanaged_role(self):
@@ -682,11 +682,11 @@ class CreateUserTestCase(AuthBaseTestCase):
             'first_name': 'New',
             'last_name': 'User',
             'email': 'user@mtp.local',
-            'roles': ['bank-admin'],
+            'role': 'bank-admin',
         }
         response = self.assertUserNotCreated(self.cashbook_uas[0], user_data)
-        self.assertIn('roles', response.data)
-        self.assertIn('Invalid role(s)', response.data['roles'])
+        self.assertIn('role', response.data)
+        self.assertIn('Invalid role: bank-admin', response.data['role'])
         self.assertEqual(User.objects.filter(username=user_data['username']).count(), 0)
 
 
@@ -718,7 +718,7 @@ class UpdateUserTestCase(AuthBaseTestCase):
         response = self._update_user(requester, username, user_data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         user_data.pop('user_admin', None)
-        user_data.pop('roles', None)
+        user_data.pop('role', None)
         User.objects.get(username=username, **user_data)
         return response
 
@@ -730,7 +730,7 @@ class UpdateUserTestCase(AuthBaseTestCase):
         response = self._update_user(requester, username, user_data)
         self.assertNotEqual(response.status_code, status.HTTP_200_OK)
         original_user_data.pop('user_admin', None)
-        original_user_data.pop('roles', None)
+        original_user_data.pop('role', None)
         User.objects.get(username=username, **original_user_data)
         return response
 
@@ -917,7 +917,7 @@ class UpdateUserTestCase(AuthBaseTestCase):
 
     def test_can_change_role_in_own_app(self):
         user_data = {
-            'roles': ['security']
+            'role': 'security'
         }
         self.assertUserUpdated(
             self.cashbook_uas[0],
@@ -932,7 +932,7 @@ class UpdateUserTestCase(AuthBaseTestCase):
 
     def test_can_change_role_and_admin_level_in_own_app(self):
         user_data = {
-            'roles': ['security'],
+            'role': 'security',
             'user_admin': True,
         }
         self.assertUserUpdated(
@@ -948,7 +948,7 @@ class UpdateUserTestCase(AuthBaseTestCase):
 
     def test_can_change_role_in_own_prison_but_different_app(self):
         user_data = {
-            'roles': ['prison-clerk']
+            'role': 'prison-clerk'
         }
         self.assertUserUpdated(
             self.cashbook_uas[0],
@@ -963,7 +963,7 @@ class UpdateUserTestCase(AuthBaseTestCase):
 
     def test_cannot_change_own_role(self):
         user_data = {
-            'roles': ['prison-clerk']
+            'role': 'prison-clerk'
         }
         with silence_logger('django.request', level=logging.ERROR):
             response = self.assertUserNotUpdated(
@@ -977,7 +977,7 @@ class UpdateUserTestCase(AuthBaseTestCase):
 
     def test_cannot_change_to_unknown_role(self):
         user_data = {
-            'roles': ['unknown']
+            'role': 'unknown'
         }
         with silence_logger('django.request', level=logging.ERROR):
             response = self.assertUserNotUpdated(
@@ -987,12 +987,12 @@ class UpdateUserTestCase(AuthBaseTestCase):
             )
         updated_user = User.objects.get(username=self.prison_clerks[0].username)
         self.assertIn('PrisonClerk', updated_user.groups.values_list('name', flat=True))
-        self.assertIn('roles', response.data)
-        self.assertIn('Invalid role(s)', response.data['roles'])
+        self.assertIn('role', response.data)
+        self.assertIn('Invalid role: unknown', response.data['role'])
 
     def test_cannot_change_to_unmanaged_role(self):
         user_data = {
-            'roles': ['bank-admin']
+            'role': 'bank-admin'
         }
         with silence_logger('django.request', level=logging.ERROR):
             response = self.assertUserNotUpdated(
@@ -1002,12 +1002,12 @@ class UpdateUserTestCase(AuthBaseTestCase):
             )
         updated_user = User.objects.get(username=self.prison_clerks[0].username)
         self.assertIn('PrisonClerk', updated_user.groups.values_list('name', flat=True))
-        self.assertIn('roles', response.data)
-        self.assertIn('Invalid role(s)', response.data['roles'])
+        self.assertIn('role', response.data)
+        self.assertIn('Invalid role: bank-admin', response.data['role'])
 
     def test_cannot_change_role_in_other_prison(self):
         user_data = {
-            'roles': ['security']
+            'role': 'security'
         }
         with silence_logger('django.request', level=logging.ERROR):
             self.assertUserNotUpdated(

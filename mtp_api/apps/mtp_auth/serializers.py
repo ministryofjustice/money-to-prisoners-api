@@ -100,17 +100,17 @@ class UserSerializer(serializers.ModelSerializer):
         )
 
     def validate(self, attrs):
-        roles = self.initial_data.get('roles', ())
-        if roles:
+        role = self.initial_data.get('role')
+        if role:
             user = self.context['request'].user
             managed_roles = {
                 role.name: role
                 for role in Role.objects.get_managed_roles_for_user(user)
             }
             try:
-                self.initial_data['roles'] = [managed_roles[role] for role in roles]
+                self.initial_data['role'] = managed_roles[role]
             except KeyError:
-                raise serializers.ValidationError({'roles': 'Invalid role(s)'})
+                raise serializers.ValidationError({'role': 'Invalid role: %s' % role})
 
         return super().validate(attrs)
 
@@ -118,12 +118,12 @@ class UserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         creating_user = self.context['request'].user
 
-        roles = validated_data.pop('roles', ())
+        role = validated_data.pop('role', None)
         make_user_admin = validated_data.pop('user_admin', False)
         validated_data.pop('is_locked_out', None)
 
-        if not roles:
-            raise serializers.ValidationError({'roles': 'Roles not specified'})
+        if not role:
+            raise serializers.ValidationError({'role': 'Role must be specified'})
 
         new_user = super().create(validated_data)
 
@@ -140,21 +140,19 @@ class UserSerializer(serializers.ModelSerializer):
             for prison in prisons:
                 pu.prisons.add(prison)
 
-        main_application_name = roles[0].application.name
-        for application in {role.application for role in roles}:
-            ApplicationUserMapping.objects.create(user=new_user, application=application)
-        for group in {group for role in roles for group in role.groups}:
+        ApplicationUserMapping.objects.create(user=new_user, application=role.application)
+        for group in role.groups:
             new_user.groups.add(group)
 
         context = {
             'username': new_user.username,
             'password': password,
-            'service_name': main_application_name,
+            'service_name': role.application.name,
         }
         send_email(
             new_user.email, 'mtp_auth/new_user.txt',
             _('Your new %(service_name)s account is ready to use') % {
-                'service_name': main_application_name
+                'service_name': role.application.name
             },
             context=context, html_template='mtp_auth/new_user.html'
         )
@@ -168,27 +166,26 @@ class UserSerializer(serializers.ModelSerializer):
         updating_user = self.context['request'].user
         was_user_admin = user.groups.filter(pk=user_admin_group.pk).exists()
 
-        if user.pk == updating_user.pk and ('user_admin' in validated_data or 'roles' in validated_data):
-            # cannot edit one's own roles or admin status
+        if user.pk == updating_user.pk and ('user_admin' in validated_data or 'role' in validated_data):
+            # cannot edit one's own role or admin status
             raise serializers.ValidationError('Cannot change own access permissions')
 
-        roles = validated_data.pop('roles', ())
+        role = validated_data.pop('role', None)
         make_user_admin = validated_data.pop('user_admin', was_user_admin)
         is_locked_out = validated_data.pop('is_locked_out', None)
 
         updated_user = super().update(user, validated_data)
 
-        if roles:
+        if role:
             updated_user.applicationusermapping_set.all().delete()
             updated_user.groups.clear()
 
             if make_user_admin:
                 updated_user.groups.add(user_admin_group)
 
-            for role in roles:
-                ApplicationUserMapping.objects.create(user=updated_user, application=role.application)
-                for group in role.groups:
-                    updated_user.groups.add(group)
+            ApplicationUserMapping.objects.create(user=updated_user, application=role.application)
+            for group in role.groups:
+                updated_user.groups.add(group)
         elif was_user_admin != make_user_admin:
             if make_user_admin:
                 updated_user.groups.add(user_admin_group)
