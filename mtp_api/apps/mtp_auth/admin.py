@@ -112,3 +112,13 @@ class UserAdmin(DjangoUserAdmin):
     @add_short_description(_('account locked'))
     def account_locked(self, instance):
         return _boolean_icon(instance.is_locked_out)
+
+    def response_change(self, request, obj):
+        response = super().response_change(request, obj)
+        if obj.groups.filter(name='UserAdmin').exists() and Role.objects.get_roles_for_user(obj).count() != 1:
+            messages.error(request, _('This user will be unable to manage user accounts. '
+                                      'Either remove ‘UserAdmin’ group or choose fewer other groups.'))
+        if obj.groups.filter(name='PrisonClerk').exists() and (not hasattr(obj, 'prisonusermapping')
+                                                               or obj.prisonusermapping.prisons.count() == 0):
+            messages.error(request, _('Prison clerks must be assigned to a prison.'))
+        return response

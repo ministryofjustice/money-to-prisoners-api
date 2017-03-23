@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: MTP api\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-22 18:07+0000\n"
+"POT-Creation-Date: 2017-03-23 17:08+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Igor U <igor.ushkarev@digital.justice.gov.uk>, 2016\n"
 "Language-Team: Welsh (https://www.transifex.com/ministry-of-justice/teams/34553/cy/)\n"
@@ -423,6 +423,14 @@ msgstr ""
 msgid "account locked"
 msgstr ""
 
+#: apps/mtp_auth/admin.py:119
+msgid "This user will be unable to manage user accounts. Either remove ‘UserAdmin’ group or choose fewer other groups."
+msgstr ""
+
+#: apps/mtp_auth/admin.py:123
+msgid "Prison clerks must be assigned to a prison."
+msgstr ""
+
 #: apps/mtp_auth/app.py:7
 msgid "MTP Authorisation"
 msgstr ""
@@ -440,7 +448,7 @@ msgstr ""
 msgid "That email address already exists"
 msgstr ""
 
-#: apps/mtp_auth/serializers.py:156
+#: apps/mtp_auth/serializers.py:154
 #, python-format
 msgid "Your new %(service_name)s account is ready to use"
 msgstr ""
