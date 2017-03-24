@@ -28,16 +28,19 @@ def get_sender_prisoner_pairs():
     number_of_prisoners = PrisonerLocation.objects.all().count()
     number_of_senders = number_of_prisoners
 
-    expiry_date = fake.date_time_between(start_date='now', end_date='+5y')
-    senders = [
-        {
-            'cardholder_name': ' '.join([fake.first_name(), fake.last_name()]),
-            'card_number_last_digits': ''.join([str(random.randint(0, 9)) for _ in range(4)]),
-            'card_expiry_date': expiry_date.strftime('%m/%y'),
-            'ip_address': fake.ipv4(),
-            'email': fake.email(),
-        } for n in range(number_of_senders)
-    ]
+    senders = []
+    for _ in range(number_of_senders):
+        expiry_date = fake.date_time_between(start_date='now', end_date='+5y')
+        full_name = ' '.join([fake.first_name(), fake.last_name()])
+        senders.append(
+            {
+                'cardholder_name': full_name,
+                'card_number_last_digits': ''.join([str(random.randint(0, 9)) for _ in range(4)]),
+                'card_expiry_date': expiry_date.strftime('%m/%y'),
+                'ip_address': fake.ipv4(),
+                'email': '%s@mail.local' % full_name.replace(' ', '.'),
+            }
+        )
 
     prisoners = list(PrisonerLocation.objects.all())
 
