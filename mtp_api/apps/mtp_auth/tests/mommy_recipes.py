@@ -99,11 +99,12 @@ def create_security_staff_user(name_and_password='security-staff', prisons=()):
         last_name='Staff',
     )
 
-    make(
-        'mtp_auth.PrisonUserMapping',
-        user=ssu,
-        prisons=prisons,
-    )
+    if prisons:
+        make(
+            'mtp_auth.PrisonUserMapping',
+            user=ssu,
+            prisons=prisons,
+        )
 
     return ssu
 

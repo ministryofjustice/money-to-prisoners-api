@@ -3,6 +3,7 @@ import logging
 from django.contrib.auth import password_validation, get_user_model
 from django.contrib.auth.password_validation import get_default_password_validators
 from django.core.exceptions import NON_FIELD_ERRORS
+from django.db import models
 from django.db.transaction import atomic
 from django.forms import ValidationError
 from django.http import Http404
@@ -66,7 +67,7 @@ class UserViewSet(viewsets.ModelViewSet):
         user_key_groups = list(key_groups.intersection(user_groups))
         if len(user_key_groups) == 1:
             queryset = queryset.filter(prisonusermapping__isnull=True)
-            return queryset.filter(groups=user_key_groups[0])
+            return queryset.filter(models.Q(groups=user_key_groups[0]) | models.Q(pk=user.pk))
 
         return User.objects.filter(pk=user.pk)
 
