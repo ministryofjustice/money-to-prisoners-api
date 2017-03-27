@@ -274,6 +274,9 @@ ZENDESK_API_USERNAME = os.environ.get('ZENDESK_API_USERNAME', '')
 ZENDESK_API_TOKEN = os.environ.get('ZENDESK_API_TOKEN', '')
 ZENDESK_GROUP_ID = 26417927
 
+NOMIS_API_AVAILABLE = os.environ.get('NOMIS_API_AVAILABLE', 'False') == 'True'
+NOMIS_API_PRISONS = os.environ.get('NOMIS_API_PRISONS', '').split(',')
+
 try:
     from .local import *  # noqa
 except ImportError:
