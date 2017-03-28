@@ -7,7 +7,10 @@ from django.core.exceptions import ValidationError
 from django.db.models import Sum
 from django.utils.translation import gettext_lazy as _
 
-from core.admin import DateRangeFilter, RelatedAnyFieldListFilter, SearchFilter, add_short_description
+from core.admin import (
+    UtcDateRangeFilter, RelatedAnyFieldListFilter, SearchFilter,
+    add_short_description
+)
 from payment.models import Payment
 from transaction.models import Transaction
 from transaction.utils import format_amount
@@ -111,7 +114,7 @@ class CreditAdmin(admin.ModelAdmin):
         SourceFilter,
         'resolution',
         ('prison', RelatedAnyFieldListFilter),
-        ('received_at', DateRangeFilter),
+        ('received_at', UtcDateRangeFilter),
         'reconciled',
         'reviewed',
         ('owner__username', SearchFilter),
