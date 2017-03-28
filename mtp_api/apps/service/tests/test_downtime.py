@@ -71,7 +71,7 @@ class DowntimeTestCase(TestCase):
 class DowntimeHealthcheckTestCase(TestCase):
 
     def _get_healthcheck_data(self):
-        response = self.client.get('/healthcheck.json')
+        response = self.client.get('/service-availability/')
         return json.loads(str(response.content, 'utf-8'))
 
     def test_healthcheck_returns_active_downtime(self):
@@ -81,6 +81,7 @@ class DowntimeHealthcheckTestCase(TestCase):
         downtime.save()
 
         data = self._get_healthcheck_data()
+        self.assertFalse(data['*']['status'])
         self.assertFalse(data['gov_uk_pay']['status'])
         self.assertEqual(data['gov_uk_pay']['downtime_end'], in_one_hour.isoformat())
 
@@ -90,9 +91,11 @@ class DowntimeHealthcheckTestCase(TestCase):
         downtime.save()
 
         data = self._get_healthcheck_data()
+        self.assertFalse(data['*']['status'])
         self.assertFalse(data['gov_uk_pay']['status'])
         self.assertNotIn('downtime_end', data['gov_uk_pay'])
 
     def test_healthcheck_returns_no_downtime(self):
         data = self._get_healthcheck_data()
+        self.assertTrue(data['*']['status'])
         self.assertTrue(data['gov_uk_pay']['status'])
