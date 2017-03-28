@@ -67,7 +67,7 @@ class UserViewSet(viewsets.ModelViewSet):
         user_key_groups = list(key_groups.intersection(user_groups))
         if len(user_key_groups) == 1:
             queryset = queryset.filter(prisonusermapping__isnull=True)
-            return queryset.filter(models.Q(groups=user_key_groups[0]) | models.Q(pk=user.pk))
+            return queryset.filter(models.Q(groups=user_key_groups[0]) | models.Q(pk=user.pk)).distinct()
 
         return User.objects.filter(pk=user.pk)
 
