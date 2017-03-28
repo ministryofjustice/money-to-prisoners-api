@@ -2,13 +2,15 @@ import math
 
 from django.conf import settings
 from django.db import models
-from django.db.models import DateTimeField, Func
+from django.db.models import DateTimeField
 from django.template import Context, loader
 from rest_framework.exceptions import NotFound
 from rest_framework.pagination import BasePagination, _get_count as get_count
 from rest_framework.response import Response
 from rest_framework.settings import api_settings
 from rest_framework.utils.urls import replace_query_param
+
+from core.models import TruncUtcDate
 
 
 class DateBasedPagination(BasePagination):
@@ -55,7 +57,7 @@ class DateBasedPagination(BasePagination):
 
         # convert field into date and select only this field
         dates = queryset.annotate(
-            converted_date=Func(page_by_date_field, function='DATE')
+            converted_date=TruncUtcDate(page_by_date_field)
         ).values_list('converted_date', flat=True)
         # count distinct dates for this field
         date_count = dates.aggregate(count=models.Count('converted_date', distinct=True))['count'] or 0
@@ -80,7 +82,7 @@ class DateBasedPagination(BasePagination):
             from_date, to_date = dates[0], dates[-1]
 
         filters = {
-            '%s__date__range' % page_by_date_field: [from_date, to_date]
+            '%s__utcdate__range' % page_by_date_field: [from_date, to_date]
         }
         return list(queryset.filter(**filters))
 

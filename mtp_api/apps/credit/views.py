@@ -197,8 +197,9 @@ class CreditViewMixin(object):
             return queryset
 
         if cashbook_client:
+            # must match bank admin UTC date boundary
             queryset = queryset.filter(
-                received_at__date__lt=timezone.now().date()
+                received_at__utcdate__lt=timezone.now().date()
             )
 
         return queryset.filter(

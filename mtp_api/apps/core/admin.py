@@ -155,6 +155,22 @@ class DateRangeFilter(BaseDateFilter):
         return _('Date in range')
 
 
+class UtcDateRangeFilter(BaseDateFilter):
+
+    def get_form_fields(self):
+        return [
+            ('%s__utcdate__gte' % self.field_path, forms.DateField(
+                widget=SidebarDateWidget(attrs={'placeholder': _('Start UTC date')})
+            )),
+            ('%s__utcdate__lte' % self.field_path, forms.DateField(
+                widget=SidebarDateWidget(attrs={'placeholder': _('End UTC date')})
+            ))
+        ]
+
+    def get_submit_label(self):
+        return _('UTC date in range')
+
+
 class DateFilter(BaseDateFilter):
 
     def get_form_fields(self):

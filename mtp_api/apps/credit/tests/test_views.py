@@ -62,9 +62,9 @@ class CreditListTestCase(
         else:
             if (logged_in_user.applicationusermapping_set.first().application.client_id ==
                     CASHBOOK_OAUTH_CLIENT_ID):
-                credits = [c for c in credits if c.received_at < timezone.make_aware(
-                    datetime.datetime.combine(timezone.now(), datetime.time.min)
-                )]
+                credits = [c for c in credits if c.received_at < datetime.datetime.combine(
+                    timezone.now().date(), datetime.time.min
+                ).replace(tzinfo=timezone.utc)]
             managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
             return [c for c in credits if c.prison in managing_prisons]
 

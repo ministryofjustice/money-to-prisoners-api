@@ -3,11 +3,14 @@ from datetime import timedelta
 from time import perf_counter as pc
 
 from crontab import CronTab
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.management import call_command, get_commands
 from django.db import models
+from django.db.models.functions.datetime import TruncBase
 from django.dispatch import receiver
 from django.utils import timezone
+from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 
 logger = logging.getLogger('mtp')
@@ -61,3 +64,21 @@ class ScheduledCommand(models.Model):
 def set_next_execution(sender, instance, **kwargs):
     if instance.next_execution is None:
         instance.update_next_execution()
+
+
+class TruncUtcDate(TruncBase):
+    lookup_name = 'utcdate'
+
+    @cached_property
+    def output_field(self):
+        return models.DateField()
+
+    def as_sql(self, compiler, connection):
+        lhs, lhs_params = compiler.compile(self.lhs)
+        tzname = 'utc' if settings.USE_TZ else None
+        sql, tz_params = connection.ops.datetime_cast_date_sql(lhs, tzname)
+        lhs_params.extend(tz_params)
+        return sql, lhs_params
+
+
+models.DateTimeField.register_lookup(TruncUtcDate)
