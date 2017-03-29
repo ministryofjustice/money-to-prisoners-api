@@ -13,6 +13,8 @@ def service_availability_view(_):
         }
         if downtime.end:
             status['downtime_end'] = downtime.end.isoformat()
+        if downtime.message_to_users:
+            status['message_to_users'] = downtime.message_to_users
         return service, status
 
     response = dict(map(service_availability, (service for service, _ in SERVICES)))
