@@ -22,8 +22,12 @@ class Downtime(models.Model):
     service = models.CharField(max_length=50, choices=SERVICES)
     start = models.DateTimeField()
     end = models.DateTimeField(null=True, blank=True)
+    message_to_users = models.CharField(max_length=255, blank=True)
 
     objects = DowntimeManager()
+
+    class Meta:
+        ordering = ('-end', '-start')
 
     def __str__(self):
         return '%s, %s -> %s' % (self.service, self.start, self.end)

@@ -84,6 +84,7 @@ class DowntimeHealthcheckTestCase(TestCase):
         self.assertFalse(data['*']['status'])
         self.assertFalse(data['gov_uk_pay']['status'])
         self.assertEqual(data['gov_uk_pay']['downtime_end'], in_one_hour.isoformat())
+        self.assertNotIn('message_to_users', data['gov_uk_pay'])
 
     def test_healthcheck_returns_active_downtime_with_no_end(self):
         one_hour_ago = timezone.now() - timedelta(hours=1)
@@ -94,6 +95,18 @@ class DowntimeHealthcheckTestCase(TestCase):
         self.assertFalse(data['*']['status'])
         self.assertFalse(data['gov_uk_pay']['status'])
         self.assertNotIn('downtime_end', data['gov_uk_pay'])
+        self.assertNotIn('message_to_users', data['gov_uk_pay'])
+
+    def test_healthcheck_returns_active_downtime_with_message_to_users(self):
+        one_hour_ago = timezone.now() - timedelta(hours=1)
+        downtime = Downtime(service=SERVICES.GOV_UK_PAY, start=one_hour_ago, end=None)
+        downtime.message_to_users = 'We’re making some changes to the site'
+        downtime.save()
+
+        data = self._get_healthcheck_data()
+        self.assertFalse(data['*']['status'])
+        self.assertFalse(data['gov_uk_pay']['status'])
+        self.assertEqual(data['gov_uk_pay']['message_to_users'], 'We’re making some changes to the site')
 
     def test_healthcheck_returns_no_downtime(self):
         data = self._get_healthcheck_data()
