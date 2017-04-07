@@ -63,7 +63,7 @@ class PaymentAdmin(admin.ModelAdmin):
     list_filter = ('status',)
     search_fields = ('uuid', 'recipient_name', 'email', 'card_number_last_digits',)
     exclude = ('credit',)
-    readonly_fields = ('credit_link',)
+    readonly_fields = ('credit_link', 'batch',)
     actions = ['display_total_amount']
 
     @add_short_description(_('credit'))
