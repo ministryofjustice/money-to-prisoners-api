@@ -53,7 +53,7 @@ class TransactionAdminInline(admin.StackedInline):
 class PaymentAdminInline(admin.StackedInline):
     model = Payment
     extra = 0
-    readonly_fields = ('uuid', 'status',)
+    readonly_fields = ('uuid', 'status', 'batch',)
 
     def has_add_permission(self, request):
         return False
@@ -108,7 +108,10 @@ class CreditAdmin(admin.ModelAdmin):
     ordering = ('-received_at',)
     date_hierarchy = 'received_at'
     inlines = (TransactionAdminInline, PaymentAdminInline, CommentAdminInline, LogAdminInline)
-    readonly_fields = ('resolution', 'reconciled', 'reviewed',)
+    readonly_fields = (
+        'resolution', 'reconciled', 'reviewed', 'blocked',
+        'sender_profile', 'prisoner_profile',
+    )
     list_filter = (
         StatusFilter,
         SourceFilter,
