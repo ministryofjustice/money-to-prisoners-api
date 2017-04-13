@@ -2,7 +2,6 @@ from django.db import migrations
 
 prefixes = ('HMP & YOI', 'HMP', 'HMYOI & RC', 'HMYOI', 'IRC')  # from Prison.re_prefixes
 name_sql = 'initcap(name)'
-name_sql = '''regexp_replace({name_sql}, ' ISIS$', ' ISIS', 'i')'''.format(name_sql=name_sql)
 for prefix in prefixes:
     name_sql = '''regexp_replace({name_sql}, '^{prefix} ', '{prefix} ', 'i')'''.format(prefix=prefix,
                                                                                        name_sql=name_sql)
