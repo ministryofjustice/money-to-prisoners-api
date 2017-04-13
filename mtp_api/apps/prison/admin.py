@@ -1,5 +1,6 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.admin import ModelAdmin
+from django.utils.translation import gettext
 
 from core.admin import DateFilter
 from prison.models import Prison, PrisonerLocation, Population, Category
@@ -20,6 +21,13 @@ class PrisonAdmin(ModelAdmin):
     list_display = ('name', 'nomis_id', 'general_ledger_code')
     list_filter = ('region', 'populations', 'categories')
     search_fields = ('nomis_id', 'general_ledger_code', 'name', 'region')
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        if obj.name.upper() == obj.short_name.upper():
+            self.message_user(request=request, level=messages.WARNING,
+                              message=gettext('Prison name does not start with a standard prefix.') +
+                              ' (%s)' % ', '.join(Prison.name_prefixes))
 
 
 @admin.register(PrisonerLocation)
