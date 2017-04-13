@@ -42,18 +42,15 @@ class Prison(TimeStampedModel):
     categories = models.ManyToManyField(Category)
     pre_approval_required = models.BooleanField(default=False)
 
-    re_prefixes = re.compile(r'^(%s)?' % '|'.join(('HMP & YOI', 'HMP', 'HMYOI & RC', 'HMYOI', 'IRC')))
+    name_prefixes = ('HMP/YOI', 'HMP', 'HMYOI/RC', 'HMYOI', 'IRC', 'STC')
+    re_prefixes = re.compile(r'^(%s)?' % (' |'.join(('HMP & YOI', 'HMYOI & RC') + name_prefixes) + ' '))
 
     class Meta:
         ordering = ('name',)
 
     @classmethod
     def shorten_name(cls, name):
-        name = name.upper()
-        name = cls.re_prefixes.sub('', name).strip()
-        if name == 'ISIS':
-            return name
-        return name.title()
+        return cls.re_prefixes.sub('', name.upper()).title()
 
     def __str__(self):
         return self.name
