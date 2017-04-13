@@ -478,14 +478,26 @@ class PrisonViewTestCase(AuthTestCaseMixin, APITestCase):
         super().setUp()
         prison_clerks, _, bank_admins, _, send_money_users, security_users = make_test_users()
         self.users = prison_clerks[0], bank_admins[0], send_money_users[0], security_users[0]
+        self.send_money_user = send_money_users[0]
+        load_random_prisoner_locations(number_of_prisoners=2 * Prison.objects.count())
 
     def test_list_prisons(self):
         url = reverse('prison-list')
         prison_set = set(Prison.objects.values_list('name', flat=True))
+        self.assertTrue(prison_set)
         for user in self.users:
             response = self.client.get(url, HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user),
                                        format='json')
             self.assertSetEqual(set(prison['name'] for prison in response.data['results']), prison_set)
+
+    def test_exclude_empty_prisons(self):
+        url = reverse('prison-list')
+        empty_prison = mommy.make(Prison, name='Empty')
+        response = self.client.get(url + '?exclude_empty_prisons=True',
+                                   HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.send_money_user),
+                                   format='json')
+        self.assertEqual(response.data['count'], Prison.objects.count() - 1)
+        self.assertNotIn(bytes(empty_prison.nomis_id, encoding='utf-8'), response.content)
 
 
 class PrisonPopulationViewTestCase(AuthTestCaseMixin, APITestCase):

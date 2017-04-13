@@ -111,6 +111,12 @@ class PrisonView(mixins.ListModelMixin, viewsets.GenericViewSet):
     serializer_class = PrisonSerializer
     queryset = Prison.objects.all()
 
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+        if self.request.GET.get('exclude_empty_prisons', '').lower() == 'true':
+            queryset = queryset.filter(nomis_id__in=PrisonerLocation.objects.values('prison'))
+        return queryset
+
 
 class PopulationView(mixins.ListModelMixin, viewsets.GenericViewSet):
     permission_classes = (IsAuthenticated,)
