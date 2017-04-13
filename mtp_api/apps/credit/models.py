@@ -34,8 +34,10 @@ class Credit(TimeStampedModel):
 
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
 
-    sender_profile = models.ForeignKey('security.SenderProfile', related_name='credits', blank=True, null=True)
-    prisoner_profile = models.ForeignKey('security.PrisonerProfile', related_name='credits', blank=True, null=True)
+    sender_profile = models.ForeignKey('security.SenderProfile', related_name='credits', blank=True, null=True,
+                                       on_delete=models.SET_NULL)
+    prisoner_profile = models.ForeignKey('security.PrisonerProfile', related_name='credits', blank=True, null=True,
+                                         on_delete=models.SET_NULL)
 
     objects = CompletedCreditManager.from_queryset(CreditQuerySet)()
     objects_all = CreditManager.from_queryset(CreditQuerySet)()
