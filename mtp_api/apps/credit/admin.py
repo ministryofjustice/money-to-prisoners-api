@@ -227,4 +227,4 @@ class CreditAdmin(admin.ModelAdmin):
 
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
-    pass
+    list_display = ('comment', 'user', 'credit',)
