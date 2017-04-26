@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from prison.models import Prison
-from .models import Credit, Comment
+from .models import Credit, Comment, ProcessingBatch
 
 
 class CreditedOnlyCreditSerializer(serializers.ModelSerializer):
@@ -128,3 +128,17 @@ class LockedCreditSerializer(CreditSerializer):
             'locked',
             'locked_at',
         )
+
+
+class ProcessingBatchSerializer(serializers.ModelSerializer):
+    active = serializers.BooleanField()
+
+    class Meta:
+        model = ProcessingBatch
+        read_only = ('user', 'active',)
+        fields = ('id', 'user', 'credits', 'created', 'active',)
+
+    def create(self, validated_data):
+        user = self.context['request'].user
+        validated_data['user'] = user
+        super().create(validated_data)

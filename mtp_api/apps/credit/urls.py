@@ -6,6 +6,7 @@ from . import views as views
 
 router = routers.DefaultRouter()
 router.register(r'comments', views.CommentView)
+router.register(r'processing_batches', views.ProcessingBatchView)
 
 urlpatterns = [
     url(r'^credits/$', csrf_exempt(views.CreditList.as_view()), name='credit-list'),

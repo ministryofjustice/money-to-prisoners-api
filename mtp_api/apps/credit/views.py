@@ -29,11 +29,12 @@ from prison.models import Prison
 from transaction.pagination import DateBasedPagination
 from . import InvalidCreditStateException
 from .constants import CREDIT_STATUS, CREDIT_SOURCE
-from .models import Credit, Comment
+from .models import Credit, Comment, ProcessingBatch
 from .permissions import CreditPermissions
 from .serializers import (
     CreditSerializer, SecurityCreditSerializer, CreditedOnlyCreditSerializer,
-    IdsCreditSerializer, LockedCreditSerializer, CommentSerializer
+    IdsCreditSerializer, LockedCreditSerializer, CommentSerializer,
+    ProcessingBatchSerializer
 )
 
 User = get_user_model()
@@ -481,3 +482,18 @@ class CommentView(
     def get_serializer(self, *args, **kwargs):
         many = kwargs.pop('many', True)
         return super().get_serializer(many=many, *args, **kwargs)
+
+
+class ProcessingBatchView(
+    mixins.CreateModelMixin, mixins.DestroyModelMixin, mixins.ListModelMixin,
+    viewsets.GenericViewSet
+):
+    queryset = ProcessingBatch.objects.all()
+    serializer_class = ProcessingBatchSerializer
+
+    permission_classes = (
+        IsAuthenticated, ActionsBasedPermissions, CashbookClientIDPermissions
+    )
+
+    def get_queryset(self):
+        return self.queryset.filter(user=self.request.user)

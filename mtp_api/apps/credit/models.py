@@ -1,10 +1,12 @@
+from datetime import timedelta
 import warnings
 
 from django.conf import settings
 from django.db import models
-from django.db.models import Q
+from django.db.models import Q, Max
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils import timezone
 from model_utils.models import TimeStampedModel
 
 from credit.constants import LOG_ACTIONS, CREDIT_RESOLUTION, CREDIT_STATUS, CREDIT_SOURCE
@@ -332,6 +334,25 @@ class Comment(TimeStampedModel):
             credit_id=self.credit.pk,
             user='<None>' if not self.user else self.user.username,
         )
+
+
+class ProcessingBatch(TimeStampedModel):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    credits = models.ManyToManyField(Credit)
+
+    class Meta:
+        ordering = ('-created',)
+        verbose_name_plural = 'processing batches'
+
+    def __str__(self):
+        return '%s %s' % (self.user.username, self.created)
+
+    def active(self):
+        last_updated = self.credits.all().aggregate(Max('modified'))['modified__max']
+        now = timezone.now()
+        if now - last_updated < timedelta(minutes=2):
+            return True
+        return False
 
 
 @receiver(post_save, sender=Credit, dispatch_uid='update_prison_for_credit')
