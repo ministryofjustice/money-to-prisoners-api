@@ -267,7 +267,14 @@ CARD_REF_CODE_BASE = 800001
 SURVEY_GIZMO_API_KEY = os.environ.get('SURVEY_GIZMO_API_KEY')
 
 PERFORMANCE_PLATFORM_API_URL = os.environ.get('PERFORMANCE_PLATFORM_API_URL', 'http://localhost/')
-PERFORMANCE_PLATFORM_API_TOKEN = os.environ.get('PERFORMANCE_PLATFORM_API_TOKEN', 'not_a_token')
+PERFORMANCE_PLATFORM_API_TOKENS = {
+    'completion-rate': os.environ.get(
+        'PERFORMANCE_PLATFORM_API_TOKEN_COMPLETION_RATE', 'not_a_token'
+    ),
+    'transactions-by-channel-type': os.environ.get(
+        'PERFORMANCE_PLATFORM_API_TOKEN_DIGITAL_TAKEUP', 'also_not_a_token'
+    ),
+}
 
 ZENDESK_BASE_URL = 'https://ministryofjustice.zendesk.com'
 ZENDESK_API_USERNAME = os.environ.get('ZENDESK_API_USERNAME', '')
