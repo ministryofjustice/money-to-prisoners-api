@@ -14,7 +14,7 @@ from credit.managers import CreditManager, CompletedCreditManager, CreditQuerySe
 from credit.signals import (
     credit_created, credit_locked, credit_unlocked, credit_credited,
     credit_refunded, credit_reconciled, credit_prisons_need_updating,
-    credit_reviewed
+    credit_reviewed, credit_set_manual
 )
 from prison.models import Prison, PrisonerLocation
 from transaction.utils import format_amount
@@ -48,13 +48,13 @@ class Credit(TimeStampedModel):
     STATUS_LOOKUP = {
         CREDIT_STATUS.LOCKED: (
             Q(owner__isnull=False) &
-            Q(resolution=CREDIT_RESOLUTION.PENDING)
+            (Q(resolution=CREDIT_RESOLUTION.PENDING) | Q(resolution=CREDIT_RESOLUTION.MANUAL))
         ),
         CREDIT_STATUS.AVAILABLE: (
             Q(blocked=False) &
             Q(prison__isnull=False) &
             Q(owner__isnull=True) &
-            Q(resolution=CREDIT_RESOLUTION.PENDING)
+            (Q(resolution=CREDIT_RESOLUTION.PENDING) | Q(resolution=CREDIT_RESOLUTION.MANUAL))
         ),
         CREDIT_STATUS.CREDITED: (
             Q(resolution=CREDIT_RESOLUTION.CREDITED)
@@ -408,6 +408,11 @@ def credit_reconciled_receiver(sender, credit, by_user, **kwargs):
 @receiver(credit_reviewed)
 def credit_reviewed_receiver(sender, credit, by_user, **kwargs):
     Log.objects.credits_reviewed([credit], by_user)
+
+
+@receiver(credit_set_manual)
+def credit_set_manual_receiver(sender, credit, by_user, **kwargs):
+    Log.objects.credits_set_manual([credit], by_user)
 
 
 @receiver(credit_prisons_need_updating)

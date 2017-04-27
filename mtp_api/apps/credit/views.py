@@ -442,6 +442,38 @@ class CreditCredits(CreditViewMixin, APIView):
         return Response(status=drf_status.HTTP_204_NO_CONTENT)
 
 
+class SetManualCredits(CreditViewMixin, APIView):
+    serializer_class = IdsCreditSerializer
+    action = 'credit'
+
+    permission_classes = (
+        IsAuthenticated, CashbookClientIDPermissions,
+        CreditPermissions
+    )
+
+    def get_serializer(self, *args, **kwargs):
+        kwargs['context'] = {
+            'request': self.request,
+            'format': self.format_kwarg,
+            'view': self
+        }
+        return self.serializer_class(*args, **kwargs)
+
+    def post(self, request, format=None):
+        deserialized = self.get_serializer(data=request.data)
+        deserialized.is_valid(raise_exception=True)
+
+        credit_ids = deserialized.data.get('credit_ids', [])
+        with transaction.atomic():
+            Credit.objects.set_manual(
+                self.get_queryset(),
+                credit_ids,
+                request.user
+            )
+
+        return Response(status=drf_status.HTTP_204_NO_CONTENT)
+
+
 class ReviewCredits(CreditViewMixin, APIView):
     serializer_class = IdsCreditSerializer
     action = 'review'

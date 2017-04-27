@@ -4,6 +4,7 @@ from extended_choices import Choices
 CREDIT_RESOLUTION = Choices(
     ('INITIAL', 'initial', _('Initial')),
     ('PENDING', 'pending', _('Pending')),
+    ('MANUAL', 'manual', _('Requires manual processing')),
     ('CREDITED', 'credited', _('Credited')),
     ('REFUNDED', 'refunded', _('Refunded'))
 )
@@ -33,4 +34,5 @@ LOG_ACTIONS = Choices(
     ('REFUNDED', 'refunded', _('Refunded')),
     ('RECONCILED', 'reconciled', _('Reconciled')),
     ('REVIEWED', 'reviewed', _('Reviewed')),
+    ('MANUAL', 'manual', _('Marked for manual processing')),
 )

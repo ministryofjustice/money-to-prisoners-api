@@ -19,7 +19,7 @@ from rest_framework import status
 from core import getattr_path
 from credit.views import CreditTextSearchFilter
 from credit.models import Credit, Log
-from credit.constants import CREDIT_STATUS, LOCK_LIMIT, LOG_ACTIONS
+from credit.constants import CREDIT_STATUS, LOCK_LIMIT, LOG_ACTIONS, CREDIT_RESOLUTION
 from credit.tests.test_base import (
     BaseCreditViewTestCase, CreditRejectsRequestsWithoutPermissionTestMixin
 )
@@ -1671,6 +1671,80 @@ class CreditCreditsTestCase(
                 credit__id__in=to_credit
             ).count(),
             len(to_credit)
+        )
+
+    def test_missing_ids(self):
+        logged_in_user = self.prison_clerks[0]
+
+        response = self.client.post(
+            self._get_url(), data={
+                'credit_ids': []
+            },
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_invalid_format(self):
+        logged_in_user = self.prison_clerks[0]
+
+        response = self.client.post(
+            self._get_url(), data={},
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class SetManualCreditsTestCase(
+    CashbookCreditRejectsRequestsWithoutPermissionTestMixin,
+    BaseCreditViewTestCase
+):
+    ENDPOINT_VERB = 'post'
+
+    def _get_url(self, **filters):
+        return reverse('setmanual-credit')
+
+    def test_set_manual_credits(self):
+        logged_in_user = self.prison_clerks[0]
+        managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
+
+        available_qs = self._get_available_credits_qs(managing_prisons, logged_in_user)
+        manual_qs = self._get_queryset(logged_in_user, managing_prisons).filter(
+            owner=logged_in_user,
+            resolution=CREDIT_RESOLUTION.MANUAL,
+            prison__in=managing_prisons
+        )
+
+        self.assertTrue(available_qs.count() > 0)
+
+        to_set_manual = list(available_qs.values_list('id', flat=True))
+
+        data = {
+            'credit_ids': to_set_manual
+        }
+        response = self.client.post(
+            self._get_url(), data=data,
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        # check db
+        self.assertEqual(
+            manual_qs.filter(id__in=to_set_manual).count(), len(to_set_manual)
+        )
+        # check logs
+        self.assertEqual(
+            Log.objects.filter(
+                user=logged_in_user,
+                action=LOG_ACTIONS.MANUAL,
+                credit__id__in=to_set_manual
+            ).count(),
+            len(to_set_manual)
         )
 
     def test_missing_ids(self):
