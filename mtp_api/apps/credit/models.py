@@ -341,18 +341,20 @@ class ProcessingBatch(TimeStampedModel):
     credits = models.ManyToManyField(Credit)
 
     class Meta:
-        ordering = ('-created',)
         verbose_name_plural = 'processing batches'
 
     def __str__(self):
         return '%s %s' % (self.user.username, self.created)
 
-    def active(self):
-        last_updated = self.credits.all().aggregate(Max('modified'))['modified__max']
+    def expired(self):
+        # indicates if the process has timed out
         now = timezone.now()
+        if now - self.created < timedelta(minutes=2):
+            return False
+        last_updated = self.credits.all().aggregate(Max('modified'))['modified__max']
         if now - last_updated < timedelta(minutes=2):
-            return True
-        return False
+            return False
+        return True
 
 
 @receiver(post_save, sender=Credit, dispatch_uid='update_prison_for_credit')

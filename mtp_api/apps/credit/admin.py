@@ -15,7 +15,7 @@ from payment.models import Payment
 from transaction.models import Transaction
 from transaction.utils import format_amount
 from .constants import CREDIT_SOURCE, CREDIT_STATUS, LOG_ACTIONS
-from .models import Credit, Log, Comment
+from .models import Credit, Log, Comment, ProcessingBatch
 
 
 class LogAdminInline(admin.TabularInline):
@@ -228,3 +228,11 @@ class CreditAdmin(admin.ModelAdmin):
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
     list_display = ('comment', 'user', 'credit',)
+
+
+@admin.register(ProcessingBatch)
+class ProcessingBatchAdmin(admin.ModelAdmin):
+    list_display = ('created', 'user', 'credit_count',)
+
+    def credit_count(self, instance):
+        return len(instance.credits.all())

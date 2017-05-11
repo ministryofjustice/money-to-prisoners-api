@@ -131,14 +131,14 @@ class LockedCreditSerializer(CreditSerializer):
 
 
 class ProcessingBatchSerializer(serializers.ModelSerializer):
-    active = serializers.BooleanField()
+    expired = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = ProcessingBatch
-        read_only = ('user', 'active',)
-        fields = ('id', 'user', 'credits', 'created', 'active',)
+        read_only_fields = ('id', 'user', 'expired', 'created',)
+        fields = ('id', 'user', 'credits', 'created', 'expired',)
 
     def create(self, validated_data):
         user = self.context['request'].user
         validated_data['user'] = user
-        super().create(validated_data)
+        return super().create(validated_data)
