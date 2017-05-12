@@ -7,8 +7,8 @@ ENV LC_CTYPE=en_GB.UTF-8
 ENV TERM=xterm
 
 # install libraries
-RUN apt-get update && apt-get install -y software-properties-common python-software-properties
-RUN apt-get update && apt-get install -y build-essential curl gettext git libpcre3-dev libpq-dev ntp
+RUN apt-get update && apt-get install -y software-properties-common python-software-properties python3-software-properties
+RUN apt-get update && apt-get install -y build-essential curl gettext git libpcre3-dev libpq-dev libffi-dev ntp
 
 # pre-create directories
 WORKDIR /app
@@ -16,6 +16,8 @@ RUN mkdir -p mtp_api/assets
 RUN mkdir -p mtp_api/assets-static
 RUN mkdir -p static
 RUN mkdir -p media
+RUN mkdir -p spooler
+RUN chown www-data:www-data spooler
 
 # install python
 RUN apt-get install -y python3-all python3-all-dev python3-setuptools python3-pip python-pip python3.4-venv
@@ -42,4 +44,4 @@ RUN venv/bin/python run.py --requirements-file requirements/docker.txt build
 EXPOSE 8080
 EXPOSE 8800
 ENV DJANGO_SETTINGS_MODULE=mtp_api.settings.docker
-CMD venv/bin/python manage.py migrate --no-input && venv/bin/uwsgi --ini conf/uwsgi/api.ini
+CMD venv/bin/python manage.py migrate --no-input && venv/bin/uwsgi --ini api.ini
