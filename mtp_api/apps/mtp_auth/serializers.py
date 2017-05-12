@@ -1,8 +1,8 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.db.transaction import atomic
-from django.utils.translation import gettext as _
-from mtp_common.email import send_email
+from django.utils.translation import gettext
+from mtp_common.tasks import send_email
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
@@ -72,7 +72,7 @@ class UserSerializer(serializers.ModelSerializer):
 
         fields['email'].validators.append(UniqueValidator(
             User.objects.all(),
-            message=_('That email address already exists')
+            message=gettext('That email address already exists')
         ))
 
         return fields
@@ -151,7 +151,7 @@ class UserSerializer(serializers.ModelSerializer):
         }
         send_email(
             new_user.email, 'mtp_auth/new_user.txt',
-            _('Your new %(service_name)s account is ready to use') % {
+            gettext('Your new %(service_name)s account is ready to use') % {
                 'service_name': role.application.name
             },
             context=context, html_template='mtp_auth/new_user.html'

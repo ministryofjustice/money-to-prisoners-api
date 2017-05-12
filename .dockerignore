@@ -25,3 +25,4 @@ mtp_api/settings/local.py
 static/
 media/
 venv/
+spooler/

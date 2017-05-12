@@ -18,6 +18,7 @@ mtp_api/assets/
 mtp_api/settings/local.py
 static/
 media/
+spooler/
 
 # selenium
 geckodriver.log
