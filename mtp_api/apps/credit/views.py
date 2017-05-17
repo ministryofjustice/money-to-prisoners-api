@@ -433,13 +433,26 @@ class CreditCredits(CreditViewMixin, APIView):
 
         credit_ids = deserialized.data.get('credit_ids', [])
         with transaction.atomic():
-            Credit.objects.credit(
+            conflict_ids = Credit.objects.credit(
                 self.get_queryset(),
                 credit_ids,
                 request.user
             )
 
-        return Response(status=drf_status.HTTP_204_NO_CONTENT)
+        if conflict_ids:
+            return Response(
+                data={
+                    'errors': [
+                        {
+                            'msg': 'Some credits were not in a valid state for this operation.',
+                            'ids': conflict_ids,
+                        }
+                    ]
+                },
+                status=drf_status.HTTP_200_OK
+            )
+        else:
+            return Response(status=drf_status.HTTP_204_NO_CONTENT)
 
 
 class SetManualCredits(CreditViewMixin, APIView):
@@ -465,13 +478,26 @@ class SetManualCredits(CreditViewMixin, APIView):
 
         credit_ids = deserialized.data.get('credit_ids', [])
         with transaction.atomic():
-            Credit.objects.set_manual(
+            conflict_ids = Credit.objects.set_manual(
                 self.get_queryset(),
                 credit_ids,
                 request.user
             )
 
-        return Response(status=drf_status.HTTP_204_NO_CONTENT)
+        if conflict_ids:
+            return Response(
+                data={
+                    'errors': [
+                        {
+                            'msg': 'Some credits were not in a valid state for this operation.',
+                            'ids': conflict_ids,
+                        }
+                    ]
+                },
+                status=drf_status.HTTP_200_OK
+            )
+        else:
+            return Response(status=drf_status.HTTP_204_NO_CONTENT)
 
 
 class ReviewCredits(CreditViewMixin, APIView):
