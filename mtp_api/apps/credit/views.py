@@ -176,6 +176,7 @@ class CreditListFilter(django_filters.FilterSet):
         name='received_at', lookup_expr='gte'
     )
     source = CreditSourceFilter()
+    pk = MultipleValueFilter(name='pk')
 
     class Meta:
         model = Credit
