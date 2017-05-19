@@ -131,6 +131,7 @@ class CreditListTestCase(
         )
         amount_pattern_checker = self._get_amount_pattern_checker(filters, noop_checker)
         valid_checker = self._get_valid_checker(filters, noop_checker)
+        pk_checker = self._get_multivalue_attribute_checker('pk', filters, noop_checker)
 
         expected_ids = [
             c.pk
@@ -151,7 +152,8 @@ class CreditListTestCase(
             prison_population_checker(c) and
             prison_category_checker(c) and
             amount_pattern_checker(c) and
-            valid_checker(c)
+            valid_checker(c) and
+            pk_checker(c)
         ]
 
         self.assertEqual(response.data['count'], len(expected_ids))
@@ -171,6 +173,11 @@ class CreditListTestCase(
             if text_search:
                 return lambda c: filters[attribute].lower() in (getattr(c, attribute) or '').lower()
             return lambda c: getattr(c, attribute) == filters[attribute]
+        return noop_checker
+
+    def _get_multivalue_attribute_checker(self, attribute, filters, noop_checker, text_search=False):
+        if filters.get(attribute):
+            return lambda c: getattr(c, attribute) in filters[attribute]
         return noop_checker
 
     def _get_sub_attribute_checker(self, filter_name, attribute_path, filters, noop_checker, text_search=False):
@@ -345,6 +352,16 @@ class CreditListWithDefaultsTestCase(CreditListTestCase):
                 search.append(credit.prison.categories.first().name)
         self._test_response_with_filters(filters={
             'prison_category': search
+        })
+
+    def test_filter_by_pks(self):
+        search = []
+        while len(search) < 2:
+            credit = random.choice(self.credits)
+            if credit.pk not in search:
+                search.append(credit.pk)
+        self._test_response_with_filters(filters={
+            'pk': search
         })
 
 
