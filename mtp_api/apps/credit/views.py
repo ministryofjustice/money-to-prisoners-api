@@ -411,7 +411,7 @@ class UnlockCredits(CreditViewMixin, APIView):
 
 
 class CreditCredits(CreditViewMixin, APIView):
-    serializer_class = IdsCreditSerializer
+    serializer_class = CreditedOnlyCreditSerializer
     action = 'credit'
 
     permission_classes = (
@@ -428,16 +428,22 @@ class CreditCredits(CreditViewMixin, APIView):
         return self.serializer_class(*args, **kwargs)
 
     def post(self, request, format=None):
-        deserialized = self.get_serializer(data=request.data)
+        deserialized = self.get_serializer(data=request.data, many=True)
         deserialized.is_valid(raise_exception=True)
 
-        credit_ids = deserialized.data.get('credit_ids', [])
+        conflict_ids = []
         with transaction.atomic():
-            conflict_ids = Credit.objects.credit(
-                self.get_queryset(),
-                credit_ids,
-                request.user
-            )
+            for credit_update in deserialized.data:
+                if credit_update['credited']:
+                    credits = Credit.objects.available().filter(
+                        pk=credit_update['id']
+                    ).select_for_update()
+                    if len(credits):
+                        credits.first().credit_prisoner(
+                            request.user, credit_update.get('nomis_transaction_id')
+                        )
+                    else:
+                        conflict_ids.append(credit_update['id'])
 
         if conflict_ids:
             return Response(

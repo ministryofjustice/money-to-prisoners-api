@@ -1648,9 +1648,10 @@ class CreditCreditsTestCase(
 
         to_credit = list(available_qs.values_list('id', flat=True))
 
-        data = {
-            'credit_ids': to_credit
-        }
+        data = [
+            {'id': c_id, 'credited': True, 'nomis_transaction_id': 'nomis%s' % c_id}
+            for c_id in to_credit
+        ]
         response = self.client.post(
             self._get_url(), data=data,
             format='json',
@@ -1663,6 +1664,8 @@ class CreditCreditsTestCase(
         self.assertEqual(
             credited_qs.filter(id__in=to_credit).count(), len(to_credit)
         )
+        for credit in credited_qs.filter(id__in=to_credit):
+            self.assertEqual(credit.nomis_transaction_id, 'nomis%s' % credit.id)
         # check logs
         self.assertEqual(
             Log.objects.filter(
@@ -1677,9 +1680,7 @@ class CreditCreditsTestCase(
         logged_in_user = self.prison_clerks[0]
 
         response = self.client.post(
-            self._get_url(), data={
-                'credit_ids': []
-            },
+            self._get_url(), data=[],
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
         )
@@ -1690,7 +1691,7 @@ class CreditCreditsTestCase(
         logged_in_user = self.prison_clerks[0]
 
         response = self.client.post(
-            self._get_url(), data={},
+            self._get_url(), data=[{}],
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
         )

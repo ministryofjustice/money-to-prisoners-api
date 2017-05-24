@@ -7,12 +7,14 @@ from .models import Credit, Comment, ProcessingBatch
 class CreditedOnlyCreditSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(required=True)
     credited = serializers.BooleanField(required=True)
+    nomis_transaction_id = serializers.CharField(required=False)
 
     class Meta:
         model = Credit
         fields = (
             'id',
             'credited',
+            'nomis_transaction_id',
         )
 
 
@@ -73,6 +75,7 @@ class CreditSerializer(serializers.ModelSerializer):
             'comments',
             'reviewed',
             'short_payment_ref',
+            'nomis_transaction_id',
         )
 
     def get_anonymous(self, obj):

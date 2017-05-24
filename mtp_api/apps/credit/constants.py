@@ -12,6 +12,7 @@ CREDIT_RESOLUTION = Choices(
 CREDIT_STATUS = Choices(
     ('AVAILABLE', 'available', _('Available')),
     ('LOCKED', 'locked', _('Locked')),
+    ('CREDIT_PENDING', 'credit_pending', _('Credit pending')),
     ('CREDITED', 'credited', _('Credited')),
     ('REFUNDED', 'refunded', _('Refunded')),
     ('REFUND_PENDING', 'refund_pending', _('Refund pending')),

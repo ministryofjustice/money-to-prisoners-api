@@ -33,6 +33,7 @@ class Credit(TimeStampedModel):
     reconciled = models.BooleanField(default=False)
     reviewed = models.BooleanField(default=False)
     blocked = models.BooleanField(default=False)
+    nomis_transaction_id = models.CharField(max_length=50, blank=True, null=True)
 
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
 
@@ -54,6 +55,11 @@ class Credit(TimeStampedModel):
             Q(blocked=False) &
             Q(prison__isnull=False) &
             Q(owner__isnull=True) &
+            (Q(resolution=CREDIT_RESOLUTION.PENDING) | Q(resolution=CREDIT_RESOLUTION.MANUAL))
+        ),
+        CREDIT_STATUS.CREDIT_PENDING: (
+            Q(blocked=False) &
+            Q(prison__isnull=False) &
             (Q(resolution=CREDIT_RESOLUTION.PENDING) | Q(resolution=CREDIT_RESOLUTION.MANUAL))
         ),
         CREDIT_STATUS.CREDITED: (
@@ -113,16 +119,16 @@ class Credit(TimeStampedModel):
             sender=self.__class__, credit=self, by_user=by_user
         )
 
-    def credit_prisoner(self, credited, by_user):
-        if credited:
-            self.resolution = CREDIT_RESOLUTION.CREDITED
-        else:
-            self.resolution = CREDIT_RESOLUTION.PENDING
+    def credit_prisoner(self, by_user, nomis_transaction_id=None):
+        self.resolution = CREDIT_RESOLUTION.CREDITED
+        self.owner = by_user
+        if nomis_transaction_id:
+            self.nomis_transaction_id = nomis_transaction_id
         self.save()
 
         credit_credited.send(
             sender=self.__class__, credit=self, by_user=by_user,
-            credited=credited
+            credited=True
         )
 
     def reconcile(self, by_user):
@@ -346,6 +352,7 @@ class ProcessingBatch(TimeStampedModel):
     def __str__(self):
         return '%s %s' % (self.user.username, self.created)
 
+    @property
     def expired(self):
         # indicates if the process has timed out
         now = timezone.now()
