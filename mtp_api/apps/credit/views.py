@@ -29,11 +29,12 @@ from prison.models import Prison
 from transaction.pagination import DateBasedPagination
 from . import InvalidCreditStateException
 from .constants import CREDIT_STATUS, CREDIT_SOURCE
-from .models import Credit, Comment
+from .models import Credit, Comment, ProcessingBatch
 from .permissions import CreditPermissions
 from .serializers import (
     CreditSerializer, SecurityCreditSerializer, CreditedOnlyCreditSerializer,
-    IdsCreditSerializer, LockedCreditSerializer, CommentSerializer
+    IdsCreditSerializer, LockedCreditSerializer, CommentSerializer,
+    ProcessingBatchSerializer
 )
 
 User = get_user_model()
@@ -410,6 +411,57 @@ class UnlockCredits(CreditViewMixin, APIView):
 
 
 class CreditCredits(CreditViewMixin, APIView):
+    serializer_class = CreditedOnlyCreditSerializer
+    action = 'credit'
+
+    permission_classes = (
+        IsAuthenticated, CashbookClientIDPermissions,
+        CreditPermissions
+    )
+
+    def get_serializer(self, *args, **kwargs):
+        kwargs['context'] = {
+            'request': self.request,
+            'format': self.format_kwarg,
+            'view': self
+        }
+        return self.serializer_class(*args, **kwargs)
+
+    def post(self, request, format=None):
+        deserialized = self.get_serializer(data=request.data, many=True)
+        deserialized.is_valid(raise_exception=True)
+
+        conflict_ids = []
+        with transaction.atomic():
+            for credit_update in deserialized.data:
+                if credit_update['credited']:
+                    credits = Credit.objects.available().filter(
+                        pk=credit_update['id']
+                    ).select_for_update()
+                    if len(credits):
+                        credits.first().credit_prisoner(
+                            request.user, credit_update.get('nomis_transaction_id')
+                        )
+                    else:
+                        conflict_ids.append(credit_update['id'])
+
+        if conflict_ids:
+            return Response(
+                data={
+                    'errors': [
+                        {
+                            'msg': 'Some credits were not in a valid state for this operation.',
+                            'ids': conflict_ids,
+                        }
+                    ]
+                },
+                status=drf_status.HTTP_200_OK
+            )
+        else:
+            return Response(status=drf_status.HTTP_204_NO_CONTENT)
+
+
+class SetManualCredits(CreditViewMixin, APIView):
     serializer_class = IdsCreditSerializer
     action = 'credit'
 
@@ -432,13 +484,26 @@ class CreditCredits(CreditViewMixin, APIView):
 
         credit_ids = deserialized.data.get('credit_ids', [])
         with transaction.atomic():
-            Credit.objects.credit(
+            conflict_ids = Credit.objects.set_manual(
                 self.get_queryset(),
                 credit_ids,
                 request.user
             )
 
-        return Response(status=drf_status.HTTP_204_NO_CONTENT)
+        if conflict_ids:
+            return Response(
+                data={
+                    'errors': [
+                        {
+                            'msg': 'Some credits were not in a valid state for this operation.',
+                            'ids': conflict_ids,
+                        }
+                    ]
+                },
+                status=drf_status.HTTP_200_OK
+            )
+        else:
+            return Response(status=drf_status.HTTP_204_NO_CONTENT)
 
 
 class ReviewCredits(CreditViewMixin, APIView):
@@ -481,3 +546,18 @@ class CommentView(
     def get_serializer(self, *args, **kwargs):
         many = kwargs.pop('many', True)
         return super().get_serializer(many=many, *args, **kwargs)
+
+
+class ProcessingBatchView(
+    mixins.CreateModelMixin, mixins.DestroyModelMixin, mixins.ListModelMixin,
+    viewsets.GenericViewSet
+):
+    queryset = ProcessingBatch.objects.all()
+    serializer_class = ProcessingBatchSerializer
+
+    permission_classes = (
+        IsAuthenticated, ActionsBasedPermissions, CashbookClientIDPermissions
+    )
+
+    def get_queryset(self):
+        return self.queryset.filter(user=self.request.user).order_by('-id')

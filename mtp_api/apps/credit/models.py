@@ -1,10 +1,12 @@
+from datetime import timedelta
 import warnings
 
 from django.conf import settings
 from django.db import models
-from django.db.models import Q
+from django.db.models import Q, Max
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils import timezone
 from model_utils.models import TimeStampedModel
 
 from credit.constants import LOG_ACTIONS, CREDIT_RESOLUTION, CREDIT_STATUS, CREDIT_SOURCE
@@ -12,7 +14,7 @@ from credit.managers import CreditManager, CompletedCreditManager, CreditQuerySe
 from credit.signals import (
     credit_created, credit_locked, credit_unlocked, credit_credited,
     credit_refunded, credit_reconciled, credit_prisons_need_updating,
-    credit_reviewed
+    credit_reviewed, credit_set_manual
 )
 from prison.models import Prison, PrisonerLocation
 from transaction.utils import format_amount
@@ -31,6 +33,7 @@ class Credit(TimeStampedModel):
     reconciled = models.BooleanField(default=False)
     reviewed = models.BooleanField(default=False)
     blocked = models.BooleanField(default=False)
+    nomis_transaction_id = models.CharField(max_length=50, blank=True, null=True)
 
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
 
@@ -46,13 +49,18 @@ class Credit(TimeStampedModel):
     STATUS_LOOKUP = {
         CREDIT_STATUS.LOCKED: (
             Q(owner__isnull=False) &
-            Q(resolution=CREDIT_RESOLUTION.PENDING)
+            (Q(resolution=CREDIT_RESOLUTION.PENDING) | Q(resolution=CREDIT_RESOLUTION.MANUAL))
         ),
         CREDIT_STATUS.AVAILABLE: (
             Q(blocked=False) &
             Q(prison__isnull=False) &
             Q(owner__isnull=True) &
-            Q(resolution=CREDIT_RESOLUTION.PENDING)
+            (Q(resolution=CREDIT_RESOLUTION.PENDING) | Q(resolution=CREDIT_RESOLUTION.MANUAL))
+        ),
+        CREDIT_STATUS.CREDIT_PENDING: (
+            Q(blocked=False) &
+            Q(prison__isnull=False) &
+            (Q(resolution=CREDIT_RESOLUTION.PENDING) | Q(resolution=CREDIT_RESOLUTION.MANUAL))
         ),
         CREDIT_STATUS.CREDITED: (
             Q(resolution=CREDIT_RESOLUTION.CREDITED)
@@ -111,16 +119,16 @@ class Credit(TimeStampedModel):
             sender=self.__class__, credit=self, by_user=by_user
         )
 
-    def credit_prisoner(self, credited, by_user):
-        if credited:
-            self.resolution = CREDIT_RESOLUTION.CREDITED
-        else:
-            self.resolution = CREDIT_RESOLUTION.PENDING
+    def credit_prisoner(self, by_user, nomis_transaction_id=None):
+        self.resolution = CREDIT_RESOLUTION.CREDITED
+        self.owner = by_user
+        if nomis_transaction_id:
+            self.nomis_transaction_id = nomis_transaction_id
         self.save()
 
         credit_credited.send(
             sender=self.__class__, credit=self, by_user=by_user,
-            credited=credited
+            credited=True
         )
 
     def reconcile(self, by_user):
@@ -334,6 +342,28 @@ class Comment(TimeStampedModel):
         )
 
 
+class ProcessingBatch(TimeStampedModel):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    credits = models.ManyToManyField(Credit)
+
+    class Meta:
+        verbose_name_plural = 'processing batches'
+
+    def __str__(self):
+        return '%s %s' % (self.user.username, self.created)
+
+    @property
+    def expired(self):
+        # indicates if the process has timed out
+        now = timezone.now()
+        if now - self.created < timedelta(minutes=2):
+            return False
+        last_updated = self.credits.all().aggregate(Max('modified'))['modified__max']
+        if now - last_updated < timedelta(minutes=2):
+            return False
+        return True
+
+
 @receiver(post_save, sender=Credit, dispatch_uid='update_prison_for_credit')
 def update_prison_for_credit(sender, instance, created, *args, **kwargs):
     if (created and
@@ -387,6 +417,11 @@ def credit_reconciled_receiver(sender, credit, by_user, **kwargs):
 @receiver(credit_reviewed)
 def credit_reviewed_receiver(sender, credit, by_user, **kwargs):
     Log.objects.credits_reviewed([credit], by_user)
+
+
+@receiver(credit_set_manual)
+def credit_set_manual_receiver(sender, credit, by_user, **kwargs):
+    Log.objects.credits_set_manual([credit], by_user)
 
 
 @receiver(credit_prisons_need_updating)

@@ -14,6 +14,9 @@ class CreditQuerySet(models.QuerySet):
     def locked(self):
         return self.filter(self.model.STATUS_LOOKUP[CREDIT_STATUS.LOCKED])
 
+    def credit_pending(self):
+        return self.filter(self.model.STATUS_LOOKUP[CREDIT_STATUS.CREDIT_PENDING])
+
     def credited(self):
         return self.filter(self.model.STATUS_LOOKUP[CREDIT_STATUS.CREDITED])
 
@@ -122,19 +125,18 @@ class CreditManager(models.Manager):
         to_update.update(resolution=CREDIT_RESOLUTION.CREDITED)
 
     @atomic
-    def credit(self, queryset, credit_ids, user):
+    def set_manual(self, queryset, credit_ids, user):
         to_update = queryset.filter(
             resolution=CREDIT_RESOLUTION.PENDING,
-            pk__in=credit_ids,
+            pk__in=credit_ids
         ).select_for_update()
 
         ids_to_update = [c.id for c in to_update]
         conflict_ids = set(credit_ids) - set(ids_to_update)
 
         from .models import Log
-        Log.objects.credits_credited(to_update, user)
-        to_update.update(resolution=CREDIT_RESOLUTION.CREDITED, owner=user)
-
+        Log.objects.credits_set_manual(to_update, user)
+        to_update.update(resolution=CREDIT_RESOLUTION.MANUAL, owner=user)
         return sorted(conflict_ids)
 
     @atomic
@@ -203,6 +205,9 @@ class LogManager(models.Manager):
 
     def credits_reviewed(self, credits, by_user):
         self._log_action(LOG_ACTIONS.REVIEWED, credits, by_user)
+
+    def credits_set_manual(self, credits, by_user):
+        self._log_action(LOG_ACTIONS.MANUAL, credits, by_user)
 
 
 class CreditingTimeManager(models.Manager):

@@ -1,18 +1,20 @@
 from rest_framework import serializers
 
 from prison.models import Prison
-from .models import Credit, Comment
+from .models import Credit, Comment, ProcessingBatch
 
 
 class CreditedOnlyCreditSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(required=True)
     credited = serializers.BooleanField(required=True)
+    nomis_transaction_id = serializers.CharField(required=False)
 
     class Meta:
         model = Credit
         fields = (
             'id',
             'credited',
+            'nomis_transaction_id',
         )
 
 
@@ -73,6 +75,7 @@ class CreditSerializer(serializers.ModelSerializer):
             'comments',
             'reviewed',
             'short_payment_ref',
+            'nomis_transaction_id',
         )
 
     def get_anonymous(self, obj):
@@ -128,3 +131,17 @@ class LockedCreditSerializer(CreditSerializer):
             'locked',
             'locked_at',
         )
+
+
+class ProcessingBatchSerializer(serializers.ModelSerializer):
+    expired = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = ProcessingBatch
+        read_only_fields = ('id', 'user', 'expired', 'created',)
+        fields = ('id', 'user', 'credits', 'created', 'expired',)
+
+    def create(self, validated_data):
+        user = self.context['request'].user
+        validated_data['user'] = user
+        return super().create(validated_data)
