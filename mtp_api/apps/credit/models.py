@@ -208,7 +208,10 @@ class Credit(TimeStampedModel):
     @property
     def sender_name(self):
         if hasattr(self, 'transaction'):
-            return self.transaction.sender_name
+            if self.transaction.reference_in_sender_field:
+                return self.transaction.reference
+            else:
+                return self.transaction.sender_name
         elif hasattr(self, 'payment'):
             return self.payment.cardholder_name
 
