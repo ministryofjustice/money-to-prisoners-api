@@ -435,7 +435,7 @@ class CreditCredits(CreditViewMixin, APIView):
         with transaction.atomic():
             for credit_update in deserialized.data:
                 if credit_update['credited']:
-                    credits = Credit.objects.available().filter(
+                    credits = Credit.objects.credit_pending().filter(
                         pk=credit_update['id']
                     ).select_for_update()
                     if len(credits):
