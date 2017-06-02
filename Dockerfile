@@ -29,7 +29,7 @@ RUN curl -sL https://deb.nodesource.com/setup_7.x | bash -
 RUN apt-get install -y nodejs
 RUN npm set progress=false
 RUN npm cache clean
-RUN curl -L https://npmjs.org/install.sh | bash  # npm -g install npm fails currently
+RUN curl -L https://npmjs.org/install.sh | npm_install=4.6.1 bash  # npm -g install npm fails currently
 RUN [ -e /usr/bin/node ] || ln -s /usr/bin/nodejs /usr/bin/node
 
 # cache python packages, unless requirements change
