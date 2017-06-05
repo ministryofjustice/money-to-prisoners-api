@@ -19,6 +19,7 @@ npm-debug.log
 Dockerfile
 docker-compose.yml
 package.json
+package-lock.json
 webpack.config.js
 mtp_api/assets/
 mtp_api/settings/local.py
