@@ -1,11 +1,23 @@
 from django import forms
-from django.db.models import Q
+from django.db import models
 from django.utils import six
 from django.utils.dateparse import parse_datetime
 from django.utils.formats import get_format
 from django.utils.functional import lazy
 import django_filters
 from rest_framework.filters import OrderingFilter
+
+
+class ValueMatchesTransform(models.Transform):
+    output_field = models.BooleanField()
+
+    def __init__(self, value, *expressions, **extra):
+        super().__init__(*expressions, **extra)
+        self.value = value
+
+    def as_sql(self, compiler, connection):
+        lhs, params = compiler.compile(self.lhs)
+        return '(%s = %%s)' % lhs, params + [self.value]
 
 
 class MultipleFieldCharFilter(django_filters.CharFilter):
@@ -28,12 +40,12 @@ class MultipleFieldCharFilter(django_filters.CharFilter):
         if value in ([], (), {}, None, ''):
             return qs
 
-        q = Q()
+        q = models.Q()
         for n in set(self.name):
             if self.conjoined:
                 qs = self.get_method(qs)(**{'%s__%s' % (n, lookup): value})
             else:
-                q |= Q(**{'%s__%s' % (n, lookup): value})
+                q |= models.Q(**{'%s__%s' % (n, lookup): value})
 
         if self.distinct:
             return self.get_method(qs)(q).distinct()
@@ -100,6 +112,15 @@ class SafeOrderingFilter(OrderingFilter):
         if ordering and 'id' not in ordering:
             return list(ordering) + ['id']
         return ordering
+
+
+class CreditStatusOrderingFilter(SafeOrderingFilter):
+    def filter_queryset(self, request, queryset, view):
+        queryset = super().filter_queryset(request, queryset, view)
+        if request.query_params.get('credited_last') in ('true', 'True', True):
+            queryset = queryset.annotate(is_credited=ValueMatchesTransform('credited', models.F('resolution')))
+            queryset.query.order_by.insert(0, 'is_credited')
+        return queryset
 
 
 class MultipleValueField(forms.MultipleChoiceField):

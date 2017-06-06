@@ -771,6 +771,7 @@ class CreditListInvalidValuesTestCase(CreditListTestCase):
 
 class CreditListOrderingTestCase(CreditListTestCase):
     transaction_batch = 200
+    ordering_fields = ['received_at', 'amount', 'prisoner_number', 'prisoner_name']
 
     @classmethod
     def setUpClass(cls):
@@ -798,7 +799,7 @@ class CreditListOrderingTestCase(CreditListTestCase):
 
     @classmethod
     def add_test_methods(cls):
-        for ordering_field in ['received_at', 'amount', 'prisoner_number', 'prisoner_name']:
+        for ordering_field in cls.ordering_fields:
             cls.add_test_method(ordering_field)
 
     @classmethod
@@ -838,6 +839,39 @@ class CreditListOrderingTestCase(CreditListTestCase):
                 self.assertGreaterEqual(item[ordering], last_item[ordering])
             last_item = item
         return response
+
+    def test_ordering_with_credited_last(self):
+        ordering = random.choice(self.ordering_fields)
+        if random.random() >= 0.5:
+            ordering = '-' + ordering
+            ordering_assertion = self.assertGreaterEqual
+        else:
+            ordering_assertion = self.assertLessEqual
+        url = self._get_url(ordering=ordering, credited_last='True')
+        response = self.client.get(
+            url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.logged_in_user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data['results']
+        if len(results) < 2:
+            print('Cannot test ordering on a list of fewer than 2 results')
+            return
+        found_first_credited = False
+        last_credit = None
+        for credit in results:
+            if credit['resolution'] == 'credited':
+                found_first_credited = True
+                last_credit = None
+            if found_first_credited:
+                self.assertTrue(credit['credited_at'])
+                self.assertEqual(credit['resolution'], 'credited')
+            else:
+                self.assertIsNone(credit['credited_at'])
+                self.assertNotEqual(credit['resolution'], 'credited')
+            if last_credit is not None:
+                ordering_assertion(last_credit[ordering], credit[ordering])
+            last_credit = credit
 
 
 CreditListOrderingTestCase.add_test_methods()

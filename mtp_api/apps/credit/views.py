@@ -16,7 +16,7 @@ from rest_framework.reverse import reverse
 
 from core.filters import (
     BlankStringFilter, StatusChoiceFilter, IsoDateTimeFilter,
-    MultipleFieldCharFilter, SafeOrderingFilter, MultipleValueFilter
+    MultipleFieldCharFilter, CreditStatusOrderingFilter, MultipleValueFilter
 )
 from core.permissions import ActionsBasedPermissions
 from mtp_auth.models import PrisonUserMapping
@@ -189,7 +189,7 @@ class CreditListFilter(django_filters.FilterSet):
         }
 
 
-class CreditViewMixin(object):
+class CreditViewMixin:
 
     def get_queryset(self):
         queryset = Credit.objects.all()
@@ -210,7 +210,7 @@ class CreditViewMixin(object):
 
 
 class GetCredits(CreditViewMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
-    filter_backends = (filters.DjangoFilterBackend, SafeOrderingFilter)
+    filter_backends = (filters.DjangoFilterBackend, CreditStatusOrderingFilter)
     filter_class = CreditListFilter
     ordering_fields = ('created', 'received_at', 'amount',
                        'prisoner_number', 'prisoner_name')
