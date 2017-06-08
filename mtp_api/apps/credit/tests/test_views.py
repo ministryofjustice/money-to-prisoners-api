@@ -10,7 +10,7 @@ from django.core.urlresolvers import reverse
 from django.db import connection
 from django.utils import timezone
 from django.utils.crypto import get_random_string
-from django.utils.dateparse import parse_datetime
+from django.utils.dateparse import parse_datetime, parse_date
 from django.utils.dateformat import format as format_date
 from django.utils.timezone import localtime
 from mtp_common.test_utils import silence_logger
@@ -19,11 +19,12 @@ from rest_framework import status
 from core import getattr_path
 from credit.views import CreditTextSearchFilter
 from credit.models import Credit, Log
-from credit.constants import CREDIT_STATUS, LOCK_LIMIT, LOG_ACTIONS, CREDIT_RESOLUTION
+from credit.constants import (
+    CREDIT_STATUS, LOCK_LIMIT, LOG_ACTIONS, CREDIT_RESOLUTION
+)
 from credit.tests.test_base import (
     BaseCreditViewTestCase, CreditRejectsRequestsWithoutPermissionTestMixin
 )
-from mtp_auth.constants import CASHBOOK_OAUTH_CLIENT_ID
 from mtp_auth.models import PrisonUserMapping
 from prison.models import Prison
 from transaction.tests.utils import generate_transactions
@@ -53,20 +54,6 @@ class CreditListTestCase(
         return '{url}?{filters}'.format(
             url=url, filters=urllib.parse.urlencode(filters, doseq=True)
         )
-
-    def _get_managed_prison_credits(self, logged_in_user=None):
-        credits = self.credits
-        logged_in_user = logged_in_user or self._get_authorised_user()
-        if logged_in_user.has_perm('credit.view_any_credit'):
-            return credits
-        else:
-            if (logged_in_user.applicationusermapping_set.first().application.client_id ==
-                    CASHBOOK_OAUTH_CLIENT_ID):
-                credits = [c for c in credits if c.received_at < datetime.datetime.combine(
-                    timezone.now().date(), datetime.time.min
-                ).replace(tzinfo=timezone.utc)]
-            managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
-            return [c for c in credits if c.prison in managing_prisons]
 
     def _get_invalid_credits(self):
         return [c for c in self.credits if c.prison is None]
@@ -1810,3 +1797,68 @@ class ReviewCreditTestCase(
         self.assertEqual(len(reviewed_logs), len(reviewed))
         for log in reviewed_logs:
             self.assertTrue(log.credit.id in reviewed)
+
+
+class CreditsGroupedByCreditedListTestCase(
+    CashbookCreditRejectsRequestsWithoutPermissionTestMixin,
+    BaseCreditViewTestCase
+):
+    ENDPOINT_VERB = 'get'
+
+    def _get_authorised_user(self):
+        return self.prison_clerks[0]
+
+    def _get_url(self):
+        return reverse('credit-processed-list')
+
+    def _get_credits_grouped_by_credited_list(self, filters={}):
+        logged_in_user = self._get_authorised_user()
+
+        response = self.client.get(
+            self._get_url(),
+            filters,
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
+        )
+        return response
+
+    def test_credits_grouped_by_credited_list(self):
+        response = self._get_credits_grouped_by_credited_list()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        credits = [
+            c for c in self._get_managed_prison_credits()
+            if c.resolution == CREDIT_RESOLUTION.CREDITED
+        ]
+        for group in response.data['results']:
+            total = 0
+            count = 0
+            for credit in credits:
+                for log in Log.objects.filter(credit=credit):
+                    if (log.action == LOG_ACTIONS.CREDITED and
+                            log.created.date() == parse_date(group['logged_at']) and
+                            log.user.id == group['owner']):
+                        total += credit.amount
+                        count += 1
+                        break
+            self.assertEqual(count, group['count'])
+            self.assertEqual(total, group['total'])
+
+    def test_credits_grouped_by_credited_list_filtered_by_date(self):
+        start_date = datetime.date.today() - datetime.timedelta(days=2)
+        end_date = datetime.date.today() - datetime.timedelta(days=1)
+        response = self._get_credits_grouped_by_credited_list({
+            'logged_at__gte': start_date.isoformat(),
+            'logged_at__lt': end_date.isoformat()
+        })
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        for group in response.data['results']:
+            self.assertGreaterEqual(
+                parse_date(group['logged_at']),
+                start_date
+            )
+            self.assertLess(
+                parse_date(group['logged_at']),
+                end_date
+            )

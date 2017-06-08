@@ -1,7 +1,11 @@
+from django.contrib.auth import get_user_model
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from prison.models import Prison
 from .models import Credit, Comment, ProcessingBatch
+
+User = get_user_model()
 
 
 class CreditedOnlyCreditSerializer(serializers.ModelSerializer):
@@ -145,3 +149,18 @@ class ProcessingBatchSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         validated_data['user'] = user
         return super().create(validated_data)
+
+
+class CreditsGroupedByCreditedSerializer(serializers.Serializer):
+    logged_at = serializers.DateField()
+    owner = serializers.IntegerField()
+    owner_name = serializers.SerializerMethodField()
+    count = serializers.IntegerField()
+    total = serializers.IntegerField()
+    comment_count = serializers.IntegerField()
+
+    def get_owner_name(self, instance):
+        try:
+            return User.objects.get(pk=instance['owner']).get_full_name()
+        except User.DoesNotExist:
+            return _('Unknown')
