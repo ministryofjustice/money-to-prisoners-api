@@ -110,3 +110,13 @@ class MultipleValueField(forms.MultipleChoiceField):
 
 class MultipleValueFilter(django_filters.MultipleChoiceFilter):
     field_class = MultipleValueField
+
+
+def annotate_filter(filter_, annotations):
+    base_filter = filter_.filter
+
+    def annotated_filter(qs, value):
+        return base_filter(qs.annotate(**annotations), value)
+
+    filter_.filter = annotated_filter
+    return filter_

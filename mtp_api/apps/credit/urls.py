@@ -16,5 +16,6 @@ urlpatterns = [
     url(r'^credits/actions/review/$', views.ReviewCredits.as_view(), name='credit-review'),
     url(r'^credits/actions/credit/$', views.CreditCredits.as_view(), name='credit-credit'),
     url(r'^credits/actions/setmanual/$', views.SetManualCredits.as_view(), name='setmanual-credit'),
+    url(r'^credits/processed/$', views.CreditsGroupedByCreditedList.as_view(), name='credit-processed-list'),
     url(r'^credits/', include(router.urls)),
 ]

@@ -8,6 +8,7 @@ from rest_framework.test import APITestCase
 
 from core.tests.utils import make_test_users
 from mtp_auth.constants import CASHBOOK_OAUTH_CLIENT_ID
+from mtp_auth.models import PrisonUserMapping
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from payment.tests.utils import generate_payments, latest_payment_date
 from prison.models import Prison
@@ -89,6 +90,20 @@ class BaseCreditViewTestCase(AuthTestCaseMixin, APITestCase):
 
     def _get_latest_date(self):
         return Credit.objects.all().aggregate(models.Max('received_at'))['received_at__max']
+
+    def _get_managed_prison_credits(self, logged_in_user=None):
+        credits = self.credits
+        logged_in_user = logged_in_user or self._get_authorised_user()
+        if logged_in_user.has_perm('credit.view_any_credit'):
+            return credits
+        else:
+            if (logged_in_user.applicationusermapping_set.first().application.client_id ==
+                    CASHBOOK_OAUTH_CLIENT_ID):
+                credits = [c for c in credits if c.received_at < datetime.combine(
+                    timezone.now().date(), time.min
+                ).replace(tzinfo=timezone.utc)]
+            managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
+            return [c for c in credits if c.prison in managing_prisons]
 
 
 class CreditRejectsRequestsWithoutPermissionTestMixin:

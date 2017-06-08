@@ -16,8 +16,10 @@ from rest_framework.reverse import reverse
 
 from core.filters import (
     BlankStringFilter, StatusChoiceFilter, IsoDateTimeFilter,
-    MultipleFieldCharFilter, SafeOrderingFilter, MultipleValueFilter
+    MultipleFieldCharFilter, SafeOrderingFilter, MultipleValueFilter,
+    annotate_filter
 )
+from core.models import TruncUtcDate
 from core.permissions import ActionsBasedPermissions
 from mtp_auth.models import PrisonUserMapping
 from mtp_auth.permissions import (
@@ -28,13 +30,13 @@ from mtp_auth.permissions import (
 from prison.models import Prison
 from transaction.pagination import DateBasedPagination
 from . import InvalidCreditStateException
-from .constants import CREDIT_STATUS, CREDIT_SOURCE
+from .constants import CREDIT_STATUS, CREDIT_SOURCE, LOG_ACTIONS
 from .models import Credit, Comment, ProcessingBatch
 from .permissions import CreditPermissions
 from .serializers import (
     CreditSerializer, SecurityCreditSerializer, CreditedOnlyCreditSerializer,
     IdsCreditSerializer, LockedCreditSerializer, CommentSerializer,
-    ProcessingBatchSerializer
+    ProcessingBatchSerializer, CreditsGroupedByCreditedSerializer
 )
 
 User = get_user_model()
@@ -178,6 +180,14 @@ class CreditListFilter(django_filters.FilterSet):
     )
     source = CreditSourceFilter()
     pk = MultipleValueFilter(name='pk')
+    logged_at__lt = annotate_filter(
+        IsoDateTimeFilter(name='logged_at', lookup_expr='lt'),
+        {'logged_at': TruncUtcDate('log__created')}
+    )
+    logged_at__gte = annotate_filter(
+        IsoDateTimeFilter(name='logged_at', lookup_expr='gte'),
+        {'logged_at': TruncUtcDate('log__created')}
+    )
 
     class Meta:
         model = Credit
@@ -186,6 +196,7 @@ class CreditListFilter(django_filters.FilterSet):
             'amount': ['exact', 'lte', 'gte'],
             'reviewed': ['exact'],
             'resolution': ['exact'],
+            'log__action': ['exact']
         }
 
 
@@ -284,6 +295,34 @@ class MarkCreditedCredits(CreditViewMixin, generics.GenericAPIView):
             )
 
         return Response(status=drf_status.HTTP_204_NO_CONTENT)
+
+
+class CreditsGroupedByCreditedList(CreditViewMixin, generics.ListAPIView):
+    serializer_class = CreditsGroupedByCreditedSerializer
+    permission_classes = (
+        IsAuthenticated, CashbookClientIDPermissions,
+        CreditPermissions
+    )
+    filter_backends = (filters.DjangoFilterBackend,)
+    filter_class = CreditListFilter
+    action = 'list'
+
+    def get_queryset(self):
+        return super().get_queryset().filter(
+            Credit.STATUS_LOOKUP[CREDIT_STATUS.CREDITED],
+            log__action=LOG_ACTIONS.CREDITED
+        )
+
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+
+        queryset = queryset.annotate(logged_at=TruncUtcDate('log__created'))
+        queryset = queryset.values('logged_at', 'owner').annotate(
+            count=models.Count('*'), total=models.Sum('amount'),
+            comment_count=models.Count('comments')
+        ).order_by('-logged_at')
+
+        return queryset
 
 
 class CreditList(View):
