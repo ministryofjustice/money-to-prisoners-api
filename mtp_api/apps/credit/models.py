@@ -250,8 +250,8 @@ class Credit(TimeStampedModel):
     def credited_at(self):
         if not self.resolution == CREDIT_RESOLUTION.CREDITED:
             return None
-        log_action = self.log_set.filter(action=LOG_ACTIONS.CREDITED) \
-            .order_by('-created').first()
+        log_action = self.log_set.filter(
+            action=LOG_ACTIONS.CREDITED).order_by('-created').first()
         if not log_action:
             warnings.warn('Credit model %s is missing a credited log' % self.pk)
             return None
@@ -261,12 +261,19 @@ class Credit(TimeStampedModel):
     def refunded_at(self):
         if not self.resolution == CREDIT_RESOLUTION.REFUNDED:
             return None
-        log_action = self.log_set.filter(action=LOG_ACTIONS.REFUNDED) \
-            .order_by('-created').first()
+        log_action = self.log_set.filter(
+            action=LOG_ACTIONS.REFUNDED).order_by('-created').first()
         if not log_action:
             warnings.warn('Credit model %s is missing a refunded log' % self.pk)
             return None
         return log_action.created
+
+    @property
+    def set_manual_at(self):
+        log_action = self.log_set.filter(
+            action=LOG_ACTIONS.MANUAL).order_by('-created').first()
+        if log_action:
+            return log_action.created
 
     @property
     def reconciled_at(self):
