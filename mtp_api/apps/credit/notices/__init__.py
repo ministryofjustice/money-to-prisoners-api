@@ -1,0 +1,82 @@
+import pathlib
+
+from django.conf import settings
+from django.utils.translation import gettext as _
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import mm
+from reportlab.pdfbase.pdfmetrics import registerFont
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfgen.canvas import Canvas
+
+assets_path = pathlib.Path(__file__).parent.absolute()
+
+
+def get_asset_path(path):
+    return str(assets_path / path)
+
+
+registerFont(TTFont('NTA-Light', get_asset_path('gds-light.ttf')))
+registerFont(TTFont('NTA-Bold', get_asset_path('gds-bold.ttf')))
+
+
+class NoticeBundle:
+    """
+    Generic tool for creating PDF bundles
+    """
+    page_width = 210
+    page_height = 297
+
+    def __init__(self):
+        self.canvas = None  # type: Canvas
+        self.text_y_adjust = 0
+
+    @property
+    def author(self):
+        return _('Her Majesty’s Prison and Probation Service')
+
+    @property
+    def creator(self):
+        return 'MTP-%s/%s/%s' % (settings.APP, settings.ENVIRONMENT, settings.APP_GIT_COMMIT)
+
+    @property
+    def title(self):
+        raise NotImplementedError
+
+    @property
+    def subject(self):
+        return _('Prisoner money')
+
+    def render(self, path):
+        canvas = Canvas(path, pagesize=A4, pageCompression=1)
+        canvas.setTitle(self.title)
+        canvas.setSubject(self.subject)
+        canvas.setAuthor(self.author)
+        canvas.setCreator(self.creator)
+        canvas._doc.info.producer = self.creator
+        self.canvas = canvas
+        self.render_pages()
+        self.canvas.save()
+
+    def render_pages(self):
+        raise NotImplementedError
+
+    def change_font(self, font, size):
+        self.text_y_adjust = size / 4
+        self.canvas.setFont(font, size)
+
+    def text_width(self, text):
+        return self.canvas.stringWidth(text) / mm
+
+    def draw_text(self, x, y, text, align='L'):
+        x *= mm
+        if align == 'R':
+            x -= self.canvas.stringWidth(text)
+        elif align == 'C':
+            x -= self.canvas.stringWidth(text) / 2
+        self.canvas.drawString(x, (self.page_height - y) * mm - self.text_y_adjust, text)
+
+    def draw_image(self, path, x, y, w, h):
+        self.canvas.drawImage(path, x * mm, (self.page_height - y - h) * mm, width=w * mm, height=h * mm)
+
+    def draw_line(self, x1, y1, x2, y2):
+        self.canvas.line(x1 * mm, (self.page_height - y1) * mm, x2 * mm, (self.page_height - y2) * mm)
