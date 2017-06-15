@@ -76,3 +76,14 @@ class PrisonerLocation(TimeStampedModel):
 
     def __str__(self):
         return '%s (%s)' % (self.prisoner_name, self.prisoner_number)
+
+
+class PrisonerCreditNoticeEmail(models.Model):
+    prison = models.OneToOneField(Prison)
+    email = models.EmailField()
+
+    class Meta:
+        ordering = ('prison',)
+
+    def __str__(self):
+        return '%s <%s>' % (self.prison.name, self.email)
