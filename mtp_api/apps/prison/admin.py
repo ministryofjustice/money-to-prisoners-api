@@ -3,7 +3,7 @@ from django.contrib.admin import ModelAdmin
 from django.utils.translation import gettext
 
 from core.admin import DateFilter
-from prison.models import Prison, PrisonerLocation, Population, Category
+from prison.models import Prison, PrisonerLocation, Population, Category, PrisonerCreditNoticeEmail
 
 
 @admin.register(Population)
@@ -36,3 +36,8 @@ class PrisonerLocationAdmin(ModelAdmin):
     list_display = ('prisoner_name', 'prisoner_number', 'prisoner_dob', 'prison')
     list_filter = ('prison', ('prisoner_dob', DateFilter))
     search_fields = ('prisoner_name', 'prisoner_number')
+
+
+@admin.register(PrisonerCreditNoticeEmail)
+class PrisonerCreditNoticeEmailAdmin(ModelAdmin):
+    list_display = ('prison', 'email')
