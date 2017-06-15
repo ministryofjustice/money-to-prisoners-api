@@ -49,6 +49,7 @@ class CreditSerializer(serializers.ModelSerializer):
     owner_name = serializers.CharField(read_only=True)
     credited_at = serializers.DateTimeField(read_only=True)
     refunded_at = serializers.DateTimeField(read_only=True)
+    set_manual_at = serializers.DateTimeField(read_only=True)
     source = serializers.CharField(read_only=True)
     intended_recipient = serializers.CharField(read_only=True)
     anonymous = serializers.SerializerMethodField()
@@ -72,6 +73,7 @@ class CreditSerializer(serializers.ModelSerializer):
             'resolution',
             'credited_at',
             'refunded_at',
+            'set_manual_at',
             'source',
             'intended_recipient',
             'anonymous',
