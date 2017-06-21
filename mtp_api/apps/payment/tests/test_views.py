@@ -161,7 +161,7 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         self.prison_clerks, _, _, _, self.send_money_users, _ = make_test_users()
         load_random_prisoner_locations(2)
 
-    def _test_update_status(self, new_outcome, received_at=None):
+    def _test_update_payment(self, **update_fields):
         user = self.send_money_users[0]
 
         new_payment = {
@@ -179,21 +179,15 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         )
         payment_uuid = response.data['uuid']
 
-        update = {
-            'status': new_outcome
-        }
-        if received_at is not None:
-            update['received_at'] = received_at.isoformat()
-
         response = self.client.patch(
             reverse('payment-detail', args=[payment_uuid]),
-            data=update, format='json',
+            data=update_fields, format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
         return response
 
     def test_update_status_taken_succeeds(self):
-        response = self._test_update_status(PAYMENT_STATUS.TAKEN)
+        response = self._test_update_payment(status=PAYMENT_STATUS.TAKEN)
 
         self.assertEqual(response.status_code, http_status.HTTP_200_OK)
         self.assertTrue(response.data['uuid'] is not None)
@@ -210,7 +204,9 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
 
     def test_update_received_at_succeeds(self):
         received_at = datetime(2016, 9, 22, 23, 12, tzinfo=timezone.utc)
-        response = self._test_update_status(PAYMENT_STATUS.TAKEN, received_at=received_at)
+        response = self._test_update_payment(
+            status=PAYMENT_STATUS.TAKEN, received_at=received_at.isoformat()
+        )
 
         self.assertEqual(response.status_code, http_status.HTTP_200_OK)
         self.assertTrue(response.data['uuid'] is not None)
@@ -226,7 +222,7 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(Credit.objects.all()[0].received_at, received_at)
 
     def test_update_status_failed_succeeds(self):
-        response = self._test_update_status(PAYMENT_STATUS.FAILED)
+        response = self._test_update_payment(status=PAYMENT_STATUS.FAILED)
 
         self.assertEqual(response.status_code, http_status.HTTP_200_OK)
         self.assertTrue(response.data['uuid'] is not None)
@@ -241,7 +237,7 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(Credit.objects.all().count(), 0)
 
     def test_update_status_failed_after_taken_fails(self):
-        first_response = self._test_update_status(PAYMENT_STATUS.TAKEN)
+        first_response = self._test_update_payment(status=PAYMENT_STATUS.TAKEN)
         p_uuid = first_response.data['uuid']
 
         user = self.send_money_users[0]
@@ -267,6 +263,45 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
                          PAYMENT_STATUS.TAKEN)
         self.assertEqual(Credit.objects.all()[0].resolution,
                          CREDIT_RESOLUTION.PENDING)
+
+    def test_update_with_billing_address(self):
+        billing_address = {
+            'line1': '62 Petty France',
+            'line2': '',
+            'city': 'London',
+            'country': 'UK',
+            'postcode': 'SW1H 9EU'
+        }
+        response = self._test_update_payment(
+            status=PAYMENT_STATUS.TAKEN,
+            billing_address=billing_address
+        )
+
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+        self.assertTrue(response.data['uuid'] is not None)
+
+        # check changes in db
+        self.assertEqual(Payment.objects.count(), 1)
+        payment = Payment.objects.all()[0]
+        self.assertEqual(payment.status, PAYMENT_STATUS.TAKEN)
+        self.assertIsNotNone(payment.billing_address)
+        self.assertEqual(payment.billing_address.line1, billing_address['line1'])
+        self.assertEqual(payment.billing_address.postcode, billing_address['postcode'])
+
+    def test_update_fails_with_bad_billing_address(self):
+        bad_billing_address = 45
+        response = self._test_update_payment(
+            status=PAYMENT_STATUS.TAKEN,
+            billing_address=bad_billing_address
+        )
+
+        self.assertEqual(response.status_code, http_status.HTTP_400_BAD_REQUEST)
+
+        # check changes in db
+        self.assertEqual(Payment.objects.count(), 1)
+        payment = Payment.objects.all()[0]
+        self.assertEqual(payment.status, PAYMENT_STATUS.PENDING)
+        self.assertIsNone(payment.billing_address)
 
 
 class GetPaymentViewTestCase(AuthTestCaseMixin, APITestCase):
