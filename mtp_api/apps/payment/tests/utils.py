@@ -14,7 +14,7 @@ from credit.tests.utils import (
     build_sender_prisoner_pairs
 )
 from payment.constants import PAYMENT_STATUS
-from payment.models import Payment
+from payment.models import Payment, BillingAddress
 from prison.models import PrisonerLocation
 
 fake = Faker(locale='en_GB')
@@ -32,6 +32,23 @@ def get_sender_prisoner_pairs():
     for _ in range(number_of_senders):
         expiry_date = fake.date_time_between(start_date='now', end_date='+5y')
         full_name = ' '.join([fake.first_name(), fake.last_name()])
+        address_parts = fake.address().split('\n')
+        billing_address = {}
+        if len(address_parts) == 4:
+            billing_address = {
+                'line1': address_parts[0],
+                'line2': address_parts[1],
+                'city': address_parts[2],
+                'postcode': address_parts[3],
+                'country': 'UK',
+            }
+        elif len(address_parts) == 3:
+            billing_address = {
+                'line1': address_parts[0],
+                'city': address_parts[1],
+                'postcode': address_parts[2],
+                'country': 'UK',
+            }
         senders.append(
             {
                 'cardholder_name': full_name,
@@ -39,6 +56,8 @@ def get_sender_prisoner_pairs():
                 'card_expiry_date': expiry_date.strftime('%m/%y'),
                 'ip_address': fake.ipv4(),
                 'email': '%s@mail.local' % full_name.replace(' ', '.'),
+                'card_brand': 'Visa',
+                'billing_address': billing_address,
             }
         )
 
@@ -143,6 +162,8 @@ def setup_payment(owner_status_chooser,
         del data['cardholder_name']
         del data['card_number_last_digits']
         del data['card_expiry_date']
+        del data['card_brand']
+        del data['billing_address']
 
     with MockModelTimestamps(data['created'], data['modified']):
         new_payment = save_payment(data)
@@ -165,6 +186,11 @@ def save_payment(data):
     prison = data.pop('prison', None)
     reconciled = data.pop('reconciled', False)
     owner = data.pop('owner', None)
+
+    billing_address = data.pop('billing_address', None)
+    if billing_address:
+        billing_address = BillingAddress.objects.create(**billing_address)
+        data['billing_address'] = billing_address
 
     credit = Credit(
         amount=data['amount'],

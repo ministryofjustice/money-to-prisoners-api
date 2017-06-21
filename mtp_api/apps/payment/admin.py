@@ -7,7 +7,7 @@ from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 
 from core.admin import add_short_description
-from payment.models import Batch, Payment
+from payment.models import Batch, BillingAddress, Payment
 from transaction.utils import format_amount
 
 
@@ -55,6 +55,12 @@ class BatchAdmin(admin.ModelAdmin):
         return format_html('<a href="{}">{}</a>', link, description)
 
 
+@admin.register(BillingAddress)
+class BillingAddressAdmin(admin.ModelAdmin):
+    list_display = ('line1', 'line2', 'city', 'country', 'postcode')
+    search_fields = ('postcode',)
+
+
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
     list_display = ('cardholder_name', 'email', 'formatted_amount', 'status', 'created')
@@ -62,8 +68,8 @@ class PaymentAdmin(admin.ModelAdmin):
     date_hierarchy = 'created'
     list_filter = ('status',)
     search_fields = ('uuid', 'recipient_name', 'email', 'card_number_last_digits',)
-    exclude = ('credit',)
-    readonly_fields = ('credit_link', 'batch',)
+    exclude = ('credit', 'billing_address',)
+    readonly_fields = ('credit_link', 'batch', 'billing_address_link',)
     actions = ['display_total_amount']
 
     @add_short_description(_('credit'))
@@ -71,8 +77,19 @@ class PaymentAdmin(admin.ModelAdmin):
         link = reverse('admin:credit_credit_change', args=(instance.credit.pk,))
         description = '%(amount)s %(status)s, %(date)s' % {
             'amount': format_amount(instance.amount),
-            'status': instance.status,
-            'date': format_date(timezone.localtime(instance.created), 'd/m/Y'),
+            'status': instance.credit.resolution,
+            'date': format_date(timezone.localtime(instance.credit.created), 'd/m/Y'),
+        }
+        return format_html('<a href="{}">{}</a>', link, description)
+
+    @add_short_description(_('billing address'))
+    def billing_address_link(self, instance):
+        link = reverse('admin:payment_billingaddress_change', args=(instance.billing_address.pk,))
+        description = '%(line1)s, %(city)s, %(country)s, %(postcode)s' % {
+            'line1': instance.billing_address.line1,
+            'city': instance.billing_address.city,
+            'country': instance.billing_address.country,
+            'postcode': instance.billing_address.postcode,
         }
         return format_html('<a href="{}">{}</a>', link, description)
 

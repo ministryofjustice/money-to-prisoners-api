@@ -36,6 +36,14 @@ class Batch(TimeStampedModel):
         return self.payment_set.aggregate(total_amount=models.Sum('amount'))['total_amount']
 
 
+class BillingAddress(models.Model):
+    line1 = models.CharField(max_length=250, blank=True, null=True)
+    line2 = models.CharField(max_length=250, blank=True, null=True)
+    city = models.CharField(max_length=250, blank=True, null=True)
+    country = models.CharField(max_length=250, blank=True, null=True)
+    postcode = models.CharField(max_length=250, blank=True, null=True)
+
+
 class Payment(TimeStampedModel):
     uuid = models.UUIDField(default=uuid.uuid4, primary_key=True, editable=False)
     status = models.CharField(max_length=50, choices=PAYMENT_STATUS, default=PAYMENT_STATUS.PENDING)
@@ -52,8 +60,13 @@ class Payment(TimeStampedModel):
     cardholder_name = models.CharField(max_length=250, blank=True, null=True)
     card_number_last_digits = models.CharField(max_length=4, blank=True, null=True)
     card_expiry_date = models.CharField(max_length=5, blank=True, null=True)
+    card_brand = models.CharField(max_length=250, blank=True, null=True)
 
     ip_address = models.GenericIPAddressField(blank=True, null=True)
+
+    billing_address = models.ForeignKey(
+        BillingAddress, on_delete=models.SET_NULL, null=True, blank=True
+    )
 
     objects = PaymentManager()
 
