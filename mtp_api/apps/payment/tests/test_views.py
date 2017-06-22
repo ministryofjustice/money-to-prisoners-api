@@ -11,7 +11,7 @@ from core.tests.utils import make_test_users
 from credit.constants import CREDIT_RESOLUTION
 from credit.models import Credit
 from mtp_auth.tests.utils import AuthTestCaseMixin
-from payment.models import Batch, Payment
+from payment.models import Batch, BillingAddress, Payment
 from payment.constants import PAYMENT_STATUS
 from payment.tests.utils import generate_payments
 from prison.tests.utils import load_random_prisoner_locations
@@ -302,6 +302,53 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         payment = Payment.objects.all()[0]
         self.assertEqual(payment.status, PAYMENT_STATUS.PENDING)
         self.assertIsNone(payment.billing_address)
+
+    def test_update_with_billing_address_twice_updates_in_place(self):
+        billing_address_1 = {
+            'line1': '62 Petty France',
+            'line2': '',
+            'city': 'London',
+            'country': 'UK',
+            'postcode': 'SW1H 9EU'
+        }
+        response = self._test_update_payment(
+            billing_address=billing_address_1
+        )
+
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+        self.assertTrue(response.data['uuid'] is not None)
+
+        # check changes in db
+        self.assertEqual(Payment.objects.count(), 1)
+        payment = Payment.objects.all()[0]
+        self.assertIsNotNone(payment.billing_address)
+        self.assertEqual(payment.billing_address.line1, billing_address_1['line1'])
+
+        billing_address_2 = {
+            'line1': '70 Petty France',
+            'line2': '',
+            'city': 'London',
+            'country': 'UK',
+            'postcode': 'SW1H 9EU'
+        }
+        response = self.client.patch(
+            reverse('payment-detail', args=[response.data['uuid']]),
+            data={'billing_address': billing_address_2}, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.send_money_users[0])
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+
+        # check no additional billing address created
+        self.assertEqual(BillingAddress.objects.count(), 1)
+        self.assertEqual(
+            Payment.objects.all()[0].billing_address,
+            BillingAddress.objects.all()[0]
+        )
+        # check billing address has been updated
+        self.assertEqual(
+            BillingAddress.objects.all()[0].line1,
+            billing_address_2['line1']
+        )
 
 
 class GetPaymentViewTestCase(AuthTestCaseMixin, APITestCase):
