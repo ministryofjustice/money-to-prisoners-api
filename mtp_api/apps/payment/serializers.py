@@ -72,8 +72,13 @@ class PaymentSerializer(serializers.ModelSerializer):
             )
         billing_address = validated_data.pop('billing_address', None)
         if billing_address:
-            new_address = BillingAddress.objects.create(**billing_address)
-            validated_data['billing_address'] = new_address
+            if instance.billing_address:
+                BillingAddress.objects.filter(
+                    pk=instance.billing_address.pk
+                ).update(**billing_address)
+            else:
+                new_address = BillingAddress.objects.create(**billing_address)
+                validated_data['billing_address'] = new_address
 
         received_at = validated_data.pop('received_at', None)
         if received_at:
