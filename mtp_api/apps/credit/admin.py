@@ -53,7 +53,7 @@ class TransactionAdminInline(admin.StackedInline):
 class PaymentAdminInline(admin.StackedInline):
     model = Payment
     extra = 0
-    readonly_fields = ('uuid', 'status', 'batch',)
+    readonly_fields = ('uuid', 'status', 'batch', 'billing_address',)
 
     def has_add_permission(self, request):
         return False
