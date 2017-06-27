@@ -1,36 +1,38 @@
-FROM ubuntu:trusty
+FROM buildpack-deps:xenial
 
 # setup environment
-RUN echo "Europe/London" > /etc/timezone && dpkg-reconfigure --frontend noninteractive tzdata
-RUN locale-gen "en_GB.UTF-8"
-ENV LC_CTYPE=en_GB.UTF-8
-ENV TERM=xterm
+RUN apt-get update && apt-get install -y --no-install-recommends locales tzdata
+RUN set -ex; echo en_GB.UTF-8 UTF-8 > /etc/locale.gen && locale-gen
+ENV LANG=en_GB.UTF-8
+ENV TZ=Europe/London
+RUN timedatectl set-timezone Europe/London || true
 
 # install libraries
-RUN apt-get update && apt-get install -y software-properties-common python-software-properties python3-software-properties
-RUN apt-get update && apt-get install -y build-essential curl gettext git libpcre3-dev libpq-dev libffi-dev ntp
+RUN apt-get install -y --no-install-recommends software-properties-common build-essential rsync gettext python3-all-dev python3-venv
+
+# install node.js
+RUN curl -sL https://deb.nodesource.com/setup_8.x | bash -
+RUN apt-get install -y --no-install-recommends nodejs
+RUN npm set progress=false
+
+# cleanup
+RUN rm -rf /var/lib/apt/lists/*
 
 # pre-create directories
 WORKDIR /app
-RUN mkdir -p mtp_api/assets
-RUN mkdir -p mtp_api/assets-static
-RUN mkdir -p static
-RUN mkdir -p media
-RUN mkdir -p spooler
-RUN chown www-data:www-data spooler
+RUN set -ex; mkdir -p \
+  mtp_api/assets \
+  mtp_api/assets-static \
+  static \
+  media \
+  spooler
+RUN set -ex; chown www-data:www-data \
+  media \
+  spooler
 
-# install python
-RUN apt-get install -y python3-all python3-all-dev python3-setuptools python3-pip python-pip python3.4-venv
+# install virtual environment
 RUN /usr/bin/python3 -m venv venv
 RUN venv/bin/pip install -U setuptools pip wheel
-
-# install node.js
-RUN curl -sL https://deb.nodesource.com/setup_7.x | bash -
-RUN apt-get install -y nodejs
-RUN npm set progress=false
-RUN npm cache clean
-RUN curl -L https://npmjs.org/install.sh | npm_install=4.6.1 bash  # npm -g install npm fails currently
-RUN [ -e /usr/bin/node ] || ln -s /usr/bin/nodejs /usr/bin/node
 
 # cache python packages, unless requirements change
 ADD ./requirements requirements
