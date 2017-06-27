@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mtp-api\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-06-21 14:25+0100\n"
+"POT-Creation-Date: 2017-06-27 18:44+0100\n"
 "PO-Revision-Date: 2016-11-04 10:00+0000\n"
 "Last-Translator: Welsh Language Unit <welsh.language.unit.manager@hmcts.gsi.gov.uk>\n"
 "Language-Team: Welsh (http://www.transifex.com/ministry-of-justice/mtp/language/cy/)\n"
@@ -209,7 +209,7 @@ msgstr ""
 msgid "source"
 msgstr ""
 
-#: apps/credit/admin.py:138 apps/payment/admin.py:79
+#: apps/credit/admin.py:138 apps/payment/admin.py:96
 #: apps/transaction/admin.py:70
 msgid "amount"
 msgstr ""
@@ -218,7 +218,7 @@ msgstr ""
 msgid "Display total of selected credits"
 msgstr ""
 
-#: apps/credit/admin.py:159 apps/payment/admin.py:90
+#: apps/credit/admin.py:159 apps/payment/admin.py:107
 #: apps/transaction/admin.py:91
 #, python-format
 msgid "Total: %s"
@@ -573,15 +573,19 @@ msgstr ""
 msgid "settlement transaction"
 msgstr ""
 
-#: apps/payment/admin.py:69 apps/transaction/admin.py:58
+#: apps/payment/admin.py:75 apps/transaction/admin.py:58
 msgid "credit"
 msgstr ""
 
-#: apps/payment/admin.py:83
+#: apps/payment/admin.py:85
+msgid "billing address"
+msgstr ""
+
+#: apps/payment/admin.py:100
 msgid "service charge"
 msgstr ""
 
-#: apps/payment/admin.py:87
+#: apps/payment/admin.py:104
 msgid "Display total of selected payments"
 msgstr ""
 
@@ -617,11 +621,11 @@ msgstr ""
 msgid "For reconciliation"
 msgstr ""
 
-#: apps/payment/models.py:46
+#: apps/payment/models.py:54
 msgid "As specified by the sender"
 msgstr ""
 
-#: apps/payment/models.py:48
+#: apps/payment/models.py:56
 msgid "Specified by sender for confirmation emails"
 msgstr ""
 
