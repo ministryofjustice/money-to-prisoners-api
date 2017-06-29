@@ -1,4 +1,5 @@
 from datetime import timedelta
+import logging
 import warnings
 
 from django.conf import settings
@@ -19,12 +20,15 @@ from credit.signals import (
 from prison.models import Prison, PrisonerLocation
 from transaction.utils import format_amount
 
+logger = logging.getLogger('mtp')
+
 
 class Credit(TimeStampedModel):
     amount = models.PositiveIntegerField()
     received_at = models.DateTimeField(auto_now=False, blank=True, null=True)
 
     prisoner_number = models.CharField(blank=True, null=True, max_length=250)
+    single_offender_id = models.UUIDField(blank=True, null=True)
     prisoner_dob = models.DateField(blank=True, null=True)
     prisoner_name = models.CharField(blank=True, null=True, max_length=250)
     prison = models.ForeignKey(Prison, blank=True, null=True, on_delete=models.SET_NULL)
@@ -387,9 +391,14 @@ def update_prison_for_credit(sender, instance, created, *args, **kwargs):
                 prisoner_dob=instance.prisoner_dob,
                 active=True
             )
+            instance.single_offender_id = location.single_offender_id
             instance.prisoner_name = location.prisoner_name
             instance.prison = location.prison
             instance.save()
+        except PrisonerLocation.MultipleObjectsReturned:
+            logger.error('Prisoner location is not unique for %s %s' % (
+                instance.prisoner_number, instance.prisoner_dob
+            ))
         except PrisonerLocation.DoesNotExist:
             pass
 

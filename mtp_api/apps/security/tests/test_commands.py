@@ -35,6 +35,7 @@ class UpdateSecurityProfilesTestCase(TestCase):
             self.assertEqual(len(credits), sender_profile.credit_count)
 
         for prisoner_profile in PrisonerProfile.objects.all():
+            self.assertTrue(prisoner_profile.single_offender_id)
             credits = Credit.objects.filter(prisoner_profile.credit_filters)
             self.assertEqual(sum([credit.amount for credit in credits]), prisoner_profile.credit_total)
             self.assertEqual(len(credits), prisoner_profile.credit_count)
@@ -174,7 +175,7 @@ class UpdateSecurityProfilesTestCase(TestCase):
 
         new_payments[0]['created'] = timezone.now()
 
-        new_payments[0]['email'] = 'dude@mtp.local'
+        new_payments[0]['email'] = 'doe@mtp.local'
         new_payments[0]['cardholder_name'] = 'other name'
         new_payments[0]['card_number_last_digits'] = debit_card_details.card_number_last_digits
         new_payments[0]['card_expiry_date'] = debit_card_details.card_expiry_date

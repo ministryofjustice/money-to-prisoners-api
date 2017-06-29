@@ -61,10 +61,11 @@ class Prison(TimeStampedModel):
 
 
 class PrisonerLocation(TimeStampedModel):
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, blank=True, null=True, on_delete=models.SET_NULL)
 
     prisoner_name = models.CharField(blank=True, max_length=250)
     prisoner_number = models.CharField(max_length=250)  # TODO: shouldn't this be unique?
+    single_offender_id = models.UUIDField(blank=True, null=True)
     prisoner_dob = models.DateField()
     prison = models.ForeignKey(Prison, on_delete=models.CASCADE)
     active = models.BooleanField(default=False)
@@ -73,6 +74,8 @@ class PrisonerLocation(TimeStampedModel):
         index_together = (
             ('prisoner_number', 'prisoner_dob'),
         )
+        ordering = ('prisoner_number',)
+        get_latest_by = 'created'
 
     def __str__(self):
         return '%s (%s)' % (self.prisoner_name, self.prisoner_number)
