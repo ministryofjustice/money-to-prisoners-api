@@ -284,6 +284,10 @@ ZENDESK_GROUP_ID = 26417927
 NOMIS_API_AVAILABLE = os.environ.get('NOMIS_API_AVAILABLE', 'False') == 'True'
 NOMIS_API_PRISONS = os.environ.get('NOMIS_API_PRISONS', '').split(',')
 
+OFFENDER_API_URL = os.environ.get('OFFENDER_API_URL', '')
+OFFENDER_API_CLIENT_ID = os.environ.get('OFFENDER_API_CLIENT_ID', '')
+OFFENDER_API_CLIENT_SECRET = os.environ.get('OFFENDER_API_CLIENT_SECRET', '')
+
 try:
     from .local import *  # noqa
 except ImportError:

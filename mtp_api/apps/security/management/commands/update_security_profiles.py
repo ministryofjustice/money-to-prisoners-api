@@ -206,6 +206,7 @@ class Command(BaseCommand):
             if self.verbose:
                 self.stdout.write('Creating prisoner profile for %s' % credit.prisoner_number)
             prisoner_profile = PrisonerProfile(
+                single_offender_id=credit.single_offender_id,
                 prisoner_name=credit.prisoner_name,
                 prisoner_number=credit.prisoner_number,
                 prisoner_dob=credit.prisoner_dob

@@ -32,10 +32,10 @@ class PrisonAdmin(ModelAdmin):
 
 @admin.register(PrisonerLocation)
 class PrisonerLocationAdmin(ModelAdmin):
-    ordering = ('prisoner_number',)
     list_display = ('prisoner_name', 'prisoner_number', 'prisoner_dob', 'prison')
     list_filter = ('prison', ('prisoner_dob', DateFilter))
-    search_fields = ('prisoner_name', 'prisoner_number')
+    search_fields = ('prisoner_name', 'prisoner_number', 'single_offender_id')
+    readonly_fields = ('created_by',)
 
 
 @admin.register(PrisonerCreditNoticeEmail)

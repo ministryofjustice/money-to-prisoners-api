@@ -67,18 +67,18 @@ def build_sender_prisoner_pairs(senders, prisoners):
     number_of_prisoners = len(prisoners)
 
     sender_prisoner_pairs = []
-    for i in range(number_of_senders*3):
+    for i in range(number_of_senders * 3):
         prisoner_fraction = number_of_prisoners
         if i <= number_of_senders:
             sender_fraction = number_of_senders
             if i % 3 == 1:
-                prisoner_fraction = ceil(number_of_prisoners/2)
+                prisoner_fraction = ceil(number_of_prisoners / 2)
             elif i % 3 == 2:
-                prisoner_fraction = ceil(number_of_prisoners/15)
-        elif i <= number_of_senders*2:
-            sender_fraction = ceil(number_of_senders/2)
+                prisoner_fraction = ceil(number_of_prisoners / 15)
+        elif i <= number_of_senders * 2:
+            sender_fraction = ceil(number_of_senders / 2)
         else:
-            sender_fraction = ceil(number_of_senders/15)
+            sender_fraction = ceil(number_of_senders / 15)
 
         sender_prisoner_pairs.append(
             (senders[i % sender_fraction], prisoners[i % prisoner_fraction])
