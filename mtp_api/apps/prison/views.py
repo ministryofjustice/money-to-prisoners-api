@@ -1,20 +1,33 @@
+from io import StringIO
+import logging
+
+from django.conf import settings
+from django.contrib.admin.models import LogEntry, CHANGE as CHANGE_LOG_ENTRY
+from django.core.management import call_command
 from django.db import transaction
+from django.urls import reverse_lazy
 from django.utils.dateparse import parse_date
+from django.utils.translation import gettext_lazy as _
+from django.views.generic import FormView
 from rest_framework import generics, mixins, viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from core.permissions import ActionsBasedPermissions
+from core.views import AdminViewMixin
 from credit.signals import credit_prisons_need_updating
 from mtp_auth.permissions import (
     NomsOpsClientIDPermissions, SendMoneyClientIDPermissions
 )
+from prison.forms import LoadOffendersForm
 from prison.models import PrisonerLocation, Category, Population, Prison
 from prison.serializers import (
     PrisonerLocationSerializer, PrisonerValiditySerializer, PrisonSerializer,
     PopulationSerializer, CategorySerializer
 )
 from security.signals import prisoner_profile_current_prisons_need_updating
+
+logger = logging.getLogger('mtp')
 
 
 class PrisonerLocationView(
@@ -128,3 +141,44 @@ class CategoryView(mixins.ListModelMixin, viewsets.GenericViewSet):
     permission_classes = (IsAuthenticated,)
     serializer_class = CategorySerializer
     queryset = Category.objects.all()
+
+
+class LoadOffendersView(AdminViewMixin, FormView):
+    """
+    Load offenders from Single Offender ID service
+    """
+    title = _('Load offenders')
+    form_class = LoadOffendersForm
+    template_name = 'admin/prison/prisonerlocation/load-offenders.html'
+    success_url = reverse_lazy('admin:prison_prisonerlocation_changelist')
+    superuser_required = True
+
+    def get_context_data(self, **kwargs):
+        available = (
+            settings.OFFENDER_API_URL and
+            settings.OFFENDER_API_CLIENT_ID and settings.OFFENDER_API_CLIENT_SECRET
+        )
+        return super().get_context_data(opts=PrisonerLocation._meta, available=available, **kwargs)
+
+    def form_valid(self, form):
+        output = StringIO()
+        call_command('load_prisoner_locations', no_color=True, stdout=output, stderr=output, verbosity=2,
+                     modified_only=form.cleaned_data['modified_only'])
+        output.seek(0)
+        command_output = output.read()
+
+        LogEntry.objects.log_action(
+            user_id=self.request.user.pk,
+            content_type_id=None, object_id=None,
+            object_repr=_('Offender locations loaded from Single Offender ID'),
+            action_flag=CHANGE_LOG_ENTRY,
+        )
+        logger.info('User "%(username)s" loaded offender locations from Single Offender ID' % {
+            'username': self.request.user.username,
+        })
+        logger.debug(command_output)
+
+        return self.render_to_response(self.get_context_data(
+            form=form,
+            command_output=command_output,
+        ))
