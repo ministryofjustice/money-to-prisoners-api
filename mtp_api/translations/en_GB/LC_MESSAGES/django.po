@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mtp-api\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-06-27 18:44+0100\n"
+"POT-Creation-Date: 2017-07-03 16:55+0100\n"
 "PO-Revision-Date: 2016-11-04 10:00+0000\n"
 "Last-Translator: Welsh Language Unit <welsh.language.unit.manager@hmcts.gsi.gov.uk>\n"
 "Language-Team: Welsh (http://www.transifex.com/ministry-of-justice/mtp/language/cy/)\n"
@@ -23,48 +23,48 @@ msgstr ""
 msgid "Send money to a prisoner"
 msgstr ""
 
-#: apps/core/admin.py:104
+#: apps/core/admin.py:106
 msgid "All"
 msgstr ""
 
-#: apps/core/admin.py:147
+#: apps/core/admin.py:149
 msgid "Start date"
 msgstr ""
 
-#: apps/core/admin.py:150
+#: apps/core/admin.py:152
 msgid "End date"
 msgstr ""
 
-#: apps/core/admin.py:155
+#: apps/core/admin.py:157
 msgid "Date in range"
 msgstr ""
 
-#: apps/core/admin.py:163
+#: apps/core/admin.py:165
 msgid "Start UTC date"
 msgstr ""
 
-#: apps/core/admin.py:166
+#: apps/core/admin.py:168
 msgid "End UTC date"
 msgstr ""
 
-#: apps/core/admin.py:171
+#: apps/core/admin.py:173
 msgid "UTC date in range"
 msgstr ""
 
-#: apps/core/admin.py:179 apps/credit/dashboards.py:361
+#: apps/core/admin.py:181 apps/credit/dashboards.py:361
 msgid "Date"
 msgstr ""
 
-#: apps/core/admin.py:184
+#: apps/core/admin.py:186
 msgid "Search"
 msgstr ""
 
-#: apps/core/admin.py:194
+#: apps/core/admin.py:196
 #, python-format
 msgid "Search %(fieldname)s"
 msgstr ""
 
-#: apps/core/admin.py:221
+#: apps/core/admin.py:223
 msgid "Any"
 msgstr ""
 
@@ -700,6 +700,10 @@ msgstr ""
 msgid "Prisoner management"
 msgstr ""
 
+#: apps/prison/forms.py:6
+msgid "Only load updated offender locations"
+msgstr ""
+
 #: apps/prison/models.py:10
 msgid "Invalid prisoner number"
 msgstr ""
@@ -707,6 +711,15 @@ msgstr ""
 #: apps/prison/serializers.py:67
 #, python-brace-format
 msgid "No prison found with code \"{pk_value}\""
+msgstr ""
+
+#: apps/prison/views.py:150
+#: templates/admin/prison/prisonerlocation/change_list.html:7
+msgid "Load offenders"
+msgstr ""
+
+#: apps/prison/views.py:173
+msgid "Offender locations loaded from Single Offender ID"
 msgstr ""
 
 #: apps/security/admin.py:22
@@ -920,6 +933,7 @@ msgstr ""
 
 #: templates/admin/payment/payment/search.html:25
 #: templates/admin/performance/digitaltakeup/upload.html:16
+#: templates/admin/prison/prisonerlocation/load-offenders.html:15
 msgid "Home"
 msgstr ""
 
@@ -934,6 +948,15 @@ msgstr ""
 
 #: templates/admin/performance/digitaltakeup/upload.html:38
 msgid "Upload"
+msgstr ""
+
+#: templates/admin/prison/prisonerlocation/load-offenders.html:36
+#: templates/core/dashboard/module.html:30
+msgid "Update"
+msgstr ""
+
+#: templates/admin/prison/prisonerlocation/load-offenders.html:48
+msgid "Single Offender ID details not set."
 msgstr ""
 
 #: templates/admin/security/prisonerprofile/change_form.html:6
@@ -1068,10 +1091,6 @@ msgstr ""
 
 #: templates/core/dashboard/module.html:13
 msgid "Stand out"
-msgstr ""
-
-#: templates/core/dashboard/module.html:30
-msgid "Update"
 msgstr ""
 
 #: templates/core/dashboard/satisfaction-results.html:23

@@ -21,12 +21,14 @@ class AdminSite(admin.AdminSite):
         from core.views import DashboardView, RecreateTestDataView
         from payment.views import PaymentSearchView
         from performance.views import DigitalTakeupUploadView
+        from prison.views import LoadOffendersView
 
         return [
             url(r'^dashboard/$', DashboardView.as_view(), name='dashboard'),
             url(r'^digital-takeup-upload/$', DigitalTakeupUploadView.as_view(), name='digital_takeup_upload'),
-            url(r'^recreate-test-data/$', RecreateTestDataView.as_view(), name='recreate_test_data'),
             url(r'^payment/payment/search/$', PaymentSearchView.as_view(), name='payment_search'),
+            url(r'^prison/prisonerlocation/load-offenders/$', LoadOffendersView.as_view(), name='load_offenders'),
+            url(r'^recreate-test-data/$', RecreateTestDataView.as_view(), name='recreate_test_data'),
         ] + super().get_urls()
 
     def index(self, request, extra_context=None):

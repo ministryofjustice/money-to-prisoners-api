@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-06-27 18:44+0100\n"
+"POT-Creation-Date: 2017-07-03 16:55+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Igor U <igor.ushkarev@digital.justice.gov.uk>, 2017\n"
 "Language-Team: Welsh (https://www.transifex.com/ministry-of-justice/teams/34553/cy/)\n"
@@ -23,48 +23,48 @@ msgstr "Rheoli cyfrif banc"
 msgid "Send money to a prisoner"
 msgstr "Anfon arian at garcharor"
 
-#: apps/core/admin.py:104
+#: apps/core/admin.py:106
 msgid "All"
 msgstr "Pob un"
 
-#: apps/core/admin.py:147
+#: apps/core/admin.py:149
 msgid "Start date"
 msgstr "Dyddiad cychwyn"
 
-#: apps/core/admin.py:150
+#: apps/core/admin.py:152
 msgid "End date"
 msgstr "Dyddiad gorffen"
 
-#: apps/core/admin.py:155
+#: apps/core/admin.py:157
 msgid "Date in range"
 msgstr "Dyddiad o fewn yr ystod"
 
-#: apps/core/admin.py:163
+#: apps/core/admin.py:165
 msgid "Start UTC date"
 msgstr "Dyddiad cychwyn UTC"
 
-#: apps/core/admin.py:166
+#: apps/core/admin.py:168
 msgid "End UTC date"
 msgstr "Dyddiad gorffen UTC"
 
-#: apps/core/admin.py:171
+#: apps/core/admin.py:173
 msgid "UTC date in range"
 msgstr "Dyddiad UTC o fewn yr ystod"
 
-#: apps/core/admin.py:179 apps/credit/dashboards.py:361
+#: apps/core/admin.py:181 apps/credit/dashboards.py:361
 msgid "Date"
 msgstr "Dyddiad"
 
-#: apps/core/admin.py:184
+#: apps/core/admin.py:186
 msgid "Search"
 msgstr "Chwilio"
 
-#: apps/core/admin.py:194
+#: apps/core/admin.py:196
 #, python-format
 msgid "Search %(fieldname)s"
 msgstr "Chwilio %(fieldname)s"
 
-#: apps/core/admin.py:221
+#: apps/core/admin.py:223
 msgid "Any"
 msgstr "Unrhyw un"
 
@@ -700,6 +700,10 @@ msgstr "Nid yw enw'r carchar yn dechrau â rhagddodiad safonol."
 msgid "Prisoner management"
 msgstr "Rheoli carcharor"
 
+#: apps/prison/forms.py:6
+msgid "Only load updated offender locations"
+msgstr ""
+
 #: apps/prison/models.py:10
 msgid "Invalid prisoner number"
 msgstr "Rhif carcharor annilys"
@@ -708,6 +712,15 @@ msgstr "Rhif carcharor annilys"
 #, python-brace-format
 msgid "No prison found with code \"{pk_value}\""
 msgstr "Ni ddaethpwyd o hyd i unrhyw garchar gyda'r cod \"{pk_value}\""
+
+#: apps/prison/views.py:150
+#: templates/admin/prison/prisonerlocation/change_list.html:7
+msgid "Load offenders"
+msgstr ""
+
+#: apps/prison/views.py:173
+msgid "Offender locations loaded from Single Offender ID"
+msgstr ""
 
 #: apps/security/admin.py:22
 msgid "cardholder names"
@@ -920,6 +933,7 @@ msgstr "Cynnwys anhysbys"
 
 #: templates/admin/payment/payment/search.html:25
 #: templates/admin/performance/digitaltakeup/upload.html:16
+#: templates/admin/prison/prisonerlocation/load-offenders.html:15
 msgid "Home"
 msgstr "Cartref"
 
@@ -935,6 +949,15 @@ msgstr "Darganfod"
 #: templates/admin/performance/digitaltakeup/upload.html:38
 msgid "Upload"
 msgstr "Llwytho"
+
+#: templates/admin/prison/prisonerlocation/load-offenders.html:36
+#: templates/core/dashboard/module.html:30
+msgid "Update"
+msgstr "Diweddaru"
+
+#: templates/admin/prison/prisonerlocation/load-offenders.html:48
+msgid "Single Offender ID details not set."
+msgstr ""
 
 #: templates/admin/security/prisonerprofile/change_form.html:6
 msgid "Sender profiles"
@@ -1069,10 +1092,6 @@ msgstr "Cuddio"
 #: templates/core/dashboard/module.html:13
 msgid "Stand out"
 msgstr ""
-
-#: templates/core/dashboard/module.html:30
-msgid "Update"
-msgstr "Diweddaru"
 
 #: templates/core/dashboard/satisfaction-results.html:23
 #, python-format
