@@ -4,6 +4,7 @@ from django.core.management import call_command
 from django.test import TestCase
 import responses
 
+from credit.models import Credit
 from prison.models import PrisonerLocation, Prison
 
 
@@ -62,6 +63,28 @@ class LoadPrisonerLocationsTestCase(TestCase):
         self.assertIsNone(location.created_by)
         self.assertTrue(location.active)
 
+    def test_propagates_single_offender_id_to_credit(self):
+        self.assertEqual(PrisonerLocation.objects.count(), 0)
+        Credit.objects.create(
+            amount=1000,
+            received_at=datetime.datetime(2017, 7, 4, 12),
+            prisoner_number='A1409AE',
+            prisoner_dob=datetime.date(1989, 1, 21),
+        )
+        with responses.RequestsMock() as rsps:
+            self.fake_response(rsps)
+            call_command(
+                'load_prisoner_locations',
+                offender_endpoint=self.offenders_url,
+                oauth_endpoint=self.oauth_url, oauth_client='abc', oauth_secret='123',
+                page_size=1, verbosity=0,
+            )
+        self.assertEqual(PrisonerLocation.objects.count(), 1)
+        credit = Credit.objects.first()
+        self.assertEqual(str(credit.single_offender_id), '4a39e889-7abb-817c-e050-16ac01107c5c')
+        self.assertEqual(credit.prison_id, 'IXB')
+        self.assertEqual(credit.prisoner_name, 'JAMES HALLS')
+
     def test_ignores_unknown_prisons(self):
         self.assertEqual(PrisonerLocation.objects.count(), 0)
         Prison.objects.filter(nomis_id='IXB').delete()
@@ -78,24 +101,25 @@ class LoadPrisonerLocationsTestCase(TestCase):
     def test_ignores_invalid_offenders(self):
         self.assertEqual(PrisonerLocation.objects.count(), 0)
         with responses.RequestsMock() as rsps:
-            self.fake_response(rsps,
-                               {
-                                   'id': '300d5efe-bddc-4e17-8afd-1fd765ba3981',
-                                   'noms_id': None,
-                                   'establishment_code': 'INP',
-                                   'given_name_1': 'JILLY',
-                                   'surname': 'HALL',
-                                   'date_of_birth': '1970-01-01',
-                               },
-                               {
-                                   'id': '5506a0b6-9b86-49be-b4f3-db1a215f48c8',
-                                   'noms_id': 'A1401AE',
-                                   'establishment_code': 'INP',
-                                   'given_name_1': 'JILLY',
-                                   'surname': 'HALL',
-                                   'date_of_birth': None,
-                               },
-                               )
+            self.fake_response(
+                rsps,
+                {
+                    'id': '300d5efe-bddc-4e17-8afd-1fd765ba3981',
+                    'noms_id': None,
+                    'establishment_code': 'INP',
+                    'given_name_1': 'JILLY',
+                    'surname': 'HALL',
+                    'date_of_birth': '1970-01-01',
+                },
+                {
+                    'id': '5506a0b6-9b86-49be-b4f3-db1a215f48c8',
+                    'noms_id': 'A1401AE',
+                    'establishment_code': 'INP',
+                    'given_name_1': 'JILLY',
+                    'surname': 'HALL',
+                    'date_of_birth': None,
+                },
+            )
             call_command(
                 'load_prisoner_locations',
                 offender_endpoint=self.offenders_url,
