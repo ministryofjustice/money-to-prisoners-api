@@ -47,20 +47,24 @@ class CreditQuerySet(models.QuerySet):
 class CreditManager(models.Manager):
 
     def update_prisons(self):
-        cursor = connection.cursor()
-
-        cursor.execute(
-            "UPDATE credit_credit "
-            "SET prison_id = pl.prison_id, prisoner_name = pl.prisoner_name "
-            "FROM credit_credit AS c LEFT OUTER JOIN prison_prisonerlocation AS pl "
-            "ON c.prisoner_number = pl.prisoner_number "
-            "AND c.prisoner_dob = pl.prisoner_dob AND pl.active is True "
-            "LEFT OUTER JOIN payment_payment AS p ON p.credit_id=c.id "
-            "WHERE c.owner_id IS NULL AND c.resolution = 'pending' "
-            "AND c.reconciled is False AND credit_credit.id = c.id "
-            # don't remove a match from a debit card payment
-            "AND NOT (pl.prison_id IS NULL AND p.uuid IS NOT NULL) "
-        )
+        with connection.cursor() as cursor:
+            cursor.execute(
+                '''
+                UPDATE credit_credit
+                SET prison_id = pl.prison_id, prisoner_name = pl.prisoner_name,
+                single_offender_id = pl.single_offender_id
+                FROM credit_credit AS c
+                LEFT OUTER JOIN prison_prisonerlocation AS pl
+                ON c.prisoner_number = pl.prisoner_number
+                AND c.prisoner_dob = pl.prisoner_dob AND pl.active IS True
+                LEFT OUTER JOIN payment_payment AS p ON p.credit_id=c.id
+                WHERE c.owner_id IS NULL AND c.resolution = %s
+                AND c.reconciled is False AND credit_credit.id = c.id
+                -- don't remove a match from a debit card payment
+                AND NOT (pl.prison_id IS NULL AND p.uuid IS NOT NULL)
+                ''',
+                (CREDIT_RESOLUTION.PENDING,)
+            )
 
     @atomic
     def reconcile(self, start_date, end_date, user, **kwargs):
