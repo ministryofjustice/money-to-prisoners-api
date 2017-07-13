@@ -134,10 +134,13 @@ class Command(BaseCommand):
     def create_or_update_debit_card(self, credit):
         sender_name = credit.sender_name or ''
         sender_email = credit.payment.email or ''
+        billing_address = credit.payment.billing_address
+        normalised_postcode = billing_address.normalised_postcode if billing_address else None
         try:
             sender_details = DebitCardSenderDetails.objects.get(
                 card_number_last_digits=credit.card_number_last_digits,
-                card_expiry_date=credit.card_expiry_date
+                card_expiry_date=credit.card_expiry_date,
+                postcode=normalised_postcode
             )
             sender_profile = sender_details.sender
             if sender_name:
@@ -170,17 +173,24 @@ class Command(BaseCommand):
                 DebitCardSenderDetails(
                     card_number_last_digits=credit.card_number_last_digits,
                     card_expiry_date=credit.card_expiry_date,
+                    postcode=normalised_postcode
                 ),
                 bulk=False
             )
+            sender_details = sender_profile.debit_card_details.first()
             if sender_name:
-                sender_profile.debit_card_details.first().cardholder_names.add(
+                sender_details.cardholder_names.add(
                     CardholderName(name=sender_name), bulk=False
                 )
             if sender_email:
-                sender_profile.debit_card_details.first().sender_emails.add(
+                sender_details.sender_emails.add(
                     SenderEmail(email=sender_email), bulk=False
                 )
+
+        if billing_address:
+            billing_address.debit_card_sender_details = sender_details
+            billing_address.save()
+
         return sender_profile
 
     def create_or_update_prisoner_profile(self, credit, sender):

@@ -75,9 +75,11 @@ class SenderProfileListTestCase(SecurityViewTestCase):
         card_prisoner_counts = Credit.objects.filter(payment__isnull=False).values(
             'payment__card_expiry_date',
             'payment__card_number_last_digits',
+            'payment__billing_address__postcode',
         ).order_by(
             'payment__card_expiry_date',
-            'payment__card_number_last_digits'
+            'payment__card_number_last_digits',
+            'payment__billing_address__postcode'
         ).annotate(prisoner_count=Count('prisoner_number', distinct=True))
         card_prisoner_counts = card_prisoner_counts.filter(prisoner_count__gte=3)
 
@@ -156,11 +158,13 @@ class PrisonerProfileListTestCase(SecurityViewTestCase):
             Credit.objects.filter(payment__isnull=False, prisoner_number__isnull=False).values(
                 'prisoner_number',
                 'payment__card_expiry_date',
-                'payment__card_number_last_digits'
+                'payment__card_number_last_digits',
+                'payment__billing_address__postcode'
             ).order_by(
                 'prisoner_number',
                 'payment__card_expiry_date',
-                'payment__card_number_last_digits'
+                'payment__card_number_last_digits',
+                'payment__billing_address__postcode'
             ).distinct()
         )
 

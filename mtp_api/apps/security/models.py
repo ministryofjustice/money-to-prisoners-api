@@ -92,6 +92,7 @@ class BankTransferSenderDetails(TimeStampedModel):
 class DebitCardSenderDetails(TimeStampedModel):
     card_number_last_digits = models.CharField(max_length=4, blank=True, null=True)
     card_expiry_date = models.CharField(max_length=5, blank=True, null=True)
+    postcode = models.CharField(max_length=250, blank=True, null=True)
     sender = models.ForeignKey(
         SenderProfile, on_delete=models.CASCADE, related_name='debit_card_details'
     )
@@ -100,7 +101,7 @@ class DebitCardSenderDetails(TimeStampedModel):
         ordering = ('created',)
         verbose_name_plural = 'debit card sender details'
         unique_together = (
-            ('card_number_last_digits', 'card_expiry_date',),
+            ('card_number_last_digits', 'card_expiry_date', 'postcode',),
         )
 
     def __str__(self):
