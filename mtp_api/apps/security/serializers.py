@@ -30,6 +30,7 @@ class DebitCardSenderDetailsSerializer(serializers.ModelSerializer):
             'card_expiry_date',
             'cardholder_names',
             'sender_emails',
+            'postcode',
         )
 
     def get_cardholder_names(self, obj):

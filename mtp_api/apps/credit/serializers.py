@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
+from payment.serializers import BillingAddressSerializer
 from prison.models import Prison
 from .models import Credit, Comment, ProcessingBatch
 
@@ -106,6 +107,8 @@ class SecurityCreditSerializer(CreditSerializer):
     card_expiry_date = serializers.CharField(read_only=True)
     sender_profile = serializers.PrimaryKeyRelatedField(read_only=True)
     prisoner_profile = serializers.PrimaryKeyRelatedField(read_only=True)
+    ip_address = serializers.CharField(read_only=True)
+    billing_address = BillingAddressSerializer()
 
     class Meta:
         model = Credit
@@ -118,6 +121,8 @@ class SecurityCreditSerializer(CreditSerializer):
             'card_expiry_date',
             'sender_profile',
             'prisoner_profile',
+            'ip_address',
+            'billing_address',
         )
 
     @classmethod
