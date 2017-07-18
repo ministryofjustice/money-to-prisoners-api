@@ -85,13 +85,7 @@ class PaymentAdmin(admin.ModelAdmin):
     @add_short_description(_('billing address'))
     def billing_address_link(self, instance):
         link = reverse('admin:payment_billingaddress_change', args=(instance.billing_address.pk,))
-        description = '%(line1)s, %(city)s, %(country)s, %(postcode)s' % {
-            'line1': instance.billing_address.line1,
-            'city': instance.billing_address.city,
-            'country': instance.billing_address.country,
-            'postcode': instance.billing_address.postcode,
-        }
-        return format_html('<a href="{}">{}</a>', link, description)
+        return format_html('<a href="{}">{}</a>', link, str(instance.billing_address))
 
     @add_short_description(_('amount'))
     def formatted_amount(self, instance):

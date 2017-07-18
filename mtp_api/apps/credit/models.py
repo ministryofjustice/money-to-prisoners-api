@@ -244,6 +244,14 @@ class Credit(TimeStampedModel):
         return self.payment.card_expiry_date if hasattr(self, 'payment') else None
 
     @property
+    def ip_address(self):
+        return self.payment.ip_address if hasattr(self, 'payment') else None
+
+    @property
+    def billing_address(self):
+        return self.payment.billing_address if hasattr(self, 'payment') else None
+
+    @property
     def reconciliation_code(self):
         if hasattr(self, 'transaction'):
             return self.transaction.ref_code

@@ -121,6 +121,7 @@ class UpdateSecurityProfilesTestCase(TestCase):
         new_payments[0]['cardholder_name'] = 'other name'
         new_payments[0]['card_number_last_digits'] = card_details.card_number_last_digits
         new_payments[0]['card_expiry_date'] = card_details.card_expiry_date
+        new_payments[0]['billing_address']['postcode'] = card_details.postcode
 
         new_payments[0]['prisoner_number'] = prisoner_to_update.prisoner_number
         new_payments[0]['prisoner_dob'] = prisoner_to_update.prisoner_dob

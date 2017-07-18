@@ -1,3 +1,4 @@
+import re
 import uuid
 
 from django.db import models
@@ -42,6 +43,23 @@ class BillingAddress(models.Model):
     city = models.CharField(max_length=250, blank=True, null=True)
     country = models.CharField(max_length=250, blank=True, null=True)
     postcode = models.CharField(max_length=250, blank=True, null=True)
+    debit_card_sender_details = models.ForeignKey(
+        'security.DebitCardSenderDetails', related_name='billing_addresses',
+        blank=True, null=True, on_delete=models.SET_NULL
+    )
+
+    @property
+    def normalised_postcode(self):
+        return re.sub(r'\s', '', self.postcode).upper() if self.postcode else self.postcode
+
+    def __str__(self):
+        return '{line1}, {line2}, {city}, {postcode}, {country}'.format(
+            line1=self.line1,
+            line2=self.line2,
+            city=self.city,
+            postcode=self.postcode,
+            country=self.country
+        )
 
 
 class Payment(TimeStampedModel):
