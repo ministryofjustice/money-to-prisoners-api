@@ -1376,6 +1376,17 @@ class ResetPasswordTestCase(AuthBaseTestCase):
             'username': [ResetPasswordView.error_messages['not_found']],
         })
 
+    def test_unable_to_reset_immutable_user(self):
+        username = 'send-money'
+        try:
+            User.objects.get(username=username)
+        except User.DoesNotExist:
+            self.fail()
+        response = self.client.post(self.reset_url, {'username': username})
+        self.assertErrorResponse(response, {
+            'username': [ResetPasswordView.error_messages['not_found']],
+        })
+
     def test_user_with_no_email(self):
         self.user.email = ''
         self.user.save()

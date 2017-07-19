@@ -157,6 +157,7 @@ class ChangePasswordView(generics.GenericAPIView):
 class ResetPasswordView(generics.GenericAPIView):
     permission_classes = ()
     serializer_class = ResetPasswordSerializer
+    immutable_users = ['transaction-uploader', 'send-money']
 
     error_messages = {
         'generic': _('There has been a system error. Please try again later'),
@@ -207,6 +208,8 @@ class ResetPasswordView(generics.GenericAPIView):
                 elif user_count > 1:
                     return self.failure_response('multiple_found', field='username')
                 user = users[0]
+            if user.username in self.immutable_users:
+                return self.failure_response('not_found', field='username')
             if user.is_locked_out:
                 return self.failure_response('locked_out', field='username')
             if not user.email:
