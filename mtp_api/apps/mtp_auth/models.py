@@ -1,5 +1,6 @@
 import datetime
 from types import MethodType
+import uuid
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -112,6 +113,14 @@ class FailedLoginAttempt(TimeStampedModel):
 
     def __str__(self):
         return self.user.username
+
+
+class PasswordChangeRequest(TimeStampedModel):
+    code = models.UUIDField(default=uuid.uuid4, primary_key=True, editable=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return '{user} {created}'.format(user=self.user, created=self.created)
 
 
 def patch_user_model():

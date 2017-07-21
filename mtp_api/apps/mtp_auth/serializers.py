@@ -205,3 +205,8 @@ class ChangePasswordSerializer(serializers.Serializer):
 
 class ResetPasswordSerializer(serializers.Serializer):
     username = serializers.CharField(write_only=True)
+    create_email_code = serializers.BooleanField(required=False)
+
+
+class ChangePasswordWithCodeSerializer(serializers.Serializer):
+    new_password = serializers.CharField()

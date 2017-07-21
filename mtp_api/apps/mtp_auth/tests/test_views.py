@@ -24,7 +24,7 @@ from mtp_auth.constants import (
     BANK_ADMIN_OAUTH_CLIENT_ID, CASHBOOK_OAUTH_CLIENT_ID,
     NOMS_OPS_OAUTH_CLIENT_ID, SEND_MONEY_CLIENT_ID
 )
-from mtp_auth.models import Role, FailedLoginAttempt
+from mtp_auth.models import Role, FailedLoginAttempt, PasswordChangeRequest
 from mtp_auth.tests.mommy_recipes import create_prison_clerk
 from mtp_auth.views import ResetPasswordView
 from mtp_auth.tests.utils import AuthTestCaseMixin
@@ -1356,6 +1356,8 @@ class ResetPasswordTestCase(AuthBaseTestCase):
         user = authenticate(username=self.user.username, password=self.current_password)
         self.assertEqual(self.user.username, getattr(user, 'username', None),
                          msg='Cannot log in with old password')
+        self.assertEqual(PasswordChangeRequest.objects.all().count(), 0,
+                         msg='Password change request should not be created')
 
     def test_unknown_user(self):
         response = self.client.post(self.reset_url, {'username': 'unknown'})
@@ -1420,6 +1422,9 @@ class ResetPasswordTestCase(AuthBaseTestCase):
         user = authenticate(username=self.user.username, password=self.current_password)
         self.assertIsNone(user, msg='Password was not changed')
 
+        self.assertEqual(PasswordChangeRequest.objects.all().count(), 0,
+                         msg='Password change request should not be created')
+
         latest_email = mail.outbox[0]
         self.assertIn(self.user.username, latest_email.body)
         self.assertNotIn(self.current_password, latest_email.body)
@@ -1441,3 +1446,66 @@ class ResetPasswordTestCase(AuthBaseTestCase):
 
     def test_password_reset_by_email_case_insensitive(self):
         self.assertPasswordReset(self.user.email.title())
+
+    def test_create_password_change_request(self):
+        response = self.client.post(self.reset_url, {
+            'username': self.user.username,
+            'create_email_code': True
+        })
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        user = authenticate(username=self.user.username, password=self.current_password)
+        self.assertEqual(self.user.username, getattr(user, 'username', None),
+                         msg='Cannot log in with old password')
+
+        self.assertEqual(PasswordChangeRequest.objects.all().count(), 1)
+        change_request = PasswordChangeRequest.objects.all().first()
+        self.assertEqual(response.json()['code'], str(change_request.code))
+
+
+class ChangePasswordWithCodeTestCase(AuthBaseTestCase):
+    reset_url = reverse_lazy('user-reset-password')
+
+    def setUp(self):
+        super().setUp()
+        self.user = make_test_users()[0][0]
+        self.current_password = 'Password321='
+        self.user.set_password(self.current_password)
+        self.user.save()
+        self.new_password = 'newpassword'
+        self.incorrect_code = '55d5ff5d-598e-48a8-b68e-54f22c32c472'
+
+    def get_change_url(self, code):
+        return reverse_lazy('user-change-password-with-code', kwargs={'code': code})
+
+    def test_password_change_with_code(self):
+        response = self.client.post(self.reset_url, {
+            'username': self.user.username,
+            'create_email_code': True
+        })
+        code = response.json()['code']
+        response = self.client.post(
+            self.get_change_url(code), {'new_password': self.new_password}
+        )
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        user = authenticate(username=self.user.username, password=self.current_password)
+        self.assertIsNone(user, msg='Password was not changed')
+
+        user = authenticate(username=self.user.username, password=self.new_password)
+        self.assertEqual(self.user.username, getattr(user, 'username', None),
+                         msg='Cannot log in with new password')
+
+    def test_password_change_fails_with_incorrect_code(self):
+        self.client.post(self.reset_url, {
+            'username': self.user.username,
+            'create_email_code': True
+        })
+        response = self.client.post(
+            self.get_change_url(self.incorrect_code),
+            {'new_password': self.new_password}
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+        user = authenticate(username=self.user.username, password=self.current_password)
+        self.assertEqual(self.user.username, getattr(user, 'username', None),
+                         msg='Cannot log in with old password')

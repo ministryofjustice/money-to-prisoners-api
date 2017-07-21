@@ -15,9 +15,12 @@ from rest_framework import viewsets, generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import FailedLoginAttempt, PrisonUserMapping, Role
+from .models import FailedLoginAttempt, PrisonUserMapping, Role, PasswordChangeRequest
 from .permissions import UserPermissions, AnyAdminClientIDPermissions
-from .serializers import RoleSerializer, UserSerializer, ChangePasswordSerializer, ResetPasswordSerializer
+from .serializers import (
+    RoleSerializer, UserSerializer, ChangePasswordSerializer, ResetPasswordSerializer,
+    ChangePasswordWithCodeSerializer
+)
 
 User = get_user_model()
 
@@ -154,6 +157,36 @@ class ChangePasswordView(generics.GenericAPIView):
         )
 
 
+@method_decorator(sensitive_post_parameters('new_password'), name='dispatch')
+class ChangePasswordWithCodeView(generics.GenericAPIView):
+    permission_classes = ()
+    serializer_class = ChangePasswordWithCodeSerializer
+
+    @atomic
+    @method_decorator(sensitive_variables('new_password'))
+    def post(self, request, code):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            new_password = serializer.validated_data['new_password']
+
+            try:
+                user = PasswordChangeRequest.objects.get(code=code).user
+                password_validation.validate_password(new_password, user)
+                user.set_password(new_password)
+                user.save()
+                return Response(status=status.HTTP_204_NO_CONTENT)
+            except PasswordChangeRequest.DoesNotExist:
+                return Response(status=status.HTTP_404_NOT_FOUND)
+            except ValidationError as e:
+                errors = {'new_password': e.error_list}
+        else:
+            errors = serializer.errors
+        return Response(
+            data={'errors': errors},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+
 class ResetPasswordView(generics.GenericAPIView):
     permission_classes = ()
     serializer_class = ResetPasswordSerializer
@@ -215,21 +248,25 @@ class ResetPasswordView(generics.GenericAPIView):
             if not user.email:
                 return self.failure_response('no_email', field='username')
 
-            password = self.generate_new_password()
-            if not password:
-                logger.error('Password could not be generated; have validators changed?')
-                return self.failure_response('generic')
+            if serializer.validated_data.get('create_email_code', False):
+                change_request, _ = PasswordChangeRequest.objects.get_or_create(user=user)
+                return Response({'code': str(change_request.code)})
+            else:
+                password = self.generate_new_password()
+                if not password:
+                    logger.error('Password could not be generated; have validators changed?')
+                    return self.failure_response('generic')
 
-            user.set_password(password)
-            user.save()
+                user.set_password(password)
+                user.save()
 
-            send_email(
-                user.email, 'mtp_auth/reset_password.txt',
-                gettext('Your new Prisoner Money password'),
-                context={'username': user.username, 'password': password},
-                html_template='mtp_auth/reset_password.html'
-            )
+                send_email(
+                    user.email, 'mtp_auth/reset_password.txt',
+                    gettext('Your new Prisoner Money password'),
+                    context={'username': user.username, 'password': password},
+                    html_template='mtp_auth/reset_password.html'
+                )
 
-            return Response(status=status.HTTP_204_NO_CONTENT)
+                return Response(status=status.HTTP_204_NO_CONTENT)
         else:
             return self.failure_response(serializer.errors)
