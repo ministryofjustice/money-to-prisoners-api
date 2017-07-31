@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-07-03 16:55+0100\n"
+"POT-Creation-Date: 2017-07-31 12:52+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Igor U <igor.ushkarev@digital.justice.gov.uk>, 2017\n"
 "Language-Team: Welsh (https://www.transifex.com/ministry-of-justice/teams/34553/cy/)\n"
@@ -198,7 +198,7 @@ msgstr "Ail-greu data prawf"
 #: apps/core/views.py:189
 #, python-format
 msgid "Data reset to %(scenario)s scenario"
-msgstr "Ailosod data i %(scenario)s sefyllfa"
+msgstr "Ailosod data ar gyfer sefyllfa %(scenario)s "
 
 #: apps/credit/admin.py:67 apps/credit/admin.py:149
 #: apps/transaction/admin.py:19 apps/transaction/admin.py:81
@@ -209,7 +209,7 @@ msgstr "statws"
 msgid "source"
 msgstr "ffynhonnell"
 
-#: apps/credit/admin.py:138 apps/payment/admin.py:96
+#: apps/credit/admin.py:138 apps/payment/admin.py:90
 #: apps/transaction/admin.py:70
 msgid "amount"
 msgstr "swm"
@@ -218,7 +218,7 @@ msgstr "swm"
 msgid "Display total of selected credits"
 msgstr "Dangos y credydau sydd wedi cael eu dethol"
 
-#: apps/credit/admin.py:159 apps/payment/admin.py:107
+#: apps/credit/admin.py:159 apps/payment/admin.py:101
 #: apps/transaction/admin.py:91
 #, python-format
 msgid "Total: %s"
@@ -276,7 +276,7 @@ msgstr "Rhaid ei brosesu â llaw"
 #: templates/core/dashboard/credit-report-cells/credited.html:13
 #: templates/core/dashboard/credit-report-cells/credited.html:23
 msgid "Credited"
-msgstr "Wedi'i gredydu"
+msgstr "Wedi cael ei gredydu"
 
 #: apps/credit/constants.py:9 apps/credit/constants.py:17
 #: apps/credit/constants.py:35
@@ -311,7 +311,7 @@ msgstr "Trosglwyddiad banc"
 msgid "Online"
 msgstr "Ar-lein"
 
-#: apps/credit/constants.py:24 apps/credit/serializers.py:168
+#: apps/credit/constants.py:24 apps/credit/serializers.py:173
 msgid "Unknown"
 msgstr "Anhysbys"
 
@@ -325,7 +325,7 @@ msgstr "Wedi'i ddatgloi"
 
 #: apps/credit/constants.py:34
 msgid "Uncredited"
-msgstr "Heb eu credydu"
+msgstr "Heb gael ei gredydu"
 
 #: apps/credit/constants.py:36
 msgid "Reconciled"
@@ -390,7 +390,7 @@ msgstr "Dyddiad o"
 
 #: apps/credit/dashboards.py:101
 msgid "To date"
-msgstr "Hyd yma"
+msgstr "Dyddiad i"
 
 #: apps/credit/dashboards.py:104
 msgid "Prison"
@@ -464,7 +464,7 @@ msgstr "o %s"
 
 #: apps/credit/notices/prisoner_credits.py:110
 msgid "Send money to someone in prison"
-msgstr "Anfon arian at rywun yn y carchar"
+msgstr "Anfon arian at rywun sydd yn y carchar"
 
 #: apps/credit/notices/prisoner_credits.py:113
 msgid "Confidential. Please fold & staple"
@@ -504,7 +504,7 @@ msgid "MTP Authorisation"
 msgstr "Awdurdodi MTP"
 
 #: apps/mtp_auth/forms.py:11 apps/mtp_auth/forms.py:29
-#: apps/mtp_auth/models.py:131
+#: apps/mtp_auth/models.py:140
 msgid "That username already exists"
 msgstr "Mae'r enw defnyddiwr hwnnw yn bodoli'n barod"
 
@@ -514,42 +514,42 @@ msgstr "Nid oedd y ddau flwch cyfrinair yn cyfateb"
 
 #: apps/mtp_auth/forms.py:30 apps/mtp_auth/serializers.py:75
 msgid "That email address already exists"
-msgstr "Mae'r cyfeiriad e-bost hwnnw yn bodoli'n barod"
+msgstr "Mae'r cyfeiriad e-bost yn bodoli'n barod"
 
 #: apps/mtp_auth/serializers.py:154
 #, python-format
 msgid "Your new %(service_name)s account is ready to use"
 msgstr "Mae eich cyfrif %(service_name)s newydd yn barod i'w ddefnyddio"
 
-#: apps/mtp_auth/views.py:111
+#: apps/mtp_auth/views.py:114
 msgid "You cannot disable yourself"
 msgstr "Ni allwch analluogi eich hun"
 
-#: apps/mtp_auth/views.py:146
+#: apps/mtp_auth/views.py:149
 msgid "You’ve entered an incorrect password"
 msgstr "Rydych wedi nodi cyfrinair anghywir"
 
-#: apps/mtp_auth/views.py:162
+#: apps/mtp_auth/views.py:196
 msgid "There has been a system error. Please try again later"
 msgstr "Mae yna wall wedi digwydd yn y system. Rhowch gynnig arall arni hwyrach ymlaen."
 
-#: apps/mtp_auth/views.py:163
+#: apps/mtp_auth/views.py:197
 msgid "Username doesn’t match any user account"
 msgstr "Nid yw'r enw defnyddiwr yn cyfateb i unrhyw gyfrif"
 
-#: apps/mtp_auth/views.py:164
+#: apps/mtp_auth/views.py:198
 msgid "Your account is locked, please contact the person who set it up"
 msgstr "Mae eich cyfrif wedi'i gloi, cysylltwch â'r unigolyn wnaeth ei greu"
 
-#: apps/mtp_auth/views.py:166
+#: apps/mtp_auth/views.py:200
 msgid "We don’t have your email address, please contact the person who set up the account"
 msgstr "Nid yw eich cyfeiriad e-bost gennym, cysylltwch â'r unigolyn wnaeth greu'r cyfrif"
 
-#: apps/mtp_auth/views.py:168
+#: apps/mtp_auth/views.py:202
 msgid "That email address matches multiple user accounts, please enter your unique username"
 msgstr "Mae'r cyfeiriad ebost yna yn cyfateb i nifer o gyfrifon defnyddwyr, nodwch eich enw defnyddiwr unigryw os gwelwch yn dda"
 
-#: apps/mtp_auth/views.py:225
+#: apps/mtp_auth/views.py:265
 msgid "Your new Prisoner Money password"
 msgstr "Eich cyfrinair Anfon Arian at Garcharor newydd"
 
@@ -579,13 +579,13 @@ msgstr "credyd"
 
 #: apps/payment/admin.py:85
 msgid "billing address"
-msgstr ""
+msgstr "cyfeiriad bilio"
 
-#: apps/payment/admin.py:100
+#: apps/payment/admin.py:94
 msgid "service charge"
 msgstr "tâl gwasanaeth"
 
-#: apps/payment/admin.py:104
+#: apps/payment/admin.py:98
 msgid "Display total of selected payments"
 msgstr "Dangos y taliadau sydd wedi cael eu dethol"
 
@@ -617,15 +617,15 @@ msgstr "Dim ond y 4 digid olaf sydd ei angen"
 msgid "Prisoner number"
 msgstr "Rhif y carcharor"
 
-#: apps/payment/models.py:18 apps/transaction/models.py:33
+#: apps/payment/models.py:19 apps/transaction/models.py:33
 msgid "For reconciliation"
 msgstr "I'w cysoni"
 
-#: apps/payment/models.py:54
+#: apps/payment/models.py:72
 msgid "As specified by the sender"
 msgstr "Fel y nodwyd gan yr anfonwr"
 
-#: apps/payment/models.py:56
+#: apps/payment/models.py:74
 msgid "Specified by sender for confirmation emails"
 msgstr "Wedi'i nodi gan yr anfonwr ar gyfer negeseuon e-bost cadarnhau"
 
@@ -690,7 +690,7 @@ msgstr "Ni chawsom gredydau yn y carchardai hyn, ond mae yna rai ar y daenlen:"
 
 #: apps/performance/views.py:82
 msgid "Credits received do not match those in the spreadsheet:"
-msgstr "Nid yw'r credydau a cafwyd yn cyfateb i'r rhai sydd ar y daenlen:"
+msgstr "Nid yw'r credydau a gafwyd yn cyfateb i'r rhai sydd ar y daenlen:"
 
 #: apps/prison/admin.py:29
 msgid "Prison name does not start with a standard prefix."
@@ -778,7 +778,7 @@ msgstr "Trafodion o gyfriflen banc"
 #: apps/transaction/constants.py:7
 #: templates/core/dashboard/credit-report-cells/credited.html:23
 msgid "Creditable"
-msgstr "Mae modd ei gymeradwyo"
+msgstr "Mae modd ei gredydu"
 
 #: apps/transaction/constants.py:10
 #: templates/core/dashboard/credit-report-cells/refunded.html:23
@@ -818,7 +818,7 @@ msgstr "Gweinyddol"
 
 #: apps/transaction/views.py:109
 msgid "'received_at__gte' and 'received_at__lt' fields are required"
-msgstr ""
+msgstr "Rhaid llenwi'r meysydd 'received_at__gte' a 'received_at__lt'"
 
 #: apps/transaction/views.py:117
 msgid "Invalid date format"
@@ -830,11 +830,11 @@ msgstr "Mae'r defnyddiwr hwn wedi cael ei gloi alan"
 
 #: templates/admin/auth/user/change_form.html:13
 msgid "MTP Authorisations"
-msgstr ""
+msgstr "Awdurdodiadau MTP"
 
 #: templates/admin/auth/user/change_form.html:20
 msgid "Can access the following applications:"
-msgstr ""
+msgstr "Mynediad i'r adnoddau canlynol:"
 
 #: templates/admin/auth/user/change_form.html:24
 #: templates/admin/auth/user/change_form.html:50
@@ -857,12 +857,12 @@ msgstr "Heb ei gofrestru mewn unrhyw garchar."
 #: templates/admin/auth/user/change_form.html:39
 #, python-format
 msgid "Registered at %(prison_name)s."
-msgstr ""
+msgstr "Wedi'i gofrestru yn %(prison_name)s."
 
 #: templates/admin/auth/user/change_form.html:43
 #, python-format
 msgid "Registered at <strong>%(prison_count)s</strong> prisons."
-msgstr ""
+msgstr "Wedi cofrestru mewn <strong>%(prison_count)s</strong> o garchardai."
 
 #: templates/admin/base_site.html:6
 #, python-format
@@ -871,7 +871,7 @@ msgstr "Ap fersiwn %(version)s"
 
 #: templates/admin/base_site.html:10
 msgid "App version not known"
-msgstr ""
+msgstr "Fersiwn ap yn anhysbys"
 
 #: templates/admin/base_site.html:21
 #, python-format
@@ -885,7 +885,7 @@ msgstr "Adroddiadau"
 #: templates/admin/index.html:31
 #, python-format
 msgid "Models in the %(name)s application"
-msgstr ""
+msgstr "Modelau yn yr adnodd %(name)s "
 
 #: templates/admin/index.html:48 templates/core/dashboard/module.html:16
 msgid "Change"
@@ -901,7 +901,7 @@ msgstr "Adnoddau profi:"
 
 #: templates/admin/index.html:67
 msgid "Delete and recreate sample data for user testing"
-msgstr ""
+msgstr "Dileu ac ail-greu'r data sampl er mwyn iddo gael ei brofi "
 
 #: templates/admin/index.html:69
 msgid "This cannot be undone!"
@@ -961,11 +961,11 @@ msgstr ""
 
 #: templates/admin/security/prisonerprofile/change_form.html:6
 msgid "Sender profiles"
-msgstr ""
+msgstr "Proffiliau anfonwyr"
 
 #: templates/admin/security/senderprofile/change_form.html:6
 msgid "Prisoner profiles"
-msgstr ""
+msgstr "Proffiliau carcharorion"
 
 #: templates/core/admin-form-filter.html:2
 #, python-format
@@ -974,27 +974,27 @@ msgstr " Erbyn %(filter_title)s "
 
 #: templates/core/dashboard/credit-report-cells/bank-transfer-issues.html:7
 msgid "Bank transfer issues"
-msgstr ""
+msgstr "Problemau gyda throsglwyddiadau banc "
 
 #: templates/core/dashboard/credit-report-cells/bank-transfer-issues.html:9
 msgid "Bank transfers that contained incomplete sender information"
-msgstr ""
+msgstr "Trosglwyddiadau banc a oedd yn cynnwys gwybodaeth anghyflawn am yr anfonwr "
 
 #: templates/core/dashboard/credit-report-cells/bank-transfer-issues.html:14
 msgid "Bank transfers that do not match a prisoner and cannot be refunded"
-msgstr ""
+msgstr "Trosglwyddiadau banc nad ydynt yn cyfateb i garcharor ac na ellir eu had-dalu"
 
 #: templates/core/dashboard/credit-report-cells/bank-transfer-issues.html:20
 msgid "Bank transfers marked as administrative, e.g. WorldPay settlements or NOMS reimbursing a payment out to a supplier"
-msgstr ""
+msgstr "Trosglwyddiadau banc sydd wedi cael eu marcio fel 'gweinyddol, e.e. setliadau WorldPay neu NOMS yn ad-dalu taliad i gyflenwr"
 
 #: templates/core/dashboard/credit-report-cells/bank-transfer-references.html:7
 msgid "Bank transfer references"
-msgstr ""
+msgstr "Cyfeirnodau trosglwyddiadau banc "
 
 #: templates/core/dashboard/credit-report-cells/bank-transfer-references.html:9
 msgid "References that can be read as a prisoner number and date of birth"
-msgstr ""
+msgstr "Cyfeirnodau y gellir eu darllen fel rhif carcharor a dyddiad geni "
 
 #: templates/core/dashboard/credit-report-cells/bank-transfer-references.html:10
 msgid "Readable"
@@ -1002,19 +1002,19 @@ msgstr "Darllenadwy"
 
 #: templates/core/dashboard/credit-report-cells/bank-transfer-references.html:14
 msgid "References using the / delimited format as generated by send-money"
-msgstr ""
+msgstr "Cyfeirnodau sy'n defnyddio'r fformat / a gynhyrchwyd gan anfon-arian"
 
 #: templates/core/dashboard/credit-report-cells/bank-transfer-references.html:15
 msgid "Slash-format"
-msgstr ""
+msgstr "Fformat-slaes"
 
 #: templates/core/dashboard/credit-report-cells/bank-transfer-references.html:21
 msgid "Unmatched"
-msgstr ""
+msgstr "Ddim yn cyfateb "
 
 #: templates/core/dashboard/credit-report-cells/bank-transfer-references.html:25
 msgid "References that cannot be read as a prisoner number and date of birth"
-msgstr ""
+msgstr "Cyfeirnodau na ellir eu darllen fel rhif carcharor a dyddiad geni "
 
 #: templates/core/dashboard/credit-report-cells/bank-transfer-references.html:26
 msgid "Invalid"
@@ -1022,11 +1022,11 @@ msgstr "Annilys"
 
 #: templates/core/dashboard/credit-report-cells/creditable.html:7
 msgid "Crediting"
-msgstr ""
+msgstr "Credydu"
 
 #: templates/core/dashboard/credit-report-cells/creditable.html:9
 msgid "Proportion of creditable that is debit card payments, i.e. ignores rejected bank transfers"
-msgstr ""
+msgstr "Cyfran o'r credydau sy'n daliadau cerdyn debyd, h.y. anwybyddu trosglwyddiadau banc a wrthodwyd"
 
 #: templates/core/dashboard/credit-report-cells/creditable.html:10
 msgid "Debit cards"
@@ -1034,39 +1034,39 @@ msgstr "Cardiau debyd"
 
 #: templates/core/dashboard/credit-report-cells/creditable.html:14
 msgid "The average time between receipt and crediting in the Digital Cashbook"
-msgstr ""
+msgstr "Yr amser cyfartalog rhwng derbyn a chredydu yn y Llyfr Arian Digidol "
 
 #: templates/core/dashboard/credit-report-cells/creditable.html:15
 msgid "Time to credit"
-msgstr ""
+msgstr "Amser i gredydu"
 
 #: templates/core/dashboard/credit-report-cells/credited.html:16
 msgid "Marked as credited through the Cashbook tool"
-msgstr ""
+msgstr "Wedi'i farcio fel wedi ei gredydu drwy'r adnodd Llyfr Arian "
 
 #: templates/core/dashboard/credit-report-cells/error-rate.html:5
 msgid "Proportion of incoming bank transfers that cannot be credited."
-msgstr ""
+msgstr "Cyfran o drosglwyddiadau banc na ellir eu credydu. "
 
 #: templates/core/dashboard/credit-report-cells/error-rate.html:7
 msgid "Bank transfer error rate"
-msgstr ""
+msgstr "Gwall trosglwyddiad banc "
 
 #: templates/core/dashboard/credit-report-cells/payment-method.html:7
 msgid "Received by method"
-msgstr ""
+msgstr "Fe'i dderbyniwyd ar ffurf"
 
 #: templates/core/dashboard/credit-report-cells/received.html:12
 msgid "Received"
-msgstr ""
+msgstr "Wedi cyrraedd"
 
 #: templates/core/dashboard/credit-report-cells/refunded.html:16
 msgid "Refunds file downloaded through the Bank Admin tool"
-msgstr ""
+msgstr "Cafodd y ffeil ad-daliadau ei llwytho drwy'r adnodd Banc - gweinyddol "
 
 #: templates/core/dashboard/credit-report-cells/top-prisons.html:8
 msgid "Received by prison"
-msgstr ""
+msgstr "Mae'r carchar wedi'i gael "
 
 #: templates/core/dashboard/credit-report-cells/top-prisons.html:12
 msgid "No prison"
@@ -1074,16 +1074,16 @@ msgstr "Dim carchar"
 
 #: templates/core/dashboard/credit-report.html:60
 msgid "View credits list"
-msgstr ""
+msgstr "Gweld y rhestr o gredydau"
 
 #: templates/core/dashboard/index.html:21
 #, python-format
 msgid "Reloads every %(count)s seconds"
-msgstr ""
+msgstr "Mae'n ail-lwytho bob %(count)s eiliad"
 
 #: templates/core/dashboard/index.html:23
 msgid "Auto-reload"
-msgstr ""
+msgstr "Ail-lwytho'n awtomatig"
 
 #: templates/core/dashboard/module.html:6
 msgid "Hide"
@@ -1091,16 +1091,16 @@ msgstr "Cuddio"
 
 #: templates/core/dashboard/module.html:13
 msgid "Stand out"
-msgstr ""
+msgstr "Sefyll allan"
 
 #: templates/core/dashboard/satisfaction-results.html:23
 #, python-format
 msgid "View complete results for %(title)s"
-msgstr ""
+msgstr "Gweld holl ganlyniadau %(title)s"
 
 #: templates/core/recreate-test-data.html:11
 msgid "Run again"
-msgstr ""
+msgstr "Rhedeg eto"
 
 #: templates/core/recreate-test-data.html:13
 msgid "Output log"
@@ -1123,7 +1123,7 @@ msgstr "Yn atodedig mae'r slipiau credyd i garcharorion y mae eu cyfrifon wedi c
 #: templates/credit/prisoner-notice-email.html:9
 #: templates/credit/prisoner-notice-email.txt:6
 msgid "Please print them out and deliver them confidentially to individuals’ cells."
-msgstr "Argraffwch nhw a'u hanfon yn gyfrifachol i gelloedd yr unigolion."
+msgstr "Argraffwch nhw a'u hanfon yn gyfrinfachol i gelloedd yr unigolion."
 
 #: templates/credit/prisoner-notice-email.html:11
 #: templates/credit/prisoner-notice-email.txt:8
