@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mtp-api\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-07-03 16:55+0100\n"
+"POT-Creation-Date: 2017-07-31 12:52+0100\n"
 "PO-Revision-Date: 2016-11-04 10:00+0000\n"
 "Last-Translator: Welsh Language Unit <welsh.language.unit.manager@hmcts.gsi.gov.uk>\n"
 "Language-Team: Welsh (http://www.transifex.com/ministry-of-justice/mtp/language/cy/)\n"
@@ -209,7 +209,7 @@ msgstr ""
 msgid "source"
 msgstr ""
 
-#: apps/credit/admin.py:138 apps/payment/admin.py:96
+#: apps/credit/admin.py:138 apps/payment/admin.py:90
 #: apps/transaction/admin.py:70
 msgid "amount"
 msgstr ""
@@ -218,7 +218,7 @@ msgstr ""
 msgid "Display total of selected credits"
 msgstr ""
 
-#: apps/credit/admin.py:159 apps/payment/admin.py:107
+#: apps/credit/admin.py:159 apps/payment/admin.py:101
 #: apps/transaction/admin.py:91
 #, python-format
 msgid "Total: %s"
@@ -311,7 +311,7 @@ msgstr ""
 msgid "Online"
 msgstr ""
 
-#: apps/credit/constants.py:24 apps/credit/serializers.py:168
+#: apps/credit/constants.py:24 apps/credit/serializers.py:173
 msgid "Unknown"
 msgstr ""
 
@@ -504,7 +504,7 @@ msgid "MTP Authorisation"
 msgstr ""
 
 #: apps/mtp_auth/forms.py:11 apps/mtp_auth/forms.py:29
-#: apps/mtp_auth/models.py:131
+#: apps/mtp_auth/models.py:140
 msgid "That username already exists"
 msgstr ""
 
@@ -521,35 +521,35 @@ msgstr ""
 msgid "Your new %(service_name)s account is ready to use"
 msgstr ""
 
-#: apps/mtp_auth/views.py:111
+#: apps/mtp_auth/views.py:114
 msgid "You cannot disable yourself"
 msgstr ""
 
-#: apps/mtp_auth/views.py:146
+#: apps/mtp_auth/views.py:149
 msgid "You’ve entered an incorrect password"
 msgstr ""
 
-#: apps/mtp_auth/views.py:162
+#: apps/mtp_auth/views.py:196
 msgid "There has been a system error. Please try again later"
 msgstr ""
 
-#: apps/mtp_auth/views.py:163
+#: apps/mtp_auth/views.py:197
 msgid "Username doesn’t match any user account"
 msgstr ""
 
-#: apps/mtp_auth/views.py:164
+#: apps/mtp_auth/views.py:198
 msgid "Your account is locked, please contact the person who set it up"
 msgstr ""
 
-#: apps/mtp_auth/views.py:166
+#: apps/mtp_auth/views.py:200
 msgid "We don’t have your email address, please contact the person who set up the account"
 msgstr ""
 
-#: apps/mtp_auth/views.py:168
+#: apps/mtp_auth/views.py:202
 msgid "That email address matches multiple user accounts, please enter your unique username"
 msgstr ""
 
-#: apps/mtp_auth/views.py:225
+#: apps/mtp_auth/views.py:265
 msgid "Your new Prisoner Money password"
 msgstr ""
 
@@ -581,11 +581,11 @@ msgstr ""
 msgid "billing address"
 msgstr ""
 
-#: apps/payment/admin.py:100
+#: apps/payment/admin.py:94
 msgid "service charge"
 msgstr ""
 
-#: apps/payment/admin.py:104
+#: apps/payment/admin.py:98
 msgid "Display total of selected payments"
 msgstr ""
 
@@ -617,15 +617,15 @@ msgstr ""
 msgid "Prisoner number"
 msgstr ""
 
-#: apps/payment/models.py:18 apps/transaction/models.py:33
+#: apps/payment/models.py:19 apps/transaction/models.py:33
 msgid "For reconciliation"
 msgstr ""
 
-#: apps/payment/models.py:54
+#: apps/payment/models.py:72
 msgid "As specified by the sender"
 msgstr ""
 
-#: apps/payment/models.py:56
+#: apps/payment/models.py:74
 msgid "Specified by sender for confirmation emails"
 msgstr ""
 
