@@ -35,7 +35,7 @@ class Command(TestServerCommand):
 
     def handle(self, *fixture_labels, **options):
         this = self
-        verbosity = options.get('verbosity')
+        this.verbosity = options.get('verbosity')
         controller_port = options.pop('controller_port')
 
         required_fixture_labels = ['initial_groups', 'initial_types', 'test_prisons']
@@ -49,7 +49,7 @@ class Command(TestServerCommand):
         def extended_create_test_db(self, *args, **kwargs):
             # extends the test db creation method to load and generate testing data
             db_name = create_test_db(*args, **kwargs)
-            call_command('loaddata', *fixture_labels, **{'verbosity': verbosity})
+            call_command('loaddata', *fixture_labels, **{'verbosity': this.verbosity})
             this.load_test_data()
             this.create_super_admin()
             return db_name
@@ -71,8 +71,11 @@ class Command(TestServerCommand):
         super().handle(*fixture_labels, **options)
 
     @synchronised
-    def load_test_data(self, verbosity=1):
-        call_command('load_test_data', protect_superusers=True, verbosity=verbosity)
+    def load_test_data(self, verbosity=1, **kwargs):
+        call_command(
+            'load_test_data', protect_superusers=True,
+            verbosity=verbosity, **kwargs
+        )
 
     @synchronised
     def create_super_admin(self):
@@ -98,8 +101,16 @@ class Command(TestServerCommand):
 
     def controller_request(self, request, client_address, server):
         action = request.recv(1024).strip()
+        if self.verbosity > 1:
+            self.stdout.write('Message received: %s' % action)
         if action == b'load_test_data':
             self.load_test_data(verbosity=1)
+            request.sendall(b'done')
+        elif action == b'load_nomis_test_data':
+            self.load_test_data(
+                verbosity=1, prisons=['nomis-api-dev'],
+                prisoners=['nomis-api-dev'], credits='nomis'
+            )
             request.sendall(b'done')
         elif action in (b'quit', b'exit', b'shutdown'):
             request.sendall(b'shutting down')

@@ -155,12 +155,6 @@ class RecreateTestDataView(AdminViewMixin, FormView):
             elif scenario == 'cashbook':
                 options.update({
                     'prisons': ['nomis'],
-                    'prisoners': ['nomis'],
-                    'credits': 'nomis',
-                })
-            elif scenario == 'training':
-                options.update({
-                    'prisons': ['nomis'],
                     'prisoners': ['sample'],
                     'credits': 'nomis',
                 })
