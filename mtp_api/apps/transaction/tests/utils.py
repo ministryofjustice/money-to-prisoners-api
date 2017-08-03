@@ -202,7 +202,7 @@ def generate_predetermined_transactions_data():
         'created': over_a_week_ago,
         'modified': a_week_ago,
         'owner': None,
-        'credited': True,
+        'credited': False,
         'refunded': False,
 
         'sender_name': 'Mary Stevenson',

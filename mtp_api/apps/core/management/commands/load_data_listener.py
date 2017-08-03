@@ -38,6 +38,12 @@ class Command(BaseCommand):
         if action == b'load_test_data':
             self.load_test_data(verbosity=1)
             request.sendall(b'done')
+        elif action == b'load_nomis_test_data':
+            self.load_test_data(
+                verbosity=1, prisons=['nomis-api-dev'],
+                prisoners=['nomis-api-dev'], credits='nomis'
+            )
+            request.sendall(b'done')
         elif action in (b'quit', b'exit', b'shutdown'):
             request.sendall(b'shutting down')
             threading.Timer(1, self.shutdown).start()
@@ -45,8 +51,11 @@ class Command(BaseCommand):
             request.sendall(b'unknown action')
 
     @synchronised
-    def load_test_data(self, verbosity=1):
-        call_command('load_test_data', protect_superusers=True, verbosity=verbosity)
+    def load_test_data(self, verbosity=1, **kwargs):
+        call_command(
+            'load_test_data', protect_superusers=True,
+            verbosity=verbosity, **kwargs
+        )
 
     @synchronised
     def shutdown(self):
