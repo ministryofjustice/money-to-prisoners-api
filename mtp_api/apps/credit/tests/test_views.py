@@ -1,8 +1,6 @@
 import datetime
-import math
 import random
 import re
-from unittest import mock, skip
 import urllib.parse
 
 from django.conf import settings
@@ -12,22 +10,18 @@ from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.utils.dateparse import parse_datetime, parse_date
 from django.utils.dateformat import format as format_date
-from django.utils.timezone import localtime
-from mtp_common.test_utils import silence_logger
 from rest_framework import status
 
 from core import getattr_path
-from credit.views import CreditTextSearchFilter
 from credit.models import Credit, Log
 from credit.constants import (
-    CREDIT_STATUS, LOCK_LIMIT, LOG_ACTIONS, CREDIT_RESOLUTION
+    CREDIT_STATUS, LOG_ACTIONS, CREDIT_RESOLUTION
 )
 from credit.tests.test_base import (
     BaseCreditViewTestCase, CreditRejectsRequestsWithoutPermissionTestMixin
 )
 from mtp_auth.models import PrisonUserMapping
 from prison.models import Prison
-from transaction.tests.utils import generate_transactions
 
 
 class CashbookCreditRejectsRequestsWithoutPermissionTestMixin(
@@ -261,8 +255,7 @@ class CreditListTestCase(
         if 'valid' in filters:
             def valid_checker(c):
                 return (
-                    self.STATUS_FILTERS[CREDIT_STATUS.AVAILABLE](c) or
-                    self.STATUS_FILTERS[CREDIT_STATUS.LOCKED](c) or
+                    self.STATUS_FILTERS[CREDIT_STATUS.CREDIT_PENDING](c) or
                     self.STATUS_FILTERS[CREDIT_STATUS.CREDITED](c)
                 )
             if filters['valid'] in ('true', 'True', 1, True):
@@ -354,22 +347,13 @@ class CreditListWithDefaultsTestCase(CreditListTestCase):
 
 class CreditListWithDefaultPrisonAndUserTestCase(CreditListTestCase):
 
-    def test_filter_by_status_available(self):
+    def test_filter_by_status_credit_pending(self):
         """
         Returns available credits attached to all the prisons
         that the logged-in user can manage.
         """
         self._test_response_with_filters(filters={
-            'status': CREDIT_STATUS.AVAILABLE
-        })
-
-    def test_filter_by_status_locked(self):
-        """
-        Returns locked credits attached to all the prisons
-        that the logged-in user can manage.
-        """
-        self._test_response_with_filters(filters={
-            'status': CREDIT_STATUS.LOCKED
+            'status': CREDIT_STATUS.CREDIT_PENDING
         })
 
     def test_filter_by_status_credited(self):
@@ -384,26 +368,18 @@ class CreditListWithDefaultPrisonAndUserTestCase(CreditListTestCase):
 
 class CreditListWithDefaultUserTestCase(CreditListTestCase):
 
-    def test_filter_by_status_available_and_prison(self):
+    def test_filter_by_status_credit_pending_and_prison(self):
         """
         Returns available credits attached to the passed-in prison.
         """
         self._test_response_with_filters(filters={
-            'prison': self.prisons[0].pk
-        })
-
-    def test_filter_by_status_locked_and_prison(self):
-        """
-        Returns locked credits attached to the passed-in prison.
-        """
-        self._test_response_with_filters(filters={
-            'status': CREDIT_STATUS.LOCKED,
+            'status': CREDIT_STATUS.CREDIT_PENDING,
             'prison': self.prisons[0].pk
         })
 
     def test_filter_by_status_credited_prison(self):
         """
-        Returns crdited credits attached to the passed-in prison.
+        Returns credited credits attached to the passed-in prison.
         """
         self._test_response_with_filters(filters={
             'status': CREDIT_STATUS.CREDITED,
@@ -413,21 +389,13 @@ class CreditListWithDefaultUserTestCase(CreditListTestCase):
 
 class CreditListWithDefaultPrisonTestCase(CreditListTestCase):
 
-    def test_filter_by_status_available_and_user(self):
+    def test_filter_by_status_credit_pending_and_user(self):
         """
         Returns available credits attached to all the prisons
         that the passed-in user can manage.
         """
         self._test_response_with_filters(filters={
-            'user': self.prison_clerks[1].pk
-        })
-
-    def test_filter_by_status_locked_and_user(self):
-        """
-        Returns credits locked by the passed-in user.
-        """
-        self._test_response_with_filters(filters={
-            'status': CREDIT_STATUS.LOCKED,
+            'status': CREDIT_STATUS.CREDIT_PENDING,
             'user': self.prison_clerks[1].pk
         })
 
@@ -443,22 +411,12 @@ class CreditListWithDefaultPrisonTestCase(CreditListTestCase):
 
 class CreditListWithoutDefaultsTestCase(CreditListTestCase):
 
-    def test_filter_by_status_available_and_prison_and_user(self):
+    def test_filter_by_status_credit_pending_and_prison_and_user(self):
         """
         Returns available credits attached to the passed-in prison.
         """
         self._test_response_with_filters(filters={
-            'prison': self.prisons[0].pk,
-            'user': self.prison_clerks[1].pk
-        })
-
-    def test_filter_by_status_locked_and_prison_and_user(self):
-        """
-        Returns credits locked by the passed-in user and
-        attached to the passed-in prison.
-        """
-        self._test_response_with_filters(filters={
-            'status': CREDIT_STATUS.LOCKED,
+            'status': CREDIT_STATUS.CREDIT_PENDING,
             'prison': self.prisons[0].pk,
             'user': self.prison_clerks[1].pk
         })
@@ -830,263 +788,6 @@ class CreditListOrderingTestCase(CreditListTestCase):
 CreditListOrderingTestCase.add_test_methods()
 
 
-class LockedCreditListTestCase(CreditListTestCase):
-    def _get_url(self, **filters):
-        url = reverse('credit-locked')
-
-        filters['limit'] = 1000
-        return '{url}?{filters}'.format(
-            url=url, filters=urllib.parse.urlencode(filters)
-        )
-
-    def test_locked_credits_returns_same_ones_as_filtered_list(self):
-        logged_in_user = self.prison_clerks[0]
-        logged_in_user.prisonusermapping.prisons.add(*self.prisons)
-        # managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
-
-        url_list = super()._get_url(status=CREDIT_STATUS.LOCKED)
-        response_list = self.client.get(
-            url_list, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
-        )
-        self.assertTrue(response_list.data['count'])  # ensure some credits exist!
-
-        url_locked = self._get_url()
-        response_locked = self.client.get(
-            url_locked, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
-        )
-
-        self.assertEqual(response_locked.status_code, status.HTTP_200_OK)
-        self.assertEqual(response_locked.data['count'], response_list.data['count'])
-        self.assertListEqual(
-            list(sorted(credit['id'] for credit in response_locked.data['results'])),
-            list(sorted(credit['id'] for credit in response_list.data['results'])),
-        )
-        self.assertTrue(all(credit['locked'] for credit in response_locked.data['results']))
-        self.assertTrue(all('locked_at' in credit for credit in response_locked.data['results']))
-
-
-class DateBasedPaginationTestCase(CreditListTestCase):
-    def _get_response(self, filters):
-        logged_in_user = self._get_authorised_user()
-        url = self._get_url(**filters)
-        return self.client.get(
-            url, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
-        )
-
-    def _test_invalid_response(self, filters):
-        response = self._get_response(filters)
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-
-    def test_invalid_ordering(self):
-        self._test_invalid_response({'page_by_date_field': 'received_at',
-                                     'ordering': 'prisoner_number'})
-
-    def test_invalid_pagination(self):
-        received_at = self._get_random_credit_date()
-        received_at__gte = received_at.strftime('%Y-%m-%d')
-        received_at__lt = (received_at - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
-        self._test_invalid_response({'page_by_date_field': 'prisoner_name',
-                                     'received_at__gte': received_at__gte,
-                                     'received_at__lt': received_at__lt})
-
-    def _get_random_credit(self):
-        return random.choice(self._get_managed_prison_credits())
-
-    def _get_date_of_credit(self, credit):
-        return localtime(credit.received_at).date()
-
-    def _get_random_credit_date(self):
-        return self._get_date_of_credit(self._get_random_credit())
-
-    def _get_date_count(self, credits):
-        credit_dates = set(map(self._get_date_of_credit, credits))
-        return len(credit_dates)
-
-    def _get_page_count(self, credits, page_size=settings.REQUEST_PAGE_DAYS):
-        return int(math.ceil(self._get_date_count(credits) / page_size))
-
-    def _get_all_pages_of_credits(self, credits, page_size=settings.REQUEST_PAGE_DAYS):
-        all_pages = []
-        current_page = []
-        dates_collected = 0
-        last_date = None
-        for credit in credits:
-            date = self._get_date_of_credit(credit)
-            if date != last_date:
-                dates_collected += 1
-                last_date = date
-            if dates_collected > page_size:
-                dates_collected = 1
-                last_date = date
-                all_pages.append(current_page)
-                current_page = []
-            current_page.append(credit)
-        if current_page:
-            all_pages.append(current_page)
-        return all_pages
-
-    def _get_page_of_credits(self, credits, page=1, page_size=settings.REQUEST_PAGE_DAYS):
-        all_pages = self._get_all_pages_of_credits(credits, page_size=page_size)
-        return all_pages[page - 1]
-
-    def _get_page_of_credit_ids(self, credits, page=1, page_size=settings.REQUEST_PAGE_DAYS):
-        page = self._get_page_of_credits(credits, page=page, page_size=page_size)
-        return sorted(credit.id for credit in page)
-
-    def _test_paginated_response(self, filters, credit_ids, count, page, page_count):
-        response = self._get_response(filters)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        response_ids = sorted(credit['id'] for credit in response.data['results'])
-        self.assertListEqual(response_ids, credit_ids)
-
-        self.assertEqual(response.data['count'], count)
-        self.assertEqual(response.data['page'], page)
-        self.assertEqual(response.data['page_count'], page_count)
-
-    def _get_credits(self, credit_filter=None, ordering='-received_at'):
-        credits = self._get_managed_prison_credits()
-        credits = filter(credit_filter, credits)
-
-        def credit_sort(credit):
-            return credit.received_at
-
-        if ordering == 'received_at':
-            credits = sorted(credits, key=credit_sort)
-        elif ordering == '-received_at':
-            credits = sorted(credits, key=credit_sort, reverse=True)
-        else:
-            raise NotImplementedError
-
-        return credits
-
-    @skip
-    def test_pagination_without_filters(self):
-        credits = self._get_credits()
-
-        expected = {
-            'count': len(credits),
-            'page': 1,
-            'page_count': self._get_page_count(credits),
-            'credit_ids': self._get_page_of_credit_ids(credits),
-        }
-        self._test_paginated_response(filters={'page_by_date_field': 'received_at',
-                                               'ordering': '-received_at'},
-                                      **expected)
-
-    def test_pagination_with_search(self):
-        search_term = ''
-        while not search_term:
-            random_credit = self._get_random_credit()
-            search_term = random_credit.prisoner_name or \
-                random_credit.prisoner_number
-        search_term = search_term.lower().split()[0]
-
-        search_fields = CreditTextSearchFilter.fields
-
-        def credit_filter(credit):
-            return any(
-                search_term in str(getattr(credit, search_field, '') or '').lower()
-                for search_field in search_fields
-            )
-
-        credits = self._get_credits(credit_filter)
-
-        expected = {
-            'count': len(credits),
-            'page': 1,
-            'page_count': self._get_page_count(credits),
-            'credit_ids': self._get_page_of_credit_ids(credits),
-        }
-        self._test_paginated_response(filters={'page_by_date_field': 'received_at',
-                                               'ordering': '-received_at',
-                                               'search': search_term},
-                                      **expected)
-
-    def test_pagination_with_single_date(self):
-        received_at = self._get_random_credit_date()
-
-        def credit_filter(credit):
-            return self._get_date_of_credit(credit) == received_at
-
-        credits = self._get_credits(credit_filter)
-
-        expected = {
-            'count': len(credits),
-            'page': 1,
-            'page_count': self._get_page_count(credits),
-            'credit_ids': self._get_page_of_credit_ids(credits),
-        }
-        received_at__gte = received_at.strftime('%Y-%m-%d')
-        received_at__lt = (received_at + datetime.timedelta(days=1)).strftime('%Y-%m-%d')
-        self._test_paginated_response(filters={'page_by_date_field': 'received_at',
-                                               'ordering': '-received_at',
-                                               'received_at__gte': received_at__gte,
-                                               'received_at__lt': received_at__lt},
-                                      **expected)
-
-    def test_pagination_with_date_range(self):
-        received_at__gte, received_at__lt = self._get_random_credit_date(), self._get_random_credit_date()
-        while received_at__lt == received_at__gte:
-            received_at__gte, received_at__lt = self._get_random_credit_date(), self._get_random_credit_date()
-        if received_at__gte > received_at__lt:
-            received_at__gte, received_at__lt = received_at__lt, received_at__gte
-
-        def credit_filter(credit):
-            return received_at__gte <= self._get_date_of_credit(credit) < received_at__lt
-
-        credits = self._get_credits(credit_filter)
-
-        expected = {
-            'count': len(credits),
-            'page': 1,
-            'page_count': self._get_page_count(credits),
-            'credit_ids': self._get_page_of_credit_ids(credits),
-        }
-        received_at__gte = received_at__gte.strftime('%Y-%m-%d')
-        received_at__lt = received_at__lt.strftime('%Y-%m-%d')
-        self._test_paginated_response(filters={'page_by_date_field': 'received_at',
-                                               'ordering': '-received_at',
-                                               'received_at__gte': received_at__gte,
-                                               'received_at__lt': received_at__lt},
-                                      **expected)
-
-    @skip
-    def test_pagination_beyond_page_1(self):
-        tries = 6
-        page_count = 0
-        credits = []
-        for _ in range(tries):
-            credits = self._get_credits()
-            page_count = self._get_page_count(credits)
-            if page_count > 1:
-                break
-            self.credits = [t.credit for t in generate_transactions(
-                transaction_batch=150
-            ) if t.credit]
-        self.assertGreater(page_count, 1,
-                           'Could not generate enough pages for test in %d tries' % tries)
-
-        response = self._get_response(filters={'page_by_date_field': 'received_at',
-                                               'ordering': '-received_at',
-                                               'page': 1})
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        expected = {
-            'count': len(credits),
-            'page': 2,
-            'page_count': page_count,
-            'credit_ids': self._get_page_of_credit_ids(credits, page=2),
-        }
-        self._test_paginated_response(filters={'page_by_date_field': 'received_at',
-                                               'ordering': '-received_at',
-                                               'page': 2},
-                                      **expected)
-
-
 class SecurityCreditListTestCase(CreditListTestCase):
 
     def _get_authorised_user(self):
@@ -1269,354 +970,6 @@ class NoPrisonCreditListTestCase(SecurityCreditListTestCase):
         })
 
 
-class LockCreditTestCase(
-    CashbookCreditRejectsRequestsWithoutPermissionTestMixin,
-    BaseCreditViewTestCase
-):
-    ENDPOINT_VERB = 'post'
-    transaction_batch = 500
-
-    def _get_url(self):
-        return reverse('credit-lock')
-
-    def setUp(self):
-        super().setUp()
-
-        self.logged_in_user = self.prison_clerks[0]
-        self.logged_in_user.prisonusermapping.prisons.add(*self.prisons)
-
-    def _test_lock(self, already_locked_count, available_count=LOCK_LIMIT):
-        locked_qs = self._get_locked_credits_qs(self.prisons, self.logged_in_user)
-        available_qs = self._get_available_credits_qs(self.prisons, self.logged_in_user)
-
-        # set nr of credits locked by logged-in user to 'already_locked'
-        locked = locked_qs.values_list('pk', flat=True)
-        Credit.objects.filter(
-            pk__in=[-1]+list(locked[:locked.count() - already_locked_count])
-        ).delete()
-
-        self.assertEqual(locked_qs.count(), already_locked_count)
-
-        # set nr of credits available to 'available'
-        available = available_qs.values_list('pk', flat=True)
-        Credit.objects.filter(
-            pk__in=[-1]+list(available[:available.count() - available_count])
-        ).delete()
-
-        self.assertEqual(available_qs.count(), available_count)
-
-        expected_locked = min(
-            already_locked_count + available_qs.count(),
-            LOCK_LIMIT
-        )
-
-        # make lock request
-        url = self._get_url()
-        response = self.client.post(
-            url, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.logged_in_user)
-        )
-        self.assertEqual(response.status_code, status.HTTP_303_SEE_OTHER)
-
-        # check that expected_locked got locked
-        self.assertEqual(locked_qs.count(), expected_locked)
-
-        return locked_qs
-
-    def test_lock_with_none_locked_already(self):
-        locked_credits = self._test_lock(already_locked_count=0)
-
-        # check logs
-        self.assertEqual(
-            Log.objects.filter(
-                user=self.logged_in_user,
-                action=LOG_ACTIONS.LOCKED,
-                credit__id__in=locked_credits.values_list('id', flat=True)
-            ).count(),
-            locked_credits.count()
-        )
-
-    def test_lock_with_max_locked_already(self):
-        self._test_lock(already_locked_count=LOCK_LIMIT)
-
-    def test_lock_with_some_locked_already(self):
-        self._test_lock(already_locked_count=(LOCK_LIMIT/2))
-
-    def test_lock_with_some_locked_already_but_none_available(self):
-        self._test_lock(already_locked_count=(LOCK_LIMIT/2), available_count=0)
-
-
-class UnlockCreditTestCase(
-    CashbookCreditRejectsRequestsWithoutPermissionTestMixin,
-    BaseCreditViewTestCase
-):
-    ENDPOINT_VERB = 'post'
-
-    def _get_url(self):
-        return reverse('credit-unlock')
-
-    def test_can_unlock_somebody_else_s_credits(self):
-        logged_in_user = self.prison_clerks[0]
-        logged_in_user.prisonusermapping.prisons.add(*self.prisons)
-        locked_qs = self._get_locked_credits_qs(self.prisons, logged_in_user)
-
-        to_unlock = list(locked_qs.values_list('id', flat=True))
-        response = self.client.post(
-            self._get_url(),
-            {'credit_ids': to_unlock},
-            format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_303_SEE_OTHER)
-        self.assertEqual(
-            urllib.parse.urlsplit(response['Location']).path,
-            reverse('credit-list')
-        )
-
-        self.assertEqual(locked_qs.count(), 0)
-
-        # check logs
-        self.assertEqual(
-            Log.objects.filter(
-                user=logged_in_user,
-                action=LOG_ACTIONS.UNLOCKED,
-                credit__id__in=to_unlock
-            ).count(),
-            len(to_unlock)
-        )
-
-    def test_cannot_unlock_somebody_else_s_credits_in_different_prison(self):
-        # logged-in user managing prison #0
-        logged_in_user = self.prison_clerks[0]
-        logged_in_user.prisonusermapping.prisons.clear()
-        logged_in_user.prisonusermapping.prisons.add(self.prisons[0])
-
-        # other user managing prison #1
-        other_user = self.prison_clerks[1]
-        other_user.prisonusermapping.prisons.add(self.prisons[1])
-
-        locked_qs = self._get_locked_credits_qs(self.prisons, other_user)
-        locked_qs.update(prison=self.prisons[1])
-        to_unlock = locked_qs.values_list('id', flat=True)
-
-        with silence_logger():
-            response = self.client.post(
-                self._get_url(),
-                {'credit_ids': to_unlock},
-                format='json',
-                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
-            )
-
-        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
-        errors = response.data['errors']
-        self.assertEqual(len(errors), 1)
-        self.assertEqual(errors[0]['msg'], 'Some credits could not be unlocked.')
-        self.assertEqual(errors[0]['ids'], sorted(to_unlock))
-
-    def test_cannot_unlock_credited_credits(self):
-        logged_in_user = self.prison_clerks[0]
-        managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
-
-        locked_qs = self._get_locked_credits_qs(managing_prisons, user=logged_in_user)
-        credited_qs = self._get_credited_credits_qs(managing_prisons, user=logged_in_user)
-
-        locked_ids = list(locked_qs.values_list('id', flat=True))
-        credited_ids = list(credited_qs.values_list('id', flat=True)[:1])
-
-        with silence_logger():
-            response = self.client.post(
-                self._get_url(),
-                {'credit_ids': locked_ids + credited_ids},
-                format='json',
-                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
-            )
-
-        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
-        errors = response.data['errors']
-        self.assertEqual(len(errors), 1)
-        self.assertEqual(errors[0]['msg'], 'Some credits could not be unlocked.')
-        self.assertEqual(errors[0]['ids'], sorted(credited_ids))
-
-    @mock.patch('credit.managers.credit_prisons_need_updating')
-    def test_unlock_sends_credit_prisons_need_updating_signal(
-        self, mocked_credit_prisons_need_updating
-    ):
-        logged_in_user = self.prison_clerks[0]
-        logged_in_user.prisonusermapping.prisons.add(*self.prisons)
-        locked_qs = self._get_locked_credits_qs(self.prisons, logged_in_user)
-
-        response = self.client.post(
-            self._get_url(),
-            {'credit_ids': list(locked_qs.values_list('id', flat=True))},
-            format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_303_SEE_OTHER)
-
-        mocked_credit_prisons_need_updating.send.assert_called_with(sender=Credit)
-
-
-class MarkCreditsCreditedTestCase(
-    CashbookCreditRejectsRequestsWithoutPermissionTestMixin,
-    BaseCreditViewTestCase
-):
-    ENDPOINT_VERB = 'patch'
-
-    def _get_url(self, **filters):
-        return reverse('credit-list')
-
-    def test_mark_credits_credited(self):
-        logged_in_user = self.prison_clerks[0]
-        managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
-
-        locked_qs = self._get_locked_credits_qs(managing_prisons, logged_in_user)
-        credited_qs = self._get_credited_credits_qs(managing_prisons, logged_in_user)
-
-        self.assertTrue(locked_qs.count() > 0)
-
-        to_credit = list(locked_qs.values_list('id', flat=True))
-
-        data = [
-            {'id': t_id, 'credited': True} for t_id in to_credit
-        ]
-        response = self.client.patch(
-            self._get_url(), data=data,
-            format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-
-        # check db
-        self.assertEqual(
-            credited_qs.filter(id__in=to_credit).count(), len(to_credit)
-        )
-        # check logs
-        self.assertEqual(
-            Log.objects.filter(
-                user=logged_in_user,
-                action=LOG_ACTIONS.CREDITED,
-                credit__id__in=to_credit
-            ).count(),
-            len(to_credit)
-        )
-
-    def test_cannot_mark_somebody_else_s_credits_credited(self):
-        logged_in_user = self.prison_clerks[0]
-        other_user = self.prison_clerks[1]
-
-        locked_qs = self._get_locked_credits_qs(self.prisons, logged_in_user)
-        credited_qs = self._get_credited_credits_qs(self.prisons, logged_in_user)
-        locked_by_other_user_qs = self._get_locked_credits_qs(self.prisons, other_user)
-
-        credited = credited_qs.count()
-
-        locked_by_other_user_ids = list(locked_by_other_user_qs.values_list('id', flat=True))
-        data = [
-            {'id': t_id, 'credited': True}
-            for t_id in locked_qs.values_list('id', flat=True)
-        ] + [
-            {'id': t_id, 'credited': True}
-            for t_id in locked_by_other_user_ids
-        ]
-
-        with silence_logger():
-            response = self.client.patch(
-                self._get_url(), data=data,
-                format='json',
-                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
-            )
-
-        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
-        errors = response.data['errors']
-        self.assertEqual(len(errors), 1)
-        self.assertEqual(errors[0]['msg'], 'Some credits could not be marked credited.')
-        self.assertEqual(errors[0]['ids'], sorted(locked_by_other_user_ids))
-
-        # nothing changed in db
-        self.assertEqual(credited_qs.count(), credited)
-
-    def test_cannot_mark_non_locked_credits_credited(self):
-        logged_in_user = self.prison_clerks[0]
-        managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
-
-        locked_qs = self._get_locked_credits_qs(managing_prisons, logged_in_user)
-        credited_qs = self._get_credited_credits_qs(self.prisons, logged_in_user)
-        available_qs = self._get_available_credits_qs(managing_prisons, logged_in_user)
-
-        credited = credited_qs.count()
-
-        available_ids = available_qs.values_list('id', flat=True)
-        data = [
-            {'id': t_id, 'credited': True}
-            for t_id in locked_qs.values_list('id', flat=True)
-        ] + [
-            {'id': t_id, 'credited': True}
-            for t_id in available_ids
-        ]
-
-        with silence_logger():
-            response = self.client.patch(
-                self._get_url(), data=data,
-                format='json',
-                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
-            )
-
-        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
-        errors = response.data['errors']
-        self.assertEqual(len(errors), 1)
-        self.assertEqual(errors[0]['msg'], 'Some credits could not be marked credited.')
-        self.assertEqual(errors[0]['ids'], sorted(available_ids))
-
-        # nothing changed in db
-        self.assertEqual(credited_qs.count(), credited)
-
-    def test_invalid_format(self):
-        logged_in_user = self.prison_clerks[0]
-
-        response = self.client.patch(
-            self._get_url(), data={},
-            format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-    def test_missing_ids(self):
-        logged_in_user = self.prison_clerks[0]
-
-        response = self.client.patch(
-            self._get_url(), data=[
-                {'credited': True}
-            ],
-            format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-    def test_misspelt_credit(self):
-        logged_in_user = self.prison_clerks[0]
-        managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
-
-        locked_qs = self._get_locked_credits_qs(managing_prisons, logged_in_user)
-
-        data = [
-            {'id': t_id, 'credted': True}
-            for t_id in locked_qs.values_list('id', flat=True)
-        ]
-
-        response = self.client.patch(
-            self._get_url(), data=data,
-            format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-
 class CreditCreditsTestCase(
     CashbookCreditRejectsRequestsWithoutPermissionTestMixin,
     BaseCreditViewTestCase
@@ -1630,7 +983,7 @@ class CreditCreditsTestCase(
         logged_in_user = self.prison_clerks[0]
         managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
 
-        available_qs = self._get_available_credits_qs(managing_prisons, logged_in_user)
+        available_qs = self._get_credit_pending_credits_qs(managing_prisons, logged_in_user)
         credited_qs = self._get_credited_credits_qs(managing_prisons, logged_in_user)
 
         self.assertTrue(available_qs.count() > 0)
@@ -1701,7 +1054,7 @@ class SetManualCreditsTestCase(
         logged_in_user = self.prison_clerks[0]
         managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
 
-        available_qs = self._get_available_credits_qs(managing_prisons, logged_in_user)
+        available_qs = self._get_credit_pending_credits_qs(managing_prisons, logged_in_user)
         manual_qs = self._get_queryset(logged_in_user, managing_prisons).filter(
             owner=logged_in_user,
             resolution=CREDIT_RESOLUTION.MANUAL,
@@ -1776,7 +1129,7 @@ class ReviewCreditTestCase(
 
     def test_can_mark_credits_reviewed(self):
         logged_in_user = self._get_authorised_user()
-        reviewed = Credit.objects.available()[:10].values_list('id', flat=True)
+        reviewed = Credit.objects.credit_pending()[:10].values_list('id', flat=True)
 
         response = self.client.post(
             self._get_url(),

@@ -10,8 +10,6 @@ CREDIT_RESOLUTION = Choices(
 )
 
 CREDIT_STATUS = Choices(
-    ('AVAILABLE', 'available', _('Available')),
-    ('LOCKED', 'locked', _('Locked')),
     ('CREDIT_PENDING', 'credit_pending', _('Credit pending')),
     ('CREDITED', 'credited', _('Credited')),
     ('REFUNDED', 'refunded', _('Refunded')),
@@ -28,10 +26,10 @@ LOCK_LIMIT = 20
 
 LOG_ACTIONS = Choices(
     ('CREATED', 'created', _('Created')),
-    ('LOCKED', 'locked', _('Locked')),
-    ('UNLOCKED', 'unlocked', _('Unlocked')),
+    ('LOCKED', 'locked', _('Locked')),  # legacy
+    ('UNLOCKED', 'unlocked', _('Unlocked')),  # legacy
     ('CREDITED', 'credited', _('Credited')),
-    ('UNCREDITED', 'uncredited', _('Uncredited')),
+    ('UNCREDITED', 'uncredited', _('Uncredited')),  # never happens
     ('REFUNDED', 'refunded', _('Refunded')),
     ('RECONCILED', 'reconciled', _('Reconciled')),
     ('REVIEWED', 'reviewed', _('Reviewed')),

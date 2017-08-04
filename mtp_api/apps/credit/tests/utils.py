@@ -21,8 +21,7 @@ def get_owner_and_status_chooser():
         clerks_per_prison[p.pk] = (
             cycle(list(User.objects.filter(id__in=user_ids))),
             cycle([
-                CREDIT_STATUS.LOCKED,
-                CREDIT_STATUS.AVAILABLE,
+                CREDIT_STATUS.CREDIT_PENDING,
                 CREDIT_STATUS.CREDITED
             ])
         )
@@ -46,9 +45,6 @@ def create_credit_log(credit, created, modified):
             Log.objects.create(**log_data)
         elif credit.refunded:
             log_data['action'] = LOG_ACTIONS.REFUNDED
-            Log.objects.create(**log_data)
-        elif credit.locked:
-            log_data['action'] = LOG_ACTIONS.LOCKED
             Log.objects.create(**log_data)
 
 

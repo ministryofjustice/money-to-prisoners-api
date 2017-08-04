@@ -312,12 +312,7 @@ def setup_transaction(owner_status_chooser,
 
         if is_valid:
             owner, status = owner_status_chooser(data['prison'])
-            if status == CREDIT_STATUS.LOCKED:
-                data.update({
-                    'owner': owner,
-                    'credited': False
-                })
-            elif status == CREDIT_STATUS.AVAILABLE:
+            if status == CREDIT_STATUS.CREDIT_PENDING:
                 data.update({
                     'owner': None,
                     'credited': False

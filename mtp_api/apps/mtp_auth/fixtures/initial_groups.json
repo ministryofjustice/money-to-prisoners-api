@@ -33,9 +33,6 @@
     "name": "PrisonClerk",
     "permissions": [
       ["view_credit", "credit", "credit"],
-      ["lock_credit", "credit", "credit"],
-      ["unlock_credit", "credit", "credit"],
-      ["patch_credited_credit", "credit", "credit"],
       ["credit_credit", "credit", "credit"],
       ["add_processingbatch", "credit", "processingbatch"],
       ["delete_processingbatch", "credit", "processingbatch"]
