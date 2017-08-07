@@ -2,7 +2,6 @@ import random
 from unittest import mock
 
 from django.core.urlresolvers import reverse
-from django.test import override_settings
 from django.utils.dateformat import format as format_date
 from model_mommy import mommy
 from rest_framework import status
@@ -318,11 +317,7 @@ class PrisonerValidityViewTestCase(AuthTestCaseMixin, APITestCase):
             if prisoner_dob != cannot_equal:
                 return prisoner_dob
 
-    def assertValidResponse(self, response, valid_data):  # noqa
-        if 'nomis_integrated_prison' not in valid_data:
-            expected_data = dict(valid_data, nomis_integrated_prison=False)
-        else:
-            expected_data = valid_data
+    def assertValidResponse(self, response, expected_data):  # noqa
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         response_data = response.json()
         self.assertEqual(response_data['count'], 1)
@@ -458,17 +453,6 @@ class PrisonerValidityViewTestCase(AuthTestCaseMixin, APITestCase):
         valid_data_with_filter['prisons'] = ','.join(other_prisons.values_list('nomis_id', flat=True))
         response = self.call_authorised_endpoint(valid_data_with_filter)
         self.assertEmptyResponse(response)
-
-    @override_settings(NOMIS_API_AVAILABLE=True, NOMIS_API_PRISONS=['IXB'])
-    def test_nomis_integrated_prison_set_where_relevant(self):
-        prisoner_location = self.prisoner_locations.filter(prison__pk='IXB').first()
-        valid_data = {
-            'prisoner_number': prisoner_location.prisoner_number,
-            'prisoner_dob': format_date(prisoner_location.prisoner_dob, 'Y-m-d'),
-            'nomis_integrated_prison': True
-        }
-        response = self.call_authorised_endpoint(valid_data)
-        self.assertValidResponse(response, valid_data)
 
 
 class PrisonViewTestCase(AuthTestCaseMixin, APITestCase):
