@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.db import transaction
 from django.utils.translation import ugettext as _
 from rest_framework import serializers
@@ -71,17 +70,9 @@ class PrisonerLocationSerializer(serializers.ModelSerializer):
 
 
 class PrisonerValiditySerializer(serializers.ModelSerializer):
-    nomis_integrated_prison = serializers.SerializerMethodField()
-
     class Meta:
         model = PrisonerLocation
         fields = (
             'prisoner_number',
             'prisoner_dob',
-            'nomis_integrated_prison'
         )
-
-    def get_nomis_integrated_prison(self, obj):
-        if settings.NOMIS_API_AVAILABLE and obj.prison.nomis_id in settings.NOMIS_API_PRISONS:
-            return True
-        return False
