@@ -13,9 +13,8 @@ from model_utils.models import TimeStampedModel
 from credit.constants import LOG_ACTIONS, CREDIT_RESOLUTION, CREDIT_STATUS, CREDIT_SOURCE
 from credit.managers import CreditManager, CompletedCreditManager, CreditQuerySet, LogManager, CreditingTimeManager
 from credit.signals import (
-    credit_created, credit_locked, credit_unlocked, credit_credited,
-    credit_refunded, credit_reconciled, credit_prisons_need_updating,
-    credit_reviewed, credit_set_manual
+    credit_created, credit_credited, credit_refunded, credit_reconciled,
+    credit_prisons_need_updating, credit_reviewed, credit_set_manual
 )
 from prison.models import Prison, PrisonerLocation
 from transaction.utils import format_amount
@@ -51,16 +50,6 @@ class Credit(TimeStampedModel):
 
     # NB: there are matching boolean fields or properties on the model instance for each
     STATUS_LOOKUP = {
-        CREDIT_STATUS.LOCKED: (
-            Q(owner__isnull=False) &
-            (Q(resolution=CREDIT_RESOLUTION.PENDING) | Q(resolution=CREDIT_RESOLUTION.MANUAL))
-        ),
-        CREDIT_STATUS.AVAILABLE: (
-            Q(blocked=False) &
-            Q(prison__isnull=False) &
-            Q(owner__isnull=True) &
-            (Q(resolution=CREDIT_RESOLUTION.PENDING) | Q(resolution=CREDIT_RESOLUTION.MANUAL))
-        ),
         CREDIT_STATUS.CREDIT_PENDING: (
             Q(blocked=False) &
             Q(prison__isnull=False) &
@@ -88,9 +77,6 @@ class Credit(TimeStampedModel):
         permissions = (
             ('view_credit', 'Can view credit'),
             ('view_any_credit', 'Can view any credit'),
-            ('lock_credit', 'Can lock credit'),
-            ('unlock_credit', 'Can unlock credit'),
-            ('patch_credited_credit', 'Can patch credited credit'),
             ('review_credit', 'Can review credit'),
             ('credit_credit', 'Can credit credit'),
         )
@@ -105,22 +91,6 @@ class Credit(TimeStampedModel):
             sender_name=self.sender_name,
             prisoner_name=self.prisoner_name,
             status=self.status
-        )
-
-    def lock(self, by_user):
-        self.owner = by_user
-        self.save()
-
-        credit_locked.send(
-            sender=self.__class__, credit=self, by_user=by_user
-        )
-
-    def unlock(self, by_user):
-        self.owner = None
-        self.save()
-
-        credit_unlocked.send(
-            sender=self.__class__, credit=self, by_user=by_user
         )
 
     def credit_prisoner(self, by_user, nomis_transaction_id=None):
@@ -160,17 +130,12 @@ class Credit(TimeStampedModel):
             return self.payment.recipient_name
 
     @property
-    def available(self):
+    def credit_pending(self):
         return (
-            self.owner is None and self.prison is not None and
-            self.resolution == CREDIT_RESOLUTION.PENDING and
+            self.prison is not None and
+            (self.resolution == CREDIT_RESOLUTION.PENDING or
+             self.resolution == CREDIT_RESOLUTION.MANUAL) and
             not self.blocked
-        )
-
-    @property
-    def locked(self):
-        return (
-            self.owner is not None and self.resolution == CREDIT_RESOLUTION.PENDING
         )
 
     @property
@@ -194,10 +159,8 @@ class Credit(TimeStampedModel):
 
     @property
     def status(self):
-        if self.available:
-            return CREDIT_STATUS.AVAILABLE
-        elif self.locked:
-            return CREDIT_STATUS.LOCKED
+        if self.credit_pending:
+            return CREDIT_STATUS.CREDIT_PENDING
         elif self.credited:
             return CREDIT_STATUS.CREDITED
         elif self.refund_pending:
@@ -295,17 +258,6 @@ class Credit(TimeStampedModel):
             .order_by('-created').first()
         if not log_action:
             warnings.warn('Credit model %s is missing a reconciled log' % self.pk)
-            return None
-        return log_action.created
-
-    @property
-    def locked_at(self):
-        if not self.locked:
-            return None
-        log_action = self.log_set.filter(action=LOG_ACTIONS.LOCKED) \
-            .order_by('-created').first()
-        if not log_action:
-            warnings.warn('Credit model %s is missing a locked log' % self.pk)
             return None
         return log_action.created
 
@@ -414,16 +366,6 @@ def update_prison_for_credit(sender, instance, created, *args, **kwargs):
 @receiver(credit_created)
 def credit_created_receiver(sender, credit, by_user, **kwargs):
     Log.objects.credits_created([credit], by_user)
-
-
-@receiver(credit_locked)
-def credit_locked_receiver(sender, credit, by_user, **kwargs):
-    Log.objects.credits_locked([credit], by_user)
-
-
-@receiver(credit_unlocked)
-def credit_unlocked_receiver(sender, credit, by_user, **kwargs):
-    Log.objects.credits_unlocked([credit], by_user)
 
 
 @receiver(credit_credited)

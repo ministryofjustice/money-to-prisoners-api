@@ -11,7 +11,7 @@ class CreateProcessingBatchTestCase(BaseCreditViewTestCase):
     def test_create_processing_batch_succeeds(self):
         user = self.prison_clerks[0]
         user_prisons = PrisonUserMapping.objects.get_prison_set_for_user(user)
-        available_credits = self._get_available_credits_qs(
+        available_credits = self._get_credit_pending_credits_qs(
             user_prisons, user
         ).values_list('id', flat=True)
 

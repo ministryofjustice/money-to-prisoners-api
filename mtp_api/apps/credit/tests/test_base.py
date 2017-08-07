@@ -26,9 +26,10 @@ class BaseCreditViewTestCase(AuthTestCaseMixin, APITestCase):
     ]
     STATUS_FILTERS = {
         None: lambda c: True,
-        CREDIT_STATUS.LOCKED: lambda c: c.owner and c.resolution == CREDIT_RESOLUTION.PENDING,
-        CREDIT_STATUS.AVAILABLE: lambda c: (
-            c.prison and not c.owner and c.resolution == CREDIT_RESOLUTION.PENDING and
+        CREDIT_STATUS.CREDIT_PENDING: lambda c: (
+            c.prison and
+            (c.resolution == CREDIT_RESOLUTION.PENDING or
+             c.resolution == CREDIT_RESOLUTION.MANUAL) and
             not c.blocked
         ),
         CREDIT_STATUS.CREDITED: lambda c: c.credited
@@ -66,21 +67,9 @@ class BaseCreditViewTestCase(AuthTestCaseMixin, APITestCase):
             )
         return qs
 
-    def _get_locked_credits_qs(self, prisons, user=None):
-        params = {
-            'resolution': CREDIT_RESOLUTION.PENDING,
-            'prison__in': prisons
-        }
-        if user:
-            params['owner'] = user
-        else:
-            params['owner__isnull'] = False
-
-        return self._get_queryset(user, prisons).filter(**params)
-
-    def _get_available_credits_qs(self, prisons, user=None):
+    def _get_credit_pending_credits_qs(self, prisons, user=None):
         return self._get_queryset(user, prisons).filter(
-            blocked=False, owner__isnull=True, resolution=CREDIT_RESOLUTION.PENDING
+            blocked=False, resolution=CREDIT_RESOLUTION.PENDING
         )
 
     def _get_credited_credits_qs(self, prisons, user=None):

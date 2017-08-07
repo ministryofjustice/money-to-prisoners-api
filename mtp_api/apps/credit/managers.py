@@ -2,17 +2,10 @@ from django.db import connection, models
 from django.db.transaction import atomic
 
 from . import InvalidCreditStateException
-from .constants import LOG_ACTIONS, CREDIT_STATUS, CREDIT_RESOLUTION, LOCK_LIMIT
-from .signals import credit_prisons_need_updating
+from .constants import LOG_ACTIONS, CREDIT_STATUS, CREDIT_RESOLUTION
 
 
 class CreditQuerySet(models.QuerySet):
-
-    def available(self):
-        return self.filter(self.model.STATUS_LOOKUP[CREDIT_STATUS.AVAILABLE])
-
-    def locked(self):
-        return self.filter(self.model.STATUS_LOOKUP[CREDIT_STATUS.LOCKED])
 
     def credit_pending(self):
         return self.filter(self.model.STATUS_LOOKUP[CREDIT_STATUS.CREDIT_PENDING])
@@ -25,9 +18,6 @@ class CreditQuerySet(models.QuerySet):
 
     def refund_pending(self):
         return self.filter(self.model.STATUS_LOOKUP[CREDIT_STATUS.REFUND_PENDING])
-
-    def locked_by(self, user):
-        return self.filter(self.model.STATUS_LOOKUP[CREDIT_STATUS.LOCKED], owner=user)
 
     def counts_per_day(self):
         return self.exclude(received_at__isnull=True) \
@@ -78,55 +68,6 @@ class CreditManager(models.Manager):
         from .models import Log
         Log.objects.credits_reconciled(update_set, user)
         update_set.update(reconciled=True)
-
-    @atomic
-    def lock(self, queryset, user):
-        locked_count = queryset.locked_by(user).count()
-        if locked_count < LOCK_LIMIT:
-            slice_size = LOCK_LIMIT - locked_count
-            available = queryset.available()
-            to_lock = available[:slice_size].values_list('id', flat=True)
-            locking = queryset.filter(pk__in=to_lock).select_for_update()
-
-            if (available.filter(pk__in=to_lock).count() != len(locking)):
-                available_ids = available.filter(pk__in=to_lock).values_list('id', flat=True)
-                conflict_ids = set(to_lock) - set(available_ids)
-                raise InvalidCreditStateException(sorted(conflict_ids))
-
-            from .models import Log
-            Log.objects.credits_locked(locking, user)
-            locking.update(owner=user)
-
-    @atomic
-    def unlock(self, queryset, credit_ids, user):
-        to_update = queryset.locked().filter(pk__in=credit_ids).select_for_update()
-        ids_to_update = [c.id for c in to_update]
-        conflict_ids = set(credit_ids) - set(ids_to_update)
-
-        if conflict_ids:
-            raise InvalidCreditStateException(sorted(conflict_ids))
-
-        from .models import Credit, Log
-        Log.objects.credits_unlocked(to_update, user)
-        to_update.update(owner=None)
-        credit_prisons_need_updating.send(sender=Credit)
-
-    @atomic
-    def mark_credited(self, queryset, credit_ids, user):
-        to_update = queryset.filter(
-            owner=user,
-            pk__in=credit_ids
-        ).select_for_update()
-
-        ids_to_update = [c.id for c in to_update]
-        conflict_ids = set(credit_ids) - set(ids_to_update)
-
-        if conflict_ids:
-            raise InvalidCreditStateException(sorted(conflict_ids))
-
-        from .models import Log
-        Log.objects.credits_credited(to_update, user)
-        to_update.update(resolution=CREDIT_RESOLUTION.CREDITED)
 
     @atomic
     def set_manual(self, queryset, credit_ids, user):
@@ -190,12 +131,6 @@ class LogManager(models.Manager):
 
     def credits_created(self, credits, by_user=None):
         self._log_action(LOG_ACTIONS.CREATED, credits, by_user)
-
-    def credits_locked(self, credits, by_user):
-        self._log_action(LOG_ACTIONS.LOCKED, credits, by_user)
-
-    def credits_unlocked(self, credits, by_user):
-        self._log_action(LOG_ACTIONS.UNLOCKED, credits, by_user)
 
     def credits_credited(self, credits, by_user, credited=True):
         action = LOG_ACTIONS.CREDITED if credited else LOG_ACTIONS.UNCREDITED

@@ -133,17 +133,6 @@ class SecurityCreditSerializer(CreditSerializer):
             return None
 
 
-class LockedCreditSerializer(CreditSerializer):
-    locked = serializers.BooleanField(read_only=True)
-    locked_at = serializers.DateTimeField(read_only=True)
-
-    class Meta(CreditSerializer.Meta):
-        fields = CreditSerializer.Meta.fields + (
-            'locked',
-            'locked_at',
-        )
-
-
 class ProcessingBatchSerializer(serializers.ModelSerializer):
     expired = serializers.BooleanField(read_only=True)
 
