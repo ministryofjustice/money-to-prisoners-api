@@ -1,4 +1,5 @@
 import logging
+from urllib.parse import urlparse, urlencode, parse_qs
 
 from django.contrib.auth import password_validation, get_user_model
 from django.contrib.auth.password_validation import get_default_password_validators
@@ -248,9 +249,25 @@ class ResetPasswordView(generics.GenericAPIView):
             if not user.email:
                 return self.failure_response('no_email', field='username')
 
-            if serializer.validated_data.get('create_email_code', False):
+            if serializer.validated_data.get('create_password'):
                 change_request, _ = PasswordChangeRequest.objects.get_or_create(user=user)
-                return Response({'code': str(change_request.code)})
+                change_password_url = urlparse(
+                    serializer.validated_data['create_password']['password_change_url']
+                )
+                query = parse_qs(change_password_url.query)
+                query.update({
+                    serializer.validated_data['create_password']['reset_code_param']: str(change_request.code)
+                })
+                change_password_url = change_password_url._replace(query=urlencode(query))
+                send_email(
+                    user.email, 'mtp_auth/create_new_password.txt',
+                    gettext('Create a new Prisoner Money password'),
+                    context={
+                        'change_password_url': change_password_url.geturl(),
+                    },
+                    html_template='mtp_auth/create_new_password.html'
+                )
+                return Response(status=status.HTTP_204_NO_CONTENT)
             else:
                 password = self.generate_new_password()
                 if not password:

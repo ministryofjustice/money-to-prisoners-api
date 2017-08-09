@@ -1447,19 +1447,27 @@ class ResetPasswordTestCase(AuthBaseTestCase):
     def test_password_reset_by_email_case_insensitive(self):
         self.assertPasswordReset(self.user.email.title())
 
+    @override_settings(ENVIRONMENT='prod')
     def test_create_password_change_request(self):
         response = self.client.post(self.reset_url, {
             'username': self.user.username,
-            'create_email_code': True
-        })
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+            'create_password': {
+                'password_change_url': 'http://localhost/path',
+                'reset_code_param': 'reset_code'
+            }
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         user = authenticate(username=self.user.username, password=self.current_password)
         self.assertEqual(self.user.username, getattr(user, 'username', None),
                          msg='Cannot log in with old password')
 
         self.assertEqual(PasswordChangeRequest.objects.all().count(), 1)
+        self.assertEqual(len(mail.outbox), 1)
         change_request = PasswordChangeRequest.objects.all().first()
-        self.assertEqual(response.json()['code'], str(change_request.code))
+        self.assertTrue(
+            'http://localhost/path?reset_code=%s' % str(change_request.code) in
+            mail.outbox[0].body
+        )
 
 
 class ChangePasswordWithCodeTestCase(AuthBaseTestCase):
@@ -1480,9 +1488,14 @@ class ChangePasswordWithCodeTestCase(AuthBaseTestCase):
     def test_password_change_with_code(self):
         response = self.client.post(self.reset_url, {
             'username': self.user.username,
-            'create_email_code': True
-        })
-        code = response.json()['code']
+            'create_password': {
+                'password_change_url': 'http://localhost/',
+                'reset_code_param': 'reset_code'
+            }
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        code = PasswordChangeRequest.objects.all().first().code
         response = self.client.post(
             self.get_change_url(code), {'new_password': self.new_password}
         )
@@ -1498,8 +1511,11 @@ class ChangePasswordWithCodeTestCase(AuthBaseTestCase):
     def test_password_change_fails_with_incorrect_code(self):
         self.client.post(self.reset_url, {
             'username': self.user.username,
-            'create_email_code': True
-        })
+            'create_password': {
+                'password_change_url': 'http://localhost/',
+                'reset_code_param': 'reset_code'
+            }
+        }, format='json')
         response = self.client.post(
             self.get_change_url(self.incorrect_code),
             {'new_password': self.new_password}
