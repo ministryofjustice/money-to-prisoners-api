@@ -13,8 +13,8 @@ from core.forms import AdminFilterForm, SidebarDateWidget
 
 
 class AdminSite(admin.AdminSite):
-    site_title = _('Send money to a prisoner')
-    site_header = _('Send money to a prisoner')
+    site_title = _('Prisoner money')
+    site_header = _('Prisoner money')
     site_url = None
 
     def get_urls(self):

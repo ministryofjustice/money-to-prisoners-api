@@ -1,10 +1,10 @@
-# Send money to a prisoner
+# Prisoner money
 # Copyright (C) Crown copyright (Ministry of Justice)
 msgid ""
 msgstr ""
 "Project-Id-Version: mtp-api\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-07-31 12:52+0100\n"
+"POT-Creation-Date: 2017-08-10 14:45+0100\n"
 "PO-Revision-Date: 2016-11-04 10:00+0000\n"
 "Last-Translator: Welsh Language Unit <welsh.language.unit.manager@hmcts.gsi.gov.uk>\n"
 "Language-Team: Welsh (http://www.transifex.com/ministry-of-justice/mtp/language/cy/)\n"
@@ -19,8 +19,8 @@ msgid "Bank account management"
 msgstr ""
 
 #: apps/core/admin.py:16 apps/core/admin.py:17 apps/core/app.py:7
-#: templates/admin/base_site.html:14
-msgid "Send money to a prisoner"
+#: apps/credit/notices/__init__.py:47 templates/admin/base_site.html:14
+msgid "Prisoner money"
 msgstr ""
 
 #: apps/core/admin.py:106
@@ -51,7 +51,7 @@ msgstr ""
 msgid "UTC date in range"
 msgstr ""
 
-#: apps/core/admin.py:181 apps/credit/dashboards.py:361
+#: apps/core/admin.py:181 apps/credit/dashboards.py:360
 msgid "Date"
 msgstr ""
 
@@ -148,18 +148,14 @@ msgid "User testing the Cashbook service"
 msgstr ""
 
 #: apps/core/forms.py:10
-msgid "Training data for the Cashbook service"
-msgstr ""
-
-#: apps/core/forms.py:11
 msgid "NOMIS API dev env data"
 msgstr ""
 
-#: apps/core/forms.py:12
+#: apps/core/forms.py:11
 msgid "Random set of credits"
 msgstr ""
 
-#: apps/core/forms.py:13
+#: apps/core/forms.py:12
 msgid "Delete prisoner location and credit data"
 msgstr ""
 
@@ -195,7 +191,7 @@ msgstr ""
 msgid "Recreate test data"
 msgstr ""
 
-#: apps/core/views.py:189
+#: apps/core/views.py:183
 #, python-format
 msgid "Data reset to %(scenario)s scenario"
 msgstr ""
@@ -237,22 +233,13 @@ msgstr ""
 msgid "Display resolution time of selected credits"
 msgstr ""
 
-#: apps/credit/admin.py:203
+#: apps/credit/admin.py:195
 #, python-format
-msgid "Time until credit after lock: AVG (%(avg)s), MAX (%(max)s), MIN (%(min)s)"
+msgid "Time until credit after being received: average %(avg)s, maximum %(max)s, minimum %(min)s"
 msgstr ""
 
-#: apps/credit/admin.py:209
+#: apps/credit/admin.py:202
 msgid "No credits have been credited yet."
-msgstr ""
-
-#: apps/credit/admin.py:218
-#, python-format
-msgid "Time until unlock after lock: AVG (%(avg)s), MAX (%(max)s), MIN (%(min)s)"
-msgstr ""
-
-#: apps/credit/admin.py:224
-msgid "No credits have been unlocked yet."
 msgstr ""
 
 #: apps/credit/app.py:7
@@ -271,167 +258,163 @@ msgstr ""
 msgid "Requires manual processing"
 msgstr ""
 
-#: apps/credit/constants.py:8 apps/credit/constants.py:16
-#: apps/credit/constants.py:33
+#: apps/credit/constants.py:8 apps/credit/constants.py:14
+#: apps/credit/constants.py:31
 #: templates/core/dashboard/credit-report-cells/credited.html:13
 #: templates/core/dashboard/credit-report-cells/credited.html:23
 msgid "Credited"
 msgstr ""
 
-#: apps/credit/constants.py:9 apps/credit/constants.py:17
-#: apps/credit/constants.py:35
+#: apps/credit/constants.py:9 apps/credit/constants.py:15
+#: apps/credit/constants.py:33
 #: templates/core/dashboard/credit-report-cells/refunded.html:13
 #: templates/core/dashboard/credit-report-cells/refunded.html:23
 msgid "Refunded"
 msgstr ""
 
 #: apps/credit/constants.py:13
-msgid "Available"
-msgstr ""
-
-#: apps/credit/constants.py:14 apps/credit/constants.py:31
-msgid "Locked"
-msgstr ""
-
-#: apps/credit/constants.py:15
 msgid "Credit pending"
 msgstr ""
 
-#: apps/credit/constants.py:18
+#: apps/credit/constants.py:16
 msgid "Refund pending"
 msgstr ""
 
-#: apps/credit/constants.py:22 apps/security/admin.py:50
+#: apps/credit/constants.py:20 apps/security/admin.py:50
 #: apps/transaction/constants.py:31
 #: templates/core/dashboard/credit-report-cells/payment-method.html:10
 msgid "Bank transfer"
 msgstr ""
 
-#: apps/credit/constants.py:23
+#: apps/credit/constants.py:21
 msgid "Online"
 msgstr ""
 
-#: apps/credit/constants.py:24 apps/credit/serializers.py:173
+#: apps/credit/constants.py:22 apps/credit/serializers.py:162
 msgid "Unknown"
 msgstr ""
 
-#: apps/credit/constants.py:30
+#: apps/credit/constants.py:28
 msgid "Created"
 msgstr ""
 
-#: apps/credit/constants.py:32
+#: apps/credit/constants.py:29
+msgid "Locked"
+msgstr ""
+
+#: apps/credit/constants.py:30
 msgid "Unlocked"
 msgstr ""
 
-#: apps/credit/constants.py:34
+#: apps/credit/constants.py:32
 msgid "Uncredited"
 msgstr ""
 
-#: apps/credit/constants.py:36
+#: apps/credit/constants.py:34
 msgid "Reconciled"
 msgstr ""
 
-#: apps/credit/constants.py:37
+#: apps/credit/constants.py:35
 msgid "Reviewed"
 msgstr ""
 
-#: apps/credit/constants.py:38
+#: apps/credit/constants.py:36
 msgid "Marked for manual processing"
 msgstr ""
 
-#: apps/credit/dashboards.py:64
+#: apps/credit/dashboards.py:63
 msgid "Enter number of days"
 msgstr ""
 
-#: apps/credit/dashboards.py:85
+#: apps/credit/dashboards.py:84
 msgid "Date range"
 msgstr ""
 
-#: apps/credit/dashboards.py:87
+#: apps/credit/dashboards.py:86
 msgid "Today"
 msgstr ""
 
-#: apps/credit/dashboards.py:88
+#: apps/credit/dashboards.py:87
 msgid "Yesterday"
 msgstr ""
 
-#: apps/credit/dashboards.py:89
+#: apps/credit/dashboards.py:88
 msgid "This week"
 msgstr ""
 
-#: apps/credit/dashboards.py:90
+#: apps/credit/dashboards.py:89
 msgid "Last week"
 msgstr ""
 
-#: apps/credit/dashboards.py:91 apps/credit/dashboards.py:282
+#: apps/credit/dashboards.py:90 apps/credit/dashboards.py:281
 msgid "Last 4 weeks"
 msgstr ""
 
-#: apps/credit/dashboards.py:92
+#: apps/credit/dashboards.py:91
 msgid "This month"
 msgstr ""
 
-#: apps/credit/dashboards.py:93
+#: apps/credit/dashboards.py:92
 msgid "Last month"
 msgstr ""
 
-#: apps/credit/dashboards.py:94 apps/credit/dashboards.py:225
-#: apps/credit/dashboards.py:226
+#: apps/credit/dashboards.py:93 apps/credit/dashboards.py:224
+#: apps/credit/dashboards.py:225
 msgid "Since the beginning"
 msgstr ""
 
-#: apps/credit/dashboards.py:95
+#: apps/credit/dashboards.py:94
 msgid "Specify a range…"
 msgstr ""
 
-#: apps/credit/dashboards.py:100
+#: apps/credit/dashboards.py:99
 msgid "From date"
 msgstr ""
 
-#: apps/credit/dashboards.py:101
+#: apps/credit/dashboards.py:100
 msgid "To date"
 msgstr ""
 
-#: apps/credit/dashboards.py:104
+#: apps/credit/dashboards.py:103
 msgid "Prison"
 msgstr ""
 
-#: apps/credit/dashboards.py:105
+#: apps/credit/dashboards.py:104
 msgid "All prisons"
 msgstr ""
 
-#: apps/credit/dashboards.py:108
+#: apps/credit/dashboards.py:107
 msgid "Min. time to credit"
 msgstr ""
 
-#: apps/credit/dashboards.py:112
+#: apps/credit/dashboards.py:111
 msgid "End date must be after start date"
 msgstr ""
 
-#: apps/credit/dashboards.py:181
+#: apps/credit/dashboards.py:180
 #, python-format
 msgid "%(from)s to %(to)s"
 msgstr ""
 
-#: apps/credit/dashboards.py:295
+#: apps/credit/dashboards.py:294
 #, python-format
 msgid "only for %(prison)s"
 msgstr ""
 
-#: apps/credit/dashboards.py:297
+#: apps/credit/dashboards.py:296
 #, python-format
 msgid "time to credit at least %(days)s days"
 msgstr ""
 
-#: apps/credit/dashboards.py:362
+#: apps/credit/dashboards.py:361
 msgid "Valid credits"
 msgstr ""
 
-#: apps/credit/dashboards.py:364
+#: apps/credit/dashboards.py:363
 msgid "Credits to refund"
 msgstr ""
 
-#: apps/credit/dashboards.py:411
+#: apps/credit/dashboards.py:410
 msgid "Credit report"
 msgstr ""
 
@@ -441,10 +424,6 @@ msgstr ""
 
 #: apps/credit/notices/__init__.py:35
 msgid "Her Majesty’s Prison and Probation Service"
-msgstr ""
-
-#: apps/credit/notices/__init__.py:47
-msgid "Prisoner money"
 msgstr ""
 
 #: apps/credit/notices/prisoner_credits.py:15
@@ -521,35 +500,39 @@ msgstr ""
 msgid "Your new %(service_name)s account is ready to use"
 msgstr ""
 
-#: apps/mtp_auth/views.py:114
+#: apps/mtp_auth/views.py:115
 msgid "You cannot disable yourself"
 msgstr ""
 
-#: apps/mtp_auth/views.py:149
+#: apps/mtp_auth/views.py:150
 msgid "You’ve entered an incorrect password"
 msgstr ""
 
-#: apps/mtp_auth/views.py:196
+#: apps/mtp_auth/views.py:197
 msgid "There has been a system error. Please try again later"
 msgstr ""
 
-#: apps/mtp_auth/views.py:197
+#: apps/mtp_auth/views.py:198
 msgid "Username doesn’t match any user account"
 msgstr ""
 
-#: apps/mtp_auth/views.py:198
+#: apps/mtp_auth/views.py:199
 msgid "Your account is locked, please contact the person who set it up"
 msgstr ""
 
-#: apps/mtp_auth/views.py:200
+#: apps/mtp_auth/views.py:201
 msgid "We don’t have your email address, please contact the person who set up the account"
 msgstr ""
 
-#: apps/mtp_auth/views.py:202
+#: apps/mtp_auth/views.py:203
 msgid "That email address matches multiple user accounts, please enter your unique username"
 msgstr ""
 
-#: apps/mtp_auth/views.py:265
+#: apps/mtp_auth/views.py:264
+msgid "Create a new Prisoner Money password"
+msgstr ""
+
+#: apps/mtp_auth/views.py:282
 msgid "Your new Prisoner Money password"
 msgstr ""
 
@@ -708,7 +691,7 @@ msgstr ""
 msgid "Invalid prisoner number"
 msgstr ""
 
-#: apps/prison/serializers.py:67
+#: apps/prison/serializers.py:66
 #, python-brace-format
 msgid "No prison found with code \"{pk_value}\""
 msgstr ""
@@ -1128,6 +1111,14 @@ msgstr ""
 #: templates/credit/prisoner-notice-email.html:11
 #: templates/credit/prisoner-notice-email.txt:8
 msgid "Thank you for your co-operation."
+msgstr ""
+
+#: templates/mtp_auth/create_new_password.html:6
+msgid "Click on the link below to create your new Prisoner Money password."
+msgstr ""
+
+#: templates/mtp_auth/create_new_password.txt:2
+msgid "Copy and paste the link below into your browser address bar to create your new Prisoner Money password."
 msgstr ""
 
 #: templates/mtp_auth/new_user.html:6 templates/mtp_auth/new_user.txt:2
