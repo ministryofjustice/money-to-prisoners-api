@@ -81,7 +81,7 @@ def make_applications():
         {'name': 'bank-admin', 'groups': ['RefundBankAdmin', 'BankAdmin']},
     )
     make_application_and_roles(
-        SEND_MONEY_CLIENT_ID, 'Send money to a prisoner',
+        SEND_MONEY_CLIENT_ID, 'Send money to someone in prison',
     )
 
     Role.objects.get(name='prison-clerk').managed_roles.add(Role.objects.get(name='security'))

@@ -1,10 +1,10 @@
-# Send money to a prisoner
+# Prisoner money
 # Copyright (C) Crown copyright (Ministry of Justice)
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-07-31 12:52+0100\n"
+"POT-Creation-Date: 2017-08-10 14:45+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Igor U <igor.ushkarev@digital.justice.gov.uk>, 2017\n"
 "Language-Team: Welsh (https://www.transifex.com/ministry-of-justice/teams/34553/cy/)\n"
@@ -19,9 +19,9 @@ msgid "Bank account management"
 msgstr "Rheoli cyfrif banc"
 
 #: apps/core/admin.py:16 apps/core/admin.py:17 apps/core/app.py:7
-#: templates/admin/base_site.html:14
-msgid "Send money to a prisoner"
-msgstr "Anfon arian at garcharor"
+#: apps/credit/notices/__init__.py:47 templates/admin/base_site.html:14
+msgid "Prisoner money"
+msgstr "Arian carcharor"
 
 #: apps/core/admin.py:106
 msgid "All"
@@ -51,7 +51,7 @@ msgstr "Dyddiad gorffen UTC"
 msgid "UTC date in range"
 msgstr "Dyddiad UTC o fewn yr ystod"
 
-#: apps/core/admin.py:181 apps/credit/dashboards.py:361
+#: apps/core/admin.py:181 apps/credit/dashboards.py:360
 msgid "Date"
 msgstr "Dyddiad"
 
@@ -148,18 +148,14 @@ msgid "User testing the Cashbook service"
 msgstr "Profi'r gwasanaeth llyfr arian"
 
 #: apps/core/forms.py:10
-msgid "Training data for the Cashbook service"
-msgstr "Data hyfforddi ar gyfer y gwasanaeth llyfr arian"
-
-#: apps/core/forms.py:11
 msgid "NOMIS API dev env data"
 msgstr "NOMIS API dev env data"
 
-#: apps/core/forms.py:12
+#: apps/core/forms.py:11
 msgid "Random set of credits"
 msgstr "Set ar hap o gredydau"
 
-#: apps/core/forms.py:13
+#: apps/core/forms.py:12
 msgid "Delete prisoner location and credit data"
 msgstr "Dileu lleoliad y carcharor a data credydau"
 
@@ -195,7 +191,7 @@ msgstr "Mae'r cyfrinair hwn yn rhy wan (defnyddiwch rifau a llythrennau)"
 msgid "Recreate test data"
 msgstr "Ail-greu data prawf"
 
-#: apps/core/views.py:189
+#: apps/core/views.py:183
 #, python-format
 msgid "Data reset to %(scenario)s scenario"
 msgstr "Ailosod data ar gyfer sefyllfa %(scenario)s "
@@ -237,23 +233,14 @@ msgstr "O %(total)s o gredydau: Gellir credydu %(valid_count)s (%(valid_percent)
 msgid "Display resolution time of selected credits"
 msgstr "Dangos amser prosesu'r credydau sydd wedi cael eu dethol"
 
-#: apps/credit/admin.py:203
+#: apps/credit/admin.py:195
 #, python-format
-msgid "Time until credit after lock: AVG (%(avg)s), MAX (%(max)s), MIN (%(min)s)"
-msgstr "Amser tan credydu ar ôl cloi: CYF (%(avg)s), UCHAFSWM (%(max)s), ISAFSWM (%(min)s)"
+msgid "Time until credit after being received: average %(avg)s, maximum %(max)s, minimum %(min)s"
+msgstr ""
 
-#: apps/credit/admin.py:209
+#: apps/credit/admin.py:202
 msgid "No credits have been credited yet."
 msgstr "Nid oes credydau wedi cael eu credydu eto."
-
-#: apps/credit/admin.py:218
-#, python-format
-msgid "Time until unlock after lock: AVG (%(avg)s), MAX (%(max)s), MIN (%(min)s)"
-msgstr "Amser tan datgloi ar ôl cloi: CYF (%(avg)s), UCHAFSWM (%(max)s), ISAFSWM (%(min)s)"
-
-#: apps/credit/admin.py:224
-msgid "No credits have been unlocked yet."
-msgstr "Nid oes credydau wedi cael eu datgloi eto."
 
 #: apps/credit/app.py:7
 msgid "Credits"
@@ -271,167 +258,163 @@ msgstr "Aros"
 msgid "Requires manual processing"
 msgstr "Rhaid ei brosesu â llaw"
 
-#: apps/credit/constants.py:8 apps/credit/constants.py:16
-#: apps/credit/constants.py:33
+#: apps/credit/constants.py:8 apps/credit/constants.py:14
+#: apps/credit/constants.py:31
 #: templates/core/dashboard/credit-report-cells/credited.html:13
 #: templates/core/dashboard/credit-report-cells/credited.html:23
 msgid "Credited"
 msgstr "Wedi cael ei gredydu"
 
-#: apps/credit/constants.py:9 apps/credit/constants.py:17
-#: apps/credit/constants.py:35
+#: apps/credit/constants.py:9 apps/credit/constants.py:15
+#: apps/credit/constants.py:33
 #: templates/core/dashboard/credit-report-cells/refunded.html:13
 #: templates/core/dashboard/credit-report-cells/refunded.html:23
 msgid "Refunded"
 msgstr "Wedi'i ad-dalu"
 
 #: apps/credit/constants.py:13
-msgid "Available"
-msgstr "Ar gael"
-
-#: apps/credit/constants.py:14 apps/credit/constants.py:31
-msgid "Locked"
-msgstr "Wedi'i gloi"
-
-#: apps/credit/constants.py:15
 msgid "Credit pending"
 msgstr "Credyd yn aros"
 
-#: apps/credit/constants.py:18
+#: apps/credit/constants.py:16
 msgid "Refund pending"
 msgstr "Aros am ad-daliad"
 
-#: apps/credit/constants.py:22 apps/security/admin.py:50
+#: apps/credit/constants.py:20 apps/security/admin.py:50
 #: apps/transaction/constants.py:31
 #: templates/core/dashboard/credit-report-cells/payment-method.html:10
 msgid "Bank transfer"
 msgstr "Trosglwyddiad banc"
 
-#: apps/credit/constants.py:23
+#: apps/credit/constants.py:21
 msgid "Online"
 msgstr "Ar-lein"
 
-#: apps/credit/constants.py:24 apps/credit/serializers.py:173
+#: apps/credit/constants.py:22 apps/credit/serializers.py:162
 msgid "Unknown"
 msgstr "Anhysbys"
 
-#: apps/credit/constants.py:30
+#: apps/credit/constants.py:28
 msgid "Created"
 msgstr "Crëwyd"
 
-#: apps/credit/constants.py:32
+#: apps/credit/constants.py:29
+msgid "Locked"
+msgstr "Wedi'i gloi"
+
+#: apps/credit/constants.py:30
 msgid "Unlocked"
 msgstr "Wedi'i ddatgloi"
 
-#: apps/credit/constants.py:34
+#: apps/credit/constants.py:32
 msgid "Uncredited"
 msgstr "Heb gael ei gredydu"
 
-#: apps/credit/constants.py:36
+#: apps/credit/constants.py:34
 msgid "Reconciled"
 msgstr "Wedi'i gysoni"
 
-#: apps/credit/constants.py:37
+#: apps/credit/constants.py:35
 msgid "Reviewed"
 msgstr "Wedi'i adolygu"
 
-#: apps/credit/constants.py:38
+#: apps/credit/constants.py:36
 msgid "Marked for manual processing"
 msgstr "Eu marcio ar gyfer eu prosesu â llaw"
 
-#: apps/credit/dashboards.py:64
+#: apps/credit/dashboards.py:63
 msgid "Enter number of days"
 msgstr "Nodwch y nifer o ddyddiau"
 
-#: apps/credit/dashboards.py:85
+#: apps/credit/dashboards.py:84
 msgid "Date range"
 msgstr "Ystod dyddiad"
 
-#: apps/credit/dashboards.py:87
+#: apps/credit/dashboards.py:86
 msgid "Today"
 msgstr "Heddiw"
 
-#: apps/credit/dashboards.py:88
+#: apps/credit/dashboards.py:87
 msgid "Yesterday"
 msgstr "Ddoe"
 
-#: apps/credit/dashboards.py:89
+#: apps/credit/dashboards.py:88
 msgid "This week"
 msgstr "Yr wythnos hon"
 
-#: apps/credit/dashboards.py:90
+#: apps/credit/dashboards.py:89
 msgid "Last week"
 msgstr "Wythnos diwethaf"
 
-#: apps/credit/dashboards.py:91 apps/credit/dashboards.py:282
+#: apps/credit/dashboards.py:90 apps/credit/dashboards.py:281
 msgid "Last 4 weeks"
 msgstr "4 wythnos ddiwethaf"
 
-#: apps/credit/dashboards.py:92
+#: apps/credit/dashboards.py:91
 msgid "This month"
 msgstr "Y mis hwn"
 
-#: apps/credit/dashboards.py:93
+#: apps/credit/dashboards.py:92
 msgid "Last month"
 msgstr "Mis diwethaf"
 
-#: apps/credit/dashboards.py:94 apps/credit/dashboards.py:225
-#: apps/credit/dashboards.py:226
+#: apps/credit/dashboards.py:93 apps/credit/dashboards.py:224
+#: apps/credit/dashboards.py:225
 msgid "Since the beginning"
 msgstr "Ers y dechrau"
 
-#: apps/credit/dashboards.py:95
+#: apps/credit/dashboards.py:94
 msgid "Specify a range…"
 msgstr "Nodwch ystod…"
 
-#: apps/credit/dashboards.py:100
+#: apps/credit/dashboards.py:99
 msgid "From date"
 msgstr "Dyddiad o"
 
-#: apps/credit/dashboards.py:101
+#: apps/credit/dashboards.py:100
 msgid "To date"
 msgstr "Dyddiad i"
 
-#: apps/credit/dashboards.py:104
+#: apps/credit/dashboards.py:103
 msgid "Prison"
 msgstr "Carchar"
 
-#: apps/credit/dashboards.py:105
+#: apps/credit/dashboards.py:104
 msgid "All prisons"
 msgstr "Pob carchar"
 
-#: apps/credit/dashboards.py:108
+#: apps/credit/dashboards.py:107
 msgid "Min. time to credit"
 msgstr "Amser byrraf i brosesu credydau"
 
-#: apps/credit/dashboards.py:112
+#: apps/credit/dashboards.py:111
 msgid "End date must be after start date"
 msgstr "Rhaid i'r dyddiad gorffen fod ar ôl y dyddiad cychwyn"
 
-#: apps/credit/dashboards.py:181
+#: apps/credit/dashboards.py:180
 #, python-format
 msgid "%(from)s to %(to)s"
 msgstr "%(from)s i %(to)s"
 
-#: apps/credit/dashboards.py:295
+#: apps/credit/dashboards.py:294
 #, python-format
 msgid "only for %(prison)s"
 msgstr "dim ond ar gyfer %(prison)s"
 
-#: apps/credit/dashboards.py:297
+#: apps/credit/dashboards.py:296
 #, python-format
 msgid "time to credit at least %(days)s days"
 msgstr "O leiaf %(days)s diwrnod i brosesu credyd"
 
-#: apps/credit/dashboards.py:362
+#: apps/credit/dashboards.py:361
 msgid "Valid credits"
 msgstr "Credydau dilys"
 
-#: apps/credit/dashboards.py:364
+#: apps/credit/dashboards.py:363
 msgid "Credits to refund"
 msgstr "Credydau i'w had-dalu"
 
-#: apps/credit/dashboards.py:411
+#: apps/credit/dashboards.py:410
 msgid "Credit report"
 msgstr "Adroddiad credyd"
 
@@ -442,10 +425,6 @@ msgstr "Mae cyfrifon y carcharorion hyn wedi cael eu credydu"
 #: apps/credit/notices/__init__.py:35
 msgid "Her Majesty’s Prison and Probation Service"
 msgstr "Gwasanaeth Carchardai a Phrawf Ei Mawrhydi"
-
-#: apps/credit/notices/__init__.py:47
-msgid "Prisoner money"
-msgstr "Arian carcharor"
 
 #: apps/credit/notices/prisoner_credits.py:15
 #: apps/credit/notices/prisoner_credits.py:18
@@ -521,35 +500,39 @@ msgstr "Mae'r cyfeiriad e-bost yn bodoli'n barod"
 msgid "Your new %(service_name)s account is ready to use"
 msgstr "Mae eich cyfrif %(service_name)s newydd yn barod i'w ddefnyddio"
 
-#: apps/mtp_auth/views.py:114
+#: apps/mtp_auth/views.py:115
 msgid "You cannot disable yourself"
 msgstr "Ni allwch analluogi eich hun"
 
-#: apps/mtp_auth/views.py:149
+#: apps/mtp_auth/views.py:150
 msgid "You’ve entered an incorrect password"
 msgstr "Rydych wedi nodi cyfrinair anghywir"
 
-#: apps/mtp_auth/views.py:196
+#: apps/mtp_auth/views.py:197
 msgid "There has been a system error. Please try again later"
 msgstr "Mae yna wall wedi digwydd yn y system. Rhowch gynnig arall arni hwyrach ymlaen."
 
-#: apps/mtp_auth/views.py:197
+#: apps/mtp_auth/views.py:198
 msgid "Username doesn’t match any user account"
 msgstr "Nid yw'r enw defnyddiwr yn cyfateb i unrhyw gyfrif"
 
-#: apps/mtp_auth/views.py:198
+#: apps/mtp_auth/views.py:199
 msgid "Your account is locked, please contact the person who set it up"
 msgstr "Mae eich cyfrif wedi'i gloi, cysylltwch â'r unigolyn wnaeth ei greu"
 
-#: apps/mtp_auth/views.py:200
+#: apps/mtp_auth/views.py:201
 msgid "We don’t have your email address, please contact the person who set up the account"
 msgstr "Nid yw eich cyfeiriad e-bost gennym, cysylltwch â'r unigolyn wnaeth greu'r cyfrif"
 
-#: apps/mtp_auth/views.py:202
+#: apps/mtp_auth/views.py:203
 msgid "That email address matches multiple user accounts, please enter your unique username"
 msgstr "Mae'r cyfeiriad ebost yna yn cyfateb i nifer o gyfrifon defnyddwyr, nodwch eich enw defnyddiwr unigryw os gwelwch yn dda"
 
-#: apps/mtp_auth/views.py:265
+#: apps/mtp_auth/views.py:264
+msgid "Create a new Prisoner Money password"
+msgstr ""
+
+#: apps/mtp_auth/views.py:282
 msgid "Your new Prisoner Money password"
 msgstr "Eich cyfrinair Anfon Arian at Garcharor newydd"
 
@@ -708,7 +691,7 @@ msgstr ""
 msgid "Invalid prisoner number"
 msgstr "Rhif carcharor annilys"
 
-#: apps/prison/serializers.py:67
+#: apps/prison/serializers.py:66
 #, python-brace-format
 msgid "No prison found with code \"{pk_value}\""
 msgstr "Ni ddaethpwyd o hyd i unrhyw garchar gyda'r cod \"{pk_value}\""
@@ -1130,6 +1113,14 @@ msgstr "Argraffwch nhw a'u hanfon yn gyfrinfachol i gelloedd yr unigolion."
 msgid "Thank you for your co-operation."
 msgstr "Diolch yn fawr am eich cydweithrediad."
 
+#: templates/mtp_auth/create_new_password.html:6
+msgid "Click on the link below to create your new Prisoner Money password."
+msgstr ""
+
+#: templates/mtp_auth/create_new_password.txt:2
+msgid "Copy and paste the link below into your browser address bar to create your new Prisoner Money password."
+msgstr ""
+
 #: templates/mtp_auth/new_user.html:6 templates/mtp_auth/new_user.txt:2
 #, python-format
 msgid "Your new %(service_name)s account has been created for you."
@@ -1159,3 +1150,18 @@ msgstr "Ni ellir dod o hyd i’r dudalen"
 #: urls.py:37
 msgid "Sorry, something went wrong"
 msgstr "Mae'n ddrwg iawn gennym, aeth rhywbeth o'i le"
+
+#~ msgid "Send money to a prisoner"
+#~ msgstr "Anfon arian at garcharor"
+
+#~ msgid "Training data for the Cashbook service"
+#~ msgstr "Data hyfforddi ar gyfer y gwasanaeth llyfr arian"
+
+#~ msgid "Time until unlock after lock: AVG (%(avg)s), MAX (%(max)s), MIN (%(min)s)"
+#~ msgstr "Amser tan datgloi ar ôl cloi: CYF (%(avg)s), UCHAFSWM (%(max)s), ISAFSWM (%(min)s)"
+
+#~ msgid "No credits have been unlocked yet."
+#~ msgstr "Nid oes credydau wedi cael eu datgloi eto."
+
+#~ msgid "Available"
+#~ msgstr "Ar gael"

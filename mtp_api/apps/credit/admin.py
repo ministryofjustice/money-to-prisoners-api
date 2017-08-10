@@ -192,10 +192,11 @@ class CreditAdmin(admin.ModelAdmin):
 
             self.message_user(
                 request,
-                _('Time until credit after being received: '
-                  'AVG (%(avg)s), MAX (%(max)s), MIN (%(min)s)')
-                % {'avg': avg_credit_time, 'max': max(until_credited_times),
-                   'min': min(until_credited_times)}
+                _('Time until credit after being received: average %(avg)s, maximum %(max)s, minimum %(min)s') % {
+                    'avg': avg_credit_time,
+                    'max': max(until_credited_times),
+                    'min': min(until_credited_times),
+                }
             )
         else:
             self.message_user(request, _('No credits have been credited yet.'),

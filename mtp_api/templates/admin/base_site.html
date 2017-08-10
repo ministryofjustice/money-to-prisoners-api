@@ -11,7 +11,7 @@
   {% endif %}
 
   <h1 id="site-name" title="{{ version_description }}">
-    <a href="{% url 'admin:index' %}">{{ site_header|default:_('Send money to a prisoner') }}</a>
+    <a href="{% url 'admin:index' %}">{{ site_header|default:_('Prisoner money') }}</a>
     {% if ENVIRONMENT != 'prod' %}— <strong>{{ ENVIRONMENT|capfirst }}</strong>{% endif %}
   </h1>
 {% endblock %}
