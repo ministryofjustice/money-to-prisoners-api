@@ -206,6 +206,7 @@ class CreditAdmin(admin.ModelAdmin):
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
     list_display = ('comment', 'user', 'credit',)
+    readonly_fields = ('credit',)
 
 
 @admin.register(ProcessingBatch)
