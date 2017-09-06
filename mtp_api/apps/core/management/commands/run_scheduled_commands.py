@@ -23,4 +23,8 @@ class Command(BaseCommand):
                         if locked_command.is_scheduled():
                             locked_command.run()
                 except DatabaseError:
-                    logger.warning('Scheduled command "%s" failed to run' % command)
+                    logger.warning(
+                        'Scheduled command "%s" failed to run due to database error' % command
+                    )
+                except Exception:
+                    logger.exception('Scheduled command "%s" failed to run' % command)
