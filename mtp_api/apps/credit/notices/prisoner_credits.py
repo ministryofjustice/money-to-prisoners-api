@@ -134,3 +134,51 @@ class PrisonerCreditNoticeBundle(NoticeBundle):
 
         self.change_font('NTA-Light', 12)
         self.draw_text(191, 177, self.human_date, align='R')
+
+
+def create_sample():
+    import argparse
+    import collections
+    import datetime
+
+    import django
+    from django.conf import settings
+
+    if not settings.configured:
+        settings.configure(APP='api', ENVIRONMENT='local', APP_GIT_COMMIT='unknown')
+        django.setup()
+
+    def generate_samples():
+        Credit = collections.namedtuple('Credit', 'amount sender_name')
+
+        yield ('JAMES HALLS', 'A1409AE', [
+            Credit(3500, 'JORDAN MARSH'),
+            Credit(4000, 'BRETT WILKINS'),
+            Credit(2036000, 'SOMEBODY WITH A SIMULATED LONG NAME-THAT-TRUNCATES'),
+            Credit(10000, 'JORDAN MARSH'),
+            Credit(1000, 'RICHARDSON JUSTIN'),
+            Credit(10000, 'POWELL JADE'),
+            Credit(1000, 'PAIGE BARTON'),
+            Credit(5, 'X GREEN'),
+            Credit(5000, 'GARRY CLARK GARRY CLAR'),
+            Credit(5000, 'SIMPSON R'),
+            Credit(5001, 'Gordon Ian'),
+        ])
+        yield ('RICKY-LONG LONG-LONG-SURNAME-RIPPIN', 'A1234AA', [
+            Credit(2036000, 'SOMEBODY WITH A SIMULATED LONG NAME-THAT-TRUNCATES'),
+            Credit(3500, 'AMÉLIE POULAIN'),
+            Credit(100000, 'علاء الدين'),
+            Credit(1000, 'ІГОР ИГОРЬ'),
+        ])
+
+    parser = argparse.ArgumentParser(description='Creates a sample prisoner credit notices PDF')
+    parser.add_argument('path', help='Path to save the PDF file')
+    args = parser.parse_args()
+    bundle = PrisonerCreditNoticeBundle('HMP Brixton',
+                                        generate_samples(),
+                                        datetime.date.today() - datetime.timedelta(days=1))
+    bundle.render(args.path)
+
+
+if __name__ == '__main__':
+    create_sample()
