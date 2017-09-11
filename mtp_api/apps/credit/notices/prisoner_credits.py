@@ -118,8 +118,8 @@ class PrisonerCreditNoticeBundle(NoticeBundle):
         self.draw_line(self.page_width - fold_line_width, half_page_height, self.page_width, half_page_height)
 
         self.change_font('NTA-Light', 12)
-        self.draw_text(19, 208, _('You have been sent money online.'))
-        self.draw_text(19, 214, _('You may not have all this money to spend in canteen.'))
+        self.draw_text(19, 208, _('You’ve been sent money online.'))
+        self.draw_text(19, 214, _('It’s gone into your private cash account.'))
 
         staple = get_asset_path('staple.png')
         self.draw_image(staple, x=100.74, y=8, w=8.52, h=1.738)
