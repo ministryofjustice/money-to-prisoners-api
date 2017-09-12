@@ -54,7 +54,7 @@ class PrisonerCreditNoticeBundle(NoticeBundle):
             self.canvas.showPage()
 
     def render_prisoner_page(self, credits_list):
-        top = 235
+        top = 215
         left = 40
         row_height = 10
         col_gap = 2
@@ -105,35 +105,42 @@ class PrisonerCreditNoticeBundle(NoticeBundle):
                 self.draw_text(x + col_gap, y + row * line_height, sender_row)
 
     def render_base_template(self):
-        self.draw_image(get_asset_path('logo.png'), x=94.558, y=62, w=20.884, h=17.321)
+        self.draw_image(get_asset_path('logo.png'), x=94.558, y=72, w=20.884, h=17.321)
         self.change_font('NTA-Light', 12)
-        self.draw_text(105, 85, _('Send money to someone in prison'), align='C')
+        self.draw_text(105, 95, _('Send money to someone in prison'), align='C')
 
+        fold_line = 166
         self.change_font('NTA-Light', 8)
         fold_text = _('Confidential. Please fold & staple')
+        self.draw_text(105, fold_line, fold_text, align='C')
         fold_line_width = (self.page_width - self.text_width(fold_text) - 3) / 2
-        half_page_height = self.page_height / 2
-        self.draw_text(105, half_page_height, fold_text, align='C')
-        self.draw_line(0, half_page_height, fold_line_width, half_page_height)
-        self.draw_line(self.page_width - fold_line_width, half_page_height, self.page_width, half_page_height)
+        self.draw_line(0, fold_line, fold_line_width, fold_line)
+        self.draw_line(self.page_width - fold_line_width, fold_line, self.page_width, fold_line)
 
         self.change_font('NTA-Light', 12)
-        self.draw_text(19, 208, _('You’ve been sent money online.'))
-        self.draw_text(19, 214, _('It’s gone into your private cash account.'))
+        message = _('You’ve been sent money online.') + ' ' + _('It’s gone into your private cash account.')
+        self.draw_text(19, 188, message)
 
         staple = get_asset_path('staple.png')
-        self.draw_image(staple, x=100.74, y=8, w=8.52, h=1.738)
-        self.draw_image(staple, x=100.74, y=287.262, w=8.52, h=1.738)
+        self.canvas.saveState()
+        self.canvas.scale(-1, 1)
+        self.draw_image(staple, x=-10.9, y=76.8, w=1.8, h=8.4)
+        self.canvas.restoreState()
+        self.draw_image(staple, x=199.1, y=76.8, w=1.8, h=8.4)
 
     def render_header(self, name, number):
+        baseline = 0.8
         self.change_font('NTA-Bold', 19)
-        self.draw_text(19, 177, name)
+        if self.text_width(name) > 110:
+            self.change_font('NTA-Bold', 17)
+            baseline = 0.3
+        self.draw_text(19, 17, name)
 
         self.change_font('NTA-Light', 16)
-        self.draw_text(19, 185, number)
+        self.draw_text(19, 25, number)
 
         self.change_font('NTA-Light', 12)
-        self.draw_text(191, 177, self.human_date, align='R')
+        self.draw_text(191, 17 + baseline, _('Received on %(date)s') % {'date': self.human_date}, align='R')
 
 
 def create_sample():
