@@ -80,3 +80,12 @@ class NoticeBundle:
 
     def draw_line(self, x1, y1, x2, y2):
         self.canvas.line(x1 * mm, (self.page_height - y1) * mm, x2 * mm, (self.page_height - y2) * mm)
+
+    def draw_lines(self, lines):
+        self.canvas.lines(
+            (x1 * mm, (self.page_height - y1) * mm, x2 * mm, (self.page_height - y2) * mm)
+            for x1, y1, x2, y2 in lines
+        )
+
+    def draw_rect(self, x, y, width, height, **kwargs):
+        self.canvas.rect(x * mm, (self.page_height - y - height) * mm, width, height * mm, **kwargs)
