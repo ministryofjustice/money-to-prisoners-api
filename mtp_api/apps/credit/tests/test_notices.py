@@ -89,7 +89,7 @@ class PrisonerCreditNoticeTestCase(unittest.TestCase):
         canvas_save.return_value = None
 
         prisoners = [('NKFUVMY PMNDINERGGPGL-UMR-X-YFMESG', 'A1234AA', [
-            self.credit_cls(3035011, 'XFYISGB JD XQMBXB CZWNEIPTUGDS 4SJL0 PEX 2NOZ')
+            self.credit_cls(3035011, 'X' * 100)
         ])]
         bundle = PrisonerCreditNoticeBundle('INB', prisoners, datetime.date(2017, 6, 16))
         bundle.render(None)

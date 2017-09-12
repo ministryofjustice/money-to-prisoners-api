@@ -55,12 +55,12 @@ class PrisonerCreditNoticeBundle(NoticeBundle):
 
     def render_prisoner_page(self, credits_list):
         top = 215
-        left = 40
+        left = 30
         row_height = 10
         col_gap = 2
         col_stride = 106
         amount_width = 22
-        sender_width = 62
+        sender_width = 62 if len(credits_list) > 5 else 146
         line_height = 5
         for index, credit in enumerate(credits_list):
             if index > 4:
