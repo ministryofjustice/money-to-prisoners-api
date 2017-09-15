@@ -17,7 +17,7 @@ django.jQuery(function ($) {
   function startDashboardAutoreload () {
     autoreloadInterval = setInterval(function () {
       window.location.reload();
-    }, parseInt($dashboardWrapper.data('reload-interval'), 10) * 1000 || 1000);
+    }, (parseInt($dashboardWrapper.data('reload-interval'), 10) || 600) * 1000);
   }
 
   $('#mtp-dashboard-autoreload input').click(function () {

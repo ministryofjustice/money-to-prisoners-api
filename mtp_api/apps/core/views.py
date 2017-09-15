@@ -59,7 +59,7 @@ class DashboardView(AdminViewMixin, TemplateView, metaclass=MediaDefiningClass):
     required_permissions = ['transaction.view_dashboard']
     cookie_name = 'mtp-dashboard'
     standout_cookie_name = 'mtp-dashboard-standout'
-    reload_interval = 5 * 60
+    reload_interval = 600  # 10min
     _registry = []
 
     class Media:
