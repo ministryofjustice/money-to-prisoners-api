@@ -52,10 +52,14 @@ class TransactionDashboardTestCase(DashboardTestCase):
         self.assertAmountInContent(credited_amount, response)
 
         self.client.cookies[DashboardView.cookie_name] = json.dumps({
-            CreditReport.cookie_key: 'date_range=all'
+            CreditReport.cookie_key: 'date_range=yesterday'
         })
         response = self.client.get(self.url)
-        self.assertContains(response, 'Since the beginning')
-        credit_set = Credit.objects.filter(CREDITABLE_FILTERS)
+        self.assertContains(response, 'Yesterday')
+        today = now().replace(hour=0, minute=0, second=0, microsecond=0)
+        yesterday = today - datetime.timedelta(days=1)
+        credit_set = Credit.objects.filter(CREDITABLE_FILTERS).filter(
+            received_at__range=(yesterday, today)
+        )
         credited_amount = credit_set.aggregate(amount=models.Sum('amount'))['amount']
         self.assertAmountInContent(credited_amount, response)
