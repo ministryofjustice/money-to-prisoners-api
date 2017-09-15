@@ -90,7 +90,7 @@ class CreditReportForm(DashboardChangeForm):
             ('four_weeks', _('Last 4 weeks')),
             ('this_month', _('This month')),
             ('last_month', _('Last month')),
-            ('all', _('Since the beginning')),
+            # ('all', _('Since the beginning')),
             ('custom', _('Specify a range…')),
         ],
         initial='this_week',
@@ -109,13 +109,17 @@ class CreditReportForm(DashboardChangeForm):
     prevent_auto_reload = True
     error_messages = {
         'date_order': _('End date must be after start date'),
+        'big_range': _('Choose a smaller date range'),
     }
 
     def clean_end_date(self):
         start_date = self.cleaned_data.get('start_date')
         end_date = self.cleaned_data.get('end_date')
-        if start_date and end_date and end_date < start_date:
-            raise forms.ValidationError(self.error_messages['date_order'], code='date_order')
+        if start_date and end_date and self.cleaned_data.get('date_range') == 'custom':
+            if end_date < start_date:
+                raise forms.ValidationError(self.error_messages['date_order'], code='date_order')
+            if end_date - start_date > datetime.timedelta(days=60):
+                raise forms.ValidationError(self.error_messages['big_range'], code='big_range')
         return end_date
 
     @cached_property
