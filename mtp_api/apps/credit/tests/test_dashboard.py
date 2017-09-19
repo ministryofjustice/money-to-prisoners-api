@@ -52,7 +52,7 @@ class TransactionDashboardTestCase(DashboardTestCase):
         self.assertAmountInContent(credited_amount, response)
 
         self.client.cookies[DashboardView.cookie_name] = json.dumps({
-            CreditReport.cookie_key: 'date_range=yesterday'
+            CreditReport.slug: 'date_range=yesterday'
         })
         response = self.client.get(self.url)
         self.assertContains(response, 'Yesterday')

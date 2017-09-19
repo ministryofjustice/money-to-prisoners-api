@@ -7,7 +7,6 @@ from django.core.cache import cache
 from django.forms import Form, MediaDefiningClass
 from django.http.request import QueryDict
 from django.utils.safestring import mark_safe
-from django.utils.text import re_camel_case
 from django.utils.translation import gettext, gettext_lazy as _
 import requests
 
@@ -15,6 +14,7 @@ from core.views import DashboardView
 
 
 class DashboardModule(metaclass=MediaDefiningClass):
+    slug = NotImplemented
     template = 'core/dashboard/module.html'
     column_count = 1
     html_classes = ''
@@ -22,17 +22,14 @@ class DashboardModule(metaclass=MediaDefiningClass):
     show_stand_out = False
     enabled = True
     priority = 0
-    cookie_key = None
 
-    def __init__(self, dashboard_view):
-        self.dashboard_view = dashboard_view
-        self.cookie_data = QueryDict(dashboard_view.cookie_data.get(self.cookie_key)) or None
+    def __init__(self, view):
+        self.view = view
+        self.cookie_data = QueryDict(view.cookie_data.get(self.slug)) or None
 
     @property
     def html_id(self):
-        html_id = re_camel_case.sub(r'_\1', self.__class__.__name__)
-        html_id = html_id.strip().lower()
-        return 'id' + html_id
+        return 'id_%s' % self.slug
 
 
 class DashboardChangeForm(Form):
@@ -43,6 +40,7 @@ class DashboardChangeForm(Form):
 
 @DashboardView.register_dashboard
 class ExternalDashboards(DashboardModule):
+    slug = 'external_dashboards'
     template = 'core/dashboard/external-dashboards.html'
     column_count = 2
     title = _('External dashboards and logs')
@@ -134,6 +132,7 @@ class SatisfactionDashboard(DashboardModule):
     Questions selected must have the same options across all surveys
     each with 6 options ending with "Not applicable" – they're treated as rating scales.
     """
+    slug = 'satisfaction_dashboard'
     template = 'core/dashboard/satisfaction-results.html'
     column_count = 1
     title = _('User satisfaction')
@@ -170,8 +169,8 @@ class SatisfactionDashboard(DashboardModule):
             'javascripts/satisfaction-results.js',
         )
 
-    def __init__(self, dashboard_view):
-        super().__init__(dashboard_view)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.enabled = bool(settings.SURVEY_GIZMO_API_KEY)
         self.cache_key = 'satisfaction_results'
 
@@ -262,13 +261,13 @@ class SatisfactionDashboard(DashboardModule):
             options = question['options']
             if len(options) != len(self.weightings):
                 messages.error(
-                    self.dashboard_view.request,
+                    self.view.request,
                     _('Satisfaction survey question %(question_id)s has unexpected number of options' % question)
                 )
                 return {}
             if options[-1]['value'] != 'Not applicable':
                 messages.error(
-                    self.dashboard_view.request,
+                    self.view.request,
                     _('Satisfaction survey question %(question_id)s does not have "Not applicable" option' % question)
                 )
                 return {}

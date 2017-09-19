@@ -7,7 +7,7 @@
     {% endif %}
     <table>
       <caption class="mtp-dashboard-standout-hide">
-        {{ dashboard_module.title }}
+        <a href="{% url 'admin:dashboard_single' slug=dashboard_module.slug %}">{{ dashboard_module.title }}</a>
         <span class="float-right">
           {% if dashboard_module.show_stand_out %}
             <a href="#" class="js-mtp-dashboard-standout">{% trans 'Stand out' %}</a>
@@ -24,7 +24,7 @@
         {% if dashboard_module.form %}
           <tr class="mtp-dashboard-change">
             <th colspan="{{ dashboard_module.column_count }}">
-              <form class="{% if not dashboard_module.form.is_valid %}invalid{% endif %} {% if not dashboard_module.form.prevent_auto_reload %}mtp-auto-reload{% endif %}" data-cookie-key="{{ dashboard_module.cookie_key }}">
+              <form class="{% if not dashboard_module.form.is_valid %}invalid{% endif %} {% if not dashboard_module.form.prevent_auto_reload %}mtp-auto-reload{% endif %}" data-cookie-key="{{ dashboard_module.slug }}">
                 {{ dashboard_module.form.as_p }}
                 {% if dashboard_module.form.prevent_auto_reload %}
                   <input type="submit" value="{% trans 'Update' %}">

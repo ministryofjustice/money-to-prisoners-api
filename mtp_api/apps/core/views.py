@@ -60,6 +60,7 @@ class DashboardView(AdminViewMixin, TemplateView, metaclass=MediaDefiningClass):
     cookie_name = 'mtp-dashboard'
     standout_cookie_name = 'mtp-dashboard-standout'
     reload_interval = 600  # 10min
+    single_module = False
     _registry = []
 
     class Media:
@@ -81,8 +82,10 @@ class DashboardView(AdminViewMixin, TemplateView, metaclass=MediaDefiningClass):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.cookie_data = {}
+        self.slug = None
 
-    def dispatch(self, request, *args, **kwargs):
+    def dispatch(self, request, *args, slug=None, **kwargs):
+        self.slug = slug
         try:
             self.cookie_data = json.loads(url_unquote(request.COOKIES.get(self.cookie_name, '')))
         except (TypeError, ValueError):
@@ -94,10 +97,14 @@ class DashboardView(AdminViewMixin, TemplateView, metaclass=MediaDefiningClass):
         if not cls._registry:
             autodiscover_modules('dashboards', register_to=cls)
 
-        dashboards = map(lambda d: d(dashboard_view=self),
-                         cls._registry)
-        return sorted((dashboard for dashboard in dashboards if dashboard.enabled),
-                      key=lambda dashboard: dashboard.priority, reverse=True)
+        dashboards = cls._registry
+        if self.slug:
+            dashboards = filter(lambda d: d.slug == self.slug, dashboards)
+        dashboards = filter(lambda d: d.enabled, map(lambda d: d(view=self), dashboards))
+        dashboards = sorted(dashboards, key=lambda dashboard: dashboard.priority, reverse=True)
+        if not dashboards:
+            raise Http404('No enabled dashboards')
+        return dashboards
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
