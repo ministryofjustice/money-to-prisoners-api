@@ -409,12 +409,12 @@ class CreditReportChart:
 
 @DashboardView.register_dashboard
 class CreditReport(DashboardModule):
+    slug = 'credit_report'
     template = 'core/dashboard/credit-report.html'
     column_count = 3
     title = _('Credit report')
     show_stand_out = True
     priority = 100
-    cookie_key = 'credit-report'
 
     class Media:
         css = {
@@ -442,7 +442,7 @@ class CreditReport(DashboardModule):
                                        credit_queryset=report_parameters['chart_credit_queryset'],
                                        start_date=report_parameters['chart_start_date'],
                                        end_date=report_parameters['chart_end_date'])
-        if self.dashboard_view and self.dashboard_view.request.user.has_perm('credit.change_credit'):
+        if self.view and self.view.request.user.has_perm('credit.change_credit'):
             self.change_list_url = '%s?%s' % (reverse('admin:credit_credit_changelist'),
                                               report_parameters['admin_filter_string'])
 

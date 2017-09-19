@@ -1,4 +1,4 @@
-{% extends "admin/base_site.html" %}
+{% extends 'admin/base_site.html' %}
 {% load i18n %}
 {% load static %}
 
@@ -8,10 +8,23 @@
   <script type="text/javascript" src="{% url 'admin:jsi18n' %}"></script>
   {{ combined_media }}
 {% endblock %}
+
 {% block extrastyle %}
   {{ block.super }}
 
   <link rel="stylesheet" type="text/css" href="{% static 'admin/css/forms.css' %}" />
+{% endblock %}
+
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    {% if request.resolver_match.url_name == 'dashboard_single' %}
+      &rsaquo; <a href="{% url 'admin:dashboard' %}">{{ title }}</a>
+      &rsaquo; {{ dashboard_modules.0.title }}
+    {% else %}
+      &rsaquo; {{ title }}
+    {% endif %}
+  </div>
 {% endblock %}
 
 {% block content %}
@@ -30,6 +43,5 @@
         {% include dashboard_module.template with dashboard=view dashboard_module=dashboard_module only %}
       {% endfor %}
     </div>
-
   </div>
 {% endblock %}

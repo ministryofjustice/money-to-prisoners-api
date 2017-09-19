@@ -5,8 +5,14 @@
 .mtp-dashboard-module {
   background: #fff;
 
-  caption span a {
-    margin-left: 10px;
+  caption {
+    a {
+      color: #fff;
+    }
+
+    span a {
+      margin-left: 10px;
+    }
   }
 }
 
@@ -43,10 +49,6 @@
   caption {
     background: #222;
     color: #fff;
-
-    span a {
-      color: #fff;
-    }
   }
 
   thead th {

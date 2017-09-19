@@ -25,6 +25,7 @@ class AdminSite(admin.AdminSite):
 
         return [
             url(r'^dashboard/$', DashboardView.as_view(), name='dashboard'),
+            url(r'^dashboard/(?P<slug>[^/]+)/$', DashboardView.as_view(single_module=True), name='dashboard_single'),
             url(r'^digital-takeup-upload/$', DigitalTakeupUploadView.as_view(), name='digital_takeup_upload'),
             url(r'^payment/payment/search/$', PaymentSearchView.as_view(), name='payment_search'),
             url(r'^prison/prisonerlocation/load-offenders/$', LoadOffendersView.as_view(), name='load_offenders'),
