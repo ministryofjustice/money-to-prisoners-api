@@ -42,7 +42,7 @@
       </tr>
     {% endif %}
 
-    <tr style="height: 50%">
+    <tr class="credit-chart-row">
       <td colspan="{{ dashboard_module.column_count }}">
         <script>
           var creditReportData = {{ dashboard_module.chart.data|default:'{}' }};
