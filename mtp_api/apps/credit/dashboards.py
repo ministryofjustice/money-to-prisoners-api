@@ -104,7 +104,6 @@ class CreditReportForm(DashboardChangeForm):
         empty_label=_('All prisons'),
         required=False,
     )
-    min_crediting_time = SimpleDurationField(label=_('Min. time to credit'), required=False)
 
     prevent_auto_reload = True
     error_messages = {
@@ -233,10 +232,6 @@ class CreditReportForm(DashboardChangeForm):
         if self.is_valid():
             return self.cleaned_data['prison']
 
-    def get_min_crediting_time(self):
-        if self.is_valid():
-            return self.cleaned_data['min_crediting_time']
-
     def get_report_parameters(self):
         credit_queryset = Credit.objects.all()
         transaction_queryset = Transaction.objects.all()
@@ -245,15 +240,6 @@ class CreditReportForm(DashboardChangeForm):
         if prison:
             credit_queryset = credit_queryset.filter(prison=prison)
             transaction_queryset = transaction_queryset.filter(credit__prison=prison)
-
-        min_crediting_time = self.get_min_crediting_time()
-        if min_crediting_time:
-            credit_queryset = credit_queryset.filter(
-                creditingtime__crediting_time__gte=min_crediting_time
-            )
-            transaction_queryset = transaction_queryset.filter(
-                credit__creditingtime__crediting_time__gte=min_crediting_time
-            )
 
         chart_credit_queryset = credit_queryset.filter()
 
@@ -296,10 +282,6 @@ class CreditReportForm(DashboardChangeForm):
         extra_titles = []
         if prison:
             extra_titles.append(_('only for %(prison)s') % {'prison': prison})
-        if min_crediting_time:
-            extra_titles.append(_('time to credit at least %(days)s days') % {
-                'days': min_crediting_time.days + min_crediting_time.seconds / 86400
-            })
         if extra_titles:
             title += ' (%s)' % ', '.join(extra_titles)
 
