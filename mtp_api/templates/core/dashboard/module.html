@@ -1,21 +1,22 @@
 {% load i18n %}
 
 {% block module %}
-  <div id="{{ dashboard_module.html_id }}" class="module mtp-dashboard-module {{ dashboard_module.html_classes }}">
-    {% if dashboard_module.show_stand_out %}
-      <a href="#" class="mtp-dashboard-standout-show js-mtp-dashboard-standout">{% trans 'Hide' %}</a>
+  <div id="{{ dashboard_module.html_id }}" class="module mtp-dashboard-module">
+    {% if dashboard.fullscreen %}
+      <a href="{% url 'admin:dashboard' %}" class="mtp-dashboard-toggle-full-screen" data-close-label="{% trans 'Close' %}">
+        {% trans 'Full-screen' %}
+      </a>
     {% endif %}
     <table>
-      <caption class="mtp-dashboard-standout-hide">
-        <a href="{% url 'admin:dashboard_single' slug=dashboard_module.slug %}">{{ dashboard_module.title }}</a>
-        <span class="float-right">
-          {% if dashboard_module.show_stand_out %}
-            <a href="#" class="js-mtp-dashboard-standout">{% trans 'Stand out' %}</a>
-          {% endif %}
-          {% if dashboard_module.form %}
+      <caption>
+        <a href="{% url 'admin:dashboard_fullscreen' slug=dashboard_module.slug %}" title="{% trans 'Show in full-screen' %}">
+          {{ dashboard_module.title }}
+        </a>
+        {% if dashboard_module.form %}
+          <span class="float-right">
             <a href="#" class="js-mtp-dashboard-change changelink">{% trans 'Change' %}</a>
-          {% endif %}
-        </span>
+          </span>
+        {% endif %}
       </caption>
       <thead>
         {% block module_thead %}{% endblock %}

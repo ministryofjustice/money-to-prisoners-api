@@ -65,7 +65,7 @@
   }
 }
 
-.mtp-dashboard-module-standout {
+.mtp-dashboard-full-screen {
   .credit-stat {
     background: #111;
     font-size: 2em;
@@ -94,7 +94,7 @@
   height: 100%;
   background: #f9f9f9;
 
-  .mtp-dashboard-module-standout & {
+  .mtp-dashboard-full-screen & {
     background: #111;
   }
 }

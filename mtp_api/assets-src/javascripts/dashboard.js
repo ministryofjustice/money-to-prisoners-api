@@ -3,13 +3,9 @@
 django.jQuery(function ($) {
   'use strict';
 
-  var $pageBackground = $('html, body');
   var $dashboardWrapper = $('#mtp-dashboard');
   var cookieName = $dashboardWrapper.data('cookie-name');
-  var standoutCookieName = $dashboardWrapper.data('standout-cookie-name');
-  var $dashboardModules = $('.mtp-dashboard-module');
   var $moduleForms = $('.mtp-dashboard-change form');
-  var $standoutModule = $('#' + Cookies.get(standoutCookieName));
   var autoreloadInterval = null;
 
   // dashboard auto-reload
@@ -70,30 +66,23 @@ django.jQuery(function ($) {
   $moduleForms.filter(':not(.mtp-auto-reload)').on('click', ':submit', saveDashboardFormsAndReload);
 
 
-  // dashboard module stand-out
+  // dashboard full-screen
 
-  $dashboardModules.on('mtp.dashboard-standout', function (e, $module) {
-    if ($module.hasClass('mtp-dashboard-module-standout')) {
-      $dashboardModules.css('visibility', 'visible');
-      $module.removeClass('mtp-dashboard-module-standout');
-      $pageBackground.css('background', '#fff');
-      Cookies.remove(standoutCookieName);
-    } else {
-      $dashboardModules.not($module).css('visibility', 'hidden');
-      $module.addClass('mtp-dashboard-module-standout');
-      $pageBackground.css('background', $module.css('background'));
-      Cookies.set(standoutCookieName, $module.attr('id'));
+  $('.mtp-dashboard-toggle-full-screen').click(function (e) {
+    var $button = $(this);
+    var dashboardWrapper = $dashboardWrapper[0];
+    var prefixes = ['', 'webkit', 'moz', 'ms'];
+    e.preventDefault();
+    $button.text($button.data('close-label'));
+    $button.off('click');
+    for (var prefix in prefixes) {
+      if (prefixes.hasOwnProperty(prefix)) {
+        var method = prefixes[prefix] ? prefixes[prefix] + 'RequestFullscreen' : 'requestFullscreen';
+        if (dashboardWrapper[method]) {
+          dashboardWrapper[method]();
+          return;
+        }
+      }
     }
   });
-
-  $('.js-mtp-dashboard-standout').click(function (e) {
-    var $module = $(this).closest('.mtp-dashboard-module');
-
-    e.preventDefault();
-    $module.trigger('mtp.dashboard-standout', [$module]);
-  });
-
-  if ($standoutModule.size()) {
-    $standoutModule.trigger('mtp.dashboard-standout', [$standoutModule]);
-  }
 });
