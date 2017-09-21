@@ -58,9 +58,8 @@ class DashboardView(AdminViewMixin, TemplateView, metaclass=MediaDefiningClass):
     template_name = 'core/dashboard/index.html'
     required_permissions = ['transaction.view_dashboard']
     cookie_name = 'mtp-dashboard'
-    standout_cookie_name = 'mtp-dashboard-standout'
     reload_interval = 600  # 10min
-    single_module = False
+    fullscreen = False
     _registry = []
 
     class Media:
@@ -117,6 +116,7 @@ class DashboardView(AdminViewMixin, TemplateView, metaclass=MediaDefiningClass):
         context.update({
             'dashboard_modules': dashboard_modules,
             'combined_media': combined_media,
+            'fullscreen': self.fullscreen,
         })
         return context
 

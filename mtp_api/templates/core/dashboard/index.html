@@ -15,10 +15,12 @@
   <link rel="stylesheet" type="text/css" href="{% static 'admin/css/forms.css' %}" />
 {% endblock %}
 
+{% block bodyclass %}{{ block.super }} {% if view.fullscreen %}mtp-dashboard-full-screen{% endif %}{% endblock %}
+
 {% block breadcrumbs %}
   <div class="breadcrumbs">
     <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
-    {% if request.resolver_match.url_name == 'dashboard_single' %}
+    {% if view.fullscreen %}
       &rsaquo; <a href="{% url 'admin:dashboard' %}">{{ title }}</a>
       &rsaquo; {{ dashboard_modules.0.title }}
     {% else %}
@@ -38,7 +40,7 @@
       </li>
     </ul>
 
-    <div id="mtp-dashboard" data-reload-interval="{{ view.reload_interval }}" data-cookie-name="{{ view.cookie_name }}" data-standout-cookie-name="{{ view.standout_cookie_name }}">
+    <div id="mtp-dashboard" data-reload-interval="{{ view.reload_interval }}" data-cookie-name="{{ view.cookie_name }}">
       {% for dashboard_module in dashboard_modules %}
         {% include dashboard_module.template with dashboard=view dashboard_module=dashboard_module only %}
       {% endfor %}

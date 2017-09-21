@@ -17,9 +17,7 @@ class DashboardModule(metaclass=MediaDefiningClass):
     slug = NotImplemented
     template = 'core/dashboard/module.html'
     column_count = 1
-    html_classes = ''
     title = _('Dashboard')
-    show_stand_out = False
     enabled = True
     priority = 0
 

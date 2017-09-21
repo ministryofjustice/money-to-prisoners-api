@@ -33,7 +33,7 @@ django.jQuery(function ($) {
       fontSize: 13
     }
   };
-  var standoutStyles = {
+  var fullScreenStyles = {
     // colours and sizes optimised for philips tv
     font: 'Roboto, "Lucida Grande", Verdana, Arial, sans-serif',
     lines: ['#6f6', '#F3513F'],
@@ -60,7 +60,7 @@ django.jQuery(function ($) {
 
   function drawCreditReports () {
     var chart = new google.visualization.ColumnChart($chart[0]);
-    var styles = $module.hasClass('mtp-dashboard-module-standout') ? standoutStyles : normalStyles;
+    var styles = $('body').hasClass('mtp-dashboard-full-screen') ? fullScreenStyles : normalStyles;
 
     chart.draw(chartData, {
       hAxis: {
@@ -149,11 +149,6 @@ django.jQuery(function ($) {
 
     });
   }
-
-  $module.on('mtp.dashboard-standout', function () {
-    $chart.empty();
-    drawCreditReports();
-  });
 
   google.charts.setOnLoadCallback(function () {
     chartData = new google.visualization.DataTable();

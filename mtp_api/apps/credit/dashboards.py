@@ -413,7 +413,6 @@ class CreditReport(DashboardModule):
     template = 'core/dashboard/credit-report.html'
     column_count = 3
     title = _('Credit report')
-    show_stand_out = True
     priority = 100
 
     class Media:
