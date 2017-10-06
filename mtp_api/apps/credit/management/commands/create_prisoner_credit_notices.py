@@ -4,7 +4,7 @@ import pathlib
 
 from django.core.management import BaseCommand, CommandError
 from django.utils.dateparse import parse_date
-from django.utils.timezone import now
+from django.utils.timezone import make_aware, now
 
 from credit.constants import LOG_ACTIONS
 from credit.models import Log
@@ -38,15 +38,14 @@ class Command(BaseCommand):
             date = parse_date(date)
             if not date:
                 raise CommandError('Date %s cannot be parsed, use YYYY-MM-DD format' % date)
-            date_range = date, date + datetime.timedelta(days=1)
         else:
-            today = now().date()
-            date = today - datetime.timedelta(days=1)
-            date_range = date, today
+            date = now().date() - datetime.timedelta(days=1)
+        date_range = (make_aware(datetime.datetime.combine(date, datetime.time.min)),
+                      make_aware(datetime.datetime.combine(date, datetime.time.max)))
 
         credit_logs = Log.objects.filter(
             action=LOG_ACTIONS.CREDITED,
-            created__date__range=date_range,
+            created__range=date_range,
             credit__prison=prison.pk,
         )
         credit_count = credit_logs.count()
