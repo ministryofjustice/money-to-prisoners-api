@@ -448,7 +448,7 @@ class CreateUserTestCase(AuthBaseTestCase):
         self.assertEqual(User.objects.filter(username=user_data['username']).count(), 0)
 
     @override_settings(ENVIRONMENT='prod')
-    def assertUserCreated(self, requester, user_data, client_id, groups):  # noqa
+    def assertUserCreated(self, requester, user_data, client_id, groups, target_client_id=None):  # noqa
         response = self.client.post(
             self.get_url(),
             format='json',
@@ -463,6 +463,7 @@ class CreateUserTestCase(AuthBaseTestCase):
             if key in ('username', 'first_name', 'last_name', 'email')
         ))
 
+        target_client_id = target_client_id or client_id
         make_user_admin = user_data.pop('user_admin', False)
         user_data.pop('role', None)
         new_user = User.objects.get(**user_data)
@@ -471,7 +472,7 @@ class CreateUserTestCase(AuthBaseTestCase):
                 new_user.applicationusermapping_set.all()
                 .values_list('application__client_id', flat=True)
             ),
-            [client_id]
+            [target_client_id]
         )
         self.assertEqual(
             set(new_user.groups.all()),
@@ -484,10 +485,11 @@ class CreateUserTestCase(AuthBaseTestCase):
         else:
             self.assertNotIn('UserAdmin', new_user.groups.values_list('name', flat=True))
 
-        self.assertTrue(user_data['username'] in mail.outbox[0].body)
+        latest_email = mail.outbox[0]
+        self.assertIn(user_data['username'], latest_email.body)
         self.assertEqual(
-            'Your new %s account is ready to use' % Application.objects.get(client_id=client_id).name,
-            mail.outbox[0].subject
+            'Your new %s account is ready to use' % Application.objects.get(client_id=target_client_id).name,
+            latest_email.subject
         )
 
     def test_create_bank_admin(self):
@@ -536,6 +538,22 @@ class CreateUserTestCase(AuthBaseTestCase):
             [Group.objects.get(name='Security')]
         )
 
+    def test_create_security_staff_as_prison_clerk(self):
+        user_data = {
+            'username': 'new-security-staff',
+            'first_name': 'New',
+            'last_name': 'Security Staff',
+            'email': 'nss@mtp.local',
+            'role': 'security',
+        }
+        self.assertUserCreated(
+            self.cashbook_uas[0],
+            user_data,
+            'cashbook',
+            [Group.objects.get(name='Security')],
+            target_client_id='noms-ops',
+        )
+
     def test_create_prison_clerk(self):
         user_data = {
             'username': 'new-prison-clerk',
@@ -549,6 +567,22 @@ class CreateUserTestCase(AuthBaseTestCase):
             user_data,
             'cashbook',
             [Group.objects.get(name='PrisonClerk')]
+        )
+
+    def test_create_prison_clerk_as_security(self):
+        user_data = {
+            'username': 'new-prison-clerk',
+            'first_name': 'New',
+            'last_name': 'Prison Clerk',
+            'email': 'pc@mtp.local',
+            'role': 'prison-clerk',
+        }
+        self.assertUserCreated(
+            self.security_uas[0],
+            user_data,
+            'noms-ops',
+            [Group.objects.get(name='PrisonClerk')],
+            target_client_id='cashbook'
         )
 
     def test_create_cashbook_user_admin(self):
