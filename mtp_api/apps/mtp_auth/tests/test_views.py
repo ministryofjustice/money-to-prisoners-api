@@ -448,7 +448,8 @@ class CreateUserTestCase(AuthBaseTestCase):
         self.assertEqual(User.objects.filter(username=user_data['username']).count(), 0)
 
     @override_settings(ENVIRONMENT='prod')
-    def assertUserCreated(self, requester, user_data, client_id, groups, target_client_id=None):  # noqa
+    def assertUserCreated(self, requester, user_data, client_id, groups,  # noqa
+                          target_client_id=None, expected_login_link=None):
         response = self.client.post(
             self.get_url(),
             format='json',
@@ -487,6 +488,11 @@ class CreateUserTestCase(AuthBaseTestCase):
 
         latest_email = mail.outbox[0]
         self.assertIn(user_data['username'], latest_email.body)
+        if expected_login_link:
+            self.assertIn('sign in at', latest_email.body)
+            self.assertIn(expected_login_link, latest_email.body)
+        else:
+            self.assertNotIn('sign in at', latest_email.body)
         self.assertEqual(
             'Your new %s account is ready to use' % Application.objects.get(client_id=target_client_id).name,
             latest_email.subject
@@ -600,6 +606,41 @@ class CreateUserTestCase(AuthBaseTestCase):
             'cashbook',
             [Group.objects.get(name='PrisonClerk'),
              Group.objects.get(name='UserAdmin')]
+        )
+
+    def test_login_link_present(self):
+        Role.objects.filter(name='prison-clerk').update(login_url='https://cashbook.local/login/')
+        user_data = {
+            'username': 'new-prison-clerk',
+            'first_name': 'New',
+            'last_name': 'Prison Clerk',
+            'email': 'pc@mtp.local',
+            'role': 'prison-clerk',
+        }
+        self.assertUserCreated(
+            self.cashbook_uas[0],
+            user_data,
+            'cashbook',
+            [Group.objects.get(name='PrisonClerk')],
+            expected_login_link='https://cashbook.local/login/',
+        )
+
+    def test_login_link_present_for_different_role(self):
+        Role.objects.filter(name='security').update(login_url='https://noms-ops.local/login/')
+        user_data = {
+            'username': 'new-security-staff',
+            'first_name': 'New',
+            'last_name': 'Security Staff',
+            'email': 'nss@mtp.local',
+            'role': 'security',
+        }
+        self.assertUserCreated(
+            self.cashbook_uas[0],
+            user_data,
+            'cashbook',
+            [Group.objects.get(name='Security')],
+            target_client_id='noms-ops',
+            expected_login_link='https://noms-ops.local/login/',
         )
 
     def assertUserNotCreated(self, requester, data):  # noqa

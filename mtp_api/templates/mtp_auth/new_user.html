@@ -18,4 +18,12 @@
       <td>{{ password }}</td>
     </tr>
   </table>
+
+  {% if login_url %}
+    <p>
+      {% blocktrans trimmed with login_url=login_url|urlize %}
+        You can now sign in at: {{ login_url }}
+      {% endblocktrans %}
+    </p>
+  {% endif %}
 {% endblock %}

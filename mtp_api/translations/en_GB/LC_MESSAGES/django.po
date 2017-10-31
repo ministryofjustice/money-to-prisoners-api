@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mtp-api\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-08-10 14:45+0100\n"
+"POT-Creation-Date: 2017-10-31 14:16+0000\n"
 "PO-Revision-Date: 2016-11-04 10:00+0000\n"
 "Last-Translator: Welsh Language Unit <welsh.language.unit.manager@hmcts.gsi.gov.uk>\n"
 "Language-Team: Welsh (http://www.transifex.com/ministry-of-justice/mtp/language/cy/)\n"
@@ -436,25 +436,30 @@ msgstr ""
 msgid "Money credited to prisoners on %(date)s at %(prison)s"
 msgstr ""
 
-#: apps/credit/notices/prisoner_credits.py:80
+#: apps/credit/notices/prisoner_credits.py:82
 #, python-format
 msgid "from %s"
 msgstr ""
 
-#: apps/credit/notices/prisoner_credits.py:110
+#: apps/credit/notices/prisoner_credits.py:112
 msgid "Send money to someone in prison"
 msgstr ""
 
-#: apps/credit/notices/prisoner_credits.py:113
+#: apps/credit/notices/prisoner_credits.py:115
 msgid "Confidential. Please fold & staple"
 msgstr ""
 
-#: apps/credit/notices/prisoner_credits.py:121
-msgid "You have been sent money online."
+#: apps/credit/notices/prisoner_credits.py:129
+msgid "You’ve been sent money online."
 msgstr ""
 
-#: apps/credit/notices/prisoner_credits.py:122
-msgid "You may not have all this money to spend in canteen."
+#: apps/credit/notices/prisoner_credits.py:129
+msgid "It’s gone into your private cash account."
+msgstr ""
+
+#: apps/credit/notices/prisoner_credits.py:238
+#, python-format
+msgid "Received on %(date)s"
 msgstr ""
 
 #: apps/credit/templatetags/credit.py:34
@@ -483,7 +488,7 @@ msgid "MTP Authorisation"
 msgstr ""
 
 #: apps/mtp_auth/forms.py:11 apps/mtp_auth/forms.py:29
-#: apps/mtp_auth/models.py:140
+#: apps/mtp_auth/models.py:141
 msgid "That username already exists"
 msgstr ""
 
@@ -495,7 +500,7 @@ msgstr ""
 msgid "That email address already exists"
 msgstr ""
 
-#: apps/mtp_auth/serializers.py:154
+#: apps/mtp_auth/serializers.py:155
 #, python-format
 msgid "Your new %(service_name)s account is ready to use"
 msgstr ""
@@ -528,11 +533,11 @@ msgstr ""
 msgid "That email address matches multiple user accounts, please enter your unique username"
 msgstr ""
 
-#: apps/mtp_auth/views.py:264
+#: apps/mtp_auth/views.py:266
 msgid "Create a new Prisoner Money password"
 msgstr ""
 
-#: apps/mtp_auth/views.py:282
+#: apps/mtp_auth/views.py:284
 msgid "Your new Prisoner Money password"
 msgstr ""
 
@@ -1121,21 +1126,26 @@ msgstr ""
 msgid "Copy and paste the link below into your browser address bar to create your new Prisoner Money password."
 msgstr ""
 
-#: templates/mtp_auth/new_user.html:6 templates/mtp_auth/new_user.txt:2
+#: templates/mtp_auth/new_user.html:7 templates/mtp_auth/new_user.txt:2
 #, python-format
 msgid "Your new %(service_name)s account has been created for you."
 msgstr ""
 
-#: templates/mtp_auth/new_user.html:13 templates/mtp_auth/new_user.txt:6
+#: templates/mtp_auth/new_user.html:14 templates/mtp_auth/new_user.txt:6
 #: templates/mtp_auth/reset_password.html:11
 #: templates/mtp_auth/reset_password.txt:4
 msgid "Username"
 msgstr ""
 
-#: templates/mtp_auth/new_user.html:17 templates/mtp_auth/new_user.txt:7
+#: templates/mtp_auth/new_user.html:18 templates/mtp_auth/new_user.txt:7
 #: templates/mtp_auth/reset_password.html:15
 #: templates/mtp_auth/reset_password.txt:5
 msgid "Password"
+msgstr ""
+
+#: templates/mtp_auth/new_user.html:25 templates/mtp_auth/new_user.txt:9
+#, python-format
+msgid "You can now sign in at: %(login_url)s"
 msgstr ""
 
 #: templates/mtp_auth/reset_password.html:6
