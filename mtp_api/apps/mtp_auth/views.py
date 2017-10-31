@@ -1,5 +1,5 @@
 import logging
-from urllib.parse import urlparse, urlencode, parse_qs
+from urllib.parse import urlsplit, urlunsplit, urlencode, parse_qs
 
 from django.contrib.auth import password_validation, get_user_model
 from django.contrib.auth.password_validation import get_default_password_validators
@@ -251,19 +251,21 @@ class ResetPasswordView(generics.GenericAPIView):
 
             if serializer.validated_data.get('create_password'):
                 change_request, _ = PasswordChangeRequest.objects.get_or_create(user=user)
-                change_password_url = urlparse(
+                change_password_url = urlsplit(
                     serializer.validated_data['create_password']['password_change_url']
                 )
                 query = parse_qs(change_password_url.query)
                 query.update({
                     serializer.validated_data['create_password']['reset_code_param']: str(change_request.code)
                 })
-                change_password_url = change_password_url._replace(query=urlencode(query))
+                change_password_url = list(change_password_url)
+                change_password_url[3] = urlencode(query)
+                change_password_url = urlunsplit(change_password_url)
                 send_email(
                     user.email, 'mtp_auth/create_new_password.txt',
                     gettext('Create a new Prisoner Money password'),
                     context={
-                        'change_password_url': change_password_url.geturl(),
+                        'change_password_url': change_password_url,
                     },
                     html_template='mtp_auth/create_new_password.html'
                 )
