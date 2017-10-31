@@ -61,6 +61,7 @@ class Role(models.Model):
     other_groups = models.ManyToManyField('auth.Group', blank=True, related_name='+')
     application = models.ForeignKey('oauth2_provider.Application', related_name='+', on_delete=models.CASCADE)
     managed_roles = models.ManyToManyField('self', blank=True)
+    login_url = models.URLField(null=True)
 
     objects = RoleManager()
 

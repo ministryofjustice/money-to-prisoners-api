@@ -148,6 +148,7 @@ class UserSerializer(serializers.ModelSerializer):
             'username': new_user.username,
             'password': password,
             'service_name': role.application.name,
+            'login_url': role.login_url,
         }
         send_email(
             new_user.email, 'mtp_auth/new_user.txt',

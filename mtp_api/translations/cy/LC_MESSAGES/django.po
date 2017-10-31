@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-08-10 14:45+0100\n"
+"POT-Creation-Date: 2017-10-31 14:16+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Igor U <igor.ushkarev@digital.justice.gov.uk>, 2017\n"
 "Language-Team: Welsh (https://www.transifex.com/ministry-of-justice/teams/34553/cy/)\n"
@@ -436,26 +436,31 @@ msgstr "anfonwr anhysbys"
 msgid "Money credited to prisoners on %(date)s at %(prison)s"
 msgstr "Arian wedi'i gredydu i garcharorion ar %(date)s yn %(prison)s"
 
-#: apps/credit/notices/prisoner_credits.py:80
+#: apps/credit/notices/prisoner_credits.py:82
 #, python-format
 msgid "from %s"
 msgstr "o %s"
 
-#: apps/credit/notices/prisoner_credits.py:110
+#: apps/credit/notices/prisoner_credits.py:112
 msgid "Send money to someone in prison"
 msgstr "Anfon arian at rywun sydd yn y carchar"
 
-#: apps/credit/notices/prisoner_credits.py:113
+#: apps/credit/notices/prisoner_credits.py:115
 msgid "Confidential. Please fold & staple"
 msgstr "Cyfrinachol. Plygwch a styffylwch"
 
-#: apps/credit/notices/prisoner_credits.py:121
-msgid "You have been sent money online."
+#: apps/credit/notices/prisoner_credits.py:129
+msgid "You’ve been sent money online."
 msgstr "Mae rhywun wedi anfon arian atoch ar-lein."
 
-#: apps/credit/notices/prisoner_credits.py:122
-msgid "You may not have all this money to spend in canteen."
-msgstr "Efallai na fydd gennych yr holl arian hwn i'w wario yn y ffreutur."
+#: apps/credit/notices/prisoner_credits.py:129
+msgid "It’s gone into your private cash account."
+msgstr ""
+
+#: apps/credit/notices/prisoner_credits.py:238
+#, python-format
+msgid "Received on %(date)s"
+msgstr ""
 
 #: apps/credit/templatetags/credit.py:34
 #, python-format
@@ -483,7 +488,7 @@ msgid "MTP Authorisation"
 msgstr "Awdurdodi MTP"
 
 #: apps/mtp_auth/forms.py:11 apps/mtp_auth/forms.py:29
-#: apps/mtp_auth/models.py:140
+#: apps/mtp_auth/models.py:141
 msgid "That username already exists"
 msgstr "Mae'r enw defnyddiwr hwnnw yn bodoli'n barod"
 
@@ -495,7 +500,7 @@ msgstr "Nid oedd y ddau flwch cyfrinair yn cyfateb"
 msgid "That email address already exists"
 msgstr "Mae'r cyfeiriad e-bost yn bodoli'n barod"
 
-#: apps/mtp_auth/serializers.py:154
+#: apps/mtp_auth/serializers.py:155
 #, python-format
 msgid "Your new %(service_name)s account is ready to use"
 msgstr "Mae eich cyfrif %(service_name)s newydd yn barod i'w ddefnyddio"
@@ -528,11 +533,11 @@ msgstr "Nid yw eich cyfeiriad e-bost gennym, cysylltwch â'r unigolyn wnaeth gre
 msgid "That email address matches multiple user accounts, please enter your unique username"
 msgstr "Mae'r cyfeiriad ebost yna yn cyfateb i nifer o gyfrifon defnyddwyr, nodwch eich enw defnyddiwr unigryw os gwelwch yn dda"
 
-#: apps/mtp_auth/views.py:264
+#: apps/mtp_auth/views.py:266
 msgid "Create a new Prisoner Money password"
 msgstr ""
 
-#: apps/mtp_auth/views.py:282
+#: apps/mtp_auth/views.py:284
 msgid "Your new Prisoner Money password"
 msgstr "Eich cyfrinair Anfon Arian at Garcharor newydd"
 
@@ -1121,22 +1126,27 @@ msgstr ""
 msgid "Copy and paste the link below into your browser address bar to create your new Prisoner Money password."
 msgstr ""
 
-#: templates/mtp_auth/new_user.html:6 templates/mtp_auth/new_user.txt:2
+#: templates/mtp_auth/new_user.html:7 templates/mtp_auth/new_user.txt:2
 #, python-format
 msgid "Your new %(service_name)s account has been created for you."
 msgstr "Mae eich cyfrif %(service_name)s newydd wedi cael ei greu i chi."
 
-#: templates/mtp_auth/new_user.html:13 templates/mtp_auth/new_user.txt:6
+#: templates/mtp_auth/new_user.html:14 templates/mtp_auth/new_user.txt:6
 #: templates/mtp_auth/reset_password.html:11
 #: templates/mtp_auth/reset_password.txt:4
 msgid "Username"
 msgstr "Enw defnyddiwr"
 
-#: templates/mtp_auth/new_user.html:17 templates/mtp_auth/new_user.txt:7
+#: templates/mtp_auth/new_user.html:18 templates/mtp_auth/new_user.txt:7
 #: templates/mtp_auth/reset_password.html:15
 #: templates/mtp_auth/reset_password.txt:5
 msgid "Password"
 msgstr "Cyfrinair"
+
+#: templates/mtp_auth/new_user.html:25 templates/mtp_auth/new_user.txt:9
+#, python-format
+msgid "You can now sign in at: %(login_url)s"
+msgstr ""
 
 #: templates/mtp_auth/reset_password.html:6
 #: templates/mtp_auth/reset_password.txt:2
@@ -1150,6 +1160,12 @@ msgstr "Ni ellir dod o hyd i’r dudalen"
 #: urls.py:37
 msgid "Sorry, something went wrong"
 msgstr "Mae'n ddrwg iawn gennym, aeth rhywbeth o'i le"
+
+#~ msgid "You have been sent money online."
+#~ msgstr "Mae rhywun wedi anfon arian atoch ar-lein."
+
+#~ msgid "You may not have all this money to spend in canteen."
+#~ msgstr "Efallai na fydd gennych yr holl arian hwn i'w wario yn y ffreutur."
 
 #~ msgid "Send money to a prisoner"
 #~ msgstr "Anfon arian at garcharor"
