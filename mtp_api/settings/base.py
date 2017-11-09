@@ -49,6 +49,7 @@ INSTALLED_APPS = (
     'performance',
     'service',
     'security',
+    'disbursement',
 
     # django admin
     'django.contrib.admin',

@@ -17,6 +17,7 @@ urlpatterns = [
     url(r'^', include('credit.urls')),
     url(r'^', include('security.urls')),
     url(r'^', include('service.urls')),
+    url(r'^', include('disbursement.urls')),
 
     url(r'^oauth2/', include(('oauth2_provider.urls', 'oauth2_provider'), namespace='oauth2_provider')),
     url(r'^admin/', admin.site.urls),

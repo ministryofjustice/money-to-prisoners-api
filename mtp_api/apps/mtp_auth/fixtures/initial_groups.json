@@ -22,7 +22,10 @@
       ["view_transaction", "transaction", "transaction"],
       ["patch_processed_transaction", "transaction", "transaction"],
       ["add_balance", "account", "balance"],
-      ["view_batch", "payment", "batch"]
+      ["view_batch", "payment", "batch"],
+      ["view_disbursement", "disbursement", "disbursement"],
+      ["change_disbursement", "disbursement", "disbursement"],
+      ["view_recipient", "disbursement", "recipient"]
     ]
   }
 },
@@ -35,7 +38,13 @@
       ["view_credit", "credit", "credit"],
       ["credit_credit", "credit", "credit"],
       ["add_processingbatch", "credit", "processingbatch"],
-      ["delete_processingbatch", "credit", "processingbatch"]
+      ["delete_processingbatch", "credit", "processingbatch"],
+      ["view_disbursement", "disbursement", "disbursement"],
+      ["change_disbursement", "disbursement", "disbursement"],
+      ["add_disbursement", "disbursement", "disbursement"],
+      ["view_recipient", "disbursement", "recipient"],
+      ["change_recipient", "disbursement", "recipient"],
+      ["add_recipient", "disbursement", "recipient"]
     ]
   }
 },
