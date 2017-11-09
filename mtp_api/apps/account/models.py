@@ -5,7 +5,7 @@ from transaction.utils import format_amount
 
 
 class Balance(TimeStampedModel):
-    closing_balance = models.IntegerField()
+    closing_balance = models.BigIntegerField()
     date = models.DateField()
 
     class Meta:
