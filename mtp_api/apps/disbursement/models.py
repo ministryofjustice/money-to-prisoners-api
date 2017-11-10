@@ -10,6 +10,7 @@ from .signals import (
     disbursement_sent
 )
 from prison.models import Prison
+from transaction.utils import format_amount
 
 
 class Recipient(models.Model):
@@ -32,11 +33,14 @@ class Recipient(models.Model):
             ('view_recipient', 'Can view disbursement recipients'),
         )
 
+    def __str__(self):
+        return self.name
+
 
 class Disbursement(TimeStampedModel):
     amount = models.PositiveIntegerField()
-    prisoner_number = models.CharField(blank=True, null=True, max_length=250)
-    prison = models.ForeignKey(Prison, blank=True, null=True, on_delete=models.SET_NULL)
+    prisoner_number = models.CharField(max_length=250)
+    prison = models.ForeignKey(Prison, on_delete=models.PROTECT)
     resolution = models.CharField(
         max_length=50, choices=DISBURSEMENT_RESOLUTION,
         default=DISBURSEMENT_RESOLUTION.PENDING
@@ -64,6 +68,15 @@ class Disbursement(TimeStampedModel):
     class Meta:
         permissions = (
             ('view_disbursement', 'Can view disbursements'),
+        )
+
+    def __str__(self):
+        return 'Disbursement {id}, {amount} {prisoner} > {recipient}, {status}'.format(
+            id=self.pk,
+            amount=format_amount(self.amount, True),
+            prisoner=self.prisoner_number,
+            recipient=self.recipient.name,
+            status=self.resolution
         )
 
 
