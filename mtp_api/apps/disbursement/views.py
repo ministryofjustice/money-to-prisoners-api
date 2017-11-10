@@ -10,7 +10,8 @@ from mtp_auth.permissions import (
 from .constants import DISBURSEMENT_RESOLUTION
 from .models import Disbursement, Recipient
 from .serializers import (
-    DisbursementSerializer, DisbursementIdsSerializer, RecipientSerializer
+    DisbursementSerializer, DisbursementIdsSerializer, RecipientSerializer,
+    ReadDisbursementSerializer
 )
 
 
@@ -19,11 +20,15 @@ class DisbursementView(
 ):
     queryset = Disbursement.objects.all().order_by('-id')
     filter_backends = (filters.DjangoFilterBackend,)
-    serializer_class = DisbursementSerializer
-
     permission_classes = (
         IsAuthenticated, ActionsBasedViewPermissions, CashbookClientIDPermissions
     )
+
+    def get_serializer_class(self):
+        if self.request.method == 'GET':
+            return ReadDisbursementSerializer
+        else:
+            return DisbursementSerializer
 
 
 class RecipientView(

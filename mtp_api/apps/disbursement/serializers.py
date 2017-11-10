@@ -5,8 +5,13 @@ from .models import Disbursement, Recipient
 from .signals import disbursement_created
 
 
-class DisbursementSerializer(serializers.ModelSerializer):
+class RecipientSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Recipient
+        fields = '__all__'
 
+
+class DisbursementSerializer(serializers.ModelSerializer):
     @atomic
     def create(self, *args, **kwargs):
         new_disbursement = super().create(*args, **kwargs)
@@ -23,11 +28,13 @@ class DisbursementSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class ReadDisbursementSerializer(serializers.ModelSerializer):
+    recipient = RecipientSerializer(read_only=False)
+
+    class Meta:
+        model = Disbursement
+        fields = '__all__'
+
+
 class DisbursementIdsSerializer(serializers.Serializer):
     disbursement_ids = serializers.ListField(child=serializers.IntegerField())
-
-
-class RecipientSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Recipient
-        fields = '__all__'

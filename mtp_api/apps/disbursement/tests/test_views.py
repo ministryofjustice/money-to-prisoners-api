@@ -65,6 +65,37 @@ class CreateDisbursementTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(disbursements[0].recipient, recipient)
 
 
+class ListDisbursementsTestCase(AuthTestCaseMixin, APITestCase):
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
+
+    def setUp(self):
+        super().setUp()
+        self.prison_clerks, _, self.bank_admins, _, _, _ = make_test_users()
+
+    def test_list_disbursements(self):
+        user = self.prison_clerks[0]
+
+        recipient = Recipient.objects.create(name='Sam Hall')
+        Disbursement.objects.create(
+            amount=1000,
+            prisoner_number='A1234BC',
+            prison=Prison.objects.get(pk='IXB'),
+            method=DISBURSEMENT_METHOD.BANK_TRANSFER,
+            recipient=recipient
+        )
+
+        response = self.client.get(
+            reverse('disbursement-list'), format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        data = response.data
+        self.assertEqual(data['count'], 1)
+        self.assertEqual(data['results'][0]['recipient']['name'], recipient.name)
+
+
 class UpdateDisbursementResolutionTestCase(AuthTestCaseMixin, APITestCase):
     fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
