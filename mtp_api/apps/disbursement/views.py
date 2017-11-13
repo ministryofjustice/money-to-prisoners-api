@@ -4,8 +4,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.permissions import ActionsBasedViewPermissions
+from mtp_auth.models import PrisonUserMapping
 from mtp_auth.permissions import (
-    CashbookClientIDPermissions, BankAdminClientIDPermissions
+    CashbookClientIDPermissions, BankAdminClientIDPermissions,
+    CASHBOOK_OAUTH_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID,
+    BANK_ADMIN_OAUTH_CLIENT_ID, get_client_permissions_class
 )
 from .constants import DISBURSEMENT_RESOLUTION
 from .models import Disbursement, Recipient
@@ -15,13 +18,27 @@ from .serializers import (
 )
 
 
+class DisbursementViewMixin():
+    def get_queryset(self):
+        queryset = Disbursement.objects.all()
+        if self.request.auth.application.client_id == CASHBOOK_OAUTH_CLIENT_ID:
+            return queryset.filter(
+                prison__in=PrisonUserMapping.objects.get_prison_set_for_user(self.request.user)
+            )
+        return queryset
+
+
 class DisbursementView(
-    mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet
+    DisbursementViewMixin, mixins.CreateModelMixin, mixins.ListModelMixin,
+    viewsets.GenericViewSet
 ):
     queryset = Disbursement.objects.all().order_by('-id')
     filter_backends = (filters.DjangoFilterBackend,)
     permission_classes = (
-        IsAuthenticated, ActionsBasedViewPermissions, CashbookClientIDPermissions
+        IsAuthenticated, ActionsBasedViewPermissions, get_client_permissions_class(
+            CASHBOOK_OAUTH_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID,
+            BANK_ADMIN_OAUTH_CLIENT_ID
+        )
     )
 
     def get_serializer_class(self):
@@ -39,15 +56,17 @@ class RecipientView(
     serializer_class = RecipientSerializer
 
     permission_classes = (
-        IsAuthenticated, ActionsBasedViewPermissions, CashbookClientIDPermissions
+        IsAuthenticated, ActionsBasedViewPermissions, get_client_permissions_class(
+            CASHBOOK_OAUTH_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID,
+            BANK_ADMIN_OAUTH_CLIENT_ID
+        )
     )
 
 
-class ReviewDisbursementsView(APIView):
+class ReviewDisbursementsView(DisbursementViewMixin, APIView):
     serializer_class = DisbursementIdsSerializer
     action = 'update'
     resolution = NotImplemented
-    queryset = Disbursement.objects.all()
 
     permission_classes = (
         IsAuthenticated, CashbookClientIDPermissions,
@@ -67,7 +86,9 @@ class ReviewDisbursementsView(APIView):
         deserialized.is_valid(raise_exception=True)
 
         disbursement_ids = deserialized.data.get('disbursement_ids', [])
-        Disbursement.objects.update_resolution(disbursement_ids, self.resolution, request.user)
+        Disbursement.objects.update_resolution(
+            self.get_queryset(), disbursement_ids, self.resolution, request.user
+        )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 

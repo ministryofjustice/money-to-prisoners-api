@@ -7,8 +7,8 @@ from .constants import LOG_ACTIONS, DISBURSEMENT_RESOLUTION
 class DisbursementManager(models.Manager):
 
     @atomic
-    def update_resolution(self, credit_ids, resolution, user):
-        to_update = self.get_queryset().filter(
+    def update_resolution(self, queryset, credit_ids, resolution, user):
+        to_update = queryset.filter(
             pk__in=credit_ids
         ).select_for_update()
 
