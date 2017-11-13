@@ -84,3 +84,11 @@ class ActionsBasedPermissions(BasePermission):
             (request.user.is_authenticated() or not self.authenticated_users_only) and
             request.user.has_perms(perms)
         )
+
+
+class ActionsBasedViewPermissions(ActionsBasedPermissions):
+    actions_perms_map = ActionsBasedPermissions.actions_perms_map.copy()
+    actions_perms_map.update({
+        'list': ['%(app_label)s.view_%(model_name)s'],
+        'retrieve': ['%(app_label)s.view_%(model_name)s'],
+    })
