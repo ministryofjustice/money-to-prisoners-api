@@ -4,8 +4,8 @@ import re
 import urllib.parse
 
 from django.conf import settings
-from django.core.urlresolvers import reverse
 from django.db import connection
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.utils.dateparse import parse_datetime, parse_date

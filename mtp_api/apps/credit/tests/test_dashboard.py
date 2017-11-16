@@ -2,8 +2,8 @@ import datetime
 import json
 
 from django.contrib.auth import get_user_model
-from django.core.urlresolvers import reverse_lazy
 from django.db import models
+from django.urls import reverse_lazy
 from django.utils.timezone import now
 
 from core.views import DashboardView

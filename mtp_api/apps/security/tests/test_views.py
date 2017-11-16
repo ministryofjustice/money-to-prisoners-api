@@ -2,8 +2,8 @@ from collections import defaultdict
 from itertools import chain
 
 from django.core.management import call_command
-from django.core.urlresolvers import reverse
 from django.db.models import Count, Q
+from django.urls import reverse
 from rest_framework import status as http_status
 from rest_framework.test import APITestCase
 

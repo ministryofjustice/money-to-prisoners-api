@@ -1,7 +1,7 @@
 from datetime import date, datetime, timedelta, time
 
-from django.core.urlresolvers import reverse
 from django.conf import settings
+from django.urls import reverse
 from django.utils import timezone
 from mtp_common.test_utils import silence_logger
 from rest_framework import status as http_status
