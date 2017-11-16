@@ -8,9 +8,9 @@ from django.contrib.admin import site
 from django.contrib.admin.models import LogEntry, CHANGE as CHANGE_LOG_ENTRY
 from django.core.exceptions import PermissionDenied
 from django.core.management import call_command
-from django.core.urlresolvers import reverse_lazy
 from django.forms import MediaDefiningClass
 from django.http.response import Http404
+from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.utils.module_loading import autodiscover_modules
 from django.utils.translation import gettext_lazy as _

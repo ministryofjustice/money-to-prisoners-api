@@ -1,7 +1,7 @@
 import random
 from unittest import mock
 
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.utils.dateformat import format as format_date
 from model_mommy import mommy
 from rest_framework import status

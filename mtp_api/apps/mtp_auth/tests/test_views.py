@@ -10,7 +10,7 @@ from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.models import Group
 from django.core import mail
-from django.core.urlresolvers import reverse, reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.test import override_settings
 from django.utils.timezone import now
 from mtp_common.test_utils import silence_logger

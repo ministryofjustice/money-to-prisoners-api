@@ -1,7 +1,7 @@
 from datetime import datetime, date, timedelta
 
 from django.contrib.auth import get_user_model
-from django.core.urlresolvers import reverse, reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.test import TestCase
 from django.utils import timezone
 from rest_framework import status as http_status

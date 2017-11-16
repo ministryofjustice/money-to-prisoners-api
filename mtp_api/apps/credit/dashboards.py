@@ -5,8 +5,8 @@ import types
 from django import forms
 from django.contrib.admin import widgets as admin_widgets
 from django.core.exceptions import ValidationError
-from django.core.urlresolvers import reverse
 from django.db import models
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateformat import format as format_date
 from django.utils.encoding import force_text
