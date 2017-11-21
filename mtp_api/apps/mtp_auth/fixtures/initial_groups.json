@@ -44,7 +44,8 @@
       ["add_disbursement", "disbursement", "disbursement"],
       ["view_recipient", "disbursement", "recipient"],
       ["change_recipient", "disbursement", "recipient"],
-      ["add_recipient", "disbursement", "recipient"]
+      ["add_recipient", "disbursement", "recipient"],
+      ["view_prisonerlocation", "prison", "prisonerlocation"]
     ]
   }
 },

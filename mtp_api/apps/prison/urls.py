@@ -4,7 +4,7 @@ from rest_framework import routers
 from . import views
 
 router = routers.DefaultRouter()
-router.register(r'prisoner_locations', views.PrisonerLocationView)
+router.register(r'prisoner_locations', views.PrisonerLocationView, base_name='prisonerlocation')
 router.register(r'prisoner_validity', views.PrisonerValidityView,
                 base_name='prisoner_validity')
 router.register(r'prisons', views.PrisonView, base_name='prison')
