@@ -10,6 +10,7 @@ from rest_framework.test import APITestCase
 from core.tests.utils import make_test_users
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from mtp_auth.constants import CASHBOOK_OAUTH_CLIENT_ID
+from mtp_auth.models import PrisonUserMapping
 from prison.models import Prison, PrisonerLocation, Population, Category
 from prison.tests.utils import (
     random_prisoner_name, random_prisoner_number, random_prisoner_dob,
@@ -31,6 +32,9 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
     def list_url(self):
         return reverse('prisonerlocation-list')
 
+    def retrieve_url(self, prisoner_number):
+        return reverse('prisonerlocation-detail', kwargs={'prisoner_number': prisoner_number})
+
     @property
     def delete_old_url(self):
         return reverse('prisonerlocation-delete-old')
@@ -46,20 +50,12 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
         """
         users_data = [
             (
-                self.prison_clerks[0],
-                self.get_http_authorization_for_user(self.prison_clerks[0])
-            ),
-            (
                 self.bank_admins[0],
                 self.get_http_authorization_for_user(self.bank_admins[0])
             ),
             (
                 self.refund_bank_admins[0],
                 self.get_http_authorization_for_user(self.refund_bank_admins[0])
-            ),
-            (
-                self.users[0],
-                self.get_http_authorization_for_user(self.users[0], client_id=CASHBOOK_OAUTH_CLIENT_ID)
             ),
             (
                 self.send_money_users[0],
@@ -223,6 +219,34 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
             ],
             assert_error_msg='Should fail because invalid prison'
         )
+
+    def test_retrieve(self):
+        load_random_prisoner_locations()
+        user = self.prison_clerks[0]
+
+        prisoner = PrisonerLocation.objects.filter(
+            prison__in=PrisonUserMapping.objects.get_prison_set_for_user(user)
+        ).first()
+
+        response = self.client.get(
+            self.retrieve_url(prisoner.prisoner_number), format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_retrieve_fails_for_prisoner_not_in_own_prison(self):
+        load_random_prisoner_locations()
+        user = self.prison_clerks[0]
+
+        prisoner = PrisonerLocation.objects.exclude(
+            prison__in=PrisonUserMapping.objects.get_prison_set_for_user(user)
+        ).first()
+
+        response = self.client.get(
+            self.retrieve_url(prisoner.prisoner_number), format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
 class DeleteOldPrisonerLocationsViewTestCase(AuthTestCaseMixin, APITestCase):

@@ -13,11 +13,14 @@ from rest_framework import generics, mixins, viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from core.permissions import ActionsBasedPermissions
+from core.permissions import ActionsBasedPermissions, ActionsBasedViewPermissions
 from core.views import AdminViewMixin
 from credit.signals import credit_prisons_need_updating
+from mtp_auth.models import PrisonUserMapping
 from mtp_auth.permissions import (
-    NomsOpsClientIDPermissions, SendMoneyClientIDPermissions
+    NomsOpsClientIDPermissions, SendMoneyClientIDPermissions,
+    NOMS_OPS_OAUTH_CLIENT_ID, CASHBOOK_OAUTH_CLIENT_ID,
+    get_client_permissions_class
 )
 from prison.forms import LoadOffendersForm
 from prison.models import PrisonerLocation, Category, Population, Prison
@@ -31,15 +34,19 @@ logger = logging.getLogger('mtp')
 
 
 class PrisonerLocationView(
-    mixins.CreateModelMixin, viewsets.GenericViewSet,
+    mixins.CreateModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
 ):
     queryset = PrisonerLocation.objects.all()
 
     permission_classes = (
-        IsAuthenticated, NomsOpsClientIDPermissions,
-        ActionsBasedPermissions
+        IsAuthenticated, ActionsBasedViewPermissions,
+        get_client_permissions_class(
+            NOMS_OPS_OAUTH_CLIENT_ID, CASHBOOK_OAUTH_CLIENT_ID)
     )
     serializer_class = PrisonerLocationSerializer
+    lookup_field = 'prisoner_number'
+    lookup_url_kwarg = 'prisoner_number'
+    lookup_value_regex = '[A-Za-z]{1}[0-9]{4}[A-Za-z]{2}'
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data, many=True)
@@ -53,6 +60,19 @@ class PrisonerLocationView(
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
+
+    def check_object_permissions(self, request, obj):
+        super().check_object_permissions(request, obj)
+        if obj.prison not in PrisonUserMapping.objects.get_prison_set_for_user(
+            self.request.user
+        ):
+            self.permission_denied(
+                request,
+                message=_(
+                    'Cannot retrieve details for this prisoner as they are not '
+                    'in a prison that you manage.'
+                )
+            )
 
 
 class DeleteOldPrisonerLocationsView(generics.GenericAPIView):

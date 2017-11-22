@@ -71,6 +71,9 @@ class PrisonerLocation(TimeStampedModel):
     active = models.BooleanField(default=False)
 
     class Meta:
+        permissions = (
+            ('view_prisonerlocation', 'Can view prisoner location'),
+        )
         index_together = (
             ('prisoner_number', 'prisoner_dob'),
         )
