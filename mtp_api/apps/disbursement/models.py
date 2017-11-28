@@ -46,7 +46,7 @@ class Disbursement(TimeStampedModel):
         default=DISBURSEMENT_RESOLUTION.PENDING
     )
     method = models.CharField(max_length=50, choices=DISBURSEMENT_METHOD)
-    recipient = models.ForeignKey(Recipient, on_delete=models.CASCADE)
+    recipient = models.ForeignKey(Recipient, on_delete=models.PROTECT)
 
     objects = DisbursementManager()
 
