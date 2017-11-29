@@ -1,5 +1,12 @@
-from django.conf.urls import url
+from django.conf.urls import include, url
+from rest_framework import routers
 
-from service.views import service_availability_view
+from service.views import NotificationView, service_availability_view
 
-urlpatterns = [url(r'^service-availability/$', service_availability_view)]
+router = routers.DefaultRouter()
+router.register(r'notifications', NotificationView, base_name='notifications')
+
+urlpatterns = [
+    url(r'^', include(router.urls)),
+    url(r'^service-availability/$', service_availability_view),
+]
