@@ -24,7 +24,7 @@ class CreateDisbursementTestCase(AuthTestCaseMixin, APITestCase):
     def test_permissions_required(self):
         user = self.bank_admins[0]
 
-        recipient = Recipient.objects.create(name='Sam Hall')
+        recipient = Recipient.objects.create(first_name='Sam', last_name='Hall')
 
         new_disbursement = {
             'amount': 1000,
@@ -46,7 +46,7 @@ class CreateDisbursementTestCase(AuthTestCaseMixin, APITestCase):
 
         prisons = PrisonUserMapping.objects.get_prison_set_for_user(user)
         prisoner = PrisonerLocation.objects.filter(prison__in=prisons).first()
-        recipient = Recipient.objects.create(name='Sam Hall')
+        recipient = Recipient.objects.create(first_name='Sam', last_name='Hall')
 
         new_disbursement = {
             'amount': 1000,
@@ -74,7 +74,7 @@ class CreateDisbursementTestCase(AuthTestCaseMixin, APITestCase):
 
         prisons = PrisonUserMapping.objects.get_prison_set_for_user(user)
         prisoner = PrisonerLocation.objects.exclude(prison__in=prisons).first()
-        recipient = Recipient.objects.create(name='Sam Hall')
+        recipient = Recipient.objects.create(first_name='Sam', last_name='Hall')
 
         new_disbursement = {
             'amount': 1000,
@@ -99,7 +99,7 @@ class CreateDisbursementTestCase(AuthTestCaseMixin, APITestCase):
 
         prisons = PrisonUserMapping.objects.get_prison_set_for_user(user)
         prisoner = PrisonerLocation.objects.exclude(prison__in=prisons).first()
-        recipient = Recipient.objects.create(name='Sam Hall')
+        recipient = Recipient.objects.create(first_name='Sam', last_name='Hall')
 
         new_disbursement = {
             'amount': 1000,
@@ -130,7 +130,7 @@ class ListDisbursementsTestCase(AuthTestCaseMixin, APITestCase):
     def test_list_disbursements(self):
         user = self.prison_clerks[0]
 
-        recipient1 = Recipient.objects.create(name='Sam Hall')
+        recipient1 = Recipient.objects.create(first_name='Sam', last_name='Hall')
         Disbursement.objects.create(
             amount=1000,
             prisoner_number='A1234BC',
@@ -138,7 +138,7 @@ class ListDisbursementsTestCase(AuthTestCaseMixin, APITestCase):
             method=DISBURSEMENT_METHOD.BANK_TRANSFER,
             recipient=recipient1
         )
-        recipient2 = Recipient.objects.create(name='Sam Hall')
+        recipient2 = Recipient.objects.create(first_name='Sam', last_name='Hall')
         Disbursement.objects.create(
             amount=1000,
             prisoner_number='A1234BC',
@@ -156,7 +156,8 @@ class ListDisbursementsTestCase(AuthTestCaseMixin, APITestCase):
 
         data = response.data
         self.assertEqual(data['count'], 1)
-        self.assertEqual(data['results'][0]['recipient']['name'], recipient1.name)
+        self.assertEqual(data['results'][0]['recipient']['first_name'], recipient1.first_name)
+        self.assertEqual(data['results'][0]['recipient']['last_name'], recipient1.last_name)
 
 
 class UpdateDisbursementResolutionTestCase(AuthTestCaseMixin, APITestCase):
@@ -169,7 +170,7 @@ class UpdateDisbursementResolutionTestCase(AuthTestCaseMixin, APITestCase):
     def test_reject_disbursement(self):
         user = self.prison_clerks[0]
 
-        recipient = Recipient.objects.create(name='Sam Hall')
+        recipient = Recipient.objects.create(first_name='Sam', last_name='Hall')
         disbursement = Disbursement.objects.create(
             amount=1000,
             prisoner_number='A1234BC',
@@ -200,7 +201,7 @@ class UpdateDisbursementResolutionTestCase(AuthTestCaseMixin, APITestCase):
     def test_cannot_reject_disbursement_for_non_permitted_prison(self):
         user = self.prison_clerks[0]
 
-        recipient = Recipient.objects.create(name='Sam Hall')
+        recipient = Recipient.objects.create(first_name='Sam', last_name='Hall')
         disbursement = Disbursement.objects.create(
             amount=1000,
             prisoner_number='A1234BC',
@@ -229,7 +230,7 @@ class UpdateDisbursementResolutionTestCase(AuthTestCaseMixin, APITestCase):
     def test_send_disbursement(self):
         user = self.bank_admins[0]
 
-        recipient = Recipient.objects.create(name='Sam Hall')
+        recipient = Recipient.objects.create(first_name='Sam', last_name='Hall')
         disbursement1 = Disbursement.objects.create(
             amount=1000,
             prisoner_number='A1234BC',
