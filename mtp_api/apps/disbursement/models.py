@@ -14,14 +14,15 @@ from transaction.utils import format_amount
 
 
 class Recipient(models.Model):
-    name = models.CharField(max_length=250)
+    first_name = models.CharField(max_length=250)
+    last_name = models.CharField(max_length=250)
     email = models.EmailField(null=True, blank=True)
 
     line1 = models.CharField(max_length=250, blank=True, null=True)
     line2 = models.CharField(max_length=250, blank=True, null=True)
     city = models.CharField(max_length=250, blank=True, null=True)
-    country = models.CharField(max_length=250, blank=True, null=True)
     postcode = models.CharField(max_length=250, blank=True, null=True)
+    country = models.CharField(max_length=250, blank=True, null=True)
 
     sort_code = models.CharField(max_length=50, blank=True, null=True)
     account_number = models.CharField(max_length=50, blank=True, null=True)
@@ -35,6 +36,10 @@ class Recipient(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def name(self):
+        return '%s %s' % (self.first_name, self.last_name)
 
 
 class Disbursement(TimeStampedModel):
