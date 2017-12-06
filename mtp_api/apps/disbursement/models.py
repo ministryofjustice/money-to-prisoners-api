@@ -13,35 +13,6 @@ from prison.models import Prison
 from transaction.utils import format_amount
 
 
-class Recipient(models.Model):
-    first_name = models.CharField(max_length=250)
-    last_name = models.CharField(max_length=250)
-    email = models.EmailField(null=True, blank=True)
-
-    line1 = models.CharField(max_length=250, blank=True, null=True)
-    line2 = models.CharField(max_length=250, blank=True, null=True)
-    city = models.CharField(max_length=250, blank=True, null=True)
-    postcode = models.CharField(max_length=250, blank=True, null=True)
-    country = models.CharField(max_length=250, blank=True, null=True)
-
-    sort_code = models.CharField(max_length=50, blank=True, null=True)
-    account_number = models.CharField(max_length=50, blank=True, null=True)
-    # used by building societies to identify the account nr
-    roll_number = models.CharField(max_length=50, blank=True, null=True)
-
-    class Meta:
-        permissions = (
-            ('view_recipient', 'Can view disbursement recipients'),
-        )
-
-    def __str__(self):
-        return self.name
-
-    @property
-    def name(self):
-        return '%s %s' % (self.first_name, self.last_name)
-
-
 class Disbursement(TimeStampedModel):
     amount = models.PositiveIntegerField()
     prisoner_number = models.CharField(max_length=250)
@@ -51,9 +22,28 @@ class Disbursement(TimeStampedModel):
         default=DISBURSEMENT_RESOLUTION.PENDING
     )
     method = models.CharField(max_length=50, choices=DISBURSEMENT_METHOD)
-    recipient = models.ForeignKey(Recipient, on_delete=models.PROTECT)
+
+    # recipient details
+    recipient_first_name = models.CharField(max_length=250)
+    recipient_last_name = models.CharField(max_length=250)
+    recipient_email = models.EmailField(null=True, blank=True)
+
+    address_line1 = models.CharField(max_length=250, blank=True, null=True)
+    address_line2 = models.CharField(max_length=250, blank=True, null=True)
+    city = models.CharField(max_length=250, blank=True, null=True)
+    postcode = models.CharField(max_length=250, blank=True, null=True)
+    country = models.CharField(max_length=250, blank=True, null=True)
+
+    sort_code = models.CharField(max_length=50, blank=True, null=True)
+    account_number = models.CharField(max_length=50, blank=True, null=True)
+    # used by building societies to identify the account nr
+    roll_number = models.CharField(max_length=50, blank=True, null=True)
 
     objects = DisbursementManager()
+
+    @property
+    def recipient_name(self):
+        return '%s %s' % (self.recipient_first_name, self.recipient_last_name)
 
     def reject(self, by_user):
         self.resolution = DISBURSEMENT_RESOLUTION.REJECTED
@@ -80,7 +70,7 @@ class Disbursement(TimeStampedModel):
             id=self.pk,
             amount=format_amount(self.amount, True),
             prisoner=self.prisoner_number,
-            recipient=self.recipient.name,
+            recipient=self.recipient_name,
             status=self.resolution
         )
 

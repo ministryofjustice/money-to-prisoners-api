@@ -1,8 +1,11 @@
+import django_filters
 from rest_framework import mixins, viewsets, filters, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.filters import IsoDateTimeFilter, annotate_filter
+from core.models import TruncUtcDate
 from core.permissions import ActionsBasedViewPermissions
 from mtp_auth.models import PrisonUserMapping
 from mtp_auth.permissions import (
@@ -11,11 +14,28 @@ from mtp_auth.permissions import (
     BANK_ADMIN_OAUTH_CLIENT_ID, get_client_permissions_class
 )
 from .constants import DISBURSEMENT_RESOLUTION
-from .models import Disbursement, Recipient
-from .serializers import (
-    DisbursementSerializer, DisbursementIdsSerializer, RecipientSerializer,
-    ReadDisbursementSerializer
-)
+from .models import Disbursement
+from .serializers import DisbursementSerializer, DisbursementIdsSerializer
+
+
+class DisbursementFilter(django_filters.FilterSet):
+    logged_at__lt = annotate_filter(
+        IsoDateTimeFilter(name='logged_at', lookup_expr='lt'),
+        {'logged_at': TruncUtcDate('log__created')}
+    )
+    logged_at__gte = annotate_filter(
+        IsoDateTimeFilter(name='logged_at', lookup_expr='gte'),
+        {'logged_at': TruncUtcDate('log__created')}
+    )
+
+    class Meta:
+        model = Disbursement
+        fields = {
+            'log__action': ['exact'],
+            'resolution': ['exact'],
+            'prison': ['exact'],
+            'method': ['exact']
+        }
 
 
 class DisbursementViewMixin():
@@ -33,28 +53,9 @@ class DisbursementView(
     viewsets.GenericViewSet
 ):
     queryset = Disbursement.objects.all().order_by('-id')
+    serializer_class = DisbursementSerializer
+    filter_class = DisbursementFilter
     filter_backends = (filters.DjangoFilterBackend,)
-    permission_classes = (
-        IsAuthenticated, ActionsBasedViewPermissions, get_client_permissions_class(
-            CASHBOOK_OAUTH_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID,
-            BANK_ADMIN_OAUTH_CLIENT_ID
-        )
-    )
-
-    def get_serializer_class(self):
-        if self.request.method == 'GET':
-            return ReadDisbursementSerializer
-        else:
-            return DisbursementSerializer
-
-
-class RecipientView(
-    mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet
-):
-    queryset = Recipient.objects.all().order_by('-id')
-    filter_backends = (filters.DjangoFilterBackend,)
-    serializer_class = RecipientSerializer
-
     permission_classes = (
         IsAuthenticated, ActionsBasedViewPermissions, get_client_permissions_class(
             CASHBOOK_OAUTH_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID,

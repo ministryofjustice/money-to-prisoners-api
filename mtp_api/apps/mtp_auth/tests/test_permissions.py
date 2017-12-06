@@ -89,7 +89,7 @@ class SynchroniseGroupsTestCase(TestCase):
         group = Group.objects.get(name='PrisonClerk')
         self.assertTrue(group.permissions.filter(pk=expected_permission.pk).exists())
         self.assertTrue(group.permissions.filter(pk=unexpected_permission.pk).exists())
-        self.assertEqual(group.permissions.count(), 12)
+        self.assertEqual(group.permissions.count(), 9)
 
     @mock.patch('mtp_auth.management.commands.sync_group_permissions.input')
     def test_sets_permissions_exactly(self, mock_input):
@@ -102,4 +102,4 @@ class SynchroniseGroupsTestCase(TestCase):
         group = Group.objects.get(name='PrisonClerk')
         self.assertTrue(group.permissions.filter(pk=expected_permission.pk).exists())
         self.assertFalse(group.permissions.filter(pk=unexpected_permission.pk).exists())
-        self.assertEqual(group.permissions.count(), 11)
+        self.assertEqual(group.permissions.count(), 8)
