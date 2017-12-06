@@ -57,10 +57,10 @@ class SenderProfileListFilter(django_filters.FilterSet):
     prisoner_count__lte = django_filters.NumberFilter(name='prisoner_count', lookup_expr='lte')
     prisoner_count__gte = django_filters.NumberFilter(name='prisoner_count', lookup_expr='gte')
 
-    prison = django_filters.ModelMultipleChoiceFilter(name='prisoners__prisons', queryset=Prison.objects.all())
-    prison_region = django_filters.CharFilter(name='prisoners__prisons__region')
-    prison_population = MultipleValueFilter(name='prisoners__prisons__populations__name')
-    prison_category = MultipleValueFilter(name='prisoners__prisons__categories__name')
+    prison = django_filters.ModelMultipleChoiceFilter(name='prisons', queryset=Prison.objects.all())
+    prison_region = django_filters.CharFilter(name='prisons__region')
+    prison_population = MultipleValueFilter(name='prisons__populations__name')
+    prison_category = MultipleValueFilter(name='prisons__categories__name')
     prison_count__lte = django_filters.NumberFilter(name='prison_count', lookup_expr='lte')
     prison_count__gte = django_filters.NumberFilter(name='prison_count', lookup_expr='gte')
 
