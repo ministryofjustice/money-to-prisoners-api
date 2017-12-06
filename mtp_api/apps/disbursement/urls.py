@@ -6,7 +6,6 @@ from . import views
 
 router = routers.DefaultRouter()
 router.register(r'disbursements', views.DisbursementView)
-router.register(r'recipients', views.RecipientView)
 
 urlpatterns = [
     url(r'^disbursements/actions/reject/$',

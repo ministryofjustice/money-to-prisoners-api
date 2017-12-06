@@ -4,14 +4,8 @@ from rest_framework import serializers
 
 from mtp_auth.models import PrisonUserMapping
 from prison.models import PrisonerLocation, Prison
-from .models import Disbursement, Recipient
+from .models import Disbursement
 from .signals import disbursement_created
-
-
-class RecipientSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Recipient
-        fields = '__all__'
 
 
 class PrisonerInPrisonValidator():
@@ -65,14 +59,6 @@ class DisbursementSerializer(serializers.ModelSerializer):
         model = Disbursement
         fields = '__all__'
         validators = [PrisonerInPrisonValidator()]
-
-
-class ReadDisbursementSerializer(serializers.ModelSerializer):
-    recipient = RecipientSerializer(read_only=False)
-
-    class Meta:
-        model = Disbursement
-        fields = '__all__'
 
 
 class DisbursementIdsSerializer(serializers.Serializer):

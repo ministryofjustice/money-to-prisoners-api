@@ -6,7 +6,7 @@ from django.core.management import BaseCommand, CommandError
 
 from account.models import Balance
 from credit.models import Credit
-from disbursement.models import Disbursement, Recipient
+from disbursement.models import Disbursement
 from payment.models import Batch, Payment
 from prison.models import Prison, PrisonerLocation
 from security.models import SenderProfile, PrisonerProfile, SavedSearch
@@ -56,7 +56,6 @@ class Command(BaseCommand):
             PrisonerProfile.objects.all().delete()
             SavedSearch.objects.all().delete()
             Disbursement.objects.all().delete()
-            Recipient.objects.all().delete()
 
         if not protect_prisoner_locations:
             print_message('Deleting all prisoner locations')

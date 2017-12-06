@@ -5,7 +5,7 @@ from rest_framework.test import APITestCase
 from disbursement.constants import (
     DISBURSEMENT_RESOLUTION, DISBURSEMENT_METHOD, LOG_ACTIONS
 )
-from disbursement.models import Disbursement, Recipient, Log
+from disbursement.models import Disbursement, Log
 from core.tests.utils import make_test_users
 from mtp_auth.models import PrisonUserMapping
 from mtp_auth.tests.utils import AuthTestCaseMixin
@@ -24,14 +24,13 @@ class CreateDisbursementTestCase(AuthTestCaseMixin, APITestCase):
     def test_permissions_required(self):
         user = self.bank_admins[0]
 
-        recipient = Recipient.objects.create(first_name='Sam', last_name='Hall')
-
         new_disbursement = {
             'amount': 1000,
             'prisoner_number': 'A1234BC',
             'prison': 'IXB',
             'method': 'bank_transfer',
-            'recipient': recipient.id
+            'recipient_first_name': 'Sam',
+            'recipient_last_name': 'Hall'
         }
 
         response = self.client.post(
@@ -46,14 +45,14 @@ class CreateDisbursementTestCase(AuthTestCaseMixin, APITestCase):
 
         prisons = PrisonUserMapping.objects.get_prison_set_for_user(user)
         prisoner = PrisonerLocation.objects.filter(prison__in=prisons).first()
-        recipient = Recipient.objects.create(first_name='Sam', last_name='Hall')
 
         new_disbursement = {
             'amount': 1000,
             'prisoner_number': prisoner.prisoner_number,
             'prison': prisoner.prison.nomis_id,
             'method': 'bank_transfer',
-            'recipient': recipient.id
+            'recipient_first_name': 'Sam',
+            'recipient_last_name': 'Hall'
         }
 
         response = self.client.post(
@@ -67,21 +66,20 @@ class CreateDisbursementTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(disbursements.count(), 1)
         self.assertEqual(disbursements[0].resolution, DISBURSEMENT_RESOLUTION.PENDING)
         self.assertEqual(disbursements[0].method, DISBURSEMENT_METHOD.BANK_TRANSFER)
-        self.assertEqual(disbursements[0].recipient, recipient)
 
     def test_create_disbursement_fails_for_non_permitted_prison(self):
         user = self.prison_clerks[0]
 
         prisons = PrisonUserMapping.objects.get_prison_set_for_user(user)
         prisoner = PrisonerLocation.objects.exclude(prison__in=prisons).first()
-        recipient = Recipient.objects.create(first_name='Sam', last_name='Hall')
 
         new_disbursement = {
             'amount': 1000,
             'prisoner_number': prisoner.prisoner_number,
             'prison': prisoner.prison.nomis_id,
             'method': 'bank_transfer',
-            'recipient': recipient.id
+            'recipient_first_name': 'Sam',
+            'recipient_last_name': 'Hall'
         }
 
         response = self.client.post(
@@ -99,14 +97,14 @@ class CreateDisbursementTestCase(AuthTestCaseMixin, APITestCase):
 
         prisons = PrisonUserMapping.objects.get_prison_set_for_user(user)
         prisoner = PrisonerLocation.objects.exclude(prison__in=prisons).first()
-        recipient = Recipient.objects.create(first_name='Sam', last_name='Hall')
 
         new_disbursement = {
             'amount': 1000,
             'prisoner_number': prisoner.prisoner_number,
             'prison': prisons.first().nomis_id,
             'method': 'bank_transfer',
-            'recipient': recipient.id
+            'recipient_first_name': 'Sam',
+            'recipient_last_name': 'Hall'
         }
 
         response = self.client.post(
@@ -130,21 +128,21 @@ class ListDisbursementsTestCase(AuthTestCaseMixin, APITestCase):
     def test_list_disbursements(self):
         user = self.prison_clerks[0]
 
-        recipient1 = Recipient.objects.create(first_name='Sam', last_name='Hall')
         Disbursement.objects.create(
             amount=1000,
             prisoner_number='A1234BC',
             prison=Prison.objects.get(pk='IXB'),
             method=DISBURSEMENT_METHOD.BANK_TRANSFER,
-            recipient=recipient1
+            recipient_first_name='Sam',
+            recipient_last_name='Hall'
         )
-        recipient2 = Recipient.objects.create(first_name='Sam', last_name='Hall')
         Disbursement.objects.create(
             amount=1000,
             prisoner_number='A1234BC',
             prison=Prison.objects.get(pk='INP'),
             method=DISBURSEMENT_METHOD.BANK_TRANSFER,
-            recipient=recipient2
+            recipient_first_name='Sam',
+            recipient_last_name='Hall'
         )
 
         response = self.client.get(
@@ -156,8 +154,8 @@ class ListDisbursementsTestCase(AuthTestCaseMixin, APITestCase):
 
         data = response.data
         self.assertEqual(data['count'], 1)
-        self.assertEqual(data['results'][0]['recipient']['first_name'], recipient1.first_name)
-        self.assertEqual(data['results'][0]['recipient']['last_name'], recipient1.last_name)
+        self.assertEqual(data['results'][0]['recipient_first_name'], 'Sam')
+        self.assertEqual(data['results'][0]['recipient_last_name'], 'Hall')
 
 
 class UpdateDisbursementResolutionTestCase(AuthTestCaseMixin, APITestCase):
@@ -170,13 +168,13 @@ class UpdateDisbursementResolutionTestCase(AuthTestCaseMixin, APITestCase):
     def test_reject_disbursement(self):
         user = self.prison_clerks[0]
 
-        recipient = Recipient.objects.create(first_name='Sam', last_name='Hall')
         disbursement = Disbursement.objects.create(
             amount=1000,
             prisoner_number='A1234BC',
             prison=Prison.objects.get(pk='IXB'),
             method=DISBURSEMENT_METHOD.BANK_TRANSFER,
-            recipient=recipient
+            recipient_first_name='Sam',
+            recipient_last_name='Hall'
         )
 
         self.assertEqual(disbursement.resolution, DISBURSEMENT_RESOLUTION.PENDING)
@@ -201,13 +199,13 @@ class UpdateDisbursementResolutionTestCase(AuthTestCaseMixin, APITestCase):
     def test_cannot_reject_disbursement_for_non_permitted_prison(self):
         user = self.prison_clerks[0]
 
-        recipient = Recipient.objects.create(first_name='Sam', last_name='Hall')
         disbursement = Disbursement.objects.create(
             amount=1000,
             prisoner_number='A1234BC',
             prison=Prison.objects.get(pk='INP'),
             method=DISBURSEMENT_METHOD.BANK_TRANSFER,
-            recipient=recipient
+            recipient_first_name='Sam',
+            recipient_last_name='Hall'
         )
 
         self.assertEqual(disbursement.resolution, DISBURSEMENT_RESOLUTION.PENDING)
@@ -230,20 +228,21 @@ class UpdateDisbursementResolutionTestCase(AuthTestCaseMixin, APITestCase):
     def test_send_disbursement(self):
         user = self.bank_admins[0]
 
-        recipient = Recipient.objects.create(first_name='Sam', last_name='Hall')
         disbursement1 = Disbursement.objects.create(
             amount=1000,
             prisoner_number='A1234BC',
             prison=Prison.objects.get(pk='IXB'),
             method=DISBURSEMENT_METHOD.BANK_TRANSFER,
-            recipient=recipient
+            recipient_first_name='Sam',
+            recipient_last_name='Hall'
         )
         disbursement2 = Disbursement.objects.create(
             amount=1000,
             prisoner_number='A1234BD',
             prison=Prison.objects.get(pk='INP'),
             method=DISBURSEMENT_METHOD.BANK_TRANSFER,
-            recipient=recipient
+            recipient_first_name='Sam',
+            recipient_last_name='Hall'
         )
 
         self.assertEqual(disbursement1.resolution, DISBURSEMENT_RESOLUTION.PENDING)
