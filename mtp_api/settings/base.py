@@ -282,6 +282,10 @@ ZENDESK_API_USERNAME = os.environ.get('ZENDESK_API_USERNAME', '')
 ZENDESK_API_TOKEN = os.environ.get('ZENDESK_API_TOKEN', '')
 ZENDESK_GROUP_ID = 26417927
 
+NOMIS_API_BASE_URL = os.environ.get('NOMIS_API_BASE_URL', '')
+NOMIS_API_CLIENT_TOKEN = os.environ.get('NOMIS_API_CLIENT_TOKEN', '')
+NOMIS_API_PRIVATE_KEY = os.environ.get('NOMIS_API_PRIVATE_KEY', '').encode('utf8').decode('unicode_escape')
+
 OFFENDER_API_URL = os.environ.get('OFFENDER_API_URL', '')
 OFFENDER_API_CLIENT_ID = os.environ.get('OFFENDER_API_CLIENT_ID', '')
 OFFENDER_API_CLIENT_SECRET = os.environ.get('OFFENDER_API_CLIENT_SECRET', '')

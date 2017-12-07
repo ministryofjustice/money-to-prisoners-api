@@ -2,9 +2,12 @@ import collections
 import datetime
 import pathlib
 
+from django.conf import settings
 from django.core.management import BaseCommand, CommandError
 from django.utils.dateparse import parse_date
 from django.utils.timezone import make_aware, now
+from mtp_common.nomis import get as nomis_get
+import requests
 
 from credit.constants import LOG_ACTIONS
 from credit.models import Log
@@ -64,9 +67,11 @@ class Command(BaseCommand):
         prisoners = []
         for prisoner_number in sorted(prisoner_credits.keys()):
             credits = prisoner_credits[prisoner_number]
+            location = self.get_housing(prisoner_number)
             prisoners.append((
                 credits[0].prisoner_name,
                 prisoner_number,
+                location,
                 sorted(credits, key=lambda credit: credit.received_at),
             ))
 
@@ -74,3 +79,36 @@ class Command(BaseCommand):
             self.stdout.write('Generating notices bundle for %s at %s' % (prison.name, path))
         bundle = PrisonerCreditNoticeBundle(prison.name, prisoners, date)
         bundle.render(str(path))
+
+    def get_housing(self, prisoner_number):
+        try:
+            if not settings.NOMIS_API_BASE_URL:
+                raise ValueError
+            housing = nomis_get(
+                '/offenders/%s/location' % prisoner_number,
+                retries=2
+            )['housing_location']
+            return self.format_housing(housing)
+        except (TypeError, KeyError, ValueError, requests.RequestException):
+            return
+
+    def format_housing(self, housing):
+        """
+        Supports several versions of the NOMIS api
+        """
+        if not housing:
+            return
+        if isinstance(housing, str):
+            housing = {'description': housing}
+        elif not isinstance(housing, dict) or not housing.get('description'):
+            return
+        levels = housing.get('levels')
+        if not isinstance(levels, list):
+            levels = housing['description'].split('-')
+            levels.pop(0)
+            levels = [
+                {'type': k, 'value': v}
+                for k, v in zip(('WING', 'LAND', 'CELL'), levels)
+            ]
+            housing['levels'] = levels
+        return housing
