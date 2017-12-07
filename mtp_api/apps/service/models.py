@@ -46,11 +46,11 @@ NOTIFICATION_TARGETS = Choices(
 class Notification(models.Model):
     public = models.BooleanField(default=False, help_text='Notifications must be public to be seen before login')
     target = models.CharField(max_length=30, choices=NOTIFICATION_TARGETS)
-    level = models.SmallIntegerField(choices=[
+    level = models.SmallIntegerField(choices=sorted(
         (level, capfirst(name))
         for level, name in messages.DEFAULT_TAGS.items()
         if level > 10
-    ])
+    ))
     start = models.DateTimeField(default=timezone.now)
     end = models.DateTimeField(null=True, blank=True)
     headline = models.CharField(max_length=200)
