@@ -46,10 +46,10 @@ class PrisonerCreditNoticeBundle(NoticeBundle):
         for prisoner in self.prisoners:
             self.render_prisoner_pages(*prisoner)
 
-    def render_prisoner_pages(self, name, number, credits_list):
+    def render_prisoner_pages(self, name, number, location, credits_list):
         for page in range(0, len(credits_list), 10):
             self.render_base_template()
-            self.render_header(name, number)
+            self.render_header(name, number, location)
             self.render_prisoner_page(credits_list[page:page + 10])
             self.canvas.showPage()
 
@@ -223,7 +223,7 @@ class PrisonerCreditNoticeBundle(NoticeBundle):
         ]
         self.draw_lines(security_lines)
 
-    def render_header(self, name, number):
+    def render_header(self, name, number, location):
         baseline = 0.8
         self.change_font('NTA-Bold', 19)
         if self.text_width(name) > 110:
@@ -231,8 +231,27 @@ class PrisonerCreditNoticeBundle(NoticeBundle):
             baseline = 0.3
         self.draw_text(19, 17, name)
 
+        sub_heading = number
+        if isinstance(location, dict):
+            levels = location.get('levels')
+            if levels:
+                level_labels = {
+                    'WING': _('Wing'),
+                    'LAND': _('Landing'),
+                    'CELL': _('Cell'),
+                }
+                labels = [
+                    (level_labels.get(level.get('type')), level.get('value'))
+                    for level in levels
+                ]
+            else:
+                labels = [(_('Location'), location.get('description'))]
+            labels = filter(lambda label: label[0] and label[1], labels)
+            labels = '    '.join(map(lambda label: ': '.join(label), labels))
+            if labels:
+                sub_heading += '    ' + labels
         self.change_font('NTA-Light', 16)
-        self.draw_text(19, 25, number)
+        self.draw_text(19, 25, sub_heading)
 
         self.change_font('NTA-Light', 12)
         self.draw_text(191, 17 + baseline, _('Received on %(date)s') % {'date': self.human_date}, align='R')
@@ -253,7 +272,14 @@ def create_sample():
     def generate_samples():
         Credit = collections.namedtuple('Credit', 'amount sender_name')
 
-        yield ('JAMES HALLS', 'A1409AE', [
+        yield ('JAMES HALLS', 'A1409AE', {
+            'description': 'LEI-A-2-002',
+            'levels': [
+                {'type': 'WING', 'value': 'A'},
+                {'type': 'LAND', 'value': '2'},
+                {'type': 'CELL', 'value': '002'}
+            ],
+        }, [
             Credit(3500, 'JORDAN MARSH'),
             Credit(4000, 'BRETT WILKINS'),
             Credit(2036000, 'SOMEBODY WITH A SIMULATED LONG NAME-THAT-TRUNCATES'),
@@ -266,7 +292,14 @@ def create_sample():
             Credit(5000, 'SIMPSON R'),
             Credit(5001, 'Gordon Ian'),
         ])
-        yield ('RICKY-LONG LONG-LONG-SURNAME-RIPPIN', 'A1234AA', [
+        yield ('RICKY-LONG LONG-LONG-SURNAME-RIPPIN', 'A1234AA', {
+            'description': 'LEI-B-1-002',
+            'levels': [
+                {'type': 'WING', 'value': 'B'},
+                {'type': 'LAND', 'value': '1'},
+                {'type': 'CELL', 'value': '002'}
+            ],
+        }, [
             Credit(2036000, 'SOMEBODY WITH A SIMULATED LONG NAME-THAT-TRUNCATES'),
             Credit(3500, 'AMÉLIE POULAIN'),
             Credit(100000, 'علاء الدين'),
