@@ -1,3 +1,5 @@
+import codecs
+import collections
 import re
 
 from django.utils.translation import gettext as _
@@ -5,18 +7,29 @@ from django.utils.translation import gettext as _
 from credit.notices import NoticeBundle, get_asset_path
 from transaction.utils import format_amount
 
+western_european = codecs.lookup('cp1252')  # characters supported by NTA font
 re_invalid_name = re.compile(r'(\d{6})')
 re_whitespace = re.compile(r'\s+')
 
 
-def format_sender(sender):
-    if not sender or re_invalid_name.search(sender):
+def format_name(name, fallback):
+    name = re_whitespace.sub(' ', (name or '').strip()).upper()
+    if not name or re_invalid_name.search(name):
         # empty or looks like card number
-        return _('unknown sender')
-    if any(ord(c) > 382 for c in sender):
+        return fallback
+    try:
+        western_european.encode(name)
+    except UnicodeEncodeError:
         # some characters cannot be printed
-        return _('unknown sender')
-    return re_whitespace.sub(' ', sender.strip()).upper()
+        return fallback
+    return name
+
+
+def format_disbursement_method(method):
+    return {'bank_transfer': _('bank transfer'), 'cheque': _('cheque')}.get(method, _('unknown method'))
+
+
+Update = collections.namedtuple('Update', 'symbol heading subheading messages')
 
 
 class PrisonerCreditNoticeBundle(NoticeBundle):
@@ -27,7 +40,8 @@ class PrisonerCreditNoticeBundle(NoticeBundle):
     def __init__(self, prison, prisoners, date):
         """
         :param prison: only used in PDF title
-        :param prisoners: iterable of (prisoner_name: str, prisoner_number: str, credits: typing.Sequence[Credit])
+        :param prisoners: iterable of (prisoner_name: str, prisoner_number: str,
+            credits: typing.Sequence[Credit], disbursements: typing.Sequence[Disbursement])
         :param date: date credits were credited
         """
         super().__init__()
@@ -37,7 +51,7 @@ class PrisonerCreditNoticeBundle(NoticeBundle):
 
     @property
     def title(self):
-        return _('Money credited to prisoners on %(date)s at %(prison)s') % {
+        return _('Prisoner money updates from %(date)s at %(prison)s') % {
             'date': self.human_date,
             'prison': self.prison,
         }
@@ -46,70 +60,134 @@ class PrisonerCreditNoticeBundle(NoticeBundle):
         for prisoner in self.prisoners:
             self.render_prisoner_pages(*prisoner)
 
-    def render_prisoner_pages(self, name, number, location, credits_list):
-        for page in range(0, len(credits_list), 10):
+    def render_prisoner_pages(self, name, number, location, credits_list, disbursements_list):
+        updates = []
+        if credits_list:
+            updates.append(Update(
+                '+',
+                _('Money in'),
+                _('You’ve been sent money online.') + ' ' + _('It’s gone into your private cash account.'),
+                [
+                    {
+                        'label': format_amount(credit.amount, trim_empty_pence=False),
+                        'message': _('from %(name)s') % {
+                            'name': format_name(credit.sender_name,  fallback=_('unknown sender')),
+                        }
+                    }
+                    for credit in credits_list
+                ]
+            ))
+        if disbursements_list:
+            updates.append(Update(
+                '–',
+                _('Money out'),
+                _('These disbursement requests have been sent.') + ' ' + _('It takes about 7 working days.'),
+                [
+                    {
+                        'label': format_amount(disbursement.amount, trim_empty_pence=False),
+                        'message': _('to %(name)s by %(method)s') % {
+                            'name': format_name('%s %s' % (disbursement.recipient_first_name,
+                                                           disbursement.recipient_last_name),
+                                                fallback=_('unknown recipient')),
+                            'method': format_disbursement_method(disbursement.method),
+                        }
+                    }
+                    for disbursement in disbursements_list
+                ]
+            ))
+        while updates:
             self.render_base_template()
             self.render_header(name, number, location)
-            self.render_prisoner_page(credits_list[page:page + 10])
+            self.render_prisoner_page(updates)
             self.canvas.showPage()
 
-    def render_prisoner_page(self, credits_list):
-        top = 237
-        left = 30
-        row_height = 10
-        col_gap = 2
-        col_stride = 106
-        amount_width = 22
-        sender_width = 62 if len(credits_list) > 5 else 146
-        line_height = 5
-        for index, credit in enumerate(credits_list):
-            if index > 4:
-                x = left + col_stride
-                y = top + (index - 5) * row_height
-            else:
-                x = left
-                y = top + index * row_height
+    def render_prisoner_page(self, updates):
+        top = 222
+        bottom = self.page_height - 6
+        gutter = 12
+        heading_height = 12
+        heading_gap = 6
+        text_height = 6
 
-            amount = format_amount(credit.amount, trim_empty_pence=False)
-            if self.text_width(amount) > amount_width:
-                self.change_font('NTA-Bold', 10)
-                amount_y_adjust = 0.2
-            else:
+        while top < bottom - heading_height - text_height and updates:
+            update = updates.pop(0)
+            left = self.render_prisoner_page_heading(gutter, top, update)
+            top += heading_height
+            while top <= bottom - text_height and update.messages:
+                message = update.messages.pop(0)
                 self.change_font('NTA-Bold', 12)
-                amount_y_adjust = 0
-            self.draw_text(x, y + amount_y_adjust, amount, align='R')
+                label_width = self.text_width(message['label'])
+                self.draw_text(left, top, message['label'])
+                self.change_font('NTA-Light', 12)
+                message = ' ' + message['message']
+                message = self.truncate_text_to_width(self.page_width - label_width - 2 * gutter, message)
+                self.draw_text(left + label_width, top, message)
+                top += text_height
+            top += heading_gap
+            if update.messages:
+                updates.insert(0, update)
 
-            sender = _('from %s') % format_sender(credit.sender_name)
-            self.change_font('NTA-Light', 12)
-            if self.text_width(sender) > sender_width:
-                sender = sender.split()
-                sender_rows = []
-                sender_row = []
-                while True:
-                    sender_row.append(sender.pop(0))
-                    if self.text_width(' '.join(sender_row)) > sender_width:
-                        if len(sender_row) == 1:
-                            sender_rows.append(sender_row[0])
-                        else:
-                            sender_rows.append(' '.join(sender_row[:-1]))
-                            sender.insert(0, sender_row[-1])
-                        sender_row = []
-                    if not sender:
-                        break
-                if sender_row:
-                    sender_rows.append(' '.join(sender_row))
+    def render_prisoner_page_heading(self, x, y, update: Update):
+        radius = 3
+        left = x + radius
+        self.draw_circle(left, y + radius - 3.3, radius, stroke=0, fill=1)
+        self.change_font('NTA-Bold', 14)
+        self.canvas.setFillGray(1)
+        self.draw_text(left, y + radius - 2.8, update.symbol, align='C')
+        self.canvas.setFillGray(0)
+        left += 5
+        self.draw_text(left, y, update.heading)
+        self.change_font('NTA-Light', 12)
+        self.draw_text(left, y + 5, update.subheading)
+        return left
+
+    def render_header(self, name, number, location):
+        top = 16
+        gutter = 12
+
+        date_label = _('Updates from %(date)s') % {'date': self.human_date}
+
+        sub_heading = number
+        if isinstance(location, dict):
+            levels = location.get('levels')
+            if levels:
+                level_labels = {
+                    'WING': _('Wing'),
+                    'LAND': _('Landing'),
+                    'CELL': _('Cell'),
+                }
+                labels = [
+                    (level_labels.get(level.get('type')), level.get('value'))
+                    for level in levels
+                ]
             else:
-                sender_rows = [sender]
-            if len(sender_rows) > 2:
-                sender_rows = sender_rows[:2]
-                sender_rows[-1] += '…'
-            for row, sender_row in enumerate(sender_rows):
-                self.draw_text(x + col_gap, y + row * line_height, sender_row)
+                labels = [(_('Location'), location.get('description'))]
+            labels = filter(lambda label: label[0] and label[1], labels)
+            labels = '    '.join(map(lambda label: ': '.join(label), labels))
+            if labels:
+                sub_heading += '    ' + labels
+
+        self.change_font('NTA-Light', 12)
+        date_label_width = self.text_width(date_label)
+        name_width_allowance = self.page_width - date_label_width - gutter * 2 - 6
+        baseline = 0.8
+        self.change_font('NTA-Bold', 19)
+        if self.text_width(name) > name_width_allowance:
+            self.change_font('NTA-Bold', 17)
+            baseline = 0.3
+        name = self.truncate_text_to_width(name_width_allowance, name)
+        self.draw_text(gutter, top, name)
+
+        self.change_font('NTA-Light', 16)
+        self.draw_text(gutter, top + 7, sub_heading)
+
+        self.change_font('NTA-Light', 12)
+        self.draw_text(self.page_width - gutter, top + baseline, date_label, align='R')
 
     def render_base_template(self):
         self.draw_image(get_asset_path('logo.png'), x=94.558, y=57, w=20.884, h=17.321)
         self.change_font('NTA-Light', 12)
-        self.draw_text(105, 80, _('Send money to someone in prison'), align='C')
+        self.draw_text(105, 80, _('Prisoner money update'), align='C')
 
         self.change_font('NTA-Light', 8)
         fold_text = _('Confidential. Please fold & staple')
@@ -125,25 +203,28 @@ class PrisonerCreditNoticeBundle(NoticeBundle):
 
         self.render_security_box()
 
-        self.change_font('NTA-Light', 12)
-        message = _('You’ve been sent money online.') + ' ' + _('It’s gone into your private cash account.')
-        self.draw_text(110, 225, message, align='C')
-
         staple = get_asset_path('staple.png')
         self.canvas.setFillGray(1)
         self.canvas.saveState()
         self.canvas.scale(-1, 1)
-        self.draw_rect(-11, 160.3, 4.8, 11.4, stroke=0, fill=1)
-        self.draw_image(staple, x=-10, y=166-4.2, w=1.8, h=8.4)
+        self.draw_rect(-11, 158.55, 4.8, 11.9, stroke=0, fill=1)
+        self.draw_image(staple, x=-10, y=160.3, w=1.8, h=8.4)
         self.canvas.restoreState()
-        self.draw_rect(199, 160.3, 4.8, 11.4, stroke=0, fill=1)
-        self.draw_image(staple, x=200, y=166-4.2, w=1.8, h=8.4)
+        self.draw_rect(199, 158.55, 4.8, 11.9, stroke=0, fill=1)
+        self.draw_image(staple, x=200, y=160.3, w=1.8, h=8.4)
         self.canvas.setFillGray(0)
 
     def render_security_box(self):
-        # security_bounds = 10, 122 + 15, self.page_width - 10, 210 - 15
-        # security_width = security_bounds[2] - security_bounds[0]
-        # security_height = security_bounds[3] - security_bounds[1]
+        # top, bottom = 120, 209
+        # vertical_gutter, horizontal_gutter = 9.5, 10
+        # security_bounds = (
+        #     horizontal_gutter,
+        #     top + vertical_gutter,
+        #     self.page_width - horizontal_gutter,
+        #     bottom - vertical_gutter,
+        # )
+        # security_width = int(security_bounds[2] - security_bounds[0])
+        # security_height = int(security_bounds[3] - security_bounds[1])
         # security_lines = []
         # for shift in range(0, security_height, 2):
         #     security_lines.append(
@@ -166,95 +247,73 @@ class PrisonerCreditNoticeBundle(NoticeBundle):
         #     for x1, y1, x2, y2 in security_lines
         # ]
         security_lines = [
-            (10, 137, 68, 195), (10, 139, 66, 195), (10, 141, 64, 195), (10, 143, 62, 195), (10, 145, 60, 195),
-            (10, 147, 58, 195), (10, 149, 56, 195), (10, 151, 54, 195), (10, 153, 52, 195), (10, 155, 50, 195),
-            (10, 157, 48, 195), (10, 159, 46, 195), (10, 161, 44, 195), (10, 163, 42, 195), (10, 165, 40, 195),
-            (10, 167, 38, 195), (10, 169, 36, 195), (10, 171, 34, 195), (10, 173, 32, 195), (10, 175, 30, 195),
-            (10, 177, 28, 195), (10, 179, 26, 195), (10, 181, 24, 195), (10, 183, 22, 195), (10, 185, 20, 195),
-            (10, 187, 18, 195), (10, 189, 16, 195), (10, 191, 14, 195), (10, 193, 12, 195), (12, 137, 70, 195),
-            (14, 137, 72, 195), (16, 137, 74, 195), (18, 137, 76, 195), (20, 137, 78, 195), (22, 137, 80, 195),
-            (24, 137, 82, 195), (26, 137, 84, 195), (28, 137, 86, 195), (30, 137, 88, 195), (32, 137, 90, 195),
-            (34, 137, 92, 195), (36, 137, 94, 195), (38, 137, 96, 195), (40, 137, 98, 195), (42, 137, 100, 195),
-            (44, 137, 102, 195), (46, 137, 104, 195), (48, 137, 106, 195), (50, 137, 108, 195), (52, 137, 110, 195),
-            (54, 137, 112, 195), (56, 137, 114, 195), (58, 137, 116, 195), (60, 137, 118, 195), (62, 137, 120, 195),
-            (64, 137, 122, 195), (66, 137, 124, 195), (68, 137, 126, 195), (70, 137, 128, 195), (72, 137, 130, 195),
-            (74, 137, 132, 195), (76, 137, 134, 195), (78, 137, 136, 195), (80, 137, 138, 195), (82, 137, 140, 195),
-            (84, 137, 142, 195), (86, 137, 144, 195), (88, 137, 146, 195), (90, 137, 148, 195), (92, 137, 150, 195),
-            (94, 137, 152, 195), (96, 137, 154, 195), (98, 137, 156, 195), (100, 137, 158, 195), (102, 137, 160, 195),
-            (104, 137, 162, 195), (106, 137, 164, 195), (108, 137, 166, 195), (110, 137, 168, 195),
-            (112, 137, 170, 195), (114, 137, 172, 195), (116, 137, 174, 195), (118, 137, 176, 195),
-            (120, 137, 178, 195), (122, 137, 180, 195), (124, 137, 182, 195), (126, 137, 184, 195),
-            (128, 137, 186, 195), (130, 137, 188, 195), (132, 137, 190, 195), (134, 137, 192, 195),
-            (136, 137, 194, 195), (138, 137, 196, 195), (140, 137, 198, 195), (142, 137, 200, 195),
-            (144, 137, 200, 193), (146, 137, 200, 191), (148, 137, 200, 189), (150, 137, 200, 187),
-            (152, 137, 200, 185), (154, 137, 200, 183), (156, 137, 200, 181), (158, 137, 200, 179),
-            (160, 137, 200, 177), (162, 137, 200, 175), (164, 137, 200, 173), (166, 137, 200, 171),
-            (168, 137, 200, 169), (170, 137, 200, 167), (172, 137, 200, 165), (174, 137, 200, 163),
-            (176, 137, 200, 161), (178, 137, 200, 159), (180, 137, 200, 157), (182, 137, 200, 155),
-            (184, 137, 200, 153), (186, 137, 200, 151), (188, 137, 200, 149), (190, 137, 200, 147),
-            (192, 137, 200, 145), (194, 137, 200, 143), (196, 137, 200, 141), (198, 137, 200, 139),
-            (200, 137, 142, 195), (200, 139, 144, 195), (200, 141, 146, 195), (200, 143, 148, 195),
-            (200, 145, 150, 195), (200, 147, 152, 195), (200, 149, 154, 195), (200, 151, 156, 195),
-            (200, 153, 158, 195), (200, 155, 160, 195), (200, 157, 162, 195), (200, 159, 164, 195),
-            (200, 161, 166, 195), (200, 163, 168, 195), (200, 165, 170, 195), (200, 167, 172, 195),
-            (200, 169, 174, 195), (200, 171, 176, 195), (200, 173, 178, 195), (200, 175, 180, 195),
-            (200, 177, 182, 195), (200, 179, 184, 195), (200, 181, 186, 195), (200, 183, 188, 195),
-            (200, 185, 190, 195), (200, 187, 192, 195), (200, 189, 194, 195), (200, 191, 196, 195),
-            (200, 193, 198, 195), (198, 137, 140, 195), (196, 137, 138, 195), (194, 137, 136, 195),
-            (192, 137, 134, 195), (190, 137, 132, 195), (188, 137, 130, 195), (186, 137, 128, 195),
-            (184, 137, 126, 195), (182, 137, 124, 195), (180, 137, 122, 195), (178, 137, 120, 195),
-            (176, 137, 118, 195), (174, 137, 116, 195), (172, 137, 114, 195), (170, 137, 112, 195),
-            (168, 137, 110, 195), (166, 137, 108, 195), (164, 137, 106, 195), (162, 137, 104, 195),
-            (160, 137, 102, 195), (158, 137, 100, 195), (156, 137, 98, 195), (154, 137, 96, 195), (152, 137, 94, 195),
-            (150, 137, 92, 195), (148, 137, 90, 195), (146, 137, 88, 195), (144, 137, 86, 195), (142, 137, 84, 195),
-            (140, 137, 82, 195), (138, 137, 80, 195), (136, 137, 78, 195), (134, 137, 76, 195), (132, 137, 74, 195),
-            (130, 137, 72, 195), (128, 137, 70, 195), (126, 137, 68, 195), (124, 137, 66, 195), (122, 137, 64, 195),
-            (120, 137, 62, 195), (118, 137, 60, 195), (116, 137, 58, 195), (114, 137, 56, 195), (112, 137, 54, 195),
-            (110, 137, 52, 195), (108, 137, 50, 195), (106, 137, 48, 195), (104, 137, 46, 195), (102, 137, 44, 195),
-            (100, 137, 42, 195), (98, 137, 40, 195), (96, 137, 38, 195), (94, 137, 36, 195), (92, 137, 34, 195),
-            (90, 137, 32, 195), (88, 137, 30, 195), (86, 137, 28, 195), (84, 137, 26, 195), (82, 137, 24, 195),
-            (80, 137, 22, 195), (78, 137, 20, 195), (76, 137, 18, 195), (74, 137, 16, 195), (72, 137, 14, 195),
-            (70, 137, 12, 195), (68, 137, 10, 195), (66, 137, 10, 193), (64, 137, 10, 191), (62, 137, 10, 189),
-            (60, 137, 10, 187), (58, 137, 10, 185), (56, 137, 10, 183), (54, 137, 10, 181), (52, 137, 10, 179),
-            (50, 137, 10, 177), (48, 137, 10, 175), (46, 137, 10, 173), (44, 137, 10, 171), (42, 137, 10, 169),
-            (40, 137, 10, 167), (38, 137, 10, 165), (36, 137, 10, 163), (34, 137, 10, 161), (32, 137, 10, 159),
-            (30, 137, 10, 157), (28, 137, 10, 155), (26, 137, 10, 153), (24, 137, 10, 151), (22, 137, 10, 149),
-            (20, 137, 10, 147), (18, 137, 10, 145), (16, 137, 10, 143), (14, 137, 10, 141), (12, 137, 10, 139),
+            (10, 129.5, 80, 199.5), (10, 131.5, 78, 199.5), (10, 133.5, 76, 199.5), (10, 135.5, 74, 199.5),
+            (10, 137.5, 72, 199.5), (10, 139.5, 70, 199.5), (10, 141.5, 68, 199.5), (10, 143.5, 66, 199.5),
+            (10, 145.5, 64, 199.5), (10, 147.5, 62, 199.5), (10, 149.5, 60, 199.5), (10, 151.5, 58, 199.5),
+            (10, 153.5, 56, 199.5), (10, 155.5, 54, 199.5), (10, 157.5, 52, 199.5), (10, 159.5, 50, 199.5),
+            (10, 161.5, 48, 199.5), (10, 163.5, 46, 199.5), (10, 165.5, 44, 199.5), (10, 167.5, 42, 199.5),
+            (10, 169.5, 40, 199.5), (10, 171.5, 38, 199.5), (10, 173.5, 36, 199.5), (10, 175.5, 34, 199.5),
+            (10, 177.5, 32, 199.5), (10, 179.5, 30, 199.5), (10, 181.5, 28, 199.5), (10, 183.5, 26, 199.5),
+            (10, 185.5, 24, 199.5), (10, 187.5, 22, 199.5), (10, 189.5, 20, 199.5), (10, 191.5, 18, 199.5),
+            (10, 193.5, 16, 199.5), (10, 195.5, 14, 199.5), (10, 197.5, 12, 199.5), (12, 129.5, 82, 199.5),
+            (14, 129.5, 84, 199.5), (16, 129.5, 86, 199.5), (18, 129.5, 88, 199.5), (20, 129.5, 90, 199.5),
+            (22, 129.5, 92, 199.5), (24, 129.5, 94, 199.5), (26, 129.5, 96, 199.5), (28, 129.5, 98, 199.5),
+            (30, 129.5, 100, 199.5), (32, 129.5, 102, 199.5), (34, 129.5, 104, 199.5), (36, 129.5, 106, 199.5),
+            (38, 129.5, 108, 199.5), (40, 129.5, 110, 199.5), (42, 129.5, 112, 199.5), (44, 129.5, 114, 199.5),
+            (46, 129.5, 116, 199.5), (48, 129.5, 118, 199.5), (50, 129.5, 120, 199.5), (52, 129.5, 122, 199.5),
+            (54, 129.5, 124, 199.5), (56, 129.5, 126, 199.5), (58, 129.5, 128, 199.5), (60, 129.5, 130, 199.5),
+            (62, 129.5, 132, 199.5), (64, 129.5, 134, 199.5), (66, 129.5, 136, 199.5), (68, 129.5, 138, 199.5),
+            (70, 129.5, 140, 199.5), (72, 129.5, 142, 199.5), (74, 129.5, 144, 199.5), (76, 129.5, 146, 199.5),
+            (78, 129.5, 148, 199.5), (80, 129.5, 150, 199.5), (82, 129.5, 152, 199.5), (84, 129.5, 154, 199.5),
+            (86, 129.5, 156, 199.5), (88, 129.5, 158, 199.5), (90, 129.5, 160, 199.5), (92, 129.5, 162, 199.5),
+            (94, 129.5, 164, 199.5), (96, 129.5, 166, 199.5), (98, 129.5, 168, 199.5), (100, 129.5, 170, 199.5),
+            (102, 129.5, 172, 199.5), (104, 129.5, 174, 199.5), (106, 129.5, 176, 199.5), (108, 129.5, 178, 199.5),
+            (110, 129.5, 180, 199.5), (112, 129.5, 182, 199.5), (114, 129.5, 184, 199.5), (116, 129.5, 186, 199.5),
+            (118, 129.5, 188, 199.5), (120, 129.5, 190, 199.5), (122, 129.5, 192, 199.5), (124, 129.5, 194, 199.5),
+            (126, 129.5, 196, 199.5), (128, 129.5, 198, 199.5), (130, 129.5, 200, 199.5), (132, 129.5, 200, 197.5),
+            (134, 129.5, 200, 195.5), (136, 129.5, 200, 193.5), (138, 129.5, 200, 191.5), (140, 129.5, 200, 189.5),
+            (142, 129.5, 200, 187.5), (144, 129.5, 200, 185.5), (146, 129.5, 200, 183.5), (148, 129.5, 200, 181.5),
+            (150, 129.5, 200, 179.5), (152, 129.5, 200, 177.5), (154, 129.5, 200, 175.5), (156, 129.5, 200, 173.5),
+            (158, 129.5, 200, 171.5), (160, 129.5, 200, 169.5), (162, 129.5, 200, 167.5), (164, 129.5, 200, 165.5),
+            (166, 129.5, 200, 163.5), (168, 129.5, 200, 161.5), (170, 129.5, 200, 159.5), (172, 129.5, 200, 157.5),
+            (174, 129.5, 200, 155.5), (176, 129.5, 200, 153.5), (178, 129.5, 200, 151.5), (180, 129.5, 200, 149.5),
+            (182, 129.5, 200, 147.5), (184, 129.5, 200, 145.5), (186, 129.5, 200, 143.5), (188, 129.5, 200, 141.5),
+            (190, 129.5, 200, 139.5), (192, 129.5, 200, 137.5), (194, 129.5, 200, 135.5), (196, 129.5, 200, 133.5),
+            (198, 129.5, 200, 131.5), (200, 129.5, 130, 199.5), (200, 131.5, 132, 199.5), (200, 133.5, 134, 199.5),
+            (200, 135.5, 136, 199.5), (200, 137.5, 138, 199.5), (200, 139.5, 140, 199.5), (200, 141.5, 142, 199.5),
+            (200, 143.5, 144, 199.5), (200, 145.5, 146, 199.5), (200, 147.5, 148, 199.5), (200, 149.5, 150, 199.5),
+            (200, 151.5, 152, 199.5), (200, 153.5, 154, 199.5), (200, 155.5, 156, 199.5), (200, 157.5, 158, 199.5),
+            (200, 159.5, 160, 199.5), (200, 161.5, 162, 199.5), (200, 163.5, 164, 199.5), (200, 165.5, 166, 199.5),
+            (200, 167.5, 168, 199.5), (200, 169.5, 170, 199.5), (200, 171.5, 172, 199.5), (200, 173.5, 174, 199.5),
+            (200, 175.5, 176, 199.5), (200, 177.5, 178, 199.5), (200, 179.5, 180, 199.5), (200, 181.5, 182, 199.5),
+            (200, 183.5, 184, 199.5), (200, 185.5, 186, 199.5), (200, 187.5, 188, 199.5), (200, 189.5, 190, 199.5),
+            (200, 191.5, 192, 199.5), (200, 193.5, 194, 199.5), (200, 195.5, 196, 199.5), (200, 197.5, 198, 199.5),
+            (198, 129.5, 128, 199.5), (196, 129.5, 126, 199.5), (194, 129.5, 124, 199.5), (192, 129.5, 122, 199.5),
+            (190, 129.5, 120, 199.5), (188, 129.5, 118, 199.5), (186, 129.5, 116, 199.5), (184, 129.5, 114, 199.5),
+            (182, 129.5, 112, 199.5), (180, 129.5, 110, 199.5), (178, 129.5, 108, 199.5), (176, 129.5, 106, 199.5),
+            (174, 129.5, 104, 199.5), (172, 129.5, 102, 199.5), (170, 129.5, 100, 199.5), (168, 129.5, 98, 199.5),
+            (166, 129.5, 96, 199.5), (164, 129.5, 94, 199.5), (162, 129.5, 92, 199.5), (160, 129.5, 90, 199.5),
+            (158, 129.5, 88, 199.5), (156, 129.5, 86, 199.5), (154, 129.5, 84, 199.5), (152, 129.5, 82, 199.5),
+            (150, 129.5, 80, 199.5), (148, 129.5, 78, 199.5), (146, 129.5, 76, 199.5), (144, 129.5, 74, 199.5),
+            (142, 129.5, 72, 199.5), (140, 129.5, 70, 199.5), (138, 129.5, 68, 199.5), (136, 129.5, 66, 199.5),
+            (134, 129.5, 64, 199.5), (132, 129.5, 62, 199.5), (130, 129.5, 60, 199.5), (128, 129.5, 58, 199.5),
+            (126, 129.5, 56, 199.5), (124, 129.5, 54, 199.5), (122, 129.5, 52, 199.5), (120, 129.5, 50, 199.5),
+            (118, 129.5, 48, 199.5), (116, 129.5, 46, 199.5), (114, 129.5, 44, 199.5), (112, 129.5, 42, 199.5),
+            (110, 129.5, 40, 199.5), (108, 129.5, 38, 199.5), (106, 129.5, 36, 199.5), (104, 129.5, 34, 199.5),
+            (102, 129.5, 32, 199.5), (100, 129.5, 30, 199.5), (98, 129.5, 28, 199.5), (96, 129.5, 26, 199.5),
+            (94, 129.5, 24, 199.5), (92, 129.5, 22, 199.5), (90, 129.5, 20, 199.5), (88, 129.5, 18, 199.5),
+            (86, 129.5, 16, 199.5), (84, 129.5, 14, 199.5), (82, 129.5, 12, 199.5), (80, 129.5, 10, 199.5),
+            (78, 129.5, 10, 197.5), (76, 129.5, 10, 195.5), (74, 129.5, 10, 193.5), (72, 129.5, 10, 191.5),
+            (70, 129.5, 10, 189.5), (68, 129.5, 10, 187.5), (66, 129.5, 10, 185.5), (64, 129.5, 10, 183.5),
+            (62, 129.5, 10, 181.5), (60, 129.5, 10, 179.5), (58, 129.5, 10, 177.5), (56, 129.5, 10, 175.5),
+            (54, 129.5, 10, 173.5), (52, 129.5, 10, 171.5), (50, 129.5, 10, 169.5), (48, 129.5, 10, 167.5),
+            (46, 129.5, 10, 165.5), (44, 129.5, 10, 163.5), (42, 129.5, 10, 161.5), (40, 129.5, 10, 159.5),
+            (38, 129.5, 10, 157.5), (36, 129.5, 10, 155.5), (34, 129.5, 10, 153.5), (32, 129.5, 10, 151.5),
+            (30, 129.5, 10, 149.5), (28, 129.5, 10, 147.5), (26, 129.5, 10, 145.5), (24, 129.5, 10, 143.5),
+            (22, 129.5, 10, 141.5), (20, 129.5, 10, 139.5), (18, 129.5, 10, 137.5), (16, 129.5, 10, 135.5),
+            (14, 129.5, 10, 133.5), (12, 129.5, 10, 131.5),
         ]
         self.draw_lines(security_lines)
-
-    def render_header(self, name, number, location):
-        baseline = 0.8
-        self.change_font('NTA-Bold', 19)
-        if self.text_width(name) > 110:
-            self.change_font('NTA-Bold', 17)
-            baseline = 0.3
-        self.draw_text(19, 17, name)
-
-        sub_heading = number
-        if isinstance(location, dict):
-            levels = location.get('levels')
-            if levels:
-                level_labels = {
-                    'WING': _('Wing'),
-                    'LAND': _('Landing'),
-                    'CELL': _('Cell'),
-                }
-                labels = [
-                    (level_labels.get(level.get('type')), level.get('value'))
-                    for level in levels
-                ]
-            else:
-                labels = [(_('Location'), location.get('description'))]
-            labels = filter(lambda label: label[0] and label[1], labels)
-            labels = '    '.join(map(lambda label: ': '.join(label), labels))
-            if labels:
-                sub_heading += '    ' + labels
-        self.change_font('NTA-Light', 16)
-        self.draw_text(19, 25, sub_heading)
-
-        self.change_font('NTA-Light', 12)
-        self.draw_text(191, 17 + baseline, _('Received on %(date)s') % {'date': self.human_date}, align='R')
 
 
 def create_sample():
@@ -271,7 +330,37 @@ def create_sample():
 
     def generate_samples():
         Credit = collections.namedtuple('Credit', 'amount sender_name')
+        Disbursement = collections.namedtuple('Disbursement', 'amount method recipient_first_name recipient_last_name')
 
+        yield ('JILLY HALL', 'A1401AE', {
+            'description': 'LEI-A-2-002',
+            'levels': [
+                {'type': 'WING', 'value': 'A'},
+                {'type': 'LAND', 'value': '2'},
+                {'type': 'CELL', 'value': '002'}
+            ],
+        }, [], [])
+        yield ('JILLY HALL', 'A1401AE', {
+            'description': 'LEI-B-2-002',
+            'levels': [
+                {'type': 'WING', 'value': 'B'},
+                {'type': 'LAND', 'value': '2'},
+                {'type': 'CELL', 'value': '002'}
+            ],
+        }, [
+            Credit(2000, 'JORDAN MARSH'),
+            Credit(3000, 'MRS J MARSH'),
+        ], [])
+        yield ('JILLY HALL', 'A1401AE', {
+            'description': 'LEI-C-2-002',
+            'levels': [
+                {'type': 'WING', 'value': 'C'},
+                {'type': 'LAND', 'value': '2'},
+                {'type': 'CELL', 'value': '002'}
+            ],
+        }, [], [
+            Disbursement(10000, 'cheque', 'thomas', 'raymond'),
+        ])
         yield ('JAMES HALLS', 'A1409AE', {
             'description': 'LEI-A-2-002',
             'levels': [
@@ -282,17 +371,19 @@ def create_sample():
         }, [
             Credit(3500, 'JORDAN MARSH'),
             Credit(4000, 'BRETT WILKINS'),
-            Credit(2036000, 'SOMEBODY WITH A SIMULATED LONG NAME-THAT-TRUNCATES'),
+            Credit(2036000, 'SOMEBODY WITH A SURPRISINGLY-LONG-SURNAME'),
             Credit(10000, 'JORDAN MARSH'),
             Credit(1000, 'RICHARDSON JUSTIN'),
             Credit(10000, 'POWELL JADE'),
             Credit(1000, 'PAIGE BARTON'),
             Credit(5, 'X GREEN'),
-            Credit(5000, 'GARRY CLARK GARRY CLAR'),
+            Credit(5000, 'GARRY CLARK GARRY CLARK'),
             Credit(5000, 'SIMPSON R'),
             Credit(5001, 'Gordon Ian'),
+        ], [
+            Disbursement(1000, 'cheque', 'Jordan', 'Marsh'),
         ])
-        yield ('RICKY-LONG LONG-LONG-SURNAME-RIPPIN', 'A1234AA', {
+        yield ('RICKY-LONG EXTREMELY-LONG-SURNAME-RIPPIN', 'A1234AA', {
             'description': 'LEI-B-1-002',
             'levels': [
                 {'type': 'WING', 'value': 'B'},
@@ -300,10 +391,15 @@ def create_sample():
                 {'type': 'CELL', 'value': '002'}
             ],
         }, [
-            Credit(2036000, 'SOMEBODY WITH A SIMULATED LONG NAME-THAT-TRUNCATES'),
-            Credit(3500, 'AMÉLIE POULAIN'),
-            Credit(100000, 'علاء الدين'),
-            Credit(1000, 'ІГОР ИГОРЬ'),
+            Credit(2036000, 'SOMEBODY WITH A SIMULATED VERY EXTREMELY LONG NAME-THAT-TRUNCATES'),
+            Credit(3500, 'Amélie Poulain'),  # supported characters
+            Credit(100000, 'علاء الدين'),  # unsupported characters
+            Credit(1000, 'Ігор Игорь'),  # unsupported characters
+        ], [
+            Disbursement(1000, 'cheque', 'SOMEBODY WITH A SIMULATED', 'VERY EXTREMELY LONG SURNAME-THAT-TRUNCATES'),
+            Disbursement(1000, 'bank_transfer', 'Joséphine', 'Frédérique'),  # supported characters
+            Disbursement(1000, 'cheque', 'ARİF', 'Błażej'),  # unsupported characters
+            Disbursement(1000, 'bank_transfer', ' ', ''),  # unsupported characters
         ])
 
     parser = argparse.ArgumentParser(description='Creates a sample prisoner credit notices PDF')

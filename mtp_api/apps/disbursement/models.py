@@ -4,7 +4,7 @@ from django.dispatch import receiver
 from model_utils.models import TimeStampedModel
 
 from .constants import LOG_ACTIONS, DISBURSEMENT_RESOLUTION, DISBURSEMENT_METHOD
-from .managers import DisbursementManager, LogManager
+from .managers import DisbursementManager, DisbursementQuerySet, LogManager
 from .signals import (
     disbursement_confirmed, disbursement_created, disbursement_rejected,
     disbursement_sent
@@ -39,7 +39,7 @@ class Disbursement(TimeStampedModel):
     # used by building societies to identify the account nr
     roll_number = models.CharField(max_length=50, blank=True, null=True)
 
-    objects = DisbursementManager()
+    objects = DisbursementManager.from_queryset(DisbursementQuerySet)()
 
     @property
     def recipient_name(self):

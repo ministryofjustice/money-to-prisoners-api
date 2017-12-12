@@ -1,5 +1,7 @@
 import collections
 import datetime
+import functools
+import itertools
 import unittest
 from unittest import mock
 
@@ -11,11 +13,13 @@ from mtp_common.auth import urljoin
 from faker import Faker
 import responses
 
-from credit.constants import LOG_ACTIONS
-from credit.models import Credit, Log
+from credit.constants import LOG_ACTIONS as CREDIT_ACTIONS
+from credit.models import Credit, Log as CreditLog
 from credit.notices import Canvas
 from credit.notices.prisoner_credits import PrisonerCreditNoticeBundle
 from credit.tests.test_base import BaseCreditViewTestCase
+from disbursement.constants import LOG_ACTIONS as DISBURSEMENT_ACTIONS
+from disbursement.models import Disbursement, Log as DisbursementLog
 from prison.models import Prison, PrisonerCreditNoticeEmail
 
 fake = Faker(locale='en_GB')
@@ -40,19 +44,23 @@ override_nomis_settings = override_settings(
     ),  # this key is just for tests, doesn't do anything
 )
 
+credit_cls = collections.namedtuple('Credit', ('amount', 'sender_name'))
+disbursement_cls = collections.namedtuple('Disbursement', 'amount method recipient_first_name recipient_last_name')
+
 
 class PrisonerCreditNoticeTestCase(unittest.TestCase):
-    credit_cls = collections.namedtuple('Credit', ('amount', 'sender_name'))
     image_per_template = 3
-    text_per_template = 7
-    text_per_credit = 2
+    text_per_template = 6
+    text_per_update = 3
+    text_per_message = 2
 
-    def assertPageCredits(self, show_page, draw_string, credits_per_page):  # noqa
-        self.assertEqual(show_page.call_count, len(credits_per_page))
-        self.assertEqual(
-            draw_string.call_count,
-            self.text_per_template * len(credits_per_page) + self.text_per_credit * sum(credits_per_page)
-        )
+    def assertPageUpdates(self, show_page, draw_string, updates_per_page):  # noqa
+        self.assertEqual(show_page.call_count, len(updates_per_page))
+        self.assertEqual(draw_string.call_count, (
+            self.text_per_template * len(updates_per_page) +
+            self.text_per_update * functools.reduce(lambda updates, page: updates + len(page), updates_per_page, 0) +
+            self.text_per_message * sum(itertools.chain.from_iterable(updates_per_page))
+        ))
 
     @mock.patch.object(Canvas, 'drawImage')
     @mock.patch.object(Canvas, 'drawString')
@@ -61,11 +69,11 @@ class PrisonerCreditNoticeTestCase(unittest.TestCase):
     def test_one_prisoner_one_credit(self, canvas_save, canvas_show_page, canvas_draw_string, canvas_draw_image):
         canvas_save.return_value = None
 
-        prisoners = [('JAMES HALLS', 'A1409AE', sample_location, [self.credit_cls(1000, 'Mrs. Halls')])]
+        prisoners = [('JAMES HALLS', 'A1409AE', sample_location, [credit_cls(1000, 'Mrs. Halls')], [])]
         bundle = PrisonerCreditNoticeBundle('INB', prisoners, datetime.date(2017, 6, 16))
         bundle.render(None)
 
-        self.assertPageCredits(canvas_show_page, canvas_draw_string, [1])
+        self.assertPageUpdates(canvas_show_page, canvas_draw_string, [[1]])
         self.assertEqual(canvas_draw_image.call_count, self.image_per_template)
 
     @mock.patch.object(Canvas, 'drawString')
@@ -74,12 +82,41 @@ class PrisonerCreditNoticeTestCase(unittest.TestCase):
     def test_one_prisoner_two_credits(self, canvas_save, canvas_show_page, canvas_draw_string):
         canvas_save.return_value = None
 
-        prisoners = [('JAMES HALLS', 'A1409AE', sample_location, [self.credit_cls(1000, 'Mrs. Halls'),
-                                                                  self.credit_cls(2000, 'Mrs. Halls')])]
+        prisoners = [('JAMES HALLS', 'A1409AE', sample_location, [credit_cls(1000, 'Mrs. Halls'),
+                                                                  credit_cls(2000, 'Mrs. Halls')], [])]
         bundle = PrisonerCreditNoticeBundle('INB', prisoners, datetime.date(2017, 6, 16))
         bundle.render(None)
 
-        self.assertPageCredits(canvas_show_page, canvas_draw_string, [2])
+        self.assertPageUpdates(canvas_show_page, canvas_draw_string, [[2]])
+
+    @mock.patch.object(Canvas, 'drawString')
+    @mock.patch.object(Canvas, 'showPage')
+    @mock.patch.object(Canvas, 'save')
+    def test_one_prisoner_two_disbursements(self, canvas_save, canvas_show_page, canvas_draw_string):
+        canvas_save.return_value = None
+
+        prisoners = [('JAMES HALLS', 'A1409AE', sample_location, [], [
+            disbursement_cls(2000, 'cheque', 'Rose', 'Johnson'),
+            disbursement_cls(3000, 'bank_transfer', 'Janet', 'Johnson')
+        ])]
+        bundle = PrisonerCreditNoticeBundle('INB', prisoners, datetime.date(2017, 6, 16))
+        bundle.render(None)
+
+        self.assertPageUpdates(canvas_show_page, canvas_draw_string, [[2]])
+
+    @mock.patch.object(Canvas, 'drawString')
+    @mock.patch.object(Canvas, 'showPage')
+    @mock.patch.object(Canvas, 'save')
+    def test_one_prisoner_two_different_updates(self, canvas_save, canvas_show_page, canvas_draw_string):
+        canvas_save.return_value = None
+
+        prisoners = [('JAMES HALLS', 'A1409AE', sample_location,
+                      [credit_cls(1000, 'Mrs. Halls')],
+                      [disbursement_cls(2000, 'cheque', 'Mary', 'Johnson')])]
+        bundle = PrisonerCreditNoticeBundle('INB', prisoners, datetime.date(2017, 6, 16))
+        bundle.render(None)
+
+        self.assertPageUpdates(canvas_show_page, canvas_draw_string, [[1, 1]])
 
     @mock.patch.object(Canvas, 'drawString')
     @mock.patch.object(Canvas, 'showPage')
@@ -87,12 +124,12 @@ class PrisonerCreditNoticeTestCase(unittest.TestCase):
     def test_two_prisoners(self, canvas_save, canvas_show_page, canvas_draw_string):
         canvas_save.return_value = None
 
-        prisoners = [('JAMES HALLS', 'A1409AE', sample_location, [self.credit_cls(1000, 'Mrs. Halls')]),
-                     ('RICKIE RIPPIN', 'A1617FY', sample_location, [self.credit_cls(2500, 'JOHNSON & ASSOCIATES')])]
+        prisoners = [('JAMES HALLS', 'A1409AE', sample_location, [credit_cls(1000, 'Mrs. Halls')], []),
+                     ('RICKIE RIPPIN', 'A1617FY', sample_location, [credit_cls(2500, 'JOHNSON & ASSOCIATES')], [])]
         bundle = PrisonerCreditNoticeBundle('INB', prisoners, datetime.date(2017, 6, 16))
         bundle.render(None)
 
-        self.assertPageCredits(canvas_show_page, canvas_draw_string, [1, 1])
+        self.assertPageUpdates(canvas_show_page, canvas_draw_string, [[1], [1]])
 
     @mock.patch.object(Canvas, 'drawString')
     @mock.patch.object(Canvas, 'showPage')
@@ -100,11 +137,25 @@ class PrisonerCreditNoticeTestCase(unittest.TestCase):
     def test_one_prisoner_many_credits(self, canvas_save, canvas_show_page, canvas_draw_string):
         canvas_save.return_value = None
 
-        prisoners = [('JAMES HALLS', 'A1409AE', sample_location, [self.credit_cls(1000, 'Mrs. Halls')] * 11)]
+        prisoners = [('JAMES HALLS', 'A1409AE', sample_location, [credit_cls(1000, 'Mrs. Halls')] * 11, [])]
         bundle = PrisonerCreditNoticeBundle('INB', prisoners, datetime.date(2017, 6, 16))
         bundle.render(None)
 
-        self.assertPageCredits(canvas_show_page, canvas_draw_string, [10, 1])
+        self.assertPageUpdates(canvas_show_page, canvas_draw_string, [[9], [2]])
+
+    @mock.patch.object(Canvas, 'drawString')
+    @mock.patch.object(Canvas, 'showPage')
+    @mock.patch.object(Canvas, 'save')
+    def test_one_prisoner_many_updates(self, canvas_save, canvas_show_page, canvas_draw_string):
+        canvas_save.return_value = None
+
+        prisoners = [('JAMES HALLS', 'A1409AE', sample_location,
+                      [credit_cls(1000, 'Mrs. Halls')] * 11,
+                      [disbursement_cls(2000, 'bank_transfer', 'Mary', 'Johnson')] * 11)]
+        bundle = PrisonerCreditNoticeBundle('INB', prisoners, datetime.date(2017, 6, 16))
+        bundle.render(None)
+
+        self.assertPageUpdates(canvas_show_page, canvas_draw_string, [[9], [2, 3], [8]])
 
     @mock.patch.object(Canvas, 'drawString')
     @mock.patch.object(Canvas, 'showPage')
@@ -113,14 +164,12 @@ class PrisonerCreditNoticeTestCase(unittest.TestCase):
         canvas_save.return_value = None
 
         prisoners = [('NKFUVMY PMNDINERGGPGL-UMR-X-YFMESG', 'A1234AA', sample_location, [
-            self.credit_cls(3035011, 'X' * 100)
-        ])]
+            credit_cls(3035011, 'X' * 100)
+        ], [])]
         bundle = PrisonerCreditNoticeBundle('INB', prisoners, datetime.date(2017, 6, 16))
         bundle.render(None)
 
-        self.assertEqual(canvas_show_page.call_count, 1)
-        # sender name wraps to two lines (but still doesn't actually fit)
-        self.assertEqual(canvas_draw_string.call_count, self.text_per_template + self.text_per_credit + 1)
+        self.assertPageUpdates(canvas_show_page, canvas_draw_string, [[1]])
 
     @mock.patch.object(Canvas, 'drawString')
     @mock.patch.object(Canvas, 'showPage')
@@ -131,11 +180,11 @@ class PrisonerCreditNoticeTestCase(unittest.TestCase):
         malformed_location = {
             'description': 'LEIA2',
         }
-        prisoners = [('JAMES HALLS', 'A1409AE', malformed_location, [self.credit_cls(1000, 'Mrs. Halls')])]
+        prisoners = [('JAMES HALLS', 'A1409AE', malformed_location, [credit_cls(1000, 'Mrs. Halls')], [])]
         bundle = PrisonerCreditNoticeBundle('INB', prisoners, datetime.date(2017, 6, 16))
         bundle.render(None)
 
-        self.assertPageCredits(canvas_show_page, canvas_draw_string, [1])
+        self.assertPageUpdates(canvas_show_page, canvas_draw_string, [[1]])
         expected_string = 'Location: LEIA2'
         drawn_strings = [call[0][2] for call in canvas_draw_string.call_args_list]
         self.assertTrue(any(expected_string in drawn_string for drawn_string in drawn_strings))
@@ -146,11 +195,11 @@ class PrisonerCreditNoticeTestCase(unittest.TestCase):
     def test_location_complete(self, canvas_save, canvas_show_page, canvas_draw_string):
         canvas_save.return_value = None
 
-        prisoners = [('JAMES HALLS', 'A1409AE', sample_location, [self.credit_cls(1000, 'Mrs. Halls')])]
+        prisoners = [('JAMES HALLS', 'A1409AE', sample_location, [credit_cls(1000, 'Mrs. Halls')], [])]
         bundle = PrisonerCreditNoticeBundle('INB', prisoners, datetime.date(2017, 6, 16))
         bundle.render(None)
 
-        self.assertPageCredits(canvas_show_page, canvas_draw_string, [1])
+        self.assertPageUpdates(canvas_show_page, canvas_draw_string, [[1]])
         expected_string = 'Wing: A    Landing: 2    Cell: 002'
         drawn_strings = [call[0][2] for call in canvas_draw_string.call_args_list]
         self.assertTrue(any(expected_string in drawn_string for drawn_string in drawn_strings))
@@ -169,11 +218,12 @@ class CreatePrisonerNoticesTestCase(NoticesCommandTestCase):
     def setUp(self):
         super().setUp()
         self.assign_email_addresses()
-        credited_logs = Log.objects.filter(action=LOG_ACTIONS.CREDITED).order_by('-created')
+        DisbursementLog.objects.filter(action=DISBURSEMENT_ACTIONS.SENT).delete()
+        credited_logs = CreditLog.objects.filter(action=CREDIT_ACTIONS.CREDITED).order_by('-created')
         self.latest_log = credited_logs.first()
         credited_logs.exclude(pk=self.latest_log.pk).delete()
         self.latest_credit = self.latest_log.credit
-        # leave only 1 as credited
+        # leave only 1 credit as credited and no sent disbursements
 
     @override_nomis_settings
     @mock.patch('credit.management.commands.create_prisoner_credit_notices.PrisonerCreditNoticeBundle')
@@ -196,7 +246,8 @@ class CreatePrisonerNoticesTestCase(NoticesCommandTestCase):
                 self.latest_credit.prisoner_name,
                 self.latest_credit.prisoner_number,
                 expected_location,
-                [self.latest_credit]
+                [self.latest_credit],
+                [],
             )],
             self.latest_log.created.date()
         )
@@ -287,6 +338,7 @@ class SendPrisonerCreditNoticeTestCase(NoticesCommandTestCase):
         nomis_get.side_effect = NotImplementedError
         self.assign_email_addresses()
         Credit.objects.credited().delete()
+        Disbursement.objects.sent().delete()
         call_command('send_prisoner_credit_notices', verbosity=0)
         self.assertEqual(len(mail.outbox), 0)
 
@@ -294,10 +346,11 @@ class SendPrisonerCreditNoticeTestCase(NoticesCommandTestCase):
     def test_one_email_per_prison(self, nomis_get):
         nomis_get.return_value = None
         self.assign_email_addresses()
-        credited_logs = Log.objects.filter(action=LOG_ACTIONS.CREDITED).order_by('-created')
+        Disbursement.objects.sent().delete()
+        credited_logs = CreditLog.objects.filter(action=CREDIT_ACTIONS.CREDITED).order_by('-created')
         latest = credited_logs.first().created.date()
-        credited_logs = Log.objects.filter(
-            action=LOG_ACTIONS.CREDITED,
+        credited_logs = CreditLog.objects.filter(
+            action=CREDIT_ACTIONS.CREDITED,
             created__date__range=(latest, latest + datetime.timedelta(days=1))
         )
         prison_set = {credited_log.credit.prison_id for credited_log in credited_logs}
