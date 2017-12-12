@@ -4,6 +4,17 @@ from django.db.transaction import atomic
 from .constants import LOG_ACTIONS, DISBURSEMENT_RESOLUTION
 
 
+class DisbursementQuerySet(models.QuerySet):
+    def rejected(self):
+        return self.filter(resolution=DISBURSEMENT_RESOLUTION.REJECTED)
+
+    def confirmed(self):
+        return self.filter(resolution=DISBURSEMENT_RESOLUTION.CONFIRMED)
+
+    def sent(self):
+        return self.filter(resolution=DISBURSEMENT_RESOLUTION.SENT)
+
+
 class DisbursementManager(models.Manager):
 
     @atomic

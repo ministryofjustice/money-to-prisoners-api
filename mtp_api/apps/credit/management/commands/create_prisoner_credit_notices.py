@@ -9,9 +9,11 @@ from django.utils.timezone import make_aware, now
 from mtp_common.nomis import get as nomis_get
 import requests
 
-from credit.constants import LOG_ACTIONS
-from credit.models import Log
+from credit.constants import LOG_ACTIONS as CREDIT_ACTIONS
+from credit.models import Log as CreditLog
 from credit.notices.prisoner_credits import PrisonerCreditNoticeBundle
+from disbursement.constants import LOG_ACTIONS as DISBURSEMENT_ACTIONS
+from disbursement.models import Log as DisbursementLog
 from prison.models import Prison
 
 
@@ -46,33 +48,49 @@ class Command(BaseCommand):
         date_range = (make_aware(datetime.datetime.combine(date, datetime.time.min)),
                       make_aware(datetime.datetime.combine(date, datetime.time.max)))
 
-        credit_logs = Log.objects.filter(
-            action=LOG_ACTIONS.CREDITED,
+        credit_logs = CreditLog.objects.filter(
+            action=CREDIT_ACTIONS.CREDITED,
             created__range=date_range,
             credit__prison=prison.pk,
         )
         credit_count = credit_logs.count()
-        if not credit_count:
+        disbursement_logs = DisbursementLog.objects.filter(
+            action=DISBURSEMENT_ACTIONS.SENT,
+            created__range=date_range,
+            disbursement__prison=prison.pk,
+        )
+        disbursement_count = disbursement_logs.count()
+        if credit_count + disbursement_count == 0:
             if verbosity:
-                self.stdout.write('Nothing credited at %s on %s' % (prison, date))
+                self.stdout.write('Nothing credited or disbursed at %s on %s' % (prison, date))
             return
         if verbosity > 1:
-            self.stdout.write('%d credits received at %s on %s' % (credit_count, prison, date))
+            self.stdout.write('%d credits received, %d disbursements sent at %s on %s' % (
+                credit_count, disbursement_count, prison, date,
+            ))
 
-        prisoner_credits = collections.defaultdict(list)
-        for credit in credit_logs:
-            credit = credit.credit
-            prisoner_credits[credit.prisoner_number].append(credit)
+        prisoner_updates = collections.defaultdict(lambda: {'credits': [], 'disbursements': []})
+        for log in credit_logs:
+            credit = log.credit
+            prisoner_updates[credit.prisoner_number]['credits'].append(credit)
+        for log in disbursement_logs:
+            disbursement = log.disbursement
+            prisoner_updates[disbursement.prisoner_number]['disbursements'].append(disbursement)
 
         prisoners = []
-        for prisoner_number in sorted(prisoner_credits.keys()):
-            credits = prisoner_credits[prisoner_number]
+        for prisoner_number in sorted(prisoner_updates.keys()):
+            credits_list = prisoner_updates[prisoner_number]['credits']
+            credits_list = sorted(credits_list, key=lambda credit: credit.received_at)
+            disbursements_list = prisoner_updates[prisoner_number]['disbursements']
+            disbursements_list = sorted(disbursements_list, key=lambda disbursement: disbursement.modified)
+            prisoner_name = (credits_list or disbursements_list)[0].prisoner_name
             location = self.get_housing(prisoner_number)
             prisoners.append((
-                credits[0].prisoner_name,
+                prisoner_name,
                 prisoner_number,
                 location,
-                sorted(credits, key=lambda credit: credit.received_at),
+                credits_list,
+                disbursements_list,
             ))
 
         if verbosity:

@@ -1,4 +1,5 @@
 import pathlib
+import re
 
 from django.conf import settings
 from django.utils.translation import gettext as _
@@ -67,6 +68,29 @@ class NoticeBundle:
     def text_width(self, text):
         return self.canvas.stringWidth(text) / mm
 
+    def truncate_text_to_width(self, width, text, ellipsis='…'):
+        text_width = self.text_width(text)
+        if text_width <= width:
+            return text
+        boundaries = []
+
+        def record_boundary(match):
+            boundaries.append(match.span()[0])
+            return ' '
+
+        re.sub(r'\W', record_boundary, text)
+        if boundaries:
+            truncated_text = text
+            while boundaries and text_width > width:
+                truncated_text = text[:boundaries.pop()] + ellipsis
+                text_width = self.text_width(truncated_text)
+        else:
+            truncated_text = text + ellipsis
+            while text_width > width:
+                truncated_text = truncated_text[:-2] + ellipsis
+                text_width = self.text_width(truncated_text)
+        return truncated_text
+
     def draw_text(self, x, y, text, align='L'):
         x *= mm
         if align == 'R':
@@ -89,3 +113,6 @@ class NoticeBundle:
 
     def draw_rect(self, x, y, width, height, **kwargs):
         self.canvas.rect(x * mm, (self.page_height - y - height) * mm, width, height * mm, **kwargs)
+
+    def draw_circle(self, x, y, radius, **kwargs):
+        self.canvas.circle(x * mm, (self.page_height - y) * mm, radius * mm, **kwargs)
