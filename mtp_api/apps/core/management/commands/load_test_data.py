@@ -10,6 +10,7 @@ from core.tests.utils import (
 )
 from credit.models import Credit
 from disbursement.models import Disbursement
+from disbursement.tests.utils import generate_disbursements
 from payment.models import Batch, Payment
 from payment.tests.utils import generate_payments
 from prison.models import Prison
@@ -50,6 +51,8 @@ class Command(BaseCommand):
                             help='Number of new transactions to create')
         parser.add_argument('--number-of-payments', default=100, type=int,
                             help='Number of new payments to create')
+        parser.add_argument('--number-of-disbursements', default=100, type=int,
+                            help='Number of new disbursements to create')
         parser.add_argument('--days-of-history', default=7, type=int,
                             help='Number of days of historical credits')
 
@@ -119,6 +122,7 @@ class Command(BaseCommand):
 
         number_of_transactions = options['number_of_transactions']
         number_of_payments = options['number_of_payments']
+        number_of_disbursements = options['number_of_disbursements']
         days_of_history = options['days_of_history']
         if credits == 'random':
             print_message('Generating random credits')
@@ -140,6 +144,10 @@ class Command(BaseCommand):
                 consistent_history=True,
                 days_of_history=days_of_history
             )
+        generate_disbursements(
+            disbursement_batch=number_of_disbursements,
+            days_of_history=days_of_history
+        )
         call_command('update_security_profiles')
 
     def handle_prod(self, **options):
