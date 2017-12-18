@@ -135,6 +135,7 @@ class RecreateTestDataView(AdminViewMixin, FormView):
             'stderr': output,
             'number_of_transactions': form.cleaned_data['number_of_transactions'],
             'number_of_payments': form.cleaned_data['number_of_payments'],
+            'number_of_disbursements': form.cleaned_data['number_of_disbursements'],
             'number_of_prisoners': form.cleaned_data['number_of_prisoners'],
             'days_of_history': form.cleaned_data['days_of_history'],
         }

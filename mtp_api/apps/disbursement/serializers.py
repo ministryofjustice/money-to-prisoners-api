@@ -1,11 +1,14 @@
+from django.contrib.auth import get_user_model
 from django.db.transaction import atomic
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from mtp_auth.models import PrisonUserMapping
 from prison.models import PrisonerLocation, Prison
-from .models import Disbursement
+from .models import Disbursement, Log
 from .signals import disbursement_created
+
+User = get_user_model()
 
 
 class PrisonerInPrisonValidator():
@@ -39,7 +42,30 @@ class PrisonPermittedValidator():
             )
 
 
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = (
+            'username',
+            'first_name',
+            'last_name',
+        )
+
+
+class LogSerializer(serializers.ModelSerializer):
+    user = UserSerializer()
+
+    class Meta:
+        model = Log
+        fields = (
+            'user',
+            'action',
+            'created',
+        )
+
+
 class DisbursementSerializer(serializers.ModelSerializer):
+    log_set = LogSerializer(many=True, required=False)
     prison = serializers.PrimaryKeyRelatedField(
         queryset=Prison.objects.all(),
         validators=[PrisonPermittedValidator()]

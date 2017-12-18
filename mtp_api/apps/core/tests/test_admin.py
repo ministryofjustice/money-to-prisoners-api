@@ -55,6 +55,7 @@ class RecreateTestDataViewTestCase(TestCase):
                 response = self.client.post(self.url, data={
                     'scenario': 'random',
                     'number_of_transactions': '50',
+                    'number_of_disbursements': '50',
                     'number_of_payments': '50',
                     'number_of_prisoners': '50',
                     'days_of_history': '7',

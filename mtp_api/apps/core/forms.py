@@ -14,6 +14,7 @@ class RecreateTestDataForm(forms.Form):
     )
     number_of_transactions = forms.IntegerField(initial=50)
     number_of_payments = forms.IntegerField(initial=50)
+    number_of_disbursements = forms.IntegerField(initial=50)
     number_of_prisoners = forms.IntegerField(initial=50)
     days_of_history = forms.IntegerField(initial=7)
 
