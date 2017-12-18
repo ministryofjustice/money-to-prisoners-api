@@ -228,6 +228,7 @@ class CreatePrisonerNoticesTestCase(NoticesCommandTestCase):
     @override_nomis_settings
     @mock.patch('credit.management.commands.create_prisoner_credit_notices.PrisonerCreditNoticeBundle')
     def call_command(self, housing_response, expected_location, bundle_class):
+        credited_date = self.latest_credit.modified.date()
         with responses.RequestsMock() as rsps:
             location_response = {
                 'establishment': {'code': self.latest_credit.prison.nomis_id, 'desc': self.latest_credit.prison.name},
@@ -238,8 +239,13 @@ class CreatePrisonerNoticesTestCase(NoticesCommandTestCase):
                 urljoin(settings.NOMIS_API_BASE_URL, '/offenders/%s/location' % self.latest_credit.prisoner_number),
                 json=location_response,
             )
-            call_command('create_prisoner_credit_notices', '/tmp/fake-path', self.latest_credit.prison.nomis_id,
-                         verbosity=0)
+            call_command(
+                'create_prisoner_credit_notices',
+                '/tmp/fake-path',
+                self.latest_credit.prison.nomis_id,
+                verbosity=0,
+                date=credited_date.strftime('%Y-%m-%d')
+            )
         bundle_class.assert_called_once_with(
             self.latest_credit.prison.name,
             [(
