@@ -85,6 +85,7 @@ def generate_initial_disbursement_data(tot=100, days_of_history=7):
         data = {
             'amount': amount,
             'prisoner_number': prisoner.prisoner_number,
+            'prisoner_name': prisoner.prisoner_name,
             'prison': prisoner.prison,
             'created': random_date
         }
