@@ -16,6 +16,7 @@ from transaction.utils import format_amount
 class Disbursement(TimeStampedModel):
     amount = models.PositiveIntegerField()
     prisoner_number = models.CharField(max_length=250)
+    prisoner_name = models.CharField(max_length=250)
     prison = models.ForeignKey(Prison, on_delete=models.PROTECT)
     resolution = models.CharField(
         max_length=50, choices=DISBURSEMENT_RESOLUTION,
@@ -61,6 +62,7 @@ class Disbursement(TimeStampedModel):
         disbursement_sent.send(Disbursement, self, by_user)
 
     class Meta:
+        ordering = ('id',)
         permissions = (
             ('view_disbursement', 'Can view disbursements'),
         )
@@ -84,6 +86,9 @@ class Log(TimeStampedModel):
     action = models.CharField(max_length=50, choices=LOG_ACTIONS)
 
     objects = LogManager()
+
+    class Meta:
+        ordering = ('id',)
 
     def __str__(self):
         return 'Disbursement {id} {action} by {user}'.format(

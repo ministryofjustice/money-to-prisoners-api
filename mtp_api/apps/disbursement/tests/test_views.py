@@ -66,6 +66,7 @@ class CreateDisbursementTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(disbursements.count(), 1)
         self.assertEqual(disbursements[0].resolution, DISBURSEMENT_RESOLUTION.PENDING)
         self.assertEqual(disbursements[0].method, DISBURSEMENT_METHOD.BANK_TRANSFER)
+        self.assertEqual(disbursements[0].prisoner_name, prisoner.prisoner_name)
 
     def test_create_disbursement_fails_for_non_permitted_prison(self):
         user = self.prison_clerks[0]

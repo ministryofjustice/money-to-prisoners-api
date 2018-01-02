@@ -70,10 +70,14 @@ class DisbursementSerializer(serializers.ModelSerializer):
         queryset=Prison.objects.all(),
         validators=[PrisonPermittedValidator()]
     )
+    prisoner_name = serializers.CharField(required=False)
 
     @atomic
-    def create(self, *args, **kwargs):
-        new_disbursement = super().create(*args, **kwargs)
+    def create(self, validated_data, *args, **kwargs):
+        validated_data['prisoner_name'] = PrisonerLocation.objects.get(
+            prisoner_number=validated_data['prisoner_number']
+        ).prisoner_name
+        new_disbursement = super().create(validated_data, *args, **kwargs)
         disbursement_created.send(
             sender=Disbursement,
             disbursement=new_disbursement,
