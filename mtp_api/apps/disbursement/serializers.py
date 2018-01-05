@@ -6,26 +6,27 @@ from rest_framework import serializers
 from mtp_auth.models import PrisonUserMapping
 from prison.models import PrisonerLocation, Prison
 from .models import Disbursement, Log
-from .signals import disbursement_created
+from .signals import disbursement_created, disbursement_edited
 
 User = get_user_model()
 
 
 class PrisonerInPrisonValidator():
     def __call__(self, data):
-        prisoner_number = data['prisoner_number']
-        prison = data['prison']
+        if 'prisoner_number' in data:
+            prisoner_number = data['prisoner_number']
+            prison = data['prison']
 
-        try:
-            PrisonerLocation.objects.get(
-                prisoner_number=prisoner_number,
-                prison=prison
-            )
-        except PrisonerLocation.DoesNotExist:
-            raise serializers.ValidationError(
-                _('Prisoner %(prisoner_number)s is not in %(prison)s') %
-                {'prisoner_number': prisoner_number, 'prison': prison}
-            )
+            try:
+                PrisonerLocation.objects.get(
+                    prisoner_number=prisoner_number,
+                    prison=prison
+                )
+            except PrisonerLocation.DoesNotExist:
+                raise serializers.ValidationError(
+                    _('Prisoner %(prisoner_number)s is not in %(prison)s') %
+                    {'prisoner_number': prisoner_number, 'prison': prison}
+                )
 
 
 class PrisonPermittedValidator():
@@ -71,19 +72,35 @@ class DisbursementSerializer(serializers.ModelSerializer):
         validators=[PrisonPermittedValidator()]
     )
     prisoner_name = serializers.CharField(required=False)
+    resolution = serializers.CharField(read_only=True)
 
     @atomic
-    def create(self, validated_data, *args, **kwargs):
+    def create(self, validated_data):
         validated_data['prisoner_name'] = PrisonerLocation.objects.get(
             prisoner_number=validated_data['prisoner_number']
         ).prisoner_name
-        new_disbursement = super().create(validated_data, *args, **kwargs)
+        new_disbursement = super().create(validated_data)
         disbursement_created.send(
             sender=Disbursement,
             disbursement=new_disbursement,
             by_user=self.context['request'].user
         )
         return new_disbursement
+
+    @atomic
+    def update(self, instance, validated_data):
+        if 'prisoner_number' in validated_data:
+            validated_data['prisoner_name'] = PrisonerLocation.objects.get(
+                prisoner_number=validated_data['prisoner_number']
+            ).prisoner_name
+        updated_disbursement = super().update(instance, validated_data)
+        if validated_data:
+            disbursement_edited.send(
+                sender=Disbursement,
+                disbursement=updated_disbursement,
+                by_user=self.context['request'].user
+            )
+        return updated_disbursement
 
     class Meta:
         model = Disbursement

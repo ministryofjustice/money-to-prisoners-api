@@ -4,6 +4,7 @@ from extended_choices import Choices
 
 LOG_ACTIONS = Choices(
     ('CREATED', 'created', _('Created')),
+    ('EDITED', 'edited', _('Edited')),
     ('REJECTED', 'rejected', _('Rejected')),
     ('CONFIRMED', 'confirmed', _('Confirmed')),
     ('SENT', 'sent', _('Sent')),

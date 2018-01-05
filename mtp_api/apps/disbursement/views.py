@@ -13,6 +13,7 @@ from mtp_auth.permissions import (
     CASHBOOK_OAUTH_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID,
     BANK_ADMIN_OAUTH_CLIENT_ID, get_client_permissions_class
 )
+from . import InvalidDisbursementStateException
 from .constants import DISBURSEMENT_RESOLUTION
 from .models import Disbursement
 from .serializers import DisbursementSerializer, DisbursementIdsSerializer
@@ -50,7 +51,7 @@ class DisbursementViewMixin():
 
 class DisbursementView(
     DisbursementViewMixin, mixins.CreateModelMixin, mixins.ListModelMixin,
-    viewsets.GenericViewSet
+    mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet
 ):
     queryset = Disbursement.objects.all().order_by('-id')
     serializer_class = DisbursementSerializer
@@ -87,9 +88,20 @@ class ReviewDisbursementsView(DisbursementViewMixin, APIView):
         deserialized.is_valid(raise_exception=True)
 
         disbursement_ids = deserialized.data.get('disbursement_ids', [])
-        Disbursement.objects.update_resolution(
-            self.get_queryset(), disbursement_ids, self.resolution, request.user
-        )
+        try:
+            Disbursement.objects.update_resolution(
+                self.get_queryset(), disbursement_ids, self.resolution, request.user
+            )
+        except InvalidDisbursementStateException as e:
+            return Response(
+                data={
+                    'errors': [{
+                        'msg': 'Some disbursements were not in a valid state for this operation.',
+                        'ids': e.conflict_ids,
+                    }]
+                },
+                status=status.HTTP_409_CONFLICT
+            )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 

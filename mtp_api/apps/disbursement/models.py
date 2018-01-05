@@ -7,7 +7,7 @@ from .constants import LOG_ACTIONS, DISBURSEMENT_RESOLUTION, DISBURSEMENT_METHOD
 from .managers import DisbursementManager, DisbursementQuerySet, LogManager
 from .signals import (
     disbursement_confirmed, disbursement_created, disbursement_rejected,
-    disbursement_sent
+    disbursement_sent, disbursement_edited
 )
 from prison.models import Prison
 from transaction.utils import format_amount
@@ -101,6 +101,11 @@ class Log(TimeStampedModel):
 @receiver(disbursement_created)
 def disbursement_created_receiver(sender, disbursement, by_user, **kwargs):
     Log.objects.disbursements_created([disbursement], by_user)
+
+
+@receiver(disbursement_edited)
+def disbursement_edited_receiver(sender, disbursement, by_user, **kwargs):
+    Log.objects.disbursements_edited([disbursement], by_user)
 
 
 @receiver(disbursement_rejected)
