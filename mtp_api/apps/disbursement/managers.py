@@ -1,6 +1,7 @@
 from django.db import models
 from django.db.transaction import atomic
 
+from . import InvalidDisbursementStateException
 from .constants import LOG_ACTIONS, DISBURSEMENT_RESOLUTION
 
 
@@ -18,10 +19,22 @@ class DisbursementQuerySet(models.QuerySet):
 class DisbursementManager(models.Manager):
 
     @atomic
-    def update_resolution(self, queryset, credit_ids, resolution, user):
+    def update_resolution(self, queryset, disbursement_ids, resolution, user):
+        required_state = (
+            DISBURSEMENT_RESOLUTION.CONFIRMED if
+            resolution == DISBURSEMENT_RESOLUTION.SENT else
+            DISBURSEMENT_RESOLUTION.PENDING
+        )
+
         to_update = queryset.filter(
-            pk__in=credit_ids
+            pk__in=disbursement_ids,
+            resolution=required_state
         ).select_for_update()
+
+        ids_to_update = [c.id for c in to_update]
+        conflict_ids = set(disbursement_ids) - set(ids_to_update)
+        if conflict_ids:
+            raise InvalidDisbursementStateException(sorted(conflict_ids))
 
         from .models import Log
         if resolution == DISBURSEMENT_RESOLUTION.REJECTED:

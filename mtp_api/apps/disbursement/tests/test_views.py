@@ -222,8 +222,7 @@ class UpdateDisbursementsTestCase(AuthTestCaseMixin, APITestCase):
         updated = Disbursement.objects.get(pk=disbursement.pk)
         self.assertEqual(updated.resolution, DISBURSEMENT_RESOLUTION.PENDING)
 
-        logs = Log.objects.all()
-        self.assertEqual(logs.count(), 0)
+        self.assertEqual(Log.objects.all().count(), 0)
 
     def test_cannot_update_disbursement_for_different_prison(self):
         user = self.prison_clerks[0]
@@ -248,8 +247,7 @@ class UpdateDisbursementsTestCase(AuthTestCaseMixin, APITestCase):
         updated = Disbursement.objects.get(pk=disbursement.pk)
         self.assertEqual(updated.amount, 1000)
 
-        logs = Log.objects.all()
-        self.assertEqual(logs.count(), 0)
+        self.assertEqual(Log.objects.all().count(), 0)
 
 
 class UpdateDisbursementResolutionTestCase(AuthTestCaseMixin, APITestCase):
@@ -290,6 +288,36 @@ class UpdateDisbursementResolutionTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(logs[0].user, user)
         self.assertEqual(logs[0].action, LOG_ACTIONS.REJECTED)
 
+    def test_can_only_confirm_pending_disbursement(self):
+        user = self.prison_clerks[0]
+
+        disbursement = Disbursement.objects.create(
+            amount=1000,
+            prisoner_number='A1234BC',
+            prison=Prison.objects.get(pk='IXB'),
+            method=DISBURSEMENT_METHOD.BANK_TRANSFER,
+            recipient_first_name='Sam',
+            recipient_last_name='Hall',
+            resolution=DISBURSEMENT_RESOLUTION.REJECTED
+        )
+
+        response = self.client.post(
+            reverse('disbursement-confirm'),
+            data={'disbursement_ids': [disbursement.id]}, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertEqual(
+            response.data['errors'][0]['ids'],
+            [disbursement.id]
+        )
+
+        disbursements = Disbursement.objects.all()
+        self.assertEqual(disbursements[0].resolution, DISBURSEMENT_RESOLUTION.REJECTED)
+
+        self.assertEqual(Log.objects.all().count(), 0)
+
     def test_cannot_reject_disbursement_for_non_permitted_prison(self):
         user = self.prison_clerks[0]
 
@@ -310,14 +338,13 @@ class UpdateDisbursementResolutionTestCase(AuthTestCaseMixin, APITestCase):
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
 
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
 
         disbursements = Disbursement.objects.all()
         self.assertEqual(disbursements.count(), 1)
         self.assertEqual(disbursements[0].resolution, DISBURSEMENT_RESOLUTION.PENDING)
 
-        logs = Log.objects.all()
-        self.assertEqual(logs.count(), 0)
+        self.assertEqual(Log.objects.all().count(), 0)
 
     def test_send_disbursement(self):
         user = self.bank_admins[0]
@@ -328,7 +355,8 @@ class UpdateDisbursementResolutionTestCase(AuthTestCaseMixin, APITestCase):
             prison=Prison.objects.get(pk='IXB'),
             method=DISBURSEMENT_METHOD.BANK_TRANSFER,
             recipient_first_name='Sam',
-            recipient_last_name='Hall'
+            recipient_last_name='Hall',
+            resolution=DISBURSEMENT_RESOLUTION.CONFIRMED
         )
         disbursement2 = Disbursement.objects.create(
             amount=1000,
@@ -336,11 +364,9 @@ class UpdateDisbursementResolutionTestCase(AuthTestCaseMixin, APITestCase):
             prison=Prison.objects.get(pk='INP'),
             method=DISBURSEMENT_METHOD.BANK_TRANSFER,
             recipient_first_name='Sam',
-            recipient_last_name='Hall'
+            recipient_last_name='Hall',
+            resolution=DISBURSEMENT_RESOLUTION.CONFIRMED
         )
-
-        self.assertEqual(disbursement1.resolution, DISBURSEMENT_RESOLUTION.PENDING)
-        self.assertEqual(disbursement2.resolution, DISBURSEMENT_RESOLUTION.PENDING)
 
         response = self.client.post(
             reverse('disbursement-send'),
@@ -363,3 +389,39 @@ class UpdateDisbursementResolutionTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(logs[1].disbursement, disbursements[1])
         self.assertEqual(logs[1].user, user)
         self.assertEqual(logs[1].action, LOG_ACTIONS.SENT)
+
+    def test_cannot_send_unconfirmed_disbursement(self):
+        user = self.bank_admins[0]
+
+        disbursement1 = Disbursement.objects.create(
+            amount=1000,
+            prisoner_number='A1234BC',
+            prison=Prison.objects.get(pk='IXB'),
+            method=DISBURSEMENT_METHOD.BANK_TRANSFER,
+            recipient_first_name='Sam',
+            recipient_last_name='Hall',
+        )
+        disbursement2 = Disbursement.objects.create(
+            amount=1000,
+            prisoner_number='A1234BD',
+            prison=Prison.objects.get(pk='INP'),
+            method=DISBURSEMENT_METHOD.BANK_TRANSFER,
+            recipient_first_name='Sam',
+            recipient_last_name='Hall',
+        )
+
+        response = self.client.post(
+            reverse('disbursement-send'),
+            data={'disbursement_ids': [disbursement1.id, disbursement2.id]},
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+
+        disbursements = Disbursement.objects.all()
+        self.assertEqual(disbursements.count(), 2)
+        self.assertEqual(disbursements[0].resolution, DISBURSEMENT_RESOLUTION.PENDING)
+        self.assertEqual(disbursements[1].resolution, DISBURSEMENT_RESOLUTION.PENDING)
+
+        self.assertEqual(Log.objects.all().count(), 0)
