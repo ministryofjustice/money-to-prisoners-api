@@ -50,7 +50,7 @@ class DisbursementViewMixin():
 
 class DisbursementView(
     DisbursementViewMixin, mixins.CreateModelMixin, mixins.ListModelMixin,
-    viewsets.GenericViewSet
+    mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet
 ):
     queryset = Disbursement.objects.all().order_by('-id')
     serializer_class = DisbursementSerializer

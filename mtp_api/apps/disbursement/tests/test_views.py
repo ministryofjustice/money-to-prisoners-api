@@ -68,6 +68,11 @@ class CreateDisbursementTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(disbursements[0].method, DISBURSEMENT_METHOD.BANK_TRANSFER)
         self.assertEqual(disbursements[0].prisoner_name, prisoner.prisoner_name)
 
+        logs = Log.objects.all()
+        self.assertEqual(logs[0].disbursement, disbursements[0])
+        self.assertEqual(logs[0].user, user)
+        self.assertEqual(logs[0].action, LOG_ACTIONS.CREATED)
+
     def test_create_disbursement_fails_for_non_permitted_prison(self):
         user = self.prison_clerks[0]
 
@@ -157,6 +162,94 @@ class ListDisbursementsTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(data['count'], 1)
         self.assertEqual(data['results'][0]['recipient_first_name'], 'Sam')
         self.assertEqual(data['results'][0]['recipient_last_name'], 'Hall')
+
+
+class UpdateDisbursementsTestCase(AuthTestCaseMixin, APITestCase):
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
+
+    def setUp(self):
+        super().setUp()
+        self.prison_clerks, _, self.bank_admins, _, _, _ = make_test_users()
+
+    def test_update_disbursement(self):
+        user = self.prison_clerks[0]
+
+        disbursement = Disbursement.objects.create(
+            amount=1000,
+            prisoner_number='A1234BC',
+            prison=Prison.objects.get(pk='IXB'),
+            method=DISBURSEMENT_METHOD.BANK_TRANSFER,
+            recipient_first_name='Sam',
+            recipient_last_name='Hall'
+        )
+
+        response = self.client.patch(
+            reverse('disbursement-detail', args=[disbursement.pk]),
+            data={'amount': 2000}, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        updated = Disbursement.objects.get(pk=disbursement.pk)
+        self.assertEqual(updated.amount, 2000)
+
+        logs = Log.objects.all()
+        self.assertEqual(logs[0].disbursement, disbursement)
+        self.assertEqual(logs[0].user, user)
+        self.assertEqual(logs[0].action, LOG_ACTIONS.EDITED)
+
+    def test_cannot_update_resolution(self):
+        user = self.prison_clerks[0]
+
+        disbursement = Disbursement.objects.create(
+            amount=1000,
+            prisoner_number='A1234BC',
+            prison=Prison.objects.get(pk='IXB'),
+            method=DISBURSEMENT_METHOD.BANK_TRANSFER,
+            recipient_first_name='Sam',
+            recipient_last_name='Hall'
+        )
+
+        response = self.client.patch(
+            reverse('disbursement-detail', args=[disbursement.pk]),
+            data={'resolution': DISBURSEMENT_RESOLUTION.SENT}, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        updated = Disbursement.objects.get(pk=disbursement.pk)
+        self.assertEqual(updated.resolution, DISBURSEMENT_RESOLUTION.PENDING)
+
+        logs = Log.objects.all()
+        self.assertEqual(logs.count(), 0)
+
+    def test_cannot_update_disbursement_for_different_prison(self):
+        user = self.prison_clerks[0]
+
+        disbursement = Disbursement.objects.create(
+            amount=1000,
+            prisoner_number='A1234BC',
+            prison=Prison.objects.get(pk='INP'),
+            method=DISBURSEMENT_METHOD.BANK_TRANSFER,
+            recipient_first_name='Sam',
+            recipient_last_name='Hall'
+        )
+
+        response = self.client.patch(
+            reverse('disbursement-detail', args=[disbursement.pk]),
+            data={'amount': 2000}, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+        updated = Disbursement.objects.get(pk=disbursement.pk)
+        self.assertEqual(updated.amount, 1000)
+
+        logs = Log.objects.all()
+        self.assertEqual(logs.count(), 0)
 
 
 class UpdateDisbursementResolutionTestCase(AuthTestCaseMixin, APITestCase):

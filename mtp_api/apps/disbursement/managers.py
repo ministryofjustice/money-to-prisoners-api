@@ -49,6 +49,9 @@ class LogManager(models.Manager):
     def disbursements_created(self, disbursements, by_user):
         self._log_action(LOG_ACTIONS.CREATED, disbursements, by_user)
 
+    def disbursements_edited(self, disbursements, by_user):
+        self._log_action(LOG_ACTIONS.EDITED, disbursements, by_user)
+
     def disbursements_rejected(self, disbursements, by_user):
         self._log_action(LOG_ACTIONS.REJECTED, disbursements, by_user)
 
