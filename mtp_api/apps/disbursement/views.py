@@ -16,7 +16,10 @@ from mtp_auth.permissions import (
 from . import InvalidDisbursementStateException
 from .constants import DISBURSEMENT_RESOLUTION
 from .models import Disbursement
-from .serializers import DisbursementSerializer, DisbursementIdsSerializer
+from .serializers import (
+    DisbursementSerializer, DisbursementIdsSerializer,
+    DisbursementConfirmationSerializer
+)
 
 
 class DisbursementFilter(django_filters.FilterSet):
@@ -63,6 +66,20 @@ class DisbursementView(
             BANK_ADMIN_OAUTH_CLIENT_ID
         )
     )
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.resolution == DISBURSEMENT_RESOLUTION.PENDING:
+            return super().update(request, *args, **kwargs)
+        else:
+            return Response(
+                data={
+                    'errors': [{
+                        'msg': 'This disbursement can no longer be modified.'
+                    }]
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class ResolveDisbursementsView(DisbursementViewMixin, APIView):

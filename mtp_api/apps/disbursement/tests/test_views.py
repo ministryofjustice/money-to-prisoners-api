@@ -249,6 +249,32 @@ class UpdateDisbursementsTestCase(AuthTestCaseMixin, APITestCase):
 
         self.assertEqual(Log.objects.all().count(), 0)
 
+    def test_cannot_update_non_pending_disbursement(self):
+        user = self.prison_clerks[0]
+
+        disbursement = Disbursement.objects.create(
+            amount=1000,
+            prisoner_number='A1234BC',
+            prison=Prison.objects.get(pk='IXB'),
+            method=DISBURSEMENT_METHOD.BANK_TRANSFER,
+            recipient_first_name='Sam',
+            recipient_last_name='Hall',
+            resolution=DISBURSEMENT_RESOLUTION.CONFIRMED
+        )
+
+        response = self.client.patch(
+            reverse('disbursement-detail', args=[disbursement.pk]),
+            data={'amount': 2000}, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        updated = Disbursement.objects.get(pk=disbursement.pk)
+        self.assertEqual(updated.amount, 1000)
+
+        self.assertEqual(Log.objects.all().count(), 0)
+
 
 class UpdateDisbursementResolutionTestCase(AuthTestCaseMixin, APITestCase):
     fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
