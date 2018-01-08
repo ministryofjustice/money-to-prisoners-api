@@ -40,6 +40,8 @@ class Disbursement(TimeStampedModel):
     # used by building societies to identify the account nr
     roll_number = models.CharField(max_length=50, blank=True, null=True)
 
+    nomis_transaction_id = models.CharField(max_length=50, blank=True, null=True)
+
     objects = DisbursementManager.from_queryset(DisbursementQuerySet)()
 
     @property
