@@ -20,11 +20,12 @@ class DisbursementManager(models.Manager):
 
     @atomic
     def update_resolution(self, queryset, disbursement_ids, resolution, user):
-        required_state = (
-            DISBURSEMENT_RESOLUTION.CONFIRMED if
-            resolution == DISBURSEMENT_RESOLUTION.SENT else
-            DISBURSEMENT_RESOLUTION.PENDING
-        )
+        if resolution == DISBURSEMENT_RESOLUTION.SENT:
+            required_state = DISBURSEMENT_RESOLUTION.CONFIRMED
+        elif resolution == DISBURSEMENT_RESOLUTION.CONFIRMED:
+            required_state = DISBURSEMENT_RESOLUTION.PRECONFIRMED
+        else:
+            required_state = DISBURSEMENT_RESOLUTION.PENDING
 
         to_update = queryset.filter(
             pk__in=disbursement_ids,

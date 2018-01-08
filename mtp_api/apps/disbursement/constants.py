@@ -14,6 +14,7 @@ LOG_ACTIONS = Choices(
 DISBURSEMENT_RESOLUTION = Choices(
     ('PENDING', 'pending', _('Pending')),
     ('REJECTED', 'rejected', _('Rejected')),
+    ('PRECONFIRMED', 'preconfirmed', _('Pre-confirmed')),
     ('CONFIRMED', 'confirmed', _('Confirmed')),
     ('SENT', 'sent', _('Sent')),
 )

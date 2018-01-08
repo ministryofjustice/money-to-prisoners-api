@@ -65,7 +65,7 @@ class DisbursementView(
     )
 
 
-class ReviewDisbursementsView(DisbursementViewMixin, APIView):
+class ResolveDisbursementsView(DisbursementViewMixin, APIView):
     serializer_class = DisbursementIdsSerializer
     action = 'update'
     resolution = NotImplemented
@@ -106,15 +106,19 @@ class ReviewDisbursementsView(DisbursementViewMixin, APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class RejectDisbursementsView(ReviewDisbursementsView):
+class RejectDisbursementsView(ResolveDisbursementsView):
     resolution = DISBURSEMENT_RESOLUTION.REJECTED
 
 
-class ConfirmDisbursementsView(ReviewDisbursementsView):
+class PreConfirmDisbursementsView(ResolveDisbursementsView):
+    resolution = DISBURSEMENT_RESOLUTION.PRECONFIRMED
+
+
+class ConfirmDisbursementsView(ResolveDisbursementsView):
     resolution = DISBURSEMENT_RESOLUTION.CONFIRMED
 
 
-class SendDisbursementsView(ReviewDisbursementsView):
+class SendDisbursementsView(ResolveDisbursementsView):
     resolution = DISBURSEMENT_RESOLUTION.SENT
 
     permission_classes = (
