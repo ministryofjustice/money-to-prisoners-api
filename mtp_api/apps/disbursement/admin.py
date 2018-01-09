@@ -1,5 +1,7 @@
 from django.contrib import admin
+from django.utils.translation import gettext_lazy as _
 
+from core.admin import add_short_description
 from disbursement.models import Disbursement, Log
 from transaction.utils import format_amount
 
@@ -27,6 +29,6 @@ class DisbursementAdmin(admin.ModelAdmin):
     inlines = (LogAdminInline,)
     date_hierarchy = 'created'
 
-    @classmethod
-    def formatted_amount(cls, instance):
+    @add_short_description(_('amount'))
+    def formatted_amount(self, instance):
         return format_amount(instance.amount)

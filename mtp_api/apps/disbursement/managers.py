@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models.functions import Concat
 from django.db.transaction import atomic
 
 from . import InvalidDisbursementStateException
@@ -20,6 +21,10 @@ class DisbursementQuerySet(models.QuerySet):
 
 
 class DisbursementManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().annotate(
+            recipient_name=Concat('recipient_first_name', models.Value(' '), 'recipient_last_name'),
+        )
 
     @atomic
     def update_resolution(self, queryset, disbursement_ids, resolution, user):
