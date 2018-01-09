@@ -152,7 +152,7 @@ def create_disbursement_logs(disbursement):
 
     if disbursement.resolution == DISBURSEMENT_RESOLUTION.SENT:
         sending_user = bank_admins.first()
-        confirmed = disbursement.created - timedelta(hours=3)
+        confirmed = disbursement.created + timedelta(hours=3)
         with MockModelTimestamps(confirmed, confirmed):
             log_data['action'] = LOG_ACTIONS.CONFIRMED
             log_data['user'] = confirming_user
