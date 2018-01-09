@@ -63,6 +63,10 @@ class Disbursement(TimeStampedModel):
     def recipient_name(self):
         return '%s %s' % (self.recipient_first_name, self.recipient_last_name)
 
+    @recipient_name.setter
+    def recipient_name(self, _):
+        pass
+
     def reject(self, by_user):
         if not self.resolution_permitted(DISBURSEMENT_RESOLUTION.REJECTED):
             raise InvalidDisbursementStateException([self.id])
