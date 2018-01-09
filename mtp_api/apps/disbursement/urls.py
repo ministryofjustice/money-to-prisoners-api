@@ -10,6 +10,8 @@ router.register(r'disbursements', views.DisbursementView)
 urlpatterns = [
     url(r'^disbursements/actions/reject/$',
         views.RejectDisbursementsView.as_view(), name='disbursement-reject'),
+    url(r'^disbursements/actions/preconfirm/$',
+        views.PreConfirmDisbursementsView.as_view(), name='disbursement-preconfirm'),
     url(r'^disbursements/actions/confirm/$',
         views.ConfirmDisbursementsView.as_view(), name='disbursement-confirm'),
     url(r'^disbursements/actions/send/$',
