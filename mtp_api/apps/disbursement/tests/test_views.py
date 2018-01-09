@@ -1,12 +1,15 @@
+import itertools
+
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from core.tests.utils import make_test_users
 from disbursement.constants import (
     DISBURSEMENT_RESOLUTION, DISBURSEMENT_METHOD, LOG_ACTIONS
 )
 from disbursement.models import Disbursement, Log
-from core.tests.utils import make_test_users
+from disbursement.tests.utils import fake_disbursement
 from mtp_auth.models import PrisonUserMapping
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from prison.models import Prison, PrisonerLocation
@@ -130,38 +133,57 @@ class ListDisbursementsTestCase(AuthTestCaseMixin, APITestCase):
     def setUp(self):
         super().setUp()
         self.prison_clerks, _, self.bank_admins, _, _, _ = make_test_users()
+        self.user = self.prison_clerks[0]
+        self.prison = Prison.objects.get(pk='IXB')
+
+    def api_request(self, **request_params):
+        url = reverse('disbursement-list') + '?' + '&'.join('%s=%s' % item for item in request_params.items())
+        return self.client.get(
+            url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.user)
+        )
 
     def test_list_disbursements(self):
-        user = self.prison_clerks[0]
+        fake_disbursement(prison=self.prison,
+                          recipient_first_name='Sam')
+        fake_disbursement(prison=Prison.objects.get(pk='INP'),
+                          recipient_first_name='James')
 
-        Disbursement.objects.create(
-            amount=1000,
-            prisoner_number='A1234BC',
-            prison=Prison.objects.get(pk='IXB'),
-            method=DISBURSEMENT_METHOD.BANK_TRANSFER,
-            recipient_first_name='Sam',
-            recipient_last_name='Hall'
-        )
-        Disbursement.objects.create(
-            amount=1000,
-            prisoner_number='A1234BC',
-            prison=Prison.objects.get(pk='INP'),
-            method=DISBURSEMENT_METHOD.BANK_TRANSFER,
-            recipient_first_name='Sam',
-            recipient_last_name='Hall'
-        )
-
-        response = self.client.get(
-            reverse('disbursement-list'), format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
-        )
-
+        response = self.api_request()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = response.data
         self.assertEqual(data['count'], 1)
         self.assertEqual(data['results'][0]['recipient_first_name'], 'Sam')
-        self.assertEqual(data['results'][0]['recipient_last_name'], 'Hall')
+
+    def test_searching(self):
+        fake_disbursement(_quantity=20, prison=self.prison,
+                          recipient_last_name=itertools.cycle(['Smith', 'Willis']))
+
+        response = self.api_request(amount__lte=1000)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], Disbursement.objects.filter(amount__lte=1000).count())
+
+        response = self.api_request(recipient_name='smith')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 10)
+
+    def test_ordering(self):
+        fake_disbursement(_quantity=20, prison=self.prison)
+
+        response = self.api_request(ordering='created', offset=0, limit=10)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertSequenceEqual(
+            [item['id'] for item in response.data['results']],
+            Disbursement.objects.order_by('created').values_list('id', flat=True)[0:10]
+        )
+
+        response = self.api_request(ordering='-amount', offset=0, limit=100)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertSequenceEqual(
+            [item['amount'] for item in response.data['results']],
+            sorted(Disbursement.objects.values_list('amount', flat=True), reverse=True)
+        )
 
 
 class UpdateDisbursementsTestCase(AuthTestCaseMixin, APITestCase):
