@@ -9,6 +9,9 @@ class DisbursementQuerySet(models.QuerySet):
     def rejected(self):
         return self.filter(resolution=DISBURSEMENT_RESOLUTION.REJECTED)
 
+    def preconfirmed(self):
+        return self.filter(resolution=DISBURSEMENT_RESOLUTION.PRECONFIRMED)
+
     def confirmed(self):
         return self.filter(resolution=DISBURSEMENT_RESOLUTION.CONFIRMED)
 

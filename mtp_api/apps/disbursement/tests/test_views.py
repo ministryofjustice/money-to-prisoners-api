@@ -314,7 +314,7 @@ class UpdateDisbursementResolutionTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(logs[0].user, user)
         self.assertEqual(logs[0].action, LOG_ACTIONS.REJECTED)
 
-    def test_can_only_confirm_pending_disbursement(self):
+    def test_can_only_confirm_preconfirmed_disbursement(self):
         user = self.prison_clerks[0]
 
         disbursement = Disbursement.objects.create(
@@ -324,12 +324,12 @@ class UpdateDisbursementResolutionTestCase(AuthTestCaseMixin, APITestCase):
             method=DISBURSEMENT_METHOD.BANK_TRANSFER,
             recipient_first_name='Sam',
             recipient_last_name='Hall',
-            resolution=DISBURSEMENT_RESOLUTION.REJECTED
+            resolution=DISBURSEMENT_RESOLUTION.PENDING
         )
 
         response = self.client.post(
-            reverse('disbursement-confirm'),
-            data={'disbursement_ids': [disbursement.id]}, format='json',
+            reverse('disbursement-confirm'), format='json',
+            data=[{'id': disbursement.id, 'nomis_transaction_id': 111}],
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
 
@@ -340,9 +340,45 @@ class UpdateDisbursementResolutionTestCase(AuthTestCaseMixin, APITestCase):
         )
 
         disbursements = Disbursement.objects.all()
-        self.assertEqual(disbursements[0].resolution, DISBURSEMENT_RESOLUTION.REJECTED)
+        self.assertEqual(disbursements[0].resolution, DISBURSEMENT_RESOLUTION.PENDING)
 
         self.assertEqual(Log.objects.all().count(), 0)
+
+    def test_confirm_disbursement(self):
+        user = self.prison_clerks[0]
+
+        disbursement = Disbursement.objects.create(
+            amount=1000,
+            prisoner_number='A1234BC',
+            prison=Prison.objects.get(pk='IXB'),
+            method=DISBURSEMENT_METHOD.BANK_TRANSFER,
+            recipient_first_name='Sam',
+            recipient_last_name='Hall',
+            resolution=DISBURSEMENT_RESOLUTION.PRECONFIRMED
+        )
+
+        response = self.client.post(
+            reverse('disbursement-confirm'), format='json',
+            data=[{'id': disbursement.id, 'nomis_transaction_id': '1112-1'}],
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        confirmed_disbursement = Disbursement.objects.get(pk=disbursement.id)
+        self.assertEqual(
+            confirmed_disbursement.resolution,
+            DISBURSEMENT_RESOLUTION.CONFIRMED
+        )
+        self.assertEqual(
+            confirmed_disbursement.nomis_transaction_id,
+            '1112-1'
+        )
+
+        logs = Log.objects.all()
+        self.assertEqual(logs[0].disbursement, confirmed_disbursement)
+        self.assertEqual(logs[0].user, user)
+        self.assertEqual(logs[0].action, LOG_ACTIONS.CONFIRMED)
 
     def test_cannot_reject_disbursement_for_non_permitted_prison(self):
         user = self.prison_clerks[0]

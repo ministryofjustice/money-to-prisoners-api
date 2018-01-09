@@ -1,3 +1,4 @@
+from django.db.transaction import atomic
 import django_filters
 from rest_framework import mixins, viewsets, filters, status
 from rest_framework.permissions import IsAuthenticated
@@ -131,13 +132,61 @@ class PreConfirmDisbursementsView(ResolveDisbursementsView):
     resolution = DISBURSEMENT_RESOLUTION.PRECONFIRMED
 
 
-class ConfirmDisbursementsView(ResolveDisbursementsView):
-    resolution = DISBURSEMENT_RESOLUTION.CONFIRMED
-
-
 class SendDisbursementsView(ResolveDisbursementsView):
     resolution = DISBURSEMENT_RESOLUTION.SENT
 
     permission_classes = (
         IsAuthenticated, ActionsBasedViewPermissions, BankAdminClientIDPermissions
     )
+
+
+class ConfirmDisbursementsView(DisbursementViewMixin, APIView):
+    serializer_class = DisbursementConfirmationSerializer
+    action = 'update'
+
+    permission_classes = (
+        IsAuthenticated, CashbookClientIDPermissions,
+        ActionsBasedViewPermissions
+    )
+
+    def get_serializer(self, *args, **kwargs):
+        kwargs['context'] = {
+            'request': self.request,
+            'format': self.format_kwarg,
+            'view': self
+        }
+        return self.serializer_class(*args, **kwargs)
+
+    @atomic
+    def post(self, request, format=None):
+        deserialized = self.get_serializer(data=request.data, many=True)
+        deserialized.is_valid(raise_exception=True)
+
+        confirmed_disbursements = {
+            d['id']: d.get('nomis_transaction_id') for d in deserialized.data
+        }
+        disbursement_ids = confirmed_disbursements.keys()
+        to_update = Disbursement.objects.preconfirmed().filter(
+            pk__in=disbursement_ids
+        ).select_for_update()
+
+        ids_to_update = [c.id for c in to_update]
+        conflict_ids = set(disbursement_ids) - set(ids_to_update)
+        if conflict_ids:
+            return Response(
+                data={
+                    'errors': [
+                        {
+                            'msg': 'Some disbursements were not in a valid state for this operation.',
+                            'ids': sorted(conflict_ids)
+                        }
+                    ]
+                },
+                status=status.HTTP_409_CONFLICT
+            )
+
+        for disbursement in to_update:
+            disbursement.confirm(
+                request.user, confirmed_disbursements[disbursement.id]
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)

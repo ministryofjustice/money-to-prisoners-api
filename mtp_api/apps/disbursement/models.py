@@ -3,6 +3,7 @@ from django.db import models
 from django.dispatch import receiver
 from model_utils.models import TimeStampedModel
 
+from . import InvalidDisbursementStateException
 from .constants import LOG_ACTIONS, DISBURSEMENT_RESOLUTION, DISBURSEMENT_METHOD
 from .managers import DisbursementManager, DisbursementQuerySet, LogManager
 from .signals import (
@@ -49,19 +50,36 @@ class Disbursement(TimeStampedModel):
         return '%s %s' % (self.recipient_first_name, self.recipient_last_name)
 
     def reject(self, by_user):
+        if self.resolution != DISBURSEMENT_RESOLUTION.PENDING:
+            raise InvalidDisbursementStateException()
         self.resolution = DISBURSEMENT_RESOLUTION.REJECTED
         self.save()
-        disbursement_rejected.send(Disbursement, self, by_user)
+        disbursement_rejected.send(
+            sender=Disbursement, disbursement=self, by_user=by_user)
 
-    def confirm(self, by_user):
-        self.resolution = DISBURSEMENT_RESOLUTION.CONFIRMED
+    def preconfirm(self):
+        if self.resolution != DISBURSEMENT_RESOLUTION.PENDING:
+            raise InvalidDisbursementStateException()
+        self.resolution = DISBURSEMENT_RESOLUTION.PRECONFIRMED
         self.save()
-        disbursement_confirmed.send(Disbursement, self, by_user)
+
+    def confirm(self, by_user, nomis_transaction_id=None):
+        if self.resolution != DISBURSEMENT_RESOLUTION.PRECONFIRMED:
+            raise InvalidDisbursementStateException()
+        self.resolution = DISBURSEMENT_RESOLUTION.CONFIRMED
+        if nomis_transaction_id:
+            self.nomis_transaction_id = nomis_transaction_id
+        self.save()
+        disbursement_confirmed.send(
+            sender=Disbursement, disbursement=self, by_user=by_user)
 
     def send(self, by_user):
+        if self.resolution != DISBURSEMENT_RESOLUTION.CONFIRMED:
+            raise InvalidDisbursementStateException()
         self.resolution = DISBURSEMENT_RESOLUTION.SENT
         self.save()
-        disbursement_sent.send(Disbursement, self, by_user)
+        disbursement_sent.send(
+            sender=Disbursement, disbursement=self, by_user=by_user)
 
     class Meta:
         ordering = ('id',)
