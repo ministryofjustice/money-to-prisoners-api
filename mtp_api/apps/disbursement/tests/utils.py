@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 from itertools import cycle
 from math import ceil
 import random
@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from faker import Faker
+from model_mommy.recipe import Recipe, seq
 
 from core.tests.utils import MockModelTimestamps
 from credit.tests.utils import random_amount, build_sender_prisoner_pairs
@@ -15,9 +16,27 @@ from disbursement.constants import (
 )
 from disbursement.models import Disbursement, Log
 from prison.models import PrisonerLocation
+from prison.tests.utils import random_prisoner_number
 
 User = get_user_model()
 fake = Faker(locale='en_GB')
+
+disbursement_recipe = Recipe(
+    Disbursement,
+    created=seq(datetime.now() - timedelta(days=1), timedelta(hours=-1, minutes=-5)),
+    amount=random_amount,
+    method=DISBURSEMENT_METHOD.BANK_TRANSFER,
+    resolution=DISBURSEMENT_RESOLUTION.CONFIRMED,
+    prisoner_number=random_prisoner_number,
+    prisoner_name=fake.name,
+    recipient_first_name=fake.first_name,
+    recipient_last_name=fake.last_name,
+    recipient_email=fake.safe_email,
+    address_line1=fake.street_address,
+    address_line2='',
+    city=fake.city,
+    postcode=fake.postcode,
+)
 
 
 def latest_disbursement_date():
@@ -171,3 +190,11 @@ def create_disbursement_logs(disbursement):
                 log_data['action'] = LOG_ACTIONS.REJECTED
                 log_data['user'] = confirming_user
                 Log.objects.create(**log_data)
+
+
+def fake_disbursement(**kwargs):
+    disbursements = disbursement_recipe.make(**kwargs)
+    if isinstance(disbursements, list):
+        list(map(create_disbursement_logs, disbursements))
+    else:
+        create_disbursement_logs(disbursements)

@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.filters import IsoDateTimeFilter, annotate_filter
+from core.filters import IsoDateTimeFilter, SafeOrderingFilter, annotate_filter
 from core.models import TruncUtcDate
 from core.permissions import ActionsBasedViewPermissions
 from mtp_auth.models import PrisonUserMapping
@@ -33,17 +33,24 @@ class DisbursementFilter(django_filters.FilterSet):
         {'logged_at': TruncUtcDate('log__created')}
     )
 
+    prisoner_number = django_filters.CharFilter(name='prisoner_number', lookup_expr='iexact')
+    prisoner_name = django_filters.CharFilter(name='prisoner_name', lookup_expr='icontains')
+    recipient_name = django_filters.CharFilter(name='recipient_name', lookup_expr='icontains')
+    recipient_email = django_filters.CharFilter(name='recipient_email', lookup_expr='icontains')
+
     class Meta:
         model = Disbursement
         fields = {
             'log__action': ['exact'],
             'resolution': ['exact'],
             'prison': ['exact'],
-            'method': ['exact']
+            'method': ['exact'],
+            'amount': ['exact', 'lte', 'gte'],
+            'nomis_transaction_id': ['exact'],
         }
 
 
-class DisbursementViewMixin():
+class DisbursementViewMixin:
     def get_queryset(self):
         queryset = Disbursement.objects.all()
         if self.request.auth.application.client_id == CASHBOOK_OAUTH_CLIENT_ID:
@@ -60,7 +67,9 @@ class DisbursementView(
     queryset = Disbursement.objects.all().order_by('-id')
     serializer_class = DisbursementSerializer
     filter_class = DisbursementFilter
-    filter_backends = (filters.DjangoFilterBackend,)
+    filter_backends = (filters.DjangoFilterBackend, SafeOrderingFilter)
+    ordering_fields = ('created', 'amount', 'resolution', 'method', 'recipient_name',
+                       'prisoner_number', 'prisoner_name')
     permission_classes = (
         IsAuthenticated, ActionsBasedViewPermissions, get_client_permissions_class(
             CASHBOOK_OAUTH_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID,
