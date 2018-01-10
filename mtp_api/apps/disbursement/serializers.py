@@ -112,13 +112,6 @@ class DisbursementIdsSerializer(serializers.Serializer):
     disbursement_ids = serializers.ListField(child=serializers.IntegerField())
 
 
-class DisbursementConfirmationSerializer(serializers.ModelSerializer):
+class DisbursementConfirmationSerializer(serializers.Serializer):
     id = serializers.IntegerField(required=True)
-    nomis_transaction_id = serializers.CharField(required=False)
-
-    class Meta:
-        model = Disbursement
-        fields = (
-            'id',
-            'nomis_transaction_id',
-        )
+    nomis_transaction_id = serializers.CharField(required=False, allow_null=True)

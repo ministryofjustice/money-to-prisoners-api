@@ -12,6 +12,8 @@ urlpatterns = [
         views.RejectDisbursementsView.as_view(), name='disbursement-reject'),
     url(r'^disbursements/actions/preconfirm/$',
         views.PreConfirmDisbursementsView.as_view(), name='disbursement-preconfirm'),
+    url(r'^disbursements/actions/reset/$',
+        views.ResetDisbursementsView.as_view(), name='disbursement-reset'),
     url(r'^disbursements/actions/confirm/$',
         views.ConfirmDisbursementsView.as_view(), name='disbursement-confirm'),
     url(r'^disbursements/actions/send/$',

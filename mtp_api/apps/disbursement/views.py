@@ -132,6 +132,10 @@ class PreConfirmDisbursementsView(ResolveDisbursementsView):
     resolution = DISBURSEMENT_RESOLUTION.PRECONFIRMED
 
 
+class ResetDisbursementsView(ResolveDisbursementsView):
+    resolution = DISBURSEMENT_RESOLUTION.PENDING
+
+
 class SendDisbursementsView(ResolveDisbursementsView):
     resolution = DISBURSEMENT_RESOLUTION.SENT
 
@@ -159,11 +163,11 @@ class ConfirmDisbursementsView(DisbursementViewMixin, APIView):
 
     @atomic
     def post(self, request, format=None):
-        deserialized = self.get_serializer(data=request.data, many=True)
-        deserialized.is_valid(raise_exception=True)
+        serializer = self.get_serializer(data=request.data, many=True)
+        serializer.is_valid(raise_exception=True)
 
         confirmed_disbursements = {
-            d['id']: d.get('nomis_transaction_id') for d in deserialized.data
+            d['id']: d.get('nomis_transaction_id') for d in serializer.data
         }
         disbursement_ids = confirmed_disbursements.keys()
         to_update = Disbursement.objects.preconfirmed().filter(
@@ -175,12 +179,10 @@ class ConfirmDisbursementsView(DisbursementViewMixin, APIView):
         if conflict_ids:
             return Response(
                 data={
-                    'errors': [
-                        {
-                            'msg': 'Some disbursements were not in a valid state for this operation.',
-                            'ids': sorted(conflict_ids)
-                        }
-                    ]
+                    'errors': [{
+                        'msg': 'Some disbursements were not in a valid state for this operation.',
+                        'ids': sorted(conflict_ids)
+                    }]
                 },
                 status=status.HTTP_409_CONFLICT
             )
