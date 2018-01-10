@@ -132,6 +132,10 @@ class PreConfirmDisbursementsView(ResolveDisbursementsView):
     resolution = DISBURSEMENT_RESOLUTION.PRECONFIRMED
 
 
+class ResetDisbursementsView(ResolveDisbursementsView):
+    resolution = DISBURSEMENT_RESOLUTION.PENDING
+
+
 class SendDisbursementsView(ResolveDisbursementsView):
     resolution = DISBURSEMENT_RESOLUTION.SENT
 
