@@ -5,7 +5,7 @@ from rest_framework import serializers
 
 from mtp_auth.models import PrisonUserMapping
 from prison.models import PrisonerLocation, Prison
-from .models import Disbursement, Log
+from .models import Disbursement, Log, Comment
 from .signals import disbursement_created, disbursement_edited
 
 User = get_user_model()
@@ -115,3 +115,20 @@ class DisbursementIdsSerializer(serializers.Serializer):
 class DisbursementConfirmationSerializer(serializers.Serializer):
     id = serializers.IntegerField(required=True)
     nomis_transaction_id = serializers.CharField(required=False, allow_null=True)
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    user_full_name = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Comment
+        read_only = ('user',)
+        fields = ('disbursement', 'user', 'user_full_name', 'comment',)
+
+    def create(self, validated_data):
+        user = self.context['request'].user
+        validated_data['user'] = user
+        super().create(validated_data)
+
+    def get_user_full_name(self, obj):
+        return obj.user.get_full_name() if obj.user else None

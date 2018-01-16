@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 
 from core.admin import add_short_description
-from disbursement.models import Disbursement, Log
+from disbursement.models import Disbursement, Log, Comment
 from transaction.utils import format_amount
 
 
@@ -20,15 +20,27 @@ class LogAdminInline(admin.TabularInline):
         return False
 
 
+class CommentAdminInline(admin.StackedInline):
+    model = Comment
+    extra = 0
+    readonly_fields = ('disbursement',)
+
+
 @admin.register(Disbursement)
 class DisbursementAdmin(admin.ModelAdmin):
     list_display = (
         'recipient_name', 'formatted_amount', 'prisoner_number',
         'prison', 'resolution', 'method', 'created'
     )
-    inlines = (LogAdminInline,)
+    inlines = (LogAdminInline, CommentAdminInline,)
     date_hierarchy = 'created'
 
     @add_short_description(_('amount'))
     def formatted_amount(self, instance):
         return format_amount(instance.amount)
+
+
+@admin.register(Comment)
+class CommentAdmin(admin.ModelAdmin):
+    list_display = ('comment', 'user', 'disbursement',)
+    readonly_fields = ('disbursement',)

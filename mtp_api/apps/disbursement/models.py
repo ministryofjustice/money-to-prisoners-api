@@ -142,6 +142,23 @@ class Log(TimeStampedModel):
         )
 
 
+class Comment(TimeStampedModel):
+    disbursement = models.ForeignKey(
+        Disbursement, on_delete=models.CASCADE, related_name='comments'
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='disbursement_comments'
+    )
+    comment = models.TextField(max_length=3000)
+
+    def __str__(self):
+        return 'Comment on disbursement {disbursement_id} by {user}'.format(
+            disbursement_id=self.disbursement.pk,
+            user='<None>' if not self.user else self.user.username,
+        )
+
+
 @receiver(disbursement_created)
 def disbursement_created_receiver(sender, disbursement, by_user, **kwargs):
     Log.objects.disbursements_created([disbursement], by_user)

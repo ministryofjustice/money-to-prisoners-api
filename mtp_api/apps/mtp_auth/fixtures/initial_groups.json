@@ -41,7 +41,8 @@
       ["view_disbursement", "disbursement", "disbursement"],
       ["change_disbursement", "disbursement", "disbursement"],
       ["add_disbursement", "disbursement", "disbursement"],
-      ["view_prisonerlocation", "prison", "prisonerlocation"]
+      ["view_prisonerlocation", "prison", "prisonerlocation"],
+      ["add_comment", "disbursement", "comment"]
     ]
   }
 },
