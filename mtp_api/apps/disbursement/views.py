@@ -16,10 +16,10 @@ from mtp_auth.permissions import (
 )
 from . import InvalidDisbursementStateException
 from .constants import DISBURSEMENT_RESOLUTION
-from .models import Disbursement
+from .models import Disbursement, Comment
 from .serializers import (
     DisbursementSerializer, DisbursementIdsSerializer,
-    DisbursementConfirmationSerializer
+    DisbursementConfirmationSerializer, CommentSerializer
 )
 
 
@@ -201,3 +201,18 @@ class ConfirmDisbursementsView(DisbursementViewMixin, APIView):
                 request.user, confirmed_disbursements[disbursement.id]
             )
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class CommentView(
+    mixins.CreateModelMixin, viewsets.GenericViewSet
+):
+    queryset = Comment.objects.all()
+    serializer_class = CommentSerializer
+
+    permission_classes = (
+        IsAuthenticated, ActionsBasedViewPermissions, CashbookClientIDPermissions
+    )
+
+    def get_serializer(self, *args, **kwargs):
+        many = kwargs.pop('many', True)
+        return super().get_serializer(many=many, *args, **kwargs)

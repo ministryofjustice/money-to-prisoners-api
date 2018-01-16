@@ -305,7 +305,7 @@ class Comment(TimeStampedModel):
     )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True,
-        on_delete=models.SET_NULL
+        on_delete=models.SET_NULL, related_name='credit_comments'
     )
     comment = models.TextField(max_length=3000)
 
