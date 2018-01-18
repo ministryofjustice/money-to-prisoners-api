@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.filters import IsoDateTimeFilter, SafeOrderingFilter, annotate_filter
+from core.filters import IsoDateTimeFilter, MultipleValueFilter, SafeOrderingFilter, annotate_filter
 from core.models import TruncUtcDate
 from core.permissions import ActionsBasedViewPermissions
 from mtp_auth.models import PrisonUserMapping
@@ -32,7 +32,7 @@ class DisbursementFilter(django_filters.FilterSet):
         IsoDateTimeFilter(name='logged_at', lookup_expr='gte'),
         {'logged_at': TruncUtcDate('log__created')}
     )
-
+    resolution = MultipleValueFilter(name='resolution')
     prisoner_number = django_filters.CharFilter(name='prisoner_number', lookup_expr='iexact')
     prisoner_name = django_filters.CharFilter(name='prisoner_name', lookup_expr='icontains')
     recipient_name = django_filters.CharFilter(name='recipient_name', lookup_expr='icontains')
@@ -42,7 +42,6 @@ class DisbursementFilter(django_filters.FilterSet):
         model = Disbursement
         fields = {
             'log__action': ['exact'],
-            'resolution': ['exact'],
             'prison': ['exact'],
             'method': ['exact'],
             'amount': ['exact', 'lte', 'gte'],
