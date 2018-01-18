@@ -8,6 +8,7 @@ from django.views.generic import FormView, TemplateView
 from django.utils import timezone
 from credit.models import Credit
 from payment.models import Payment
+from django.db.models import Sum
 
 class DashboardView(TemplateView):
     """
@@ -20,18 +21,21 @@ class DashboardView(TemplateView):
         data = []
         context['data'] = data
 
-
         for month in range(6):
-            queryset_transaction = Transaction.objects.filter(received_at__range=(timezone.now() - datetime.timedelta(days = 30 * (month + 1)), timezone.now() - datetime.timedelta(days = 30 * month)))
+            start_of_month = timezone.now() - datetime.timedelta(days = 30 * (month + 1))
+            end_of_month = timezone.now() - datetime.timedelta(days = 30 * month)
 
-            queryset_credit = Credit.objects.filter(received_at__range=(timezone.now() - datetime.timedelta(days = 30 * (month + 1)), timezone.now() - datetime.timedelta(days = 30 * month)))
+            queryset_transaction = Transaction.objects.filter(received_at__range=(start_of_month, end_of_month))
+            queryset_transaction_amount = Transaction.objects.filter(received_at__range=(start_of_month, end_of_month)).aggregate(Sum('amount'))
 
-            # queryset_credit_amount = Credit.objects.filter(received_at__range=(timezone.now() - datetime.timedelta(days = 30 * (month + 1)), timezone.now() - datetime.timedelta(days = 30 * month)))
+            queryset_credit = Credit.objects.filter(received_at__range=(start_of_month, end_of_month))
+            queryset_credit_amount = Credit.objects.filter(received_at__range=(start_of_month, end_of_month)).aggregate(Sum('amount'))
 
             data.append({
             'transaction_count': queryset_transaction.count(),
             'credit_count': queryset_credit.count(),
-            # 'queryset_credit_amount': queryset_credit_amount
+            'queryset_credit_amount': queryset_credit_amount,
+            'queryset_transaction_amount': queryset_transaction_amount,
             })
 
         return context
