@@ -65,8 +65,26 @@ class LogSerializer(serializers.ModelSerializer):
         )
 
 
+class CommentSerializer(serializers.ModelSerializer):
+    user_full_name = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Comment
+        read_only = ('user',)
+        fields = ('disbursement', 'user', 'user_full_name', 'comment', 'category')
+
+    def create(self, validated_data):
+        user = self.context['request'].user
+        validated_data['user'] = user
+        super().create(validated_data)
+
+    def get_user_full_name(self, obj):
+        return obj.user.get_full_name() if obj.user else None
+
+
 class DisbursementSerializer(serializers.ModelSerializer):
     log_set = LogSerializer(many=True, required=False)
+    comments = CommentSerializer(many=True, required=False)
     prison = serializers.PrimaryKeyRelatedField(
         queryset=Prison.objects.all(),
         validators=[PrisonPermittedValidator()]
@@ -115,20 +133,3 @@ class DisbursementIdsSerializer(serializers.Serializer):
 class DisbursementConfirmationSerializer(serializers.Serializer):
     id = serializers.IntegerField(required=True)
     nomis_transaction_id = serializers.CharField(required=False, allow_null=True)
-
-
-class CommentSerializer(serializers.ModelSerializer):
-    user_full_name = serializers.SerializerMethodField(read_only=True)
-
-    class Meta:
-        model = Comment
-        read_only = ('user',)
-        fields = ('disbursement', 'user', 'user_full_name', 'comment',)
-
-    def create(self, validated_data):
-        user = self.context['request'].user
-        validated_data['user'] = user
-        super().create(validated_data)
-
-    def get_user_full_name(self, obj):
-        return obj.user.get_full_name() if obj.user else None

@@ -151,6 +151,10 @@ class Comment(TimeStampedModel):
         on_delete=models.SET_NULL, related_name='disbursement_comments'
     )
     comment = models.TextField(max_length=3000)
+    category = models.CharField(max_length=100, blank=True, default='')
+
+    class Meta:
+        ordering = ('created',)
 
     def __str__(self):
         return 'Comment on disbursement {disbursement_id} by {user}'.format(
