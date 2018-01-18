@@ -1,5 +1,5 @@
 
 {% for d in data %}
-    <li> Number of credits that month: {{ d.credit_count }} Total value of credits that month: £{{d.queryset_credit_amount.amount__sum}} Number of transaction that month: {{d.transaction_count}} Total value of transactions that month: £{{d.queryset_transaction_amount.amount__sum}}</li>
+    <li> Number of credits that month: {{ d.credit_count }}  Total value of credits that month: £{{d.queryset_credit_amount}}   Number of transaction that month: {{d.transaction_count}}   Total value of transactions that month: £{{d.queryset_transaction_amount}}</li>
 {% endfor%}
 
