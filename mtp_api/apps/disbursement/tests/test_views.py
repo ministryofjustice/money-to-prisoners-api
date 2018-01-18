@@ -1,6 +1,7 @@
 import itertools
 
 from django.urls import reverse
+from mtp_common.test_utils import silence_logger
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -258,11 +259,12 @@ class UpdateDisbursementsTestCase(AuthTestCaseMixin, APITestCase):
             recipient_last_name='Hall'
         )
 
-        response = self.client.patch(
-            reverse('disbursement-detail', args=[disbursement.pk]),
-            data={'amount': 2000}, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
-        )
+        with silence_logger('django.request'):
+            response = self.client.patch(
+                reverse('disbursement-detail', args=[disbursement.pk]),
+                data={'amount': 2000}, format='json',
+                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+            )
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
