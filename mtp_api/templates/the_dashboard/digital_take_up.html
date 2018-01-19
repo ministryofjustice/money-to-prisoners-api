@@ -1,5 +1,7 @@
 
 {% for d in data %}
-    <li> Number of credits that month: {{ d.credit_count }}  Total value of credits that month: £{{d.queryset_credit_amount}}   Number of transaction that month: {{d.transaction_count}}   Total value of transactions that month: £{{d.queryset_transaction_amount}}</li>
+    <li> Number of credits that month: {{ d.credit_count }}  Total value of credits that month: £{{d.queryset_credit_amount}} Number of transaction that month: {{d.transaction_count}} Total value of transactions that month: £{{d.queryset_transaction_amount}}
+    Percentage that is Credit {{d.percent_credit_amount}}% Percentage that is Transactions {{d.percent_transaction_amount}}%
+    </li>
 {% endfor%}
 

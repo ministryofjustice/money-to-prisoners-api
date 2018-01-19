@@ -17,8 +17,6 @@ class DashboardView(TemplateView):
     template_name = 'the_dashboard/digital_take_up.html'
 
 
-
-
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         data = []
@@ -41,15 +39,37 @@ class DashboardView(TemplateView):
             amount_transaction_to_pounds = pence_to_pounds(queryset_transaction_amount['amount__sum'])
             amount_credit_to_pounds = pence_to_pounds(queryset_credit_amount['amount__sum'])
 
+
+            def as_a_percentage(credit, transaction):
+                if(credit == None):
+                     credit = 0
+                if(transaction == None):
+                    transaction = 0
+                if(credit == 0 and transaction == 0):
+                    percent = {'percent_of_credit': 0, 'percent_of_transaction': 0}
+                else:
+                    total = credit + transaction
+                    percent_of_credit = credit/total * 100
+                    percent_of_transaction = transaction/total * 100
+                    percent = {'percent_of_credit': round(percent_of_credit, 2), 'percent_of_transaction': round(percent_of_transaction, 2)}
+                return percent
+
+            percent_of_use = as_a_percentage(queryset_credit.count(), queryset_transaction.count())
+            percent_of_amount = as_a_percentage(queryset_credit_amount['amount__sum'], queryset_transaction_amount['amount__sum'])
+            print(percent_of_amount)
+            print(percent_of_use)
+
+
             data.append({
             'transaction_count': queryset_transaction.count(),
             'credit_count': queryset_credit.count(),
             'queryset_credit_amount': amount_credit_to_pounds,
             'queryset_transaction_amount': amount_transaction_to_pounds,
+            'percent_of_credit_count': percent_of_use['percent_of_credit'],
+            'percent_of_transaction_count': percent_of_use['percent_of_transaction'],
+            'percent_credit_amount': percent_of_amount['percent_of_credit'],
+            'percent_transaction_amount': percent_of_amount['percent_of_transaction']
             })
-
-
-            # print(data[0]['queryset_transaction_amount'])
 
         return context
 
