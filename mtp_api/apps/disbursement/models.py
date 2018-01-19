@@ -68,6 +68,8 @@ class Disbursement(TimeStampedModel):
         pass
 
     def reject(self, by_user):
+        if self.resolution == DISBURSEMENT_RESOLUTION.REJECTED:
+            return
         if not self.resolution_permitted(DISBURSEMENT_RESOLUTION.REJECTED):
             raise InvalidDisbursementStateException([self.id])
         self.resolution = DISBURSEMENT_RESOLUTION.REJECTED
@@ -76,18 +78,24 @@ class Disbursement(TimeStampedModel):
             sender=Disbursement, disbursement=self, by_user=by_user)
 
     def preconfirm(self):
+        if self.resolution == DISBURSEMENT_RESOLUTION.PRECONFIRMED:
+            return
         if not self.resolution_permitted(DISBURSEMENT_RESOLUTION.PRECONFIRMED):
             raise InvalidDisbursementStateException([self.id])
         self.resolution = DISBURSEMENT_RESOLUTION.PRECONFIRMED
         self.save()
 
     def reset(self):
+        if self.resolution == DISBURSEMENT_RESOLUTION.PENDING:
+            return
         if not self.resolution_permitted(DISBURSEMENT_RESOLUTION.PENDING):
             raise InvalidDisbursementStateException([self.id])
         self.resolution = DISBURSEMENT_RESOLUTION.PENDING
         self.save()
 
     def confirm(self, by_user, nomis_transaction_id=None):
+        if self.resolution == DISBURSEMENT_RESOLUTION.CONFIRMED:
+            return
         if not self.resolution_permitted(DISBURSEMENT_RESOLUTION.CONFIRMED):
             raise InvalidDisbursementStateException([self.id])
         self.resolution = DISBURSEMENT_RESOLUTION.CONFIRMED
@@ -98,6 +106,8 @@ class Disbursement(TimeStampedModel):
             sender=Disbursement, disbursement=self, by_user=by_user)
 
     def send(self, by_user):
+        if self.resolution == DISBURSEMENT_RESOLUTION.SENT:
+            return
         if not self.resolution_permitted(DISBURSEMENT_RESOLUTION.SENT):
             raise InvalidDisbursementStateException([self.id])
         self.resolution = DISBURSEMENT_RESOLUTION.SENT

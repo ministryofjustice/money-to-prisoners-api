@@ -30,13 +30,15 @@ class DisbursementManager(models.Manager):
     def update_resolution(self, queryset, disbursement_ids, resolution, user):
         to_update = queryset.filter(
             pk__in=disbursement_ids,
-            resolution=self.model.get_permitted_state(resolution)
+            resolution__in=[self.model.get_permitted_state(resolution), resolution]
         ).select_for_update()
 
         ids_to_update = [c.id for c in to_update]
         conflict_ids = set(disbursement_ids) - set(ids_to_update)
         if conflict_ids:
             raise InvalidDisbursementStateException(sorted(conflict_ids))
+
+        to_update = to_update.exclude(resolution=resolution)
 
         from .models import Log
         if resolution == DISBURSEMENT_RESOLUTION.REJECTED:
