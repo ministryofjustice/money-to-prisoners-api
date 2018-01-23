@@ -9,6 +9,7 @@ from django.utils import timezone
 from credit.models import Credit
 from payment.models import Payment
 from django.db.models import Sum
+import pytz
 
 class DashboardView(TemplateView):
     """
@@ -16,15 +17,33 @@ class DashboardView(TemplateView):
     """
     template_name = 'the_dashboard/digital_take_up.html'
 
-
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         data = []
         context['data'] = data
 
-        for month in range(6):
-            start_of_month = timezone.now() - datetime.timedelta(days = 30 * (month + 1))
-            end_of_month = timezone.now() - datetime.timedelta(days = 30 * month)
+        tz = timezone.get_current_timezone()
+        today = datetime.date.today()
+        year = today.year
+        month = today.month
+        if month == 12:
+            month = 1
+            year += 1
+        else:
+            month += 1
+
+        for _ in range(6):
+            #start_of_month = timezone.now() - datetime.timedelta(days = 30 * (month + 1))
+            #end_of_month = timezone.now() - datetime.timedelta(days = 30 * month)
+
+            end_of_month = datetime.datetime(year=year, month=month, day=1)
+            month -= 1
+            if month == 0:
+                month = 12
+                year -= 1
+            start_of_month = datetime.datetime(year=year, month=month, day=1)
+            start_of_month = tz.localize(start_of_month)
+            end_of_month = tz.localize(end_of_month)
 
             queryset_transaction = Transaction.objects.filter(received_at__range=(start_of_month, end_of_month))
             queryset_transaction_amount = Transaction.objects.filter(received_at__range=(start_of_month, end_of_month)).aggregate(Sum('amount'))
@@ -33,12 +52,13 @@ class DashboardView(TemplateView):
             queryset_credit_amount = Credit.objects.filter(received_at__range=(start_of_month, end_of_month)).aggregate(Sum('amount'))
 
             def pence_to_pounds(amount):
+                if(amount == None):
+                    return 0
                 if(amount != None):
                     return amount/100
 
             amount_transaction_to_pounds = pence_to_pounds(queryset_transaction_amount['amount__sum'])
             amount_credit_to_pounds = pence_to_pounds(queryset_credit_amount['amount__sum'])
-
 
             def as_a_percentage(credit, transaction):
                 if(credit == None):
@@ -56,9 +76,6 @@ class DashboardView(TemplateView):
 
             percent_of_use = as_a_percentage(queryset_credit.count(), queryset_transaction.count())
             percent_of_amount = as_a_percentage(queryset_credit_amount['amount__sum'], queryset_transaction_amount['amount__sum'])
-            print(percent_of_amount)
-            print(percent_of_use)
-
 
             data.append({
             'transaction_count': queryset_transaction.count(),
@@ -68,9 +85,13 @@ class DashboardView(TemplateView):
             'percent_of_credit_count': percent_of_use['percent_of_credit'],
             'percent_of_transaction_count': percent_of_use['percent_of_transaction'],
             'percent_credit_amount': percent_of_amount['percent_of_credit'],
-            'percent_transaction_amount': percent_of_amount['percent_of_transaction']
+            'percent_transaction_amount': percent_of_amount['percent_of_transaction'],
+            'start_of_month': start_of_month,
+            'end_of_month': end_of_month
             })
 
         return context
+
+
 
 

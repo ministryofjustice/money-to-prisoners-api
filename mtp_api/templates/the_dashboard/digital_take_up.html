@@ -1,7 +1,84 @@
 
+{% load static %}
+
+
+<!-- <html>
+  <script src="https://www.google.com/jsapi" type="text/javascript"></script>
+  <script>
+    google.load('visualization', '1', {packages:['table']});
+
+    google.setOnLoadCallback(drawTable);
+    function drawTable() {
+      %(jscode)s
+      var jscode_table = new google.visualization.Table(document.getElementById('table_div_jscode'));
+      jscode_table.draw(jscode_data, {showRowNumber: true});
+
+      var json_table = new google.visualization.Table(document.getElementById('table_div_json'));
+      var json_data = new google.visualization.DataTable(%(json)s, 0.6);
+      json_table.draw(json_data, {showRowNumber: true});
+    }
+  </script>
+  <body>
+    <H1>Table created using ToJSCode</H1>
+    <div id="table_div_jscode"></div>
+    <H1>Table created using ToJSon</H1>
+    <div id="table_div_json"></div>
+  </body>
+</html> -->
+
+
+<!-- <html>
+
+  <head>
+     <script src="https://www.google.com/jsapi" type="text/javascript"></script>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript" src="../mtp_api/assets/javascripts/the-dashboard.js"> </script>
+    <title>Google Charts Example</title>
+
+  </head>
+  <body>
+    <div id="divChart"></div>
+  </body>
+</html> -->
+
+<html>
+  <head>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script>
+      google.charts.load('current', {'packages':['corechart']});
+        google.charts.setOnLoadCallback(drawChart);
+
+        function drawChart() {
+          var data = google.visualization.arrayToDataTable([
+            ['Month', 'Credits', 'Transactions'],
+            {% for d in data reversed %}
+              ['{{d.start_of_month|date:"F Y"}}', {{d.credit_count}}, {{d.transaction_count}}],
+            {% endfor %}
+            ]);
+
+          var options = {
+            title: 'Digital Take up',
+            width: 1200,
+            height: 400,
+            bar: {groupWidth: "95%"},
+            legend: { position: "none" },
+              };
+
+          var chart = new google.visualization.ColumnChart(document.getElementById('chart_div'));
+          chart.draw(data, options);
+            }
+    </script>
+
+  </head>
+  <body>
+    <div id="chart_div" style="width: 100%; height: 500px;"></div>
+
 {% for d in data %}
     <li> Number of credits that month: {{ d.credit_count }}  Total value of credits that month: £{{d.queryset_credit_amount}} Number of transaction that month: {{d.transaction_count}} Total value of transactions that month: £{{d.queryset_transaction_amount}}
     Percentage that is Credit {{d.percent_credit_amount}}% Percentage that is Transactions {{d.percent_transaction_amount}}%
     </li>
 {% endfor%}
+
+  </body>
+</html>
 
