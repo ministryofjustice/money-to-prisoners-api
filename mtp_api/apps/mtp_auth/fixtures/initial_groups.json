@@ -22,9 +22,7 @@
       ["view_transaction", "transaction", "transaction"],
       ["patch_processed_transaction", "transaction", "transaction"],
       ["add_balance", "account", "balance"],
-      ["view_batch", "payment", "batch"],
-      ["view_disbursement", "disbursement", "disbursement"],
-      ["change_disbursement", "disbursement", "disbursement"]
+      ["view_batch", "payment", "batch"]
     ]
   }
 },
@@ -98,6 +96,17 @@
       ["add_savedsearch", "security", "savedsearch"],
       ["change_savedsearch", "security", "savedsearch"],
       ["delete_savedsearch", "security", "savedsearch"]
+    ]
+  }
+},
+{
+  "model": "auth.group",
+  "pk": 8,
+  "fields": {
+    "name": "DisbursementBankAdmin",
+    "permissions": [
+      ["view_disbursement", "disbursement", "disbursement"],
+      ["change_disbursement", "disbursement", "disbursement"]
     ]
   }
 }

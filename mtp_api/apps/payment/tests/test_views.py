@@ -24,7 +24,7 @@ class GetBatchViewTestCase(AuthTestCaseMixin, APITestCase):
 
     def setUp(self):
         super().setUp()
-        _, _, self.bank_admins, _, _, _ = make_test_users()
+        self.bank_admins = make_test_users()['bank_admins']
         load_random_prisoner_locations(2)
 
     def test_get_batch(self):
@@ -60,7 +60,9 @@ class CreatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
 
     def setUp(self):
         super().setUp()
-        self.prison_clerks, _, _, _, self.send_money_users, _ = make_test_users()
+        test_users = make_test_users()
+        self.prison_clerks = test_users['prison_clerks']
+        self.send_money_users = test_users['send_money_users']
         load_random_prisoner_locations(2)
 
     def test_permissions_required(self):
@@ -158,7 +160,9 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
 
     def setUp(self):
         super().setUp()
-        self.prison_clerks, _, _, _, self.send_money_users, _ = make_test_users()
+        test_users = make_test_users()
+        self.prison_clerks = test_users['prison_clerks']
+        self.send_money_users = test_users['send_money_users']
         load_random_prisoner_locations(2)
 
     def _test_update_payment(self, **update_fields):
@@ -356,7 +360,9 @@ class GetPaymentViewTestCase(AuthTestCaseMixin, APITestCase):
 
     def setUp(self):
         super().setUp()
-        self.prison_clerks, _, _, _, self.send_money_users, _ = make_test_users()
+        test_users = make_test_users()
+        self.prison_clerks = test_users['prison_clerks']
+        self.send_money_users = test_users['send_money_users']
         load_random_prisoner_locations(2)
 
     def test_get_payment(self):
@@ -395,7 +401,9 @@ class ListPaymentViewTestCase(AuthTestCaseMixin, APITestCase):
 
     def setUp(self):
         super().setUp()
-        self.prison_clerks, _, _, _, self.send_money_users, _ = make_test_users()
+        test_users = make_test_users()
+        self.prison_clerks = test_users['prison_clerks']
+        self.send_money_users = test_users['send_money_users']
         load_random_prisoner_locations(50)
         generate_payments(50, days_of_history=1)
 

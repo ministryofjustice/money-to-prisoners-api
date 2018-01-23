@@ -15,7 +15,9 @@ class CreateBalanceTestCase(AuthTestCaseMixin, APITestCase):
 
     def setUp(self):
         super().setUp()
-        self.prison_clerks, _, self.bank_admins, _, _, _ = make_test_users()
+        test_users = make_test_users()
+        self.prison_clerks = test_users['prison_clerks']
+        self.bank_admins = test_users['bank_admins']
 
     def test_permissions_required(self):
         user = self.prison_clerks[0]
@@ -87,7 +89,9 @@ class ListBalanceViewTestCase(AuthTestCaseMixin, APITestCase):
 
     def setUp(self):
         super().setUp()
-        self.prison_clerks, _, self.bank_admins, _, _, _ = make_test_users()
+        test_users = make_test_users()
+        self.prison_clerks = test_users['prison_clerks']
+        self.bank_admins = test_users['bank_admins']
 
     def test_get_balance_is_ordered_by_date_desc(self):
         user = self.bank_admins[0]

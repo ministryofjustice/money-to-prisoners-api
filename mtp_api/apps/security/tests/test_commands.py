@@ -21,7 +21,9 @@ class UpdateSecurityProfilesTestCase(TestCase):
 
     def setUp(self):
         super().setUp()
-        self.prison_clerks, _, _, _, _, self.security_staff = make_test_users()
+        test_users = make_test_users()
+        self.prison_clerks = test_users['prison_clerks']
+        self.security_staff = test_users['security_staff']
         load_random_prisoner_locations()
 
     def test_update_security_profiles_initial(self):
@@ -198,7 +200,9 @@ class UpdateCurrentPrisonsTestCase(TestCase):
 
     def setUp(self):
         super().setUp()
-        self.prison_clerks, _, _, _, _, self.security_staff = make_test_users()
+        test_users = make_test_users()
+        self.prison_clerks = test_users['prison_clerks']
+        self.security_staff = test_users['security_staff']
         load_random_prisoner_locations()
 
     def test_update_current_prisons(self):
