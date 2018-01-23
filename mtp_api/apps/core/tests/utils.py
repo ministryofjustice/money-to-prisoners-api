@@ -12,7 +12,7 @@ from mtp_auth.models import Role, ApplicationUserMapping, PrisonUserMapping
 from mtp_auth.tests.mommy_recipes import (
     create_prison_clerk, create_prisoner_location_admin, create_bank_admin,
     create_refund_bank_admin, create_send_money_shared_user, create_user_admin,
-    create_security_staff_user
+    create_security_staff_user, create_disbursement_bank_admin
 )
 from prison.models import Prison
 
@@ -117,6 +117,7 @@ def make_test_users(clerks_per_prison=2):
     # bank admin
     bank_admins = [create_bank_admin()]
     refund_bank_admins = [create_refund_bank_admin()]
+    disbursement_bank_admins = [create_disbursement_bank_admin()]
 
     # send money shared user
     send_money_users = [create_send_money_shared_user()]
@@ -135,12 +136,19 @@ def make_test_users(clerks_per_prison=2):
     link_users_with_client(prisoner_location_admins, NOMS_OPS_OAUTH_CLIENT_ID)
     link_users_with_client(bank_admins, BANK_ADMIN_OAUTH_CLIENT_ID)
     link_users_with_client(refund_bank_admins, BANK_ADMIN_OAUTH_CLIENT_ID)
+    link_users_with_client(disbursement_bank_admins, BANK_ADMIN_OAUTH_CLIENT_ID)
     link_users_with_client(send_money_users, SEND_MONEY_CLIENT_ID)
     link_users_with_client(security_users, NOMS_OPS_OAUTH_CLIENT_ID)
 
-    return (prison_clerks, prisoner_location_admins,
-            bank_admins, refund_bank_admins,
-            send_money_users, security_users)
+    return {
+        'prison_clerks': prison_clerks,
+        'prisoner_location_admins': prisoner_location_admins,
+        'bank_admins': bank_admins,
+        'refund_bank_admins': refund_bank_admins,
+        'disbursement_bank_admins': disbursement_bank_admins,
+        'send_money_users': send_money_users,
+        'security_staff': security_users
+    }
 
 
 def make_test_user_admins():
@@ -184,4 +192,9 @@ def make_test_user_admins():
     link_users_with_client(refund_bank_admins, BANK_ADMIN_OAUTH_CLIENT_ID)
     link_users_with_client(security_users, NOMS_OPS_OAUTH_CLIENT_ID)
 
-    return prison_clerks, prisoner_location_admins, refund_bank_admins, security_users
+    return {
+        'prison_clerk_uas': prison_clerks,
+        'prisoner_location_uas': prisoner_location_admins,
+        'bank_admin_uas': refund_bank_admins,
+        'security_staff_uas': security_users
+    }

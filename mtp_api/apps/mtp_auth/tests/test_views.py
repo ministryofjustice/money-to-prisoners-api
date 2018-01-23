@@ -144,13 +144,19 @@ class RoleTestCase(AuthBaseTestCase):
 
     def setUp(self):
         super().setUp()
-        (
-            self.prison_clerks, self.prisoner_location_admins,
-            self.bank_admins, self.refund_bank_admins,
-            self.send_money_users, self.security_users
-        ) = make_test_users(clerks_per_prison=1)
+        test_users = make_test_users(clerks_per_prison=1)
+        self.prison_clerks = test_users['prison_clerks']
+        self.prisoner_location_admins = test_users['prisoner_location_admins']
+        self.bank_admins = test_users['bank_admins']
+        self.refund_bank_admins = test_users['refund_bank_admins']
+        self.send_money_users = test_users['send_money_users']
+        self.security_staff = test_users['security_staff']
         self.users_with_no_role = self.bank_admins + self.send_money_users
-        self.cashbook_uas, self.pla_uas, self.bank_uas, self.security_uas = make_test_user_admins()
+        test_uas = make_test_user_admins()
+        self.cashbook_uas = test_uas['prison_clerk_uas']
+        self.pla_uas = test_uas['prisoner_location_uas']
+        self.bank_uas = test_uas['bank_admin_uas']
+        self.security_uas = test_uas['security_staff_uas']
         self.admin_users = self.cashbook_uas + self.pla_uas + self.bank_uas + self.security_uas
 
     def test_cannot_list_roles_when_not_logged_in(self):
@@ -206,16 +212,17 @@ class RoleTestCase(AuthBaseTestCase):
 class GetUserTestCase(AuthBaseTestCase):
     def setUp(self):
         super().setUp()
-        (
-            self.prison_clerks, self.prisoner_location_admins,
-            self.bank_admins, self.refund_bank_admins,
-            self.send_money_users, _
-        ) = make_test_users(clerks_per_prison=2)
+        test_users = make_test_users(clerks_per_prison=2)
+        self.prison_clerks = test_users['prison_clerks']
+        self.prisoner_location_admins = test_users['prisoner_location_admins']
+        self.bank_admins = test_users['bank_admins']
+        self.refund_bank_admins = test_users['refund_bank_admins']
+        self.send_money_users = test_users['send_money_users']
         self.test_users = (
             self.prison_clerks + self.prisoner_location_admins +
             self.bank_admins + self.refund_bank_admins
         )
-        _, _, self.bank_uas, _ = make_test_user_admins()
+        self.bank_uas = make_test_user_admins()['bank_admin_uas']
 
         self.prisons = Prison.objects.all()
 
@@ -322,15 +329,19 @@ class GetUserTestCase(AuthBaseTestCase):
 class ListUserTestCase(AuthBaseTestCase):
     def setUp(self):
         super().setUp()
-        (
-            self.prison_clerks, self.prisoner_location_admins,
-            self.bank_admins, self.refund_bank_admins,
-            self.send_money_users, self.security_users,
-        ) = make_test_users(clerks_per_prison=1)
-        (
-            self.cashbook_uas, self.pla_uas,
-            self.bank_uas, self.security_uas,
-        ) = make_test_user_admins()
+        test_users = make_test_users(clerks_per_prison=1)
+        self.prison_clerks = test_users['prison_clerks']
+        self.prisoner_location_admins = test_users['prisoner_location_admins']
+        self.bank_admins = test_users['bank_admins']
+        self.refund_bank_admins = test_users['refund_bank_admins']
+        self.send_money_users = test_users['send_money_users']
+        self.security_staff = test_users['security_staff']
+
+        test_uas = make_test_user_admins()
+        self.cashbook_uas = test_uas['prison_clerk_uas']
+        self.pla_uas = test_uas['prisoner_location_uas']
+        self.bank_uas = test_uas['bank_admin_uas']
+        self.security_uas = test_uas['security_staff_uas']
 
     def get_url(self):
         return reverse('user-list')
@@ -424,13 +435,18 @@ class ListUserTestCase(AuthBaseTestCase):
 class CreateUserTestCase(AuthBaseTestCase):
     def setUp(self):
         super().setUp()
-        self.cashbook_uas, self.pla_uas, self.bank_uas, self.security_uas = make_test_user_admins()
+        test_uas = make_test_user_admins()
+        self.cashbook_uas = test_uas['prison_clerk_uas']
+        self.pla_uas = test_uas['prisoner_location_uas']
+        self.bank_uas = test_uas['bank_admin_uas']
+        self.security_uas = test_uas['security_staff_uas']
 
     def get_url(self):
         return reverse('user-list')
 
     def test_normal_user_cannot_create_user(self):
-        _, _, bank_admins, _, _, _ = make_test_users(clerks_per_prison=1)
+        test_users = make_test_users(clerks_per_prison=1)
+        bank_admins = test_users['bank_admins']
         user_data = {
             'username': 'new-bank-admin',
             'first_name': 'New',
@@ -768,15 +784,18 @@ class CreateUserTestCase(AuthBaseTestCase):
 class UpdateUserTestCase(AuthBaseTestCase):
     def setUp(self):
         super().setUp()
-        (
-            self.prison_clerks, self.prisoner_location_admins,
-            self.bank_admins, self.refund_bank_admins,
-            _, self.security_users
-        ) = make_test_users(clerks_per_prison=1)
-        (
-            self.cashbook_uas, self.pla_uas,
-            self.bank_uas, self.security_uas,
-        ) = make_test_user_admins()
+        test_users = make_test_users(clerks_per_prison=1)
+        self.prison_clerks = test_users['prison_clerks']
+        self.prisoner_location_admins = test_users['prisoner_location_admins']
+        self.bank_admins = test_users['bank_admins']
+        self.refund_bank_admins = test_users['refund_bank_admins']
+        self.security_users = test_users['security_staff']
+
+        test_uas = make_test_user_admins()
+        self.cashbook_uas = test_uas['prison_clerk_uas']
+        self.pla_uas = test_uas['prisoner_location_uas']
+        self.bank_uas = test_uas['bank_admin_uas']
+        self.security_uas = test_uas['security_staff_uas']
 
     def get_url(self, username):
         return reverse('user-detail', kwargs={'username': username})
@@ -1097,9 +1116,16 @@ class UpdateUserTestCase(AuthBaseTestCase):
 class DeleteUserTestCase(AuthBaseTestCase):
     def setUp(self):
         super().setUp()
-        (self.prison_clerks, self.prisoner_location_admins,
-         self.bank_admins, self.refund_bank_admins, _, _) = make_test_users(clerks_per_prison=1)
-        self.cashbook_uas, self.pla_uas, self.bank_uas, _ = make_test_user_admins()
+        test_users = make_test_users(clerks_per_prison=1)
+        self.prison_clerks = test_users['prison_clerks']
+        self.prisoner_location_admins = test_users['prisoner_location_admins']
+        self.bank_admins = test_users['bank_admins']
+        self.refund_bank_admins = test_users['refund_bank_admins']
+
+        test_uas = make_test_user_admins()
+        self.cashbook_uas = test_uas['prison_clerk_uas']
+        self.pla_uas = test_uas['prisoner_location_uas']
+        self.bank_uas = test_uas['bank_admin_uas']
 
     def get_url(self, username):
         return reverse('user-detail', kwargs={'username': username})
@@ -1172,12 +1198,21 @@ class DeleteUserTestCase(AuthBaseTestCase):
 class UserApplicationValidationTestCase(AuthBaseTestCase):
     def setUp(self):
         super().setUp()
+        test_users = make_test_users()
         self.applications = (
             CASHBOOK_OAUTH_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID,
-            BANK_ADMIN_OAUTH_CLIENT_ID, BANK_ADMIN_OAUTH_CLIENT_ID,
-            SEND_MONEY_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID,
+            BANK_ADMIN_OAUTH_CLIENT_ID, SEND_MONEY_CLIENT_ID
         )
-        self.users_and_apps = list(zip(make_test_users(), self.applications))
+
+        self.users_and_apps = (
+            (test_users['prison_clerks'], CASHBOOK_OAUTH_CLIENT_ID),
+            (test_users['prisoner_location_admins'], NOMS_OPS_OAUTH_CLIENT_ID),
+            (test_users['bank_admins'], BANK_ADMIN_OAUTH_CLIENT_ID),
+            (test_users['refund_bank_admins'], BANK_ADMIN_OAUTH_CLIENT_ID),
+            (test_users['disbursement_bank_admins'], BANK_ADMIN_OAUTH_CLIENT_ID),
+            (test_users['send_money_users'], SEND_MONEY_CLIENT_ID),
+            (test_users['security_staff'], NOMS_OPS_OAUTH_CLIENT_ID),
+        )
 
     def _create_basic_auth(self, client_id, client_secret):
         creds = base64.b64encode(bytes('%s:%s' % (client_id, client_secret), 'utf8')).decode('utf-8')
@@ -1221,7 +1256,7 @@ class UserApplicationValidationTestCase(AuthBaseTestCase):
 class AccountLockoutTestCase(AuthBaseTestCase):
     def setUp(self):
         super().setUp()
-        self.prison_clerks = make_test_users()[0]
+        self.prison_clerks = make_test_users()['prison_clerks']
 
     def pass_login(self, user, client):
         response = self.client.post(
@@ -1345,7 +1380,7 @@ class AccountLockoutTestCase(AuthBaseTestCase):
 class ChangePasswordTestCase(AuthBaseTestCase):
     def setUp(self):
         super().setUp()
-        self.user = make_test_users()[0][0]
+        self.user = make_test_users()['prison_clerks'][0]
         self.current_password = self.user.username
 
     def correct_password_change(self, new_password):
@@ -1417,7 +1452,7 @@ class ResetPasswordTestCase(AuthBaseTestCase):
 
     def setUp(self):
         super().setUp()
-        self.user = make_test_users()[0][0]
+        self.user = make_test_users()['prison_clerks'][0]
         self.current_password = 'Password321='
         self.user.set_password(self.current_password)
         self.user.save()
@@ -1550,7 +1585,7 @@ class ChangePasswordWithCodeTestCase(AuthBaseTestCase):
 
     def setUp(self):
         super().setUp()
-        self.user = make_test_users()[0][0]
+        self.user = make_test_users()['prison_clerks'][0]
         self.current_password = 'Password321='
         self.user.set_password(self.current_password)
         self.user.save()

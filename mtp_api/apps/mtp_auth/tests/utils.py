@@ -15,6 +15,8 @@ class AuthTestCaseMixin:
         'PrisonerLocationAdmin': NOMS_OPS_OAUTH_CLIENT_ID,
         'Security': NOMS_OPS_OAUTH_CLIENT_ID,
         'BankAdmin': BANK_ADMIN_OAUTH_CLIENT_ID,
+        'RefundBankAdmin': BANK_ADMIN_OAUTH_CLIENT_ID,
+        'DisbursementBankAdmin': BANK_ADMIN_OAUTH_CLIENT_ID,
         'PrisonClerk': CASHBOOK_OAUTH_CLIENT_ID,
         'SendMoney': SEND_MONEY_CLIENT_ID,
     }

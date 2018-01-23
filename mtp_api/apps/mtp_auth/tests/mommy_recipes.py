@@ -134,6 +134,18 @@ def create_refund_bank_admin(name_and_password='refund-bank-admin'):
     return rba
 
 
+def create_disbursement_bank_admin(name_and_password='disbursement-bank-admin'):
+    disbursement_bank_admin_group = Group.objects.get(name='DisbursementBankAdmin')
+    dba = create_basic_user(
+        name_and_password,
+        [disbursement_bank_admin_group],
+        first_name='Disbursement',
+        last_name='Admin',
+    )
+
+    return dba
+
+
 def create_send_money_shared_user(name_and_password='send-money'):
     send_money_group = Group.objects.get(name='SendMoney')
     user = create_basic_user(

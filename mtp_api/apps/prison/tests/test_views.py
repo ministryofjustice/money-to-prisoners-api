@@ -23,9 +23,12 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
 
     def setUp(self):
         super().setUp()
-        (self.prison_clerks, self.users,
-         self.bank_admins, self.refund_bank_admins,
-         self.send_money_users, _) = make_test_users()
+        test_users = make_test_users(clerks_per_prison=2)
+        self.prison_clerks = test_users['prison_clerks']
+        self.prisoner_location_admins = test_users['prisoner_location_admins']
+        self.bank_admins = test_users['bank_admins']
+        self.refund_bank_admins = test_users['refund_bank_admins']
+        self.send_money_users = test_users['send_money_users']
         self.prisons = Prison.objects.all()
 
     @property
@@ -76,7 +79,7 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
         Tests that if the user does not have permissions to create
         transactions, they won't be able to access the API.
         """
-        unauthorised_user = self.users[0]
+        unauthorised_user = self.prisoner_location_admins[0]
 
         unauthorised_user.groups.first().permissions.all().delete()
 
@@ -96,7 +99,7 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_create(self):
-        user = self.users[0]
+        user = self.prisoner_location_admins[0]
 
         repeated_p_num_1 = random_prisoner_number()
         repeated_p_num_2 = random_prisoner_number()
@@ -147,7 +150,7 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
         data = self.test_create()
         self.client.post(
             self.delete_old_url, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.users[0])
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.prisoner_location_admins[0])
         )
         self.assertEqual(PrisonerLocation.objects.filter(active=True).count(), 3)
         self.assertEqual(PrisonerLocation.objects.filter(active=False).count(), 0)
@@ -161,7 +164,7 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
         data = self.test_create()
         self.client.post(
             self.delete_inactive_url, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.users[0])
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.prisoner_location_admins[0])
         )
         self.assertEqual(PrisonerLocation.objects.filter(active=True).count(), 2)
         self.assertEqual(PrisonerLocation.objects.filter(active=False).count(), 0)
@@ -174,7 +177,7 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
     def _test_validation_error(self, data, assert_error_msg):
         response = self.client.post(
             self.list_url, data=data, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.users[0])
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.prisoner_location_admins[0])
         )
         self.assertEqual(
             response.status_code,
@@ -254,9 +257,12 @@ class DeleteOldPrisonerLocationsViewTestCase(AuthTestCaseMixin, APITestCase):
 
     def setUp(self):
         super().setUp()
-        (self.prison_clerks, self.users,
-         self.bank_admins, self.refund_bank_admins,
-         self.send_money_users, _) = make_test_users()
+        test_users = make_test_users(clerks_per_prison=2)
+        self.prison_clerks = test_users['prison_clerks']
+        self.prisoner_location_admins = test_users['prisoner_location_admins']
+        self.bank_admins = test_users['bank_admins']
+        self.refund_bank_admins = test_users['refund_bank_admins']
+        self.send_money_users = test_users['send_money_users']
         load_random_prisoner_locations(50)
         self.assertEqual(PrisonerLocation.objects.filter(active=True).count(), 50)
 
@@ -283,7 +289,7 @@ class DeleteOldPrisonerLocationsViewTestCase(AuthTestCaseMixin, APITestCase):
     def test_delete_old(self):
         response = self.client.post(
             self.url, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.users[0])
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.prisoner_location_admins[0])
         )
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
@@ -296,7 +302,7 @@ class DeleteOldPrisonerLocationsViewTestCase(AuthTestCaseMixin, APITestCase):
     ):
         response = self.client.post(
             self.url, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.users[0])
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.prisoner_location_admins[0])
         )
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
@@ -309,9 +315,12 @@ class PrisonerValidityViewTestCase(AuthTestCaseMixin, APITestCase):
 
     def setUp(self):
         super().setUp()
-        (self.prison_clerks, self.prisoner_location_admins,
-         self.bank_admins, self.refund_bank_admins,
-         self.send_money_users, _) = make_test_users()
+        test_users = make_test_users(clerks_per_prison=2)
+        self.prison_clerks = test_users['prison_clerks']
+        self.prisoner_location_admins = test_users['prisoner_location_admins']
+        self.bank_admins = test_users['bank_admins']
+        self.refund_bank_admins = test_users['refund_bank_admins']
+        self.send_money_users = test_users['send_money_users']
         load_random_prisoner_locations()
         self.prisoner_locations = PrisonerLocation.objects.all()
 
@@ -484,8 +493,12 @@ class PrisonViewTestCase(AuthTestCaseMixin, APITestCase):
 
     def setUp(self):
         super().setUp()
-        prison_clerks, _, bank_admins, _, send_money_users, security_users = make_test_users()
-        self.users = prison_clerks[0], bank_admins[0], send_money_users[0], security_users[0]
+        test_users = make_test_users(clerks_per_prison=2)
+        prison_clerks = test_users['prison_clerks']
+        bank_admins = test_users['bank_admins']
+        send_money_users = test_users['send_money_users']
+        security_staff = test_users['security_staff']
+        self.users = prison_clerks[0], bank_admins[0], send_money_users[0], security_staff[0]
         self.send_money_user = send_money_users[0]
         load_random_prisoner_locations(number_of_prisoners=2 * Prison.objects.count())
 
@@ -513,7 +526,7 @@ class PrisonPopulationViewTestCase(AuthTestCaseMixin, APITestCase):
 
     def setUp(self):
         super().setUp()
-        self.prison_clerks, _, _, _, _, _ = make_test_users()
+        self.prison_clerks = make_test_users()['prison_clerks']
 
     @property
     def url(self):
@@ -537,7 +550,7 @@ class PrisonCategoryViewTestCase(AuthTestCaseMixin, APITestCase):
 
     def setUp(self):
         super().setUp()
-        self.prison_clerks, _, _, _, _, _ = make_test_users()
+        self.prison_clerks = make_test_users()['prison_clerks']
 
     @property
     def url(self):

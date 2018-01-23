@@ -22,7 +22,9 @@ class CreateDisbursementTestCase(AuthTestCaseMixin, APITestCase):
 
     def setUp(self):
         super().setUp()
-        self.prison_clerks, _, self.bank_admins, _, _, _ = make_test_users()
+        test_users = make_test_users()
+        self.prison_clerks = test_users['prison_clerks']
+        self.bank_admins = test_users['disbursement_bank_admins']
         load_random_prisoner_locations()
 
     def test_permissions_required(self):
@@ -133,7 +135,9 @@ class ListDisbursementsTestCase(AuthTestCaseMixin, APITestCase):
 
     def setUp(self):
         super().setUp()
-        self.prison_clerks, _, self.bank_admins, _, _, _ = make_test_users()
+        test_users = make_test_users()
+        self.prison_clerks = test_users['prison_clerks']
+        self.bank_admins = test_users['disbursement_bank_admins']
         self.user = self.prison_clerks[0]
         self.prison = Prison.objects.get(pk='IXB')
 
@@ -192,7 +196,9 @@ class UpdateDisbursementsTestCase(AuthTestCaseMixin, APITestCase):
 
     def setUp(self):
         super().setUp()
-        self.prison_clerks, _, self.bank_admins, _, _, _ = make_test_users()
+        test_users = make_test_users()
+        self.prison_clerks = test_users['prison_clerks']
+        self.bank_admins = test_users['disbursement_bank_admins']
 
     def test_update_disbursement(self):
         user = self.prison_clerks[0]
@@ -305,7 +311,9 @@ class UpdateDisbursementResolutionTestCase(AuthTestCaseMixin, APITestCase):
 
     def setUp(self):
         super().setUp()
-        self.prison_clerks, _, self.bank_admins, _, _, _ = make_test_users()
+        test_users = make_test_users()
+        self.prison_clerks = test_users['prison_clerks']
+        self.bank_admins = test_users['disbursement_bank_admins']
 
     def test_reject_disbursement(self):
         user = self.prison_clerks[0]

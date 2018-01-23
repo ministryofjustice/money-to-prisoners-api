@@ -38,11 +38,14 @@ class BaseCreditViewTestCase(AuthTestCaseMixin, APITestCase):
 
     def setUp(self):
         super().setUp()
-        (
-            self.prison_clerks, self.prisoner_location_admins,
-            self.bank_admins, self.refund_bank_admins,
-            self.send_money_users, self.security_staff
-        ) = make_test_users(clerks_per_prison=2)
+
+        test_users = make_test_users(clerks_per_prison=2)
+        self.prison_clerks = test_users['prison_clerks']
+        self.prisoner_location_admins = test_users['prisoner_location_admins']
+        self.bank_admins = test_users['bank_admins']
+        self.refund_bank_admins = test_users['refund_bank_admins']
+        self.send_money_users = test_users['send_money_users']
+        self.security_staff = test_users['security_staff']
 
         self.latest_transaction_date = latest_transaction_date()
         self.latest_payment_date = latest_payment_date()

@@ -15,7 +15,9 @@ class NotificationsTestCase(AuthTestCaseMixin, APITestCase):
 
     def setUp(self):
         super().setUp()
-        self.users = list(itertools.chain.from_iterable(make_test_users(clerks_per_prison=1)))
+        self.users = list(itertools.chain.from_iterable(
+            make_test_users(clerks_per_prison=1).values())
+        )
 
     def test_unauthenticated_can_see_public_notifications(self):
         Notification.objects.create(
