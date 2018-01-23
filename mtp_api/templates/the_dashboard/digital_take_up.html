@@ -46,9 +46,12 @@
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <script>
       google.charts.load('current', {'packages':['corechart']});
-        google.charts.setOnLoadCallback(drawChart);
+        google.charts.setOnLoadCallback(drawChartTransaction);
+        google.charts.setOnLoadCallback(drawChartAmount);
+        google.charts.setOnLoadCallback(drawChartPercentage);
 
-        function drawChart() {
+
+        function drawChartTransaction() {
           var data = google.visualization.arrayToDataTable([
             ['Month', 'Credits', 'Transactions'],
             {% for d in data reversed %}
@@ -57,21 +60,64 @@
             ]);
 
           var options = {
-            title: 'Digital Take up',
+            title: 'Digital Take Up Transactions',
             width: 1200,
             height: 400,
             bar: {groupWidth: "95%"},
             legend: { position: "none" },
               };
 
-          var chart = new google.visualization.ColumnChart(document.getElementById('chart_div'));
+          var chart = new google.visualization.ColumnChart(document.getElementById('chart_div_1'));
           chart.draw(data, options);
             }
-    </script>
 
+            function drawChartAmount() {
+              var data = google.visualization.arrayToDataTable([
+                ['Month', 'Credits', 'Transactions'],
+                {% for d in data reversed %}
+                  ['{{d.start_of_month|date:"F Y"}}', {{d.queryset_credit_amount}}, {{d.queryset_transaction_amount}}],
+                {% endfor %}
+                ]);
+
+              var options = {
+                title: 'Digital Take up Money',
+                width: 1200,
+                height: 400,
+                bar: {groupWidth: "95%"},
+                legend: { position: "none" },
+                  };
+
+              var chart = new google.visualization.ColumnChart(document.getElementById('chart_div_2'));
+              chart.draw(data, options);
+                }
+
+
+          function drawChartPercentage() {
+              var data = google.visualization.arrayToDataTable([
+                ['Month', 'Credits', 'Transactions'],
+                {% for d in data reversed %}
+                  ['{{d.start_of_month|date:"F Y"}}', {{d.percent_credit_amount}}, {{d.percent_transaction_amount}}],
+                {% endfor %}
+                ]);
+
+              var options = {
+                title: 'Digital take up as a percentage',
+                width: 1200,
+                height: 400,
+                legend: { position: 'top', maxLines: 3 },
+                bar: { groupWidth: '75%' },
+                isStacked: true,
+                  };
+
+              var chart = new google.visualization.ColumnChart(document.getElementById('chart_div_3'));
+              chart.draw(data, options);
+                }
+        </script>
   </head>
   <body>
-    <div id="chart_div" style="width: 100%; height: 500px;"></div>
+    <div id="chart_div_1" style="width: 100%; height: 500px;"></div>
+    <div id="chart_div_2" style="width: 100%; height: 500px;"></div>
+    <div id="chart_div_3" style="width: 100%; height: 500px;"></div>
 
 {% for d in data %}
     <li> Number of credits that month: {{ d.credit_count }}  Total value of credits that month: £{{d.queryset_credit_amount}} Number of transaction that month: {{d.transaction_count}} Total value of transactions that month: £{{d.queryset_transaction_amount}}
