@@ -11,11 +11,11 @@ from .signals import disbursement_created, disbursement_edited
 User = get_user_model()
 
 
-class PrisonerInPrisonValidator():
+class PrisonerInPrisonValidator:
     def __call__(self, data):
         if 'prisoner_number' in data:
-            prisoner_number = data['prisoner_number']
-            prison = data['prison']
+            prisoner_number = data.get('prisoner_number')
+            prison = data.get('prison')
 
             try:
                 PrisonerLocation.objects.get(
