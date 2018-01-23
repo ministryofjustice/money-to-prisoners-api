@@ -1,33 +1,7 @@
 
 {% load static %}
 
-
-<!-- <html>
-  <script src="https://www.google.com/jsapi" type="text/javascript"></script>
-  <script>
-    google.load('visualization', '1', {packages:['table']});
-
-    google.setOnLoadCallback(drawTable);
-    function drawTable() {
-      %(jscode)s
-      var jscode_table = new google.visualization.Table(document.getElementById('table_div_jscode'));
-      jscode_table.draw(jscode_data, {showRowNumber: true});
-
-      var json_table = new google.visualization.Table(document.getElementById('table_div_json'));
-      var json_data = new google.visualization.DataTable(%(json)s, 0.6);
-      json_table.draw(json_data, {showRowNumber: true});
-    }
-  </script>
-  <body>
-    <H1>Table created using ToJSCode</H1>
-    <div id="table_div_jscode"></div>
-    <H1>Table created using ToJSon</H1>
-    <div id="table_div_json"></div>
-  </body>
-</html> -->
-
-
-<!-- <html>
+<html>
 
   <head>
      <script src="https://www.google.com/jsapi" type="text/javascript"></script>
@@ -39,7 +13,7 @@
   <body>
     <div id="divChart"></div>
   </body>
-</html> -->
+</html>
 
 <html>
   <head>
@@ -49,6 +23,9 @@
         google.charts.setOnLoadCallback(drawChartTransaction);
         google.charts.setOnLoadCallback(drawChartAmount);
         google.charts.setOnLoadCallback(drawChartPercentage);
+      google.charts.load("current", {packages:["calendar"]});
+      google.charts.setOnLoadCallback(drawChartCalendarCredit);
+
 
 
         function drawChartTransaction() {
@@ -61,9 +38,9 @@
 
           var options = {
             title: 'Digital Take Up Transactions',
-            width: 1200,
+            width: 800,
             height: 400,
-            bar: {groupWidth: "95%"},
+            bar: {groupWidth: "85%"},
             legend: { position: "none" },
               };
 
@@ -81,9 +58,9 @@
 
               var options = {
                 title: 'Digital Take up Money',
-                width: 1200,
+                width: 800,
                 height: 400,
-                bar: {groupWidth: "95%"},
+                bar: {groupWidth: "85%"},
                 legend: { position: "none" },
                   };
 
@@ -112,19 +89,38 @@
               var chart = new google.visualization.ColumnChart(document.getElementById('chart_div_3'));
               chart.draw(data, options);
                 }
+
+
+                function drawChartCalendarCredit() {
+       var dataTable = new google.visualization.DataTable();
+       dataTable.addColumn({ type: 'date', id: 'Date' });
+       dataTable.addColumn({ type: 'number', id: 'Credit' } );
+       dataTable.addRows([
+        {% for d in data reversed %}
+          [new Date({{d.start_of_month|date:"o, n, w"}}), {{ d.credit_count }}],
+        {% endfor %}
+
+        ]);
+
+       var chart = new google.visualization.Calendar(document.getElementById('calendar_basic'));
+
+       var options = {
+         title: "Credit Over the Year",
+         height: 350,
+       };
+
+       chart.draw(dataTable, options);
+   }
         </script>
   </head>
   <body>
-    <div id="chart_div_1" style="width: 100%; height: 500px;"></div>
-    <div id="chart_div_2" style="width: 100%; height: 500px;"></div>
+    <h1>Analytics Dashboard - MTP</h1>
+    <table>
+    <tr>
+        <td><div id="chart_div_1" style="width: 40%; height: 500px;"></div></div></td>
+        <td> <div id="chart_div_2" style="width: 40%; height: 500px;"></div></td>
+    </tr>
+  </table>
     <div id="chart_div_3" style="width: 100%; height: 500px;"></div>
-
-{% for d in data %}
-    <li> Number of credits that month: {{ d.credit_count }}  Total value of credits that month: £{{d.queryset_credit_amount}} Number of transaction that month: {{d.transaction_count}} Total value of transactions that month: £{{d.queryset_transaction_amount}}
-    Percentage that is Credit {{d.percent_credit_amount}}% Percentage that is Transactions {{d.percent_transaction_amount}}%
-    </li>
-{% endfor%}
-
-  </body>
-</html>
-
+    <div id="chart_div_4" style="width: 100%; height: 500px;"></div>
+    <div id="calendar_basic" style="width: 1000px; height: 350px;"></div>
