@@ -8,8 +8,10 @@ from django.views.generic import FormView, TemplateView
 from django.utils import timezone
 from credit.models import Credit
 from payment.models import Payment
+from performance.models import DigitalTakeupQueryset, DigitalTakeup
 from django.db.models import Sum
 import pytz
+import functools
 
 class DashboardView(TemplateView):
     """
@@ -32,15 +34,15 @@ class DashboardView(TemplateView):
         else:
             month += 1
 
+
         for _ in range(6):
-            #start_of_month = timezone.now() - datetime.timedelta(days = 30 * (month + 1))
-            #end_of_month = timezone.now() - datetime.timedelta(days = 30 * month)
 
             end_of_month = datetime.datetime(year=year, month=month, day=1)
             month -= 1
             if month == 0:
                 month = 12
                 year -= 1
+
             start_of_month = datetime.datetime(year=year, month=month, day=1)
             start_of_month = tz.localize(start_of_month)
             end_of_month = tz.localize(end_of_month)
@@ -51,6 +53,7 @@ class DashboardView(TemplateView):
             queryset_credit = Credit.objects.filter(received_at__range=(start_of_month, end_of_month))
             queryset_credit_amount = Credit.objects.filter(received_at__range=(start_of_month, end_of_month)).aggregate(Sum('amount'))
 
+
             def pence_to_pounds(amount):
                 if(amount == None):
                     return 0
@@ -60,24 +63,43 @@ class DashboardView(TemplateView):
             amount_transaction_to_pounds = pence_to_pounds(queryset_transaction_amount['amount__sum'])
             amount_credit_to_pounds = pence_to_pounds(queryset_credit_amount['amount__sum'])
 
-            def as_a_percentage(credit, transaction):
+            def as_a_percentage(credit, transaction, post=0):
                 if(credit == None):
                      credit = 0
                 if(transaction == None):
                     transaction = 0
-                if(credit == 0 and transaction == 0):
-                    percent = {'percent_of_credit': 0, 'percent_of_transaction': 0}
+                if(post == None):
+                    post = 0
+                if(credit == 0 and transaction == 0 and post == 0 ):
+                    percent = {'percent_of_credit': 0, 'percent_of_transaction': 0, 'percent_of_post': 0}
                 else:
-                    total = credit + transaction
+                    total = credit + transaction + post
                     percent_of_credit = credit/total * 100
                     percent_of_transaction = transaction/total * 100
-                    percent = {'percent_of_credit': round(percent_of_credit, 2), 'percent_of_transaction': round(percent_of_transaction, 2)}
+                    percent_of_post = post/total * 100
+                    percent = {'percent_of_credit': round(percent_of_credit, 2), 'percent_of_transaction': round(percent_of_transaction, 2), 'percent_of_post': round(percent_of_post, 2)}
                 return percent
 
             percent_of_use = as_a_percentage(queryset_credit.count(), queryset_transaction.count())
             percent_of_amount = as_a_percentage(queryset_credit_amount['amount__sum'], queryset_transaction_amount['amount__sum'])
 
+            digital_takeup = DigitalTakeup.objects.filter(date__range=(start_of_month, end_of_month))
+
+            transaction_by_post = [i.credits_by_post for i in digital_takeup]
+
+
+            def total_post(list_of_post_that_month):
+                if(list_of_post_that_month == []):
+                    total = 0
+                else:
+                    total = functools.reduce(lambda x,y: x+y, list_of_post_that_month)
+                return total
+
+            transaction_by_post = total_post(transaction_by_post)
+
+
             data.append({
+            'transaction_by_post':transaction_by_post,
             'transaction_count': queryset_transaction.count(),
             'credit_count': queryset_credit.count(),
             'queryset_credit_amount': amount_credit_to_pounds,
@@ -85,6 +107,7 @@ class DashboardView(TemplateView):
             'percent_of_credit_count': percent_of_use['percent_of_credit'],
             'percent_of_transaction_count': percent_of_use['percent_of_transaction'],
             'percent_credit_amount': percent_of_amount['percent_of_credit'],
+            'percent_of_post': percent_of_amount['percent_of_post'],
             'percent_transaction_amount': percent_of_amount['percent_of_transaction'],
             'start_of_month': start_of_month,
             'end_of_month': end_of_month

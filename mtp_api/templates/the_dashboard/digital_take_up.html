@@ -19,20 +19,20 @@
   <head>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <script>
-      google.charts.load('current', {'packages':['corechart']});
+        google.charts.load('current', {'packages':['corechart']});
         google.charts.setOnLoadCallback(drawChartTransaction);
         google.charts.setOnLoadCallback(drawChartAmount);
         google.charts.setOnLoadCallback(drawChartPercentage);
-      google.charts.load("current", {packages:["calendar"]});
-      google.charts.setOnLoadCallback(drawChartCalendarCredit);
+        google.charts.load("current", {packages:["calendar"]});
+        google.charts.setOnLoadCallback(drawChartCalendarCredit);
 
 
 
         function drawChartTransaction() {
           var data = google.visualization.arrayToDataTable([
-            ['Month', 'Credits', 'Transactions'],
+            ['Month', 'Credits', 'Transactions', 'Post'],
             {% for d in data reversed %}
-              ['{{d.start_of_month|date:"F Y"}}', {{d.credit_count}}, {{d.transaction_count}}],
+              ['{{d.start_of_month|date:"F Y"}}', {{d.credit_count}}, {{d.transaction_count}}, {{d.transaction_by_post}}],
             {% endfor %}
             ]);
 
@@ -68,12 +68,11 @@
               chart.draw(data, options);
                 }
 
-
           function drawChartPercentage() {
               var data = google.visualization.arrayToDataTable([
-                ['Month', 'Credits', 'Transactions'],
+                ['Month', 'Credits', 'Transactions', 'Post'],
                 {% for d in data reversed %}
-                  ['{{d.start_of_month|date:"F Y"}}', {{d.percent_credit_amount}}, {{d.percent_transaction_amount}}],
+                  ['{{d.start_of_month|date:"F Y"}}', {{d.percent_of_credit_count}}, {{d.percent_of_transaction_count}}, {{d.percent_of_post}}],
                 {% endfor %}
                 ]);
 
