@@ -45,6 +45,12 @@ class Disbursement(TimeStampedModel):
 
     objects = DisbursementManager.from_queryset(DisbursementQuerySet)()
 
+    class Meta:
+        ordering = ('id',)
+        permissions = (
+            ('view_disbursement', 'Can view disbursements'),
+        )
+
     @staticmethod
     def get_permitted_state(new_resolution):
         if new_resolution == DISBURSEMENT_RESOLUTION.SENT:
@@ -55,6 +61,15 @@ class Disbursement(TimeStampedModel):
             return DISBURSEMENT_RESOLUTION.PRECONFIRMED
         else:
             return DISBURSEMENT_RESOLUTION.PENDING
+
+    def __str__(self):
+        return 'Disbursement {id}, {amount} {prisoner} > {recipient}, {status}'.format(
+            id=self.pk,
+            amount=format_amount(self.amount, True),
+            prisoner=self.prisoner_number,
+            recipient=self.recipient_name,
+            status=self.resolution
+        )
 
     def resolution_permitted(self, new_resolution):
         return self.resolution == self.get_permitted_state(new_resolution)
@@ -114,21 +129,6 @@ class Disbursement(TimeStampedModel):
         self.save()
         disbursement_sent.send(
             sender=Disbursement, disbursement=self, by_user=by_user)
-
-    class Meta:
-        ordering = ('id',)
-        permissions = (
-            ('view_disbursement', 'Can view disbursements'),
-        )
-
-    def __str__(self):
-        return 'Disbursement {id}, {amount} {prisoner} > {recipient}, {status}'.format(
-            id=self.pk,
-            amount=format_amount(self.amount, True),
-            prisoner=self.prisoner_number,
-            recipient=self.recipient_name,
-            status=self.resolution
-        )
 
 
 class Log(TimeStampedModel):

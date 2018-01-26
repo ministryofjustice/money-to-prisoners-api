@@ -290,6 +290,8 @@ OFFENDER_API_URL = os.environ.get('OFFENDER_API_URL', '')
 OFFENDER_API_CLIENT_ID = os.environ.get('OFFENDER_API_CLIENT_ID', '')
 OFFENDER_API_CLIENT_SECRET = os.environ.get('OFFENDER_API_CLIENT_SECRET', '')
 
+ELASTICSEARCH_DOMAIN = os.environ.get('ELASTICSEARCH_DOMAIN', '')
+
 try:
     from .local import *  # noqa
 except ImportError:

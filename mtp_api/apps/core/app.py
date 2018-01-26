@@ -10,5 +10,9 @@ class AppConfig(DjangoAppConfig):
         from django.contrib import admin
         from django.contrib.admin import sites as admin_sites
         from core.admin import site
+        from core.search import registry
+
         admin.site = site
         admin_sites.site = site
+
+        registry.setup()
