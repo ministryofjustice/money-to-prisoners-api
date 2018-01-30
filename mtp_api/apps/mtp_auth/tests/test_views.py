@@ -178,7 +178,10 @@ class RoleTestCase(AuthBaseTestCase):
 
     def test_can_all_list_roles(self):
         user = random.choice(self.admin_users)
-        roles = self.assertCanListRoles(user, ['bank-admin', 'prison-clerk', 'prisoner-location-admin', 'security'])
+        roles = self.assertCanListRoles(
+            user,
+            ['bank-admin', 'disbursement-admin', 'prison-clerk', 'prisoner-location-admin', 'security']
+        )
         self.assertTrue(all(
             'application' in role and 'name' in role['application'] and 'client_id' in role['application']
             for role in roles
@@ -186,7 +189,10 @@ class RoleTestCase(AuthBaseTestCase):
 
     def test_user_not_in_role_can_list_all_anyway(self):
         user = random.choice(self.users_with_no_role)
-        self.assertCanListRoles(user, ['bank-admin', 'prison-clerk', 'prisoner-location-admin', 'security'])
+        self.assertCanListRoles(
+            user,
+            ['bank-admin', 'disbursement-admin', 'prison-clerk', 'prisoner-location-admin', 'security']
+        )
 
     def test_user_not_in_role_cannot_mange_any(self):
         user = random.choice(self.users_with_no_role)
