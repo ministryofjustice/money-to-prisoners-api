@@ -23,8 +23,11 @@ class DigitalTakeupUploadForm(forms.Form):
         'invalid_date': _('The report data should be for one day only'),
         'unknown_prison': _('Cannot look up prison ‘%(prison_name)s’'),
     }
-    credit_type_mtp = 'MTDS'
-    credit_type_post = 'POST'
+    credit_types = {
+        'POST': ('credits_by_post', 'amount_by_post'),
+        'MTDS':  ('credits_by_mtp', 'amount_by_mtp'),
+        'MRPR':  ('credits_by_mtp', 'amount_by_mtp'),  # to allow for legacy report uploading
+    }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -94,18 +97,24 @@ class DigitalTakeupUploadForm(forms.Form):
                                       params={'prison_name': prison_name})
             if nomis_id not in self.credits_by_prison:
                 self.credits_by_prison[nomis_id] = {
-                    self.credit_type_mtp: 0,
-                    self.credit_type_post: 0,
+                    'credits_by_post': 0,
+                    'credits_by_mtp': 0,
+                    'amount_by_post': 0,
+                    'amount_by_mtp': 0,
                 }
             if sheet.cell_value(row, 1):
                 credit_type = sheet.cell_value(row, 1).upper()
                 count = sheet.cell_value(row, 2)
+                amount = sheet.cell_value(row, 4)
             else:
                 credit_type = sheet.cell_value(row, 2).upper()
                 count = sheet.cell_value(row, 3)
-            if credit_type not in self.credits_by_prison[nomis_id]:
+                amount = sheet.cell_value(row, 5)
+            if credit_type not in self.credit_types:
                 raise ValueError('Cannot parse credit type %s in row %d' % (credit_type, row))
-            self.credits_by_prison[nomis_id][credit_type] = int(count)
+            credits_key, amount_key = self.credit_types[credit_type]
+            self.credits_by_prison[nomis_id][credits_key] = int(count)
+            self.credits_by_prison[nomis_id][amount_key] = int(amount * 100)
             row += 1
 
     def clean_excel_file(self):
@@ -130,17 +139,12 @@ class DigitalTakeupUploadForm(forms.Form):
     def save(self):
         from performance.models import DigitalTakeup
 
-        takeup = [
+        for nomis_id, credit_by_prison in self.credits_by_prison.items():
             DigitalTakeup.objects.update_or_create(
-                defaults=dict(
-                    credits_by_post=credit_by_prison[DigitalTakeupUploadForm.credit_type_post],
-                    credits_by_mtp=credit_by_prison[DigitalTakeupUploadForm.credit_type_mtp],
-                ),
+                defaults=credit_by_prison,
                 date=self.date,
                 prison_id=nomis_id,
-            )[0]
-            for nomis_id, credit_by_prison in self.credits_by_prison.items()
-        ]
+            )
 
         datestr = self.date.strftime('%Y-%m-%dT00:00:00')
         job = ScheduledCommand(
@@ -150,5 +154,3 @@ class DigitalTakeupUploadForm(forms.Form):
             delete_after_next=True
         )
         job.save()
-
-        return takeup
