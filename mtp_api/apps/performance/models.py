@@ -53,6 +53,8 @@ class DigitalTakeup(models.Model):
     prison = models.ForeignKey('prison.Prison', on_delete=models.CASCADE)
     credits_by_post = models.IntegerField(verbose_name=_('Credits by post'))
     credits_by_mtp = models.IntegerField(verbose_name=_('Credits sent digitally'))
+    amount_by_post = models.IntegerField(verbose_name=_('Amount by post'), null=True)
+    amount_by_mtp = models.IntegerField(verbose_name=_('Amount sent digitally'), null=True)
 
     objects = DigitalTakeupQueryset.as_manager()
 
@@ -72,6 +74,13 @@ class DigitalTakeup(models.Model):
     @property
     def credits_total(self):
         return self.credits_by_post + self.credits_by_mtp
+
+    @property
+    def amount_total(self):
+        try:
+            return self.amount_by_post + self.amount_by_mtp
+        except TypeError:
+            pass
 
     @property
     def digital_takeup(self):
