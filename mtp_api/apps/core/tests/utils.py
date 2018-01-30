@@ -79,6 +79,7 @@ def make_applications():
     make_application_and_roles(
         BANK_ADMIN_OAUTH_CLIENT_ID, 'Bank admin',
         {'name': 'bank-admin', 'groups': ['RefundBankAdmin', 'BankAdmin']},
+        {'name': 'disbursement-admin', 'groups': ['DisbursementBankAdmin']},
     )
     make_application_and_roles(
         SEND_MONEY_CLIENT_ID, 'Send money to someone in prison',
