@@ -23,7 +23,7 @@ class DigitalTakeupUploadForm(forms.Form):
         'invalid_date': _('The report data should be for one day only'),
         'unknown_prison': _('Cannot look up prison ‘%(prison_name)s’'),
     }
-    credit_type_mtp = 'MRPR'
+    credit_type_mtp = 'MTDS'
     credit_type_post = 'POST'
 
     def __init__(self, *args, **kwargs):
