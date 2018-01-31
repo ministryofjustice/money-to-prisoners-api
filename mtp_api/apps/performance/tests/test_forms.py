@@ -26,7 +26,12 @@ class DigitalUptakeTestCase(TestCase):
         self.assertEqual(DigitalTakeup.objects.count(), 111)
         self.assertEqual(ScheduledCommand.objects.count(), 2)
 
+        sample_date = datetime.date(2016, 11, 2)
         self.assertAlmostEqual(DigitalTakeup.objects.mean_digital_takeup(), 0.19, places=2)
         self.assertAlmostEqual(DigitalTakeup.objects.filter(
-            date=datetime.date(2016, 11, 2)
+            date=sample_date
         ).mean_digital_takeup(), 0.49, places=2)
+
+        uptake_in_brixton = DigitalTakeup.objects.get(prison='BXI', date=sample_date)
+        self.assertEqual(uptake_in_brixton.amount_by_mtp, 14240)
+        self.assertEqual(uptake_in_brixton.amount_total, 34664)
