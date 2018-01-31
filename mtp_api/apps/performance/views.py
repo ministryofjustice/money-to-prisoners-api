@@ -64,10 +64,10 @@ class DigitalTakeupUploadView(AdminViewMixin, FormView):
         common_prison_credits = sorted(spreadsheet_set.intersection(credited_set))
         common_prison_credit_differences = [
             '%s (recevied %d, spreadsheet %d)' % (
-                prison, credited[prison], credits_in_spreadsheet[prison][DigitalTakeupUploadForm.credit_type_mtp]
+                prison, credited[prison], credits_in_spreadsheet[prison]['credits_by_mtp']
             )
             for prison in sorted(common_prison_credits)
-            if credits_in_spreadsheet[prison][DigitalTakeupUploadForm.credit_type_mtp] != credited[prison]
+            if credits_in_spreadsheet[prison]['credits_by_mtp'] != credited[prison]
         ]
         if missing_prison_credits:
             messages.warning(self.request,
