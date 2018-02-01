@@ -15,6 +15,16 @@ import functools
 import urllib.request as ur
 import json
 import requests
+from django.db import models
+from credit.models import Credit, CREDIT_RESOLUTION, CREDIT_STATUS
+
+
+TRANSACTION_ERROR_FILTERS = (
+    models.Q(transaction__source=TRANSACTION_SOURCE.BANK_TRANSFER,
+             prison__isnull=True) |
+    models.Q(transaction__source=TRANSACTION_SOURCE.BANK_TRANSFER,
+             blocked=True)
+)
 
 def weighted_average(data):
     rating_1 = data["rating_1:sum"]
@@ -66,15 +76,11 @@ def get_user_satisfaction():
             year_ago = weighted_average(ratings)
             year_ago = "{:.2%}".format(year_ago)
 
-
-
     return {
         'last': last,
         'previous': previous,
         'year_ago': year_ago
     }
-
-
 
 
 class DashboardView(TemplateView):
@@ -91,6 +97,8 @@ class DashboardView(TemplateView):
         tz = timezone.get_current_timezone()
         today = datetime.date.today()
         year = today.year
+        last_year = today.year -1
+        print("LAST YEAR", last_year)
         month = today.month
         if month == 12:
             month = 1
@@ -98,68 +106,34 @@ class DashboardView(TemplateView):
         else:
             month += 1
 
-        # url_satisfaction_data_not_sure = 'https://www.performance.service.gov.uk/data/send-prisoner-money/customer-satisfaction?flatten=true&duration=52&period=week&collect=rating_1%3Asum&collect=rating_2%3Asum&collect=rating_3%3Asum&collect=rating_4%3Asum&collect=rating_5%3Asum&collect=total%3Asum&format=json'
-        # url_satisfaction_data = "https://www.performance.service.gov.uk/data/send-prisoner-money/customer-satisfaction"
-
-        # satisfaction_data = ur.urlopen(url_satisfaction_data)
-        # satisfaction_data = satisfaction_data.read()
-        # # print(type(satisfaction_data))
-        # satisfaction_data = satisfaction_data.decode('UTF-8')
-        # # print(type(satisfaction_data))
-        # satisfaction_data = json.loads(satisfaction_data)
-        # # print(type(satisfaction_data))
-
-        # satisfaction_data_list_of_dict = satisfaction_data['data']
-        # print(satisfaction_data_list_of_dict)
-
-
-        # def create_unique_data(data, sort_by):
-        #     data_sorted = []
-        #     for element in reversed(data):
-        #         data_sorted.append(element[sort_by])
-        #     return (set(data_sorted), sort_by)
-
-
-        # # unique_data = create_unique_data(satisfaction_data_list_of_dict, '_month_start_at')
-
-        # def create_data_object(unique_data, data):
-        #     unique_data, sort_by = unique_data
-        #     unique_data_list = list(unique_data)
-        #     truncated_string_list = [string[:10] for string in unique_data_list]
-        #     dict_data = {e: {'rating_1': 0, 'rating_2': 0, 'rating_3': 0, 'rating_4': 0, 'rating_5': 0 } for e in truncated_string_list}
-        #     return dict_data
-
-
-
-
-        # print(create_data_object(unique_data, satisfaction_data_list_of_dict))
-
-        # print(create_data_object(create_unique_data, satisfaction_data_list_of_dict))
-
-        # [li['total'] for li in data]
-
-        # data_retrieve = [x if x['total'] == 52 for x in data]
-
+        list_of_errors = []
+        list_of_errors_the_previous_year = []
         for _ in range(6):
-
             end_of_month = datetime.datetime(year=year, month=month, day=1)
+            end_of_month_last_year = datetime.datetime(year=last_year, month=month, day=1)
             month -= 1
             if month == 0:
                 month = 12
                 year -= 1
+                last_year -= 1
 
+
+            start_of_month_last_year = datetime.datetime(year=last_year, month=month, day=1)
             start_of_month = datetime.datetime(year=year, month=month, day=1)
             start_of_month = tz.localize(start_of_month)
             end_of_month = tz.localize(end_of_month)
-
-            # print('start_of_month', start_of_month)
-            # print('end_of_month', end_of_month)
+            start_of_month_last_year = tz.localize(start_of_month_last_year)
+            end_of_month_last_year = tz.localize(end_of_month_last_year)
 
             queryset_transaction = Transaction.objects.filter(received_at__range=(start_of_month, end_of_month))
             queryset_transaction_amount = Transaction.objects.filter(received_at__range=(start_of_month, end_of_month)).aggregate(Sum('amount'))
 
             queryset_credit = Credit.objects.filter(received_at__range=(start_of_month, end_of_month))
             queryset_credit_amount = Credit.objects.filter(received_at__range=(start_of_month, end_of_month)).aggregate(Sum('amount'))
+
+            queryset_credit_last_year = Credit.objects.filter(received_at__range=(start_of_month_last_year, end_of_month_last_year))
+
+            print("QUERY CREDITS LAST YEAR", queryset_credit_last_year)
 
 
             def pence_to_pounds(amount):
@@ -197,19 +171,32 @@ class DashboardView(TemplateView):
                 transaction_by_post += takeup.credits_by_post
 
 
-            # transaction_by_post = [i.credits_by_post for i in digital_takeup]
+            total_credit = queryset_credit.exclude(resolution=CREDIT_RESOLUTION.INITIAL)
+            error_credit = total_credit.filter(transaction__isnull=False)
+            total_credit_count = total_credit.count()
+            error_credit_count = error_credit.count()
+
+            total_credit_last_year = queryset_credit_last_year.exclude(resolution=CREDIT_RESOLUTION.INITIAL)
+            error_credit_last_year = total_credit_last_year.filter(transaction__isnull=False)
+            total_credit_count_last_year = total_credit_last_year.count()
+            error_credit_count_last_year = error_credit_last_year.count()
 
 
-            # def total_post(list_of_post_that_month):
-            #     if(list_of_post_that_month == []):
-            #         total = 0
-                # else:
-                #     total = functools.reduce(lambda x,y: x+y, list_of_post_that_month)
-                #     total = sum(list_of_post_that_month)
-            #     return total
+            def error_percentage(total, errors):
+                try:
+                    percent_of_errors = (errors/total) * 100
+                except:
+                    percent_of_errors = 0
+                return round(percent_of_errors)
 
-            # transaction_by_post = total_post(transaction_by_post)
+            percent_of_errors = error_percentage(total_credit_count, error_credit_count)
 
+            percent_of_errors_last_year = error_percentage(total_credit_count_last_year, error_credit_count_last_year)
+
+            print("ERRORS LAST YEAR", percent_of_errors_last_year)
+
+            list_of_errors.append(percent_of_errors)
+            list_of_errors_the_previous_year.append(percent_of_errors_last_year)
 
             data.append({
             'transaction_by_post':transaction_by_post,
@@ -226,6 +213,13 @@ class DashboardView(TemplateView):
             'end_of_month': end_of_month,
             })
 
+        last_year_same_time_percentage_of_errors = list_of_errors_the_previous_year[0]
+        this_months_pecentage_of_errors = list_of_errors[0]
+        last_months_percentage_of_errors = list_of_errors[1]
+
+        context['last_year_same_time_percentage_of_errors'] = last_year_same_time_percentage_of_errors
+        context['this_months_pecentage_of_errors'] = this_months_pecentage_of_errors
+        context['last_months_percentage_of_errors'] = last_months_percentage_of_errors
         context['user_satisfaction'] = get_user_satisfaction()
         return context
 

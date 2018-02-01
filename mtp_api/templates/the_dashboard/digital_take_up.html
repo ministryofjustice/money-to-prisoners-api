@@ -1,5 +1,7 @@
 
 {% load static %}
+{% load credit %}
+{% load i18n %}
 
 <html>
 
@@ -89,31 +91,30 @@
               chart.draw(data, options);
                 }
 
+          // function drawChartCalendarCredit() {
+          //     var dataTable = new google.visualization.DataTable();
+          //        dataTable.addColumn({ type: 'date', id: 'Date' });
+          //        dataTable.addColumn({ type: 'number', id: 'Credit' } );
+          //        dataTable.addRows([
+          //         {% for d in data reversed %}
+          //           [new Date({{d.start_of_month|date:"o, n, w"}}), {{ d.credit_count }}],
+          //         {% endfor %}
 
-          function drawChartCalendarCredit() {
-              var dataTable = new google.visualization.DataTable();
-                 dataTable.addColumn({ type: 'date', id: 'Date' });
-                 dataTable.addColumn({ type: 'number', id: 'Credit' } );
-                 dataTable.addRows([
-                  {% for d in data reversed %}
-                    [new Date({{d.start_of_month|date:"o, n, w"}}), {{ d.credit_count }}],
-                  {% endfor %}
+          //         ]);
 
-                  ]);
+          //     var chart = new google.visualization.Calendar(document.getElementById('calendar_basic'));
 
-              var chart = new google.visualization.Calendar(document.getElementById('calendar_basic'));
+          //     var options = {
+          //        title: "Credit Over the Year",
+          //        height: 350,
+          //        };
 
-              var options = {
-                 title: "Credit Over the Year",
-                 height: 350,
-                 };
-
-               chart.draw(dataTable, options);
-               }
+          //      chart.draw(dataTable, options);
+          //      }
         </script>
   </head>
   <body>
-    <h1>Analytics Dashboard - MTP</h1>
+    <h1>{% trans 'Analytics Dashboard - MTP' %}</h1>
 
   <table>
     <tr>
@@ -125,19 +126,28 @@
     <div id="chart_div_4" style="width: 100%; height: 500px;"></div>
     <div id="calendar_basic" style="width: 1000px; height: 350px;"></div>
     <div>
-      <h1>User Satisfaction</h1>
+      <h2>{% trans 'User Satisfaction' %}</h2>
       {% if user_satisfaction.last > user_satisfaction.previous %}
         {{user_satisfaction.last}} +
       {% elif user_satisfaction.last < user_satisfaction.previous %}
-         user_satisfaction.previous %} -
+         {{user_satisfaction.previous}} -
       {% endif %}
-      <p>Past month</p>
+      <p>{% trans 'Past month' %}</p>
 
 
       {{user_satisfaction.year_ago}}
-      <p>Last year same time</p>
+      <p>{% trans 'Last year same time' %}</p>
 
-    <!--  Last: {{user_satisfaction.last}} {{user_satisfaction.year_ago}} Previous: {{user_satisfaction.previous}} -->
+      <h2>{% trans 'BACS Error Rate' %}</h2>
+      {% if this_months_pecentage_of_errors > last_months_percentage_of_errors %}
+        {{this_months_pecentage_of_errors}}% +
+      {% elif this_months_pecentage_of_errors < last_months_percentage_of_errors %}
+         {{this_months_pecentage_of_errors}}% -
+      {% endif %}
+
+      <p>{% trans 'Past month' %}</p>
+    <p>{{last_year_same_time_percentage_of_errors}}%</p>
+        <p>{% trans 'Last year same time' %}</p>
 
    </div>
   </body>
