@@ -25,6 +25,9 @@
         google.charts.setOnLoadCallback(drawChartTransaction);
         google.charts.setOnLoadCallback(drawChartAmount);
         google.charts.setOnLoadCallback(drawDonut);
+        google.charts.setOnLoadCallback(drawWeeklySatisfaction);
+        google.charts.setOnLoadCallback(drawMonthlySatisfaction);
+        google.charts.setOnLoadCallback(drawYearlySatisfaction);
         ;
 
         function drawChartTransaction() {
@@ -68,22 +71,110 @@
                 }
 
 
-      function drawDonut()  {
-        var data = google.visualization.arrayToDataTable([
-          ['Sent Money', 'Number'],
-          ['Credit', {{this_month_credit}}],
-          ['Transactions', {{this_months_transaction}}],
-          ['Post', {{this_months_transaction_by_post}}],
-        ]);
+            function drawDonut()  {
+              var data = google.visualization.arrayToDataTable([
+                ['Sent Money', 'Number'],
+                ['Credit', {{this_month_credit}}],
+                ['Transactions', {{this_months_transaction}}],
+                ['Post', {{this_months_transaction_by_post}}],
+              ]);
 
-        var options = {
-          title: 'This Months Uptake',
-          pieHole: 0.4,
-        };
+              var options = {
+                title: 'This Months Uptake',
+                pieHole: 0.4,
+              };
 
-        var chart = new google.visualization.PieChart(document.getElementById('chart_div_3'));
-        chart.draw(data, options);
-      }
+              var chart = new google.visualization.PieChart(document.getElementById('chart_div_3'));
+              chart.draw(data, options);
+            }
+
+
+            function drawWeeklySatisfaction() {
+              var data = google.visualization.arrayToDataTable([
+                ["Ratings", "Vote", { role: "style" } ],
+                ["Rating 1", {{user_satisfaction.weekly_ratings.rating_1}}, "#b87333"],
+                ["Rating 2", {{user_satisfaction.weekly_ratings.rating_2}}, "silver"],
+                ["Rating 3", {{user_satisfaction.weekly_ratings.rating_3}}, "gold"],
+                ["Rating 4", {{user_satisfaction.weekly_ratings.rating_4}}, "color: #e5e4e2"],
+                ["Rating 5", {{user_satisfaction.weekly_ratings.rating_1}}, "color: #e5e4e2"]
+              ]);
+
+            var view = new google.visualization.DataView(data);
+            view.setColumns([0, 1,
+                             { calc: "stringify",
+                               sourceColumn: 1,
+                               type: "string",
+                               role: "annotation" },
+                             2]);
+
+            var options = {
+              title: "Satisfaction rates over the week",
+              width: 600,
+              height: 400,
+              bar: {groupWidth: "95%"},
+              legend: { position: "none" },
+            };
+            var chart = new google.visualization.ColumnChart(document.getElementById('chart_div_4'));
+            chart.draw(view, options);
+          }
+
+          function drawMonthlySatisfaction() {
+              var data = google.visualization.arrayToDataTable([
+                ["Ratings", "Vote", { role: "style" } ],
+                ["Rating 1", {{user_satisfaction.monthly_ratings.rating_1}}, "#b87333"],
+                ["Rating 2", {{user_satisfaction.monthly_ratings.rating_2}}, "silver"],
+                ["Rating 3", {{user_satisfaction.monthly_ratings.rating_3}}, "gold"],
+                ["Rating 4", {{user_satisfaction.monthly_ratings.rating_4}}, "color: #e5e4e2"],
+                ["Rating 5", {{user_satisfaction.monthly_ratings.rating_1}}, "color: #e5e4e2"]
+              ]);
+
+            var view = new google.visualization.DataView(data);
+            view.setColumns([0, 1,
+                             { calc: "stringify",
+                               sourceColumn: 1,
+                               type: "string",
+                               role: "annotation" },
+                             2]);
+
+            var options = {
+              title: "Satisfaction rates over the month",
+              width: 600,
+              height: 400,
+              bar: {groupWidth: "95%"},
+              legend: { position: "none" },
+            };
+            var chart = new google.visualization.ColumnChart(document.getElementById('chart_div_5'));
+            chart.draw(view, options);
+          }
+
+          function drawYearlySatisfaction() {
+              var data = google.visualization.arrayToDataTable([
+                ["Ratings", "Vote", { role: "style" } ],
+                ["Rating 1", {{user_satisfaction.yearly_ratings.rating_1}}, "#b87333"],
+                ["Rating 2", {{user_satisfaction.yearly_ratings.rating_2}}, "silver"],
+                ["Rating 3", {{user_satisfaction.yearly_ratings.rating_3}}, "gold"],
+                ["Rating 4", {{user_satisfaction.yearly_ratings.rating_4}}, "color: #e5e4e2"],
+                ["Rating 5", {{user_satisfaction.yearly_ratings.rating_1}}, "color: #e5e4e2"]
+              ]);
+
+            var view = new google.visualization.DataView(data);
+            view.setColumns([0, 1,
+                             { calc: "stringify",
+                               sourceColumn: 1,
+                               type: "string",
+                               role: "annotation" },
+                             2]);
+
+            var options = {
+              title: "Satisfaction rates over the year",
+              width: 600,
+              height: 400,
+              bar: {groupWidth: "95%"},
+              legend: { position: "none" },
+            };
+            var chart = new google.visualization.ColumnChart(document.getElementById('chart_div_6'));
+            chart.draw(view, options);
+          }
 
         </script>
   </head>
@@ -96,21 +187,13 @@
         <td><div id="chart_div_2" style="width: 40%; height: 500px;"></div></td>
     </tr>
   </table>
-    <div id="chart_div_3" style="style=width: 900px; height: 500px;"></div>
+    <div id="chart_div_3" style="width: 900px; height: 500px;"></div>
     <div id="chart_div_4" style="width: 100%; height: 500px;"></div>
+    <div id="chart_div_4" style="width: 100%; height: 500px;"></div>
+    <div id="chart_div_5" style="width: 100%; height: 500px;"></div>
+    <div id="chart_div_6" style="width: 100%; height: 500px;"></div>
+
     <div>
-      <h2>{% trans 'User Satisfaction' %}</h2>
-      {% if user_satisfaction.last > user_satisfaction.previous %}
-        {{user_satisfaction.last}} +
-      {% elif user_satisfaction.last < user_satisfaction.previous %}
-         {{user_satisfaction.previous}} -
-      {% endif %}
-      <p>{% trans 'Past month' %}</p>
-
-
-      {{user_satisfaction.year_ago}}
-      <p>{% trans 'Last year same time' %}</p>
-
       <h2>{% trans 'BACS Error Rate' %}</h2>
       {% if this_months_pecentage_of_errors > last_months_percentage_of_errors %}
         {{this_months_pecentage_of_errors}}% +
@@ -119,8 +202,8 @@
       {% endif %}
 
       <p>{% trans 'Past month' %}</p>
-    <p>{{last_year_same_time_percentage_of_errors}}%</p>
-        <p>{% trans 'Last year same time' %}</p>
+      <p>{{last_year_same_time_percentage_of_errors}}%</p>
+      <p>{% trans 'Last year same time' %}</p>
    </div>
   </body>
 

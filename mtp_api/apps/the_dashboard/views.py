@@ -26,60 +26,87 @@ TRANSACTION_ERROR_FILTERS = (
              blocked=True)
 )
 
-def weighted_average(data):
-    rating_1 = data["rating_1:sum"]
-    rating_2 = data["rating_2:sum"]
-    rating_3 = data["rating_3:sum"]
-    rating_4 = data["rating_4:sum"]
-    rating_5 = data["rating_5:sum"]
-    total_sum = data["total:sum"]
+# def weighted_average(data):
+#     rating_1 = data["rating_1:sum"]
+#     rating_2 = data["rating_2:sum"]
+#     rating_3 = data["rating_3:sum"]
+#     rating_4 = data["rating_4:sum"]
+#     rating_5 = data["rating_5:sum"]
+#     total_sum = data["total:sum"]
 
-    return (0.25*rating_2 +.5*rating_3+rating_4*.75+rating_5)/(total_sum)
+#     return (0.25*rating_2 +.5*rating_3+rating_4*.75+rating_5)/(total_sum)
 
 
 def get_user_satisfaction():
-    data = requests.get('https://www.performance.service.gov.uk/data/send-prisoner-money/customer-satisfaction?flatten=true&duration=13&period=month&collect=rating_1%3Asum&collect=rating_2%3Asum&collect=rating_3%3Asum&collect=rating_4%3Asum&collect=rating_5%3Asum&collect=total%3Asum&format=json').json()
-    data = data["data"]
-    today = datetime.date.today()
-    year_of_last_month = today.year
-    month_of_last_month = today.month - 1
-    if (month_of_last_month == 0):
-        year_of_last_month = year_of_last_month - 1
-        month_of_last_month = 12
+    monthly_data = requests.get('https://www.performance.service.gov.uk/data/send-prisoner-money/customer-satisfaction?flatten=true&duration=1&period=month&collect=rating_1%3Asum&collect=rating_2%3Asum&collect=rating_3%3Asum&collect=rating_4%3Asum&collect=rating_5%3Asum&collect=total%3Asum&format=json').json()
+    monthly_data = monthly_data["data"][0]
+    weekly_data = requests.get('https://www.performance.service.gov.uk/data/send-prisoner-money/customer-satisfaction?flatten=true&duration=1&period=week&collect=rating_1%3Asum&collect=rating_2%3Asum&collect=rating_3%3Asum&collect=rating_4%3Asum&collect=rating_5%3Asum&collect=total%3Asum&format=json').json()
+    weekly_data = weekly_data["data"][0]
+    yearly_data = requests.get('https://www.performance.service.gov.uk/data/send-prisoner-money/customer-satisfaction?flatten=true&duration=1&period=year&collect=rating_1%3Asum&collect=rating_2%3Asum&collect=rating_3%3Asum&collect=rating_4%3Asum&collect=rating_5%3Asum&collect=total%3Asum&format=json').json()
+    yearly_data = yearly_data["data"][0]
 
-    year_of_previous_month = year_of_last_month
-    month_of_previous_month = month_of_last_month -1
-    if (month_of_previous_month == 0):
-        year_of_previous_month = year_of_previous_month - 1
-        month_of_previous_month = 12
+    this_week = {'rating_1': 0, 'rating_2': 0, 'rating_3': 0, 'rating_4': 0, 'rating_5': 0}
+    this_month = {'rating_1': 0, 'rating_2': 0, 'rating_3': 0, 'rating_4': 0, 'rating_5': 0}
+    this_year = {'rating_1': 0, 'rating_2': 0, 'rating_3': 0, 'rating_4': 0, 'rating_5': 0}
 
-    year_of_year_ago = year_of_last_month -1
-    month_of_year_ago = month_of_last_month
+    def ratings_data(name_of_time, ratings):
+        ratings['rating_1'] = name_of_time['rating_1:sum']
+        ratings['rating_2'] = name_of_time['rating_2:sum']
+        ratings['rating_3'] = name_of_time['rating_3:sum']
+        ratings['rating_4'] = name_of_time['rating_4:sum']
+        ratings['rating_5'] = name_of_time['rating_5:sum']
+        return ratings
 
-    last_start = '%d-%02d' % (year_of_last_month, month_of_last_month)
-    previous_start = '%d-%02d' % (year_of_previous_month, month_of_previous_month)
-    year_ago_start = '%d-%02d' % (year_of_year_ago, month_of_year_ago)
+    weekly_ratings = ratings_data(weekly_data, this_week)
+    monthly_ratings = ratings_data(monthly_data, this_month)
+    yearly_ratings = ratings_data(yearly_data, this_year)
 
-    last = None
-    previous = None
-    year_ago = None
-    for ratings in data:
-        if ratings["_start_at"].startswith(last_start):
-            last = weighted_average(ratings)
-            last = "{:.2%}".format(last)
+    print("WEEKLY RATINGS", weekly_ratings)
+    print("MONTHLY RATINGS", monthly_ratings)
+    print("YEARLY RATINGS", yearly_ratings)
 
-        if ratings["_start_at"].startswith(previous_start):
-            previous = weighted_average(ratings)
-            previous = "{:.2%}".format(previous)
+    # print(ratings)
 
-        if ratings["_start_at"].startswith(year_ago_start):
-            year_ago = weighted_average(ratings)
-            year_ago = "{:.2%}".format(year_ago)
+    # today = datetime.date.today()
+    # year_of_last_month = today.year
+    # month_of_last_month = today.month - 1
+    # if (month_of_last_month == 0):
+    #     year_of_last_month = year_of_last_month - 1
+    #     month_of_last_month = 12
+
+    # year_of_previous_month = year_of_last_month
+    # month_of_previous_month = month_of_last_month -1
+    # if (month_of_previous_month == 0):
+    #     year_of_previous_month = year_of_previous_month - 1
+    #     month_of_previous_month = 12
+
+    # year_of_year_ago = year_of_last_month -1
+    # month_of_year_ago = month_of_last_month
+
+    # last_start = '%d-%02d' % (year_of_last_month, month_of_last_month)
+    # previous_start = '%d-%02d' % (year_of_previous_month, month_of_previous_month)
+    # year_ago_start = '%d-%02d' % (year_of_year_ago, month_of_year_ago)
+
+    # last = None
+    # previous = None
+    # year_ago = None
+    # for ratings in data:
+    #     if ratings["_start_at"].startswith(last_start):
+    #         last = weighted_average(ratings)
+    #         last = "{:.2%}".format(last)
+
+    #     if ratings["_start_at"].startswith(previous_start):
+    #         previous = weighted_average(ratings)
+    #         previous = "{:.2%}".format(previous)
+
+    #     if ratings["_start_at"].startswith(year_ago_start):
+    #         year_ago = weighted_average(ratings)
+    #         year_ago = "{:.2%}".format(year_ago)
 
     return {
-        'last': last,
-        'previous': previous,
-        'year_ago': year_ago
+        'weekly_ratings': weekly_ratings,
+        'monthly_ratings': monthly_ratings,
+        'yearly_ratings': yearly_ratings
     }
 
 
@@ -219,11 +246,9 @@ class DashboardView(TemplateView):
             'end_of_month': end_of_month,
             })
         this_months_transaction_by_post = list_of_transactions_by_post[0]
-        print("POST", this_months_transaction_by_post)
         this_months_transaction = list_of_transaction_count[0]
-        print("TRANSACTION", this_months_transaction)
         this_month_credit = list_of_credit_count[0]
-        print("CREDIT", this_month_credit)
+
         last_year_same_time_percentage_of_errors = list_of_errors_the_previous_year[0]
         this_months_pecentage_of_errors = list_of_errors[0]
         last_months_percentage_of_errors = list_of_errors[1]
