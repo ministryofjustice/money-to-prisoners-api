@@ -108,6 +108,10 @@ class DashboardView(TemplateView):
 
         list_of_errors = []
         list_of_errors_the_previous_year = []
+        list_of_transactions_by_post = []
+        list_of_transaction_count = []
+        list_of_credit_count = []
+
         for _ in range(6):
             end_of_month = datetime.datetime(year=year, month=month, day=1)
             end_of_month_last_year = datetime.datetime(year=last_year, month=month, day=1)
@@ -193,10 +197,12 @@ class DashboardView(TemplateView):
 
             percent_of_errors_last_year = error_percentage(total_credit_count_last_year, error_credit_count_last_year)
 
-            print("ERRORS LAST YEAR", percent_of_errors_last_year)
-
             list_of_errors.append(percent_of_errors)
             list_of_errors_the_previous_year.append(percent_of_errors_last_year)
+            list_of_transactions_by_post.append(transaction_by_post)
+            list_of_transaction_count.append(queryset_transaction.count())
+            list_of_credit_count.append(queryset_credit.count())
+
 
             data.append({
             'transaction_by_post':transaction_by_post,
@@ -212,11 +218,19 @@ class DashboardView(TemplateView):
             'start_of_month': start_of_month,
             'end_of_month': end_of_month,
             })
-
+        this_months_transaction_by_post = list_of_transactions_by_post[0]
+        print("POST", this_months_transaction_by_post)
+        this_months_transaction = list_of_transaction_count[0]
+        print("TRANSACTION", this_months_transaction)
+        this_month_credit = list_of_credit_count[0]
+        print("CREDIT", this_month_credit)
         last_year_same_time_percentage_of_errors = list_of_errors_the_previous_year[0]
         this_months_pecentage_of_errors = list_of_errors[0]
         last_months_percentage_of_errors = list_of_errors[1]
 
+        context['this_months_transaction_by_post'] = this_months_transaction_by_post
+        context['this_months_transaction'] = this_months_transaction
+        context['this_month_credit'] = this_month_credit
         context['last_year_same_time_percentage_of_errors'] = last_year_same_time_percentage_of_errors
         context['this_months_pecentage_of_errors'] = this_months_pecentage_of_errors
         context['last_months_percentage_of_errors'] = last_months_percentage_of_errors

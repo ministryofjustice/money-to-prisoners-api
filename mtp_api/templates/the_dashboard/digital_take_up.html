@@ -24,11 +24,8 @@
         google.charts.load('current', {'packages':['corechart']});
         google.charts.setOnLoadCallback(drawChartTransaction);
         google.charts.setOnLoadCallback(drawChartAmount);
-        google.charts.setOnLoadCallback(drawChartPercentage);
-        google.charts.load("current", {packages:["calendar"]});
-        google.charts.setOnLoadCallback(drawChartCalendarCredit);
-
-
+        google.charts.setOnLoadCallback(drawDonut);
+        ;
 
         function drawChartTransaction() {
           var data = google.visualization.arrayToDataTable([
@@ -70,47 +67,24 @@
               chart.draw(data, options);
                 }
 
-          function drawChartPercentage() {
-              var data = google.visualization.arrayToDataTable([
-                ['Month', 'Credits', 'Transactions', 'Post'],
-                {% for d in data reversed %}
-                  ['{{d.start_of_month|date:"F Y"}}', {{d.percent_of_credit_count}}, {{d.percent_of_transaction_count}}, {{d.percent_of_post}}],
-                {% endfor %}
-                ]);
 
-              var options = {
-                title: 'Digital take up as a percentage',
-                width: 1200,
-                height: 400,
-                legend: { position: 'top', maxLines: 3 },
-                bar: { groupWidth: '75%' },
-                isStacked: true,
-                  };
+      function drawDonut()  {
+        var data = google.visualization.arrayToDataTable([
+          ['Sent Money', 'Number'],
+          ['Credit', {{this_month_credit}}],
+          ['Transactions', {{this_months_transaction}}],
+          ['Post', {{this_months_transaction_by_post}}],
+        ]);
 
-              var chart = new google.visualization.ColumnChart(document.getElementById('chart_div_3'));
-              chart.draw(data, options);
-                }
+        var options = {
+          title: 'This Months Uptake',
+          pieHole: 0.4,
+        };
 
-          // function drawChartCalendarCredit() {
-          //     var dataTable = new google.visualization.DataTable();
-          //        dataTable.addColumn({ type: 'date', id: 'Date' });
-          //        dataTable.addColumn({ type: 'number', id: 'Credit' } );
-          //        dataTable.addRows([
-          //         {% for d in data reversed %}
-          //           [new Date({{d.start_of_month|date:"o, n, w"}}), {{ d.credit_count }}],
-          //         {% endfor %}
+        var chart = new google.visualization.PieChart(document.getElementById('chart_div_3'));
+        chart.draw(data, options);
+      }
 
-          //         ]);
-
-          //     var chart = new google.visualization.Calendar(document.getElementById('calendar_basic'));
-
-          //     var options = {
-          //        title: "Credit Over the Year",
-          //        height: 350,
-          //        };
-
-          //      chart.draw(dataTable, options);
-          //      }
         </script>
   </head>
   <body>
@@ -122,9 +96,8 @@
         <td><div id="chart_div_2" style="width: 40%; height: 500px;"></div></td>
     </tr>
   </table>
-    <div id="chart_div_3" style="width: 100%; height: 500px;"></div>
+    <div id="chart_div_3" style="style=width: 900px; height: 500px;"></div>
     <div id="chart_div_4" style="width: 100%; height: 500px;"></div>
-    <div id="calendar_basic" style="width: 1000px; height: 350px;"></div>
     <div>
       <h2>{% trans 'User Satisfaction' %}</h2>
       {% if user_satisfaction.last > user_satisfaction.previous %}
@@ -148,7 +121,6 @@
       <p>{% trans 'Past month' %}</p>
     <p>{{last_year_same_time_percentage_of_errors}}%</p>
         <p>{% trans 'Last year same time' %}</p>
-
    </div>
   </body>
 
