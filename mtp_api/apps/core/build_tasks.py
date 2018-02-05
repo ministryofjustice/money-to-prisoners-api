@@ -1,4 +1,5 @@
 from django.core.management import call_command
+from mtp_common.build_tasks import tasks as mtp_common_tasks
 from mtp_common.build_tasks.executor import Context
 from mtp_common.build_tasks.tasks import serve, tasks
 
@@ -34,6 +35,9 @@ def bundle_javascript(context: Context):
     """
     rsync_flags = '-avz' if context.verbosity == 2 else '-az'
     context.shell('rsync %s %s %s/' % (rsync_flags, context.app.javascript_source_path, context.app.asset_build_path))
+
+
+mtp_common_tasks.bundle_javascript = bundle_javascript
 
 
 @tasks.register(hidden=True)
