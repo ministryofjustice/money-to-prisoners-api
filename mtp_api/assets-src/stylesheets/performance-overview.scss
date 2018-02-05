@@ -1,0 +1,77 @@
+$golden-ratio: 1.6180339887498948482;
+
+.performance-overview-title {
+  font-size: 72px;
+  font-weight: bold;
+
+  div {
+    display: none;
+  }
+}
+
+#performance-overview {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+
+  grid-gap: 0;
+  grid-template-columns: (100% / $golden-ratio) auto;
+  grid-template-rows: 2fr 5fr 1fr;
+  align-items: center;
+  justify-items: stretch;
+  align-content: stretch;
+  justify-content: stretch;
+  line-height: normal;
+
+  > div {
+    box-sizing: border-box;
+    padding: 20px;
+  }
+
+  .transition-show {
+    position: relative;
+    transition: top 0.8s, opacity 0.8s;
+    top: 0;
+    opacity: 1;
+  }
+
+  .transition-showing {
+    top: 10px;
+    opacity: 0;
+  }
+}
+
+#performance-overview-chart {
+  align-self: stretch;
+}
+
+#performance-overview-stats {
+  display: grid;
+  align-content: center;
+  align-self: stretch;
+
+  dl {
+    display: none;
+  }
+
+  dl, dt, dd {
+    margin: 0;
+    padding: 0;
+    line-height: normal;
+  }
+
+  dt {
+    font-size: 100px;
+    font-weight: bold;
+  }
+
+  dd {
+    margin-top: -20px;
+    margin-bottom: 20px;
+    font-size: 48px;
+    font-weight: normal;
+  }
+}
+

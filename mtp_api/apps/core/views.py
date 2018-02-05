@@ -60,6 +60,7 @@ class DashboardView(AdminViewMixin, TemplateView, metaclass=MediaDefiningClass):
     cookie_name = 'mtp-dashboard'
     reload_interval = 600  # 10min
     fullscreen = False
+    autodiscovered = False
     _registry = []
 
     class Media:
@@ -93,7 +94,8 @@ class DashboardView(AdminViewMixin, TemplateView, metaclass=MediaDefiningClass):
 
     def get_dashboards(self):
         cls = self.__class__
-        if not cls._registry:
+        if not cls.autodiscovered:
+            cls.autodiscovered = True
             autodiscover_modules('dashboards', register_to=cls)
 
         dashboards = cls._registry

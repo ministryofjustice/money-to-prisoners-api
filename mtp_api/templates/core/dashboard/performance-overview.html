@@ -1,0 +1,96 @@
+{% extends 'core/dashboard/module.html' %}
+{% load i18n %}
+
+{% block module_tbody %}
+  {% if dashboard.fullscreen %}
+
+    <tr>
+      <td id="performance-overview">
+        <div class="performance-overview-title mtp-dashboard-full-screen-only">{% trans 'Prisoner money' %}</div>
+        <div class="performance-overview-title">
+          {% for page in dashboard_module.stats_pages %}
+            <div class="transition-show">{{ page.title }}</div>
+          {% endfor %}
+        </div>
+
+        <script>
+          {% with chart_data=dashboard_module.chart_data %}
+            var performanceData = {
+              title: '{% trans 'Weekly credits' %}',
+              maxValue: {{ chart_data.max_value }},
+              weekCount: {{ chart_data.chart_weeks }},
+              chart: {
+                cols:{{ chart_data.column_labels|safe }},
+                rows:[{% for row in chart_data.rows reversed %}{c:[{% for item in row %}{v:{{item}}},{% endfor %}]},{% endfor %}]
+              }
+            };
+          {% endwith %}
+        </script>
+        <div id="performance-overview-chart"></div>
+
+        <div id="performance-overview-stats">
+          {% for page in dashboard_module.stats_pages %}
+            <dl>
+              {% for stat in page.stats %}
+                <dt class="transition-show">{{ stat.value }}</dt>
+                <dd class="transition-show">{{ stat.title }}</dd>
+              {% endfor %}
+            </dl>
+          {% endfor %}
+        </div>
+      </td>
+    </tr>
+
+  {% else %}
+
+    {% with simple_stats=dashboard_module.simple_stats %}
+      {% if simple_stats.earliest_credit %}
+        <tr>
+          <th colspan="{{ dashboard_module.column_count }}">
+            {% blocktrans trimmed with earliest_credit=simple_stats.earliest_credit.received_at|date:'j M Y' %}
+              Credits since {{ earliest_credit }}
+            {% endblocktrans %}
+          </th>
+        </tr>
+        {% for row in simple_stats.credits %}
+          <tr>
+            <th>{{ row.title }}</th>
+            <td>{{ row.value }}</td>
+          </tr>
+        {% endfor %}
+      {% else %}
+        <tr>
+          <td colspan="{{ dashboard_module.column_count }}">{% trans 'No credits' %}</td>
+        </tr>
+      {% endif %}
+      {% if simple_stats.earliest_disbursement %}
+        <tr>
+          <th colspan="{{ dashboard_module.column_count }}">
+            {% blocktrans trimmed with earliest_disbursement=simple_stats.earliest_disbursement.created|date:'j M Y' %}
+              Disbursements since {{ earliest_disbursement }}
+            {% endblocktrans %}
+          </th>
+        </tr>
+        {% for row in simple_stats.disbursements %}
+          <tr>
+            <th>{{ row.title }}</th>
+            <td>{{ row.value }}</td>
+          </tr>
+        {% endfor %}
+      {% else %}
+        <tr>
+          <td colspan="{{ dashboard_module.column_count }}">{% trans 'No disbursements' %}</td>
+        </tr>
+      {% endif %}
+    {% endwith %}
+
+    <tr>
+      <td colspan="{{ dashboard_module.column_count }}">
+        <a href="{% url 'admin:dashboard_fullscreen' slug=dashboard_module.slug %}">
+          {% trans 'Show more in full-screen' %}…
+        </a>
+      </td>
+    </tr>
+
+  {% endif %}
+{% endblock %}

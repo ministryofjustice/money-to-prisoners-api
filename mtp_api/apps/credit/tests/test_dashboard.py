@@ -9,7 +9,7 @@ from django.utils.timezone import now
 from core.views import DashboardView
 from core.tests.test_dashboard import DashboardTestCase
 from core.tests.utils import make_test_users
-from credit.dashboards import CreditReport, CREDITABLE_FILTERS
+from credit.dashboards.credit_report import CreditReport, CREDITABLE_FILTERS
 from credit.models import Credit
 from prison.tests.utils import load_random_prisoner_locations
 from transaction.tests.utils import generate_transactions
@@ -19,8 +19,7 @@ User = get_user_model()
 
 
 class TransactionDashboardTestCase(DashboardTestCase):
-    fixtures = ['initial_groups.json', 'initial_types.json', 'test_prisons.json']
-    url = reverse_lazy('admin:dashboard')
+    url = reverse_lazy('admin:dashboard_fullscreen', kwargs={'slug': 'credit_report'})
 
     def setUp(self):
         super().setUp()
