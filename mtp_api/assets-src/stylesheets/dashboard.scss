@@ -25,11 +25,19 @@
   }
 }
 
+.mtp-dashboard-full-screen-only {
+  display: none;
+}
+
 .mtp-dashboard-full-screen {
   background: #000;
 
   #header, .breadcrumbs, #content > h1, .object-tools, #footer {
     display: none;
+  }
+
+  .mtp-dashboard-full-screen-only {
+    display: inherit;
   }
 
   .mtp-dashboard-module {
