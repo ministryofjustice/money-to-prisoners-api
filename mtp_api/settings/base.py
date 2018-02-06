@@ -34,6 +34,7 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
 
     # third-party
+    'anymail',
     'oauth2_provider',
     'rest_framework',
     'django_filters',
@@ -163,10 +164,17 @@ CACHES = {
     }
 }
 
-EMAIL_BACKEND = 'django_mailgun.MailgunBackend'
-MAILGUN_ACCESS_KEY = os.environ.get('MAILGUN_ACCESS_KEY', '')
-MAILGUN_SERVER_NAME = os.environ.get('MAILGUN_SERVER_NAME', '')
+EMAIL_BACKEND = 'anymail.backends.mailgun.EmailBackend'
+ANYMAIL = {
+    'MAILGUN_API_KEY': os.environ.get('MAILGUN_ACCESS_KEY', ''),
+    'MAILGUN_SENDER_DOMAIN': os.environ.get('MAILGUN_SERVER_NAME', ''),
+    'SEND_DEFAULTS': {
+        'tags': [APP, ENVIRONMENT],
+    },
+}
 MAILGUN_FROM_ADDRESS = os.environ.get('MAILGUN_FROM_ADDRESS', '')
+if MAILGUN_FROM_ADDRESS:
+    DEFAULT_FROM_EMAIL = MAILGUN_FROM_ADDRESS
 
 # logging settings
 LOGGING = {
