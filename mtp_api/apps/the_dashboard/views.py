@@ -49,12 +49,12 @@ def get_user_satisfaction():
     this_month = {'rating_1': 0, 'rating_2': 0, 'rating_3': 0, 'rating_4': 0, 'rating_5': 0}
     this_year = {'rating_1': 0, 'rating_2': 0, 'rating_3': 0, 'rating_4': 0, 'rating_5': 0}
 
-    def ratings_data(name_of_time, ratings):
-        ratings['rating_1'] = name_of_time['rating_1:sum']
-        ratings['rating_2'] = name_of_time['rating_2:sum']
-        ratings['rating_3'] = name_of_time['rating_3:sum']
-        ratings['rating_4'] = name_of_time['rating_4:sum']
-        ratings['rating_5'] = name_of_time['rating_5:sum']
+    def ratings_data(time_span, ratings):
+        ratings['rating_1'] = time_span['rating_1:sum']
+        ratings['rating_2'] = time_span['rating_2:sum']
+        ratings['rating_3'] = time_span['rating_3:sum']
+        ratings['rating_4'] = time_span['rating_4:sum']
+        ratings['rating_5'] = time_span['rating_5:sum']
         return ratings
 
     weekly_ratings = ratings_data(weekly_data, this_week)
@@ -114,7 +114,7 @@ class DashboardView(TemplateView):
     """
     Django admin view which presents an overview report for MTP
     """
-    template_name = 'the_dashboard/digital_take_up.html'
+    template_name = 'the_dashboard/the_dashboard.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

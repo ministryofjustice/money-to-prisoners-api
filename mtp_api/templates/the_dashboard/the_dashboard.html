@@ -6,20 +6,13 @@
 <html>
 
   <head>
-     <script src="https://www.google.com/jsapi" type="text/javascript"></script>
+    <script src="https://www.google.com/jsapi" type="text/javascript"></script>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-    <script type="text/javascript" src="../mtp_api/assets/javascripts/the-dashboard.js"> </script>
+
+   <link href="{% static 'stylesheets/the_dashboard.css' %}" type="text/css" media="all" rel="stylesheet" />
+
     <title>Google Charts Example</title>
 
-  </head>
-  <body>
-    <div id="divChart"></div>
-  </body>
-</html>
-
-<html>
-  <head>
-    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <script>
         google.charts.load('current', {'packages':['corechart']});
         google.charts.setOnLoadCallback(drawChartTransaction);
@@ -40,13 +33,13 @@
 
           var options = {
             title: 'Digital Take Up Transactions',
-            width: 800,
-            height: 400,
+            width: 700,
+            height: 300,
             bar: {groupWidth: "85%"},
             legend: { position: "none" },
               };
 
-          var chart = new google.visualization.ColumnChart(document.getElementById('chart_div_1'));
+          var chart = new google.visualization.ColumnChart(document.getElementById('transaction_bar_chart'));
           chart.draw(data, options);
             }
 
@@ -60,13 +53,13 @@
 
               var options = {
                 title: 'Digital Take up Money',
-                width: 800,
-                height: 400,
+                width: 700,
+                height: 300,
                 bar: {groupWidth: "85%"},
                 legend: { position: "none" },
                   };
 
-              var chart = new google.visualization.ColumnChart(document.getElementById('chart_div_2'));
+              var chart = new google.visualization.ColumnChart(document.getElementById('transaction_bar_chart_of_amount'));
               chart.draw(data, options);
                 }
 
@@ -82,9 +75,10 @@
               var options = {
                 title: 'This Months Uptake',
                 pieHole: 0.4,
+                is3D: true
               };
 
-              var chart = new google.visualization.PieChart(document.getElementById('chart_div_3'));
+              var chart = new google.visualization.PieChart(document.getElementById('donut_of_transaction'));
               chart.draw(data, options);
             }
 
@@ -92,11 +86,11 @@
             function drawWeeklySatisfaction() {
               var data = google.visualization.arrayToDataTable([
                 ["Ratings", "Vote", { role: "style" } ],
-                ["Rating 1", {{user_satisfaction.weekly_ratings.rating_1}}, "#b87333"],
-                ["Rating 2", {{user_satisfaction.weekly_ratings.rating_2}}, "silver"],
+                ["Rating 1", {{user_satisfaction.weekly_ratings.rating_1}}, "green"],
+                ["Rating 2", {{user_satisfaction.weekly_ratings.rating_2}}, "purple"],
                 ["Rating 3", {{user_satisfaction.weekly_ratings.rating_3}}, "gold"],
-                ["Rating 4", {{user_satisfaction.weekly_ratings.rating_4}}, "color: #e5e4e2"],
-                ["Rating 5", {{user_satisfaction.weekly_ratings.rating_1}}, "color: #e5e4e2"]
+                ["Rating 4", {{user_satisfaction.weekly_ratings.rating_4}}, "red"],
+                ["Rating 5", {{user_satisfaction.weekly_ratings.rating_1}}, "blue"]
               ]);
 
             var view = new google.visualization.DataView(data);
@@ -108,24 +102,23 @@
                              2]);
 
             var options = {
-              title: "Satisfaction rates over the week",
-              width: 600,
-              height: 400,
+              chartArea:{left:10,top:10, width:"600px",height:"400px"},
+              title: "Week",
               bar: {groupWidth: "95%"},
               legend: { position: "none" },
             };
-            var chart = new google.visualization.ColumnChart(document.getElementById('chart_div_4'));
+            var chart = new google.visualization.ColumnChart(document.getElementById('satisfaction_week_bar_chart'));
             chart.draw(view, options);
           }
 
           function drawMonthlySatisfaction() {
               var data = google.visualization.arrayToDataTable([
                 ["Ratings", "Vote", { role: "style" } ],
-                ["Rating 1", {{user_satisfaction.monthly_ratings.rating_1}}, "#b87333"],
-                ["Rating 2", {{user_satisfaction.monthly_ratings.rating_2}}, "silver"],
+                ["Rating 1", {{user_satisfaction.monthly_ratings.rating_1}}, "green"],
+                ["Rating 2", {{user_satisfaction.monthly_ratings.rating_2}}, "purple"],
                 ["Rating 3", {{user_satisfaction.monthly_ratings.rating_3}}, "gold"],
-                ["Rating 4", {{user_satisfaction.monthly_ratings.rating_4}}, "color: #e5e4e2"],
-                ["Rating 5", {{user_satisfaction.monthly_ratings.rating_1}}, "color: #e5e4e2"]
+                ["Rating 4", {{user_satisfaction.monthly_ratings.rating_4}}, "red"],
+                ["Rating 5", {{user_satisfaction.monthly_ratings.rating_1}}, "blue"]
               ]);
 
             var view = new google.visualization.DataView(data);
@@ -137,24 +130,23 @@
                              2]);
 
             var options = {
-              title: "Satisfaction rates over the month",
-              width: 600,
-              height: 400,
+              chartArea:{left:10,top:10,width:"600px",height:"400px"},
+              title: "Month",
               bar: {groupWidth: "95%"},
               legend: { position: "none" },
             };
-            var chart = new google.visualization.ColumnChart(document.getElementById('chart_div_5'));
+            var chart = new google.visualization.ColumnChart(document.getElementById('satisfaction_month_bar_chart'));
             chart.draw(view, options);
           }
 
           function drawYearlySatisfaction() {
               var data = google.visualization.arrayToDataTable([
                 ["Ratings", "Vote", { role: "style" } ],
-                ["Rating 1", {{user_satisfaction.yearly_ratings.rating_1}}, "#b87333"],
-                ["Rating 2", {{user_satisfaction.yearly_ratings.rating_2}}, "silver"],
+                ["Rating 1", {{user_satisfaction.yearly_ratings.rating_1}}, "green"],
+                ["Rating 2", {{user_satisfaction.yearly_ratings.rating_2}}, "purple"],
                 ["Rating 3", {{user_satisfaction.yearly_ratings.rating_3}}, "gold"],
-                ["Rating 4", {{user_satisfaction.yearly_ratings.rating_4}}, "color: #e5e4e2"],
-                ["Rating 5", {{user_satisfaction.yearly_ratings.rating_1}}, "color: #e5e4e2"]
+                ["Rating 4", {{user_satisfaction.yearly_ratings.rating_4}}, "red"],
+                ["Rating 5", {{user_satisfaction.yearly_ratings.rating_1}}, "blue"]
               ]);
 
             var view = new google.visualization.DataView(data);
@@ -166,13 +158,12 @@
                              2]);
 
             var options = {
-              title: "Satisfaction rates over the year",
-              width: 600,
-              height: 400,
+              chartArea:{left:10,top:10,width:"600px",height:"400px"},
+              title: "Year",
               bar: {groupWidth: "95%"},
               legend: { position: "none" },
             };
-            var chart = new google.visualization.ColumnChart(document.getElementById('chart_div_6'));
+            var chart = new google.visualization.ColumnChart(document.getElementById('satisfaction_year_bar_chart'));
             chart.draw(view, options);
           }
 
@@ -180,30 +171,45 @@
   </head>
   <body>
     <h1>{% trans 'Analytics Dashboard - MTP' %}</h1>
-
   <table>
-    <tr>
-        <td><div id="chart_div_1" style="width: 40%; height: 500px;"></div></div></td>
-        <td><div id="chart_div_2" style="width: 40%; height: 500px;"></div></td>
+    <tr class="two">
+      <td colspan="3"><div id="transaction_bar_chart" ></div></td>
+      <td colspan="3"><div id="transaction_bar_chart_of_amount" ></div></td>
+    </tr>
+    <tr class="three">
+      <td colspan="2">
+        <h2>Monthly Take Up</h2>
+        <div id="donut_of_transaction" ></div>
+      </td>
+      <td colspan="2">
+        <h2>BACS error rate</h2>
+        {% if this_months_pecentage_of_errors > last_months_percentage_of_errors %}
+          {{this_months_pecentage_of_errors}}% +
+          {% elif this_months_pecentage_of_errors < last_months_percentage_of_errors %}
+          {{this_months_pecentage_of_errors}}% -
+          {% endif %}
+          <div>{% trans 'Last year same time' %}</div>
+          <div>{{last_year_same_time_percentage_of_errors}}%</div>
+
+      </td>
+      <td colspan="2">
+        <h2>£10m Saved</h2>
+      </td>
+    </tr>
+    <tr class="three">
+      <td colspan="2">
+        <div><h2>{% trans 'Last Week' %}</h2></div>
+        <div id="satisfaction_week_bar_chart" ></div>
+      </td>
+      <td colspan="2">
+        <div><h2>{% trans 'Last Month' %}</h2></div>
+        <div id="satisfaction_month_bar_chart" ></div>
+      </td>
+      <td colspan="2">
+        <div><h2>{% trans 'Last Year' %}</h2></div>
+        <div id="satisfaction_year_bar_chart" ></div>
+      </td>
     </tr>
   </table>
-    <div id="chart_div_3" style="width: 900px; height: 500px;"></div>
-    <div id="chart_div_4" style="width: 100%; height: 500px;"></div>
-    <div id="chart_div_4" style="width: 100%; height: 500px;"></div>
-    <div id="chart_div_5" style="width: 100%; height: 500px;"></div>
-    <div id="chart_div_6" style="width: 100%; height: 500px;"></div>
-
-    <div>
-      <h2>{% trans 'BACS Error Rate' %}</h2>
-      {% if this_months_pecentage_of_errors > last_months_percentage_of_errors %}
-        {{this_months_pecentage_of_errors}}% +
-      {% elif this_months_pecentage_of_errors < last_months_percentage_of_errors %}
-         {{this_months_pecentage_of_errors}}% -
-      {% endif %}
-
-      <p>{% trans 'Past month' %}</p>
-      <p>{{last_year_same_time_percentage_of_errors}}%</p>
-      <p>{% trans 'Last year same time' %}</p>
-   </div>
-  </body>
+</body>
 
