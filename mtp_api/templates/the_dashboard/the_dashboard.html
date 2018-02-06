@@ -25,14 +25,14 @@
 
         function drawChartTransaction() {
           var data = google.visualization.arrayToDataTable([
-            ['Month', 'Credits', 'Transactions', 'Post'],
+            ['Month', 'Debit', 'BankTransfer', 'Post'],
             {% for d in data reversed %}
               ['{{d.start_of_month|date:"F Y"}}', {{d.credit_count}}, {{d.transaction_count}}, {{d.transaction_by_post}}],
             {% endfor %}
             ]);
 
           var options = {
-            title: 'Digital Take Up Transactions',
+            backgroundColor: '#E4E4E4',
             width: 700,
             height: 300,
             bar: {groupWidth: "85%"},
@@ -45,14 +45,14 @@
 
             function drawChartAmount() {
               var data = google.visualization.arrayToDataTable([
-                ['Month', 'Credits', 'Transactions'],
+                ['Month', 'Debit', 'Bank transfer'],
                 {% for d in data reversed %}
                   ['{{d.start_of_month|date:"F Y"}}', {{d.queryset_credit_amount}}, {{d.queryset_transaction_amount}}],
                 {% endfor %}
                 ]);
 
               var options = {
-                title: 'Digital Take up Money',
+                backgroundColor: '#E4E4E4',
                 width: 700,
                 height: 300,
                 bar: {groupWidth: "85%"},
@@ -67,13 +67,13 @@
             function drawDonut()  {
               var data = google.visualization.arrayToDataTable([
                 ['Sent Money', 'Number'],
-                ['Credit', {{this_month_credit}}],
-                ['Transactions', {{this_months_transaction}}],
+                ['Debit', {{this_month_credit}}],
+                ['Bank Transfer', {{this_months_transaction}}],
                 ['Post', {{this_months_transaction_by_post}}],
               ]);
 
               var options = {
-                title: 'This Months Uptake',
+                backgroundColor: '#fcfaf4',
                 pieHole: 0.4,
                 is3D: true
               };
@@ -102,10 +102,11 @@
                              2]);
 
             var options = {
+              backgroundColor: '#E4E4E4',
               chartArea:{left:10,top:10, width:"600px",height:"400px"},
               title: "Week",
               bar: {groupWidth: "95%"},
-              legend: { position: "none" },
+              legend: { position: "right" },
             };
             var chart = new google.visualization.ColumnChart(document.getElementById('satisfaction_week_bar_chart'));
             chart.draw(view, options);
@@ -130,10 +131,11 @@
                              2]);
 
             var options = {
+              backgroundColor: '#E4E4E4',
               chartArea:{left:10,top:10,width:"600px",height:"400px"},
               title: "Month",
               bar: {groupWidth: "95%"},
-              legend: { position: "none" },
+              legend: { position: "right" },
             };
             var chart = new google.visualization.ColumnChart(document.getElementById('satisfaction_month_bar_chart'));
             chart.draw(view, options);
@@ -158,58 +160,78 @@
                              2]);
 
             var options = {
+              backgroundColor: '#E4E4E4',
               chartArea:{left:10,top:10,width:"600px",height:"400px"},
               title: "Year",
               bar: {groupWidth: "95%"},
-              legend: { position: "none" },
+              legend:'right'
+              // legend: { position: "right" },
             };
             var chart = new google.visualization.ColumnChart(document.getElementById('satisfaction_year_bar_chart'));
             chart.draw(view, options);
           }
-
         </script>
   </head>
   <body>
-    <h1>{% trans 'Analytics Dashboard - MTP' %}</h1>
-  <table>
-    <tr class="two">
-      <td colspan="3"><div id="transaction_bar_chart" ></div></td>
-      <td colspan="3"><div id="transaction_bar_chart_of_amount" ></div></td>
-    </tr>
-    <tr class="three">
-      <td colspan="2">
-        <h2>Monthly Take Up</h2>
-        <div id="donut_of_transaction" ></div>
-      </td>
-      <td colspan="2">
-        <h2>BACS error rate</h2>
-        {% if this_months_pecentage_of_errors > last_months_percentage_of_errors %}
-          {{this_months_pecentage_of_errors}}% +
-          {% elif this_months_pecentage_of_errors < last_months_percentage_of_errors %}
-          {{this_months_pecentage_of_errors}}% -
-          {% endif %}
-          <div>{% trans 'Last year same time' %}</div>
-          <div>{{last_year_same_time_percentage_of_errors}}%</div>
 
-      </td>
-      <td colspan="2">
-        <h2>£10m Saved</h2>
-      </td>
-    </tr>
-    <tr class="three">
-      <td colspan="2">
-        <div><h2>{% trans 'Last Week' %}</h2></div>
-        <div id="satisfaction_week_bar_chart" ></div>
-      </td>
-      <td colspan="2">
-        <div><h2>{% trans 'Last Month' %}</h2></div>
-        <div id="satisfaction_month_bar_chart" ></div>
-      </td>
-      <td colspan="2">
-        <div><h2>{% trans 'Last Year' %}</h2></div>
-        <div id="satisfaction_year_bar_chart" ></div>
-      </td>
-    </tr>
+  <h1 align="center">{% trans 'Analytics Dashboard - MTP' %}</h1>
+    <table align="center">
+    <thead class="color_div_one">
+      <tr class="two height" align="center">
+        <td colspan="3">
+          <div><h3>Number of Transactions</h3></div>
+          <div id="transaction_bar_chart" ></div>
+        </td>
+        <td colspan="3">
+           <div><h3>Amount of Money</h3></div>
+          <div id="transaction_bar_chart_of_amount" ></div>
+        </td>
+      </tr>
+  </thead>
+
+  <thead>
+      <tr class="three height subtitles" align="center">
+        <td colspan="2">
+          <h3>BACS error rate: </h3>
+            <h1 class='error_messages'> {% if this_months_pecentage_of_errors > last_months_percentage_of_errors %}
+            {{this_months_pecentage_of_errors}}% +
+            {% elif this_months_pecentage_of_errors < last_months_percentage_of_errors %}
+            {{this_months_pecentage_of_errors}}% -
+            {% endif %}</h1>
+            <div><h3>Last year same time: </h3></div>
+            <div><h1 class='error_messages'>{{last_year_same_time_percentage_of_errors}}%</h1></div>
+        </td>
+        <td colspan="2">
+          <div><h3>This months uptake</h3></div>
+          <div id="donut_of_transaction"></div>
+        </td>
+        <td colspan="2">
+          <h2>£10m Saved</h2>
+        </td>
+      </tr>
+    </thead>
+
+    <thead class='color_div_one'>
+     <tr align="center">
+       <td class="satisfaction-padding" colspan="6">
+         <h2>Satisfaction Rate</h2>
+       </td>
+     </tr>
+      <tr class="three height subtitles" align="center">
+        <td colspan="2">
+          <div><h3>{% trans 'Week' %}</h3></div>
+          <div id="satisfaction_week_bar_chart" ></div>
+        </td>
+        <td colspan="2">
+          <div><h3>{% trans 'Month' %}</h3></div>
+          <div id="satisfaction_month_bar_chart" ></div>
+        </td>
+        <td colspan="2">
+          <div><h3>{% trans 'Year' %}</h3></div>
+          <div id="satisfaction_year_bar_chart" ></div>
+        </td>
+      </tr>
+    </thead>
   </table>
 </body>
 

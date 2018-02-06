@@ -1,11 +1,25 @@
+body {
+  background-color: #fcfaf4;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #47474f;
+}
+
 table {
+  width: 100%;
+  height: 95%;
+}
+
+thead {
+  height: 31%;
+}
+
+.height tr {
+  height: 350px;
+}
+
+.one td {
   width: 100%
 }
-
-tr {
-  height: 350px
-}
-
 .two  td {
   width: 50%
 }
@@ -13,3 +27,26 @@ tr {
 .three td {
   width: 33%
 }
+
+table {
+    border-collapse: collapse;
+}
+
+.color_div_one {
+  background-color: #E4E4E4;
+}
+
+.satisfaction-padding {
+  padding-top: 20px;
+}
+
+.error_messages {
+  color: red;
+}
+
+ h3 {
+  color: #47474f;
+
+}
+
+
