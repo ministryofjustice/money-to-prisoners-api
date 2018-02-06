@@ -57,12 +57,12 @@ class ExternalDashboards(DashboardModule):
 
         if settings.ENVIRONMENT == 'test':
             self.grafana_host = 'grafana-staging.service.dsd.io'
-            self.kibana_host = 'kibana-staging.service.dsd.io'
+            self.kibana_host = 'elasticsearch.dsd.io'
             self.sentry_url = 'https://sentry.service.dsd.io/mojds/mtp-test-%(app)s/'
             self.sensu_url = 'https://sensu-staging.service.dsd.io/#/checks?q=moneytoprisoners'
         elif settings.ENVIRONMENT == 'prod':
             self.grafana_host = 'grafana.service.dsd.io'
-            self.kibana_host = 'kibana.service.dsd.io'
+            self.kibana_host = 'elasticsearch.dsd.io'
             self.sentry_url = 'https://sentry.service.dsd.io/mojds/mtp-prod-%(app)s/'
             self.sensu_url = 'https://sensu.service.dsd.io/#/checks?q=moneytoprisoners'
 
@@ -76,13 +76,16 @@ class ExternalDashboards(DashboardModule):
                 'links': [
                     {
                         'title': _('All apps'),
-                        'url': 'https://%s/#/dashboard/MTP?%s' % (self.kibana_host, self.kibana_params)
+                        'url': 'https://%s/#/dashboard/MTP-%s?%s' % (
+                            self.kibana_host, settings.ENVIRONMENT, self.kibana_params,
+                        )
                     }
                 ],
             })
             table.append({
                 'title': _('Application logs'),
-                'links': self.make_app_links('https://%(kibana_host)s/#/discover/MTP-%(app)s'
+                'links': self.make_app_links('https://%(kibana_host)s/_plugin/kibana/app/kibana'
+                                             '#/discover/MTP-%(app)s-%(env)s'
                                              '?%(kibana_params)s'),
             })
         if self.sentry_url:
@@ -117,6 +120,7 @@ class ExternalDashboards(DashboardModule):
                     'kibana_host': self.kibana_host,
                     'kibana_params': self.kibana_params,
                     'app': app,
+                    'env': settings.ENVIRONMENT,
                 }
             }
             for app in self.apps
