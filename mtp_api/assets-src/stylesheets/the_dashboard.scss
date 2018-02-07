@@ -5,12 +5,12 @@ body {
 }
 
 table {
-  width: 100%;
+  width: 95%;
   height: 95%;
 }
 
-thead {
-  height: 31%;
+.height_top_and_bottom {
+   height: 330px;
 }
 
 .height tr {
@@ -18,14 +18,15 @@ thead {
 }
 
 .one td {
-  width: 100%
+  width: 100%;
 }
-.two  td {
-  width: 50%
+
+.two td {
+  width: 50%;
 }
 
 .three td {
-  width: 33%
+  width: 32%;
 }
 
 table {
@@ -42,11 +43,34 @@ table {
 
 .error_messages {
   color: red;
+  font-size: 110%;
+  font-weight: 900;
 }
 
- h3 {
+.error-message-margin {
+   margin: 0;
+   padding: 0;
+}
+
+h3 {
   color: #47474f;
-
 }
+
+.savings {
+  font-size: 300%;
+  font-weight: 900;
+  color: red;
+}
+
+table #t01 {
+    width: 60%;
+    height: 60%;
+}
+
+.main-title {
+  font-size: 50px;
+}
+
+
 
 

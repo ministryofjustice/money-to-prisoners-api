@@ -138,6 +138,8 @@ class DashboardView(TemplateView):
         list_of_transactions_by_post = []
         list_of_transaction_count = []
         list_of_credit_count = []
+        list_of_formated_months = []
+        list_of_formated_months_last_year = []
 
         for _ in range(6):
             end_of_month = datetime.datetime(year=year, month=month, day=1)
@@ -148,13 +150,14 @@ class DashboardView(TemplateView):
                 year -= 1
                 last_year -= 1
 
-
             start_of_month_last_year = datetime.datetime(year=last_year, month=month, day=1)
             start_of_month = datetime.datetime(year=year, month=month, day=1)
             start_of_month = tz.localize(start_of_month)
             end_of_month = tz.localize(end_of_month)
             start_of_month_last_year = tz.localize(start_of_month_last_year)
             end_of_month_last_year = tz.localize(end_of_month_last_year)
+            formated_month_and_year = '{:%B %Y}'.format(start_of_month)
+            formated_months_last_year = '{:%B %Y}'.format(start_of_month_last_year)
 
             queryset_transaction = Transaction.objects.filter(received_at__range=(start_of_month, end_of_month))
             queryset_transaction_amount = Transaction.objects.filter(received_at__range=(start_of_month, end_of_month)).aggregate(Sum('amount'))
@@ -163,9 +166,6 @@ class DashboardView(TemplateView):
             queryset_credit_amount = Credit.objects.filter(received_at__range=(start_of_month, end_of_month)).aggregate(Sum('amount'))
 
             queryset_credit_last_year = Credit.objects.filter(received_at__range=(start_of_month_last_year, end_of_month_last_year))
-
-            print("QUERY CREDITS LAST YEAR", queryset_credit_last_year)
-
 
             def pence_to_pounds(amount):
                 if(amount == None):
@@ -229,7 +229,8 @@ class DashboardView(TemplateView):
             list_of_transactions_by_post.append(transaction_by_post)
             list_of_transaction_count.append(queryset_transaction.count())
             list_of_credit_count.append(queryset_credit.count())
-
+            list_of_formated_months.append(formated_month_and_year)
+            list_of_formated_months_last_year.append(formated_months_last_year)
 
             data.append({
             'transaction_by_post':transaction_by_post,
@@ -252,7 +253,11 @@ class DashboardView(TemplateView):
         last_year_same_time_percentage_of_errors = list_of_errors_the_previous_year[0]
         this_months_pecentage_of_errors = list_of_errors[0]
         last_months_percentage_of_errors = list_of_errors[1]
+        current_formated_month = list_of_formated_months[0]
+        current_month_previous_year = list_of_formated_months_last_year[0]
 
+        context['current_month_previous_year'] = current_month_previous_year
+        context['current_formated_month']= current_formated_month
         context['this_months_transaction_by_post'] = this_months_transaction_by_post
         context['this_months_transaction'] = this_months_transaction
         context['this_month_credit'] = this_month_credit
