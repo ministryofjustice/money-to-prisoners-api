@@ -36,7 +36,7 @@
             fontSize: 16,
             vAxis: { title: 'Transactions'},
             backgroundColor: '#E4E4E4',
-            width: 1050,
+            width: 955,
             height: 350,
             legend: { position: 'right' },
             bar: {groupWidth: '80%'},
@@ -57,13 +57,12 @@
               var options = {
                 title: 'Amount of money credited',
                 fontSize: 16,
-                vAxis: { title: 'Money (£)'},
                 backgroundColor: '#E4E4E4',
-                width: 700,
+                vAxis: { title: 'Money (£)'},
+                width: 955,
                 height: 350,
                 legend: { position: "none" },
-                  };
-
+                };
 
 
               var chart = new google.visualization.ColumnChart(document.getElementById('transaction_bar_chart_of_amount'));
@@ -80,14 +79,14 @@
               ]);
 
               var options = {
+                backgroundColor: '#fcfaf4',
                 title: '{{current_formated_month}} uptake',
                 fontSize: 16,
-                backgroundColor: '#E4E4E4',
                 width: 250,
                 height: 250,
                 pieHole: 0.4,
                 legend: { position: "none" },
-                is3D: true
+                is3D: true,
               };
 
               var chart = new google.visualization.PieChart(document.getElementById('donut_of_transaction'));
@@ -154,8 +153,8 @@
               legend: { position: "none" },
             };
             var chart = new google.visualization.ColumnChart(document.getElementById('satisfaction_month_bar_chart'));
-            chart.draw(view, options);
-          }
+              chart.draw(view, options);
+             }
 
           function drawYearlySatisfaction() {
               var data = google.visualization.arrayToDataTable([
@@ -194,46 +193,46 @@
   <table>
     <thead class="color_div_one entire-width">
       <tr>
-        <td colspan="1" align='left' class="donut_space">
-          <div id="donut_of_transaction"></div>
-        </td>
-
         <td class="transaction_bar_space" colspan="3">
           <div id="transaction_bar_chart" ></div>
         </td>
-
-        <td colspan="2" align="center">
+        <td colspan="3" align="center">
           <div id="transaction_bar_chart_of_amount" ></div>
         </td>
       </tr>
-  </thead>
+    </thead>
 
-  <thead>
-      <tr class="two entire-width" align="center">
-        <td colspan="3">
-          <table id="t01" align="right">
+    <thead>
+      <tr class="three entire-width">
+        <td colspan="2">
+          <table id="t01" align="center">
             <tr>
-              <td class="bacs-errors-padding" colspan="3">
+              <td class="bacs-errors-padding" colspan="2">
                 <div class="error_message">
                   <h1>BACS error rate:</h1>
                 </div>
                 <div>
-                  <h1 class="error-message-margin" >{{current_formated_month}}:  <span style="color:red;font-weight:bold">
-                  {% if this_months_pecentage_of_errors > last_months_percentage_of_errors %}
-                  {{this_months_pecentage_of_errors}}% +
-                  {% elif this_months_pecentage_of_errors < last_months_percentage_of_errors %}
-                  {{this_months_pecentage_of_errors}}% -
-                  {% endif %}</span>
-                  </h1>
-                </div>
-                <div>
-                  <h1 class="error-message-margin">{{current_month_previous_year}}: <span style="color:red;font-weight:bold">
-                 {{last_year_same_time_percentage_of_errors}}% </span>
-                 </h1>
-                </div>
-              </td>
+                    <h1 class="error-message-margin" >{{current_formated_month}}:  <span style="color:red;font-weight:bold">
+                    {% if this_months_pecentage_of_errors > last_months_percentage_of_errors %}
+                    {{this_months_pecentage_of_errors}}% +
+                    {% elif this_months_pecentage_of_errors < last_months_percentage_of_errors %}
+                    {{this_months_pecentage_of_errors}}% -
+                    {% endif %}</span>
+                    </h1>
+                 </div>
+                 <div>
+                    <h1 class="error-message-margin">{{current_month_previous_year}}: <span style="color:red;font-weight:bold">
+                      {{last_year_same_time_percentage_of_errors}}% </span>
+                    </h1>
+                 </div>
+               </td>
+            </tr>
           </table>
-        <td colspan="3">
+        </td>
+        <td colspan="2" align='center' class="donut_space">
+          <div id="donut_of_transaction"></div>
+        </td>
+        <td colspan="2" align='center'>
           <h2 class="savings">£10m Saved</h2>
         </td>
       </tr>
@@ -257,7 +256,6 @@
         </td>
       </tr>
     </thead>
-
   </table>
 </body>
 
