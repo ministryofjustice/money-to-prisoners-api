@@ -141,7 +141,7 @@ class DashboardView(TemplateView):
         list_of_formated_months = []
         list_of_formated_months_last_year = []
 
-        for _ in range(6):
+        for _ in range(5):
             end_of_month = datetime.datetime(year=year, month=month, day=1)
             end_of_month_last_year = datetime.datetime(year=last_year, month=month, day=1)
             month -= 1

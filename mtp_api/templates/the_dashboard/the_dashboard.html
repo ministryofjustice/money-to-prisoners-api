@@ -27,18 +27,20 @@
           var data = google.visualization.arrayToDataTable([
             ['Month', 'Debit', 'BankTransfer', 'Post'],
             {% for d in data reversed %}
-              ['{{d.start_of_month|date:"F Y"}}', {{d.credit_count}}, {{d.transaction_count}}, {{d.transaction_by_post}}],
+              ['{{d.start_of_month|date:"b Y"}}', {{d.credit_count}}, {{d.transaction_count}}, {{d.transaction_by_post}}],
             {% endfor %}
             ]);
 
           var options = {
+            title: 'Number of monthly transactions',
+            fontSize: 20,
             vAxis: { title: 'Transactions'},
             backgroundColor: '#E4E4E4',
-            width: 650,
-            height: 340,
-            bar: {groupWidth: "85%"},
+            width: 1050,
+            height: 350,
             legend: { position: 'right' },
-              };
+            bar: {groupWidth: '80%'},
+             };
 
           var chart = new google.visualization.ColumnChart(document.getElementById('transaction_bar_chart'));
           chart.draw(data, options);
@@ -48,16 +50,17 @@
               var data = google.visualization.arrayToDataTable([
                 ['Month', 'Debit', 'Bank transfer'],
                 {% for d in data reversed %}
-                  ['{{d.start_of_month|date:"F Y"}}', {{d.queryset_credit_amount}}, {{d.queryset_transaction_amount}}],
+                  ['{{d.start_of_month|date:"b Y"}}', {{d.queryset_credit_amount}}, {{d.queryset_transaction_amount}}],
                 {% endfor %}
                 ]);
 
               var options = {
+                title: 'Amount of money credited',
+                fontSize: 20,
                 vAxis: { title: 'Money (£)'},
                 backgroundColor: '#E4E4E4',
-                width: 650,
-                height: 340,
-                bar: {groupWidth: "85%"},
+                width: 700,
+                height: 350,
                 legend: { position: "none" },
                   };
 
@@ -78,10 +81,10 @@
 
               var options = {
                 title: '{{current_formated_month}} uptake',
-                fontSize: 16,
+                fontSize: 20,
                 backgroundColor: '#E4E4E4',
-                width: 300,
-                height: 300,
+                width: 250,
+                height: 250,
                 pieHole: 0.4,
                 legend: { position: "none" },
                 is3D: true
@@ -111,10 +114,11 @@
                              2]);
 
             var options = {
-              width: 560,
-              height: 340,
+              width: 640,
+              height: 320,
               backgroundColor: '#E4E4E4',
-              title: "Week",
+              title: "By week",
+              fontSize: 20,
               bar: {groupWidth: "95%"},
               legend: { position: "none" },
             };
@@ -141,10 +145,11 @@
                              2]);
 
             var options = {
-              width: 560,
-              height: 340,
+              width: 640,
+              height: 320,
               backgroundColor: '#E4E4E4',
-              title: "Month",
+              title: "By month",
+              fontSize: 20,
               bar: {groupWidth: "95%"},
               legend: { position: "none" },
             };
@@ -171,47 +176,44 @@
                              2]);
 
             var options = {
-              width: 560,
-              height: 340,
+              width: 640,
+              height: 320,
               backgroundColor: '#E4E4E4',
-              title: "Year",
+              title: "By year",
+              fontSize: 20,
               bar: {groupWidth: "95%"},
               legend: { position: "none" },
-              // legend: { position: "right" },
             };
             var chart = new google.visualization.ColumnChart(document.getElementById('satisfaction_year_bar_chart'));
             chart.draw(view, options);
           }
         </script>
   </head>
-<body>
+<body class="entire-width">
   <h1 class="main-title" align="center">Analytics Dashboard - MTP</h1>
   <table>
-    <thead class="color_div_one">
-      <tr class="height_top_and_bottom">
-        <td class="three" colspan="4" align="center">
-          <div><h2>Number of monthly transactions</h2></div>
-          <div align="right" id="transaction_bar_chart" ></div>
-        </td>
-        <td colspan="2" align ='right'>
-          <div><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAJiSURBVGhD7dg7aNVQHMfx67OtDxC0VCgUFMRFQdDBwQcdFEQRHcRNnJzaoVAHhy6iIg46iOAmONhFFAcHUURFcNDJRbAq6qAgFm3B+qqP7+9KIFz+bU6Sk+QeyQ8+0FzoOflxc5OT06hT5/9IN5b8+zPsbMEzrGseBRwV+YMvOKwPQk1UJHIJixBcWovIU6xBULGKyAQOIJjMVCRyHh1o+yQVkcdYhbaOSxH5hH1o27gWkd84iwVoq+iEdsE66dk8Qh9KzTxswCAu4g7eQg9A6yRdfcRuFJpO7McoJmGdiA+61E5jPrxmJU5iHNbERbkHzZ07i3ECU7AmKsN79CNzduINrMHLNo0RzIVz9CM+jl+wBq3SLSxFYhbiKqxBqvYNA0iMlti3YQ1StVfYhMTocroBa5CqXccyOOUMrEGq9ANDmAOnaCmhB5A1WFV0t9wM5+grewdrsKz04qQTeRn7LI2bWI5UuQBrsCTfcR/ncARb0YP4fT7N6lcyPSuUtfgJa1CLlicqvgcu+1VpiuR6el+BNWgrvcUdQhfSxLXIXWReT+kfk76N59BKN2uSimjloBWEbv2ZcwzW4KJrVRPkXULPVuQDtJbLFf2Y9KS0JtC1ug0+MlORB+hF7myHNcELrIavtBbx/rJ0CvEJ5DW8vMDEEi+inZK98JoniJf4jPXwnahIIXtXK9D6nnEQRURFCttN3IF4CW0iFJVct9WkHEVUQu/hpe8h+cplREW03Ag2WuhFRYr4gZeWMajEw+ZRwNGtVkWGm0cB5ytUZGPzKOBcg3ZKtO1Tp06dOnVKSKPxF7AXjySxa3hBAAAAAElFTkSuQmCC"></div>
-        </td>
-        <td colspan="4" align='left'>
+    <thead class="color_div_one entire-width">
+      <tr>
+        <td colspan="1" align='left' class="donut_space">
           <div id="donut_of_transaction"></div>
         </td>
-        <td colspan="4" align="center">
-          <div><h2>Amount of money credited</h2></div>
+
+        <td class="transaction_bar_space" colspan="3">
+          <div id="transaction_bar_chart" ></div>
+        </td>
+
+        <td colspan="2" align="center">
           <div id="transaction_bar_chart_of_amount" ></div>
         </td>
       </tr>
   </thead>
 
   <thead>
-      <tr class="two" align="center">
-        <td colspan="6">
+      <tr class="two entire-width" align="center">
+        <td colspan="3">
           <table id="t01" align="right">
-            <tr class="two">
-              <td colspan="1">
+            <tr>
+              <td colspan="3">
                 <div class="error_messages">
                   <h1>BACS error rate:</h1>
                 </div>
@@ -231,29 +233,26 @@
                 </div>
               </td>
           </table>
-        <td colspan="6">
+        <td colspan="3">
           <h2 class="savings">£10m Saved</h2>
         </td>
       </tr>
     </thead>
 
-    <thead class='color_div_one height_top_and_bottom'>
+    <thead class='color_div_one entire-width'>
      <tr align="center" class="one">
-       <td colspan="12">
+       <td colspan="6">
          <h1>User satisfaction rate</h1>
        </td>
      </tr>
-      <tr align="center" class="three height_top_and_bottom">
-        <td colspan="4">
-          <div><h3>By week</h3></div>
+      <tr align="center" class="three">
+        <td colspan="2">
           <div id="satisfaction_week_bar_chart"></div>
         </td>
-        <td colspan="4">
-          <div><h3>By month</h3></div>
+        <td class="three" colspan="2">
           <div id="satisfaction_month_bar_chart"></div>
         </td>
-        <td colspan="4">
-          <div><h3>By year</h3></div>
+        <td colspan="2">
           <div id="satisfaction_year_bar_chart"></div>
         </td>
       </tr>

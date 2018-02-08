@@ -2,15 +2,18 @@ body {
   background-color: #fcfaf4;
   font-family: Arial, Helvetica, sans-serif;
   color: #47474f;
+  height: 1080px;
+  width: 1920px;
+  top:0;
+  bottom:0;
+  left:0;
+  right:0;
 }
 
-table {
-  width: 95%;
-  height: 95%;
-}
+table { border-collapse: collapse!important;}
 
-.height_top_and_bottom {
-   height: 330px;
+.entire-width table thead {
+  width: 1920px;
 }
 
 .height tr {
@@ -18,19 +21,19 @@ table {
 }
 
 .one td {
-  width: 100%;
+  width: 1920px;
 }
 
-.two td {
-  width: 50%;
+.three tr td div {
+  width: 640px;
 }
 
-.three td {
-  width: 32%;
+.donut_space {
+  width: 250px;
 }
 
-table {
-    border-collapse: collapse;
+.transaction_bar_space {
+  width: 960px;
 }
 
 .color_div_one {
@@ -63,12 +66,12 @@ h3 {
 }
 
 table #t01 {
-    width: 60%;
-    height: 60%;
+  width: 60%;
+  height: 60%;
 }
 
 .main-title {
-  font-size: 50px;
+  font-size: 35px;
 }
 
 
