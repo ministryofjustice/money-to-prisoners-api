@@ -25,7 +25,7 @@
 
         function drawChartTransaction() {
           var data = google.visualization.arrayToDataTable([
-            ['Month', 'Debit', 'BankTransfer', 'Post'],
+            ['Month', 'Debit', 'Bank', 'Post'],
             {% for d in data reversed %}
               ['{{d.start_of_month|date:"b Y"}}', {{d.credit_count}}, {{d.transaction_count}}, {{d.transaction_by_post}}],
             {% endfor %}
@@ -33,7 +33,7 @@
 
           var options = {
             title: 'Number of monthly transactions',
-            fontSize: 20,
+            fontSize: 16,
             vAxis: { title: 'Transactions'},
             backgroundColor: '#E4E4E4',
             width: 1050,
@@ -48,7 +48,7 @@
 
             function drawChartAmount() {
               var data = google.visualization.arrayToDataTable([
-                ['Month', 'Debit', 'Bank transfer'],
+                ['Month', 'Debit', 'Bank'],
                 {% for d in data reversed %}
                   ['{{d.start_of_month|date:"b Y"}}', {{d.queryset_credit_amount}}, {{d.queryset_transaction_amount}}],
                 {% endfor %}
@@ -56,7 +56,7 @@
 
               var options = {
                 title: 'Amount of money credited',
-                fontSize: 20,
+                fontSize: 16,
                 vAxis: { title: 'Money (£)'},
                 backgroundColor: '#E4E4E4',
                 width: 700,
@@ -81,7 +81,7 @@
 
               var options = {
                 title: '{{current_formated_month}} uptake',
-                fontSize: 20,
+                fontSize: 16,
                 backgroundColor: '#E4E4E4',
                 width: 250,
                 height: 250,
@@ -118,7 +118,7 @@
               height: 320,
               backgroundColor: '#E4E4E4',
               title: "By week",
-              fontSize: 20,
+              fontSize: 18,
               bar: {groupWidth: "95%"},
               legend: { position: "none" },
             };
@@ -149,7 +149,7 @@
               height: 320,
               backgroundColor: '#E4E4E4',
               title: "By month",
-              fontSize: 20,
+              fontSize: 18,
               bar: {groupWidth: "95%"},
               legend: { position: "none" },
             };
@@ -180,7 +180,7 @@
               height: 320,
               backgroundColor: '#E4E4E4',
               title: "By year",
-              fontSize: 20,
+              fontSize: 18,
               bar: {groupWidth: "95%"},
               legend: { position: "none" },
             };
@@ -213,8 +213,8 @@
         <td colspan="3">
           <table id="t01" align="right">
             <tr>
-              <td colspan="3">
-                <div class="error_messages">
+              <td class="bacs-errors-padding" colspan="3">
+                <div class="error_message">
                   <h1>BACS error rate:</h1>
                 </div>
                 <div>
