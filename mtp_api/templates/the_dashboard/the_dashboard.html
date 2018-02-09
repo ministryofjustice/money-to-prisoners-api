@@ -118,6 +118,7 @@
             width: 640,
             height: 200,
             pieHole: 0.5,
+            pieSliceText: 'label',
             pieStartAngle: 100,
             pieSliceTextStyle: {
             color: 'black',
@@ -155,11 +156,11 @@
         function drawWeeklySatisfaction() {
           var data = google.visualization.arrayToDataTable([
             ["Ratings", "Vote", { role: "style" } ],
-            ["Rating 1", {{user_satisfaction.weekly_ratings.rating_1}}, "green"],
-            ["Rating 2", {{user_satisfaction.weekly_ratings.rating_2}}, "purple"],
-            ["Rating 3", {{user_satisfaction.weekly_ratings.rating_3}}, "gold"],
-            ["Rating 4", {{user_satisfaction.weekly_ratings.rating_4}}, "red"],
-            ["Rating 5", {{user_satisfaction.weekly_ratings.rating_1}}, "blue"]
+            ["😡", {{user_satisfaction.weekly_ratings.rating_1}}, "green"],
+            ["🙁", {{user_satisfaction.weekly_ratings.rating_2}}, "purple"],
+            ["😑", {{user_satisfaction.weekly_ratings.rating_3}}, "gold"],
+            ["😊", {{user_satisfaction.weekly_ratings.rating_4}}, "red"],
+            ["😄", {{user_satisfaction.weekly_ratings.rating_1}}, "blue"]
           ]);
 
           var view = new google.visualization.DataView(data);
@@ -179,11 +180,11 @@
         function drawMonthlySatisfaction() {
             var data = google.visualization.arrayToDataTable([
               ["Ratings", "Vote", { role: "style" } ],
-              ["Rating 1", {{user_satisfaction.monthly_ratings.rating_1}}, "green"],
-              ["Rating 2", {{user_satisfaction.monthly_ratings.rating_2}}, "purple"],
-              ["Rating 3", {{user_satisfaction.monthly_ratings.rating_3}}, "gold"],
-              ["Rating 4", {{user_satisfaction.monthly_ratings.rating_4}}, "red"],
-              ["Rating 5", {{user_satisfaction.monthly_ratings.rating_1}}, "blue"]
+              ["😡", {{user_satisfaction.monthly_ratings.rating_1}}, "green"],
+              ["🙁", {{user_satisfaction.monthly_ratings.rating_2}}, "purple"],
+              ["😑", {{user_satisfaction.monthly_ratings.rating_3}}, "gold"],
+              ["😊", {{user_satisfaction.monthly_ratings.rating_4}}, "red"],
+              ["😄", {{user_satisfaction.monthly_ratings.rating_1}}, "blue"]
             ]);
 
           var view = new google.visualization.DataView(data);
@@ -202,11 +203,11 @@
         function drawYearlySatisfaction() {
             var data = google.visualization.arrayToDataTable([
               ["Ratings", "Vote", { role: "style" } ],
-              ["Rating 1", {{user_satisfaction.yearly_ratings.rating_1}}, "green"],
-              ["Rating 2", {{user_satisfaction.yearly_ratings.rating_2}}, "purple"],
-              ["Rating 3", {{user_satisfaction.yearly_ratings.rating_3}}, "gold"],
-              ["Rating 4", {{user_satisfaction.yearly_ratings.rating_4}}, "red"],
-              ["Rating 5", {{user_satisfaction.yearly_ratings.rating_1}}, "blue"]
+              ["😡", {{user_satisfaction.yearly_ratings.rating_1}}, "green"],
+              ["🙁", {{user_satisfaction.yearly_ratings.rating_2}}, "purple"],
+              ["😑", {{user_satisfaction.yearly_ratings.rating_3}}, "gold"],
+              ["😊", {{user_satisfaction.yearly_ratings.rating_4}}, "red"],
+              ["😄", {{user_satisfaction.yearly_ratings.rating_1}}, "blue"]
             ]);
 
             var view = new google.visualization.DataView(data);
@@ -288,7 +289,7 @@
 
    <tr class="one color_div_one">
      <th colspan="6">
-       <h1>User satisfaction rate</h1>
+       <h1>Senders user satisfaction rate</h1>
      </th>
    </tr>
 

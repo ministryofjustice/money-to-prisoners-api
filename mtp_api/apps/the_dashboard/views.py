@@ -61,10 +61,6 @@ def get_user_satisfaction():
     monthly_ratings = ratings_data(monthly_data, this_month)
     yearly_ratings = ratings_data(yearly_data, this_year)
 
-    print("WEEKLY RATINGS", weekly_ratings)
-    print("MONTHLY RATINGS", monthly_ratings)
-    print("YEARLY RATINGS", yearly_ratings)
-
     # print(ratings)
 
     # today = datetime.date.today()
