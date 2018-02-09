@@ -2,18 +2,23 @@ body {
   background-color: #fcfaf4;
   font-family: Arial, Helvetica, sans-serif;
   color: #47474f;
-  height: 1080px;
-  width: 1920px;
-  top:0;
-  bottom:0;
-  left:0;
-  right:0;
+  padding: 0;
+  margin: 0;
 }
 
 table { border-collapse: collapse!important;}
 
-.entire-width table thead {
+table {
   width: 1920px;
+  height: 1080px;
+}
+
+th {
+  text-align: center;
+}
+
+h1 {
+  font-size: 40px;
 }
 
 .height tr {
@@ -24,7 +29,11 @@ table { border-collapse: collapse!important;}
   width: 1920px;
 }
 
-.three tr td div {
+.two td {
+  width: 960px;
+}
+
+.three td {
   width: 640px;
 }
 
@@ -48,6 +57,29 @@ table { border-collapse: collapse!important;}
   padding: 65px;
 }
 
+.error-rates {
+  padding-left: 190px;
+}
+
+.error-rates h3 {
+  display: inline-block;
+  float: left;
+  clear: left;
+  width: 160px;
+  margin: 0;
+  font-weight:bold;
+  font-size: 19px;
+}
+
+.error-rates span {
+  display: inline-block;
+  float: left;
+  color:red;
+  font-weight:bold;
+  font-size: 19px;
+}
+
+/*
 .error_messages {
   color: red;
   font-size: 110%;
@@ -58,9 +90,18 @@ table { border-collapse: collapse!important;}
    margin: 0;
    padding: 0;
 }
+*/
 
 h3 {
   color: #47474f;
+}
+
+.donut-title {
+  color: #47474f;
+  text-align: center;
+  margin-bottom: 0;
+  padding-top: 5px;
+  font-size: 24;
 }
 
 .savings {
