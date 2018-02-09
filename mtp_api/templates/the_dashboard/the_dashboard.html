@@ -14,256 +14,200 @@
     <title>Google Charts Example</title>
 
     <script>
-        google.charts.load('current', {'packages':['corechart']});
-        google.charts.setOnLoadCallback(drawChartTransaction);
-        google.charts.setOnLoadCallback(drawChartAmount);
-        google.charts.setOnLoadCallback(drawDonut);
-        google.charts.setOnLoadCallback(drawWeeklySatisfaction);
-        google.charts.setOnLoadCallback(drawMonthlySatisfaction);
-        google.charts.setOnLoadCallback(drawYearlySatisfaction);
-        ;
-
-        // Object.assign({}, obj);
-
-        // var sharedOptions = {
-        //     titleTextStyle: {
-        //       fontSize: 30
-        //     },
-        //   fontSize: 20,
-        //   bold: true,
-
-        //   hAxis: {
-        //     title: 'Months',
-        //     titleTextStyle: {
-        //       fontSize: 20,
-        //       bold: true,
-        //     }
-        //   },
-
-        //   vAxis:{
-        //     titleTextStyle: {
-        //       fontSize: 20,
-        //       bold: true,
-        //     },
-        //     textStyle: {
-        //       bold: true,
-        //       fontSize: 20,
-        //     }
-        //   },
-
-        //   backgroundColor: '#E4E4E4',
-        //     width: 955,
-        //     height: 350,
-        //     legend: {
-        //       position: 'top'
-        //     },
-
-        //     bar: {
-        //       groupWidth: '80%'
-        //     }
-        //   };
+      google.charts.load('current', {'packages':['corechart']});
+      google.charts.setOnLoadCallback(drawChartTransaction);
+      google.charts.setOnLoadCallback(drawChartAmount);
+      google.charts.setOnLoadCallback(drawDonut);
+      google.charts.setOnLoadCallback(drawWeeklySatisfaction);
+      google.charts.setOnLoadCallback(drawMonthlySatisfaction);
+      google.charts.setOnLoadCallback(drawYearlySatisfaction);
+      ;
 
 
+      var sharedOptions = {
+          titleTextStyle: {
+            fontSize: 30
+          },
+        fontSize: 20,
+        bold: true,
+
+        hAxis: {
+          title: 'Months',
+          titleTextStyle: {
+            fontSize: 20,
+            bold: true,
+          }
+        },
+
+        vAxis:{
+          titleTextStyle: {
+            fontSize: 20,
+            bold: true,
+          },
+          textStyle: {
+            bold: true,
+            fontSize: 20,
+          }
+        },
+
+        backgroundColor: '#E4E4E4',
+          width: 955,
+          height: 350,
+          legend: {
+            position: 'top'
+          },
+
+          bar: {
+            groupWidth: '80%'
+          }
+        };
 
 
-        // chart.draw(chartElement, Object.assign({title: 'title'}, sharedOptions));
+      function drawChartTransaction() {
+        var data = google.visualization.arrayToDataTable([
+          ['Month', 'Debit', 'BankTransfer', 'Post'],
+          {% for d in data reversed %}
+            ['{{d.start_of_month|date:"N Y"}}', {{d.credit_count}}, {{d.transaction_count}}, {{d.transaction_by_post}}],
+          {% endfor %}
+          ]);
 
+          var chart = new google.visualization.ColumnChart(document.getElementById('transaction_bar_chart'));
+          var options = Object.assign({title: 'Number of monthly transactions'}, sharedOptions);
+          options.vAxis.title = 'Transactions';
+          chart.draw(data, options);
+        }
 
-        function drawChartTransaction() {
+        function drawChartAmount() {
           var data = google.visualization.arrayToDataTable([
-            ['Month', 'Debit', 'BankTransfer', 'Post'],
+            ['Month', 'Debit', 'BankTransfer'],
             {% for d in data reversed %}
-              ['{{d.start_of_month|date:"N Y"}}', {{d.credit_count}}, {{d.transaction_count}}, {{d.transaction_by_post}}],
+              ['{{d.start_of_month|date:"N Y"}}', {{d.queryset_credit_amount}}, {{d.queryset_transaction_amount}}],
             {% endfor %}
             ]);
 
           var options = {
-          title: 'Number of monthly transactions',
+            legend: { position: 'top' },
+            title: 'Amount of money credited',
+            fontSize: 16,
+            backgroundColor: '#E4E4E4',
+            vAxis: { title: 'Money (£)'},
+            width: 955,
+            height: 350,
+            };
+
+
+          var chart = new google.visualization.ColumnChart(document.getElementById('transaction_bar_chart_of_amount'));
+          var options = Object.assign({title: 'Amount of money credited'}, sharedOptions);
+          options.vAxis.title = 'Money(£)';
+          chart.draw(data, options);
+        }
+
+
+        function drawDonut()  {
+          var data = google.visualization.arrayToDataTable([
+            ['Sent Money', 'Number'],
+            ['Debit', {{this_month_credit}}],
+            ['Bank Transfer', {{this_months_transaction}}],
+            ['Post', {{this_months_transaction_by_post}}],
+          ]);
+
+          var options = {
+            backgroundColor: '#fcfaf4',
+            titlePosition: 'center',
+            fontSize: 16,
+            width: 640,
+            height: 200,
+            pieHole: 0.5,
+            pieStartAngle: 100,
+            pieSliceTextStyle: {
+            color: 'black',
+          },
+            legend: { position: "none" },
+            is3D: true,
+
+
+          };
+
+          var chart = new google.visualization.PieChart(document.getElementById('donut_of_transaction'));
+          chart.draw(data, options);
+        }
+
+
+         var sharedOptionsSatisaction = {
             titleTextStyle: {
               fontSize: 30
             },
 
-          fontSize: 20,
-          bold: true,
-
-          hAxis: {
-            title: 'Months',
-              titleTextStyle: {
-              fontSize: 20,
-              bold: true,
-            }
-          },
-
-          vAxis:{
-          title: 'Transactions',
-            titleTextStyle: {
-              fontSize: 20,
-              bold: true,
+            vAxis:{
+              textStyle: {
+                bold: true,
+                fontSize: 20,
+              }
             },
-            textStyle: {
-              bold: true,
-              fontSize: 20,
-            }
-          },
-
-          backgroundColor: '#E4E4E4',
-            width: 955,
-            height: 350,
-            legend: { position: 'top' },
-            bar: {groupWidth: '80%'},
+            width: 640,
+            height: 320,
+            backgroundColor: '#E4E4E4',
+            fontSize: 18,
+            bar: {groupWidth: "95%"},
+            legend: { position: "none" },
           };
 
-          var chart = new google.visualization.ColumnChart(document.getElementById('transaction_bar_chart'));
-          chart.draw(data, options);
-            }
+        function drawWeeklySatisfaction() {
+          var data = google.visualization.arrayToDataTable([
+            ["Ratings", "Vote", { role: "style" } ],
+            ["Rating 1", {{user_satisfaction.weekly_ratings.rating_1}}, "green"],
+            ["Rating 2", {{user_satisfaction.weekly_ratings.rating_2}}, "purple"],
+            ["Rating 3", {{user_satisfaction.weekly_ratings.rating_3}}, "gold"],
+            ["Rating 4", {{user_satisfaction.weekly_ratings.rating_4}}, "red"],
+            ["Rating 5", {{user_satisfaction.weekly_ratings.rating_1}}, "blue"]
+          ]);
 
-            function drawChartAmount() {
-              var data = google.visualization.arrayToDataTable([
-                ['Month', 'Debit', 'BankTransfer'],
-                {% for d in data reversed %}
-                  ['{{d.start_of_month|date:"N Y"}}', {{d.queryset_credit_amount}}, {{d.queryset_transaction_amount}}],
-                {% endfor %}
-                ]);
-
-              var options = {
-                legend: { position: 'top' },
-                title: 'Amount of money credited',
-                fontSize: 16,
-                backgroundColor: '#E4E4E4',
-                vAxis: { title: 'Money (£)'},
-                width: 955,
-                height: 350,
-                };
+          var view = new google.visualization.DataView(data);
+          view.setColumns([0, 1,
+                           { calc: "stringify",
+                             sourceColumn: 1,
+                             type: "string",
+                             role: "annotation" },
+                           2]);
 
 
-              var chart = new google.visualization.ColumnChart(document.getElementById('transaction_bar_chart_of_amount'));
-              chart.draw(data, options);
-                }
+          var options = Object.assign({title: 'By week'}, sharedOptionsSatisaction);
+          var chart = new google.visualization.ColumnChart(document.getElementById('satisfaction_week_bar_chart'));
+          chart.draw(view, options);
+        }
 
+        function drawMonthlySatisfaction() {
+            var data = google.visualization.arrayToDataTable([
+              ["Ratings", "Vote", { role: "style" } ],
+              ["Rating 1", {{user_satisfaction.monthly_ratings.rating_1}}, "green"],
+              ["Rating 2", {{user_satisfaction.monthly_ratings.rating_2}}, "purple"],
+              ["Rating 3", {{user_satisfaction.monthly_ratings.rating_3}}, "gold"],
+              ["Rating 4", {{user_satisfaction.monthly_ratings.rating_4}}, "red"],
+              ["Rating 5", {{user_satisfaction.monthly_ratings.rating_1}}, "blue"]
+            ]);
 
-            function drawDonut()  {
-              var data = google.visualization.arrayToDataTable([
-                ['Sent Money', 'Number'],
-                ['Debit', {{this_month_credit}}],
-                ['Bank Transfer', {{this_months_transaction}}],
-                ['Post', {{this_months_transaction_by_post}}],
-              ]);
+          var view = new google.visualization.DataView(data);
+          view.setColumns([0, 1,
+                           { calc: "stringify",
+                             sourceColumn: 1,
+                             type: "string",
+                             role: "annotation" },
+                           2]);
 
-              var options = {
-                backgroundColor: '#fcfaf4',
-                titlePosition: 'center',
-                fontSize: 16,
-                width: 640,
-                height: 200,
-                pieHole: 0.5,
-                pieSliceText: 'label',
-                pieStartAngle: 100,
-                pieSliceTextStyle: {
-                color: 'black',
-              },
-                legend: { position: "none" },
-                is3D: true,
-
-
-              };
-
-              var chart = new google.visualization.PieChart(document.getElementById('donut_of_transaction'));
-              chart.draw(data, options);
-            }
-
-
-            function drawWeeklySatisfaction() {
-              var data = google.visualization.arrayToDataTable([
-                ["Ratings", "Vote", { role: "style" } ],
-                ["Rating 1", {{user_satisfaction.weekly_ratings.rating_1}}, "green"],
-                ["Rating 2", {{user_satisfaction.weekly_ratings.rating_2}}, "purple"],
-                ["Rating 3", {{user_satisfaction.weekly_ratings.rating_3}}, "gold"],
-                ["Rating 4", {{user_satisfaction.weekly_ratings.rating_4}}, "red"],
-                ["Rating 5", {{user_satisfaction.weekly_ratings.rating_1}}, "blue"]
-              ]);
-
-            var view = new google.visualization.DataView(data);
-            view.setColumns([0, 1,
-                             { calc: "stringify",
-                               sourceColumn: 1,
-                               type: "string",
-                               role: "annotation" },
-                             2]);
-
-            var options = {
-              titleTextStyle: {
-                fontSize: 30
-              },
-
-              vAxis:{
-                textStyle: {
-                  bold: true,
-                  fontSize: 20,
-                }
-              },
-              width: 640,
-              height: 320,
-              backgroundColor: '#E4E4E4',
-              title: "By week",
-              fontSize: 18,
-              bar: {groupWidth: "95%"},
-              legend: { position: "none" },
-            };
-            var chart = new google.visualization.ColumnChart(document.getElementById('satisfaction_week_bar_chart'));
+          var options = Object.assign({title: 'By month'}, sharedOptionsSatisaction);
+          var chart = new google.visualization.ColumnChart(document.getElementById('satisfaction_month_bar_chart'));
             chart.draw(view, options);
-          }
+        }
 
-          function drawMonthlySatisfaction() {
-              var data = google.visualization.arrayToDataTable([
-                ["Ratings", "Vote", { role: "style" } ],
-                ["Rating 1", {{user_satisfaction.monthly_ratings.rating_1}}, "green"],
-                ["Rating 2", {{user_satisfaction.monthly_ratings.rating_2}}, "purple"],
-                ["Rating 3", {{user_satisfaction.monthly_ratings.rating_3}}, "gold"],
-                ["Rating 4", {{user_satisfaction.monthly_ratings.rating_4}}, "red"],
-                ["Rating 5", {{user_satisfaction.monthly_ratings.rating_1}}, "blue"]
-              ]);
-
-            var view = new google.visualization.DataView(data);
-            view.setColumns([0, 1,
-                             { calc: "stringify",
-                               sourceColumn: 1,
-                               type: "string",
-                               role: "annotation" },
-                             2]);
-
-            var options = {
-              width: 640,
-              height: 320,
-              backgroundColor: '#E4E4E4',
-              title: "By month",
-              titleTextStyle: {
-                fontSize: 30
-              },
-              vAxis:{
-                textStyle: {
-                  bold: true,
-                  fontSize: 20,
-                }
-              },
-
-              fontSize: 18,
-                bar: {groupWidth: "95%"},
-                legend: { position: "none" },
-              };
-
-            var chart = new google.visualization.ColumnChart(document.getElementById('satisfaction_month_bar_chart'));
-              chart.draw(view, options);
-             }
-
-          function drawYearlySatisfaction() {
-              var data = google.visualization.arrayToDataTable([
-                ["Ratings", "Vote", { role: "style" } ],
-                ["Rating 1", {{user_satisfaction.yearly_ratings.rating_1}}, "green"],
-                ["Rating 2", {{user_satisfaction.yearly_ratings.rating_2}}, "purple"],
-                ["Rating 3", {{user_satisfaction.yearly_ratings.rating_3}}, "gold"],
-                ["Rating 4", {{user_satisfaction.yearly_ratings.rating_4}}, "red"],
-                ["Rating 5", {{user_satisfaction.yearly_ratings.rating_1}}, "blue"]
-              ]);
+        function drawYearlySatisfaction() {
+            var data = google.visualization.arrayToDataTable([
+              ["Ratings", "Vote", { role: "style" } ],
+              ["Rating 1", {{user_satisfaction.yearly_ratings.rating_1}}, "green"],
+              ["Rating 2", {{user_satisfaction.yearly_ratings.rating_2}}, "purple"],
+              ["Rating 3", {{user_satisfaction.yearly_ratings.rating_3}}, "gold"],
+              ["Rating 4", {{user_satisfaction.yearly_ratings.rating_4}}, "red"],
+              ["Rating 5", {{user_satisfaction.yearly_ratings.rating_1}}, "blue"]
+            ]);
 
             var view = new google.visualization.DataView(data);
             view.setColumns([0, 1,
@@ -294,7 +238,7 @@
             };
             var chart = new google.visualization.ColumnChart(document.getElementById('satisfaction_year_bar_chart'));
             chart.draw(view, options);
-          }
+        }
         </script>
   </head>
 <body>
