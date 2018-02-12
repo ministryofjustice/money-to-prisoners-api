@@ -89,8 +89,14 @@ class DisbursementSerializer(serializers.ModelSerializer):
         queryset=Prison.objects.all(),
         validators=[PrisonPermittedValidator()]
     )
+    prison_name = serializers.SerializerMethodField()
     prisoner_name = serializers.CharField(required=False)
     resolution = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = Disbursement
+        fields = '__all__'
+        validators = [PrisonerInPrisonValidator()]
 
     @atomic
     def create(self, validated_data):
@@ -120,10 +126,12 @@ class DisbursementSerializer(serializers.ModelSerializer):
             )
         return updated_disbursement
 
-    class Meta:
-        model = Disbursement
-        fields = '__all__'
-        validators = [PrisonerInPrisonValidator()]
+    @classmethod
+    def get_prison_name(cls, obj):
+        try:
+            return Prison.objects.get(pk=obj.prison_id).name
+        except Prison.DoesNotExist:
+            return None
 
 
 class DisbursementIdsSerializer(serializers.Serializer):
