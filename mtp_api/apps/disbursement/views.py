@@ -14,6 +14,7 @@ from mtp_auth.permissions import (
     CASHBOOK_OAUTH_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID,
     BANK_ADMIN_OAUTH_CLIENT_ID, get_client_permissions_class
 )
+from prison.models import Prison
 from . import InvalidDisbursementStateException
 from .constants import DISBURSEMENT_RESOLUTION
 from .models import Disbursement, Comment
@@ -33,16 +34,27 @@ class DisbursementFilter(django_filters.FilterSet):
         {'logged_at': TruncUtcDate('log__created')}
     )
     resolution = MultipleValueFilter(name='resolution')
+
     prisoner_number = django_filters.CharFilter(name='prisoner_number', lookup_expr='iexact')
     prisoner_name = django_filters.CharFilter(name='prisoner_name', lookup_expr='icontains')
+
+    prison = django_filters.ModelMultipleChoiceFilter(queryset=Prison.objects.all())
+    prison_region = django_filters.CharFilter(name='prison__region')
+    prison_category = MultipleValueFilter(name='prison__categories__name')
+    prison_population = MultipleValueFilter(name='prison__populations__name')
+
     recipient_name = django_filters.CharFilter(name='recipient_name', lookup_expr='icontains')
     recipient_email = django_filters.CharFilter(name='recipient_email', lookup_expr='icontains')
+
+    sort_code = django_filters.CharFilter(name='sort_code')
+    account_number = django_filters.CharFilter(name='account_number')
+    roll_number = django_filters.CharFilter(name='roll_number')
 
     class Meta:
         model = Disbursement
         fields = {
+            'created': ['exact', 'lt', 'gte'],
             'log__action': ['exact'],
-            'prison': ['exact'],
             'method': ['exact'],
             'amount': ['exact', 'lte', 'gte'],
             'nomis_transaction_id': ['exact'],
