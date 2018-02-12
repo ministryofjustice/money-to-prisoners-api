@@ -2,9 +2,9 @@
 {% load static %}
 {% load credit %}
 {% load i18n %}
+{% load humanize %}
 
 <html>
-
   <head>
     <script src="https://www.google.com/jsapi" type="text/javascript"></script>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
@@ -21,7 +21,6 @@
       google.charts.setOnLoadCallback(drawWeeklySatisfaction);
       google.charts.setOnLoadCallback(drawMonthlySatisfaction);
       google.charts.setOnLoadCallback(drawYearlySatisfaction);
-      ;
 
 
       var sharedOptions = {
@@ -89,7 +88,7 @@
             legend: { position: 'top' },
             title: 'Amount of money credited',
             fontSize: 16,
-            backgroundColor: '#E4E4E4',
+            // backgroundColor: '#E4E4E4',
             vAxis: { title: 'Money (£)'},
             width: 955,
             height: 350,
@@ -115,8 +114,8 @@
             backgroundColor: '#fcfaf4',
             titlePosition: 'center',
             fontSize: 16,
-            width: 640,
-            height: 200,
+            width: 955,
+            height: 400,
             pieHole: 0.5,
             pieSliceText: 'label',
             pieStartAngle: 100,
@@ -145,9 +144,9 @@
                 fontSize: 20,
               }
             },
-            width: 640,
+            width: 956,
             height: 320,
-            backgroundColor: '#E4E4E4',
+            // backgroundColor: '#E4E4E4',
             fontSize: 18,
             bar: {groupWidth: "95%"},
             legend: { position: "none" },
@@ -160,7 +159,7 @@
             ["🙁", {{user_satisfaction.weekly_ratings.rating_2}}, "purple"],
             ["😑", {{user_satisfaction.weekly_ratings.rating_3}}, "gold"],
             ["😊", {{user_satisfaction.weekly_ratings.rating_4}}, "red"],
-            ["😄", {{user_satisfaction.weekly_ratings.rating_1}}, "blue"]
+            ["😄", {{user_satisfaction.weekly_ratings.rating_5}}, "blue"]
           ]);
 
           var view = new google.visualization.DataView(data);
@@ -184,7 +183,7 @@
               ["🙁", {{user_satisfaction.monthly_ratings.rating_2}}, "purple"],
               ["😑", {{user_satisfaction.monthly_ratings.rating_3}}, "gold"],
               ["😊", {{user_satisfaction.monthly_ratings.rating_4}}, "red"],
-              ["😄", {{user_satisfaction.monthly_ratings.rating_1}}, "blue"]
+              ["😄", {{user_satisfaction.monthly_ratings.rating_5}}, "blue"]
             ]);
 
           var view = new google.visualization.DataView(data);
@@ -207,7 +206,7 @@
               ["🙁", {{user_satisfaction.yearly_ratings.rating_2}}, "purple"],
               ["😑", {{user_satisfaction.yearly_ratings.rating_3}}, "gold"],
               ["😊", {{user_satisfaction.yearly_ratings.rating_4}}, "red"],
-              ["😄", {{user_satisfaction.yearly_ratings.rating_1}}, "blue"]
+              ["😄", {{user_satisfaction.yearly_ratings.rating_5}}, "blue"]
             ]);
 
             var view = new google.visualization.DataView(data);
@@ -243,7 +242,44 @@
         </script>
   </head>
 <body>
-  <table>
+
+<table>
+  <tr class="two">
+    <td colspan="3">
+      <div id="transaction_bar_chart" ></div>
+    </td>
+    <td colspan="3">
+      <h1>Total digital transactions:</h1>
+      <h2>this week:</h2>
+      <h3>£{{total_digital_amount_recent_week|intcomma}}</h3>
+      <h3>{{total_digital_transactions_recent_week}} Transactions</h3>
+    </td>
+  </tr>
+  <tr class="two">
+    <td colspan="3">
+       <div id="transaction_bar_chart_of_amount" ></div>
+    </td>x
+    <td colspan="3">
+      <h2> this month:</h2>
+      <h3>£{{total_digital_amount_this_month|intcomma}}</h3>
+      <h3>{{total_digital_transactions_this_month}} Transactions</h3>
+    </td>
+  </tr>
+  <tr class="two">
+    <td colspan="3">
+      <h3 class="donut-title">{{current_formated_month}} uptake</h3>
+      <div id="donut_of_transaction"></div>
+    </td>
+    <td colspan="3">
+      <h2>this year:</h2>
+      <h3>£{{total_amount_of_digital_transactions_this_year|intcomma}}</h3>
+      <h3>{{total_number_of_digital_transactions_this_year}} Transactions</h3>
+    </td>
+  </tr>
+</table>
+
+
+  <!-- <table>
     <thead>
       <tr>
         <th colspan="6"><h1>Analytics Dashboard - Prisoner Money</h1></th>
@@ -304,6 +340,6 @@
         <div id="satisfaction_year_bar_chart"></div>
       </td>
     </tr>
-  </table>
+  </table> -->
 </body>
 

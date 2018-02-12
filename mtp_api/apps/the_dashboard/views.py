@@ -1,4 +1,5 @@
 import datetime
+# from datetime import datetime
 
 from django.shortcuts import render
 
@@ -45,9 +46,9 @@ def get_user_satisfaction():
     yearly_data = requests.get('https://www.performance.service.gov.uk/data/send-prisoner-money/customer-satisfaction?flatten=true&duration=1&period=year&collect=rating_1%3Asum&collect=rating_2%3Asum&collect=rating_3%3Asum&collect=rating_4%3Asum&collect=rating_5%3Asum&collect=total%3Asum&format=json').json()
     yearly_data = yearly_data["data"][0]
 
-    this_week = {'rating_1': 0, 'rating_2': 0, 'rating_3': 0, 'rating_4': 0, 'rating_5': 0}
-    this_month = {'rating_1': 0, 'rating_2': 0, 'rating_3': 0, 'rating_4': 0, 'rating_5': 0}
-    this_year = {'rating_1': 0, 'rating_2': 0, 'rating_3': 0, 'rating_4': 0, 'rating_5': 0}
+    this_week = {}
+    this_month = {}
+    this_year = {}
 
     def ratings_data(time_span, ratings):
         ratings['rating_1'] = time_span['rating_1:sum']
@@ -119,9 +120,14 @@ class DashboardView(TemplateView):
 
         tz = timezone.get_current_timezone()
         today = datetime.date.today()
+        weekday = today.weekday()
+        start_delta = datetime.timedelta(days=weekday, weeks=1)
+        start_of_week = today - start_delta
+        end_delta = datetime.timedelta(days=weekday)
+        end_of_week = today + end_delta
+
         year = today.year
         last_year = today.year -1
-        print("LAST YEAR", last_year)
         month = today.month
         if month == 12:
             month = 1
@@ -129,11 +135,41 @@ class DashboardView(TemplateView):
         else:
             month += 1
 
+
+        datetime.timedelta(days=weekday, weeks=1)
+
+        starting_day_of_current_year = today.replace(month=1, day=1)
+
+        total_number_of_credits_this_year = Credit.objects.filter(received_at__range=(starting_day_of_current_year, today))
+        total_amount_of_credits_this_year = Credit.objects.filter(received_at__range=(starting_day_of_current_year, today)).aggregate(Sum('amount'))
+        total_amount_of_credits_this_year = total_amount_of_credits_this_year['amount__sum']
+
+        total_number_of_transactions_this_year = Transaction.objects.filter(received_at__range=(starting_day_of_current_year, today))
+        total_amount_of_transactions_this_year = Transaction.objects.filter(received_at__range=(starting_day_of_current_year, today)).aggregate(Sum('amount'))
+        total_amount_of_transactions_this_year = total_amount_of_transactions_this_year['amount__sum']
+        total_amount_of_digital_transactions_this_year = total_amount_of_transactions_this_year + total_amount_of_credits_this_year
+        total_number_of_digital_transactions_this_year = total_number_of_credits_this_year.count() + total_number_of_transactions_this_year.count()
+
+        queryset_credit_total_recent_week = Credit.objects.filter(received_at__range=(start_of_week, end_of_week))
+        queryset_credit_amount_recent_week = Credit.objects.filter(received_at__range=(start_of_week, end_of_week)).aggregate(Sum('amount'))
+        queryset_transaction_recent_week_count = Transaction.objects.filter(received_at__range=(start_of_week, end_of_week))
+        queryset_transaction_amount_recent_week_amount = Transaction.objects.filter(received_at__range=(start_of_week, end_of_week)).aggregate(Sum('amount'))
+
+        total_digital_transactions_recent_week = queryset_credit_total_recent_week.count() + queryset_transaction_recent_week_count.count()
+        total_digital_amount_recent_week = queryset_transaction_amount_recent_week_amount['amount__sum'] + queryset_credit_amount_recent_week['amount__sum']
+
+        context['total_number_of_digital_transactions_this_year'] = total_number_of_digital_transactions_this_year
+        context['total_amount_of_digital_transactions_this_year'] = total_amount_of_digital_transactions_this_year
+        context['total_digital_transactions_recent_week']=  total_digital_transactions_recent_week
+        context['total_digital_amount_recent_week'] = total_digital_amount_recent_week
+
         list_of_errors = []
         list_of_errors_the_previous_year = []
         list_of_transactions_by_post = []
         list_of_transaction_count = []
+        list_of_transaction_amount = []
         list_of_credit_count = []
+        list_of_credit_amount = []
         list_of_formated_months = []
         list_of_formated_months_last_year = []
 
@@ -227,6 +263,8 @@ class DashboardView(TemplateView):
             list_of_credit_count.append(queryset_credit.count())
             list_of_formated_months.append(formated_month_and_year)
             list_of_formated_months_last_year.append(formated_months_last_year)
+            list_of_credit_amount.append(queryset_credit_amount)
+            list_of_transaction_amount.append(queryset_transaction_amount)
 
             data.append({
             'transaction_by_post':transaction_by_post,
@@ -245,13 +283,20 @@ class DashboardView(TemplateView):
         this_months_transaction_by_post = list_of_transactions_by_post[0]
         this_months_transaction = list_of_transaction_count[0]
         this_month_credit = list_of_credit_count[0]
+        total_digital_transactions_this_month = this_months_transaction + this_month_credit
 
         last_year_same_time_percentage_of_errors = list_of_errors_the_previous_year[0]
         this_months_pecentage_of_errors = list_of_errors[0]
         last_months_percentage_of_errors = list_of_errors[1]
         current_formated_month = list_of_formated_months[0]
         current_month_previous_year = list_of_formated_months_last_year[0]
+        current_month_transaction_amount = list_of_transaction_amount[0]['amount__sum']
+        current_month_credit_amount = list_of_credit_amount[0]['amount__sum']
+        total_digital_amount_this_month = current_month_transaction_amount + current_month_credit_amount
 
+
+        context['total_digital_amount_this_month'] = total_digital_amount_this_month
+        context['total_digital_transactions_this_month'] = total_digital_transactions_this_month
         context['current_month_previous_year'] = current_month_previous_year
         context['current_formated_month']= current_formated_month
         context['this_months_transaction_by_post'] = this_months_transaction_by_post

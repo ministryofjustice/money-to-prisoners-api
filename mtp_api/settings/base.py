@@ -58,6 +58,8 @@ INSTALLED_APPS = (
 
     # common
     'mtp_common',
+
+    'django.contrib.humanize',
 )
 
 
