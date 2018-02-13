@@ -119,12 +119,13 @@ class DashboardView(TemplateView):
         context['data'] = data
 
         tz = timezone.get_current_timezone()
-        today = datetime.date.today()
+        today = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
         weekday = today.weekday()
         start_delta = datetime.timedelta(days=weekday, weeks=1)
         start_of_week = today - start_delta
         end_delta = datetime.timedelta(days=weekday)
-        end_of_week = today + end_delta
+        end_of_week = today - end_delta
+        print("END OF WEEK", end_of_week)
 
         year = today.year
         last_year = today.year -1

@@ -13,12 +13,49 @@ table {
   border-collapse: collapse!important;
 }
 
+.chart-padding {
+  padding-left: 40px;
+}
+
+.digital-transaction-one-group {
+  padding-bottom: 30px;
+  padding-right: 5px;
+  padding-left: 5px;
+}
+
+.digital-transaction-individual-group-headings div h2 {
+    font-size: 40px;
+    font-weight: bold;
+}
+
+.digital-transaction-individual-info div h3 {
+    font-size: 40px;
+}
+
+.digital-transaction-individual-group-padding{
+  padding-bottom: 130px;
+}
+
+.digital-transaction-heading {
+  padding-top: 50px;
+  padding-bottom: 30px;
+  padding-right: 20px;
+  font-size: 50px;
+  font-weight: bold;
+  text-align: left;
+
+}
+
+.digital-transaction-align {
+  padding-left: 0px;
+}
+
 th {
   text-align: center;
 }
 
 h2,h3 {
-  text-align: center;
+  text-align: left;
   margin: 0;
 }
 
@@ -28,8 +65,8 @@ h1 {
   font-size: 40px;
 }
 
-.height tr {
-  height: 350px;
+.height {
+  height: 360px;
 }
 
 .one td {
