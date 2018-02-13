@@ -71,8 +71,8 @@
           ]);
 
           var chart = new google.visualization.ColumnChart(document.getElementById('transaction_bar_chart'));
-          var options = Object.assign({title: 'Number of monthly transactions'}, sharedOptions);
-          options.vAxis.title = 'Transactions';
+          var options = Object.assign({title: 'Number of monthly credits'}, sharedOptions);
+          options.vAxis.title = 'Credits';
           chart.draw(data, options);
         }
 
@@ -285,30 +285,30 @@
       <div id="transaction_bar_chart" ></div>
     </td>
 
-    <td rowspan="2" class="digital-transaction-one-group digital-transaction-individual-group-headings digital-transaction-individual-info
+    <td rowspan="2" class="digital-transaction-one-group
     digital-transaction-individual-group-padding">
       <div>
         <h1 class="digital-transaction-heading">
-          Digital transactions:
+          Digital credits:
         </h1>
       </div>
 
       <div class="digital-transaction-individual-group-padding">
         <h2>this week:</h2>
         <h3>£{{total_digital_amount_recent_week|intcomma}}</h3>
-        <h3>{{total_digital_transactions_recent_week}} Transactions</h3>
+        <h4>{{total_digital_transactions_recent_week}} credit recieved</h4>
       </div>
 
       <div class="digital-transaction-individual-group-padding">
-        <h2> this month:</h2>
+        <h2>this month:</h2>
         <h3>£{{total_digital_amount_this_month|intcomma}}</h3>
-        <h3>{{total_digital_transactions_this_month}} Transactions</h3>
+        <h4>{{total_digital_transactions_this_month}} credit recieved</h4>
       </div>
 
       <div class="digital-transaction-align">
         <h2>this year:</h2>
         <h3>£{{total_amount_of_digital_transactions_this_year|intcomma}}</h3>
-        <h3>{{total_number_of_digital_transactions_this_year}} Transactions</h3>
+        <h4>{{total_number_of_digital_transactions_this_year}} credit recieved</h4>
       </div>
     </td>
 

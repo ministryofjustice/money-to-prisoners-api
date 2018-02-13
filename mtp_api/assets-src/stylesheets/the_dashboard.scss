@@ -1,7 +1,6 @@
 body {
   background-color: #fcfaf4;
   font-family: Arial, Helvetica, sans-serif;
-  color: #47474f;
   padding: 0;
   margin: 0;
 }
@@ -11,6 +10,27 @@ table {
   height: 1080px;
   border: 1px solid black;
   border-collapse: collapse!important;
+}
+
+th {
+  text-align: center;
+}
+
+h2,h3,h4 {
+  text-align: left;
+  margin: 0;
+}
+
+h2 {
+  font-size: 40px;
+}
+
+h3 {
+  font-size: 80px;
+}
+
+h4 {
+  font-size: 30px;
 }
 
 .chart-padding {
@@ -28,19 +48,16 @@ table {
     font-weight: bold;
 }
 
-.digital-transaction-individual-info div h3 {
-    font-size: 40px;
-}
-
 .digital-transaction-individual-group-padding{
   padding-bottom: 130px;
+  padding-right: 100px;
 }
 
 .digital-transaction-heading {
   padding-top: 50px;
   padding-bottom: 30px;
   padding-right: 20px;
-  font-size: 50px;
+  font-size: 70px;
   font-weight: bold;
   text-align: left;
 
@@ -50,20 +67,6 @@ table {
   padding-left: 0px;
 }
 
-th {
-  text-align: center;
-}
-
-h2,h3 {
-  text-align: left;
-  margin: 0;
-}
-
-
-h1 {
-  text-align: center;
-  font-size: 40px;
-}
 
 .height {
   height: 360px;
@@ -134,10 +137,6 @@ h1 {
    padding: 0;
 }
 */
-
-h3 {
-  color: #47474f;
-}
 
 .donut-title {
   color: #47474f;
