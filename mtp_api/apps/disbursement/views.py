@@ -35,6 +35,19 @@ class DisbursementFilter(django_filters.FilterSet):
     )
     resolution = MultipleValueFilter(name='resolution')
 
+    exclude_amount__endswith = django_filters.CharFilter(
+        name='amount', lookup_expr='endswith', exclude=True
+    )
+    exclude_amount__regex = django_filters.CharFilter(
+        name='amount', lookup_expr='regex', exclude=True
+    )
+    amount__endswith = django_filters.CharFilter(
+        name='amount', lookup_expr='endswith'
+    )
+    amount__regex = django_filters.CharFilter(
+        name='amount', lookup_expr='regex'
+    )
+
     prisoner_number = django_filters.CharFilter(name='prisoner_number', lookup_expr='iexact')
     prisoner_name = django_filters.CharFilter(name='prisoner_name', lookup_expr='icontains')
 
@@ -45,6 +58,9 @@ class DisbursementFilter(django_filters.FilterSet):
 
     recipient_name = django_filters.CharFilter(name='recipient_name', lookup_expr='icontains')
     recipient_email = django_filters.CharFilter(name='recipient_email', lookup_expr='icontains')
+
+    city = django_filters.CharFilter(name='city', lookup_expr='iexact')
+    postcode = django_filters.CharFilter(name='postcode', lookup_expr='icontains')
 
     sort_code = django_filters.CharFilter(name='sort_code')
     account_number = django_filters.CharFilter(name='account_number')
