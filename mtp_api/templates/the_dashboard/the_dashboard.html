@@ -1,4 +1,3 @@
-
 {% load static %}
 {% load credit %}
 {% load i18n %}
@@ -17,6 +16,8 @@
       google.charts.load('current', {'packages':['corechart']});
       google.charts.setOnLoadCallback(drawChartTransaction);
       google.charts.setOnLoadCallback(drawChartAmount);
+      google.charts.setOnLoadCallback(drawChartDisbursmentCount);
+      google.charts.setOnLoadCallback(drawChartDisbursmentAmount);
       google.charts.setOnLoadCallback(drawDonut);
       google.charts.setOnLoadCallback(drawWeeklySatisfaction);
       google.charts.setOnLoadCallback(drawMonthlySatisfaction);
@@ -76,26 +77,62 @@
           chart.draw(data, options);
         }
 
-        function drawChartAmount() {
+      function drawChartAmount() {
+        var data = google.visualization.arrayToDataTable([
+          ['Month', 'Debit', 'BankTransfer'],
+          {% for d in data reversed %}
+            ['{{d.start_of_month|date:"N Y"}}', {{d.queryset_credit_amount}}, {{d.queryset_transaction_amount}}],
+          {% endfor %}
+          ]);
+
+        var options = {
+          legend: { position: 'top' },
+          title: 'Amount of money credited',
+          fontSize: 16,
+          vAxis: { title: 'Money (£)'},
+
+        };
+
+
+          var chart = new google.visualization.ColumnChart(document.getElementById('transaction_bar_chart_of_amount'));
+          var options = Object.assign({title: 'Amount of money credited'}, sharedOptions);
+          options.vAxis.title = 'Money(£)';
+          chart.draw(data, options);
+        }
+
+
+      function drawChartDisbursmentCount() {
+        var data = google.visualization.arrayToDataTable([
+          ['Month', 'Cheque', 'BankTransfer'],
+          {% for d in data reversed %}
+            ['{{d.start_of_month|date:"N Y"}}', {{d.disbursement_cheque_count}}, {{d.disbursement_bank_transfer_count}}],
+          {% endfor %}
+          ]);
+
+          var chart = new google.visualization.ColumnChart(document.getElementById('disbursements_count_chart'));
+          var options = Object.assign({title: 'Number of monthly disbursements'}, sharedOptions);
+          options.vAxis.title = 'Disbursments';
+          chart.draw(data, options);
+        }
+
+        function drawChartDisbursmentAmount() {
           var data = google.visualization.arrayToDataTable([
-            ['Month', 'Debit', 'BankTransfer'],
+            ['Month', 'Cheque', 'BankTransfer'],
             {% for d in data reversed %}
-              ['{{d.start_of_month|date:"N Y"}}', {{d.queryset_credit_amount}}, {{d.queryset_transaction_amount}}],
+              ['{{d.start_of_month|date:"N Y"}}', {{d.disbursement_cheque_amount}}, {{d.disbursement_bank_transfer_amount}}],
             {% endfor %}
             ]);
 
           var options = {
             legend: { position: 'top' },
-            title: 'Amount of money credited',
+            title: 'Amount of money disbursed',
             fontSize: 16,
-            // backgroundColor: '#E4E4E4',
             vAxis: { title: 'Money (£)'},
-
             };
 
 
-          var chart = new google.visualization.ColumnChart(document.getElementById('transaction_bar_chart_of_amount'));
-          var options = Object.assign({title: 'Amount of money credited'}, sharedOptions);
+          var chart = new google.visualization.ColumnChart(document.getElementById('disbursements_amount_chart'));
+          var options = Object.assign({title: 'Amount of money disbursed'}, sharedOptions);
           options.vAxis.title = 'Money(£)';
           chart.draw(data, options);
         }
@@ -124,7 +161,6 @@
             legend: { position: "none" },
             is3D: true,
 
-
           };
 
           var chart = new google.visualization.PieChart(document.getElementById('donut_of_transaction'));
@@ -145,7 +181,6 @@
             },
             width: 956,
             height: 320,
-            // backgroundColor: '#E4E4E4',
             fontSize: 18,
             bar: {groupWidth: "95%"},
             legend: { position: "none" },
@@ -242,42 +277,7 @@
   </head>
 <body>
 
-<!-- <table>
-  <tr class="two">
-    <td rowspan="5" class="height">
-      <div id="transaction_bar_chart" ></div>
-    </td>
-   <td>
-      <h1>Total digital transactions:</h1>
-    </td>
-  </tr>
-  <tr>
-    <td rowspan="3">
-      <h2>this week:</h2>
-      <h3>£{{total_digital_amount_recent_week|intcomma}}</h3>
-      <h3>{{total_digital_transactions_recent_week}} Transactions</h3>
-    </td>
-  </tr>
-  <tr>
-    <td rowspan="3">
-      <h2> this month:</h2>
-      <h3>£{{total_digital_amount_this_month|intcomma}}</h3>
-      <h3>{{total_digital_transactions_this_month}} Transactions</h3>
-    </td>
-  </tr>
-  <tr class="two">
-    <td class="height">
-       <div id="transaction_bar_chart_of_amount" ></div>
-    </td>
-  </tr>
-  <tr>
-    <td rowspan="3">
-      <h2>this year:</h2>
-      <h3>£{{total_amount_of_digital_transactions_this_year|intcomma}}</h3>
-      <h3>{{total_number_of_digital_transactions_this_year}} Transactions</h3>
-    </td>
-  </tr>
-</table> -->
+
 
 <table>
   <tr>
@@ -285,8 +285,7 @@
       <div id="transaction_bar_chart" ></div>
     </td>
 
-    <td rowspan="2" class="digital-transaction-one-group
-    digital-transaction-individual-group-padding">
+    <td rowspan="2" class="digital-transaction-one-group">
       <div>
         <h1 class="digital-transaction-heading">
           Digital credits:
@@ -319,6 +318,49 @@
     </td>
   </tr>
 </table>
+
+
+<table>
+  <tr>
+    <td class="chart-padding">
+      <div id="disbursements_count_chart" ></div>
+    </td>
+
+    <td rowspan="2" class="digital-transaction-one-group">
+      <div>
+        <h1 class="digital-transaction-heading">
+          Digital credits:
+        </h1>
+      </div>
+
+      <div class="digital-transaction-individual-group-padding">
+        <h2>this week:</h2>
+        <h3>£{{total_digital_amount_recent_week|intcomma}}</h3>
+        <h4>{{total_digital_transactions_recent_week}} credit recieved</h4>
+      </div>
+
+      <div class="digital-transaction-individual-group-padding">
+        <h2>this month:</h2>
+        <h3>£{{total_digital_amount_this_month|intcomma}}</h3>
+        <h4>{{total_digital_transactions_this_month}} credit recieved</h4>
+      </div>
+
+      <div class="digital-transaction-align">
+        <h2>this year:</h2>
+        <h3>£{{total_amount_of_digital_transactions_this_year|intcomma}}</h3>
+        <h4>{{total_number_of_digital_transactions_this_year}} credit recieved</h4>
+      </div>
+    </td>
+
+  </tr>
+  <tr>
+    <td class="chart-padding">
+      <div id="disbursements_amount_chart" ></div>
+    </td>
+  </tr>
+</table>
+
+
 
 
 

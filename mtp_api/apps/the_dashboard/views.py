@@ -1,14 +1,14 @@
 import datetime
-# from datetime import datetime
-
 from django.shortcuts import render
-
 from django.http import HttpResponse
 from transaction.models import Transaction, TRANSACTION_CATEGORY, TRANSACTION_SOURCE, TRANSACTION_STATUS
 from django.views.generic import FormView, TemplateView
 from django.utils import timezone
 from credit.models import Credit
 from payment.models import Payment
+from disbursement.models import Disbursement
+from disbursement.constants import DISBURSEMENT_METHOD
+from model_utils.models import TimeStampedModel
 from performance.models import DigitalTakeupQueryset, DigitalTakeup
 from django.db.models import Sum
 import pytz
@@ -139,15 +139,25 @@ class DashboardView(TemplateView):
 
         starting_day_of_current_year = today.replace(month=1, day=1)
 
+        def pence_to_pounds(amount):
+            if(amount == None):
+                return 0
+            if(amount != None):
+                return amount/100
+
+
         queryset_total_number_of_digital_transactions_this_year = Credit.objects.filter(received_at__range=(starting_day_of_current_year, today))
         queryset_total_amount_of_digital_transactions_this_year = Credit.objects.filter(received_at__range=(starting_day_of_current_year, today)).aggregate(Sum('amount'))
         queryset_total_number_of_digital_transactions_previous_week = Credit.objects.filter(received_at__range=(start_of_week, end_of_week))
         queryset_amount_of_digital_transactions_previous_week = Credit.objects.filter(received_at__range=(start_of_week, end_of_week)).aggregate(Sum('amount'))
 
+        total_amount_of_digital_transactions_this_year_in_pounds = pence_to_pounds(queryset_total_amount_of_digital_transactions_this_year['amount__sum'])
+        amount_of_digital_transactions_previous_week_in_pounds = pence_to_pounds(queryset_amount_of_digital_transactions_previous_week['amount__sum'])
+
         context['total_number_of_digital_transactions_this_year'] = queryset_total_number_of_digital_transactions_this_year.count()
-        context['total_amount_of_digital_transactions_this_year'] = queryset_total_amount_of_digital_transactions_this_year['amount__sum']
+        context['total_amount_of_digital_transactions_this_year'] = total_amount_of_digital_transactions_this_year_in_pounds
         context['total_digital_transactions_recent_week']=  queryset_total_number_of_digital_transactions_previous_week.count()
-        context['total_digital_amount_recent_week'] = queryset_amount_of_digital_transactions_previous_week['amount__sum']
+        context['total_digital_amount_recent_week'] = amount_of_digital_transactions_previous_week_in_pounds
 
         list_of_errors = []
         list_of_errors_the_previous_year = []
@@ -184,15 +194,24 @@ class DashboardView(TemplateView):
             queryset_debit_amount = Credit.objects.filter(payment__isnull=False).filter(received_at__range=(start_of_month, end_of_month)).aggregate(Sum('amount'))
             queryset_debit_last_year = Credit.objects.filter(payment__isnull=False).filter(received_at__range=(start_of_month_last_year, end_of_month_last_year))
 
+            queryset_disbursement_bank_transfer_count = Disbursement.objects.filter(method=DISBURSEMENT_METHOD.BANK_TRANSFER).filter(created__range=(start_of_month, end_of_month))
+            queryset_disbursement_cheque_count = Disbursement.objects.filter(method=DISBURSEMENT_METHOD.CHEQUE).filter(created__range=(start_of_month, end_of_month))
+            queryset_disbursement_bank_transfer_amount = Disbursement.objects.filter(method=DISBURSEMENT_METHOD.BANK_TRANSFER).filter(created__range=(start_of_month, end_of_month)).aggregate(Sum('amount'))
+            queryset_disbursement_cheque_amount = Disbursement.objects.filter(method=DISBURSEMENT_METHOD.CHEQUE).filter(created__range=(start_of_month, end_of_month)).aggregate(Sum('amount'))
 
-            def pence_to_pounds(amount):
-                if(amount == None):
-                    return 0
-                if(amount != None):
-                    return amount/100
+            # print("DISBURSEMENT BANK_TRANSFER", queryset_disbursement_bank_transfer_count.count())
+            # print("DISBURSEMENT CHEQUE", queryset_disbursement_bank_transfer_count.count())
+            # print("DISBURSEMENT CHEQUE AMOUNT", queryset_disbursement_cheque_amount['amount__sum'])
+            # print("DISBURSEMENT BANK_TRANSFER AMOUNT", queryset_disbursement_bank_transfer_amount['amount__sum'])
 
             bank_transfer_amount_to_pounds = pence_to_pounds(queryset_bank_transfer_amount['amount__sum'])
             debit_amount_to_pounds = pence_to_pounds(queryset_debit_amount['amount__sum'])
+
+            disbursement_cheque_amount_to_pounds = pence_to_pounds(queryset_disbursement_cheque_amount['amount__sum'])
+            disbursement_bank_transfer_amount_to_pounds = pence_to_pounds(queryset_disbursement_bank_transfer_amount['amount__sum'])
+
+            print("disbursement_cheque_amount_to_pounds",disbursement_cheque_amount_to_pounds)
+            print("disbursement_bank_transfer_amount_to_pounds",disbursement_bank_transfer_amount_to_pounds)
 
 
             def as_a_percentage(credit, transaction, post=0):
@@ -254,6 +273,10 @@ class DashboardView(TemplateView):
 
 
             data.append({
+            'disbursement_bank_transfer_count':queryset_disbursement_bank_transfer_count.count(),
+            'disbursement_bank_transfer_amount': disbursement_bank_transfer_amount_to_pounds,
+            'disbursement_cheque_count': queryset_disbursement_cheque_count.count(),
+            'disbursement_cheque_amount':disbursement_cheque_amount_to_pounds,
             'transaction_by_post':transaction_by_post,
             'transaction_count': queryset_bank_transfer.count(),
             'credit_count': queryset_debit.count(),
