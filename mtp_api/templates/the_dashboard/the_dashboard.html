@@ -329,26 +329,26 @@
     <td rowspan="2" class="digital-transaction-one-group">
       <div>
         <h1 class="digital-transaction-heading">
-          Digital credits:
+          Digital disbursements:
         </h1>
       </div>
 
       <div class="digital-transaction-individual-group-padding">
         <h2>this week:</h2>
-        <h3>£{{total_digital_amount_recent_week|intcomma}}</h3>
-        <h4>{{total_digital_transactions_recent_week}} credit recieved</h4>
+        <h3>£{{disbursement_amount_this_week_in_pounds|intcomma}}</h3>
+        <h4>{{number_of_disbursement_previous_week}} disbursement sent</h4>
       </div>
 
       <div class="digital-transaction-individual-group-padding">
         <h2>this month:</h2>
-        <h3>£{{total_digital_amount_this_month|intcomma}}</h3>
-        <h4>{{total_digital_transactions_this_month}} credit recieved</h4>
+        <h3>£{{this_months_disbursement_in_months_amount|intcomma}}</h3>
+        <h4>{{this_months_disbursement_in_months_count}} disbursement sent</h4>
       </div>
 
       <div class="digital-transaction-align">
         <h2>this year:</h2>
-        <h3>£{{total_amount_of_digital_transactions_this_year|intcomma}}</h3>
-        <h4>{{total_number_of_digital_transactions_this_year}} credit recieved</h4>
+        <h3>£{{disbursement_amount_this_year|intcomma}}</h3>
+        <h4>{{number_of_disbursement_this_year}} disbursement sent</h4>
       </div>
     </td>
 
