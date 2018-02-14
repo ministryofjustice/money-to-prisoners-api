@@ -135,7 +135,6 @@ class DashboardView(TemplateView):
         else:
             month += 1
 
-
         datetime.timedelta(days=weekday, weeks=1)
 
         starting_day_of_current_year = today.replace(month=1, day=1)
@@ -145,12 +144,6 @@ class DashboardView(TemplateView):
         queryset_total_number_of_digital_transactions_previous_week = Credit.objects.filter(received_at__range=(start_of_week, end_of_week))
         queryset_amount_of_digital_transactions_previous_week = Credit.objects.filter(received_at__range=(start_of_week, end_of_week)).aggregate(Sum('amount'))
 
-        # for transactions add:
-        # `.filter(transaction__isnull=False)`
-        # for payments add:
-        # `.filter(payment__isnull=False)`
-        # (to the end of the various credit querysets)
-
         context['total_number_of_digital_transactions_this_year'] = queryset_total_number_of_digital_transactions_this_year.count()
         context['total_amount_of_digital_transactions_this_year'] = queryset_total_amount_of_digital_transactions_this_year['amount__sum']
         context['total_digital_transactions_recent_week']=  queryset_total_number_of_digital_transactions_previous_week.count()
@@ -159,10 +152,10 @@ class DashboardView(TemplateView):
         list_of_errors = []
         list_of_errors_the_previous_year = []
         list_of_transactions_by_post = []
-        list_of_transaction_count = []
-        list_of_transaction_amount = []
-        list_of_credit_count = []
-        list_of_credit_amount = []
+        list_of_bank_transfer_count = []
+        list_of_bank_transfer_amount = []
+        list_of_debit_count = []
+        list_of_debit_amount = []
         list_of_formated_months = []
         list_of_formated_months_last_year = []
 
@@ -184,13 +177,13 @@ class DashboardView(TemplateView):
             formated_month_and_year = '{:%B %Y}'.format(start_of_month)
             formated_months_last_year = '{:%B %Y}'.format(start_of_month_last_year)
 
-            queryset_transaction = Transaction.objects.filter(received_at__range=(start_of_month, end_of_month))
-            queryset_transaction_amount = Transaction.objects.filter(received_at__range=(start_of_month, end_of_month)).aggregate(Sum('amount'))
 
-            queryset_credit = Credit.objects.filter(received_at__range=(start_of_month, end_of_month))
-            queryset_credit_amount = Credit.objects.filter(received_at__range=(start_of_month, end_of_month)).aggregate(Sum('amount'))
+            queryset_bank_transfer = Credit.objects.filter(transaction__isnull=False).filter(received_at__range=(start_of_month, end_of_month))
+            queryset_bank_transfer_amount = Credit.objects.filter(transaction__isnull=False).filter(received_at__range=(start_of_month, end_of_month)).aggregate(Sum('amount'))
+            queryset_debit = Credit.objects.filter(payment__isnull=False).filter(received_at__range=(start_of_month, end_of_month))
+            queryset_debit_amount = Credit.objects.filter(payment__isnull=False).filter(received_at__range=(start_of_month, end_of_month)).aggregate(Sum('amount'))
+            queryset_debit_last_year = Credit.objects.filter(payment__isnull=False).filter(received_at__range=(start_of_month_last_year, end_of_month_last_year))
 
-            queryset_credit_last_year = Credit.objects.filter(received_at__range=(start_of_month_last_year, end_of_month_last_year))
 
             def pence_to_pounds(amount):
                 if(amount == None):
@@ -198,8 +191,9 @@ class DashboardView(TemplateView):
                 if(amount != None):
                     return amount/100
 
-            amount_transaction_to_pounds = pence_to_pounds(queryset_transaction_amount['amount__sum'])
-            amount_credit_to_pounds = pence_to_pounds(queryset_credit_amount['amount__sum'])
+            bank_transfer_amount_to_pounds = pence_to_pounds(queryset_bank_transfer_amount['amount__sum'])
+            debit_amount_to_pounds = pence_to_pounds(queryset_debit_amount['amount__sum'])
+
 
             def as_a_percentage(credit, transaction, post=0):
                 if(credit == None):
@@ -218,8 +212,8 @@ class DashboardView(TemplateView):
                     percent = {'percent_of_credit': round(percent_of_credit, 2), 'percent_of_transaction': round(percent_of_transaction, 2), 'percent_of_post': round(percent_of_post, 2)}
                 return percent
 
-            percent_of_use = as_a_percentage(queryset_credit.count(), queryset_transaction.count())
-            percent_of_amount = as_a_percentage(queryset_credit_amount['amount__sum'], queryset_transaction_amount['amount__sum'])
+            percent_of_use = as_a_percentage(queryset_debit.count(), queryset_bank_transfer.count())
+            percent_of_amount = as_a_percentage(queryset_debit_amount['amount__sum'], queryset_bank_transfer_amount['amount__sum'])
 
             takeup_queryset = DigitalTakeup.objects.filter(date__range=(start_of_month, end_of_month))
             transaction_by_post = 0
@@ -227,16 +221,15 @@ class DashboardView(TemplateView):
                 transaction_by_post += takeup.credits_by_post
 
 
-            total_credit = queryset_credit.exclude(resolution=CREDIT_RESOLUTION.INITIAL)
+            total_credit = queryset_debit.exclude(resolution=CREDIT_RESOLUTION.INITIAL)
             error_credit = total_credit.filter(transaction__isnull=False)
             total_credit_count = total_credit.count()
             error_credit_count = error_credit.count()
 
-            total_credit_last_year = queryset_credit_last_year.exclude(resolution=CREDIT_RESOLUTION.INITIAL)
+            total_credit_last_year = queryset_debit_last_year.exclude(resolution=CREDIT_RESOLUTION.INITIAL)
             error_credit_last_year = total_credit_last_year.filter(transaction__isnull=False)
             total_credit_count_last_year = total_credit_last_year.count()
             error_credit_count_last_year = error_credit_last_year.count()
-
 
             def error_percentage(total, errors):
                 try:
@@ -252,19 +245,20 @@ class DashboardView(TemplateView):
             list_of_errors.append(percent_of_errors)
             list_of_errors_the_previous_year.append(percent_of_errors_last_year)
             list_of_transactions_by_post.append(transaction_by_post)
-            list_of_transaction_count.append(queryset_transaction.count())
-            list_of_credit_count.append(queryset_credit.count())
+            list_of_bank_transfer_count.append(queryset_bank_transfer.count())
+            list_of_debit_count.append(queryset_debit.count())
             list_of_formated_months.append(formated_month_and_year)
             list_of_formated_months_last_year.append(formated_months_last_year)
-            list_of_credit_amount.append(queryset_credit_amount)
-            list_of_transaction_amount.append(queryset_transaction_amount)
+            list_of_debit_amount.append(queryset_debit_amount)
+            list_of_bank_transfer_amount.append(queryset_bank_transfer_amount)
+
 
             data.append({
             'transaction_by_post':transaction_by_post,
-            'transaction_count': queryset_transaction.count(),
-            'credit_count': queryset_credit.count(),
-            'queryset_credit_amount': amount_credit_to_pounds,
-            'queryset_transaction_amount': amount_transaction_to_pounds,
+            'transaction_count': queryset_bank_transfer.count(),
+            'credit_count': queryset_debit.count(),
+            'queryset_credit_amount': debit_amount_to_pounds,
+            'queryset_transaction_amount': bank_transfer_amount_to_pounds,
             'percent_of_credit_count': percent_of_use['percent_of_credit'],
             'percent_of_transaction_count': percent_of_use['percent_of_transaction'],
             'percent_credit_amount': percent_of_amount['percent_of_credit'],
@@ -274,17 +268,17 @@ class DashboardView(TemplateView):
             'end_of_month': end_of_month,
             })
         this_months_transaction_by_post = list_of_transactions_by_post[0]
-        this_months_transaction = list_of_transaction_count[0]
-        this_month_credit = list_of_credit_count[0]
-        total_digital_transactions_this_month = this_months_transaction + this_month_credit
+        this_months_bank_transfers= list_of_bank_transfer_count[0]
+        this_months_debit = list_of_debit_count[0]
+        total_digital_transactions_this_month = this_months_bank_transfers + this_months_debit
 
         last_year_same_time_percentage_of_errors = list_of_errors_the_previous_year[0]
         this_months_pecentage_of_errors = list_of_errors[0]
         last_months_percentage_of_errors = list_of_errors[1]
         current_formated_month = list_of_formated_months[0]
         current_month_previous_year = list_of_formated_months_last_year[0]
-        current_month_transaction_amount = list_of_transaction_amount[0]['amount__sum']
-        current_month_credit_amount = list_of_credit_amount[0]['amount__sum']
+        current_month_transaction_amount = list_of_bank_transfer_amount[0]['amount__sum']
+        current_month_credit_amount = list_of_debit_amount[0]['amount__sum']
         total_digital_amount_this_month = current_month_transaction_amount + current_month_credit_amount
 
 
@@ -293,8 +287,8 @@ class DashboardView(TemplateView):
         context['current_month_previous_year'] = current_month_previous_year
         context['current_formated_month']= current_formated_month
         context['this_months_transaction_by_post'] = this_months_transaction_by_post
-        context['this_months_transaction'] = this_months_transaction
-        context['this_month_credit'] = this_month_credit
+        context['this_months_transaction'] = this_months_bank_transfers
+        context['this_month_credit'] = this_months_debit
         context['last_year_same_time_percentage_of_errors'] = last_year_same_time_percentage_of_errors
         context['this_months_pecentage_of_errors'] = this_months_pecentage_of_errors
         context['last_months_percentage_of_errors'] = last_months_percentage_of_errors
