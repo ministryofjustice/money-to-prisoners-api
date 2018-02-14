@@ -125,7 +125,6 @@ class DashboardView(TemplateView):
         start_of_week = today - start_delta
         end_delta = datetime.timedelta(days=weekday)
         end_of_week = today - end_delta
-        print("END OF WEEK", end_of_week)
 
         year = today.year
         last_year = today.year -1
@@ -141,28 +140,21 @@ class DashboardView(TemplateView):
 
         starting_day_of_current_year = today.replace(month=1, day=1)
 
-        total_number_of_credits_this_year = Credit.objects.filter(received_at__range=(starting_day_of_current_year, today))
-        total_amount_of_credits_this_year = Credit.objects.filter(received_at__range=(starting_day_of_current_year, today)).aggregate(Sum('amount'))
-        total_amount_of_credits_this_year = total_amount_of_credits_this_year['amount__sum']
+        queryset_total_number_of_digital_transactions_this_year = Credit.objects.filter(received_at__range=(starting_day_of_current_year, today))
+        queryset_total_amount_of_digital_transactions_this_year = Credit.objects.filter(received_at__range=(starting_day_of_current_year, today)).aggregate(Sum('amount'))
+        queryset_total_number_of_digital_transactions_previous_week = Credit.objects.filter(received_at__range=(start_of_week, end_of_week))
+        queryset_amount_of_digital_transactions_previous_week = Credit.objects.filter(received_at__range=(start_of_week, end_of_week)).aggregate(Sum('amount'))
 
-        total_number_of_transactions_this_year = Transaction.objects.filter(received_at__range=(starting_day_of_current_year, today))
-        total_amount_of_transactions_this_year = Transaction.objects.filter(received_at__range=(starting_day_of_current_year, today)).aggregate(Sum('amount'))
-        total_amount_of_transactions_this_year = total_amount_of_transactions_this_year['amount__sum']
-        total_amount_of_digital_transactions_this_year = total_amount_of_transactions_this_year + total_amount_of_credits_this_year
-        total_number_of_digital_transactions_this_year = total_number_of_credits_this_year.count() + total_number_of_transactions_this_year.count()
+        # for transactions add:
+        # `.filter(transaction__isnull=False)`
+        # for payments add:
+        # `.filter(payment__isnull=False)`
+        # (to the end of the various credit querysets)
 
-        queryset_credit_total_recent_week = Credit.objects.filter(received_at__range=(start_of_week, end_of_week))
-        queryset_credit_amount_recent_week = Credit.objects.filter(received_at__range=(start_of_week, end_of_week)).aggregate(Sum('amount'))
-        queryset_transaction_recent_week_count = Transaction.objects.filter(received_at__range=(start_of_week, end_of_week))
-        queryset_transaction_amount_recent_week_amount = Transaction.objects.filter(received_at__range=(start_of_week, end_of_week)).aggregate(Sum('amount'))
-
-        total_digital_transactions_recent_week = queryset_credit_total_recent_week.count() + queryset_transaction_recent_week_count.count()
-        total_digital_amount_recent_week = queryset_transaction_amount_recent_week_amount['amount__sum'] + queryset_credit_amount_recent_week['amount__sum']
-
-        context['total_number_of_digital_transactions_this_year'] = total_number_of_digital_transactions_this_year
-        context['total_amount_of_digital_transactions_this_year'] = total_amount_of_digital_transactions_this_year
-        context['total_digital_transactions_recent_week']=  total_digital_transactions_recent_week
-        context['total_digital_amount_recent_week'] = total_digital_amount_recent_week
+        context['total_number_of_digital_transactions_this_year'] = queryset_total_number_of_digital_transactions_this_year.count()
+        context['total_amount_of_digital_transactions_this_year'] = queryset_total_amount_of_digital_transactions_this_year['amount__sum']
+        context['total_digital_transactions_recent_week']=  queryset_total_number_of_digital_transactions_previous_week.count()
+        context['total_digital_amount_recent_week'] = queryset_amount_of_digital_transactions_previous_week['amount__sum']
 
         list_of_errors = []
         list_of_errors_the_previous_year = []
