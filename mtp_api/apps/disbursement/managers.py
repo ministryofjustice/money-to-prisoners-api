@@ -19,6 +19,18 @@ class DisbursementQuerySet(models.QuerySet):
     def sent(self):
         return self.filter(resolution=DISBURSEMENT_RESOLUTION.SENT)
 
+    def counts_per_day(self):
+        return self.extra({'created_date': 'disbursement_disbursement.created::date'}) \
+            .values('created_date') \
+            .order_by('created_date') \
+            .annotate(count_per_day=models.Count('pk'))
+
+    def amounts_per_day(self):
+        return self.extra({'created_date': 'disbursement_disbursement.created::date'}) \
+            .values('created_date') \
+            .order_by('created_date') \
+            .annotate(amount_per_day=models.Sum('amount'))
+
 
 class DisbursementManager(models.Manager):
     def get_queryset(self):
