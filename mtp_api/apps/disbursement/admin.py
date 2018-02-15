@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from core.admin import add_short_description
@@ -36,10 +37,16 @@ class DisbursementAdmin(admin.ModelAdmin):
     search_fields = ('prisoner_name', 'prisoner_number')
     inlines = (LogAdminInline, CommentAdminInline,)
     date_hierarchy = 'created'
+    actions = ['display_total_amount']
 
     @add_short_description(_('amount'))
     def formatted_amount(self, instance):
         return format_amount(instance.amount)
+
+    @add_short_description(_('Display total of selected disbursements'))
+    def display_total_amount(self, request, queryset):
+        total = queryset.aggregate(models.Sum('amount'))['amount__sum']
+        self.message_user(request, _('Total: %s') % format_amount(total, True))
 
 
 @admin.register(Comment)
