@@ -32,6 +32,8 @@ class DisbursementAdmin(admin.ModelAdmin):
         'recipient_name', 'formatted_amount', 'prisoner_number',
         'prison', 'resolution', 'method', 'created'
     )
+    list_filter = ('resolution', 'method', 'prison')
+    search_fields = ('prisoner_name', 'prisoner_number')
     inlines = (LogAdminInline, CommentAdminInline,)
     date_hierarchy = 'created'
 
