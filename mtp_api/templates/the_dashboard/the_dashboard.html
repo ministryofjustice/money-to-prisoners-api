@@ -62,7 +62,6 @@
           }
         };
 
-
       function drawChartTransaction() {
         var data = google.visualization.arrayToDataTable([
           ['Month', 'Debit', 'BankTransfer', 'Post'],
@@ -85,15 +84,6 @@
           {% endfor %}
           ]);
 
-        var options = {
-          legend: { position: 'top' },
-          title: 'Amount of money credited',
-          fontSize: 16,
-          vAxis: { title: 'Money (£)'},
-
-        };
-
-
           var chart = new google.visualization.ColumnChart(document.getElementById('transaction_bar_chart_of_amount'));
           var options = Object.assign({title: 'Amount of money credited'}, sharedOptions);
           options.vAxis.title = 'Money(£)';
@@ -112,6 +102,7 @@
           var chart = new google.visualization.ColumnChart(document.getElementById('disbursements_count_chart'));
           var options = Object.assign({title: 'Number of monthly disbursements'}, sharedOptions);
           options.vAxis.title = 'Disbursments';
+          options.colors = ['green', 'red'];
           chart.draw(data, options);
         }
 
@@ -123,16 +114,9 @@
             {% endfor %}
             ]);
 
-          var options = {
-            legend: { position: 'top' },
-            title: 'Amount of money disbursed',
-            fontSize: 16,
-            vAxis: { title: 'Money (£)'},
-            };
-
-
           var chart = new google.visualization.ColumnChart(document.getElementById('disbursements_amount_chart'));
           var options = Object.assign({title: 'Amount of money disbursed'}, sharedOptions);
+          options.colors = ['green', 'red'];
           options.vAxis.title = 'Money(£)';
           chart.draw(data, options);
         }

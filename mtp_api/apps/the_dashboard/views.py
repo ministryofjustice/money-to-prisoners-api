@@ -62,7 +62,34 @@ def get_user_satisfaction():
     monthly_ratings = ratings_data(monthly_data, this_month)
     yearly_ratings = ratings_data(yearly_data, this_year)
 
-    # print(ratings)
+    def add(first_rating, second_rating, third_rating=0):
+        return (first_rating + second_rating + third_rating)
+
+    total_satisfied_each_week = add(weekly_ratings['rating_4'], weekly_ratings['rating_5'])
+    total_satisfied_each_month =  add(monthly_ratings['rating_4'], monthly_ratings['rating_5'])
+    total_satisfied_each_year = add(yearly_ratings['rating_4'], yearly_ratings['rating_5'])
+    total_not_satisfied_each_week = add(weekly_ratings['rating_3'],weekly_ratings['rating_2'], weekly_ratings['rating_1'])
+    total_not_satisfied_each_month = add(monthly_ratings['rating_3'],monthly_ratings['rating_2'], monthly_ratings['rating_1'])
+    total_not_satisfied_each_year = add(yearly_ratings['rating_1'], yearly_ratings['rating_2'], yearly_ratings['rating_3'])
+
+
+    def percentage(make_into_a_percentage, to_be_added ):
+        total = make_into_a_percentage + to_be_added
+        try:
+            return round((make_into_a_percentage/total) * 100, 2)
+        except:
+            return 0
+
+    global percentage
+
+    weekly_satisfaction_percentage = percentage(total_satisfied_each_week, total_not_satisfied_each_week)
+    monthly_satisfaction_percentage = percentage(total_satisfied_each_month, total_not_satisfied_each_month)
+    yearly_satisfaction_percentage = percentage(total_satisfied_each_year, total_not_satisfied_each_year)
+
+    print("WEEKLY SATISFACTION PERCENTAGE", weekly_satisfaction_percentage)
+    print("MONTHLY SATISFACTION PERCENTAGE", monthly_satisfaction_percentage)
+    print("YEARLY SATISFACTION PERCENTAGE", yearly_satisfaction_percentage)
+
 
     # today = datetime.date.today()
     # year_of_last_month = today.year
@@ -101,9 +128,9 @@ def get_user_satisfaction():
     #         year_ago = "{:.2%}".format(year_ago)
 
     return {
-        'weekly_ratings': weekly_ratings,
-        'monthly_ratings': monthly_ratings,
-        'yearly_ratings': yearly_ratings
+        'weekly_ratings': weekly_satisfaction_percentage,
+        'monthly_ratings': monthly_satisfaction_percentage,
+        'yearly_ratings': yearly_satisfaction_percentage,
     }
 
 
@@ -200,7 +227,6 @@ class DashboardView(TemplateView):
             formated_month_and_year = '{:%B %Y}'.format(start_of_month)
             formated_months_last_year = '{:%B %Y}'.format(start_of_month_last_year)
 
-
             queryset_bank_transfer = Credit.objects.filter(transaction__isnull=False).filter(received_at__range=(start_of_month, end_of_month))
             queryset_bank_transfer_amount = Credit.objects.filter(transaction__isnull=False).filter(received_at__range=(start_of_month, end_of_month)).aggregate(Sum('amount'))
             queryset_debit = Credit.objects.filter(payment__isnull=False).filter(received_at__range=(start_of_month, end_of_month))
@@ -221,35 +247,37 @@ class DashboardView(TemplateView):
             disbursement_cheque_amount_to_pounds = pence_to_pounds(queryset_disbursement_cheque_amount['amount__sum'])
             disbursement_bank_transfer_amount_to_pounds = pence_to_pounds(queryset_disbursement_bank_transfer_amount['amount__sum'])
 
-            print("disbursement_cheque_amount_to_pounds",disbursement_cheque_amount_to_pounds)
-            print("disbursement_bank_transfer_amount_to_pounds",disbursement_bank_transfer_amount_to_pounds)
+            def percentage(make_into_a_percentage, to_be_added ):
+                total = make_into_a_percentage + to_be_added
+                try:
+                    return round((make_into_a_percentage/total) * 100, 2)
+                except:
+                    return 0
 
-
-            def as_a_percentage(credit, transaction, post=0):
-                if(credit == None):
-                     credit = 0
-                if(transaction == None):
-                    transaction = 0
+            def create_percentage_of_transactions(debit_card, bank_transfer, post=0):
+                if(debit_card == None):
+                     debit_card = 0
+                if(bank_transfer == None):
+                    bank_transfer = 0
                 if(post == None):
                     post = 0
-                if(credit == 0 and transaction == 0 and post == 0 ):
-                    percent = {'percent_of_credit': 0, 'percent_of_transaction': 0, 'percent_of_post': 0}
-                else:
-                    total = credit + transaction + post
-                    percent_of_credit = credit/total * 100
-                    percent_of_transaction = transaction/total * 100
-                    percent_of_post = post/total * 100
-                    percent = {'percent_of_credit': round(percent_of_credit, 2), 'percent_of_transaction': round(percent_of_transaction, 2), 'percent_of_post': round(percent_of_post, 2)}
+
+                percent = {}
+                percent['percent_of_debit_card'] = percentage(debit_card, (bank_transfer + post))
+                percent['percent_of_bank_transfer'] = percentage(bank_transfer, (debit_card + post))
+                percent['percent_of_post'] = percentage(post, (debit_card + bank_transfer))
                 return percent
 
-            percent_of_use = as_a_percentage(queryset_debit.count(), queryset_bank_transfer.count())
-            percent_of_amount = as_a_percentage(queryset_debit_amount['amount__sum'], queryset_bank_transfer_amount['amount__sum'])
+            percent_of_use = create_percentage_of_transactions(queryset_debit.count(), queryset_bank_transfer.count())
+            percent_of_amount = create_percentage_of_transactions(queryset_debit_amount['amount__sum'], queryset_bank_transfer_amount['amount__sum'])
 
+            print("PERCENTAGE OF USE", percent_of_use)
+            print("PERCENTAGE", percent_of_amount)
             takeup_queryset = DigitalTakeup.objects.filter(date__range=(start_of_month, end_of_month))
+
             transaction_by_post = 0
             for takeup in takeup_queryset:
                 transaction_by_post += takeup.credits_by_post
-
 
             total_credit = queryset_debit.exclude(resolution=CREDIT_RESOLUTION.INITIAL)
             error_credit = total_credit.filter(transaction__isnull=False)
@@ -261,16 +289,8 @@ class DashboardView(TemplateView):
             total_credit_count_last_year = total_credit_last_year.count()
             error_credit_count_last_year = error_credit_last_year.count()
 
-            def error_percentage(total, errors):
-                try:
-                    percent_of_errors = (errors/total) * 100
-                except:
-                    percent_of_errors = 0
-                return round(percent_of_errors)
-
-            percent_of_errors = error_percentage(total_credit_count, error_credit_count)
-
-            percent_of_errors_last_year = error_percentage(total_credit_count_last_year, error_credit_count_last_year)
+            percent_of_errors = percentage(total_credit_count, error_credit_count)
+            percent_of_errors_last_year = percentage(total_credit_count_last_year, error_credit_count_last_year)
 
             list_of_errors.append(percent_of_errors)
             list_of_errors_the_previous_year.append(percent_of_errors_last_year)
@@ -295,11 +315,11 @@ class DashboardView(TemplateView):
             'credit_count': queryset_debit.count(),
             'queryset_credit_amount': debit_amount_to_pounds,
             'queryset_transaction_amount': bank_transfer_amount_to_pounds,
-            'percent_of_credit_count': percent_of_use['percent_of_credit'],
-            'percent_of_transaction_count': percent_of_use['percent_of_transaction'],
-            'percent_credit_amount': percent_of_amount['percent_of_credit'],
+            'percent_of_credit_count': percent_of_use['percent_of_debit_card'],
+            'percent_of_transaction_count': percent_of_use['percent_of_bank_transfer'],
+            'percent_credit_amount': percent_of_amount['percent_of_debit_card'],
             'percent_of_post': percent_of_amount['percent_of_post'],
-            'percent_transaction_amount': percent_of_amount['percent_of_transaction'],
+            'percent_transaction_amount': percent_of_amount['percent_of_bank_transfer'],
             'start_of_month': start_of_month,
             'end_of_month': end_of_month,
             })
