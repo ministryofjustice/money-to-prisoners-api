@@ -51,23 +51,20 @@ def get_user_satisfaction():
     monthly_ratings = ratings_data(monthly_data, this_month)
     yearly_ratings = ratings_data(yearly_data, this_year)
 
-    def add(first_rating, second_rating, third_rating=0):
-        return (first_rating + second_rating + third_rating)
-
-    total_satisfied_each_week = add(weekly_ratings['rating_4'], weekly_ratings['rating_5'])
-    total_satisfied_each_month =  add(monthly_ratings['rating_4'], monthly_ratings['rating_5'])
-    total_satisfied_each_year = add(yearly_ratings['rating_4'], yearly_ratings['rating_5'])
-    total_not_satisfied_each_week = add(weekly_ratings['rating_3'],weekly_ratings['rating_2'], weekly_ratings['rating_1'])
-    total_not_satisfied_each_month = add(monthly_ratings['rating_3'],monthly_ratings['rating_2'], monthly_ratings['rating_1'])
-    total_not_satisfied_each_year = add(yearly_ratings['rating_1'], yearly_ratings['rating_2'], yearly_ratings['rating_3'])
+    total_satisfied_each_week = weekly_ratings['rating_4'] + weekly_ratings['rating_5']
+    total_satisfied_each_month =  monthly_ratings['rating_4'] + monthly_ratings['rating_5']
+    total_satisfied_each_year = yearly_ratings['rating_4'] + yearly_ratings['rating_5']
+    total_not_satisfied_each_week = weekly_ratings['rating_3'] + weekly_ratings['rating_2'] + weekly_ratings['rating_1']
+    total_not_satisfied_each_month = monthly_ratings['rating_3'] + monthly_ratings['rating_2'] + monthly_ratings['rating_1']
+    total_not_satisfied_each_year = yearly_ratings['rating_1'] + yearly_ratings['rating_2'] + yearly_ratings['rating_3']
 
 
-    def percentage(make_into_a_percentage, to_be_added ):
-        total = make_into_a_percentage + to_be_added
+    def percentage(total_satisfied, total_not_satisfied):
+        total = total_satisfied + total_not_satisfied
         try:
-            return round((make_into_a_percentage/total) * 100, 2)
+            return round((total_satisfied/total) * 100, 2)
         except:
-            return 0
+            return 'No rating'
 
 
     weekly_satisfaction_percentage = percentage(total_satisfied_each_week, total_not_satisfied_each_week)
@@ -114,10 +111,9 @@ class DashboardView(TemplateView):
         starting_day_of_current_year = today.replace(month=1, day=1)
 
         def pence_to_pounds(amount):
-            if(amount == None):
+            if(amount is None):
                 return 0
-            if(amount != None):
-                return amount/100
+            return amount/100
 
 
         queryset_total_number_of_digital_transactions_this_year = Credit.objects.filter(received_at__range=(starting_day_of_current_year, today))
@@ -130,19 +126,14 @@ class DashboardView(TemplateView):
         queryset_disbursement_amount_this_year = Disbursement.objects.filter(created__range=(starting_day_of_current_year, today)).aggregate(Sum('amount'))
         queryset_disbursement_amount_this_week = Disbursement.objects.filter(created__range=(start_of_week, end_of_week)).aggregate(Sum('amount'))
 
-        disbursement_amount_previous_week_in_pounds = pence_to_pounds(queryset_disbursement_amount_this_week['amount__sum'])
-        disbursement_amount_this_year_in_pounds = pence_to_pounds(queryset_disbursement_amount_this_year['amount__sum'])
-        total_amount_of_digital_transactions_this_year_in_pounds = pence_to_pounds(queryset_total_amount_of_digital_transactions_this_year['amount__sum'])
-        amount_of_digital_transactions_previous_week_in_pounds = pence_to_pounds(queryset_amount_of_digital_transactions_previous_week['amount__sum'])
-
         context['number_of_disbursement_the_previous_week']= queryset_number_of_disbursement_previous_week.count()
         context['number_of_disbursement_this_year']= queryset_number_of_disbursement_previous_week.count()
-        context['disbursement_amount_previous_week'] = disbursement_amount_previous_week_in_pounds
-        context['disbursement_amount_this_year'] = disbursement_amount_this_year_in_pounds
+        context['disbursement_amount_previous_week'] = queryset_disbursement_amount_this_week['amount__sum']
+        context['disbursement_amount_this_year'] = queryset_disbursement_amount_this_year['amount__sum']
         context['total_number_of_digital_transactions_this_year'] = queryset_total_number_of_digital_transactions_this_year.count()
-        context['total_amount_of_digital_transactions_this_year'] = total_amount_of_digital_transactions_this_year_in_pounds
+        context['total_amount_of_digital_transactions_this_year'] = queryset_total_amount_of_digital_transactions_this_year['amount__sum']
         context['total_digital_transactions_recent_week']=  queryset_total_number_of_digital_transactions_previous_week.count()
-        context['total_digital_amount_recent_week'] = amount_of_digital_transactions_previous_week_in_pounds
+        context['total_digital_amount_recent_week'] = queryset_amount_of_digital_transactions_previous_week['amount__sum']
 
         list_of_errors = []
         list_of_errors_the_previous_year = []
