@@ -27,17 +27,6 @@ TRANSACTION_ERROR_FILTERS = (
              blocked=True)
 )
 
-# def weighted_average(data):
-#     rating_1 = data["rating_1:sum"]
-#     rating_2 = data["rating_2:sum"]
-#     rating_3 = data["rating_3:sum"]
-#     rating_4 = data["rating_4:sum"]
-#     rating_5 = data["rating_5:sum"]
-#     total_sum = data["total:sum"]
-
-#     return (0.25*rating_2 +.5*rating_3+rating_4*.75+rating_5)/(total_sum)
-
-
 def get_user_satisfaction():
     monthly_data = requests.get('https://www.performance.service.gov.uk/data/send-prisoner-money/customer-satisfaction?flatten=true&duration=1&period=month&collect=rating_1%3Asum&collect=rating_2%3Asum&collect=rating_3%3Asum&collect=rating_4%3Asum&collect=rating_5%3Asum&collect=total%3Asum&format=json').json()
     monthly_data = monthly_data["data"][0]

@@ -132,17 +132,20 @@
 
           var options = {
             backgroundColor: '#fcfaf4',
+            title: "Digital Take up this month",
+            titleTextStyle: {
+              fontSize: 50
+            },
             titlePosition: 'center',
-            fontSize: 16,
-            width: 955,
-            height: 300,
+            fontSize: 35,
+            width: 1100,
+            height: 1000,
             pieHole: 0.5,
-            pieSliceText: 'label',
             pieStartAngle: 100,
             pieSliceTextStyle: {
             color: 'black',
           },
-            legend: { position: "none" },
+            legend: { position: "top" },
             is3D: true,
 
           };
@@ -313,7 +316,7 @@
     <td rowspan="2" class="digital-transaction-one-group">
       <div>
         <h1 class="digital-transaction-heading">
-          Digital disbursements:
+          Digital <br> disbursements:
         </h1>
       </div>
 
@@ -329,7 +332,7 @@
         <h4>{{this_months_disbursement_in_months_count}} disbursement sent</h4>
       </div>
 
-      <div class="digital-transaction-align">
+      <div>
         <h2>this year:</h2>
         <h3>£{{disbursement_amount_this_year|intcomma}}</h3>
         <h4>{{number_of_disbursement_this_year}} disbursement sent</h4>
@@ -342,6 +345,50 @@
       <div id="disbursements_amount_chart" ></div>
     </td>
   </tr>
+</table>
+
+<table>
+  <tr>
+    <td>
+      <div class="donut-padding" id='donut_of_transaction'></div>
+    </td>
+    <td class ="satsifaction-padding">
+      <div class="space_between_headings">
+        <h1 class="bank-transfer-heading">
+          Bank transfer <br> error rate:
+        </h1>
+        <h2>{{current_formated_month}}:</h2>
+        <h3>
+          {% if this_months_pecentage_of_errors > last_months_percentage_of_errors %}
+          {{this_months_pecentage_of_errors}}% +
+          {% elif this_months_pecentage_of_errors < last_months_percentage_of_errors %}
+          {{this_months_pecentage_of_errors}}%
+          {% endif %}
+        </h3>
+        <h2>
+          {{current_month_previous_year}}:
+        </h2>
+        <h3>
+          {{last_year_same_time_percentage_of_errors}}%
+        </h3>
+      </div>
+      <div class="space_between_headings">
+        <h1>
+          Satisfaction Rate
+        <h1>
+        <h3>
+          {{user_satisfaction.yearly_ratings}}%
+        </h3>
+      </div>
+      <div>
+        <h1>
+          Money Saved
+        </h1>
+        <h3>10m</h3>
+      </div>
+    </td>
+  </tr>
+
 </table>
 
 

@@ -16,9 +16,25 @@ th {
   text-align: center;
 }
 
+.bank-transfer-heading {
+  padding-bottom: 20px;
+  font-size: 50px;
+  font-weight: bold;
+}
+
+h1 {
+  font-size: 50px;
+  font-weight: bold;
+  margin: 0px
+}
+
 h2,h3,h4 {
   text-align: left;
   margin: 0;
+}
+
+.space_between_headings h3 {
+  padding-bottom: 50px;
 }
 
 h2 {
@@ -26,6 +42,7 @@ h2 {
 }
 
 h3 {
+  margin-top: 0px;
   font-size: 80px;
 }
 
@@ -37,8 +54,13 @@ h4 {
   padding-left: 40px;
 }
 
+.donut-padding {
+  padding-left: 150px;
+  padding-top: 150px;
+}
+
 .digital-transaction-one-group {
-  padding-right: 5px;
+  padding-right: 130px;
   padding-left: 5px;
 }
 
@@ -49,117 +71,18 @@ h4 {
 
 .digital-transaction-individual-group-padding{
   padding-bottom: 130px;
-  padding-right: 100px;
+}
+
+.satsifaction-padding {
+  padding-right: 65px;
 }
 
 .digital-transaction-heading {
-  padding-top: 50px;
-  padding-bottom: 30px;
-  padding-right: 20px;
-  font-size: 70px;
+  padding-bottom: 20px;
+  padding-right: 10px;
+  font-size: 50px;
   font-weight: bold;
   text-align: left;
-
-}
-
-.digital-transaction-align {
-  padding-left: 0px;
-}
-
-
-.height {
-  height: 360px;
-}
-
-.one td {
-  width: 1920px;
-}
-
-.two td {
-  width: 960px;
-
-.three td {
-  width: 640px;
-}
-
-.donut_space {
-  width: 250px;
-}
-
-.transaction_bar_space {
-  width: 960px;
-}
-
-.color_div_one {
-  background-color: #E4E4E4;
-}
-
-.satisfaction-padding {
-  padding-top: 20px;
-}
-
-.bacs-errors-padding {
-  padding: 65px;
-}
-
-.error-rates {
-  padding-left: 190px;
-}
-
-.error-rates h3 {
-  display: inline-block;
-  float: left;
-  clear: left;
-  width: 160px;
-  margin: 0;
-  font-weight:bold;
-  font-size: 19px;
-}
-
-.error-rates span {
-  display: inline-block;
-  float: left;
-  color:red;
-  font-weight:bold;
-  font-size: 19px;
-}
-
-/*
-.error_messages {
-  color: red;
-  font-size: 110%;
-  font-weight: 900;
-}
-
-.error-message-margin {
-   margin: 0;
-   padding: 0;
-}
-*/
-
-.donut-title {
-  color: #47474f;
-  text-align: center;
-  margin-bottom: 0;
-  padding-top: 5px;
-  font-size: 24;
-}
-
-.savings {
-  font-size: 300%;
-  font-weight: 900;
-  color: red;
-}
-
-table #t01 {
-  width: 60%;
-  height: 60%;
-}
-
-.main-title {
-  font-size: 35px;
-}
-
 }
 
 
