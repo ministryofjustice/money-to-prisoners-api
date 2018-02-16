@@ -69,52 +69,10 @@ def get_user_satisfaction():
         except:
             return 0
 
-    global percentage
 
     weekly_satisfaction_percentage = percentage(total_satisfied_each_week, total_not_satisfied_each_week)
     monthly_satisfaction_percentage = percentage(total_satisfied_each_month, total_not_satisfied_each_month)
     yearly_satisfaction_percentage = percentage(total_satisfied_each_year, total_not_satisfied_each_year)
-
-    print("WEEKLY SATISFACTION PERCENTAGE", weekly_satisfaction_percentage)
-    print("MONTHLY SATISFACTION PERCENTAGE", monthly_satisfaction_percentage)
-    print("YEARLY SATISFACTION PERCENTAGE", yearly_satisfaction_percentage)
-
-
-    # today = datetime.date.today()
-    # year_of_last_month = today.year
-    # month_of_last_month = today.month - 1
-    # if (month_of_last_month == 0):
-    #     year_of_last_month = year_of_last_month - 1
-    #     month_of_last_month = 12
-
-    # year_of_previous_month = year_of_last_month
-    # month_of_previous_month = month_of_last_month -1
-    # if (month_of_previous_month == 0):
-    #     year_of_previous_month = year_of_previous_month - 1
-    #     month_of_previous_month = 12
-
-    # year_of_year_ago = year_of_last_month -1
-    # month_of_year_ago = month_of_last_month
-
-    # last_start = '%d-%02d' % (year_of_last_month, month_of_last_month)
-    # previous_start = '%d-%02d' % (year_of_previous_month, month_of_previous_month)
-    # year_ago_start = '%d-%02d' % (year_of_year_ago, month_of_year_ago)
-
-    # last = None
-    # previous = None
-    # year_ago = None
-    # for ratings in data:
-    #     if ratings["_start_at"].startswith(last_start):
-    #         last = weighted_average(ratings)
-    #         last = "{:.2%}".format(last)
-
-    #     if ratings["_start_at"].startswith(previous_start):
-    #         previous = weighted_average(ratings)
-    #         previous = "{:.2%}".format(previous)
-
-    #     if ratings["_start_at"].startswith(year_ago_start):
-    #         year_ago = weighted_average(ratings)
-    #         year_ago = "{:.2%}".format(year_ago)
 
     return {
         'weekly_ratings': weekly_satisfaction_percentage,
@@ -167,8 +125,8 @@ class DashboardView(TemplateView):
         queryset_total_number_of_digital_transactions_previous_week = Credit.objects.filter(received_at__range=(start_of_week, end_of_week))
         queryset_amount_of_digital_transactions_previous_week = Credit.objects.filter(received_at__range=(start_of_week, end_of_week)).aggregate(Sum('amount'))
 
-        queryset_disbursement_this_year = Disbursement.objects.filter(created__range=(starting_day_of_current_year, today))
-        queryset_disbursement_previous_week = Disbursement.objects.filter(created__range=(start_of_week, end_of_week))
+        queryset_number_of_disbursement_this_year = Disbursement.objects.filter(created__range=(starting_day_of_current_year, today))
+        queryset_number_of_disbursement_previous_week = Disbursement.objects.filter(created__range=(start_of_week, end_of_week))
         queryset_disbursement_amount_this_year = Disbursement.objects.filter(created__range=(starting_day_of_current_year, today)).aggregate(Sum('amount'))
         queryset_disbursement_amount_this_week = Disbursement.objects.filter(created__range=(start_of_week, end_of_week)).aggregate(Sum('amount'))
 
@@ -177,8 +135,8 @@ class DashboardView(TemplateView):
         total_amount_of_digital_transactions_this_year_in_pounds = pence_to_pounds(queryset_total_amount_of_digital_transactions_this_year['amount__sum'])
         amount_of_digital_transactions_previous_week_in_pounds = pence_to_pounds(queryset_amount_of_digital_transactions_previous_week['amount__sum'])
 
-        context['number_of_disbursement_the_previous_week']= queryset_disbursement_previous_week.count()
-        context['number_of_disbursement_this_year']= queryset_disbursement_this_year.count()
+        context['number_of_disbursement_the_previous_week']= queryset_number_of_disbursement_previous_week.count()
+        context['number_of_disbursement_this_year']= queryset_number_of_disbursement_previous_week.count()
         context['disbursement_amount_previous_week'] = disbursement_amount_previous_week_in_pounds
         context['disbursement_amount_this_year'] = disbursement_amount_this_year_in_pounds
         context['total_number_of_digital_transactions_this_year'] = queryset_total_number_of_digital_transactions_this_year.count()
@@ -222,6 +180,9 @@ class DashboardView(TemplateView):
             queryset_debit_amount = Credit.objects.filter(payment__isnull=False).filter(received_at__range=(start_of_month, end_of_month)).aggregate(Sum('amount'))
             queryset_debit_last_year = Credit.objects.filter(payment__isnull=False).filter(received_at__range=(start_of_month_last_year, end_of_month_last_year))
 
+            queryset_number_of_all_digital_transactions = Credit.objects.filter(received_at__range=(start_of_month_last_year, end_of_month_last_year))
+            queryset_amount_of_digital_transactions = Credit.objects.filter(received_at__range=(start_of_month_last_year, end_of_month_last_year)).aggregate(Sum('amount'))
+
             queryset_disbursement_bank_transfer_count = Disbursement.objects.filter(method=DISBURSEMENT_METHOD.BANK_TRANSFER).filter(created__range=(start_of_month, end_of_month))
             queryset_disbursement_cheque_count = Disbursement.objects.filter(method=DISBURSEMENT_METHOD.CHEQUE).filter(created__range=(start_of_month, end_of_month))
             queryset_disbursement_bank_transfer_amount = Disbursement.objects.filter(method=DISBURSEMENT_METHOD.BANK_TRANSFER).filter(created__range=(start_of_month, end_of_month)).aggregate(Sum('amount'))
@@ -236,32 +197,12 @@ class DashboardView(TemplateView):
             disbursement_cheque_amount_to_pounds = pence_to_pounds(queryset_disbursement_cheque_amount['amount__sum'])
             disbursement_bank_transfer_amount_to_pounds = pence_to_pounds(queryset_disbursement_bank_transfer_amount['amount__sum'])
 
-            def percentage(make_into_a_percentage, to_be_added ):
-                total = make_into_a_percentage + to_be_added
+            def error_percentage(error, total ):
                 try:
-                    return round((make_into_a_percentage/total) * 100, 2)
+                    return round((error/total) * 100, 2)
                 except:
                     return 0
 
-            def create_percentage_of_transactions(debit_card, bank_transfer, post=0):
-                if(debit_card == None):
-                     debit_card = 0
-                if(bank_transfer == None):
-                    bank_transfer = 0
-                if(post == None):
-                    post = 0
-
-                percent = {}
-                percent['percent_of_debit_card'] = percentage(debit_card, (bank_transfer + post))
-                percent['percent_of_bank_transfer'] = percentage(bank_transfer, (debit_card + post))
-                percent['percent_of_post'] = percentage(post, (debit_card + bank_transfer))
-                return percent
-
-            percent_of_use = create_percentage_of_transactions(queryset_debit.count(), queryset_bank_transfer.count())
-            percent_of_amount = create_percentage_of_transactions(queryset_debit_amount['amount__sum'], queryset_bank_transfer_amount['amount__sum'])
-
-            print("PERCENTAGE OF USE", percent_of_use)
-            print("PERCENTAGE", percent_of_amount)
             takeup_queryset = DigitalTakeup.objects.filter(date__range=(start_of_month, end_of_month))
 
             transaction_by_post = 0
@@ -270,16 +211,12 @@ class DashboardView(TemplateView):
 
             total_credit = queryset_debit.exclude(resolution=CREDIT_RESOLUTION.INITIAL)
             error_credit = total_credit.filter(transaction__isnull=False)
-            total_credit_count = total_credit.count()
-            error_credit_count = error_credit.count()
 
             total_credit_last_year = queryset_debit_last_year.exclude(resolution=CREDIT_RESOLUTION.INITIAL)
             error_credit_last_year = total_credit_last_year.filter(transaction__isnull=False)
-            total_credit_count_last_year = total_credit_last_year.count()
-            error_credit_count_last_year = error_credit_last_year.count()
 
-            percent_of_errors = percentage(total_credit_count, error_credit_count)
-            percent_of_errors_last_year = percentage(total_credit_count_last_year, error_credit_count_last_year)
+            percent_of_errors = error_percentage(error_credit.count(), total_credit.count())
+            percent_of_errors_last_year = error_percentage(error_credit_last_year.count(), total_credit_last_year.count())
 
             list_of_errors.append(percent_of_errors)
             list_of_errors_the_previous_year.append(percent_of_errors_last_year)
@@ -304,44 +241,25 @@ class DashboardView(TemplateView):
             'credit_count': queryset_debit.count(),
             'queryset_credit_amount': debit_amount_to_pounds,
             'queryset_transaction_amount': bank_transfer_amount_to_pounds,
-            'percent_of_credit_count': percent_of_use['percent_of_debit_card'],
-            'percent_of_transaction_count': percent_of_use['percent_of_bank_transfer'],
-            'percent_credit_amount': percent_of_amount['percent_of_debit_card'],
-            'percent_of_post': percent_of_amount['percent_of_post'],
-            'percent_transaction_amount': percent_of_amount['percent_of_bank_transfer'],
             'start_of_month': start_of_month,
             'end_of_month': end_of_month,
             })
 
-        this_months_disbursement_in_months_amount = list_of_disbursement_in_months_amount[0]
-        this_months_disbursement_in_months_count = list_of_disbursement_in_months_count[0]
-
-        this_months_transaction_by_post = list_of_transactions_by_post[0]
-        this_months_bank_transfers= list_of_bank_transfer_count[0]
-        this_months_debit = list_of_debit_count[0]
-        total_digital_transactions_this_month = this_months_bank_transfers + this_months_debit
-
-        last_year_same_time_percentage_of_errors = list_of_errors_the_previous_year[0]
-        this_months_pecentage_of_errors = list_of_errors[0]
-        last_months_percentage_of_errors = list_of_errors[1]
-        current_formated_month = list_of_formated_months[0]
-        current_month_previous_year = list_of_formated_months_last_year[0]
         current_month_transaction_amount = list_of_bank_transfer_amount[0]['amount__sum']
         current_month_credit_amount = list_of_debit_amount[0]['amount__sum']
-        total_digital_amount_this_month = current_month_transaction_amount + current_month_credit_amount
 
-        context['this_months_disbursement_in_months_amount'] = this_months_disbursement_in_months_amount
-        context['this_months_disbursement_in_months_count'] = this_months_disbursement_in_months_count
-        context['total_digital_amount_this_month'] = total_digital_amount_this_month
-        context['total_digital_transactions_this_month'] = total_digital_transactions_this_month
-        context['current_month_previous_year'] = current_month_previous_year
-        context['current_formated_month']= current_formated_month
-        context['this_months_transaction_by_post'] = this_months_transaction_by_post
-        context['this_months_transaction'] = this_months_bank_transfers
-        context['this_month_credit'] = this_months_debit
-        context['last_year_same_time_percentage_of_errors'] = last_year_same_time_percentage_of_errors
-        context['this_months_pecentage_of_errors'] = this_months_pecentage_of_errors
-        context['last_months_percentage_of_errors'] = last_months_percentage_of_errors
+        context['this_months_disbursement_in_months_amount'] = list_of_disbursement_in_months_amount[0]
+        context['this_months_disbursement_in_months_count'] = list_of_disbursement_in_months_count[0]
+        context['total_digital_amount_this_month'] = queryset_amount_of_digital_transactions['amount__sum']
+        context['total_digital_transactions_this_month'] = queryset_number_of_all_digital_transactions.count()
+        context['current_month_previous_year'] = list_of_formated_months_last_year[0]
+        context['current_formated_month']= list_of_formated_months[0]
+        context['this_months_transaction_by_post'] = list_of_transactions_by_post[0]
+        context['this_months_bank_transfers'] = list_of_bank_transfer_count[0]
+        context['this_month_debit'] = list_of_debit_count[0]
+        context['last_year_same_time_percentage_of_errors'] = list_of_errors_the_previous_year[0]
+        context['this_months_pecentage_of_errors'] = list_of_errors[0]
+        context['last_months_percentage_of_errors'] = list_of_errors[1]
         context['user_satisfaction'] = get_user_satisfaction()
         return context
 

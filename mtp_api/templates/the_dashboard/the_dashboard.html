@@ -125,16 +125,16 @@
         function drawDonut()  {
           var data = google.visualization.arrayToDataTable([
             ['Sent Money', 'Number'],
-            ['Debit', {{this_month_credit}}],
-            ['Bank Transfer', {{this_months_transaction}}],
+            ['Debit', {{this_month_debit}}],
+            ['Bank Transfer', {{this_months_bank_transfers}}],
             ['Post', {{this_months_transaction_by_post}}],
           ]);
 
           var options = {
             backgroundColor: '#fcfaf4',
-            title: "Digital Take up this month",
+            title: "Digital Take up this {{current_formated_month}}",
             titleTextStyle: {
-              fontSize: 50
+              fontSize: 40
             },
             titlePosition: 'center',
             fontSize: 35,
@@ -389,72 +389,5 @@
     </td>
   </tr>
 </table>
-
-
-
-
-
-  <!-- <table>
-    <thead>
-      <tr>
-        <th colspan="6"><h1>Analytics Dashboard - Prisoner Money</h1></th>
-      </tr>
-    </thead>
-
-    <tr class="color_div_one">
-      <td class="transaction_bar_space" colspan="3">
-        <div id="transaction_bar_chart" ></div>
-      </td>
-      <td colspan="3">
-        <div id="transaction_bar_chart_of_amount" ></div>
-      </td>
-    </tr>
-
-    <tr class="three">
-      <td colspan="2" class="error-rates">
-        <h2>BACS error rate:</h2>
-        <div>
-          <h3>{{current_formated_month}}:</h3>
-          <span>
-            {% if this_months_pecentage_of_errors > last_months_percentage_of_errors %}
-            {{this_months_pecentage_of_errors}}% +
-            {% elif this_months_pecentage_of_errors < last_months_percentage_of_errors %}
-            {{this_months_pecentage_of_errors}}% -
-            {% endif %}
-          </span>
-
-          <h3>{{current_month_previous_year}}:</h3>
-          <span>
-            {{last_year_same_time_percentage_of_errors}}%
-          </span>
-         </div>
-      </td>
-      <td colspan="2" class="donut_space">
-        <h3 class="donut-title">{{current_formated_month}} uptake</h3>
-        <div id="donut_of_transaction"></div>
-      </td>
-      <td colspan="2">
-        <h2 class="savings">£10m Saved</h2>
-      </td>
-    </tr>
-
-   <tr class="one color_div_one">
-     <th colspan="6">
-       <h1>Senders user satisfaction rate</h1>
-     </th>
-   </tr>
-
-    <tr class="three color_div_one">
-      <td colspan="2">
-        <div id="satisfaction_week_bar_chart"></div>
-      </td>
-      <td colspan="2">
-        <div id="satisfaction_month_bar_chart"></div>
-      </td>
-      <td colspan="2">
-        <div id="satisfaction_year_bar_chart"></div>
-      </td>
-    </tr>
-  </table> -->
 </body>
 
