@@ -13,8 +13,8 @@ from transaction.utils import format_amount
 
 class Transaction(TimeStampedModel):
     amount = models.PositiveIntegerField()
-    category = models.CharField(max_length=50, choices=TRANSACTION_CATEGORY)
-    source = models.CharField(max_length=50, choices=TRANSACTION_SOURCE)
+    category = models.CharField(max_length=50, choices=TRANSACTION_CATEGORY, db_index=True)
+    source = models.CharField(max_length=50, choices=TRANSACTION_SOURCE, db_index=True)
 
     processor_type_code = models.CharField(max_length=12, blank=True, null=True)
     sender_sort_code = models.CharField(max_length=50, blank=True)
@@ -26,7 +26,7 @@ class Transaction(TimeStampedModel):
 
     # original reference
     reference = models.TextField(blank=True)
-    received_at = models.DateTimeField(auto_now=False)
+    received_at = models.DateTimeField(auto_now=False, db_index=True)
 
     # 6-digit reference code for reconciliation
     ref_code = models.CharField(max_length=12, blank=True, null=True,

@@ -15,15 +15,16 @@ from transaction.utils import format_amount
 
 
 class Disbursement(TimeStampedModel):
-    amount = models.PositiveIntegerField()
+    amount = models.PositiveIntegerField(db_index=True)
     prisoner_number = models.CharField(max_length=250, db_index=True)
     prisoner_name = models.CharField(max_length=250)
     prison = models.ForeignKey(Prison, on_delete=models.PROTECT)
     resolution = models.CharField(
-        max_length=50, choices=DISBURSEMENT_RESOLUTION,
-        default=DISBURSEMENT_RESOLUTION.PENDING
+        max_length=50,
+        choices=DISBURSEMENT_RESOLUTION, default=DISBURSEMENT_RESOLUTION.PENDING,
+        db_index=True
     )
-    method = models.CharField(max_length=50, choices=DISBURSEMENT_METHOD)
+    method = models.CharField(max_length=50, choices=DISBURSEMENT_METHOD, db_index=True)
 
     # recipient details
     recipient_first_name = models.CharField(max_length=250)
