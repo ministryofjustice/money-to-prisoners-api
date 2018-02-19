@@ -138,7 +138,7 @@ class SenderEmail(models.Model):
 
 class PrisonerProfile(TimeStampedModel):
     prisoner_name = models.CharField(max_length=250)
-    prisoner_number = models.CharField(max_length=250)
+    prisoner_number = models.CharField(max_length=250, db_index=True)
     single_offender_id = models.UUIDField(blank=True, null=True)
     prisoner_dob = models.DateField()
     credit_count = models.IntegerField(default=0)

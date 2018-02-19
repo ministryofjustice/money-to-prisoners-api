@@ -16,7 +16,7 @@ from transaction.utils import format_amount
 
 class Disbursement(TimeStampedModel):
     amount = models.PositiveIntegerField()
-    prisoner_number = models.CharField(max_length=250)
+    prisoner_number = models.CharField(max_length=250, db_index=True)
     prisoner_name = models.CharField(max_length=250)
     prison = models.ForeignKey(Prison, on_delete=models.PROTECT)
     resolution = models.CharField(
