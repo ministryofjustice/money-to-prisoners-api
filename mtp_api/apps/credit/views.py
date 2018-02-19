@@ -5,8 +5,9 @@ import re
 from django.contrib.auth import get_user_model
 from django.db import models, transaction
 import django_filters
+from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
-from rest_framework import generics, filters, mixins, status as drf_status, viewsets
+from rest_framework import generics, mixins, status as drf_status, viewsets
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -215,7 +216,7 @@ class CreditViewMixin(object):
 
 
 class GetCredits(CreditViewMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
-    filter_backends = (filters.DjangoFilterBackend, SafeOrderingFilter)
+    filter_backends = (DjangoFilterBackend, SafeOrderingFilter)
     filter_class = CreditListFilter
     ordering_fields = ('created', 'received_at', 'amount',
                        'prisoner_number', 'prisoner_name')
@@ -245,7 +246,7 @@ class CreditsGroupedByCreditedList(CreditViewMixin, generics.ListAPIView):
         IsAuthenticated, CashbookClientIDPermissions,
         CreditPermissions
     )
-    filter_backends = (filters.DjangoFilterBackend,)
+    filter_backends = (DjangoFilterBackend,)
     filter_class = CreditListFilter
     action = 'list'
 
