@@ -19,9 +19,6 @@
       google.charts.setOnLoadCallback(drawChartDisbursmentCount);
       google.charts.setOnLoadCallback(drawChartDisbursmentAmount);
       google.charts.setOnLoadCallback(drawDonut);
-      // google.charts.setOnLoadCallback(drawWeeklySatisfaction);
-      // google.charts.setOnLoadCallback(drawMonthlySatisfaction);
-      // google.charts.setOnLoadCallback(drawYearlySatisfaction);
 
 
       var sharedOptions = {
@@ -72,6 +69,7 @@
 
           var chart = new google.visualization.ColumnChart(document.getElementById('transaction_bar_chart'));
           var options = Object.assign({title: 'Number of monthly credits'}, sharedOptions);
+          options.colors = ['#1F618D', '#5DADE2', '#F7DC6F'];
           options.vAxis.title = 'Credits';
           chart.draw(data, options);
         }
@@ -86,6 +84,7 @@
 
           var chart = new google.visualization.ColumnChart(document.getElementById('transaction_bar_chart_of_amount'));
           var options = Object.assign({title: 'Amount of money credited'}, sharedOptions);
+          options.colors = ['#1F618D', '#5DADE2'];
           options.vAxis.title = 'Money(£)';
           chart.draw(data, options);
         }
@@ -102,7 +101,7 @@
           var chart = new google.visualization.ColumnChart(document.getElementById('disbursements_count_chart'));
           var options = Object.assign({title: 'Number of monthly disbursements'}, sharedOptions);
           options.vAxis.title = 'Disbursments';
-          options.colors = ['green', 'red'];
+          options.colors = ['#7DCEA0', '#5DADE2'];
           chart.draw(data, options);
         }
 
@@ -116,7 +115,7 @@
 
           var chart = new google.visualization.ColumnChart(document.getElementById('disbursements_amount_chart'));
           var options = Object.assign({title: 'Amount of money disbursed'}, sharedOptions);
-          options.colors = ['green', 'red'];
+          options.colors = ['#7DCEA0', '#5DADE2'];
           options.vAxis.title = 'Money(£)';
           chart.draw(data, options);
         }
@@ -137,6 +136,7 @@
               fontSize: 40
             },
             titlePosition: 'center',
+            colors: ['#1F618D', '#5DADE2', '#F7DC6F'],
             fontSize: 35,
             width: 1100,
             height: 1000,
@@ -205,19 +205,19 @@
       </div>
 
       <div class="digital-transaction-individual-group-padding">
-        <h2>this week:</h2>
+        <h2>This week:</h2>
         <h3>{{total_digital_amount_recent_week|format_amount}}</h3>
         <h4>{{total_digital_transactions_recent_week}} credit recieved</h4>
       </div>
 
       <div class="digital-transaction-individual-group-padding">
-        <h2>this month:</h2>
+        <h2>This month:</h2>
         <h3>{{total_digital_amount_this_month|format_amount}}</h3>
         <h4>{{total_digital_transactions_this_month}} credit recieved</h4>
       </div>
 
       <div class="digital-transaction-align">
-        <h2>this year:</h2>
+        <h2>This year:</h2>
         <h3>{{total_amount_of_digital_transactions_this_year|format_amount}}</h3>
         <h4>{{total_number_of_digital_transactions_this_year}} credit recieved</h4>
       </div>
@@ -246,19 +246,19 @@
       </div>
 
       <div class="digital-transaction-individual-group-padding">
-        <h2>this week:</h2>
+        <h2>This week:</h2>
         <h3>{{disbursement_amount_this_week_in_pounds|format_amount }}</h3>
         <h4>{{number_of_disbursement_previous_week}} disbursement sent</h4>
       </div>
 
       <div class="digital-transaction-individual-group-padding">
-        <h2>this month:</h2>
+        <h2>This month:</h2>
         <h3>{{this_months_disbursement_in_months_amount|format_amount}}</h3>
         <h4>{{this_months_disbursement_in_months_count}} disbursement sent</h4>
       </div>
 
       <div>
-        <h2>this year:</h2>
+        <h2>This year:</h2>
         <h3>{{disbursement_amount_this_year|format_amount}}</h3>
         <h4>{{number_of_disbursement_this_year}} disbursement sent</h4>
       </div>
@@ -279,10 +279,9 @@
     </td>
     <td class ="satsifaction-padding">
       <div class="space_between_headings">
-        <h1 class="bank-transfer-heading">
+        <h1 class="bank-error-rate-heading">
           Bank transfer <br> error rate:
         </h1>
-        <h2>{{current_formated_month}}:</h2>
         <h3>
           {% if this_months_pecentage_of_errors > last_months_percentage_of_errors %}
           {{this_months_pecentage_of_errors}}% +
@@ -290,18 +289,21 @@
           {{this_months_pecentage_of_errors}}%
           {% endif %}
         </h3>
-        <h2>
-          {{current_month_previous_year}}:
-        </h2>
+         <h4 class="space_between_bank-transfer-months">
+         {{current_formated_month}}:
+         </h4>
         <h3>
           {{last_year_same_time_percentage_of_errors}}%
         </h3>
+        <h4>
+          {{current_month_previous_year}}:
+        </h4>
       </div>
-      <div class="space_between_headings">
+      <div>
         <h1>
           Satisfaction Rate
         <h1>
-        <h3>
+        <h3 class="space_between_headings">
           {{user_satisfaction.yearly_ratings}}%
         </h3>
       </div>
