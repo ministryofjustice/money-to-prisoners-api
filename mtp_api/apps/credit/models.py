@@ -23,8 +23,8 @@ logger = logging.getLogger('mtp')
 
 
 class Credit(TimeStampedModel):
-    amount = models.PositiveIntegerField()
-    received_at = models.DateTimeField(auto_now=False, blank=True, null=True)
+    amount = models.PositiveIntegerField(db_index=True)
+    received_at = models.DateTimeField(auto_now=False, blank=True, null=True, db_index=True)
 
     prisoner_number = models.CharField(max_length=250, blank=True, null=True, db_index=True)
     single_offender_id = models.UUIDField(blank=True, null=True, db_index=True)
@@ -32,7 +32,8 @@ class Credit(TimeStampedModel):
     prisoner_name = models.CharField(blank=True, null=True, max_length=250)
     prison = models.ForeignKey(Prison, blank=True, null=True, on_delete=models.SET_NULL)
 
-    resolution = models.CharField(max_length=50, choices=CREDIT_RESOLUTION, default=CREDIT_RESOLUTION.PENDING)
+    resolution = models.CharField(max_length=50, choices=CREDIT_RESOLUTION, default=CREDIT_RESOLUTION.PENDING,
+                                  db_index=True)
     reconciled = models.BooleanField(default=False)
     reviewed = models.BooleanField(default=False)
     blocked = models.BooleanField(default=False)

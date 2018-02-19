@@ -64,8 +64,8 @@ class BillingAddress(models.Model):
 
 class Payment(TimeStampedModel):
     uuid = models.UUIDField(default=uuid.uuid4, primary_key=True, editable=False)
-    status = models.CharField(max_length=50, choices=PAYMENT_STATUS, default=PAYMENT_STATUS.PENDING)
-    processor_id = models.CharField(max_length=250, null=True, blank=True)
+    status = models.CharField(max_length=50, choices=PAYMENT_STATUS, default=PAYMENT_STATUS.PENDING, db_index=True)
+    processor_id = models.CharField(max_length=250, null=True, blank=True, db_index=True)
     amount = models.PositiveIntegerField()
     service_charge = models.PositiveIntegerField(default=0)
     recipient_name = models.CharField(max_length=250, null=True, blank=True,
