@@ -19,9 +19,9 @@
       google.charts.setOnLoadCallback(drawChartDisbursmentCount);
       google.charts.setOnLoadCallback(drawChartDisbursmentAmount);
       google.charts.setOnLoadCallback(drawDonut);
-      google.charts.setOnLoadCallback(drawWeeklySatisfaction);
-      google.charts.setOnLoadCallback(drawMonthlySatisfaction);
-      google.charts.setOnLoadCallback(drawYearlySatisfaction);
+      // google.charts.setOnLoadCallback(drawWeeklySatisfaction);
+      // google.charts.setOnLoadCallback(drawMonthlySatisfaction);
+      // google.charts.setOnLoadCallback(drawYearlySatisfaction);
 
 
       var sharedOptions = {
@@ -155,118 +155,43 @@
         }
 
 
-         var sharedOptionsSatisaction = {
-            titleTextStyle: {
-              fontSize: 30
-            },
+        var tableID=0;
+        function changeTable(){
+          var table_1 = document.getElementById("table_1");
+          var table_2 = document.getElementById("table_2");
+          var table_3 = document.getElementById("table_3");
 
-            vAxis:{
-              textStyle: {
-                bold: true,
-                fontSize: 20,
-              }
-            },
-            width: 956,
-            height: 320,
-            fontSize: 18,
-            bar: {groupWidth: "95%"},
-            legend: { position: "none" },
-          };
+          if(tableID >= 3) {
+            tableID = 0
+          }
 
-        function drawWeeklySatisfaction() {
-          var data = google.visualization.arrayToDataTable([
-            ["Ratings", "Vote", { role: "style" } ],
-            ["😡", {{user_satisfaction.weekly_ratings.rating_1}}, "green"],
-            ["🙁", {{user_satisfaction.weekly_ratings.rating_2}}, "purple"],
-            ["😑", {{user_satisfaction.weekly_ratings.rating_3}}, "gold"],
-            ["😊", {{user_satisfaction.weekly_ratings.rating_4}}, "red"],
-            ["😄", {{user_satisfaction.weekly_ratings.rating_5}}, "blue"]
-          ]);
-
-          var view = new google.visualization.DataView(data);
-          view.setColumns([0, 1,
-                           { calc: "stringify",
-                             sourceColumn: 1,
-                             type: "string",
-                             role: "annotation" },
-                           2]);
-
-
-          var options = Object.assign({title: 'By week'}, sharedOptionsSatisaction);
-          var chart = new google.visualization.ColumnChart(document.getElementById('satisfaction_week_bar_chart'));
-          chart.draw(view, options);
+          if(tableID == 0){
+            table_1.style.display = 'block';
+            table_2.style.display = 'none';
+            table_3.style.display = 'none';
+          }
+          if(tableID == 1) {
+            table_1.style.display = 'none';
+            table_2.style.display = 'block';
+            table_3.style.display = 'none';
+          }
+          if(tableID == 2) {
+            table_1.style.display = 'none';
+            table_2.style.display = 'none';
+            table_3.style.display = 'block';
+          }
+          console.log(tableID);
+          tableID++;
         }
 
-        function drawMonthlySatisfaction() {
-            var data = google.visualization.arrayToDataTable([
-              ["Ratings", "Vote", { role: "style" } ],
-              ["😡", {{user_satisfaction.monthly_ratings.rating_1}}, "green"],
-              ["🙁", {{user_satisfaction.monthly_ratings.rating_2}}, "purple"],
-              ["😑", {{user_satisfaction.monthly_ratings.rating_3}}, "gold"],
-              ["😊", {{user_satisfaction.monthly_ratings.rating_4}}, "red"],
-              ["😄", {{user_satisfaction.monthly_ratings.rating_5}}, "blue"]
-            ]);
 
-          var view = new google.visualization.DataView(data);
-          view.setColumns([0, 1,
-                           { calc: "stringify",
-                             sourceColumn: 1,
-                             type: "string",
-                             role: "annotation" },
-                           2]);
+        setInterval(changeTable, 8000);
 
-          var options = Object.assign({title: 'By month'}, sharedOptionsSatisaction);
-          var chart = new google.visualization.ColumnChart(document.getElementById('satisfaction_month_bar_chart'));
-            chart.draw(view, options);
-        }
-
-        function drawYearlySatisfaction() {
-            var data = google.visualization.arrayToDataTable([
-              ["Ratings", "Vote", { role: "style" } ],
-              ["😡", {{user_satisfaction.yearly_ratings.rating_1}}, "green"],
-              ["🙁", {{user_satisfaction.yearly_ratings.rating_2}}, "purple"],
-              ["😑", {{user_satisfaction.yearly_ratings.rating_3}}, "gold"],
-              ["😊", {{user_satisfaction.yearly_ratings.rating_4}}, "red"],
-              ["😄", {{user_satisfaction.yearly_ratings.rating_5}}, "blue"]
-            ]);
-
-            var view = new google.visualization.DataView(data);
-            view.setColumns([0, 1,
-                             { calc: "stringify",
-                               sourceColumn: 1,
-                               type: "string",
-                               role: "annotation" },
-                             2]);
-
-            var options = {
-              width: 640,
-              height: 320,
-              backgroundColor: '#E4E4E4',
-              title: "By year",
-              titleTextStyle: {
-                fontSize: 30
-              },
-              vAxis:{
-                textStyle: {
-                  bold: true,
-                  fontSize: 20,
-                }
-              },
-
-              fontSize: 18,
-              bar: {groupWidth: "95%"},
-              legend: { position: "none" },
-            };
-            var chart = new google.visualization.ColumnChart(document.getElementById('satisfaction_year_bar_chart'));
-            chart.draw(view, options);
-        }
         </script>
   </head>
-<body>
+<body">
 
-
-
-<table>
+<table id="table_1">
   <tr>
     <td class="chart-padding">
       <div id="transaction_bar_chart" ></div>
@@ -307,7 +232,7 @@
 </table>
 
 
-<table>
+<table id="table_2">
   <tr>
     <td class="chart-padding">
       <div id="disbursements_count_chart" ></div>
@@ -347,7 +272,7 @@
   </tr>
 </table>
 
-<table>
+<table id="table_3">
   <tr>
     <td>
       <div class="donut-padding" id='donut_of_transaction'></div>
