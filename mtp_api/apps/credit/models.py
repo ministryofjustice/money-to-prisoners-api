@@ -26,8 +26,8 @@ class Credit(TimeStampedModel):
     amount = models.PositiveIntegerField()
     received_at = models.DateTimeField(auto_now=False, blank=True, null=True)
 
-    prisoner_number = models.CharField(blank=True, null=True, max_length=250)
-    single_offender_id = models.UUIDField(blank=True, null=True)
+    prisoner_number = models.CharField(max_length=250, blank=True, null=True, db_index=True)
+    single_offender_id = models.UUIDField(blank=True, null=True, db_index=True)
     prisoner_dob = models.DateField(blank=True, null=True)
     prisoner_name = models.CharField(blank=True, null=True, max_length=250)
     prison = models.ForeignKey(Prison, blank=True, null=True, on_delete=models.SET_NULL)
