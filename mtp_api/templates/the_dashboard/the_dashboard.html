@@ -10,7 +10,7 @@
 
    <link href="{% static 'stylesheets/the_dashboard.css' %}" type="text/css" media="all" rel="stylesheet" />
 
-    <title>Google Charts Example</title>
+    <title>MTP</title>
 
     <script>
       google.charts.load('current', {'packages':['corechart']});
@@ -29,7 +29,6 @@
         bold: true,
 
         hAxis: {
-          title: 'Months',
           titleTextStyle: {
             fontSize: 30,
             bold: true,
@@ -131,15 +130,15 @@
 
           var options = {
             backgroundColor: '#fcfaf4',
-            title: "Digital Take up this {{current_formated_month}}",
+            title: "Digital take up this {{current_formated_month}}",
             titleTextStyle: {
-              fontSize: 40
+              fontSize: 50
             },
             titlePosition: 'center',
             colors: ['#1F618D', '#5DADE2', '#F7DC6F'],
-            fontSize: 35,
-            width: 1100,
-            height: 1000,
+            fontSize: 25,
+            width: 800,
+            height: 900,
             pieHole: 0.5,
             pieStartAngle: 100,
             pieSliceTextStyle: {
@@ -184,14 +183,13 @@
           tableID++;
         }
 
-
-        setInterval(changeTable, 8000);
+        setInterval(changeTable, 15000);
 
         </script>
   </head>
-<body">
+<body>
 
-<table id="table_1">
+<table id="table_1" class="main-table">
   <tr>
     <td class="chart-padding">
       <div id="transaction_bar_chart" ></div>
@@ -232,7 +230,7 @@
 </table>
 
 
-<table id="table_2">
+<table id="table_2" class="main-table">
   <tr>
     <td class="chart-padding">
       <div id="disbursements_count_chart" ></div>
@@ -263,8 +261,8 @@
         <h4>{{number_of_disbursement_this_year}} disbursement sent</h4>
       </div>
     </td>
-
   </tr>
+
   <tr>
     <td class="chart-padding">
       <div id="disbursements_amount_chart" ></div>
@@ -272,47 +270,47 @@
   </tr>
 </table>
 
-<table id="table_3">
+<table id="table_3" class="main-table">
   <tr>
     <td>
       <div class="donut-padding" id='donut_of_transaction'></div>
     </td>
-    <td class ="satsifaction-padding">
-      <div class="space_between_headings">
-        <h1 class="bank-error-rate-heading">
-          Bank transfer <br> error rate:
-        </h1>
-        <h3>
-          {% if this_months_pecentage_of_errors > last_months_percentage_of_errors %}
-          {{this_months_pecentage_of_errors}}% +
-          {% elif this_months_pecentage_of_errors < last_months_percentage_of_errors %}
-          {{this_months_pecentage_of_errors}}%
-          {% endif %}
-        </h3>
-         <h4 class="space_between_bank-transfer-months">
-         {{current_formated_month}}:
-         </h4>
-        <h3>
-          {{last_year_same_time_percentage_of_errors}}%
-        </h3>
-        <h4>
-          {{current_month_previous_year}}:
-        </h4>
-      </div>
-      <div>
-        <h1>
-          Satisfaction Rate
-        <h1>
-        <h3 class="space_between_headings">
-          {{user_satisfaction.yearly_ratings}}%
-        </h3>
-      </div>
-      <div>
-        <h1>
-          Money Saved
-        </h1>
-        <h3>10m</h3>
-      </div>
+    <td>
+      <td>
+        <div class="satisfaction-rate-box space_between_headings">
+          <h1>Satisfaction rate:<h1>
+          <h3>{{user_satisfaction.yearly_ratings}}%</h3>
+        </div>
+        <div class="space-between-boxes"></div>
+        <div class="money-saved-box">
+          <h1>Money saved:</h1>
+          <h3>10m</h3>
+        </div>
+      </td>
+
+      <td>
+        <div class="space_between_headings bank-transfer-error-box">
+          <h1 class="bank-error-rate-heading">
+            Bank transfer <br> error rate:
+          </h1>
+          <h3>
+            {% if this_months_pecentage_of_errors > last_months_percentage_of_errors %}
+            {{this_months_pecentage_of_errors}}% +
+            {% elif this_months_pecentage_of_errors < last_months_percentage_of_errors %}
+            {{this_months_pecentage_of_errors}}%
+            {% endif %}
+          </h3>
+           <h4 class="space_between_bank-transfer-months">
+            {{current_formated_month}}
+           </h4>
+          <h3>
+            {{last_year_same_time_percentage_of_errors}}%
+          </h3>
+          <h4>
+            {{current_month_previous_year}}
+          </h4>
+        </div>
+      </td>
     </td>
   </tr>
 </table>
