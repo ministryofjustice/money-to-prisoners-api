@@ -280,6 +280,12 @@ class Log(TimeStampedModel):
 
     objects = LogManager()
 
+    class Meta:
+        ordering = ('id',)
+        indexes = [
+            models.Index(fields=['created'])
+        ]
+
     def __str__(self):
         return 'Credit {id} {action} by {user}'.format(
             id=self.credit.pk,
