@@ -1,7 +1,8 @@
 from django.db.models import Count
 from django.shortcuts import get_object_or_404
 import django_filters
-from rest_framework import mixins, viewsets, filters
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, mixins, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.settings import api_settings
@@ -80,7 +81,7 @@ class SenderProfileView(
         prisoner_count=Count('prisoners', distinct=True),
         prison_count=Count('prisons', distinct=True),
     )
-    filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter,)
+    filter_backends = (DjangoFilterBackend, filters.OrderingFilter,)
     filter_class = SenderProfileListFilter
     serializer_class = SenderProfileSerializer
     ordering_param = api_settings.ORDERING_PARAM
@@ -139,7 +140,7 @@ class PrisonerProfileView(
     queryset = PrisonerProfile.objects.all().annotate(
         sender_count=Count('senders', distinct=True)
     )
-    filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter,)
+    filter_backends = (DjangoFilterBackend, filters.OrderingFilter,)
     filter_class = PrisonerProfileListFilter
     serializer_class = PrisonerProfileSerializer
     ordering_fields = ('sender_count', 'credit_count', 'credit_total', 'prisoner_name', 'prisoner_number')

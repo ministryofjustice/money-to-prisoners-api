@@ -1,6 +1,7 @@
 from django.db.transaction import atomic
 import django_filters
-from rest_framework import mixins, viewsets, filters, status
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import mixins, viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -94,7 +95,7 @@ class DisbursementView(
     queryset = Disbursement.objects.all().order_by('-id')
     serializer_class = DisbursementSerializer
     filter_class = DisbursementFilter
-    filter_backends = (filters.DjangoFilterBackend, SafeOrderingFilter)
+    filter_backends = (DjangoFilterBackend, SafeOrderingFilter)
     ordering_fields = ('created', 'amount', 'resolution', 'method', 'recipient_name',
                        'prisoner_number', 'prisoner_name')
     permission_classes = (

@@ -3,10 +3,11 @@ import logging
 from django.db.transaction import atomic
 from django.utils.dateparse import parse_datetime
 from django.utils.translation import gettext_lazy as _
-from rest_framework import mixins, viewsets, status, filters, generics
+import django_filters
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import mixins, viewsets, status, generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-import django_filters
 
 from core.filters import StatusChoiceFilter, IsoDateTimeFilter, SafeOrderingFilter
 from credit import InvalidCreditStateException
@@ -40,7 +41,7 @@ class TransactionListFilter(django_filters.FilterSet):
 class TransactionView(mixins.CreateModelMixin, mixins.UpdateModelMixin,
                       mixins.ListModelMixin, viewsets.GenericViewSet):
 
-    filter_backends = (filters.DjangoFilterBackend, SafeOrderingFilter)
+    filter_backends = (DjangoFilterBackend, SafeOrderingFilter)
     filter_class = TransactionListFilter
     ordering_fields = ('received_at',)
     permission_classes = (

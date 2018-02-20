@@ -1,8 +1,9 @@
 import django_filters
+from django_filters.rest_framework import DjangoFilterBackend
 from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import FormView
-from rest_framework import mixins, viewsets, filters
+from rest_framework import mixins, viewsets
 from rest_framework import status as http_status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -32,7 +33,7 @@ class BatchView(
 ):
     queryset = Batch.objects.all()
     serializer_class = BatchSerializer
-    filter_backends = (filters.DjangoFilterBackend,)
+    filter_backends = (DjangoFilterBackend,)
     filter_class = BatchListFilter
 
     permission_classes = (
@@ -56,7 +57,7 @@ class PaymentView(
 ):
     queryset = Payment.objects.all()
     serializer_class = PaymentSerializer
-    filter_backends = (filters.DjangoFilterBackend,)
+    filter_backends = (DjangoFilterBackend,)
     filter_class = PaymentListFilter
 
     permission_classes = (
