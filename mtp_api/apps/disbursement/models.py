@@ -52,6 +52,9 @@ class Disbursement(TimeStampedModel):
         permissions = (
             ('view_disbursement', 'Can view disbursements'),
         )
+        indexes = [
+            models.Index(fields=['created'])
+        ]
 
     @staticmethod
     def get_permitted_state(new_resolution):
@@ -145,6 +148,9 @@ class Log(TimeStampedModel):
 
     class Meta:
         ordering = ('id',)
+        indexes = [
+            models.Index(fields=['created'])
+        ]
 
     def __str__(self):
         return 'Disbursement {id} {action} by {user}'.format(

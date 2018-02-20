@@ -94,6 +94,9 @@ class Payment(TimeStampedModel):
         permissions = (
             ('view_payment', 'Can view payment'),
         )
+        indexes = [
+            models.Index(fields=['modified'])
+        ]
 
     def __str__(self):
         return str(self.uuid)
