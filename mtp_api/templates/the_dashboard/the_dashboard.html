@@ -8,7 +8,7 @@
     <script src="https://www.google.com/jsapi" type="text/javascript"></script>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 
-   <link href="{% static 'stylesheets/the_dashboard.css' %}" type="text/css" media="all" rel="stylesheet" />
+    <link href="{% static 'stylesheets/the_dashboard.css' %}" type="text/css" media="all" rel="stylesheet" />
 
     <title>MTP</title>
 
@@ -23,39 +23,63 @@
 
       var sharedOptions = {
           titleTextStyle: {
-            fontSize: 40
+            fontSize: 40,
+            color: 'white',
           },
         fontSize: 30,
         bold: true,
+        color: 'white',
 
         hAxis: {
           titleTextStyle: {
             fontSize: 30,
             bold: true,
-          }
+            color: 'white',
+          },
+          textStyle: {
+            bold: true,
+            fontSize: 30,
+            color: 'white',
+          },
         },
 
         vAxis:{
           titleTextStyle: {
             fontSize: 30,
             bold: true,
+            color: 'white',
           },
           textStyle: {
             bold: true,
             fontSize: 30,
+            color: 'white',
           }
         },
 
-          backgroundColor: '#fcfaf4',
+          backgroundColor: 'black',
           width: 1300,
           height: 500,
           legend: {
-            position: 'top'
+            position: 'top',
+            textStyle: {
+              bold: true,
+              fontSize: 30,
+              color: 'white',
+            }
+
           },
 
           bar: {
-            groupWidth: '80%'
-          }
+            groupWidth: '80%',
+            fontSize: 30,
+            color: 'white',
+          },
+
+          textStyle: {
+            bold: true,
+            fontSize: 30,
+            color: 'white',
+          },
         };
 
       function drawChartTransaction() {
@@ -68,7 +92,7 @@
 
           var chart = new google.visualization.ColumnChart(document.getElementById('transaction_bar_chart'));
           var options = Object.assign({title: 'Number of monthly credits'}, sharedOptions);
-          options.colors = ['#1F618D', '#5DADE2', '#F7DC6F'];
+          options.colors = ['#a288f9', '#5DADE2', '#F7DC6F'];
           options.vAxis.title = 'Credits';
           chart.draw(data, options);
         }
@@ -83,8 +107,8 @@
 
           var chart = new google.visualization.ColumnChart(document.getElementById('transaction_bar_chart_of_amount'));
           var options = Object.assign({title: 'Amount of money credited'}, sharedOptions);
-          options.colors = ['#1F618D', '#5DADE2'];
-          options.vAxis.title = 'Money(£)';
+          options.colors = ['#a288f9', '#5DADE2'];
+          options.vAxis.title = 'Money (£)';
           chart.draw(data, options);
         }
 
@@ -115,7 +139,7 @@
           var chart = new google.visualization.ColumnChart(document.getElementById('disbursements_amount_chart'));
           var options = Object.assign({title: 'Amount of money disbursed'}, sharedOptions);
           options.colors = ['#7DCEA0', '#5DADE2'];
-          options.vAxis.title = 'Money(£)';
+          options.vAxis.title = 'Money (£)';
           chart.draw(data, options);
         }
 
@@ -129,13 +153,14 @@
           ]);
 
           var options = {
-            backgroundColor: '#fcfaf4',
+            backgroundColor: 'black',
             title: "Digital take up this {{current_formated_month}}",
             titleTextStyle: {
-              fontSize: 50
+              fontSize: 50,
+              color: 'white',
             },
             titlePosition: 'center',
-            colors: ['#1F618D', '#5DADE2', '#F7DC6F'],
+            colors: ['#a288f9', '#5DADE2', '#F7DC6F'],
             fontSize: 25,
             width: 800,
             height: 900,
@@ -144,7 +169,13 @@
             pieSliceTextStyle: {
             color: 'black',
           },
-            legend: { position: "top" },
+            legend: { position: "top",
+              textStyle: {
+                bold: true,
+                fontSize: 25,
+                color: 'white',
+              }
+          },
             is3D: true,
 
           };
@@ -184,8 +215,7 @@
         }
 
         setInterval(changeTable, 15000);
-
-        </script>
+     </script>
   </head>
 <body>
 
@@ -281,7 +311,6 @@
           <h1>Satisfaction rate:<h1>
           <h3>{{user_satisfaction.yearly_ratings}}%</h3>
         </div>
-        <div class="space-between-boxes"></div>
         <div class="money-saved-box">
           <h1>Money saved:</h1>
           <h3>10m</h3>
