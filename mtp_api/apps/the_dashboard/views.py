@@ -110,12 +110,6 @@ class DashboardView(TemplateView):
 
         starting_day_of_current_year = today.replace(month=1, day=1)
 
-        def pence_to_pounds(amount):
-            if(amount is None):
-                return 0
-            return amount/100
-
-
         queryset_total_number_of_digital_transactions_this_year = Credit.objects.filter(received_at__range=(starting_day_of_current_year, today))
         queryset_total_amount_of_digital_transactions_this_year = Credit.objects.filter(received_at__range=(starting_day_of_current_year, today)).aggregate(Sum('amount'))
         queryset_total_number_of_digital_transactions_previous_week = Credit.objects.filter(received_at__range=(start_of_week, end_of_week))
@@ -181,13 +175,6 @@ class DashboardView(TemplateView):
             queryset_disbursement_count_all = Disbursement.objects.filter(created__range=(start_of_month, end_of_month))
             queryset_disbursement_amount_all = Disbursement.objects.filter(created__range=(start_of_month, end_of_month)).aggregate(Sum('amount'))
 
-            disbursement_amount_all = pence_to_pounds(queryset_disbursement_amount_all['amount__sum'])
-            bank_transfer_amount_to_pounds = pence_to_pounds(queryset_bank_transfer_amount['amount__sum'])
-            debit_amount_to_pounds = pence_to_pounds(queryset_debit_amount['amount__sum'])
-
-            disbursement_cheque_amount_to_pounds = pence_to_pounds(queryset_disbursement_cheque_amount['amount__sum'])
-            disbursement_bank_transfer_amount_to_pounds = pence_to_pounds(queryset_disbursement_bank_transfer_amount['amount__sum'])
-
             def error_percentage(error, total ):
                 try:
                     return round((error/total) * 100, 2)
@@ -216,28 +203,28 @@ class DashboardView(TemplateView):
             list_of_debit_count.append(queryset_debit.count())
             list_of_formated_months.append(formated_month_and_year)
             list_of_formated_months_last_year.append(formated_months_last_year)
-            list_of_debit_amount.append(queryset_debit_amount)
-            list_of_bank_transfer_amount.append(queryset_bank_transfer_amount)
+            list_of_debit_amount.append(queryset_debit_amount['amount__sum'])
+            list_of_bank_transfer_amount.append(queryset_bank_transfer_amount['amount__sum'])
             list_of_disbursement_in_months_count.append(queryset_disbursement_count_all.count())
-            list_of_disbursement_in_months_amount.append(disbursement_amount_all)
+            list_of_disbursement_in_months_amount.append(queryset_disbursement_amount_all['amount__sum'])
 
 
             data.append({
             'disbursement_bank_transfer_count':queryset_disbursement_bank_transfer_count.count(),
-            'disbursement_bank_transfer_amount': disbursement_bank_transfer_amount_to_pounds,
+            'disbursement_bank_transfer_amount': queryset_disbursement_bank_transfer_amount['amount__sum'],
             'disbursement_cheque_count': queryset_disbursement_cheque_count.count(),
-            'disbursement_cheque_amount':disbursement_cheque_amount_to_pounds,
+            'disbursement_cheque_amount':queryset_disbursement_cheque_amount['amount__sum'],
             'transaction_by_post':transaction_by_post,
             'transaction_count': queryset_bank_transfer.count(),
             'credit_count': queryset_debit.count(),
-            'queryset_credit_amount': debit_amount_to_pounds,
-            'queryset_transaction_amount': bank_transfer_amount_to_pounds,
+            'queryset_credit_amount': queryset_debit_amount['amount__sum'],
+            'queryset_transaction_amount': queryset_bank_transfer_amount['amount__sum'],
             'start_of_month': start_of_month,
             'end_of_month': end_of_month,
             })
 
-        current_month_transaction_amount = list_of_bank_transfer_amount[0]['amount__sum']
-        current_month_credit_amount = list_of_debit_amount[0]['amount__sum']
+        current_month_transaction_amount = list_of_bank_transfer_amount[0]
+        current_month_credit_amount = list_of_debit_amount[0]
 
         context['this_months_disbursement_in_months_amount'] = list_of_disbursement_in_months_amount[0]
         context['this_months_disbursement_in_months_count'] = list_of_disbursement_in_months_count[0]
