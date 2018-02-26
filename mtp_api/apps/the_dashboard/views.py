@@ -182,10 +182,30 @@ class DashboardView(TemplateView):
                     return 0
 
             takeup_queryset = DigitalTakeup.objects.filter(date__range=(start_of_month, end_of_month))
+            digital_take_up = takeup_queryset.mean_digital_takeup()
+            if digital_take_up:
+                transaction_by_post = 1 - digital_take_up * queryset_number_of_all_digital_transactions.count()
+            else:
+                transaction_by_post = 0
+            print("DIGITAL TAKE UP", digital_take_up)
+            print("POST", transaction_by_post)
 
-            transaction_by_post = 0
-            for takeup in takeup_queryset:
-                transaction_by_post += takeup.credits_by_post
+            print("TRANSACTION BY POST COST", transaction_by_post * 5.73)
+            print("NUMBER OF DIGITAL TRANSACTIONS TIME 2.22 TO GIVE TOTAL COST", queryset_number_of_all_digital_transactions.count() * 2.22)
+            transaction_by_digital = queryset_number_of_all_digital_transactions.filter(resolution=CREDIT_RESOLUTION.CREDITED).count()
+            COST_PER_TRANSACTION_BY_POST = 5.73
+            COST_PER_TRANSACTION_BY_DIGITAL = 2.22
+            total_cost_of_transaction_by_post = transaction_by_post * COST_PER_TRANSACTION_BY_POST
+            total_cost_of_transaction_by_digital = transaction_by_digital * COST_PER_TRANSACTION_BY_DIGITAL
+            total_cost_if_it_was_only_by_post = (transaction_by_post + transaction_by_digital) * COST_PER_TRANSACTION_BY_POST
+            print("COST IF ONLY BY POST", total_cost_if_it_was_only_by_post)
+            actual_cost = total_cost_of_transaction_by_post + total_cost_of_transaction_by_digital
+            print("ACTUAL COST", actual_cost)
+            savings_made = total_cost_if_it_was_only_by_post - actual_cost
+            print("SAVINGS MADE", savings_made)
+
+
+
 
             total_credit = queryset_debit.exclude(resolution=CREDIT_RESOLUTION.INITIAL)
             error_credit = total_credit.filter(transaction__isnull=False)
