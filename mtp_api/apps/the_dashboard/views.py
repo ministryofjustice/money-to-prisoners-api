@@ -121,8 +121,6 @@ class DashboardView(TemplateView):
 
         start_of_previous_month_last_year = today.replace(year=last_year, month=last_month, day=1)
         start_of_current_month_last_year = today.replace(year=last_year, month=month, day=1)
-        print("START OF PREVIOUS MONTH LAST YEAR", start_of_previous_month_last_year)
-        print("START OF CURRENT MONTH LAST YEAR", start_of_current_month_last_year)
 
         starting_day_of_current_year = today.replace(month=1, day=1)
 
@@ -171,7 +169,13 @@ class DashboardView(TemplateView):
         error_credit_last_year = total_credit_last_month_last_year.filter(transaction__isnull=False)
         percent_of_errors_last_month = error_percentage(error_credit_last_month.count(), total_credit_last_month.count())
         percent_of_errors_last_month_last_year = error_percentage(error_credit_last_year.count(), total_credit_last_month_last_year.count())
+        formated_month_and_year = '{:%B %Y}'.format(start_of_previous_month)
+        formated_months_last_year = '{:%B %Y}'.format(start_of_previous_month_last_year)
+        print("MONTH AND YEAR", formated_month_and_year)
+        print("MONTH AND YEAR LAST YEAR", formated_months_last_year)
 
+        context['formated_month_and_year'] = formated_month_and_year
+        context['formated_months_last_year'] = formated_months_last_year
         context['percent_of_errors_last_month'] = percent_of_errors_last_month
         context['percent_of_errors_last_month_last_year'] = percent_of_errors_last_month_last_year
         context['savings_made'] = round(savings_made)
@@ -189,8 +193,8 @@ class DashboardView(TemplateView):
         list_of_bank_transfer_amount = []
         list_of_debit_count = []
         list_of_debit_amount = []
-        list_of_formated_months = []
-        list_of_formated_months_last_year = []
+        # list_of_formated_months = []
+        # list_of_formated_months_last_year = []
         list_of_disbursement_in_months_amount = []
         list_of_disbursement_in_months_count = []
 
@@ -209,14 +213,14 @@ class DashboardView(TemplateView):
             end_of_month = tz.localize(end_of_month)
             start_of_month_last_year = tz.localize(start_of_month_last_year)
             end_of_month_last_year = tz.localize(end_of_month_last_year)
-            formated_month_and_year = '{:%B %Y}'.format(start_of_month)
-            formated_months_last_year = '{:%B %Y}'.format(start_of_month_last_year)
+            # formated_month_and_year = '{:%B %Y}'.format(start_of_month)
+            # formated_months_last_year = '{:%B %Y}'.format(start_of_month_last_year)
 
             queryset_bank_transfer = Credit.objects.filter(transaction__isnull=False).filter(received_at__range=(start_of_month, end_of_month))
             queryset_bank_transfer_amount = Credit.objects.filter(transaction__isnull=False).filter(received_at__range=(start_of_month, end_of_month)).aggregate(Sum('amount'))
             queryset_debit = Credit.objects.filter(payment__isnull=False).filter(received_at__range=(start_of_month, end_of_month))
             queryset_debit_amount = Credit.objects.filter(payment__isnull=False).filter(received_at__range=(start_of_month, end_of_month)).aggregate(Sum('amount'))
-            queryset_debit_last_year = Credit.objects.filter(payment__isnull=False).filter(received_at__range=(start_of_month_last_year, end_of_month_last_year))
+            # queryset_debit_last_year = Credit.objects.filter(payment__isnull=False).filter(received_at__range=(start_of_month_last_year, end_of_month_last_year))
 
             queryset_number_of_all_digital_transactions = Credit.objects.filter(received_at__range=(start_of_month_last_year, end_of_month_last_year))
             queryset_amount_of_digital_transactions = Credit.objects.filter(received_at__range=(start_of_month_last_year, end_of_month_last_year)).aggregate(Sum('amount'))
@@ -231,8 +235,8 @@ class DashboardView(TemplateView):
             list_of_transactions_by_post.append(transaction_by_post)
             list_of_bank_transfer_count.append(queryset_bank_transfer.count())
             list_of_debit_count.append(queryset_debit.count())
-            list_of_formated_months.append(formated_month_and_year)
-            list_of_formated_months_last_year.append(formated_months_last_year)
+            # list_of_formated_months.append(formated_month_and_year)
+            # list_of_formated_months_last_year.append(formated_months_last_year)
             list_of_debit_amount.append(queryset_debit_amount['amount__sum'])
             list_of_bank_transfer_amount.append(queryset_bank_transfer_amount['amount__sum'])
             list_of_disbursement_in_months_count.append(queryset_disbursement_count_all.count())
@@ -261,8 +265,8 @@ class DashboardView(TemplateView):
         context['this_months_disbursement_in_months_count'] = list_of_disbursement_in_months_count[0]
         context['total_digital_amount_this_month'] = queryset_amount_of_digital_transactions['amount__sum']
         context['total_digital_transactions_this_month'] = queryset_number_of_all_digital_transactions.count()
-        context['current_month_previous_year'] = list_of_formated_months_last_year[0]
-        context['current_formated_month']= list_of_formated_months[0]
+        # context['current_month_previous_year'] = list_of_formated_months_last_year[0]
+        # context['current_formated_month']= list_of_formated_months[0]
         context['this_months_transaction_by_post'] = list_of_transactions_by_post[0]
         context['this_months_bank_transfers'] = list_of_bank_transfer_count[0]
         context['this_month_debit'] = list_of_debit_count[0]
