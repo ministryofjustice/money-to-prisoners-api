@@ -100,13 +100,29 @@ class DashboardView(TemplateView):
         year = today.year
         last_year = today.year -1
         month = today.month
+
         if month == 12:
             month = 1
             year += 1
         else:
-            month += 1
+            month
 
-        datetime.timedelta(days=weekday, weeks=1)
+        last_month = month - 1
+        if last_month == 0:
+            last_month = 12
+            year -= 1
+        else:
+            last_month
+
+        last_month = month - 1
+
+        start_of_previous_month = today.replace(month=last_month, day=1)
+        start_of_current_month = today.replace(month=month, day=1)
+
+        start_of_previous_month_last_year = today.replace(year=last_year, month=last_month, day=1)
+        start_of_current_month_last_year = today.replace(year=last_year, month=month, day=1)
+        print("START OF PREVIOUS MONTH LAST YEAR", start_of_previous_month_last_year)
+        print("START OF CURRENT MONTH LAST YEAR", start_of_current_month_last_year)
 
         starting_day_of_current_year = today.replace(month=1, day=1)
 
@@ -121,6 +137,9 @@ class DashboardView(TemplateView):
         queryset_disbursement_amount_this_week = Disbursement.objects.filter(created__range=(start_of_week, end_of_week)).aggregate(Sum('amount'))
 
         takeup_queryset = DigitalTakeup.objects.filter(date__range=(starting_day_of_current_year, today))
+
+        queryset_debit_for_previous_month = Credit.objects.filter(payment__isnull=False).filter(received_at__range=(start_of_previous_month, start_of_current_month))
+        queryset_debit_for_previous_month_last_year = Credit.objects.filter(payment__isnull=False).filter(received_at__range=(start_of_previous_month_last_year, start_of_current_month_last_year))
 
 
         digital_take_up = takeup_queryset.mean_digital_takeup()
@@ -140,10 +159,22 @@ class DashboardView(TemplateView):
         actual_cost = total_cost_of_transaction_by_post + total_cost_of_transaction_by_digital
         savings_made = total_cost_if_it_was_only_by_post - actual_cost
 
-        print(savings_made)
+        def error_percentage(error, total ):
+            try:
+                return round((error/total) * 100, 2)
+            except:
+                return 0
 
+        total_credit_last_month = queryset_debit_for_previous_month.exclude(resolution=CREDIT_RESOLUTION.INITIAL)
+        error_credit_last_month = total_credit_last_month.filter(transaction__isnull=False)
+        total_credit_last_month_last_year = queryset_debit_for_previous_month_last_year.exclude(resolution=CREDIT_RESOLUTION.INITIAL)
+        error_credit_last_year = total_credit_last_month_last_year.filter(transaction__isnull=False)
+        percent_of_errors_last_month = error_percentage(error_credit_last_month.count(), total_credit_last_month.count())
+        percent_of_errors_last_month_last_year = error_percentage(error_credit_last_year.count(), total_credit_last_month_last_year.count())
 
-        context['savings_made'] = savings_made
+        context['percent_of_errors_last_month'] = percent_of_errors_last_month
+        context['percent_of_errors_last_month_last_year'] = percent_of_errors_last_month_last_year
+        context['savings_made'] = round(savings_made)
         context['number_of_disbursement_the_previous_week']= queryset_number_of_disbursement_previous_week.count()
         context['number_of_disbursement_this_year']= queryset_number_of_disbursement_previous_week.count()
         context['disbursement_amount_previous_week'] = queryset_disbursement_amount_this_week['amount__sum']
@@ -153,8 +184,6 @@ class DashboardView(TemplateView):
         context['total_digital_transactions_recent_week']=  queryset_total_number_of_digital_transactions_previous_week.count()
         context['total_digital_amount_recent_week'] = queryset_amount_of_digital_transactions_previous_week['amount__sum']
 
-        list_of_errors = []
-        list_of_errors_the_previous_year = []
         list_of_transactions_by_post = []
         list_of_bank_transfer_count = []
         list_of_bank_transfer_amount = []
@@ -199,43 +228,6 @@ class DashboardView(TemplateView):
             queryset_disbursement_count_all = Disbursement.objects.filter(created__range=(start_of_month, end_of_month))
             queryset_disbursement_amount_all = Disbursement.objects.filter(created__range=(start_of_month, end_of_month)).aggregate(Sum('amount'))
 
-            def error_percentage(error, total ):
-                try:
-                    return round((error/total) * 100, 2)
-                except:
-                    return 0
-
-            takeup_queryset = DigitalTakeup.objects.filter(date__range=(start_of_month, end_of_month))
-
-            # digital_take_up = takeup_queryset.mean_digital_takeup()
-            # if digital_take_up:
-            #     transaction_by_post = 1 - digital_take_up * queryset_number_of_all_digital_transactions.count()
-            # else:
-            #     transaction_by_post = 0
-
-            # transaction_by_digital = queryset_number_of_all_digital_transactions.filter(resolution=CREDIT_RESOLUTION.CREDITED).count()
-            # COST_PER_TRANSACTION_BY_POST = 5.73
-            # COST_PER_TRANSACTION_BY_DIGITAL = 2.22
-
-            # total_cost_of_transaction_by_post = transaction_by_post * COST_PER_TRANSACTION_BY_POST
-            # total_cost_of_transaction_by_digital = transaction_by_digital * COST_PER_TRANSACTION_BY_DIGITAL
-            # total_cost_if_it_was_only_by_post = (transaction_by_post + transaction_by_digital) * COST_PER_TRANSACTION_BY_POST
-            # actual_cost = total_cost_of_transaction_by_post + total_cost_of_transaction_by_digital
-            # savings_made = total_cost_if_it_was_only_by_post - actual_cost
-
-            # print(savings_made)
-
-            total_credit = queryset_debit.exclude(resolution=CREDIT_RESOLUTION.INITIAL)
-            error_credit = total_credit.filter(transaction__isnull=False)
-
-            total_credit_last_year = queryset_debit_last_year.exclude(resolution=CREDIT_RESOLUTION.INITIAL)
-            error_credit_last_year = total_credit_last_year.filter(transaction__isnull=False)
-
-            percent_of_errors = error_percentage(error_credit.count(), total_credit.count())
-            percent_of_errors_last_year = error_percentage(error_credit_last_year.count(), total_credit_last_year.count())
-
-            list_of_errors.append(percent_of_errors)
-            list_of_errors_the_previous_year.append(percent_of_errors_last_year)
             list_of_transactions_by_post.append(transaction_by_post)
             list_of_bank_transfer_count.append(queryset_bank_transfer.count())
             list_of_debit_count.append(queryset_debit.count())
@@ -248,7 +240,6 @@ class DashboardView(TemplateView):
 
 
             data.append({
-            # 'savings_made': savings_made,
             'disbursement_bank_transfer_count':queryset_disbursement_bank_transfer_count.count(),
             'disbursement_bank_transfer_amount': queryset_disbursement_bank_transfer_amount['amount__sum'],
             'disbursement_cheque_count': queryset_disbursement_cheque_count.count(),
@@ -275,9 +266,6 @@ class DashboardView(TemplateView):
         context['this_months_transaction_by_post'] = list_of_transactions_by_post[0]
         context['this_months_bank_transfers'] = list_of_bank_transfer_count[0]
         context['this_month_debit'] = list_of_debit_count[0]
-        context['last_year_same_time_percentage_of_errors'] = list_of_errors_the_previous_year[0]
-        context['this_months_pecentage_of_errors'] = list_of_errors[0]
-        context['last_months_percentage_of_errors'] = list_of_errors[1]
         context['user_satisfaction'] = get_user_satisfaction()
         return context
 

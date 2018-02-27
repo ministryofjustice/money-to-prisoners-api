@@ -313,7 +313,7 @@
         </div>
         <div class="money-saved-box">
           <h1>Money saved:</h1>
-          <h3>{{savings_made}}</h3>
+          <h3>{{savings_made|format_amount}}</h3>
         </div>
       </td>
 
@@ -323,17 +323,19 @@
             Bank transfer <br> error rate:
           </h1>
           <h3>
-            {% if this_months_pecentage_of_errors > last_months_percentage_of_errors %}
-            {{this_months_pecentage_of_errors}}% +
-            {% elif this_months_pecentage_of_errors < last_months_percentage_of_errors %}
-            {{this_months_pecentage_of_errors}}%
+            {% if percent_of_errors_last_month > percent_of_errors_last_month_last_year %}
+              {{percent_of_errors_last_month}}% +
+            {% elif percent_of_errors_last_month < percent_of_errors_last_month_last_year %}
+              {{percent_of_errors_last_month}}% -
+            {% else %}
+              {{percent_of_errors_last_month}}%
             {% endif %}
           </h3>
            <h4 class="space_between_bank-transfer-months">
             {{current_formated_month}}
            </h4>
           <h3>
-            {{last_year_same_time_percentage_of_errors}}%
+            {{percent_of_errors_last_month_last_year}}%
           </h3>
           <h4>
             {{current_month_previous_year}}
