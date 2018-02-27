@@ -16,7 +16,6 @@ django.jQuery(function ($) {
 
   // chart
 
-  var $module = $('#id_credit_report');
   var $chart = $('#credit-chart');
   var normalStyles = {
     font: 'Roboto, "Lucida Grande", Verdana, Arial, sans-serif',
