@@ -1,44 +1,6 @@
 /* globals django, google, performanceData */
 'use strict';
 
-django.jQuery(function ($) {
-  var $container = $('#id_performance_overview');
-  if ($container.length !== 1) {
-    return;
-  }
-
-  var $chart = $('#performance-overview-chart');
-  if (performanceData && $chart.length === 1) {
-    google.charts.setOnLoadCallback(function () {
-      performanceChart($, performanceData, $chart);
-    });
-  }
-
-  var container = $container[0];
-  var $titles = $('.performance-overview-title div', container);
-  var $pages = $('dl', container);
-  var $animatedElements = $('.transition-show', container);
-  var pageIndex = 0;
-
-  function render () {
-    $titles.hide();
-    $($titles.get(pageIndex)).show();
-    $pages.hide();
-    $($pages.get(pageIndex)).show();
-    $animatedElements.addClass('transition-showing');
-    $animatedElements.filter(':visible').each(function (i) {
-      var $animatedElement = $(this);
-      setTimeout(function () {
-        $animatedElement.removeClass('transition-showing');
-      }, i * 250);
-    });
-    pageIndex = (pageIndex + 1) % $pages.length;
-  }
-
-  render();
-  setInterval(render, 10000);
-});
-
 function performanceChart ($, data, $chart) {
   var options = {
     // colours and sizes optimised for full-screen on philips tv
@@ -116,3 +78,41 @@ function performanceChart ($, data, $chart) {
     $svg.append($title);
   });
 }
+
+django.jQuery(function ($) {
+  var $container = $('#id_performance_overview');
+  if ($container.length !== 1) {
+    return;
+  }
+
+  var $chart = $('#performance-overview-chart');
+  if (performanceData && $chart.length === 1) {
+    google.charts.setOnLoadCallback(function () {
+      performanceChart($, performanceData, $chart);
+    });
+  }
+
+  var container = $container[0];
+  var $titles = $('.performance-overview-title div', container);
+  var $pages = $('dl', container);
+  var $animatedElements = $('.transition-show', container);
+  var pageIndex = 0;
+
+  function render () {
+    $titles.hide();
+    $($titles.get(pageIndex)).show();
+    $pages.hide();
+    $($pages.get(pageIndex)).show();
+    $animatedElements.addClass('transition-showing');
+    $animatedElements.filter(':visible').each(function (i) {
+      var $animatedElement = $(this);
+      setTimeout(function () {
+        $animatedElement.removeClass('transition-showing');
+      }, i * 250);
+    });
+    pageIndex = (pageIndex + 1) % $pages.length;
+  }
+
+  render();
+  setInterval(render, 10000);
+});

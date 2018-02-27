@@ -42,7 +42,7 @@ django.jQuery(function ($) {
       var cli = chart.getChartLayoutInterface();
       var legendBounds = cli.getBoundingBox('legend');
       var chartBounds = cli.getChartAreaBoundingBox();
-      var significantWidth = chartBounds.width * 5 / 6;  // last option is disregarded
+      var significantWidth = chartBounds.width * 5 / 6; // last option is disregarded
       var meanMarkerWidth = 12;
       var $hideOnMouseover = [];
       var $chartDetails = null;
