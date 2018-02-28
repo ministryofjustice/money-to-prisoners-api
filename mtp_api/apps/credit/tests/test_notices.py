@@ -26,9 +26,9 @@ fake = Faker(locale='en_GB')
 sample_location = {
     'description': 'LEI-A-2-002',
     'levels': [
-        {'type': 'WING', 'value': 'A'},
-        {'type': 'LAND', 'value': '2'},
-        {'type': 'CELL', 'value': '002'}
+        {'type': 'Wing', 'value': 'A'},
+        {'type': 'Landing', 'value': '2'},
+        {'type': 'Cell', 'value': '002'}
     ],
 }
 
@@ -269,9 +269,9 @@ class CreatePrisonerNoticesTestCase(NoticesCommandTestCase):
             {
                 'description': 'LEI-A-2-002',
                 'levels': [
-                    {'type': 'WING', 'value': 'A'},
-                    {'type': 'LAND', 'value': '2'},
-                    {'type': 'CELL', 'value': '002'},
+                    {'type': 'Wing', 'value': 'A'},
+                    {'type': 'Landing', 'value': '2'},
+                    {'type': 'Cell', 'value': '002'},
                 ],
             },
         )
@@ -286,9 +286,9 @@ class CreatePrisonerNoticesTestCase(NoticesCommandTestCase):
             {
                 'description': 'LEI-A-2-002',
                 'levels': [
-                    {'type': 'WING', 'value': 'A'},
-                    {'type': 'LAND', 'value': '2'},
-                    {'type': 'CELL', 'value': '002'},
+                    {'type': 'Wing', 'value': 'A'},
+                    {'type': 'Landing', 'value': '2'},
+                    {'type': 'Cell', 'value': '002'},
                 ],
             },
         )
@@ -303,8 +303,8 @@ class CreatePrisonerNoticesTestCase(NoticesCommandTestCase):
             {
                 'description': 'LEI-A-2',
                 'levels': [
-                    {'type': 'WING', 'value': 'A'},
-                    {'type': 'LAND', 'value': '2'},
+                    {'type': 'Wing', 'value': 'A'},
+                    {'type': 'Landing', 'value': '2'},
                 ],
             },
         )
@@ -315,18 +315,18 @@ class CreatePrisonerNoticesTestCase(NoticesCommandTestCase):
                 'housing_location': {
                     'description': 'LEI-A-2-002',
                     'levels': [
-                        {'type': 'WING', 'value': 'A'},
-                        {'type': 'LAND', 'value': '2'},
-                        {'type': 'CELL', 'value': '002'},
+                        {'type': 'Wing', 'value': 'A'},
+                        {'type': 'Landing', 'value': '2'},
+                        {'type': 'Cell', 'value': '002'},
                     ],
                 },
             },
             {
                 'description': 'LEI-A-2-002',
                 'levels': [
-                    {'type': 'WING', 'value': 'A'},
-                    {'type': 'LAND', 'value': '2'},
-                    {'type': 'CELL', 'value': '002'},
+                    {'type': 'Wing', 'value': 'A'},
+                    {'type': 'Landing', 'value': '2'},
+                    {'type': 'Cell', 'value': '002'},
                 ],
             },
         )

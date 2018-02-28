@@ -153,9 +153,9 @@ class PrisonerCreditNoticeBundle(NoticeBundle):
             levels = location.get('levels')
             if levels:
                 level_labels = {
-                    'WING': _('Wing'),
-                    'LAND': _('Landing'),
-                    'CELL': _('Cell'),
+                    'Wing': _('Wing'),
+                    'Landing': _('Landing'),
+                    'Cell': _('Cell'),
                 }
                 labels = [
                     (level_labels.get(level.get('type')), level.get('value'))
@@ -235,17 +235,17 @@ def create_sample():
         yield ('JILLY HALL', 'A1401AE', {
             'description': 'LEI-A-2-002',
             'levels': [
-                {'type': 'WING', 'value': 'A'},
-                {'type': 'LAND', 'value': '2'},
-                {'type': 'CELL', 'value': '002'}
+                {'type': 'Wing', 'value': 'A'},
+                {'type': 'Landing', 'value': '2'},
+                {'type': 'Cell', 'value': '002'}
             ],
         }, [], [])
         yield ('JILLY HALL', 'A1401AE', {
             'description': 'LEI-B-2-002',
             'levels': [
-                {'type': 'WING', 'value': 'B'},
-                {'type': 'LAND', 'value': '2'},
-                {'type': 'CELL', 'value': '002'}
+                {'type': 'Wing', 'value': 'B'},
+                {'type': 'Landing', 'value': '2'},
+                {'type': 'Cell', 'value': '002'}
             ],
         }, [
             Credit(2000, 'JORDAN MARSH'),
@@ -254,9 +254,9 @@ def create_sample():
         yield ('JILLY HALL', 'A1401AE', {
             'description': 'LEI-C-2-002',
             'levels': [
-                {'type': 'WING', 'value': 'C'},
-                {'type': 'LAND', 'value': '2'},
-                {'type': 'CELL', 'value': '002'}
+                {'type': 'Wing', 'value': 'C'},
+                {'type': 'Landing', 'value': '2'},
+                {'type': 'Cell', 'value': '002'}
             ],
         }, [], [
             Disbursement(10000, 'cheque', 'thomas', 'raymond'),
@@ -264,9 +264,9 @@ def create_sample():
         yield ('JAMES HALLS', 'A1409AE', {
             'description': 'LEI-A-2-002',
             'levels': [
-                {'type': 'WING', 'value': 'A'},
-                {'type': 'LAND', 'value': '2'},
-                {'type': 'CELL', 'value': '002'}
+                {'type': 'Wing', 'value': 'A'},
+                {'type': 'Landing', 'value': '2'},
+                {'type': 'Cell', 'value': '002'}
             ],
         }, [
             Credit(3500, 'JORDAN MARSH'),
@@ -286,9 +286,9 @@ def create_sample():
         yield ('RICKY-LONG EXTREMELY-LONG-SURNAME-RIPPIN', 'A1234AA', {
             'description': 'LEI-B-1-002',
             'levels': [
-                {'type': 'WING', 'value': 'B'},
-                {'type': 'LAND', 'value': '1'},
-                {'type': 'CELL', 'value': '002'}
+                {'type': 'Wing', 'value': 'B'},
+                {'type': 'Landing', 'value': '1'},
+                {'type': 'Cell', 'value': '002'}
             ],
         }, [
             Credit(2036000, 'SOMEBODY WITH A SIMULATED VERY EXTREMELY LONG NAME-THAT-TRUNCATES'),

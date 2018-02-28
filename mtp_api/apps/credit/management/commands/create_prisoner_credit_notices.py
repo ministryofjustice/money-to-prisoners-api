@@ -126,7 +126,7 @@ class Command(BaseCommand):
             levels.pop(0)
             levels = [
                 {'type': k, 'value': v}
-                for k, v in zip(('WING', 'LAND', 'CELL'), levels)
+                for k, v in zip(('Wing', 'Landing', 'Cell'), levels)
             ]
             housing['levels'] = levels
         return housing
