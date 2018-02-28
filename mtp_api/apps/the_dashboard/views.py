@@ -127,12 +127,16 @@ class DashboardView(TemplateView):
         queryset_total_number_of_digital_transactions_this_year = Credit.objects.filter(received_at__range=(starting_day_of_current_year, today))
         queryset_total_amount_of_digital_transactions_this_year = Credit.objects.filter(received_at__range=(starting_day_of_current_year, today)).aggregate(Sum('amount'))
         queryset_total_number_of_digital_transactions_previous_week = Credit.objects.filter(received_at__range=(start_of_week, end_of_week))
+        queryset_total_number_of_digital_transactions_previous_month = Credit.objects.filter(received_at__range=(start_of_previous_month, start_of_current_month))
         queryset_amount_of_digital_transactions_previous_week = Credit.objects.filter(received_at__range=(start_of_week, end_of_week)).aggregate(Sum('amount'))
+        queryset_amount_of_digital_transactions_previous_month = Credit.objects.filter(received_at__range=(start_of_previous_month, start_of_current_month)).aggregate(Sum('amount'))
+
 
         queryset_number_of_disbursement_this_year = Disbursement.objects.filter(created__range=(starting_day_of_current_year, today))
         queryset_number_of_disbursement_previous_week = Disbursement.objects.filter(created__range=(start_of_week, end_of_week))
         queryset_disbursement_amount_this_year = Disbursement.objects.filter(created__range=(starting_day_of_current_year, today)).aggregate(Sum('amount'))
         queryset_disbursement_amount_this_week = Disbursement.objects.filter(created__range=(start_of_week, end_of_week)).aggregate(Sum('amount'))
+        queryset_disbursement_amount_previous_month = Disbursement.objects.filter(created__range=(start_of_previous_month, start_of_current_month)).aggregate(Sum('amount'))
 
         takeup_queryset = DigitalTakeup.objects.filter(date__range=(starting_day_of_current_year, today))
 
@@ -169,10 +173,10 @@ class DashboardView(TemplateView):
         error_credit_last_year = total_credit_last_month_last_year.filter(transaction__isnull=False)
         percent_of_errors_last_month = error_percentage(error_credit_last_month.count(), total_credit_last_month.count())
         percent_of_errors_last_month_last_year = error_percentage(error_credit_last_year.count(), total_credit_last_month_last_year.count())
+
         formated_month_and_year = '{:%B %Y}'.format(start_of_previous_month)
         formated_months_last_year = '{:%B %Y}'.format(start_of_previous_month_last_year)
-        print("MONTH AND YEAR", formated_month_and_year)
-        print("MONTH AND YEAR LAST YEAR", formated_months_last_year)
+
 
         context['formated_month_and_year'] = formated_month_and_year
         context['formated_months_last_year'] = formated_months_last_year
@@ -182,21 +186,21 @@ class DashboardView(TemplateView):
         context['number_of_disbursement_the_previous_week']= queryset_number_of_disbursement_previous_week.count()
         context['number_of_disbursement_this_year']= queryset_number_of_disbursement_previous_week.count()
         context['disbursement_amount_previous_week'] = queryset_disbursement_amount_this_week['amount__sum']
+        context['disbursement_amount_previous_month'] = queryset_disbursement_amount_previous_month['amount__sum']
         context['disbursement_amount_this_year'] = queryset_disbursement_amount_this_year['amount__sum']
         context['total_number_of_digital_transactions_this_year'] = queryset_total_number_of_digital_transactions_this_year.count()
         context['total_amount_of_digital_transactions_this_year'] = queryset_total_amount_of_digital_transactions_this_year['amount__sum']
-        context['total_digital_transactions_recent_week']=  queryset_total_number_of_digital_transactions_previous_week.count()
+        context['total_digital_transactions_recent_week']= queryset_total_number_of_digital_transactions_previous_week.count()
+        context['total_digital_transactions_recent_month']=queryset_total_number_of_digital_transactions_previous_month.count()
+        context['total_digital_amount_recent_month'] =queryset_amount_of_digital_transactions_previous_month['amount__sum']
         context['total_digital_amount_recent_week'] = queryset_amount_of_digital_transactions_previous_week['amount__sum']
 
+        # transaction_by_post = None
         list_of_transactions_by_post = []
         list_of_bank_transfer_count = []
         list_of_bank_transfer_amount = []
         list_of_debit_count = []
         list_of_debit_amount = []
-        # list_of_formated_months = []
-        # list_of_formated_months_last_year = []
-        list_of_disbursement_in_months_amount = []
-        list_of_disbursement_in_months_count = []
 
         for _ in range(5):
             end_of_month = datetime.datetime(year=year, month=month, day=1)
@@ -213,17 +217,23 @@ class DashboardView(TemplateView):
             end_of_month = tz.localize(end_of_month)
             start_of_month_last_year = tz.localize(start_of_month_last_year)
             end_of_month_last_year = tz.localize(end_of_month_last_year)
-            # formated_month_and_year = '{:%B %Y}'.format(start_of_month)
-            # formated_months_last_year = '{:%B %Y}'.format(start_of_month_last_year)
+
+            takeup_queryset = DigitalTakeup.objects.filter(date__range=(start_of_month, end_of_month))
+            queryset_total_number_of_digital_transactions_in_month = Credit.objects.filter(received_at__range=(start_of_month, end_of_month))
+
+            digital_take_up = takeup_queryset.mean_digital_takeup()
+            if digital_take_up:
+                transaction_by_post = 1 - digital_take_up * queryset_total_number_of_digital_transactions_in_month.count()
+            else:
+                transaction_by_post = 0
 
             queryset_bank_transfer = Credit.objects.filter(transaction__isnull=False).filter(received_at__range=(start_of_month, end_of_month))
             queryset_bank_transfer_amount = Credit.objects.filter(transaction__isnull=False).filter(received_at__range=(start_of_month, end_of_month)).aggregate(Sum('amount'))
             queryset_debit = Credit.objects.filter(payment__isnull=False).filter(received_at__range=(start_of_month, end_of_month))
             queryset_debit_amount = Credit.objects.filter(payment__isnull=False).filter(received_at__range=(start_of_month, end_of_month)).aggregate(Sum('amount'))
-            # queryset_debit_last_year = Credit.objects.filter(payment__isnull=False).filter(received_at__range=(start_of_month_last_year, end_of_month_last_year))
-
+            queryset_debit_last_year = Credit.objects.filter(payment__isnull=False).filter(received_at__range=(start_of_month_last_year, end_of_month_last_year))
             queryset_number_of_all_digital_transactions = Credit.objects.filter(received_at__range=(start_of_month_last_year, end_of_month_last_year))
-            queryset_amount_of_digital_transactions = Credit.objects.filter(received_at__range=(start_of_month_last_year, end_of_month_last_year)).aggregate(Sum('amount'))
+            # queryset_amount_of_digital_transactions = Credit.objects.filter(received_at__range=(start_of_month_last_year, end_of_month_last_year)).aggregate(Sum('amount'))
 
             queryset_disbursement_bank_transfer_count = Disbursement.objects.filter(method=DISBURSEMENT_METHOD.BANK_TRANSFER).filter(created__range=(start_of_month, end_of_month))
             queryset_disbursement_cheque_count = Disbursement.objects.filter(method=DISBURSEMENT_METHOD.CHEQUE).filter(created__range=(start_of_month, end_of_month))
@@ -235,13 +245,14 @@ class DashboardView(TemplateView):
             list_of_transactions_by_post.append(transaction_by_post)
             list_of_bank_transfer_count.append(queryset_bank_transfer.count())
             list_of_debit_count.append(queryset_debit.count())
-            # list_of_formated_months.append(formated_month_and_year)
-            # list_of_formated_months_last_year.append(formated_months_last_year)
             list_of_debit_amount.append(queryset_debit_amount['amount__sum'])
             list_of_bank_transfer_amount.append(queryset_bank_transfer_amount['amount__sum'])
-            list_of_disbursement_in_months_count.append(queryset_disbursement_count_all.count())
-            list_of_disbursement_in_months_amount.append(queryset_disbursement_amount_all['amount__sum'])
 
+            print("TRANSACTION BY POST", transaction_by_post)
+            print("QUERY SET DISBURSEMNT BANK TRANSFER", queryset_disbursement_bank_transfer_count.count())
+            print("QUERYSET DISBURSEMENT CHEQUE COUNT", queryset_disbursement_cheque_count.count())
+            print("QUERYSET DEBIT AMOUNT", queryset_debit_amount['amount__sum'])
+            print("QUERYSET BANK TRANSFER AMOUNT", queryset_bank_transfer_amount)
 
             data.append({
             'disbursement_bank_transfer_count':queryset_disbursement_bank_transfer_count.count(),
@@ -258,15 +269,11 @@ class DashboardView(TemplateView):
             })
 
 
-        current_month_transaction_amount = list_of_bank_transfer_amount[0]
-        current_month_credit_amount = list_of_debit_amount[0]
+        # current_month_transaction_amount = list_of_bank_transfer_amount[0]
+        # current_month_credit_amount = list_of_debit_amount[0]
 
-        context['this_months_disbursement_in_months_amount'] = list_of_disbursement_in_months_amount[0]
-        context['this_months_disbursement_in_months_count'] = list_of_disbursement_in_months_count[0]
-        context['total_digital_amount_this_month'] = queryset_amount_of_digital_transactions['amount__sum']
+        # context['total_digital_amount_this_month'] = queryset_amount_of_digital_transactions['amount__sum']
         context['total_digital_transactions_this_month'] = queryset_number_of_all_digital_transactions.count()
-        # context['current_month_previous_year'] = list_of_formated_months_last_year[0]
-        # context['current_formated_month']= list_of_formated_months[0]
         context['this_months_transaction_by_post'] = list_of_transactions_by_post[0]
         context['this_months_bank_transfers'] = list_of_bank_transfer_count[0]
         context['this_month_debit'] = list_of_debit_count[0]
