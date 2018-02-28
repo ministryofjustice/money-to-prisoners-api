@@ -59,7 +59,7 @@ def get_user_satisfaction():
     yearly_satisfaction_percentage = percentage(total_satisfied_each_year, total_not_satisfied_each_year)
 
     return {
-        'yearly_ratings': yearly_satisfaction_percentage,
+        'yearly_satisfaction_ratings': yearly_satisfaction_percentage,
     }
 
 
@@ -184,7 +184,6 @@ class DashboardView(TemplateView):
         for _ in range(5):
             end_of_month = datetime.datetime(year=year, month=month, day=1)
 
-            # end_of_month_last_year = datetime.datetime(year=last_year, month=month, day=1)
             month -= 1
             if month == 0:
                 month = 12
@@ -200,9 +199,10 @@ class DashboardView(TemplateView):
 
             digital_take_up = takeup_queryset.mean_digital_takeup()
             if digital_take_up:
-                transaction_by_post = 1 - digital_take_up * queryset_total_number_of_digital_transactions_in_month.count()
+                transaction_by_post = (1 - digital_take_up) * queryset_total_number_of_digital_transactions_in_month.count()
             else:
                 transaction_by_post = 0
+
 
             queryset_bank_transfer = Credit.objects.filter(transaction__isnull=False).filter(received_at__range=(start_of_month, end_of_month))
             queryset_bank_transfer_amount = Credit.objects.filter(transaction__isnull=False).filter(received_at__range=(start_of_month, end_of_month)).aggregate(Sum('amount'))
