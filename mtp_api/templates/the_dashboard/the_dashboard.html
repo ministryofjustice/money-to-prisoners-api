@@ -235,7 +235,7 @@
       <div class="digital-transaction-individual-group-padding">
         <h2>This week:</h2>
         <h3>{{total_digital_amount_recent_week|format_amount}}</h3>
-        <h4>{{total_digital_transactions_recent_week}} credit recieved</h4>
+        <h4>{{total_number_of_digital_transactions_recent_week}} credit recieved</h4>
       </div>
 
       <div class="digital-transaction-individual-group-padding">
@@ -275,7 +275,7 @@
 
       <div class="digital-transaction-individual-group-padding">
         <h2>This week:</h2>
-        <h3>{{disbursement_amount_this_week_in_pounds|format_amount }}</h3>
+        <h3>{{total_amount_of_disbursement_previous_week|format_amount }}</h3>
         <h4>{{number_of_disbursement_previous_week}} disbursement sent</h4>
       </div>
 
@@ -287,8 +287,8 @@
 
       <div>
         <h2>This year:</h2>
-        <h3>{{disbursement_amount_this_year|format_amount}}</h3>
-        <h4>{{number_of_disbursement_this_year}} disbursement sent</h4>
+        <h3>{{total_amount_of_disbursement_this_year|format_amount}}</h3>
+        <h4>{{total_number_of_disbursement_this_year}} disbursement sent</h4>
       </div>
     </td>
   </tr>
@@ -309,7 +309,7 @@
       <td>
         <div class="satisfaction-rate-box space_between_headings">
           <h1>Satisfaction rate:<h1>
-          <h3>{{user_satisfaction.yearly_ratings}}%</h3>
+          <h3>{{user_satisfaction.yearly_satisfaction_ratings}}%</h3>
         </div>
         <div class="money-saved-box">
           <h1>Money saved:</h1>
