@@ -131,7 +131,6 @@ class DashboardView(TemplateView):
         queryset_amount_of_digital_transactions_previous_week = Credit.objects.filter(received_at__range=(start_of_week, end_of_week)).aggregate(Sum('amount'))
         queryset_amount_of_digital_transactions_previous_month = Credit.objects.filter(received_at__range=(start_of_previous_month, start_of_current_month)).aggregate(Sum('amount'))
 
-
         queryset_number_of_disbursement_this_year = Disbursement.objects.filter(created__range=(starting_day_of_current_year, today))
         queryset_number_of_disbursement_previous_week = Disbursement.objects.filter(created__range=(start_of_week, end_of_week))
         queryset_disbursement_amount_this_year = Disbursement.objects.filter(created__range=(starting_day_of_current_year, today)).aggregate(Sum('amount'))
@@ -233,7 +232,7 @@ class DashboardView(TemplateView):
             queryset_debit_amount = Credit.objects.filter(payment__isnull=False).filter(received_at__range=(start_of_month, end_of_month)).aggregate(Sum('amount'))
             queryset_debit_last_year = Credit.objects.filter(payment__isnull=False).filter(received_at__range=(start_of_month_last_year, end_of_month_last_year))
             queryset_number_of_all_digital_transactions = Credit.objects.filter(received_at__range=(start_of_month_last_year, end_of_month_last_year))
-            # queryset_amount_of_digital_transactions = Credit.objects.filter(received_at__range=(start_of_month_last_year, end_of_month_last_year)).aggregate(Sum('amount'))
+            queryset_amount_of_digital_transactions = Credit.objects.filter(received_at__range=(start_of_month_last_year, end_of_month_last_year)).aggregate(Sum('amount'))
 
             queryset_disbursement_bank_transfer_count = Disbursement.objects.filter(method=DISBURSEMENT_METHOD.BANK_TRANSFER).filter(created__range=(start_of_month, end_of_month))
             queryset_disbursement_cheque_count = Disbursement.objects.filter(method=DISBURSEMENT_METHOD.CHEQUE).filter(created__range=(start_of_month, end_of_month))
@@ -242,28 +241,32 @@ class DashboardView(TemplateView):
             queryset_disbursement_count_all = Disbursement.objects.filter(created__range=(start_of_month, end_of_month))
             queryset_disbursement_amount_all = Disbursement.objects.filter(created__range=(start_of_month, end_of_month)).aggregate(Sum('amount'))
 
+            bank_transfer_amount = queryset_bank_transfer_amount['amount__sum'] or 0
+            debit_amount = queryset_debit_amount['amount__sum'] or 0
+
             list_of_transactions_by_post.append(transaction_by_post)
             list_of_bank_transfer_count.append(queryset_bank_transfer.count())
             list_of_debit_count.append(queryset_debit.count())
-            list_of_debit_amount.append(queryset_debit_amount['amount__sum'])
-            list_of_bank_transfer_amount.append(queryset_bank_transfer_amount['amount__sum'])
+            list_of_debit_amount.append(debit_amount)
+            list_of_bank_transfer_amount.append(bank_transfer_amount)
 
             print("TRANSACTION BY POST", transaction_by_post)
             print("QUERY SET DISBURSEMNT BANK TRANSFER", queryset_disbursement_bank_transfer_count.count())
             print("QUERYSET DISBURSEMENT CHEQUE COUNT", queryset_disbursement_cheque_count.count())
-            print("QUERYSET DEBIT AMOUNT", queryset_debit_amount['amount__sum'])
+            print("QUERYSET DISBURSEMENT CHEQUE AMOUNT", queryset_disbursement_cheque_amount['amount__sum'] or 0)
+            print("QUERYSET DEBIT AMOUNT", queryset_debit_amount['amount__sum'] or 0)
             print("QUERYSET BANK TRANSFER AMOUNT", queryset_bank_transfer_amount)
 
             data.append({
             'disbursement_bank_transfer_count':queryset_disbursement_bank_transfer_count.count(),
-            'disbursement_bank_transfer_amount': queryset_disbursement_bank_transfer_amount['amount__sum'],
+            'disbursement_bank_transfer_amount': queryset_disbursement_bank_transfer_amount['amount__sum'] or 0,
             'disbursement_cheque_count': queryset_disbursement_cheque_count.count(),
-            'disbursement_cheque_amount':queryset_disbursement_cheque_amount['amount__sum'],
+            'disbursement_cheque_amount':queryset_disbursement_cheque_amount['amount__sum'] or 0,
             'transaction_by_post':transaction_by_post,
             'transaction_count': queryset_bank_transfer.count(),
             'credit_count': queryset_debit.count(),
-            'queryset_credit_amount': queryset_debit_amount['amount__sum'],
-            'queryset_transaction_amount': queryset_bank_transfer_amount['amount__sum'],
+            'queryset_credit_amount': debit_amount,
+            'queryset_transaction_amount': bank_transfer_amount,
             'start_of_month': start_of_month,
             'end_of_month': end_of_month,
             })
