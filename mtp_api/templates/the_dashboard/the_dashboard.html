@@ -149,12 +149,12 @@
             ['Sent Money', 'Number'],
             ['Debit', {{this_month_debit}}],
             ['Bank Transfer', {{this_months_bank_transfers}}],
-            ['Post', {{this_months_transaction_by_post}}],
+            ['Post',{{this_months_transaction_by_post}}],
           ]);
 
           var options = {
             backgroundColor: 'black',
-            title: "Digital take up {{formated_month_and_year}}",
+            title: "Digital take up {{formated_current_month_and_year}}",
             titleTextStyle: {
               fontSize: 50,
               color: 'white',
@@ -240,8 +240,8 @@
 
       <div class="digital-transaction-individual-group-padding">
         <h2>This month:</h2>
-        <h3>{{total_digital_amount_recent_month|format_amount}}</h3>
-        <h4>{{total_digital_transactions_recent_month}} credit recieved</h4>
+        <h3>{{total_amount_of_digital_transactions_this_month|format_amount}}</h3>
+        <h4>{{total_number_of_digital_transactions_this_month}} credit recieved</h4>
       </div>
 
       <div class="digital-transaction-align">
@@ -281,8 +281,8 @@
 
       <div class="digital-transaction-individual-group-padding">
         <h2>This month:</h2>
-        <h3>{{disbursement_amount_previous_month|format_amount }}</h3>
-        <h4>{{this_months_disbursement_in_months_count}} disbursement sent</h4>
+        <h3>{{disbursement_amount_current_month|format_amount }}</h3>
+        <h4>{{disbursement_count_current_month}} disbursement sent</h4>
       </div>
 
       <div>
@@ -332,13 +332,13 @@
             {% endif %}
           </h3>
            <h4 class="space_between_bank-transfer-months">
-            {{formated_month_and_year}}
+            {{formated_current_month_and_year}}
            </h4>
           <h3>
             {{percent_of_errors_last_month_last_year}}%
           </h3>
           <h4>
-            {{formated_months_last_year}}
+            {{formated_current_month_last_year}}
           </h4>
         </div>
       </td>
