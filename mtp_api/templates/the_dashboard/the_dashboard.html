@@ -147,14 +147,14 @@
         function drawDonut()  {
           var data = google.visualization.arrayToDataTable([
             ['Sent Money', 'Number'],
-            ['Debit', {{this_month_debit}}],
-            ['Bank Transfer', {{this_months_bank_transfers}}],
-            ['Post',{{this_months_transaction_by_post}}],
+            ['Debit', {{previous_month_debit_card_count}}],
+            ['Bank Transfer', {{previous_month_bank_transfer_count}}],
+            ['Post',{{previous_month_transaction_by_post}}],
           ]);
 
           var options = {
             backgroundColor: 'black',
-            title: "Digital take up {{formated_current_month_and_year}}",
+            title: "Digital take up {{formated_previous_month_and_current_year}}",
             titleTextStyle: {
               fontSize: 50,
               color: 'white',

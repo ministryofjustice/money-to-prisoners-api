@@ -92,10 +92,13 @@ class DashboardView(TemplateView):
         else:
             month += 1
 
-        next_month = month + 1
+        last_month = month - 2
         this_month = month - 1
+        next_month = month + 1
+
 
         current_month = today.replace(month=this_month, day=1)
+        previous_month = today.replace(month=last_month, day=1)
 
         start_of_current_month = today.replace(month=this_month, day=1)
         start_of_next_month = today.replace(month=next_month, day=1)
@@ -108,6 +111,8 @@ class DashboardView(TemplateView):
         queryset_digital_transactions_this_month = Credit.objects.filter(received_at__range=(start_of_current_month, start_of_next_month))
         queryset_digital_transactions_this_year = Credit.objects.filter(received_at__range=(starting_day_of_current_year, today))
         queryset_digital_transactions_previous_week = Credit.objects.filter(received_at__range=(start_of_week, end_of_week))
+
+
         queryset_disbursements_this_year = Disbursement.objects.filter(created__range=(starting_day_of_current_year, today))
         queryset_disbursement_previous_week = Disbursement.objects.filter(created__range=(start_of_week, end_of_week))
 
@@ -161,12 +166,13 @@ class DashboardView(TemplateView):
         percent_of_errors_this_month = error_percentage(error_credit_this_month.count(), total_credit_this_month.count())
         percent_of_errors_this_month_last_year = error_percentage(error_credit_last_year.count(), total_credit_this_month_last_year.count())
 
+        formated_previous_month_and_current_year = '{:%B %Y}'.format(previous_month)
         formated_current_month_and_year = '{:%B %Y}'.format(current_month)
         formated_current_month_last_year = '{:%B %Y}'.format(start_of_current_month_last_year)
 
-
         context['total_number_of_digital_transactions_this_month'] = digital_transactions_count_this_month
         context['total_amount_of_digital_transactions_this_month'] = digital_transactions_amount_this_month
+        context['formated_previous_month_and_current_year'] = formated_previous_month_and_current_year
         context['formated_current_month_and_year'] = formated_current_month_and_year
         context['formated_current_month_last_year'] = formated_current_month_last_year
         context['percent_of_errors_last_month'] = percent_of_errors_this_month
@@ -190,8 +196,10 @@ class DashboardView(TemplateView):
         digital_transactions_count_current_month = None
         digital_transactions_amount_current_month = None
 
-
+        count = 0
         for _ in range(5):
+
+            count += 1
             end_of_month = datetime.datetime(year=year, month=month, day=1)
 
             month -= 1
@@ -220,7 +228,6 @@ class DashboardView(TemplateView):
             queryset_disbursement_bank_transfer = Disbursement.objects.filter(method=DISBURSEMENT_METHOD.BANK_TRANSFER).filter(created__range=(start_of_month, end_of_month))
             queryset_disbursement_cheque = Disbursement.objects.filter(method=DISBURSEMENT_METHOD.CHEQUE).filter(created__range=(start_of_month, end_of_month))
             queryset_disbursement_all = Disbursement.objects.filter(created__range=(start_of_month, end_of_month))
-            created__range =(start_of_month, end_of_month)
 
 
             debit_card_amount = queryset_debit_card.aggregate(Sum('amount'))['amount__sum'] or 0
@@ -238,11 +245,20 @@ class DashboardView(TemplateView):
             if transaction_by_post_current_month is None:
                 transaction_by_post_current_month = transaction_by_post
 
+            if count == 2:
+                transaction_by_post_previous_month = transaction_by_post
+
             if bank_transfer_count_current_month is None:
                 bank_transfer_count_current_month = bank_transfer_count
 
+            if count == 2:
+                bank_transfer_count_previous_month = bank_transfer_count
+
             if debit_card_count_current_month is None:
                 debit_card_count_current_month = debit_card_count
+
+            if count == 2:
+                debit_card_count_previous_month = debit_card_count
 
             if disbursement_amount_current_month is None:
                 disbursement_amount_current_month = disbursement_amount_all_methods
@@ -250,6 +266,8 @@ class DashboardView(TemplateView):
             if disbursement_count_current_month is None:
                 disbursement_count_current_month = disbursement_count_all_methods
 
+            print("START OF MONTH", start_of_month)
+            print("END OF MONTH", end_of_month)
 
             data.append({
             'disbursement_bank_transfer_count': disbursement_bank_transfer_count,
@@ -265,6 +283,9 @@ class DashboardView(TemplateView):
             'end_of_month': end_of_month,
             })
 
+        context['previous_month_debit_card_count'] = debit_card_count_previous_month
+        context['previous_month_bank_transfer_count'] = bank_transfer_count_previous_month
+        context['previous_month_transaction_by_post'] = transaction_by_post_previous_month
         context['disbursement_count_current_month'] = disbursement_count_current_month
         context['disbursement_amount_current_month'] = disbursement_amount_current_month
         context['this_months_transaction_by_post'] = transaction_by_post_current_month
