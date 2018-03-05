@@ -60,56 +60,111 @@ def get_user_satisfaction():
 
     return yearly_satisfaction_percentage
 
-def adjust_month_if_12(month):
-    if month == 12:
+
+
+
+
+
+# def calculate_periods_of_time():
+#     tz = timezone.get_current_timezone()
+#     today = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+#     weekday = today.weekday()
+
+#     start_delta = datetime.timedelta(days=weekday, weeks=1)
+#     start_of_week = today - start_delta
+#     end_delta = datetime.timedelta(days=weekday)
+#     end_of_week = today - end_delta
+#     year = today.year
+#     last_year = today.year -1
+#     month = today.month
+#     the_month = adjust_month_if_12(month)
+#     current_month = today.replace(month=the_month['this_month'], day=1)
+#     previous_month = today.replace(month=the_month['last_month'], day=1)
+#     start_of_current_month = today.replace(month=the_month['this_month'], day=1)
+#     start_of_next_month = today.replace(month=the_month['next_month'], day=1)
+#     start_of_current_month_last_year = today.replace(year=last_year, month=the_month['this_month'], day=1)
+#     start_of_next_month_last_year = today.replace(year=last_year, month=the_month['next_month'], day=1)
+#     start_of_current_year = today.replace(month=1, day=1)
+
+#     return {
+#         'tz': tz,
+#         'today': today,
+#         'weekday': weekday,
+#         'end_of_week': end_of_week,
+#         'start_of_week': start_of_week,
+#         'year_now': year,
+#         'last_year': last_year,
+#         'month': month,
+#         'current_month': current_month,
+#         'previous_month': previous_month,
+#         'start_of_current_month': start_of_current_month,
+#         'start_of_next_month': start_of_next_month,
+#         'start_of_current_month_last_year': start_of_current_month_last_year,
+#         'start_of_next_month_last_year':start_of_next_month_last_year,
+#         'start_of_current_year': start_of_current_year,
+#     }
+
+def month_cant_be_zero(month, year):
+    if month == 0:
+        month = 12
+        year -= 1
+    return (month, year)
+
+
+def month_cant_be_thirteen(month, year):
+    if month == 13:
         month = 1
         year += 1
     else:
-        month += 1
-    return {
-        'last_month': month -2,
-        'this_month': month -1,
-        'next_month': month +1
-        }
+        month
+    return (month, year)
 
-def calculate_periods_of_time():
-    tz = timezone.get_current_timezone()
-    today = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    weekday = today.weekday()
+def get_this_year_this_month(month, year):
+    month, year = month_cant_be_thirteen(month, year)
+    return {'the_year':year, 'the_month': month}
 
-    start_delta = datetime.timedelta(days=weekday, weeks=1)
-    start_of_week = today - start_delta
-    end_delta = datetime.timedelta(days=weekday)
-    end_of_week = today - end_delta
-    year = today.year
-    last_year = today.year -1
-    month = today.month
-    the_month = adjust_month_if_12(month)
-    current_month = today.replace(month=the_month['this_month'], day=1)
-    previous_month = today.replace(month=the_month['last_month'], day=1)
-    start_of_current_month = today.replace(month=the_month['this_month'], day=1)
-    start_of_next_month = today.replace(month=the_month['next_month'], day=1)
-    start_of_current_month_last_year = today.replace(year=last_year, month=the_month['this_month'], day=1)
-    start_of_next_month_last_year = today.replace(year=last_year, month=the_month['next_month'], day=1)
-    start_of_current_year = today.replace(month=1, day=1)
 
-    return {
-        'tz': tz,
-        'today': today,
-        'weekday': weekday,
-        'end_of_week': end_of_week,
-        'start_of_week': start_of_week,
-        'year_now': year,
-        'last_year': last_year,
-        'month': month,
-        'current_month': current_month,
-        'previous_month': previous_month,
-        'start_of_current_month': start_of_current_month,
-        'start_of_next_month': start_of_next_month,
-        'start_of_current_month_last_year': start_of_current_month_last_year,
-        'start_of_next_month_last_year':start_of_next_month_last_year,
-        'start_of_current_year': start_of_current_year,
-    }
+def get_this_year_last_month(month, year):
+    month -= 1
+    month, year = month_cant_be_zero(month, year)
+    return {'the_year':year, 'the_month': month}
+
+def get_this_year_this_month_in_for_loop(month, year):
+    return (month, year)
+
+def get_this_year_next_month(month, year):
+    month += 1
+    month, year = month_cant_be_thirteen(month, year)
+    return {'the_year':year, 'the_month': month}
+
+
+def get_last_year_this_month(month, year):
+    year -= 1
+    month, year = month_cant_be_thirteen(month, year)
+    return {'the_year':year, 'the_month': month}
+
+def get_last_year_next_month(month, year):
+    month += 1
+    year -= 1
+    month, year = month_cant_be_thirteen(month, year)
+    return {'the_year':year, 'the_month': month}
+
+
+def error_percentage(error, total ):
+    try:
+        return round((error/total) * 100, 2)
+    except:
+        return 0
+
+
+def transacton_by_post(queryset_for_digital_take_up, digital_transactions_count):
+    digital_take_up = queryset_for_digital_take_up.mean_digital_takeup()
+    if digital_take_up:
+        transaction_by_post = (1 - digital_take_up) * digital_transactions_count
+    else:
+        transaction_by_post = 0
+
+    return transaction_by_post
 
 
 class DashboardView(TemplateView):
@@ -123,23 +178,49 @@ class DashboardView(TemplateView):
         data = []
         context['data'] = data
 
+        tz = timezone.get_current_timezone()
+        today = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        weekday = today.weekday()
 
-        time_period = calculate_periods_of_time()
-        tz = time_period['tz']
-        today = time_period['today']
-        weekday = time_period['weekday']
-        end_of_week = time_period['end_of_week']
-        start_of_week = time_period['start_of_week']
-        year_now = time_period['year_now']
-        last_year = time_period['last_year']
-        month = time_period['month']
-        current_month = time_period['current_month']
-        previous_month = time_period['previous_month']
-        start_of_current_month = time_period['start_of_next_month']
-        start_of_next_month = time_period['start_of_next_month']
-        start_of_current_month_last_year = time_period['start_of_current_month_last_year']
-        start_of_next_month_last_year = time_period['start_of_next_month_last_year']
-        start_of_current_year = time_period['start_of_current_year']
+        start_delta = datetime.timedelta(days=weekday, weeks=1)
+        start_of_week = today - start_delta
+        end_delta = datetime.timedelta(days=weekday)
+        end_of_week = today - end_delta
+        year = today.year
+        month = today.month
+        for_month = month
+        for_month += 1
+
+        this_month_this_year = get_this_year_this_month(month, year)
+        last_month_this_year = get_this_year_last_month(month, year)
+        next_month_this_year = get_this_year_next_month(month, year)
+        this_month_last_year = get_last_year_this_month(month, year)
+        next_month_last_year = get_last_year_next_month(month, year)
+
+        start_of_current_month = today.replace(month= this_month_this_year['the_month'], year=this_month_this_year['the_year'], day=1)
+        start_of_previous_month = today.replace(month= last_month_this_year['the_month'], year=last_month_this_year['the_year'], day=1)
+        start_of_next_month = today.replace(month= next_month_this_year['the_month'], year=next_month_this_year['the_year'], day=1)
+        start_of_current_month_last_year = today.replace(year=this_month_last_year['the_year'], month=this_month_last_year['the_month'], day=1)
+        start_of_next_month_last_year = today.replace(year=next_month_last_year['the_year'], month=next_month_last_year['the_month'], day=1)
+        start_of_current_year = today.replace(month=1, day=1)
+
+
+        # time_period = calculate_periods_of_time()
+        # tz = time_period['tz']
+        # today = time_period['today']
+        # weekday = time_period['weekday']
+        # end_of_week = time_period['end_of_week']
+        # start_of_week = time_period['start_of_week']
+        # year_now = time_period['year_now']
+        # last_year = time_period['last_year']
+        # month = time_period['month']
+        # current_month = time_period['current_month']
+        # previous_month = time_period['previous_month']
+        # start_of_current_month = time_period['start_of_next_month']
+        # start_of_next_month = time_period['start_of_next_month']
+        # start_of_current_month_last_year = time_period['start_of_current_month_last_year']
+        # start_of_next_month_last_year = time_period['start_of_next_month_last_year']
+        # start_of_current_year = time_period['start_of_current_year']
 
 
         queryset_digital_transactions_this_month = Credit.objects.filter(received_at__range=(start_of_current_month, start_of_next_month))
@@ -171,13 +252,7 @@ class DashboardView(TemplateView):
         digital_transactions_count_this_year = queryset_digital_transactions_this_year.count()
         digital_transactions_amount_this_year = queryset_digital_transactions_this_year.aggregate(Sum('amount'))['amount__sum']
 
-
-        digital_take_up = queryset_digital_takeup.mean_digital_takeup()
-        if digital_take_up:
-            transaction_by_post = 1 - digital_take_up * digital_transactions_count_this_year
-        else:
-            transaction_by_post = 0
-
+        transaction_by_post = transacton_by_post(queryset_digital_takeup, digital_transactions_count_this_year)
 
         transaction_by_digital = queryset_digital_transactions_this_year.filter(resolution=CREDIT_RESOLUTION.CREDITED).count()
         COST_PER_TRANSACTION_BY_POST = 5.73
@@ -189,14 +264,6 @@ class DashboardView(TemplateView):
         actual_cost = total_cost_of_transaction_by_post + total_cost_of_transaction_by_digital
         savings_made = total_cost_if_it_was_only_by_post - actual_cost
 
-
-        def error_percentage(error, total ):
-            try:
-                return round((error/total) * 100, 2)
-            except:
-                return 0
-
-
         total_credit_this_month = queryset_debit_card_current_month.exclude(resolution=CREDIT_RESOLUTION.INITIAL)
         error_credit_this_month = total_credit_this_month.filter(transaction__isnull=False)
         total_credit_this_month_last_year = queryset_debit_card_current_month_last_year.exclude(resolution=CREDIT_RESOLUTION.INITIAL)
@@ -204,8 +271,8 @@ class DashboardView(TemplateView):
         percent_of_errors_this_month = error_percentage(error_credit_this_month.count(), total_credit_this_month.count())
         percent_of_errors_this_month_last_year = error_percentage(error_credit_last_year.count(), total_credit_this_month_last_year.count())
 
-        formated_previous_month_and_current_year = '{:%B %Y}'.format(previous_month)
-        formated_current_month_and_year = '{:%B %Y}'.format(current_month)
+        formated_previous_month_and_current_year = '{:%B %Y}'.format(start_of_previous_month)
+        formated_current_month_and_year = '{:%B %Y}'.format(start_of_current_month)
         formated_current_month_last_year = '{:%B %Y}'.format(start_of_current_month_last_year)
 
         context['total_number_of_digital_transactions_this_month'] = digital_transactions_count_this_month
@@ -236,19 +303,21 @@ class DashboardView(TemplateView):
 
         count = 0
         for _ in range(5):
-
+            print("MONTH", for_month)
             count += 1
-            end_of_month = datetime.datetime(year=year_now, month=month, day=1)
+            for_month -= 1
 
-            month -= 1
-            if month == 0:
-                month = 12
-                year_now -= 1
-                last_year -= 1
+            for_month, year = month_cant_be_zero(for_month, year)
+            for_month, year  = get_this_year_this_month_in_for_loop(for_month, year)
+            for_month, year = month_cant_be_thirteen(for_month, year)
+            next_month = for_month + 1
+            next_month, the_year = month_cant_be_thirteen(next_month, year)
 
-            start_of_month = datetime.datetime(year=year_now, month=month, day=1)
+            end_of_month = datetime.datetime(year=the_year, month=next_month, day=1)
+            start_of_month = datetime.datetime(year=year, month=for_month, day=1)
             start_of_month = tz.localize(start_of_month)
             end_of_month = tz.localize(end_of_month)
+
 
             takeup_queryset = DigitalTakeup.objects.filter(date__range=(start_of_month, end_of_month))
             queryset_total_number_of_digital_transactions_in_month = Credit.objects.filter(received_at__range=(start_of_month, end_of_month))
