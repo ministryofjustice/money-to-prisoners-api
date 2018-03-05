@@ -76,7 +76,7 @@ class CommentSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user = self.context['request'].user
         validated_data['user'] = user
-        super().create(validated_data)
+        return super().create(validated_data)
 
     def get_user_full_name(self, obj):
         return obj.user.get_full_name() if obj.user else None
