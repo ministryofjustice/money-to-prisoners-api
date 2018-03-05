@@ -157,14 +157,19 @@ def error_percentage(error, total ):
         return 0
 
 
-def transacton_by_post(queryset_for_digital_take_up, digital_transactions_count):
-    digital_take_up = queryset_for_digital_take_up.mean_digital_takeup()
-    if digital_take_up:
-        transaction_by_post = (1 - digital_take_up) * digital_transactions_count
+def transaction_by_post(the_digital_take_up, digital_transactions_count):
+    if the_digital_take_up is not None:
+        transaction_by_post = (1 - the_digital_take_up) * digital_transactions_count
     else:
         transaction_by_post = 0
 
     return transaction_by_post
+
+
+     # if digital_take_up:
+     #            transaction_by_post = (1 - digital_take_up) * total_number_of_digital_transactions_in_month
+     #        else:
+     #            transaction_by_post = 0
 
 
 class DashboardView(TemplateView):
@@ -204,25 +209,6 @@ class DashboardView(TemplateView):
         start_of_next_month_last_year = today.replace(year=next_month_last_year['the_year'], month=next_month_last_year['the_month'], day=1)
         start_of_current_year = today.replace(month=1, day=1)
 
-
-        # time_period = calculate_periods_of_time()
-        # tz = time_period['tz']
-        # today = time_period['today']
-        # weekday = time_period['weekday']
-        # end_of_week = time_period['end_of_week']
-        # start_of_week = time_period['start_of_week']
-        # year_now = time_period['year_now']
-        # last_year = time_period['last_year']
-        # month = time_period['month']
-        # current_month = time_period['current_month']
-        # previous_month = time_period['previous_month']
-        # start_of_current_month = time_period['start_of_next_month']
-        # start_of_next_month = time_period['start_of_next_month']
-        # start_of_current_month_last_year = time_period['start_of_current_month_last_year']
-        # start_of_next_month_last_year = time_period['start_of_next_month_last_year']
-        # start_of_current_year = time_period['start_of_current_year']
-
-
         queryset_digital_transactions_this_month = Credit.objects.filter(received_at__range=(start_of_current_month, start_of_next_month))
         queryset_digital_transactions_this_year = Credit.objects.filter(received_at__range=(start_of_current_year, today))
         queryset_digital_transactions_previous_week = Credit.objects.filter(received_at__range=(start_of_week, end_of_week))
@@ -252,15 +238,18 @@ class DashboardView(TemplateView):
         digital_transactions_count_this_year = queryset_digital_transactions_this_year.count()
         digital_transactions_amount_this_year = queryset_digital_transactions_this_year.aggregate(Sum('amount'))['amount__sum']
 
-        transaction_by_post = transacton_by_post(queryset_digital_takeup, digital_transactions_count_this_year)
+        digital_take_up_this_year = queryset_digital_takeup.mean_digital_takeup()
+        print("Digital take up",  digital_take_up_this_year)
+        transaction_by_post_this_year = transaction_by_post( digital_take_up_this_year, digital_transactions_count_this_year)
+        print("TRANSACTION BY POST", transaction_by_post_this_year)
 
         transaction_by_digital = queryset_digital_transactions_this_year.filter(resolution=CREDIT_RESOLUTION.CREDITED).count()
         COST_PER_TRANSACTION_BY_POST = 5.73
         COST_PER_TRANSACTION_BY_DIGITAL = 2.22
 
-        total_cost_of_transaction_by_post = transaction_by_post * COST_PER_TRANSACTION_BY_POST
+        total_cost_of_transaction_by_post = transaction_by_post_this_year * COST_PER_TRANSACTION_BY_POST
         total_cost_of_transaction_by_digital = transaction_by_digital * COST_PER_TRANSACTION_BY_DIGITAL
-        total_cost_if_it_was_only_by_post = (transaction_by_post + transaction_by_digital) * COST_PER_TRANSACTION_BY_POST
+        total_cost_if_it_was_only_by_post = (transaction_by_post_this_year + transaction_by_digital) * COST_PER_TRANSACTION_BY_POST
         actual_cost = total_cost_of_transaction_by_post + total_cost_of_transaction_by_digital
         savings_made = total_cost_if_it_was_only_by_post - actual_cost
 
@@ -324,11 +313,13 @@ class DashboardView(TemplateView):
             total_number_of_digital_transactions_in_month = queryset_total_number_of_digital_transactions_in_month.count()
 
             digital_take_up = takeup_queryset.mean_digital_takeup()
-            if digital_take_up:
-                transaction_by_post = (1 - digital_take_up) * total_number_of_digital_transactions_in_month
-            else:
-                transaction_by_post = 0
-
+            # print(total_number_of_digital_transactions_in_month)
+            print("REAL DIGITAL TAKE UP", digital_take_up)
+            # digital_take_up = 0.9259259259259259
+            # print("FAKE DigitalTakeup", digital_take_up)
+            transaction_by_post_by_month = transaction_by_post(digital_take_up, total_number_of_digital_transactions_in_month)
+            print("TRANSACTION BY POST BY MONTG", transaction_by_post_by_month)
+            # print("NUMBER OF DIGITAL TRANSACTION THIS MONTH", total_number_of_digital_transactions_in_month)
 
             bank_transfers = queryset_bank_transfer.filter(received_at__range=(start_of_month, end_of_month))
             debit_cards = queryset_debit_card.filter(received_at__range=(start_of_month, end_of_month))
@@ -350,10 +341,10 @@ class DashboardView(TemplateView):
 
 
             if transaction_by_post_current_month is None:
-                transaction_by_post_current_month = transaction_by_post
+                transaction_by_post_current_month = transaction_by_post_by_month
 
             if count == 2:
-                transaction_by_post_previous_month = transaction_by_post
+                transaction_by_post_previous_month = transaction_by_post_by_month
 
             if bank_transfer_count_current_month is None:
                 bank_transfer_count_current_month = bank_transfer_count
@@ -379,7 +370,7 @@ class DashboardView(TemplateView):
             'disbursement_bank_transfer_amount': disbursement_bank_transfer_amount,
             'disbursement_cheque_count': disbursement_cheque_count,
             'disbursement_cheque_amount':disbursement_cheque_amount,
-            'transaction_by_post':transaction_by_post,
+            'transaction_by_post':transaction_by_post_by_month,
             'transaction_count': bank_transfer_count,
             'credit_count': debit_card_count,
             'queryset_credit_amount': debit_card_amount,
