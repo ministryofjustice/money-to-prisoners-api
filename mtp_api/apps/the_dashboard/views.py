@@ -206,16 +206,14 @@ class DashboardView(TemplateView):
         digital_transactions_count_current_month = None
         digital_transactions_amount_current_month = None
 
-        count = 0
-        start_month, year = get_next_month(month, year)
-        for _ in range(5):
-            count += 1
-            start_month, the_year = start_month, year
-            start_month, year = get_previous_month(start_month, year)
-            next_month, the_year = get_next_month(start_month, year)
 
-            end_of_month = datetime.datetime(year=the_year, month=next_month, day=1)
-            start_of_month = datetime.datetime(year=year, month=start_month, day=1)
+        start_month, start_month_year = get_next_month(month, year)
+        for _ in range(5):
+            next_month, next_month_year = start_month, start_month_year
+            start_month, start_month_year = get_previous_month(start_month, start_month_year)
+
+            end_of_month = datetime.datetime(year=next_month_year, month=next_month, day=1)
+            start_of_month = datetime.datetime(year=start_month_year, month=start_month, day=1)
             start_of_month = tz.localize(start_of_month)
             end_of_month = tz.localize(end_of_month)
 
