@@ -124,7 +124,6 @@ class DashboardView(TemplateView):
         queryset_digital_transactions_this_month = Credit.objects.filter(received_at__range=(start_of_current_month, start_of_next_month))
         queryset_digital_transactions_this_year = Credit.objects.filter(received_at__range=(start_of_current_year, today))
         queryset_digital_transactions_previous_week = Credit.objects.filter(received_at__range=(start_of_week, end_of_week))
-        queryset_digital_takeup = DigitalTakeup.objects.filter(date__range=(start_of_current_year, today))
 
         queryset_disbursements_this_year = Disbursement.objects.filter(created__range=(start_of_current_year, today))
         queryset_disbursement_previous_week = Disbursement.objects.filter(created__range=(start_of_week, end_of_week))
@@ -144,19 +143,6 @@ class DashboardView(TemplateView):
         digital_transactions_count_this_year = queryset_digital_transactions_this_year.count()
         digital_transactions_amount_this_year = queryset_digital_transactions_this_year.aggregate(Sum('amount'))['amount__sum']
 
-        digital_take_up_this_year = queryset_digital_takeup.mean_digital_takeup()
-        transaction_by_post_this_year = transaction_by_post( digital_take_up_this_year, digital_transactions_count_this_year)
-
-        transaction_by_digital = queryset_digital_transactions_this_year.filter(resolution=CREDIT_RESOLUTION.CREDITED).count()
-        COST_PER_TRANSACTION_BY_POST = 5.73
-        COST_PER_TRANSACTION_BY_DIGITAL = 2.22
-
-        total_cost_of_transaction_by_post = transaction_by_post_this_year * COST_PER_TRANSACTION_BY_POST
-        total_cost_of_transaction_by_digital = transaction_by_digital * COST_PER_TRANSACTION_BY_DIGITAL
-        total_cost_if_it_was_only_by_post = (transaction_by_post_this_year + transaction_by_digital) * COST_PER_TRANSACTION_BY_POST
-        actual_cost = total_cost_of_transaction_by_post + total_cost_of_transaction_by_digital
-        savings_made = total_cost_if_it_was_only_by_post - actual_cost
-
         total_credit_this_month = queryset_debit_card_current_month.exclude(resolution=CREDIT_RESOLUTION.INITIAL)
         error_credit_this_month = total_credit_this_month.filter(transaction__isnull=False)
         total_credit_this_month_last_year = queryset_debit_card_current_month_last_year.exclude(resolution=CREDIT_RESOLUTION.INITIAL)
@@ -175,7 +161,6 @@ class DashboardView(TemplateView):
         context['formated_current_month_last_year'] = formated_current_month_last_year
         context['percent_of_errors_last_month'] = percent_of_errors_this_month
         context['percent_of_errors_last_month_last_year'] = percent_of_errors_this_month_last_year
-        context['savings_made'] = round(savings_made)
         context['number_of_disbursement_the_previous_week']= disbursement_count_previous_week
         context['total_amount_of_disbursement_previous_week'] = disbursement_amount_previous_week
         context['total_number_of_disbursement_this_year']= disbursement_count_this_year
@@ -187,13 +172,33 @@ class DashboardView(TemplateView):
 
 
         context['all_data'] = self.get_monthly_data(month, year)['all_data']
-        context['selected_data'] = self.get_monthly_data(month, year)['selected_data'][0]
+        context['selected_data'] = self.get_monthly_data(month, year)['selected_data']
+        context['savings_made'] = self.get_savings(start_of_current_year, today, digital_transactions_count_this_year, queryset_digital_transactions_this_year)
         context['user_satisfaction'] = get_user_satisfaction()
         return context
 
+    def get_savings(self, start_of_current_year, today, digital_transactions_count_this_year, queryset_digital_transactions_this_year):
+        COST_PER_TRANSACTION_BY_POST = 5.73
+        COST_PER_TRANSACTION_BY_DIGITAL = 2.22
+
+        queryset_digital_takeup = DigitalTakeup.objects.filter(date__range=(start_of_current_year, today))
+        digital_take_up_this_year = queryset_digital_takeup.mean_digital_takeup()
+
+        transaction_by_post_this_year = transaction_by_post(digital_take_up_this_year, digital_transactions_count_this_year)
+        transaction_by_digital = queryset_digital_transactions_this_year.filter(resolution=CREDIT_RESOLUTION.CREDITED).count()
+
+        total_cost_of_transaction_by_post = transaction_by_post_this_year * COST_PER_TRANSACTION_BY_POST
+        total_cost_of_transaction_by_digital = transaction_by_digital * COST_PER_TRANSACTION_BY_DIGITAL
+        total_cost_if_it_was_only_by_post = (transaction_by_post_this_year + transaction_by_digital) * COST_PER_TRANSACTION_BY_POST
+        actual_cost = total_cost_of_transaction_by_post + total_cost_of_transaction_by_digital
+        savings_made = total_cost_if_it_was_only_by_post - actual_cost
+
+        return round(savings_made)
+
+
     def get_monthly_data(self, month, year):
         all_data = []
-        selected_data = []
+        selected_data = None
 
         tz = timezone.get_current_timezone()
         start_month, start_month_year = get_next_month(month, year)
@@ -287,7 +292,7 @@ class DashboardView(TemplateView):
                 'end_of_month': end_of_month,
             })
 
-        selected_data.append({
+        selected_data = {
             'previous_month_debit_card_count': debit_card_count_previous_month,
             'previous_month_bank_transfer_count': bank_transfer_count_previous_month,
             'previous_month_transaction_by_post': transaction_by_post_previous_month,
@@ -296,7 +301,7 @@ class DashboardView(TemplateView):
             'this_months_transaction_by_post': transaction_by_post_current_month,
             'this_months_bank_transfers': bank_transfer_count_current_month,
             'this_month_debit': debit_card_count_current_month,
-        })
+        }
 
 
         return {'selected_data': selected_data, 'all_data': all_data}
