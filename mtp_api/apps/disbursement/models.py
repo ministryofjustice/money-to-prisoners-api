@@ -25,6 +25,7 @@ class Disbursement(TimeStampedModel):
         db_index=True
     )
     method = models.CharField(max_length=50, choices=DISBURSEMENT_METHOD, db_index=True)
+    remittance_description = models.CharField(max_length=250, blank=True)
 
     # recipient details
     recipient_first_name = models.CharField(max_length=250)
