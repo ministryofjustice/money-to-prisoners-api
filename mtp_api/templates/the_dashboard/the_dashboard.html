@@ -85,7 +85,7 @@
       function drawChartTransaction() {
         var data = google.visualization.arrayToDataTable([
           ['Month', 'Debit', 'BankTransfer', 'Post'],
-          {% for d in data reversed %}
+          {% for d in all_data reversed %}
             ['{{d.start_of_month|date:"N Y"}}', {{d.credit_count}}, {{d.transaction_count}}, {{d.transaction_by_post}}],
           {% endfor %}
           ]);
@@ -100,7 +100,7 @@
       function drawChartAmount() {
         var data = google.visualization.arrayToDataTable([
           ['Month', 'Debit', 'BankTransfer'],
-          {% for d in data reversed %}
+          {% for d in all_data reversed %}
             ['{{d.start_of_month|date:"N Y"}}', {{d.queryset_credit_amount}}, {{d.queryset_transaction_amount}}],
           {% endfor %}
           ]);
@@ -116,7 +116,7 @@
       function drawChartDisbursmentCount() {
         var data = google.visualization.arrayToDataTable([
           ['Month', 'Cheque', 'BankTransfer'],
-          {% for d in data reversed %}
+          {% for d in all_data reversed %}
             ['{{d.start_of_month|date:"N Y"}}', {{d.disbursement_cheque_count}}, {{d.disbursement_bank_transfer_count}}],
           {% endfor %}
           ]);
@@ -131,7 +131,7 @@
         function drawChartDisbursmentAmount() {
           var data = google.visualization.arrayToDataTable([
             ['Month', 'Cheque', 'BankTransfer'],
-            {% for d in data reversed %}
+            {% for d in all_data reversed %}
               ['{{d.start_of_month|date:"N Y"}}', {{d.disbursement_cheque_amount}}, {{d.disbursement_bank_transfer_amount}}],
             {% endfor %}
             ]);
@@ -147,9 +147,9 @@
         function drawDonut()  {
           var data = google.visualization.arrayToDataTable([
             ['Sent Money', 'Number'],
-            ['Debit', {{previous_month_debit_card_count}}],
-            ['Bank Transfer', {{previous_month_bank_transfer_count}}],
-            ['Post',{{previous_month_transaction_by_post}}],
+            ['Debit', {{selected_data.previous_month_debit_card_count}}],
+            ['Bank Transfer', {{selected_data.previous_month_bank_transfer_count}}],
+            ['Post',{{selected_data.previous_month_transaction_by_post}}],
           ]);
 
           var options = {
@@ -281,8 +281,8 @@
 
       <div class="digital-transaction-individual-group-padding">
         <h2>This month:</h2>
-        <h3>{{disbursement_amount_current_month|format_amount }}</h3>
-        <h4>{{disbursement_count_current_month}} disbursement sent</h4>
+        <h3>{{selected_data.disbursement_amount_current_month|format_amount }}</h3>
+        <h4>{{selected_data.disbursement_count_current_month}} disbursement sent</h4>
       </div>
 
       <div>

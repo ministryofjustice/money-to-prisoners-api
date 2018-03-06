@@ -100,10 +100,6 @@ class DashboardView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        data = []
-        context['data'] = data
-
-        tz = timezone.get_current_timezone()
         today = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
         weekday = today.weekday()
 
@@ -133,13 +129,8 @@ class DashboardView(TemplateView):
         queryset_disbursements_this_year = Disbursement.objects.filter(created__range=(start_of_current_year, today))
         queryset_disbursement_previous_week = Disbursement.objects.filter(created__range=(start_of_week, end_of_week))
 
-        queryset_bank_transfer = Credit.objects.filter(transaction__isnull=False)
-        queryset_debit_card = Credit.objects.filter(payment__isnull=False)
         queryset_debit_card_current_month = Credit.objects.filter(payment__isnull=False).filter(received_at__range=(start_of_current_month, start_of_next_month))
         queryset_debit_card_current_month_last_year = Credit.objects.filter(payment__isnull=False).filter(received_at__range=(start_of_current_month_last_year, start_of_next_month_last_year))
-
-        queryset_disbursement_bank_transfer = Disbursement.objects.filter(method=DISBURSEMENT_METHOD.BANK_TRANSFER)
-        queryset_disbursement_cheque = Disbursement.objects.filter(method=DISBURSEMENT_METHOD.CHEQUE)
 
         disbursement_amount_previous_week = queryset_disbursement_previous_week.aggregate(Sum('amount'))['amount__sum']
         disbursement_count_previous_week = queryset_disbursement_previous_week.count()
@@ -195,6 +186,22 @@ class DashboardView(TemplateView):
         context['total_digital_amount_recent_week'] = digital_transactions_amount_previous_week
 
 
+        context['all_data'] = self.get_monthly_data(month, year)['all_data']
+        context['selected_data'] = self.get_monthly_data(month, year)['selected_data'][0]
+        context['user_satisfaction'] = get_user_satisfaction()
+        return context
+
+    def get_monthly_data(self, month, year):
+        all_data = []
+        selected_data = []
+
+        tz = timezone.get_current_timezone()
+        start_month, start_month_year = get_next_month(month, year)
+        queryset_bank_transfer = Credit.objects.filter(transaction__isnull=False)
+        queryset_debit_card = Credit.objects.filter(payment__isnull=False)
+        queryset_disbursement_bank_transfer = Disbursement.objects.filter(method=DISBURSEMENT_METHOD.BANK_TRANSFER)
+        queryset_disbursement_cheque = Disbursement.objects.filter(method=DISBURSEMENT_METHOD.CHEQUE)
+
         transaction_by_post_current_month = None
         transaction_by_post_previous_month = None
         bank_transfer_count_current_month = None
@@ -206,8 +213,6 @@ class DashboardView(TemplateView):
         digital_transactions_count_current_month = None
         digital_transactions_amount_current_month = None
 
-
-        start_month, start_month_year = get_next_month(month, year)
         for _ in range(5):
             next_month, next_month_year = start_month, start_month_year
             start_month, start_month_year = get_previous_month(start_month, start_month_year)
@@ -268,31 +273,33 @@ class DashboardView(TemplateView):
                 disbursement_count_current_month = disbursement_count_all_methods
 
 
-            data.append({
-            'disbursement_bank_transfer_count': disbursement_bank_transfer_count,
-            'disbursement_bank_transfer_amount': disbursement_bank_transfer_amount,
-            'disbursement_cheque_count': disbursement_cheque_count,
-            'disbursement_cheque_amount':disbursement_cheque_amount,
-            'transaction_by_post':transaction_by_post_by_month,
-            'transaction_count': bank_transfer_count,
-            'credit_count': debit_card_count,
-            'queryset_credit_amount': debit_card_amount,
-            'queryset_transaction_amount': bank_transfer_amount,
-            'start_of_month': start_of_month,
-            'end_of_month': end_of_month,
+            all_data.append({
+                'disbursement_bank_transfer_count': disbursement_bank_transfer_count,
+                'disbursement_bank_transfer_amount': disbursement_bank_transfer_amount,
+                'disbursement_cheque_count': disbursement_cheque_count,
+                'disbursement_cheque_amount':disbursement_cheque_amount,
+                'transaction_by_post':transaction_by_post_by_month,
+                'transaction_count': bank_transfer_count,
+                'credit_count': debit_card_count,
+                'queryset_credit_amount': debit_card_amount,
+                'queryset_transaction_amount': bank_transfer_amount,
+                'start_of_month': start_of_month,
+                'end_of_month': end_of_month,
             })
 
-        context['previous_month_debit_card_count'] = debit_card_count_previous_month
-        context['previous_month_bank_transfer_count'] = bank_transfer_count_previous_month
-        context['previous_month_transaction_by_post'] = transaction_by_post_previous_month
-        context['disbursement_count_current_month'] = disbursement_count_current_month
-        context['disbursement_amount_current_month'] = disbursement_amount_current_month
-        context['this_months_transaction_by_post'] = transaction_by_post_current_month
-        context['this_months_bank_transfers'] =  bank_transfer_count_current_month
-        context['this_month_debit'] = debit_card_count_current_month
-        context['user_satisfaction'] = get_user_satisfaction()
-        return context
+        selected_data.append({
+            'previous_month_debit_card_count': debit_card_count_previous_month,
+            'previous_month_bank_transfer_count': bank_transfer_count_previous_month,
+            'previous_month_transaction_by_post': transaction_by_post_previous_month,
+            'disbursement_count_current_month': disbursement_count_current_month,
+            'disbursement_amount_current_month': disbursement_amount_current_month,
+            'this_months_transaction_by_post': transaction_by_post_current_month,
+            'this_months_bank_transfers': bank_transfer_count_current_month,
+            'this_month_debit': debit_card_count_current_month,
+        })
 
+
+        return {'selected_data': selected_data, 'all_data': all_data}
 
 
 
