@@ -9,7 +9,10 @@ from rest_framework import mixins, viewsets, status, generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from core.filters import StatusChoiceFilter, IsoDateTimeFilter, SafeOrderingFilter
+from core.filters import (
+    StatusChoiceFilter, IsoDateTimeFilter, SafeOrderingFilter,
+    MultipleValueFilter
+)
 from credit import InvalidCreditStateException
 from mtp_auth.permissions import BankAdminClientIDPermissions
 from payment.models import Payment
@@ -32,6 +35,7 @@ class TransactionListFilter(django_filters.FilterSet):
     received_at__gte = IsoDateTimeFilter(
         name='received_at', lookup_expr='gte'
     )
+    pk = MultipleValueFilter(name='pk')
 
     class Meta:
         model = Transaction
