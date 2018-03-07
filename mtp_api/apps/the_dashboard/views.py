@@ -134,6 +134,15 @@ def get_debit_cards(start_of_month, end_of_month):
     return (debit_card_amount, debit_card_count)
 
 
+def get_start_of_month_and_end_of_month(next_month_year, next_month, start_month_year, start_month, tz):
+    end_of_month = datetime.datetime(year=next_month_year, month=next_month, day=1)
+    start_of_month = datetime.datetime(year=start_month_year, month=start_month, day=1)
+    start_of_month = tz.localize(start_of_month)
+    end_of_month = tz.localize(end_of_month)
+
+    return (start_of_month, end_of_month)
+
+
 class DashboardView(TemplateView):
     """
     Django admin view which presents an overview report for MTP
@@ -250,18 +259,13 @@ class DashboardView(TemplateView):
 
     def get_monthly_data(self, month, year):
         data = []
-
         tz = timezone.get_current_timezone()
         start_month, start_month_year = get_next_month(month, year)
 
         for _ in range(5):
             next_month, next_month_year = start_month, start_month_year
             start_month, start_month_year = get_previous_month(start_month, start_month_year)
-
-            end_of_month = datetime.datetime(year=next_month_year, month=next_month, day=1)
-            start_of_month = datetime.datetime(year=start_month_year, month=start_month, day=1)
-            start_of_month = tz.localize(start_of_month)
-            end_of_month = tz.localize(end_of_month)
+            start_of_month, end_of_month = get_start_of_month_and_end_of_month(next_month_year, next_month, start_month_year, start_month, tz)
 
             transaction_by_post_by_month = get_transactions_by_post(start_of_month, end_of_month)
             debit_card_amount, debit_card_count = get_debit_cards(start_of_month, end_of_month)
