@@ -83,10 +83,10 @@
         };
 
       function drawChartTransaction() {
-        var data = google.visualization.arrayToDataTable([
+        var all_data = google.visualization.arrayToDataTable([
           ['Month', 'Debit', 'BankTransfer', 'Post'],
           {% for d in all_data reversed %}
-            ['{{d.start_of_month|date:"N Y"}}', {{d.credit_count}}, {{d.transaction_count}}, {{d.transaction_by_post}}],
+            ['{{d.start_of_month|date:"M Y"}}', {{d.credit_count}}, {{d.transaction_count}}, {{d.transaction_by_post}}],
           {% endfor %}
           ]);
 
@@ -94,14 +94,14 @@
           var options = Object.assign({title: 'Number of monthly credits'}, sharedOptions);
           options.colors = ['#a288f9', '#5DADE2', '#F7DC6F'];
           options.vAxis.title = 'Credits';
-          chart.draw(data, options);
+          chart.draw(all_data, options);
         }
 
       function drawChartAmount() {
-        var data = google.visualization.arrayToDataTable([
+        var all_data = google.visualization.arrayToDataTable([
           ['Month', 'Debit', 'BankTransfer'],
           {% for d in all_data reversed %}
-            ['{{d.start_of_month|date:"N Y"}}', {{d.queryset_credit_amount}}, {{d.queryset_transaction_amount}}],
+            ['{{d.start_of_month|date:"M Y"}}', {{d.debit_card_amount}}, {{d.bank_transfer_amount}}],
           {% endfor %}
           ]);
 
@@ -109,15 +109,15 @@
           var options = Object.assign({title: 'Amount of money credited'}, sharedOptions);
           options.colors = ['#a288f9', '#5DADE2'];
           options.vAxis.title = 'Money (£)';
-          chart.draw(data, options);
+          chart.draw(all_data, options);
         }
 
 
       function drawChartDisbursmentCount() {
-        var data = google.visualization.arrayToDataTable([
+        var all_data = google.visualization.arrayToDataTable([
           ['Month', 'Cheque', 'BankTransfer'],
           {% for d in all_data reversed %}
-            ['{{d.start_of_month|date:"N Y"}}', {{d.disbursement_cheque_count}}, {{d.disbursement_bank_transfer_count}}],
+            ['{{d.start_of_month|date:"M Y"}}', {{d.disbursement_cheque_count}}, {{d.disbursement_bank_transfer_count}}],
           {% endfor %}
           ]);
 
@@ -125,14 +125,14 @@
           var options = Object.assign({title: 'Number of monthly disbursements'}, sharedOptions);
           options.vAxis.title = 'Disbursments';
           options.colors = ['#7DCEA0', '#5DADE2'];
-          chart.draw(data, options);
+          chart.draw(all_data, options);
         }
 
         function drawChartDisbursmentAmount() {
-          var data = google.visualization.arrayToDataTable([
+          var all_data = google.visualization.arrayToDataTable([
             ['Month', 'Cheque', 'BankTransfer'],
             {% for d in all_data reversed %}
-              ['{{d.start_of_month|date:"N Y"}}', {{d.disbursement_cheque_amount}}, {{d.disbursement_bank_transfer_amount}}],
+              ['{{d.start_of_month|date:"M Y"}}', {{d.disbursement_cheque_amount}}, {{d.disbursement_bank_transfer_amount}}],
             {% endfor %}
             ]);
 
@@ -140,7 +140,7 @@
           var options = Object.assign({title: 'Amount of money disbursed'}, sharedOptions);
           options.colors = ['#7DCEA0', '#5DADE2'];
           options.vAxis.title = 'Money (£)';
-          chart.draw(data, options);
+          chart.draw(all_data, options);
         }
 
 
@@ -230,7 +230,6 @@
         <h1 class="digital-transaction-heading">
           Digital credits:
         </h1>
-      </div>
 
       <div class="digital-transaction-individual-group-padding">
         <h2>This week:</h2>

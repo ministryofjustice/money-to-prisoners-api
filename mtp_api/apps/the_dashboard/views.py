@@ -170,7 +170,6 @@ class DashboardView(TemplateView):
         context['total_number_of_digital_transactions_recent_week']= digital_transactions_count_previous_week
         context['total_digital_amount_recent_week'] = digital_transactions_amount_previous_week
 
-
         context['all_data'] = self.get_monthly_data(month, year)['all_data']
         context['selected_data'] = self.get_monthly_data(month, year)['selected_data']
         context['savings_made'] = self.get_savings(start_of_current_year, today, digital_transactions_count_this_year, queryset_digital_transactions_this_year)
@@ -240,7 +239,6 @@ class DashboardView(TemplateView):
             disbursement_cheque = queryset_disbursement_cheque.filter(created__range=(start_of_month, end_of_month))
             queryset_disbursement_all = Disbursement.objects.filter(created__range=(start_of_month, end_of_month))
 
-
             debit_card_amount = debit_cards.aggregate(Sum('amount'))['amount__sum'] or 0
             debit_card_count = debit_cards.count()
             bank_transfer_count = bank_transfers.count()
@@ -286,8 +284,8 @@ class DashboardView(TemplateView):
                 'transaction_by_post':transaction_by_post_by_month,
                 'transaction_count': bank_transfer_count,
                 'credit_count': debit_card_count,
-                'queryset_credit_amount': debit_card_amount,
-                'queryset_transaction_amount': bank_transfer_amount,
+                'debit_card_amount': debit_card_amount,
+                'bank_transfer_amount': bank_transfer_amount,
                 'start_of_month': start_of_month,
                 'end_of_month': end_of_month,
             })
