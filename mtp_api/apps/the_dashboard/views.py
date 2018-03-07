@@ -142,6 +142,20 @@ def get_start_of_month_and_end_of_month(next_month_year, next_month, start_month
 
     return (start_of_month, end_of_month)
 
+def get_percentage_errors(start_of_current_month, start_of_next_month, start_of_current_month_last_year, start_of_next_month_last_year):
+    queryset_debit_card_current_month = Credit.objects.filter(payment__isnull=False).filter(received_at__range=(start_of_current_month, start_of_next_month))
+    queryset_debit_card_current_month_last_year = Credit.objects.filter(payment__isnull=False).filter(received_at__range=(start_of_current_month_last_year, start_of_next_month_last_year))
+    total_credit_this_month = queryset_debit_card_current_month.exclude(resolution=CREDIT_RESOLUTION.INITIAL)
+    error_credit_this_month = total_credit_this_month.filter(transaction__isnull=False)
+    total_credit_this_month_last_year = queryset_debit_card_current_month_last_year.exclude(resolution=CREDIT_RESOLUTION.INITIAL)
+    error_credit_last_year = total_credit_this_month_last_year.filter(transaction__isnull=False)
+
+    percent_of_errors_this_month = error_percentage(error_credit_this_month.count(), total_credit_this_month.count())
+    percent_of_errors_this_month_last_year = error_percentage(error_credit_last_year.count(), total_credit_this_month_last_year.count())
+
+    return (percent_of_errors_this_month, percent_of_errors_this_month_last_year)
+
+
 
 class DashboardView(TemplateView):
     """
@@ -181,9 +195,6 @@ class DashboardView(TemplateView):
         queryset_disbursement_this_month = Disbursement.objects.filter(created__range=(start_of_current_month, start_of_next_month))
         queryset_disbursement_last_month = Disbursement.objects.filter(created__range=(start_of_previous_month, start_of_current_month))
 
-        queryset_debit_card_current_month = Credit.objects.filter(payment__isnull=False).filter(received_at__range=(start_of_current_month, start_of_next_month))
-        queryset_debit_card_current_month_last_year = Credit.objects.filter(payment__isnull=False).filter(received_at__range=(start_of_current_month_last_year, start_of_next_month_last_year))
-
         disbursement_count_previous_week = queryset_disbursement_previous_week.count()
         disbursement_amount_previous_week = queryset_disbursement_previous_week.aggregate(Sum('amount'))['amount__sum']
         disbursement_count_this_month = queryset_disbursement_this_month.count()
@@ -204,14 +215,7 @@ class DashboardView(TemplateView):
         formated_current_month_and_year = '{:%B %Y}'.format(start_of_current_month)
         formated_current_month_last_year = '{:%B %Y}'.format(start_of_current_month_last_year)
 
-        total_credit_this_month = queryset_debit_card_current_month.exclude(resolution=CREDIT_RESOLUTION.INITIAL)
-        error_credit_this_month = total_credit_this_month.filter(transaction__isnull=False)
-        total_credit_this_month_last_year = queryset_debit_card_current_month_last_year.exclude(resolution=CREDIT_RESOLUTION.INITIAL)
-        error_credit_last_year = total_credit_this_month_last_year.filter(transaction__isnull=False)
-
-        percent_of_errors_this_month = error_percentage(error_credit_this_month.count(), total_credit_this_month.count())
-        percent_of_errors_this_month_last_year = error_percentage(error_credit_last_year.count(), total_credit_this_month_last_year.count())
-
+        percent_of_errors_this_month, percent_of_errors_this_month_last_year = get_percentage_errors(start_of_current_month, start_of_next_month, start_of_current_month_last_year, start_of_next_month_last_year)
 
         context['disbursement_count_previous_week']= disbursement_count_previous_week
         context['disbursement_amount_previous_week'] = disbursement_amount_previous_week
