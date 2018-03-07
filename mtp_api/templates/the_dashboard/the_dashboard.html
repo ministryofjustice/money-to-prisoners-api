@@ -83,10 +83,10 @@
         };
 
       function drawChartTransaction() {
-        var all_data = google.visualization.arrayToDataTable([
+        var data = google.visualization.arrayToDataTable([
           ['Month', 'Debit', 'BankTransfer', 'Post'],
-          {% for d in all_data reversed %}
-            ['{{d.start_of_month|date:"M Y"}}', {{d.credit_count}}, {{d.transaction_count}}, {{d.transaction_by_post}}],
+          {% for d in data reversed %}
+            ['{{d.start_of_month|date:"M Y"}}', {{d.debit_card_count}}, {{d.bank_transfer_count}}, {{d.transaction_by_post}}],
           {% endfor %}
           ]);
 
@@ -94,13 +94,13 @@
           var options = Object.assign({title: 'Number of monthly credits'}, sharedOptions);
           options.colors = ['#a288f9', '#5DADE2', '#F7DC6F'];
           options.vAxis.title = 'Credits';
-          chart.draw(all_data, options);
+          chart.draw(data, options);
         }
 
       function drawChartAmount() {
-        var all_data = google.visualization.arrayToDataTable([
+        var data = google.visualization.arrayToDataTable([
           ['Month', 'Debit', 'BankTransfer'],
-          {% for d in all_data reversed %}
+          {% for d in data reversed %}
             ['{{d.start_of_month|date:"M Y"}}', {{d.debit_card_amount}}, {{d.bank_transfer_amount}}],
           {% endfor %}
           ]);
@@ -109,14 +109,14 @@
           var options = Object.assign({title: 'Amount of money credited'}, sharedOptions);
           options.colors = ['#a288f9', '#5DADE2'];
           options.vAxis.title = 'Money (£)';
-          chart.draw(all_data, options);
+          chart.draw(data, options);
         }
 
 
       function drawChartDisbursmentCount() {
-        var all_data = google.visualization.arrayToDataTable([
+        var data = google.visualization.arrayToDataTable([
           ['Month', 'Cheque', 'BankTransfer'],
-          {% for d in all_data reversed %}
+          {% for d in data reversed %}
             ['{{d.start_of_month|date:"M Y"}}', {{d.disbursement_cheque_count}}, {{d.disbursement_bank_transfer_count}}],
           {% endfor %}
           ]);
@@ -125,13 +125,13 @@
           var options = Object.assign({title: 'Number of monthly disbursements'}, sharedOptions);
           options.vAxis.title = 'Disbursments';
           options.colors = ['#7DCEA0', '#5DADE2'];
-          chart.draw(all_data, options);
+          chart.draw(data, options);
         }
 
         function drawChartDisbursmentAmount() {
-          var all_data = google.visualization.arrayToDataTable([
+          var data = google.visualization.arrayToDataTable([
             ['Month', 'Cheque', 'BankTransfer'],
-            {% for d in all_data reversed %}
+            {% for d in data reversed %}
               ['{{d.start_of_month|date:"M Y"}}', {{d.disbursement_cheque_amount}}, {{d.disbursement_bank_transfer_amount}}],
             {% endfor %}
             ]);
@@ -140,16 +140,16 @@
           var options = Object.assign({title: 'Amount of money disbursed'}, sharedOptions);
           options.colors = ['#7DCEA0', '#5DADE2'];
           options.vAxis.title = 'Money (£)';
-          chart.draw(all_data, options);
+          chart.draw(data, options);
         }
 
 
         function drawDonut()  {
           var data = google.visualization.arrayToDataTable([
             ['Sent Money', 'Number'],
-            ['Debit', {{selected_data.previous_month_debit_card_count}}],
-            ['Bank Transfer', {{selected_data.previous_month_bank_transfer_count}}],
-            ['Post',{{selected_data.previous_month_transaction_by_post}}],
+            ['Debit', {{data.1.debit_card_count}}],
+            ['Bank Transfer', {{data.1.bank_transfer_count}}],
+            ['Post',{{data.1.transaction_by_post}}],
           ]);
 
           var options = {
@@ -233,20 +233,20 @@
 
       <div class="digital-transaction-individual-group-padding">
         <h2>This week:</h2>
-        <h3>{{total_digital_amount_recent_week|format_amount}}</h3>
-        <h4>{{total_number_of_digital_transactions_recent_week}} credit recieved</h4>
+        <h3>{{digital_transactions_amount_previous_week|format_amount}}</h3>
+        <h4>{{digital_transactions_count_previous_week}} credit recieved</h4>
       </div>
 
       <div class="digital-transaction-individual-group-padding">
         <h2>This month:</h2>
-        <h3>{{total_amount_of_digital_transactions_this_month|format_amount}}</h3>
-        <h4>{{total_number_of_digital_transactions_this_month}} credit recieved</h4>
+        <h3>{{digital_transactions_amount_this_month|format_amount}}</h3>
+        <h4>{{digital_transactions_count_this_month}} credit recieved</h4>
       </div>
 
       <div class="digital-transaction-align">
         <h2>This year:</h2>
-        <h3>{{total_amount_of_digital_transactions_this_year|format_amount}}</h3>
-        <h4>{{total_number_of_digital_transactions_this_year}} credit recieved</h4>
+        <h3>{{digital_transactions_amount_this_year|format_amount}}</h3>
+        <h4>{{digital_transactions_count_this_year}} credit recieved</h4>
       </div>
     </td>
 
@@ -274,20 +274,20 @@
 
       <div class="digital-transaction-individual-group-padding">
         <h2>This week:</h2>
-        <h3>{{total_amount_of_disbursement_previous_week|format_amount }}</h3>
-        <h4>{{number_of_disbursement_previous_week}} disbursement sent</h4>
+        <h3>{{disbursement_amount_previous_week|format_amount }}</h3>
+        <h4>{{disbursement_count_previous_week}} disbursement sent</h4>
       </div>
 
       <div class="digital-transaction-individual-group-padding">
         <h2>This month:</h2>
-        <h3>{{selected_data.disbursement_amount_current_month|format_amount }}</h3>
-        <h4>{{selected_data.disbursement_count_current_month}} disbursement sent</h4>
+        <h3>{{disbursement_amount_this_month|format_amount }}</h3>
+        <h4>{{disbursement_count_this_month}} disbursement sent</h4>
       </div>
 
       <div>
         <h2>This year:</h2>
-        <h3>{{total_amount_of_disbursement_this_year|format_amount}}</h3>
-        <h4>{{total_number_of_disbursement_this_year}} disbursement sent</h4>
+        <h3>{{disbursement_amount_this_year|format_amount}}</h3>
+        <h4>{{disbursement_count_this_year}} disbursement sent</h4>
       </div>
     </td>
   </tr>
