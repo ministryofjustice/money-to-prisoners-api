@@ -92,6 +92,48 @@ def transaction_by_post(the_digital_take_up, digital_transactions_count):
 
     return transaction_by_post
 
+
+def get_transactions_by_post(start_of_month, end_of_month ):
+    queryset_total_number_of_digital_transactions_in_month = Credit.objects.filter(received_at__range=(start_of_month, end_of_month))
+    total_number_of_digital_transactions_in_month = queryset_total_number_of_digital_transactions_in_month.count()
+    queryset_digital_take_up = DigitalTakeup.objects.filter(date__range=(start_of_month, end_of_month)).mean_digital_takeup()
+    transaction_by_post_by_month = transaction_by_post(queryset_digital_take_up, total_number_of_digital_transactions_in_month)
+
+    return transaction_by_post_by_month
+
+
+def get_disbursements(start_of_month, end_of_month):
+    queryset_disbursement_bank_transfer = Disbursement.objects.filter(method=DISBURSEMENT_METHOD.BANK_TRANSFER).filter(created__range=(start_of_month, end_of_month))
+    disbursement_bank_transfer_amount = queryset_disbursement_bank_transfer.aggregate(Sum('amount'))['amount__sum'] or 0
+    disbursement_bank_transfer_count = queryset_disbursement_bank_transfer.count()
+
+    return (disbursement_bank_transfer_amount, disbursement_bank_transfer_count)
+
+
+def get_disbursements_by_check(start_of_month, end_of_month):
+    queryset_disbursement_cheque = Disbursement.objects.filter(method=DISBURSEMENT_METHOD.CHEQUE).filter(created__range=(start_of_month, end_of_month))
+    disbursement_cheque_count = queryset_disbursement_cheque.count()
+    disbursement_cheque_amount = queryset_disbursement_cheque.aggregate(Sum('amount'))['amount__sum'] or 0
+
+    return (disbursement_cheque_count, disbursement_cheque_amount)
+
+
+def get_bank_transfers(start_of_month, end_of_month):
+    queryset_bank_transfer = Credit.objects.filter(transaction__isnull=False).filter(received_at__range=(start_of_month, end_of_month))
+    bank_transfer_count = queryset_bank_transfer.count()
+    bank_transfer_amount = queryset_bank_transfer.aggregate(Sum('amount'))['amount__sum'] or 0
+
+    return (bank_transfer_count, bank_transfer_amount)
+
+
+def get_debit_cards(start_of_month, end_of_month):
+    queryset_debit_card = Credit.objects.filter(payment__isnull=False).filter(received_at__range=(start_of_month, end_of_month))
+    debit_card_amount = queryset_debit_card.aggregate(Sum('amount'))['amount__sum'] or 0
+    debit_card_count = queryset_debit_card.count()
+
+    return (debit_card_amount, debit_card_count)
+
+
 class DashboardView(TemplateView):
     """
     Django admin view which presents an overview report for MTP
@@ -149,37 +191,38 @@ class DashboardView(TemplateView):
         digital_transactions_count_this_year = queryset_digital_transactions_this_year.count()
         digital_transactions_amount_this_year = queryset_digital_transactions_this_year.aggregate(Sum('amount'))['amount__sum']
 
-        total_credit_this_month = queryset_debit_card_current_month.exclude(resolution=CREDIT_RESOLUTION.INITIAL)
-        error_credit_this_month = total_credit_this_month.filter(transaction__isnull=False)
-        total_credit_this_month_last_year = queryset_debit_card_current_month_last_year.exclude(resolution=CREDIT_RESOLUTION.INITIAL)
-        error_credit_last_year = total_credit_this_month_last_year.filter(transaction__isnull=False)
-        percent_of_errors_this_month = error_percentage(error_credit_this_month.count(), total_credit_this_month.count())
-        percent_of_errors_this_month_last_year = error_percentage(error_credit_last_year.count(), total_credit_this_month_last_year.count())
-
         formated_previous_month_and_current_year = '{:%B %Y}'.format(start_of_previous_month)
         formated_current_month_and_year = '{:%B %Y}'.format(start_of_current_month)
         formated_current_month_last_year = '{:%B %Y}'.format(start_of_current_month_last_year)
 
+        total_credit_this_month = queryset_debit_card_current_month.exclude(resolution=CREDIT_RESOLUTION.INITIAL)
+        error_credit_this_month = total_credit_this_month.filter(transaction__isnull=False)
+        total_credit_this_month_last_year = queryset_debit_card_current_month_last_year.exclude(resolution=CREDIT_RESOLUTION.INITIAL)
+        error_credit_last_year = total_credit_this_month_last_year.filter(transaction__isnull=False)
 
+        percent_of_errors_this_month = error_percentage(error_credit_this_month.count(), total_credit_this_month.count())
+        percent_of_errors_this_month_last_year = error_percentage(error_credit_last_year.count(), total_credit_this_month_last_year.count())
+
+
+        context['disbursement_count_previous_week']= disbursement_count_previous_week
+        context['disbursement_amount_previous_week'] = disbursement_amount_previous_week
+        context['disbursement_count_this_month'] = disbursement_count_this_month
+        context['disbursement_amount_this_month'] = disbursement_amount_this_month
+        context['disbursement_count_last_month'] = disbursement_count_last_month
+        context['disbursement_amount_last_month'] = disbursement_amount_last_month
+        context['disbursement_count_this_year']= disbursement_count_this_year
+        context['disbursement_amount_this_year'] = disbursement_amount_this_year
+        context['digital_transactions_amount_previous_week'] = digital_transactions_amount_previous_week
+        context['digital_transactions_count_previous_week']= digital_transactions_count_previous_week
+        context['digital_transactions_count_this_month'] = digital_transactions_count_this_month
+        context['digital_transactions_amount_this_month'] = digital_transactions_amount_this_month
+        context['digital_transactions_count_this_year'] = digital_transactions_count_this_year
+        context['digital_transactions_amount_this_year'] =  digital_transactions_amount_this_year
         context['formated_previous_month_and_current_year'] = formated_previous_month_and_current_year
         context['formated_current_month_and_year'] = formated_current_month_and_year
         context['formated_current_month_last_year'] = formated_current_month_last_year
-        context['disbursement_amount_last_month'] = disbursement_amount_last_month
-        context['disbursement_count_last_month'] = disbursement_count_last_month
-        context['disbursement_amount_this_month'] = disbursement_amount_this_month
-        context['disbursement_count_this_month'] = disbursement_count_this_month
-        context['disbursement_amount_previous_week'] = disbursement_amount_previous_week
-        context['disbursement_count_previous_week']= disbursement_count_previous_week
-        context['disbursement_count_this_year']= disbursement_count_this_year
-        context['disbursement_amount_this_year'] = disbursement_amount_this_year
         context['percent_of_errors_last_month'] = percent_of_errors_this_month
         context['percent_of_errors_last_month_last_year'] = percent_of_errors_this_month_last_year
-        context['digital_transactions_count_this_year'] = digital_transactions_count_this_year
-        context['digital_transactions_amount_this_year'] =  digital_transactions_amount_this_year
-        context['digital_transactions_count_this_month'] = digital_transactions_count_this_month
-        context['digital_transactions_amount_this_month'] = digital_transactions_amount_this_month
-        context['digital_transactions_count_previous_week']= digital_transactions_count_previous_week
-        context['digital_transactions_amount_previous_week'] = digital_transactions_amount_previous_week
 
         context['data'] = self.get_monthly_data(month, year)
         context['savings_made'] = self.get_savings(start_of_current_year, today, digital_transactions_count_this_year, queryset_digital_transactions_this_year)
@@ -210,11 +253,6 @@ class DashboardView(TemplateView):
 
         tz = timezone.get_current_timezone()
         start_month, start_month_year = get_next_month(month, year)
-        queryset_bank_transfer = Credit.objects.filter(transaction__isnull=False)
-        queryset_debit_card = Credit.objects.filter(payment__isnull=False)
-        queryset_disbursement_bank_transfer = Disbursement.objects.filter(method=DISBURSEMENT_METHOD.BANK_TRANSFER)
-        queryset_disbursement_cheque = Disbursement.objects.filter(method=DISBURSEMENT_METHOD.CHEQUE)
-
 
         for _ in range(5):
             next_month, next_month_year = start_month, start_month_year
@@ -225,40 +263,25 @@ class DashboardView(TemplateView):
             start_of_month = tz.localize(start_of_month)
             end_of_month = tz.localize(end_of_month)
 
-            takeup_queryset = DigitalTakeup.objects.filter(date__range=(start_of_month, end_of_month))
-            queryset_total_number_of_digital_transactions_in_month = Credit.objects.filter(received_at__range=(start_of_month, end_of_month))
-            total_number_of_digital_transactions_in_month = queryset_total_number_of_digital_transactions_in_month.count()
-
-            digital_take_up = takeup_queryset.mean_digital_takeup()
-            transaction_by_post_by_month = transaction_by_post(digital_take_up, total_number_of_digital_transactions_in_month)
-
-            bank_transfers = queryset_bank_transfer.filter(received_at__range=(start_of_month, end_of_month))
-            debit_cards = queryset_debit_card.filter(received_at__range=(start_of_month, end_of_month))
-            disbursement_bank_transfer = queryset_disbursement_bank_transfer.filter(created__range=(start_of_month, end_of_month))
-            disbursement_cheque = queryset_disbursement_cheque.filter(created__range=(start_of_month, end_of_month))
-
-            debit_card_amount = debit_cards.aggregate(Sum('amount'))['amount__sum'] or 0
-            debit_card_count = debit_cards.count()
-            bank_transfer_count = bank_transfers.count()
-            bank_transfer_amount = bank_transfers.aggregate(Sum('amount'))['amount__sum'] or 0
-            disbursement_bank_transfer_amount = disbursement_bank_transfer.aggregate(Sum('amount'))['amount__sum'] or 0
-            disbursement_bank_transfer_count = disbursement_bank_transfer.count()
-            disbursement_cheque_count = disbursement_cheque.count()
-            disbursement_cheque_amount = disbursement_cheque.aggregate(Sum('amount'))['amount__sum'] or 0
+            transaction_by_post_by_month = get_transactions_by_post(start_of_month, end_of_month)
+            debit_card_amount, debit_card_count = get_debit_cards(start_of_month, end_of_month)
+            bank_transfer_count, bank_transfer_amount = get_bank_transfers(start_of_month, end_of_month)
+            disbursement_bank_transfer_amount, disbursement_bank_transfer_count = get_disbursements(start_of_month, end_of_month)
+            disbursement_cheque_count, disbursement_cheque_amount = get_disbursements_by_check(start_of_month, end_of_month)
 
 
             data.append({
-                'disbursement_bank_transfer_count': disbursement_bank_transfer_count,
-                'disbursement_bank_transfer_amount': disbursement_bank_transfer_amount,
-                'disbursement_cheque_count': disbursement_cheque_count,
-                'disbursement_cheque_amount':disbursement_cheque_amount,
-                'transaction_by_post':transaction_by_post_by_month,
-                'bank_transfer_count': bank_transfer_count,
-                'bank_transfer_amount': bank_transfer_amount,
-                'debit_card_count': debit_card_count,
-                'debit_card_amount': debit_card_amount,
                 'start_of_month': start_of_month,
                 'end_of_month': end_of_month,
+                'transaction_by_post':transaction_by_post_by_month,
+                'debit_card_amount': debit_card_amount,
+                'debit_card_count': debit_card_count,
+                'bank_transfer_count': bank_transfer_count,
+                'bank_transfer_amount': bank_transfer_amount,
+                'disbursement_bank_transfer_amount': disbursement_bank_transfer_amount,
+                'disbursement_bank_transfer_count': disbursement_bank_transfer_count,
+                'disbursement_cheque_count': disbursement_cheque_count,
+                'disbursement_cheque_amount':disbursement_cheque_amount,
             })
 
         return data
