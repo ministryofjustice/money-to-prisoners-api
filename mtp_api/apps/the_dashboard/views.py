@@ -134,13 +134,12 @@ def get_debit_cards(start_of_month, end_of_month):
     return (debit_card_amount, debit_card_count)
 
 
-def get_start_of_month_and_end_of_month(next_month_year, next_month, start_month_year, start_month, tz):
-    end_of_month = datetime.datetime(year=next_month_year, month=next_month, day=1)
-    start_of_month = datetime.datetime(year=start_month_year, month=start_month, day=1)
-    start_of_month = tz.localize(start_of_month)
-    end_of_month = tz.localize(end_of_month)
+def make_first_of_month(month, month_year, tz):
+    month_and_year = datetime.datetime(year=month_year, month=month, day=1)
+    month_and_year = tz.localize(month_and_year)
 
-    return (start_of_month, end_of_month)
+    return month_and_year
+
 
 def get_percentage_errors(start_of_current_month, start_of_next_month, start_of_current_month_last_year, start_of_next_month_last_year):
     queryset_debit_card_current_month = Credit.objects.filter(payment__isnull=False).filter(received_at__range=(start_of_current_month, start_of_next_month))
@@ -154,7 +153,6 @@ def get_percentage_errors(start_of_current_month, start_of_next_month, start_of_
     percent_of_errors_this_month_last_year = error_percentage(error_credit_last_year.count(), total_credit_this_month_last_year.count())
 
     return (percent_of_errors_this_month, percent_of_errors_this_month_last_year)
-
 
 
 class DashboardView(TemplateView):
@@ -211,10 +209,9 @@ class DashboardView(TemplateView):
         digital_transactions_count_this_year = queryset_digital_transactions_this_year.count()
         digital_transactions_amount_this_year = queryset_digital_transactions_this_year.aggregate(Sum('amount'))['amount__sum']
 
-        formated_previous_month_and_current_year = '{:%B %Y}'.format(start_of_previous_month)
-        formated_current_month_and_year = '{:%B %Y}'.format(start_of_current_month)
-        formated_current_month_last_year = '{:%B %Y}'.format(start_of_current_month_last_year)
-
+        formated_date_previous_month_and_current_year = '{:%B %Y}'.format(start_of_previous_month)
+        formated_date_current_month_and_year = '{:%B %Y}'.format(start_of_current_month)
+        formated_date_current_month_last_year = '{:%B %Y}'.format(start_of_current_month_last_year)
         percent_of_errors_this_month, percent_of_errors_this_month_last_year = get_percentage_errors(start_of_current_month, start_of_next_month, start_of_current_month_last_year, start_of_next_month_last_year)
 
         context['disbursement_count_previous_week']= disbursement_count_previous_week
@@ -231,9 +228,9 @@ class DashboardView(TemplateView):
         context['digital_transactions_amount_this_month'] = digital_transactions_amount_this_month
         context['digital_transactions_count_this_year'] = digital_transactions_count_this_year
         context['digital_transactions_amount_this_year'] =  digital_transactions_amount_this_year
-        context['formated_previous_month_and_current_year'] = formated_previous_month_and_current_year
-        context['formated_current_month_and_year'] = formated_current_month_and_year
-        context['formated_current_month_last_year'] = formated_current_month_last_year
+        context['formated_previous_month_and_current_year'] = formated_date_previous_month_and_current_year
+        context['formated_current_month_and_year'] = formated_date_current_month_and_year
+        context['formated_current_month_last_year'] = formated_date_current_month_last_year
         context['percent_of_errors_last_month'] = percent_of_errors_this_month
         context['percent_of_errors_last_month_last_year'] = percent_of_errors_this_month_last_year
 
@@ -269,14 +266,14 @@ class DashboardView(TemplateView):
         for _ in range(5):
             next_month, next_month_year = start_month, start_month_year
             start_month, start_month_year = get_previous_month(start_month, start_month_year)
-            start_of_month, end_of_month = get_start_of_month_and_end_of_month(next_month_year, next_month, start_month_year, start_month, tz)
+            start_of_month = make_first_of_month(start_month, start_month_year, tz)
+            end_of_month = make_first_of_month(next_month, next_month_year, tz)
 
             transaction_by_post_by_month = get_transactions_by_post(start_of_month, end_of_month)
             debit_card_amount, debit_card_count = get_debit_cards(start_of_month, end_of_month)
             bank_transfer_count, bank_transfer_amount = get_bank_transfers(start_of_month, end_of_month)
             disbursement_bank_transfer_amount, disbursement_bank_transfer_count = get_disbursements(start_of_month, end_of_month)
             disbursement_cheque_count, disbursement_cheque_amount = get_disbursements_by_check(start_of_month, end_of_month)
-
 
             data.append({
                 'start_of_month': start_of_month,
