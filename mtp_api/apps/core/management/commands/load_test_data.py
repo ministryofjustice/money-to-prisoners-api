@@ -47,11 +47,11 @@ class Command(BaseCommand):
         parser.add_argument('--credits', default='random',
                             choices=['none', 'random', 'nomis'],
                             help='Create new credits using this method')
-        parser.add_argument('--number-of-transactions', default=100, type=int,
+        parser.add_argument('--number-of-transactions', default=20, type=int,
                             help='Number of new transactions to create')
-        parser.add_argument('--number-of-payments', default=100, type=int,
+        parser.add_argument('--number-of-payments', default=200, type=int,
                             help='Number of new payments to create')
-        parser.add_argument('--number-of-disbursements', default=100, type=int,
+        parser.add_argument('--number-of-disbursements', default=50, type=int,
                             help='Number of new disbursements to create')
         parser.add_argument('--days-of-history', default=7, type=int,
                             help='Number of days of historical credits')
