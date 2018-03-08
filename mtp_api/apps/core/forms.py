@@ -12,8 +12,8 @@ class RecreateTestDataForm(forms.Form):
             ('delete-locations-credits', _('Delete prisoner location and credit data')),
         ),
     )
-    number_of_transactions = forms.IntegerField(initial=50)
-    number_of_payments = forms.IntegerField(initial=50)
+    number_of_transactions = forms.IntegerField(initial=20)
+    number_of_payments = forms.IntegerField(initial=200)
     number_of_disbursements = forms.IntegerField(initial=50)
     number_of_prisoners = forms.IntegerField(initial=50)
     days_of_history = forms.IntegerField(initial=7)
