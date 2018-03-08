@@ -18,6 +18,7 @@ import json
 import requests
 from django.db import models
 from credit.models import Credit, CREDIT_RESOLUTION, CREDIT_STATUS
+from core.views import AdminViewMixin
 
 
 TRANSACTION_ERROR_FILTERS = (
@@ -107,7 +108,7 @@ def get_disbursements(start_of_month, end_of_month):
     disbursement_bank_transfer_amount = queryset_disbursement_bank_transfer.aggregate(Sum('amount'))['amount__sum'] or 0
     disbursement_bank_transfer_count = queryset_disbursement_bank_transfer.count()
 
-    return (disbursement_bank_transfer_amount, disbursement_bank_transfer_count)
+    return disbursement_bank_transfer_amount, disbursement_bank_transfer_count
 
 
 def get_disbursements_by_check(start_of_month, end_of_month):
@@ -115,7 +116,7 @@ def get_disbursements_by_check(start_of_month, end_of_month):
     disbursement_cheque_count = queryset_disbursement_cheque.count()
     disbursement_cheque_amount = queryset_disbursement_cheque.aggregate(Sum('amount'))['amount__sum'] or 0
 
-    return (disbursement_cheque_count, disbursement_cheque_amount)
+    return disbursement_cheque_count, disbursement_cheque_amount
 
 
 def get_bank_transfers(start_of_month, end_of_month):
@@ -123,7 +124,7 @@ def get_bank_transfers(start_of_month, end_of_month):
     bank_transfer_count = queryset_bank_transfer.count()
     bank_transfer_amount = queryset_bank_transfer.aggregate(Sum('amount'))['amount__sum'] or 0
 
-    return (bank_transfer_count, bank_transfer_amount)
+    return bank_transfer_count, bank_transfer_amount
 
 
 def get_debit_cards(start_of_month, end_of_month):
@@ -131,7 +132,7 @@ def get_debit_cards(start_of_month, end_of_month):
     debit_card_amount = queryset_debit_card.aggregate(Sum('amount'))['amount__sum'] or 0
     debit_card_count = queryset_debit_card.count()
 
-    return (debit_card_amount, debit_card_count)
+    return debit_card_amount, debit_card_count
 
 
 def make_first_of_month(month, month_year, tz):
@@ -152,14 +153,15 @@ def get_percentage_errors(start_of_current_month, start_of_next_month, start_of_
     percent_of_errors_this_month = error_percentage(error_credit_this_month.count(), total_credit_this_month.count())
     percent_of_errors_this_month_last_year = error_percentage(error_credit_last_year.count(), total_credit_this_month_last_year.count())
 
-    return (percent_of_errors_this_month, percent_of_errors_this_month_last_year)
+    return percent_of_errors_this_month, percent_of_errors_this_month_last_year
 
 
-class DashboardView(TemplateView):
+class DashboardView(AdminViewMixin, TemplateView):
     """
     Django admin view which presents an overview report for MTP
     """
     template_name = 'the_dashboard/the_dashboard.html'
+    required_permissions = ['transaction.view_dashboard']
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -228,11 +230,11 @@ class DashboardView(TemplateView):
         context['digital_transactions_amount_this_month'] = digital_transactions_amount_this_month
         context['digital_transactions_count_this_year'] = digital_transactions_count_this_year
         context['digital_transactions_amount_this_year'] =  digital_transactions_amount_this_year
-        context['formated_previous_month_and_current_year'] = formated_date_previous_month_and_current_year
-        context['formated_current_month_and_year'] = formated_date_current_month_and_year
-        context['formated_current_month_last_year'] = formated_date_current_month_last_year
-        context['percent_of_errors_last_month'] = percent_of_errors_this_month
-        context['percent_of_errors_last_month_last_year'] = percent_of_errors_this_month_last_year
+        context['formated_date_previous_month_and_current_year'] = formated_date_previous_month_and_current_year
+        context['formated_date_current_month_and_year'] = formated_date_current_month_and_year
+        context['formated_date_current_month_last_year'] = formated_date_current_month_last_year
+        context['percent_of_errors_this_month'] = percent_of_errors_this_month
+        context['percent_of_errors_this_month_last_year'] = percent_of_errors_this_month_last_year
 
         context['data'] = self.get_monthly_data(month, year)
         context['savings_made'] = self.get_savings(start_of_current_year, today, digital_transactions_count_this_year, queryset_digital_transactions_this_year)
@@ -247,13 +249,13 @@ class DashboardView(TemplateView):
         digital_take_up_this_year = queryset_digital_takeup.mean_digital_takeup()
 
         transaction_by_post_this_year = transaction_by_post(digital_take_up_this_year, digital_transactions_count_this_year)
-        transaction_by_digital = queryset_digital_transactions_this_year.filter(resolution=CREDIT_RESOLUTION.CREDITED).count()
+        transaction_by_digital_this_year = queryset_digital_transactions_this_year.filter(resolution=CREDIT_RESOLUTION.CREDITED).count()
 
         total_cost_of_transaction_by_post = transaction_by_post_this_year * COST_PER_TRANSACTION_BY_POST
-        total_cost_of_transaction_by_digital = transaction_by_digital * COST_PER_TRANSACTION_BY_DIGITAL
-        total_cost_if_it_was_only_by_post = (transaction_by_post_this_year + transaction_by_digital) * COST_PER_TRANSACTION_BY_POST
+        total_cost_of_transaction_by_digital = transaction_by_digital_this_year * COST_PER_TRANSACTION_BY_DIGITAL
+        total_cost_if_all_transactions_were_by_post = (transaction_by_post_this_year + transaction_by_digital_this_year) * COST_PER_TRANSACTION_BY_POST
         actual_cost = total_cost_of_transaction_by_post + total_cost_of_transaction_by_digital
-        savings_made = total_cost_if_it_was_only_by_post - actual_cost
+        savings_made = total_cost_if_all_transactions_were_by_post - actual_cost
 
         return round(savings_made)
 
@@ -290,6 +292,8 @@ class DashboardView(TemplateView):
             })
 
         return data
+
+
 
 
 

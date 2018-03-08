@@ -63,7 +63,7 @@
             position: 'top',
             textStyle: {
               bold: true,
-              fontSize: 30,
+              fontSize: 20,
               color: 'white',
             }
           },
@@ -153,7 +153,7 @@
 
           var options = {
             backgroundColor: 'black',
-            title: "Digital take up {{formated_previous_month_and_current_year}}",
+            title: 'Digital take up {{formated_date_previous_month_and_current_year}}',
             titleTextStyle: {
               fontSize: 50,
               color: 'white',
@@ -168,7 +168,7 @@
             pieSliceTextStyle: {
             color: 'black',
           },
-            legend: { position: "top",
+            legend: { position: 'top',
               textStyle: {
                 bold: true,
                 fontSize: 25,
@@ -186,9 +186,9 @@
 
         var tableID=0;
         function changeTable(){
-          var table_1 = document.getElementById("table_1");
-          var table_2 = document.getElementById("table_2");
-          var table_3 = document.getElementById("table_3");
+          var table_1 = document.getElementById('table_1');
+          var table_2 = document.getElementById('table_2');
+          var table_3 = document.getElementById('table_3');
 
           if(tableID >= 3) {
             tableID = 0
@@ -218,31 +218,31 @@
   </head>
 <body>
 
-<table id="table_1" class="main-table">
+<table id='table_1' class='main-table'>
   <tr>
-    <td class="chart-padding">
-      <div id="transaction_bar_chart" ></div>
+    <td class='chart-padding'>
+      <div id='transaction_bar_chart' ></div>
     </td>
 
-    <td rowspan="2" class="digital-transaction-one-group">
+    <td rowspan='2' class='digital-transaction-one-group'>
       <div>
-        <h1 class="digital-transaction-heading">
+        <h1 class='digital-transaction-heading'>
           Digital credits:
         </h1>
 
-      <div class="digital-transaction-individual-group-padding">
+      <div class='digital-transaction-individual-group-padding'>
         <h2>This week:</h2>
         <h3>{{digital_transactions_amount_previous_week|format_amount}}</h3>
         <h4>{{digital_transactions_count_previous_week}} credit recieved</h4>
       </div>
 
-      <div class="digital-transaction-individual-group-padding">
+      <div class='digital-transaction-individual-group-padding'>
         <h2>This month:</h2>
         <h3>{{digital_transactions_amount_this_month|format_amount}}</h3>
         <h4>{{digital_transactions_count_this_month}} credit recieved</h4>
       </div>
 
-      <div class="digital-transaction-align">
+      <div class='digital-transaction-align'>
         <h2>This year:</h2>
         <h3>{{digital_transactions_amount_this_year|format_amount}}</h3>
         <h4>{{digital_transactions_count_this_year}} credit recieved</h4>
@@ -250,33 +250,33 @@
     </td>
   </tr>
   <tr>
-    <td class="chart-padding">
-      <div id="transaction_bar_chart_of_amount" ></div>
+    <td class='chart-padding'>
+      <div id='transaction_bar_chart_of_amount' ></div>
     </td>
   </tr>
 </table>
 
 
-<table id="table_2" class="main-table">
+<table id='table_2' class='main-table'>
   <tr>
-    <td class="chart-padding">
-      <div id="disbursements_count_chart" ></div>
+    <td class='chart-padding'>
+      <div id='disbursements_count_chart' ></div>
     </td>
 
-    <td rowspan="2" class="digital-transaction-one-group">
+    <td rowspan='2' class='digital-transaction-one-group'>
       <div>
-        <h1 class="digital-transaction-heading">
+        <h1 class='digital-transaction-heading'>
           Digital <br> disbursements:
         </h1>
       </div>
 
-      <div class="digital-transaction-individual-group-padding">
+      <div class='digital-transaction-individual-group-padding'>
         <h2>This week:</h2>
         <h3>{{disbursement_amount_previous_week|format_amount }}</h3>
         <h4>{{disbursement_count_previous_week}} disbursement sent</h4>
       </div>
 
-      <div class="digital-transaction-individual-group-padding">
+      <div class='digital-transaction-individual-group-padding'>
         <h2>This month:</h2>
         <h3>{{disbursement_amount_this_month|format_amount }}</h3>
         <h4>{{disbursement_count_this_month}} disbursement sent</h4>
@@ -291,51 +291,51 @@
   </tr>
 
   <tr>
-    <td class="chart-padding">
-      <div id="disbursements_amount_chart" ></div>
+    <td class='chart-padding'>
+      <div id='disbursements_amount_chart' ></div>
     </td>
   </tr>
 </table>
 
-<table id="table_3" class="main-table">
+<table id='table_3' class='main-table'>
   <tr>
     <td>
-      <div class="donut-padding" id='donut_of_transaction'></div>
+      <div class='donut-padding' id='donut_of_transaction'></div>
     </td>
     <td>
       <td>
-        <div class="satisfaction-rate-box space_between_headings">
+        <div class='satisfaction-rate-box space_between_headings'>
           <h1>Satisfaction rate:<h1>
           <h3>{{user_satisfaction}}%</h3>
         </div>
-        <div class="money-saved-box">
+        <div class='money-saved-box'>
           <h1>Money saved:</h1>
           <h3>{{savings_made|format_amount}}</h3>
         </div>
       </td>
 
       <td>
-        <div class="space_between_headings bank-transfer-error-box">
-          <h1 class="bank-error-rate-heading">
+        <div class='space_between_headings bank-transfer-error-box'>
+          <h1 class='bank-error-rate-heading'>
             Bank transfer <br> error rate:
           </h1>
           <h3>
-            {% if percent_of_errors_last_month > percent_of_errors_last_month_last_year %}
-              {{percent_of_errors_last_month}}% +
-            {% elif percent_of_errors_last_month < percent_of_errors_last_month_last_year %}
-              {{percent_of_errors_last_month}}% -
+            {% if percent_of_errors_this_month > percent_of_errors_this_month_last_year %}
+              {{percent_of_errors_this_month}}% +
+            {% elif percent_of_errors_this_month < percent_of_errors_this_month_last_year %}
+              {{percent_of_errors_this_month}}% -
             {% else %}
-              {{percent_of_errors_last_month}}%
+              {{percent_of_errors_this_month}}%
             {% endif %}
           </h3>
-           <h4 class="space_between_bank-transfer-months">
-            {{formated_current_month_and_year}}
+           <h4 class='space_between_bank-transfer-months'>
+            {{formated_date_current_month_and_year}}
            </h4>
           <h3>
             {{percent_of_errors_last_month_last_year}}%
           </h3>
           <h4>
-            {{formated_current_month_last_year}}
+            {{formated_date_current_month_last_year}}
           </h4>
         </div>
       </td>
