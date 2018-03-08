@@ -13,6 +13,7 @@ from disbursement.models import Disbursement
 from disbursement.tests.utils import generate_disbursements
 from payment.models import Batch, Payment
 from payment.tests.utils import generate_payments
+from performance.tests.utils import generate_digital_takeup
 from prison.models import Prison
 from prison.tests.utils import load_prisoner_locations_from_file, load_random_prisoner_locations
 from security.models import SenderProfile, PrisonerProfile, SavedSearch
@@ -53,6 +54,8 @@ class Command(BaseCommand):
                             help='Number of new payments to create')
         parser.add_argument('--number-of-disbursements', default=50, type=int,
                             help='Number of new disbursements to create')
+        parser.add_argument('--digital-takeup', action='store_true',
+                            help='Generate digital take-up')
         parser.add_argument('--days-of-history', default=7, type=int,
                             help='Number of days of historical credits')
 
@@ -149,6 +152,11 @@ class Command(BaseCommand):
             days_of_history=days_of_history
         )
         call_command('update_security_profiles')
+
+        digital_takeup = options['digital_takeup']
+        if digital_takeup:
+            print_message('Generating digital take-up')
+            generate_digital_takeup(days_of_history=days_of_history)
 
     def handle_prod(self, **options):
         self.stderr.write(self.style.WARNING(
