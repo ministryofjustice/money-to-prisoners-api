@@ -18,7 +18,7 @@
       var sharedOptions = {
         titleTextStyle: {
           fontSize: 40,
-          color: 'white',
+          color: 'white'
         },
         fontSize: 30,
         bold: true,
@@ -28,25 +28,25 @@
           titleTextStyle: {
             fontSize: 30,
             bold: true,
-            color: 'white',
+            color: 'white'
           },
           textStyle: {
             bold: true,
             fontSize: 30,
-            color: 'white',
-          },
+            color: 'white'
+          }
         },
 
         vAxis:{
           titleTextStyle: {
             fontSize: 30,
             bold: true,
-            color: 'white',
+            color: 'white'
           },
           textStyle: {
             bold: true,
             fontSize: 30,
-            color: 'white',
+            color: 'white'
           }
         },
 
@@ -58,26 +58,26 @@
           textStyle: {
             bold: true,
             fontSize: 20,
-            color: 'white',
+            color: 'white'
           }
         },
 
         bar: {
           groupWidth: '80%',
           fontSize: 30,
-          color: 'white',
+          color: 'white'
         },
 
         textStyle: {
           bold: true,
           fontSize: 30,
-          color: 'white',
-        },
+          color: 'white'
+        }
       };
 
       function drawChartTransaction() {
         var data = google.visualization.arrayToDataTable([
-          ['Month', 'Debit', 'BankTransfer', 'Post'],
+          ['Month', 'Debit', 'Bank Transfer', 'Post'],
           {% for d in data reversed %}
             ['{{d.start_of_month|date:"M Y"}}', {{d.debit_card_count}}, {{d.bank_transfer_count}}, {{d.transaction_by_post}}],
           {% endfor %}
@@ -92,7 +92,7 @@
 
       function drawChartAmount() {
         var data = google.visualization.arrayToDataTable([
-          ['Month', 'Debit', 'BankTransfer'],
+          ['Month', 'Debit', 'Bank Transfer'],
           {% for d in data reversed %}
             ['{{d.start_of_month|date:"M Y"}}', {{d.debit_card_amount}}, {{d.bank_transfer_amount}}],
           {% endfor %}
@@ -108,7 +108,7 @@
 
       function drawChartDisbursmentCount() {
         var data = google.visualization.arrayToDataTable([
-          ['Month', 'Cheque', 'BankTransfer'],
+          ['Month', 'Cheque', 'Bank Transfer'],
           {% for d in data reversed %}
             ['{{d.start_of_month|date:"M Y"}}', {{d.disbursement_cheque_count}}, {{d.disbursement_bank_transfer_count}}],
           {% endfor %}
@@ -123,7 +123,7 @@
 
       function drawChartDisbursmentAmount() {
         var data = google.visualization.arrayToDataTable([
-          ['Month', 'Cheque', 'BankTransfer'],
+          ['Month', 'Cheque', 'Bank Transfer'],
           {% for d in data reversed %}
             ['{{d.start_of_month|date:"M Y"}}', {{d.disbursement_cheque_amount}}, {{d.disbursement_bank_transfer_amount}}],
           {% endfor %}
@@ -142,7 +142,7 @@
           ['Sent Money', 'Number'],
           ['Debit', {{data.1.debit_card_count}}],
           ['Bank Transfer', {{data.1.bank_transfer_count}}],
-          ['Post',{{data.1.transaction_by_post}}],
+          ['Post',{{data.1.transaction_by_post}}]
         ]);
 
         var options = {
@@ -150,7 +150,7 @@
           title: 'Digital take up {{formated_date_previous_month_and_current_year}}',
           titleTextStyle: {
             fontSize: 50,
-            color: 'white',
+            color: 'white'
           },
           titlePosition: 'center',
           colors: ['#a288f9', '#5DADE2', '#F7DC6F'],
@@ -160,17 +160,17 @@
           pieHole: 0.5,
           pieStartAngle: 100,
           pieSliceTextStyle: {
-            color: 'black',
+            color: 'black'
           },
           legend: {
             position: 'top',
             textStyle: {
               bold: true,
               fontSize: 25,
-              color: 'white',
+              color: 'white'
             }
           },
-          is3D: true,
+          is3D: true
 
         };
 
@@ -234,31 +234,31 @@
   </head>
 <body>
 
-<table id='table_1' class='main-table' style='display:none'>
+<table id="table_1" class="main-table" style="display:none">
   <tr>
-    <td class='chart-padding'>
-      <div id='transaction_bar_chart' ></div>
+    <td class="chart-padding">
+      <div id="transaction_bar_chart" ></div>
     </td>
 
-    <td rowspan='2' class='digital-transaction-one-group'>
+    <td rowspan="2" class="digital-transaction-one-group">
       <div>
-        <h1 class='digital-transaction-heading'>
+        <h1 class="digital-transaction-heading">
           Digital credits:
         </h1>
       </div>
-      <div class='digital-transaction-individual-group-padding'>
-        <h2>This week:</h2>
+      <div class="digital-transaction-individual-group-padding">
+        <h2>Last week:</h2>
         <h3>{{digital_transactions_amount_previous_week|format_amount}}</h3>
         <h4>{{digital_transactions_count_previous_week}} credit recieved</h4>
       </div>
 
-      <div class='digital-transaction-individual-group-padding'>
+      <div class="digital-transaction-individual-group-padding">
         <h2>This month:</h2>
         <h3>{{digital_transactions_amount_this_month|format_amount}}</h3>
         <h4>{{digital_transactions_count_this_month}} credit recieved</h4>
       </div>
 
-      <div class='digital-transaction-align'>
+      <div class="digital-transaction-align">
         <h2>This year:</h2>
         <h3>{{digital_transactions_amount_this_year|format_amount}}</h3>
         <h4>{{digital_transactions_count_this_year}} credit recieved</h4>
@@ -266,33 +266,33 @@
     </td>
   </tr>
   <tr>
-    <td class='chart-padding'>
-      <div id='transaction_bar_chart_of_amount' ></div>
+    <td class="chart-padding">
+      <div id="transaction_bar_chart_of_amount" ></div>
     </td>
   </tr>
 </table>
 
 
-<table id='table_2' class='main-table' style='display:none'>
+<table id="table_2" class="main-table" style='display:none'>
   <tr>
-    <td class='chart-padding'>
-      <div id='disbursements_count_chart' ></div>
+    <td class="chart-padding">
+      <div id="disbursements_count_chart" ></div>
     </td>
 
-    <td rowspan='2' class='digital-transaction-one-group'>
+    <td rowspan="2" class="digital-transaction-one-group">
       <div>
-        <h1 class='digital-transaction-heading'>
+        <h1 class="digital-transaction-heading">
           Digital <br> disbursements:
         </h1>
       </div>
 
-      <div class='digital-transaction-individual-group-padding'>
-        <h2>This week:</h2>
+      <div class="digital-transaction-individual-group-padding">
+        <h2>Last week:</h2>
         <h3>{{disbursement_amount_previous_week|format_amount }}</h3>
         <h4>{{disbursement_count_previous_week}} disbursement sent</h4>
       </div>
 
-      <div class='digital-transaction-individual-group-padding'>
+      <div class="digital-transaction-individual-group-padding">
         <h2>This month:</h2>
         <h3>{{disbursement_amount_this_month|format_amount }}</h3>
         <h4>{{disbursement_count_this_month}} disbursement sent</h4>
@@ -307,31 +307,31 @@
   </tr>
 
   <tr>
-    <td class='chart-padding'>
-      <div id='disbursements_amount_chart' ></div>
+    <td class="chart-padding">
+      <div id="disbursements_amount_chart" ></div>
     </td>
   </tr>
 </table>
 
-<table id='table_3' class='main-table' style='display:none'>
+<table id="table_3" class="main-table" style="display:none">
   <tr>
     <td>
-      <div class='donut-padding' id='donut_of_transaction'></div>
+      <div class="donut-padding" id="donut_of_transaction"></div>
     </td>
     <td>
-        <div class='satisfaction-rate-box space_between_headings'>
+        <div class="satisfaction-rate-box space_between_headings">
           <h1>Satisfaction rate:<h1>
           <h3>{{user_satisfaction}}%</h3>
         </div>
-        <div class='money-saved-box'>
+        <div class="money-saved-box">
           <h1>Money saved:</h1>
           <h3>{{savings_made|format_amount}}</h3>
         </div>
       </td>
 
       <td>
-        <div class='space_between_headings bank-transfer-error-box'>
-          <h1 class='bank-error-rate-heading'>
+        <div class="space_between_headings bank-transfer-error-box">
+          <h1 class="bank-error-rate-heading">
             Bank transfer <br> error rate:
           </h1>
           <h3>
@@ -343,7 +343,7 @@
               {{percent_of_errors_this_month}}%
             {% endif %}
           </h3>
-           <h4 class='space_between_bank-transfer-months'>
+           <h4 class="space_between_bank-transfer-months">
             {{formated_date_current_month_and_year}}
            </h4>
           <h3>
