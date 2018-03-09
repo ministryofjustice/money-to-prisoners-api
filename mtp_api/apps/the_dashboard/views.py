@@ -280,14 +280,14 @@ class DashboardView(AdminViewMixin, TemplateView):
                 'start_of_month': start_of_month,
                 'end_of_month': end_of_month,
                 'transaction_by_post':transaction_by_post_by_month,
-                'debit_card_amount': debit_card_amount,
+                'debit_card_amount': debit_card_amount / 100,
                 'debit_card_count': debit_card_count,
                 'bank_transfer_count': bank_transfer_count,
-                'bank_transfer_amount': bank_transfer_amount,
-                'disbursement_bank_transfer_amount': disbursement_bank_transfer_amount,
+                'bank_transfer_amount': bank_transfer_amount / 100,
+                'disbursement_bank_transfer_amount': disbursement_bank_transfer_amount / 100,
                 'disbursement_bank_transfer_count': disbursement_bank_transfer_count,
                 'disbursement_cheque_count': disbursement_cheque_count,
-                'disbursement_cheque_amount':disbursement_cheque_amount,
+                'disbursement_cheque_amount':disbursement_cheque_amount / 100,
             })
 
         return data

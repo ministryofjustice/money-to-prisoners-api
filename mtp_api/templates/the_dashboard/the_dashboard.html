@@ -14,18 +14,12 @@
 
     <script>
       google.charts.load('current', {'packages':['corechart']});
-      google.charts.setOnLoadCallback(drawChartTransaction);
-      google.charts.setOnLoadCallback(drawChartAmount);
-      google.charts.setOnLoadCallback(drawChartDisbursmentCount);
-      google.charts.setOnLoadCallback(drawChartDisbursmentAmount);
-      google.charts.setOnLoadCallback(drawDonut);
-
 
       var sharedOptions = {
-          titleTextStyle: {
-            fontSize: 40,
-            color: 'white',
-          },
+        titleTextStyle: {
+          fontSize: 40,
+          color: 'white',
+        },
         fontSize: 30,
         bold: true,
         color: 'white',
@@ -56,30 +50,30 @@
           }
         },
 
-          backgroundColor: 'black',
-          width: 1300,
-          height: 500,
-          legend: {
-            position: 'top',
-            textStyle: {
-              bold: true,
-              fontSize: 20,
-              color: 'white',
-            }
-          },
-
-          bar: {
-            groupWidth: '80%',
-            fontSize: 30,
-            color: 'white',
-          },
-
+        backgroundColor: 'black',
+        width: 1300,
+        height: 500,
+        legend: {
+          position: 'top',
           textStyle: {
             bold: true,
-            fontSize: 30,
+            fontSize: 20,
             color: 'white',
-          },
-        };
+          }
+        },
+
+        bar: {
+          groupWidth: '80%',
+          fontSize: 30,
+          color: 'white',
+        },
+
+        textStyle: {
+          bold: true,
+          fontSize: 30,
+          color: 'white',
+        },
+      };
 
       function drawChartTransaction() {
         var data = google.visualization.arrayToDataTable([
@@ -87,14 +81,14 @@
           {% for d in data reversed %}
             ['{{d.start_of_month|date:"M Y"}}', {{d.debit_card_count}}, {{d.bank_transfer_count}}, {{d.transaction_by_post}}],
           {% endfor %}
-          ]);
+        ]);
 
-          var chart = new google.visualization.ColumnChart(document.getElementById('transaction_bar_chart'));
-          var options = Object.assign({title: 'Number of monthly credits'}, sharedOptions);
-          options.colors = ['#a288f9', '#5DADE2', '#F7DC6F'];
-          options.vAxis.title = 'Credits';
-          chart.draw(data, options);
-        }
+        var chart = new google.visualization.ColumnChart(document.getElementById('transaction_bar_chart'));
+        var options = Object.assign({title: 'Number of monthly credits'}, sharedOptions);
+        options.colors = ['#a288f9', '#5DADE2', '#F7DC6F'];
+        options.vAxis.title = 'Credits';
+        chart.draw(data, options);
+      }
 
       function drawChartAmount() {
         var data = google.visualization.arrayToDataTable([
@@ -102,14 +96,14 @@
           {% for d in data reversed %}
             ['{{d.start_of_month|date:"M Y"}}', {{d.debit_card_amount}}, {{d.bank_transfer_amount}}],
           {% endfor %}
-          ]);
+        ]);
 
-          var chart = new google.visualization.ColumnChart(document.getElementById('transaction_bar_chart_of_amount'));
-          var options = Object.assign({title: 'Amount of money credited'}, sharedOptions);
-          options.colors = ['#a288f9', '#5DADE2'];
-          options.vAxis.title = 'Money (£)';
-          chart.draw(data, options);
-        }
+        var chart = new google.visualization.ColumnChart(document.getElementById('transaction_bar_chart_of_amount'));
+        var options = Object.assign({title: 'Amount of money credited'}, sharedOptions);
+        options.colors = ['#a288f9', '#5DADE2'];
+        options.vAxis.title = 'Money (£)';
+        chart.draw(data, options);
+      }
 
 
       function drawChartDisbursmentCount() {
@@ -118,107 +112,129 @@
           {% for d in data reversed %}
             ['{{d.start_of_month|date:"M Y"}}', {{d.disbursement_cheque_count}}, {{d.disbursement_bank_transfer_count}}],
           {% endfor %}
-          ]);
+        ]);
 
-          var chart = new google.visualization.ColumnChart(document.getElementById('disbursements_count_chart'));
-          var options = Object.assign({title: 'Number of monthly disbursements'}, sharedOptions);
-          options.vAxis.title = 'Disbursments';
-          options.colors = ['#7DCEA0', '#5DADE2'];
-          chart.draw(data, options);
-        }
+        var chart = new google.visualization.ColumnChart(document.getElementById('disbursements_count_chart'));
+        var options = Object.assign({title: 'Number of monthly disbursements'}, sharedOptions);
+        options.vAxis.title = 'Disbursments';
+        options.colors = ['#7DCEA0', '#5DADE2'];
+        chart.draw(data, options);
+      }
 
-        function drawChartDisbursmentAmount() {
-          var data = google.visualization.arrayToDataTable([
-            ['Month', 'Cheque', 'BankTransfer'],
-            {% for d in data reversed %}
-              ['{{d.start_of_month|date:"M Y"}}', {{d.disbursement_cheque_amount}}, {{d.disbursement_bank_transfer_amount}}],
-            {% endfor %}
-            ]);
+      function drawChartDisbursmentAmount() {
+        var data = google.visualization.arrayToDataTable([
+          ['Month', 'Cheque', 'BankTransfer'],
+          {% for d in data reversed %}
+            ['{{d.start_of_month|date:"M Y"}}', {{d.disbursement_cheque_amount}}, {{d.disbursement_bank_transfer_amount}}],
+          {% endfor %}
+        ]);
 
-          var chart = new google.visualization.ColumnChart(document.getElementById('disbursements_amount_chart'));
-          var options = Object.assign({title: 'Amount of money disbursed'}, sharedOptions);
-          options.colors = ['#7DCEA0', '#5DADE2'];
-          options.vAxis.title = 'Money (£)';
-          chart.draw(data, options);
-        }
+        var chart = new google.visualization.ColumnChart(document.getElementById('disbursements_amount_chart'));
+        var options = Object.assign({title: 'Amount of money disbursed'}, sharedOptions);
+        options.colors = ['#7DCEA0', '#5DADE2'];
+        options.vAxis.title = 'Money (£)';
+        chart.draw(data, options);
+      }
 
 
-        function drawDonut()  {
-          var data = google.visualization.arrayToDataTable([
-            ['Sent Money', 'Number'],
-            ['Debit', {{data.1.debit_card_count}}],
-            ['Bank Transfer', {{data.1.bank_transfer_count}}],
-            ['Post',{{data.1.transaction_by_post}}],
-          ]);
+      function drawDonut()  {
+        var data = google.visualization.arrayToDataTable([
+          ['Sent Money', 'Number'],
+          ['Debit', {{data.1.debit_card_count}}],
+          ['Bank Transfer', {{data.1.bank_transfer_count}}],
+          ['Post',{{data.1.transaction_by_post}}],
+        ]);
 
-          var options = {
-            backgroundColor: 'black',
-            title: 'Digital take up {{formated_date_previous_month_and_current_year}}',
-            titleTextStyle: {
-              fontSize: 50,
-              color: 'white',
-            },
-            titlePosition: 'center',
-            colors: ['#a288f9', '#5DADE2', '#F7DC6F'],
-            fontSize: 25,
-            width: 800,
-            height: 900,
-            pieHole: 0.5,
-            pieStartAngle: 100,
-            pieSliceTextStyle: {
+        var options = {
+          backgroundColor: 'black',
+          title: 'Digital take up {{formated_date_previous_month_and_current_year}}',
+          titleTextStyle: {
+            fontSize: 50,
+            color: 'white',
+          },
+          titlePosition: 'center',
+          colors: ['#a288f9', '#5DADE2', '#F7DC6F'],
+          fontSize: 25,
+          width: 800,
+          height: 900,
+          pieHole: 0.5,
+          pieStartAngle: 100,
+          pieSliceTextStyle: {
             color: 'black',
           },
-            legend: { position: 'top',
-              textStyle: {
-                bold: true,
-                fontSize: 25,
-                color: 'white',
-              }
+          legend: {
+            position: 'top',
+            textStyle: {
+              bold: true,
+              fontSize: 25,
+              color: 'white',
+            }
           },
-            is3D: true,
+          is3D: true,
 
-          };
+        };
 
-          var chart = new google.visualization.PieChart(document.getElementById('donut_of_transaction'));
-          chart.draw(data, options);
+        var chart = new google.visualization.PieChart(document.getElementById('donut_of_transaction'));
+        chart.draw(data, options);
+      }
+
+      var table_1;
+      var table_2;
+      var table_3;
+      var tableID=0;
+      var loadedCharts1 = false;
+      var loadedCharts2 = false;
+      var loadedCharts3 = false;
+      function changeTable(){
+
+        if(tableID >= 3) {
+          tableID = 0;
         }
 
-
-        var tableID=0;
-        function changeTable(){
-          var table_1 = document.getElementById('table_1');
-          var table_2 = document.getElementById('table_2');
-          var table_3 = document.getElementById('table_3');
-
-          if(tableID >= 3) {
-            tableID = 0
+        if(tableID == 0){
+          table_1.style.display = 'block';
+          table_2.style.display = 'none';
+          table_3.style.display = 'none';
+          if(loadedCharts2 == false){
+            drawChartTransaction();
+            drawChartAmount();
+            loadedCharts1 = true;
           }
-
-          if(tableID == 0){
-            table_1.style.display = 'block';
-            table_2.style.display = 'none';
-            table_3.style.display = 'none';
+        } else if(tableID == 1) {
+          table_1.style.display = 'none';
+          table_2.style.display = 'block';
+          table_3.style.display = 'none';
+          if(loadedCharts2 == false){
+            drawChartDisbursmentCount();
+            drawChartDisbursmentAmount();
+            loadedCharts2 = true;
           }
-          if(tableID == 1) {
-            table_1.style.display = 'none';
-            table_2.style.display = 'block';
-            table_3.style.display = 'none';
+        } else if(tableID == 2) {
+          table_1.style.display = 'none';
+          table_2.style.display = 'none';
+          table_3.style.display = 'block';
+          if(loadedCharts3 == false){
+            drawDonut();
+            loadedCharts3 = true;
           }
-          if(tableID == 2) {
-            table_1.style.display = 'none';
-            table_2.style.display = 'none';
-            table_3.style.display = 'block';
-          }
-          console.log(tableID);
-          tableID++;
         }
+        tableID++;
+      }
 
+      function initializeCharts() {
+        table_1 = document.getElementById('table_1');
+        table_2 = document.getElementById('table_2');
+        table_3 = document.getElementById('table_3');
+        changeTable();
         setInterval(changeTable, 15000);
-     </script>
+      }
+
+      google.charts.setOnLoadCallback(initializeCharts);
+    </script>
   </head>
 <body>
 
-<table id='table_1' class='main-table'>
+<table id='table_1' class='main-table' style='display:none'>
   <tr>
     <td class='chart-padding'>
       <div id='transaction_bar_chart' ></div>
@@ -229,7 +245,7 @@
         <h1 class='digital-transaction-heading'>
           Digital credits:
         </h1>
-
+      </div>
       <div class='digital-transaction-individual-group-padding'>
         <h2>This week:</h2>
         <h3>{{digital_transactions_amount_previous_week|format_amount}}</h3>
@@ -257,7 +273,7 @@
 </table>
 
 
-<table id='table_2' class='main-table'>
+<table id='table_2' class='main-table' style='display:none'>
   <tr>
     <td class='chart-padding'>
       <div id='disbursements_count_chart' ></div>
@@ -297,13 +313,12 @@
   </tr>
 </table>
 
-<table id='table_3' class='main-table'>
+<table id='table_3' class='main-table' style='display:none'>
   <tr>
     <td>
       <div class='donut-padding' id='donut_of_transaction'></div>
     </td>
     <td>
-      <td>
         <div class='satisfaction-rate-box space_between_headings'>
           <h1>Satisfaction rate:<h1>
           <h3>{{user_satisfaction}}%</h3>
