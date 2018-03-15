@@ -21,7 +21,6 @@
           color: 'white'
         },
         fontSize: 30,
-        bold: true,
         color: 'white',
 
         hAxis: {
@@ -31,8 +30,7 @@
             color: 'white'
           },
           textStyle: {
-            bold: true,
-            fontSize: 30,
+            fontSize: 20,
             color: 'white'
           }
         },
@@ -40,26 +38,19 @@
         vAxis:{
           titleTextStyle: {
             fontSize: 30,
-            bold: true,
             color: 'white'
           },
           textStyle: {
-            bold: true,
-            fontSize: 30,
+            fontSize: 20,
             color: 'white'
           }
         },
 
-        backgroundColor: 'black',
+        backgroundColor: '#27332F',
         width: 1300,
-        height: 500,
+        height: 700,
         legend: {
-          position: 'top',
-          textStyle: {
-            bold: true,
-            fontSize: 20,
-            color: 'white'
-          }
+          position: 'none'
         },
 
         bar: {
@@ -69,7 +60,6 @@
         },
 
         textStyle: {
-          bold: true,
           fontSize: 30,
           color: 'white'
         }
@@ -84,8 +74,8 @@
         ]);
 
         var chart = new google.visualization.ColumnChart(document.getElementById('transaction_bar_chart'));
-        var options = Object.assign({title: 'Number of monthly credits'}, sharedOptions);
-        options.colors = ['#a288f9', '#5DADE2', '#F7DC6F'];
+        var options = Object.assign(sharedOptions);
+        options.colors = ['#FFBF47', '#D53880', '#6F72AF'];
         options.vAxis.title = 'Credits';
         chart.draw(data, options);
       }
@@ -146,7 +136,7 @@
         ]);
 
         var options = {
-          backgroundColor: 'black',
+          backgroundColor: '#27332F',
           title: 'Digital take up {{formated_date_previous_month_and_current_year}}',
           titleTextStyle: {
             fontSize: 50,
@@ -187,9 +177,9 @@
       var loadedCharts3 = false;
       function changeTable(){
 
-        if(tableID >= 3) {
-          tableID = 0;
-        }
+        // if(tableID >= 3) {
+        //   tableID = 0;
+        // }
 
         if(tableID == 0){
           table_1.style.display = 'block';
@@ -233,45 +223,145 @@
     </script>
   </head>
 <body>
+<div id="table_1">
+  <div class="main-heading">
+    <h1><strong>Credits</strong> Money to prisoners</h1>
+  </div>
 
-<table id="table_1" class="main-table" style="display:none">
-  <tr>
-    <td class="chart-padding">
-      <div id="transaction_bar_chart" ></div>
-    </td>
-
-    <td rowspan="2" class="digital-transaction-one-group">
-      <div>
-        <h1 class="digital-transaction-heading">
-          Digital credits:
-        </h1>
-      </div>
-      <div class="digital-transaction-individual-group-padding">
-        <h2>Last week:</h2>
-        <h3>{{digital_transactions_amount_previous_week|format_amount}}</h3>
-        <h4>{{digital_transactions_count_previous_week}} credit recieved</h4>
-      </div>
-
-      <div class="digital-transaction-individual-group-padding">
-        <h2>This month:</h2>
-        <h3>{{digital_transactions_amount_this_month|format_amount}}</h3>
-        <h4>{{digital_transactions_count_this_month}} credit recieved</h4>
-      </div>
-
-      <div class="digital-transaction-align">
-        <h2>This year:</h2>
-        <h3>{{digital_transactions_amount_this_year|format_amount}}</h3>
-        <h4>{{digital_transactions_count_this_year}} credit recieved</h4>
-      </div>
-    </td>
-  </tr>
-  <tr>
-    <td class="chart-padding">
-      <div id="transaction_bar_chart_of_amount" ></div>
-    </td>
-  </tr>
-</table>
-
+  <table>
+    <col width="70%">
+    <col width="30%">
+    <tr>
+      <td>
+        <h2>Number of monthly credits</h2>
+      </td>
+      <td>
+        <h2>Digital credits</h2>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <table class="length-of-legend">
+          <td><div class="box yellow"> </div></td>
+          <td><h4 class="yellow-text">Debit card</h4></td>
+          <td><div class="box pink"> </div></td>
+          <td><h4 class="pink-text">Bank transfer</h4></td>
+          <td><div class="box purple"> </div></td>
+          <td><h4 class="purple-text">Post</h4></td>
+        </table>
+      </td>
+      <td>
+        <h4><span class="yellow-text">Debit card</span>
+            <span> + </span>
+            <span class="pink-text">bank transfer</span>
+         </h4>
+      </td>
+    </tr>
+    <tr>
+      <td><div id="transaction_bar_chart" ></div></td>
+      <td>
+        <table>
+          <tr>
+            <th><h3>Today:</h3></th>
+            <td><h4>Yesterday</h4></td>
+          </tr>
+          <tr>
+            <th><h3>£788</h3></th>
+            <td><h4>£865</h4></td>
+          </tr>
+          <tr>
+            <td><h3>7 credits</h3></td>
+            <td><h4>9 credits</h4></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><h3>This week:</h3></td>
+            <td><h4>Last week</h4></td>
+          </tr>
+          <tr>
+            <td><h3>£788</h3></td>
+            <td><h4>{{digital_transactions_amount_previous_week|format_amount}}</h4></td>
+          </tr>
+          <tr>
+            <td><h3>7 credits</h3></td>
+            <td><h4>{{digital_transactions_count_previous_week}}</h4></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><h3>This month:</h3></td>
+            <td><h4>Last month</h4></td>
+          </tr>
+          <tr>
+            <td><h3>{{digital_transactions_amount_this_month|format_amount}}</h3></td>
+            <td><h4>£1890</h4></td>
+          </tr>
+          <tr>
+            <td><h3>{{digital_transactions_count_this_month}} credits</h3></td>
+            <td><h4>9 credits</h4></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><h3>This year:</h3></td>
+            <td><h4>Last year:</h4></td>
+          </tr>
+          <tr>
+            <td><h3>{{digital_transactions_amount_this_year|format_amount}}</h3></td>
+            <td><h4>£98760</h4></td>
+          </tr>
+          <tr>
+            <td><h3>{{digital_transactions_count_this_year}} credits</h3></td>
+            <td><h4>5468 credits</h4></td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</div>
 
 <table id="table_2" class="main-table" style='display:none'>
   <tr>
