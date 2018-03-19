@@ -1,0 +1,244 @@
+{% load static %}
+{% load credit %}
+{% load i18n %}
+{% load humanize %}
+
+<html>
+<head>
+  <link href="{% static 'stylesheets/dashboard_two.css' %}" type="text/css" media="all" rel="stylesheet" />
+  <title>MTP</title>
+</head>
+<title>MTP</title>
+<script>
+
+var table_1;
+var table_2;
+var tableID=0;
+function changeTable(){
+  table_1 = document.getElementById('table_1');
+  table_2 = document.getElementById('table_2');
+  if(tableID % 2 == 0){
+    table_1.style.display = 'block';
+    table_2.style.display = 'none';
+  } else {
+    table_1.style.display = 'none';
+    table_2.style.display = 'block';
+  }
+  tableID+=1;
+}
+
+
+setInterval(changeTable, 15000);
+</script>
+  <body>
+    <div id="table_1" class="size-of-page" style="display:block">
+      <div>
+        <h1><strong>Credits</strong> Money to prisoners</h1>
+      </div>
+      <div class="space"></div>
+      <table class="verticle-align">
+      <col width="70%">
+      <col width="30%">
+        <tr>
+          <td>
+            <h2>Number of monthly credits</h2>
+              <table class="length-of-legend">
+                <td><div class="box yellow"> </div></td>
+                <td><h4 class="yellow-text">Debit card</h4></td>
+                <td><div class="box pink"></div></td>
+                <td><h4 class="pink-text">Bank transfer</h4></td>
+                <td><div class="box purple"> </div></td>
+                <td><h4 class="purple-text">Post</h4></td>
+              </table>
+            <div class="space"></div>
+            <div><img src="http://cdn.shutterstock.com/shutterstock/videos/15215122/thumb/7.jpg?i10c=img.resize%28height:160%29" alt="Bar chart" width="700">
+            </div>
+          </td>
+
+          <td>
+            <h2>Satisfaction rate:</h2>
+            <h3>99.99%:</h3>
+            <div class="space"></div>
+            <h2>Money saved:</h2>
+            <h3>£9.99</h3>
+            <h4>in current financial year</h4>
+            <div class="space"></div>
+            <h2>Digital credits</h2>
+
+            <h3>
+              <span class="yellow-text">Debit card</span>
+              <span> + </span>
+              <span class="pink-text">bank transfer</span>
+            </h3>
+
+            <div class="space"></div>
+
+            <table class="table-overview verticle-align">
+              <tr class="border_bottom">
+                <td><h5>Last week</h5></td>
+                <td><h5>This week</h5></td>
+                <td><h5>This week projected</h5></td>
+              </tr>
+              <tr>
+                <td><h6>7 credits</h6></td>
+                <td><h6>7 credits</h6></td>
+                <td><h6>9 credits</h6></td>
+              </tr>
+              <tr>
+                <td><h6>£788</h6></td>
+                <td><h6>£788</h6></td>
+                <td><h6>£865</h6></td>
+              </tr>
+              <tr class="space">
+                <td></td>
+                <td></td>
+                <td></td>
+              </tr>
+              <tr class="border_bottom">
+                <td><h5>Last month</h5></td>
+                <td><h5>This month</h5></td>
+                <td><h5>This month projected</h5></td>
+              </tr>
+              <tr>
+                <td><h6>7 credits</h6></td>
+                <td><h6>7 credits</h6></td>
+                <td><h6>9 credits</h6></td>
+              </tr>
+              <tr>
+                <td><h6>£788</h6></td>
+                <td><h6>£788</h6></td>
+                <td><h6>£890</h6></td>
+              </tr>
+              <tr class="space">
+                <td></td>
+                <td></td>
+                <td></td>
+              </tr>
+              <tr class="border_bottom">
+                <td><h5>Last year:</h5></td>
+                <td><h5>This year:</h5></td>
+                <td><h5>This year projected</h5></td>
+              </tr>
+              <tr>
+                <td><h6>8765 credits</h6></td>
+                <td><h6>8765 credits</h6></td>
+                <td><h6>8765 credits</h6></td>
+              </tr>
+              <tr>
+                <td><h6>£86950</h6></td>
+                <td><h6>£86950</h6></td>
+                <td><h6>£98760</h6></td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <div id="table_2" class="size-of-page" style="display:block">
+      <div>
+        <h1><strong>Disbursements</strong> Money sent by prisoners</h1>
+      </div>
+      <div class="space"></div>
+
+      <table class="main-table">
+        <col width="70%">
+        <col width="30%">
+        <tr>
+          <td>
+            <h2>Number of monthly disbursements</h2>
+          </td>
+          <td>
+            <h2>Digital disbursement</h2>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <table class="length-of-legend verticle-align">
+              <td><div class="box blue"> </div></td>
+              <td><h4 class="blue-text">Debit card</h4></td>
+              <td><div class="box pink"> </div></td>
+              <td><h4 class="pink-text">Bank transfer</h4></td>
+              <td><div class="box green"> </div></td>
+              <td><h4 class="green-text">Post</h4></td>
+            </table>
+            <div class="space"></div>
+          </td>
+          <td>
+            <h4>
+              <span class="blue-text">Debit card</span>
+              <span> + </span>
+              <span class="pink-text">bank transfer</span>
+            </h4>
+            <div class="space"></div>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <div><img src="http://cdn.shutterstock.com/shutterstock/videos/15215122/thumb/7.jpg?i10c=img.resize%28height:160%29" alt="Bar chart" width="700">
+            <div>
+          </td>
+          <td>
+            <table class="table-overview">
+              <tr class="border_bottom">
+                <td><h5>Last week</h5></td>
+                <td><h5>This week</h5></td>
+                <td><h5>This week projected</h5></td>
+              </tr>
+              <tr>
+                <td><h6>7 credits</h6></td>
+                <td><h6>7 credits</h6></td>
+                <td><h6>9 credits</h6></td>
+              </tr>
+              <tr>
+                <td><h6>£788</h6></td>
+                <td><h6>£788</h6></td>
+                <td><h6>£865</h6></td>
+              </tr>
+              <tr class="space">
+                <td></td>
+                <td></td>
+                <td></td>
+              </tr>
+              <tr class="border_bottom">
+                <td><h5>Last month</h5></td>
+                <td><h5>This month</h5></td>
+                <td><h5>This month projected</h5></td>
+              </tr>
+              <tr>
+                <td><h6>7 credits</h6></td>
+                <td><h6>7 credits</h6></td>
+                <td><h6>9 credits</h6></td>
+              </tr>
+              <tr>
+                <td><h6>£788</h6></td>
+                <td><h6>£788</h6></td>
+                <td><h6>£890</h6></td>
+              </tr>
+              <tr class="space">
+                <td></td>
+                <td></td>
+                <td></td>
+              </tr>
+              <tr class="border_bottom">
+                <td><h5>Last year:</h5></td>
+                <td><h5>This year:</h5></td>
+                <td><h5>This year projected</h5></td>
+              </tr>
+              <tr>
+                <td><h6>8765 credits</h6></td>
+                <td><h6>8765 credits</h6></td>
+                <td><h6>8765 credits</h6></td>
+              </tr>
+              <tr>
+                <td><h6>£86950</h6></td>
+                <td><h6>£86950</h6></td>
+                <td><h6>£98760</h6></td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </div>
+  </body>
+</html>
