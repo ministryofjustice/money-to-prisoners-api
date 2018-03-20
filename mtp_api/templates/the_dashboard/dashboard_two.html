@@ -81,12 +81,12 @@ setInterval(changeTable, 15000);
               </tr>
               <tr>
                 <td><h6>{{digital_transactions_count_previous_week}} credits</h6></td>
-                <td><h6>7 credits</h6></td>
+                <td><h6>{{digital_transactions_count_week_so_far}} credits</h6></td>
                 <td><h6>9 credits</h6></td>
               </tr>
               <tr>
                 <td><h6>{{digital_transactions_amount_previous_week|format_amount}}</h6></td>
-                <td><h6>£788</h6></td>
+                <td><h6>{{digital_transactions_amount_week_so_far|format_amount}}</h6></td>
                 <td><h6>£865</h6></td>
               </tr>
               <tr class="space">
@@ -100,12 +100,12 @@ setInterval(changeTable, 15000);
                 <td><h5>This month projected</h5></td>
               </tr>
               <tr>
-                <td><h6>7 credits</h6></td>
+                <td><h6>{{digital_transactions_count_previous_month}} credits</h6></td>
                 <td><h6>{{digital_transactions_count_this_month}} credits</h6></td>
                 <td><h6>9 credits</h6></td>
               </tr>
               <tr>
-                <td><h6>£788</h6></td>
+                <td><h6>{{digital_transactions_amount_previous_month|format_amount}}</h6></td>
                 <td><h6>{{digital_transactions_amount_this_month|format_amount}}</h6></td>
                 <td><h6>£890</h6></td>
               </tr>
@@ -120,12 +120,12 @@ setInterval(changeTable, 15000);
                 <td><h5>This year projected</h5></td>
               </tr>
               <tr>
-                <td><h6>8765 credits</h6></td>
+                <td><h6>{{digital_transactions_count_previous_year}} credits</h6></td>
                 <td><h6>{{digital_transactions_count_this_year}} credits</h6></td>
                 <td><h6>8765 credits</h6></td>
               </tr>
               <tr>
-                <td><h6>£86950</h6></td>
+                <td><h6>{{digital_transactions_amount_previous_year|format_amount}}</h6></td>
                 <td><h6>{{digital_transactions_amount_this_year|format_amount}}</h6></td>
                 <td><h6>£98760</h6></td>
               </tr>
@@ -186,13 +186,13 @@ setInterval(changeTable, 15000);
                 <td><h5>This week projected</h5></td>
               </tr>
               <tr>
-                <td><h6>7 payments</h6></td>
                 <td><h6>{{disbursement_count_previous_week}} payments</h6></td>
+                <td><h6>{{disbursement_count_week_so_far}} payments</h6></td>
                 <td><h6>9 payments</h6></td>
               </tr>
               <tr>
                 <td><h6>{{disbursement_amount_previous_week|format_amount }}</h6></td>
-                <td><h6>£788</h6></td>
+                <td><h6>{{disbursement_amount_week_so_far|format_amount}}</h6></td>
                 <td><h6>£865</h6></td>
               </tr>
               <tr class="space">
@@ -226,12 +226,12 @@ setInterval(changeTable, 15000);
                 <td><h5>This year projected</h5></td>
               </tr>
               <tr>
-                <td><h6>8765 payments</h6></td>
+                <td><h6>{{disbursement_count_previous_year}} payments</h6></td>
                 <td><h6>{{disbursement_count_this_year}} payments</h6></td>
                 <td><h6>8765 payments</h6></td>
               </tr>
               <tr>
-                <td><h6>£86950</h6></td>
+                <td><h6>{{disbursement_amount_previous_year|format_amount}}</h6></td>
                 <td><h6>{{disbursement_amount_this_year|format_amount}}</h6></td>
                 <td><h6>£98760</h6></td>
               </tr>

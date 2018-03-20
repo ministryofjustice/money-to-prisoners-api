@@ -86,63 +86,87 @@ class DashboardTwoView(AdminViewMixin, TemplateView):
         weekday = today.weekday()
 
         start_delta = datetime.timedelta(days=weekday, weeks=1)
-        start_of_week = today - start_delta
+        start_of_previous_week = today - start_delta
         end_delta = datetime.timedelta(days=weekday)
-        end_of_week = today - end_delta
+        end_of_previous_week = today - end_delta
         month = today.month
         year = today.year
+        last_year = year - 1
         last_month, last_months_year = get_previous_month(month, year)
         next_month, next_months_year = get_next_month(month, year)
 
+        start_of_last_year = today.replace(month=1, year=last_year, day=1)
         start_of_previous_month = today.replace(month=last_month, year=last_months_year, day=1)
         start_of_current_month = today.replace(month=month, year=year, day=1)
         start_of_next_month = today.replace(month=next_month, year=next_months_year, day=1)
         start_of_current_year = today.replace(month=1, day=1)
 
-        queryset_digital_transactions_this_year = Credit.objects.filter(received_at__range=(start_of_current_year, today))
-        digital_transactions_count_this_year = queryset_digital_transactions_this_year.count()
-
+        queryset_digital_transactions_previous_week = Credit.objects.filter(received_at__range=(start_of_previous_week,  end_of_previous_week))
+        queryset_digital_transactions_week_so_far = Credit.objects.filter(received_at__range=(end_of_previous_week, today))
+        queryset_digital_transactions_previous_month = Credit.objects.filter(received_at__range=(start_of_previous_month, start_of_current_month))
         queryset_digital_transactions_this_month = Credit.objects.filter(received_at__range=(start_of_current_month, start_of_next_month))
+        queryset_digital_transactions_previous_year = Credit.objects.filter(received_at__range=(start_of_last_year, start_of_current_year))
         queryset_digital_transactions_this_year = Credit.objects.filter(received_at__range=(start_of_current_year, today))
-        queryset_digital_transactions_previous_week = Credit.objects.filter(received_at__range=(start_of_week, end_of_week))
 
-        queryset_disbursements_this_year = Disbursement.objects.filter(created__range=(start_of_current_year, today))
-        queryset_disbursement_previous_week = Disbursement.objects.filter(created__range=(start_of_week, end_of_week))
+
+        queryset_disbursement_previous_week = Disbursement.objects.filter(created__range=(start_of_previous_week, end_of_previous_week))
+        queryset_disbursement_week_so_far = Disbursement.objects.filter(created__range=(end_of_previous_week, today))
+        queryset_disbursement_previous_month = Disbursement.objects.filter(created__range=(start_of_previous_month, start_of_current_month))
         queryset_disbursement_this_month = Disbursement.objects.filter(created__range=(start_of_current_month, start_of_next_month))
-        queryset_disbursement_last_month = Disbursement.objects.filter(created__range=(start_of_previous_month, start_of_current_month))
+        queryset_disbursements_previous_year = Disbursement.objects.filter(created__range=(start_of_last_year, start_of_current_year))
+        queryset_disbursements_this_year = Disbursement.objects.filter(created__range=(start_of_current_year, today))
 
         disbursement_count_previous_week = queryset_disbursement_previous_week.count()
         disbursement_amount_previous_week = queryset_disbursement_previous_week.aggregate(Sum('amount'))['amount__sum']
+        disbursement_count_week_so_far = queryset_disbursement_week_so_far.count()
+        disbursement_amount_week_so_far = queryset_disbursement_week_so_far.aggregate(Sum('amount'))['amount__sum']
+        disbursement_count_previous_month = queryset_disbursement_previous_month.count()
+        disbursement_amount_previous_month = queryset_disbursement_previous_month.aggregate(Sum('amount'))['amount__sum'] or 0
         disbursement_count_this_month = queryset_disbursement_this_month.count()
         disbursement_amount_this_month = queryset_disbursement_this_month.aggregate(Sum('amount'))['amount__sum'] or 0
-        disbursement_count_last_month = queryset_disbursement_last_month.count()
-        disbursement_amount_last_month = queryset_disbursement_last_month.aggregate(Sum('amount'))['amount__sum'] or 0
+        disbursement_count_previous_year = queryset_disbursements_previous_year.count()
+        disbursement_amount_previous_year = queryset_disbursements_previous_year.aggregate(Sum('amount'))['amount__sum']
         disbursement_count_this_year = queryset_disbursements_this_year.count()
         disbursement_amount_this_year = queryset_disbursements_this_year.aggregate(Sum('amount'))['amount__sum']
 
         digital_transactions_amount_previous_week = queryset_digital_transactions_previous_week.aggregate(Sum('amount'))['amount__sum']
         digital_transactions_count_previous_week = queryset_digital_transactions_previous_week.count()
+        digital_transactions_amount_week_so_far = queryset_digital_transactions_week_so_far.aggregate(Sum('amount'))['amount__sum']
+        digital_transactions_count_week_so_far = queryset_digital_transactions_week_so_far.count()
+        digital_transactions_count_previous_month = queryset_digital_transactions_previous_month.count()
+        digital_transactions_amount_previous_month = queryset_digital_transactions_previous_month.aggregate(Sum('amount'))['amount__sum']
         digital_transactions_count_this_month = queryset_digital_transactions_this_month.count()
         digital_transactions_amount_this_month = queryset_digital_transactions_this_month.aggregate(Sum('amount'))['amount__sum']
+        digital_transactions_count_previous_year = queryset_digital_transactions_previous_year.count()
+        digital_transactions_amount_previous_year = queryset_digital_transactions_previous_year.aggregate(Sum('amount'))['amount__sum']
         digital_transactions_count_this_year = queryset_digital_transactions_this_year.count()
         digital_transactions_amount_this_year = queryset_digital_transactions_this_year.aggregate(Sum('amount'))['amount__sum']
 
 
 
-
-
         context['disbursement_count_previous_week']= disbursement_count_previous_week
         context['disbursement_amount_previous_week'] = disbursement_amount_previous_week
+        context['disbursement_count_week_so_far'] = disbursement_count_week_so_far
+        context['disbursement_amount_week_so_far']= disbursement_amount_week_so_far
+        context['disbursement_count_last_month'] = disbursement_count_previous_month
+        context['disbursement_amount_last_month'] = disbursement_amount_previous_month
         context['disbursement_count_this_month'] = disbursement_count_this_month
         context['disbursement_amount_this_month'] = disbursement_amount_this_month
-        context['disbursement_count_last_month'] = disbursement_count_last_month
-        context['disbursement_amount_last_month'] = disbursement_amount_last_month
+        context['disbursement_count_previous_year'] = disbursement_count_previous_year
+        context['disbursement_amount_previous_year'] = disbursement_amount_previous_year
         context['disbursement_count_this_year']= disbursement_count_this_year
         context['disbursement_amount_this_year'] = disbursement_amount_this_year
+
         context['digital_transactions_amount_previous_week'] = digital_transactions_amount_previous_week
         context['digital_transactions_count_previous_week']= digital_transactions_count_previous_week
+        context['digital_transactions_amount_week_so_far'] = digital_transactions_amount_week_so_far
+        context['digital_transactions_count_week_so_far'] = digital_transactions_count_week_so_far
+        context['digital_transactions_count_previous_month'] = digital_transactions_count_previous_month
+        context['digital_transactions_amount_previous_month'] = digital_transactions_amount_previous_month
         context['digital_transactions_count_this_month'] = digital_transactions_count_this_month
         context['digital_transactions_amount_this_month'] = digital_transactions_amount_this_month
+        context['digital_transactions_count_previous_year'] = digital_transactions_count_previous_year
+        context['digital_transactions_amount_previous_year'] = digital_transactions_amount_previous_year
         context['digital_transactions_count_this_year'] = digital_transactions_count_this_year
         context['digital_transactions_amount_this_year'] =  digital_transactions_amount_this_year
 
