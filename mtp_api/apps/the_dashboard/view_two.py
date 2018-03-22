@@ -11,6 +11,7 @@ from credit.models import Credit, CREDIT_RESOLUTION, CREDIT_STATUS
 import datetime
 from disbursement.models import Disbursement
 from django.db.models import Sum
+from disbursement.constants import DISBURSEMENT_METHOD
 
 
 def get_user_satisfaction():
@@ -47,6 +48,34 @@ def get_user_satisfaction():
     return yearly_satisfaction_percentage
 
 
+def get_disbursements_by_check(start_of_month, end_of_month):
+    queryset_disbursement_cheque = Disbursement.objects.filter(method=DISBURSEMENT_METHOD.CHEQUE).filter(created__range=(start_of_month, end_of_month))
+    disbursement_cheque_count = queryset_disbursement_cheque.count()
+
+    return disbursement_cheque_count
+
+
+def get_disbursements(start_of_month, end_of_month):
+    queryset_disbursement_bank_transfer = Disbursement.objects.filter(method=DISBURSEMENT_METHOD.BANK_TRANSFER).filter(created__range=(start_of_month, end_of_month))
+    disbursement_bank_transfer_count = queryset_disbursement_bank_transfer.count()
+
+    return disbursement_bank_transfer_count
+
+
+def get_bank_transfers(start_of_month, end_of_month):
+    queryset_bank_transfer = Credit.objects.filter(transaction__isnull=False).filter(received_at__range=(start_of_month, end_of_month))
+    bank_transfer_count = queryset_bank_transfer.count()
+
+    return bank_transfer_count
+
+
+def get_debit_cards(start_of_month, end_of_month):
+    queryset_debit_card = Credit.objects.filter(payment__isnull=False).filter(received_at__range=(start_of_month, end_of_month))
+    debit_card_count = queryset_debit_card.count()
+
+    return debit_card_count
+
+
 def transaction_by_post(the_digital_take_up, digital_transactions_count):
     if the_digital_take_up is not None:
         transaction_by_post = (1 - the_digital_take_up) * digital_transactions_count
@@ -54,6 +83,15 @@ def transaction_by_post(the_digital_take_up, digital_transactions_count):
         transaction_by_post = 0
 
     return transaction_by_post
+
+
+def get_transactions_by_post(start_of_month, end_of_month ):
+    queryset_total_number_of_digital_transactions_in_month = Credit.objects.filter(received_at__range=(start_of_month, end_of_month))
+    total_number_of_digital_transactions_in_month = queryset_total_number_of_digital_transactions_in_month.count()
+    queryset_digital_take_up = DigitalTakeup.objects.filter(date__range=(start_of_month, end_of_month)).mean_digital_takeup()
+    transaction_by_post_by_month = transaction_by_post(queryset_digital_take_up, total_number_of_digital_transactions_in_month)
+
+    return round(transaction_by_post_by_month)
 
 
 def get_previous_month(month, year):
@@ -71,6 +109,12 @@ def get_next_month(month, year):
         year += 1
     return month, year
 
+
+def make_first_of_month(month, month_year, tz):
+    month_and_year = datetime.datetime(year=month_year, month=month, day=1)
+    month_and_year = tz.localize(month_and_year)
+
+    return month_and_year
 
 
 class DashboardTwoView(AdminViewMixin, TemplateView):
@@ -185,6 +229,7 @@ class DashboardTwoView(AdminViewMixin, TemplateView):
         context['digital_transactions_count_this_year'] = digital_transactions_count_this_year
         context['digital_transactions_amount_this_year'] =  digital_transactions_amount_this_year
 
+        context['data'] = self.get_monthly_data(month, year)
         context['savings'] =  self.get_savings(start_of_financial_year, end_of_financial_year, digital_transactions_count_this_financial_year, queryset_digital_transactions_this_financial_year)
         context['user_satisfaction'] = get_user_satisfaction()
         return context
@@ -206,5 +251,35 @@ class DashboardTwoView(AdminViewMixin, TemplateView):
         savings_made = total_cost_if_all_transactions_were_by_post - actual_cost
 
         return round(savings_made)
+
+
+    def get_monthly_data(self, month, year):
+        data = []
+        tz = timezone.get_current_timezone()
+        start_month, start_month_year = get_next_month(month, year)
+
+        for _ in range(6):
+            next_month, next_month_year = start_month, start_month_year
+            start_month, start_month_year = get_previous_month(start_month, start_month_year)
+            start_of_month = make_first_of_month(start_month, start_month_year, tz)
+            end_of_month = make_first_of_month(next_month, next_month_year, tz)
+
+            transaction_by_post_by_month = get_transactions_by_post(start_of_month, end_of_month)
+            debit_card_count = get_debit_cards(start_of_month, end_of_month)
+            bank_transfer_count = get_bank_transfers(start_of_month, end_of_month)
+            disbursement_bank_transfer_count = get_disbursements(start_of_month, end_of_month)
+            disbursement_cheque_count = get_disbursements_by_check(start_of_month, end_of_month)
+
+            data.append({
+                'start_of_month': start_of_month,
+                'end_of_month': end_of_month,
+                'transaction_by_post':transaction_by_post_by_month,
+                'debit_card_count': debit_card_count,
+                'bank_transfer_count': bank_transfer_count,
+                'disbursement_bank_transfer_count': disbursement_bank_transfer_count,
+                'disbursement_cheque_count': disbursement_cheque_count,
+            })
+
+        return data
 
 
