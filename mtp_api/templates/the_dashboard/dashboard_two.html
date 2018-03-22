@@ -36,7 +36,6 @@ var sharedOptions = {
 
   vAxis:{
     format: 'long',
-    // scaleType: 'log',
     titleTextStyle: {
       fontSize: 30,
       color: 'white'
@@ -55,11 +54,11 @@ var sharedOptions = {
   width: 1100,
   height: 750,
   chartArea: {
-    'left': 10,
-    'right': 80,
-    'top': 70,
-    'width': '100%',
-    'height': '70%'
+    left: 10,
+    right: 20,
+    top: 70,
+    width: '50%',
+    height: '70%'
   },
   legend: {
     position: 'none'
@@ -145,7 +144,7 @@ function drawChartDisbursmentCount() {
 
 var table_1;
 var table_2;
-var tableID=0;
+var tableID=1;
 var loadedCharts1 = false;
 var loadedCharts2 = false;
 
@@ -173,24 +172,121 @@ function initializeCharts() {
   table_1 = document.getElementById('table_1');
   table_2 = document.getElementById('table_2');
   changeTable();
-  setInterval(changeTable, 15000);
+  setInterval(changeTable, 1500);
 }
 
  google.charts.setOnLoadCallback(initializeCharts);
 </script>
 
 </head>
-
   <body>
-    <div id="table_1" class="size-of-page" style="display:block">
-    <div>
-      <h1><strong>Credits</strong> Money to prisoners</h1>
+     <div id="table_2" class="size-of-page" style="display:block">
+      <div class="main-title">
+        <h1><strong>Disbursements</strong> Money sent by prisoners</h1>
+      </div>
+
+      <table class="main-table">
+        <tr>
+          <td>
+            <h2>Number of monthly disbursements</h2>
+          </td>
+          <td class="width-of-right-sub-title">
+            <h2>Digital disbursement</h2>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <table class="length-of-legend-disbursements">
+              <td><div class="box blue"> </div></td>
+              <td><h4 class="blue-text">Cheque</h4></td>
+              <td><div class="box pink"> </div></td>
+              <td><h4 class="pink-text">Bank transfer</h4></td>
+            </table>
+          </td>
+          <td>
+            <h4 class="annotation-under-right-sub-title">
+              <span class="blue-text">Cheque</span>
+              <span> + </span>
+              <span class="pink-text">Bank transfer</span>
+            </h4>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <div id="disbursements_count_chart" ></div>
+          </td>
+          <td>
+            <table class="table-overview">
+              <tr class="border_bottom">
+                <td><h5>Last week</h5></td>
+                <td><h5>This week</h5></td>
+              </tr>
+              <tr>
+                <td><h6>{{disbursement_count_previous_week}} payments</h6></td>
+                <td><h6>{{disbursement_count_week_so_far}} payments</h6></td>
+              </tr>
+              <tr class="table-spacing">
+                <td><h6>{{disbursement_amount_previous_week|format_amount }}</h6></td>
+                <td><h6>{{disbursement_amount_week_so_far|format_amount}}</h6></td>
+              </tr>
+
+              <tr class="border_bottom">
+                <td><h5>Last month</h5></td>
+                <td><h5>This month</h5></td>
+              </tr>
+              <tr>
+                <td><h6>{{disbursement_count_last_month}} payments</h6></td>
+                <td><h6>{{disbursement_count_this_month}} payments</h6></td>
+              </tr>
+              <tr class="table-spacing">
+                <td><h6>{{disbursement_amount_last_month|format_amount}}</h6></td>
+                <td><h6>{{disbursement_amount_this_month|format_amount }}</h6></td>
+              </tr>
+
+              <tr class="border_bottom">
+                <td><h5>Last year:</h5></td>
+                <td><h5>This year:</h5></td>
+              </tr>
+              <tr>
+                <td><h6>{{disbursement_count_previous_year}} payments</h6></td>
+                <td><h6>{{disbursement_count_this_year}} payments</h6></td>
+              </tr>
+              <tr class="table-spacing">
+                <td><h6>{{disbursement_amount_previous_year|format_amount}}</h6></td>
+                <td><h6>{{disbursement_amount_this_year|format_amount}}</h6></td>
+              </tr>
+            </table>
+
+            <div class="satisfaction-box">
+              <h2>User satisfaction:</h2>
+              <h3>{{user_satisfaction}}%</h3>
+            </div>
+            <div class="money-saved-box">
+              <h2>Money saved:</h2>
+              <h3>{{savings|format_amount}}</h3>
+              <h4>in current financial year</h4>
+            </div>
+          </td>
+        </tr>
+      </table>
     </div>
-    <div class="space"></div>
-    <table>
-      <tr>
-        <td>
-          <h2>Number of monthly credits</h2>
+
+    <div id="table_1" class="size-of-page" style="display:block">
+      <div class="main-title">
+        <h1><strong>Credits</strong> Money to prisoners</h1>
+      </div>
+
+      <table class="main-table">
+        <tr>
+          <td>
+            <h2>Number of monthly credits</h2>
+          </td>
+          <td class="width-of-right-sub-title">
+            <h2>Digital credits</h2>
+          </td>
+        </tr>
+        <tr>
+          <td>
             <table class="length-of-legend-credits">
               <td><div class="box yellow"> </div></td>
               <td><h4 class="yellow-text">Debit card</h4></td>
@@ -198,168 +294,64 @@ function initializeCharts() {
               <td><h4 class="pink-text">Bank transfer</h4></td>
               <td><div class="box purple"> </div></td>
               <td><h4 class="purple-text">Post</h4></td>
+              </table>
+          </td>
+          <td>
+            <h4 class="annotation-under-right-sub-title">
+              <span class="yellow-text">Debit card</span>
+              <span> + </span>
+              <span class="pink-text">bank transfer</span>
+            </h4>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <div id="transaction_bar_chart"></div>
+          </td>
+          <td>
+            <table class="table-overview">
+              <tr class="border_bottom">
+                <td><h5>Last week</h5></td>
+                <td><h5>This week</h5></td>
+              </tr>
+              <tr>
+                <td><h6>{{digital_transactions_count_previous_week}} credits</h6></td>
+                <td><h6>{{digital_transactions_count_week_so_far}} credits</h6></td>
+              </tr>
+              <tr class="table-spacing">
+                <td><h6>{{digital_transactions_amount_previous_week|format_amount}}</h6></td>
+                <td><h6>{{digital_transactions_amount_week_so_far|format_amount}}</h6></td>
+              </tr>
+
+              <tr class="border_bottom">
+                <td><h5>Last month</h5></td>
+                <td><h5>This month</h5></td>
+              </tr>
+              <tr>
+                <td><h6>{{digital_transactions_count_previous_month}} credits</h6></td>
+                <td><h6>{{digital_transactions_count_this_month}} credits</h6></td>
+              </tr>
+              <tr class="table-spacing">
+                <td><h6>{{digital_transactions_amount_previous_month|format_amount}}</h6></td>
+                <td><h6>{{digital_transactions_amount_this_month|format_amount}}</h6></td>
+              </tr>
+
+              <tr class="border_bottom">
+                <td><h5>Last year:</h5></td>
+                <td><h5>This year:</h5></td>
+              </tr>
+              <tr>
+                <td><h6>{{digital_transactions_count_previous_year}} credits</h6></td>
+                <td><h6>{{digital_transactions_count_this_year}} credits</h6></td>
+              </tr>
+              <tr>
+                <td><h6>{{digital_transactions_amount_previous_year|format_amount}}</h6></td>
+                <td><h6>{{digital_transactions_amount_this_year|format_amount}}</h6></td>
+              </tr>
             </table>
-          <div class="space"></div>
-          <div id="transaction_bar_chart" >
-        </td>
-
-        <td>
-          <h2>User satisfaction:</h2>
-          <h3>{{user_satisfaction}}%</h3>
-          <div class="space"></div>
-          <h2>Money saved:</h2>
-          <h3>{{savings|format_amount}}</h3>
-          <h4>in current financial year</h4>
-          <div class="space"></div>
-          <h2>Digital credits</h2>
-
-          <h3>
-            <span class="yellow-text">Debit card</span>
-            <span> + </span>
-            <span class="pink-text">bank transfer</span>
-          </h3>
-
-          <div class="space"></div>
-
-          <table class="table-overview">
-            <tr class="border_bottom">
-              <td><h5>Last week</h5></td>
-              <td><h5>This week</h5></td>
-            </tr>
-            <tr>
-              <td><h6>{{digital_transactions_count_previous_week}} credits</h6></td>
-              <td><h6>{{digital_transactions_count_week_so_far}} credits</h6></td>
-            </tr>
-            <tr>
-              <td><h6>{{digital_transactions_amount_previous_week|format_amount}}</h6></td>
-              <td><h6>{{digital_transactions_amount_week_so_far|format_amount}}</h6></td>
-            </tr>
-            <tr class="space">
-              <td></td>
-              <td></td>
-            </tr>
-            <tr class="border_bottom">
-              <td><h5>Last month</h5></td>
-              <td><h5>This month</h5></td>
-            </tr>
-            <tr>
-              <td><h6>{{digital_transactions_count_previous_month}} credits</h6></td>
-              <td><h6>{{digital_transactions_count_this_month}} credits</h6></td>
-            </tr>
-            <tr>
-              <td><h6>{{digital_transactions_amount_previous_month|format_amount}}</h6></td>
-              <td><h6>{{digital_transactions_amount_this_month|format_amount}}</h6></td>
-            </tr>
-            <tr class="space">
-              <td></td>
-              <td></td>
-            </tr>
-            <tr class="border_bottom">
-              <td><h5>Last year:</h5></td>
-              <td><h5>This year:</h5></td>
-            </tr>
-            <tr>
-              <td><h6>{{digital_transactions_count_previous_year}} credits</h6></td>
-              <td><h6>{{digital_transactions_count_this_year}} credits</h6></td>
-            </tr>
-            <tr>
-              <td><h6>{{digital_transactions_amount_previous_year|format_amount}}</h6></td>
-              <td><h6>{{digital_transactions_amount_this_year|format_amount}}</h6></td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  </div>
-
-  <div id="table_2" class="size-of-page" style="display:block">
-    <div>
-      <h1><strong>Disbursements</strong> Money sent by prisoners</h1>
+          </td>
+        </tr>
+      </table>
     </div>
-    <div class="space"></div>
-
-    <table class="main-table">
-      <tr>
-        <td>
-          <h2>Number of monthly disbursements</h2>
-        </td>
-        <td>
-          <h2>Digital disbursement</h2>
-        </td>
-      </tr>
-      <tr>
-        <td>
-          <table class="length-of-legend-disbursements">
-            <td><div class="box blue"> </div></td>
-            <td><h4 class="blue-text">Cheque</h4></td>
-            <td><div class="box pink"> </div></td>
-            <td><h4 class="pink-text">Bank transfer</h4></td>
-          </table>
-          <div class="space"></div>
-        </td>
-        <td>
-          <h4>
-            <span class="blue-text">Cheque</span>
-            <span> + </span>
-            <span class="pink-text">Bank transfer</span>
-          </h4>
-          <div class="space"></div>
-        </td>
-      </tr>
-      <tr>
-        <td>
-           <div id="disbursements_count_chart" ></div>
-        </td>
-        <td>
-          <table class="table-overview">
-            <tr class="border_bottom">
-              <td><h5>Last week</h5></td>
-              <td><h5>This week</h5></td>
-            </tr>
-            <tr>
-              <td><h6>{{disbursement_count_previous_week}} payments</h6></td>
-              <td><h6>{{disbursement_count_week_so_far}} payments</h6></td>
-            </tr>
-            <tr>
-              <td><h6>{{disbursement_amount_previous_week|format_amount }}</h6></td>
-              <td><h6>{{disbursement_amount_week_so_far|format_amount}}</h6></td>
-            </tr>
-            <tr class="space">
-              <td></td>
-              <td></td>
-            </tr>
-            <tr class="border_bottom">
-              <td><h5>Last month</h5></td>
-              <td><h5>This month</h5></td>
-            </tr>
-            <tr>
-              <td><h6>{{disbursement_count_last_month}} payments</h6></td>
-              <td><h6>{{disbursement_count_this_month}} payments</h6></td>
-            </tr>
-            <tr>
-              <td><h6>{{disbursement_amount_last_month|format_amount}}</h6></td>
-              <td><h6>{{disbursement_amount_this_month|format_amount }}</h6></td>
-            </tr>
-            <tr class="space">
-              <td></td>
-              <td></td>
-            </tr>
-            <tr class="border_bottom">
-              <td><h5>Last year:</h5></td>
-              <td><h5>This year:</h5></td>
-            </tr>
-            <tr>
-              <td><h6>{{disbursement_count_previous_year}} payments</h6></td>
-              <td><h6>{{disbursement_count_this_year}} payments</h6></td>
-            </tr>
-            <tr>
-              <td><h6>{{disbursement_amount_previous_year|format_amount}}</h6></td>
-              <td><h6>{{disbursement_amount_this_year|format_amount}}</h6></td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  </div>
 </body>
 </html>
