@@ -77,7 +77,7 @@ var sharedOptions = {
 };
 
 
-function drawChartTransaction() {
+function drawChartCredit() {
   var data = google.visualization.arrayToDataTable([
     ['Month', 'Debit', 'Bank transfer', 'Post'],
     {% for d in data reversed %}
@@ -105,7 +105,7 @@ function drawChartTransaction() {
     }
   ]);
 
-  var chart = new google.visualization.ColumnChart(document.getElementById('transaction_bar_chart'));
+  var chart = new google.visualization.ColumnChart(document.getElementById('credit_bar_chart'));
   var options = Object.assign(sharedOptions);
   options.colors = ['#FFBF47', '#D53880', '#6F72AF'];
   chart.draw(view, options);
@@ -159,7 +159,7 @@ function changeTable(){
     table_1.style.display = 'block';
     table_2.style.display = 'none';
     if(loadedCharts1 == false){
-      drawChartTransaction();
+      drawChartCredit();
       loadedCharts1 = true;
     }
 
@@ -170,7 +170,7 @@ function changeTable(){
 
       credit_bar_chart_title.style.display = 'none';
       credits_legend.style.display = 'none';
-      transaction_bar_chart.style.display = 'none';
+      credit_bar_chart.style.display = 'none';
     },
 
        4000);
@@ -179,7 +179,7 @@ function changeTable(){
     digital_take_up_ratio_title.style.display = 'none';
     credit_bar_chart_title.style.display = 'block';
     digital_take_up_ratio.style.display = 'none';
-    transaction_bar_chart.style.display = 'block'
+    credit_bar_chart.style.display = 'block'
     credits_legend.style.display = 'block';
     digital_takeup_legend.style.display = 'none';
 
@@ -199,7 +199,7 @@ function initializeCharts() {
   digital_takeup_legend = document.getElementById('digital_takeup_legend');
   credits_legend = document.getElementById('credits_legend');
   digital_take_up_ratio = document.getElementById('digital_take_up_ratio');
-  transaction_bar_chart = document.getElementById('transaction_bar_chart');
+  credit_bar_chart = document.getElementById('credit_bar_chart');
   credit_bar_chart_title = document.getElementById('credit_bar_chart_title');
   digital_take_up_ratio_title = document.getElementById('digital_take_up_ratio_title');
 
@@ -312,7 +312,7 @@ function initializeCharts() {
         <tr>
           <td>
             <h2 id="credit_bar_chart_title" style="display:block">Number of monthly credits</h2>
-            <h2 id="digital_take_up_ratio_title" style="display:none">Number of monthly credits</h2>
+            <h2 id="digital_take_up_ratio_title" style="display:none">Digital takeup ratio</h2>
           </td>
           <td class="width-of-right-sub-title">
             <h2>Digital credits</h2>
@@ -346,7 +346,7 @@ function initializeCharts() {
         </tr>
         <tr>
           <td>
-            <div id="transaction_bar_chart" style="display:block"></div>
+            <div id="credit_bar_chart" style="display:block"></div>
             <div id="digital_take_up_ratio" class="large-box blue", style="display:none"></div>
           </td>
           <td>
