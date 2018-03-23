@@ -142,6 +142,12 @@ function drawChartDisbursmentCount() {
   chart.draw(view, options);
 }
 
+var credit_bar_chart_title;
+var digital_take_up_ratio_title;
+var transaction_bar_chart;
+var digital_take_up_ratio;
+var digital_takeup_legend;
+var credits_legend;
 var table_1;
 var table_2;
 var tableID=1;
@@ -156,8 +162,27 @@ function changeTable(){
       drawChartTransaction();
       loadedCharts1 = true;
     }
-    // setTimeout(......, 7500);
+
+    setTimeout(function(){
+      digital_take_up_ratio_title.style.display = 'block';
+      digital_takeup_legend.style.display = 'block';
+      digital_take_up_ratio.style.display = 'block';
+
+      credit_bar_chart_title.style.display = 'none';
+      credits_legend.style.display = 'none';
+      transaction_bar_chart.style.display = 'none';
+    },
+
+       4000);
+
   } else {
+    digital_take_up_ratio_title.style.display = 'none';
+    credit_bar_chart_title.style.display = 'block';
+    digital_take_up_ratio.style.display = 'none';
+    transaction_bar_chart.style.display = 'block'
+    credits_legend.style.display = 'block';
+    digital_takeup_legend.style.display = 'none';
+
     table_1.style.display = 'none';
     table_2.style.display = 'block';
     if(loadedCharts2 == false){
@@ -171,8 +196,15 @@ function changeTable(){
 function initializeCharts() {
   table_1 = document.getElementById('table_1');
   table_2 = document.getElementById('table_2');
+  digital_takeup_legend = document.getElementById('digital_takeup_legend');
+  credits_legend = document.getElementById('credits_legend');
+  digital_take_up_ratio = document.getElementById('digital_take_up_ratio');
+  transaction_bar_chart = document.getElementById('transaction_bar_chart');
+  credit_bar_chart_title = document.getElementById('credit_bar_chart_title');
+  digital_take_up_ratio_title = document.getElementById('digital_take_up_ratio_title');
+
   changeTable();
-  setInterval(changeTable, 1500);
+  setInterval(changeTable, 8000);
 }
 
  google.charts.setOnLoadCallback(initializeCharts);
@@ -279,7 +311,8 @@ function initializeCharts() {
       <table class="main-table">
         <tr>
           <td>
-            <h2>Number of monthly credits</h2>
+            <h2 id="credit_bar_chart_title" style="display:block">Number of monthly credits</h2>
+            <h2 id="digital_take_up_ratio_title" style="display:none">Number of monthly credits</h2>
           </td>
           <td class="width-of-right-sub-title">
             <h2>Digital credits</h2>
@@ -287,14 +320,21 @@ function initializeCharts() {
         </tr>
         <tr>
           <td>
-            <table class="length-of-legend-credits">
+            <table id="credits_legend" class="length-of-legend-credits" style="display:block">
               <td><div class="box yellow"> </div></td>
               <td><h4 class="yellow-text">Debit card</h4></td>
               <td><div class="box pink"></div></td>
               <td><h4 class="pink-text">Bank transfer</h4></td>
               <td><div class="box purple"> </div></td>
               <td><h4 class="purple-text">Post</h4></td>
-              </table>
+            </table>
+
+            <table id="digital_takeup_legend" class="length-of-legend-digital-takeup" style="display:none">
+              <td><div class="box green"> </div></td>
+              <td><h4 class="green-text">Digital (Debit card + Bank transfer) </h4></td>
+              <td><div class="box blue"></div></td>
+              <td><h4 class="blue-text">Post</h4></td>
+            </table>
           </td>
           <td>
             <h4 class="annotation-under-right-sub-title">
@@ -306,7 +346,8 @@ function initializeCharts() {
         </tr>
         <tr>
           <td>
-            <div id="transaction_bar_chart"></div>
+            <div id="transaction_bar_chart" style="display:block"></div>
+            <div id="digital_take_up_ratio" class="large-box blue", style="display:none"></div>
           </td>
           <td>
             <table class="table-overview">

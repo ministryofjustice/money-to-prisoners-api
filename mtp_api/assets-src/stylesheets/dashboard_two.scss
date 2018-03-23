@@ -46,6 +46,14 @@ td {
 .box{
   width:60px;
   height:40px;
+  margin-left: 20px;
+  margin-right: 20px;
+}
+
+.large-box {
+  margin-top: 100px;
+  width: 900px;
+  height: 400px;
 }
 
 .purple{
@@ -64,6 +72,10 @@ td {
   background: #2B8CC4;
 }
 
+.green {
+  background: #85994B;
+}
+
 .purple-text{
   color: #6F72AF;
 }
@@ -80,28 +92,32 @@ td {
   color: #2B8CC4;
 }
 
-/*
-.column-width {
-  width: 200px;
-  margin-left: 50pxs;
+.green-text{
+  color: #85994B;
 }
-*/
 
 table {
   width: 100%;
 }
 
 .length-of-legend-credits {
-  width: 700px;
+  width: 800px;
+  margin-top: 40px;
+  margin-bottom: 0px;
+}
+
+.length-of-legend-digital-takeup {
+  width: 800px;
   margin-top: 40px;
   margin-bottom: 0px;
 }
 
 .length-of-legend-disbursements {
-  width: 550px;
+  width: 500px;
   margin-top: 40px;
   margin-bottom: 0px;
 }
+
 
 h1 {
   font-size: 70px;
