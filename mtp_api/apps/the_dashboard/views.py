@@ -275,7 +275,7 @@ class DashboardView(AdminViewMixin, TemplateView):
             bank_transfer_count, bank_transfer_amount = get_bank_transfers(start_of_month, end_of_month)
             disbursement_bank_transfer_amount, disbursement_bank_transfer_count = get_disbursements(start_of_month, end_of_month)
             disbursement_cheque_count, disbursement_cheque_amount = get_disbursements_by_check(start_of_month, end_of_month)
-
+            print("START OF MONTH", start_of_month)
             data.append({
                 'start_of_month': start_of_month,
                 'end_of_month': end_of_month,

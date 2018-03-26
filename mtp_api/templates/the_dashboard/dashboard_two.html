@@ -13,6 +13,9 @@
 <script>
 google.charts.load('current', {'packages':['corechart']});
 
+
+
+
 var sharedOptions = {
   fontSize: 25,
   color: 'white',
@@ -51,7 +54,7 @@ var sharedOptions = {
   },
 
   backgroundColor: '#27332F',
-  width: 1100,
+  width: 1250,
   height: 750,
   chartArea: {
     left: 10,
@@ -76,6 +79,26 @@ var sharedOptions = {
   }
 };
 
+function drawDigitalTakeUpRatio() {
+   var data = new google.visualization.DataTable();
+      data.addColumn('date', 'Month');
+      data.addColumn('number', 'Digital');
+      data.addColumn('number', 'Post');
+
+      data.addRows([
+        {% for d in data_last_twelve_months reversed %}
+        [new Date('{{d.start_of_month|date:"M Y"}}'), {{d.digital_take_up_count_each_month_last_twelve_months}}, {{d.transaction_by_post_count_each_month_last_twelve_months}}],
+      {% endfor %}
+      ]);
+
+    var chart = new google.visualization.LineChart(document.getElementById('digital_take_up_ratio'));
+    var options = Object.assign(sharedOptions);
+    options.colors =  ['#85994B', '#2B8CC4']
+    // options.hAxis.logScale = false
+    chart.draw(data, options);
+}
+
+
 
 function drawChartCredit() {
   var data = google.visualization.arrayToDataTable([
@@ -83,7 +106,7 @@ function drawChartCredit() {
     {% for d in data reversed %}
       ['{{d.start_of_month|date:"M Y"}}', {{d.debit_card_count}}, {{d.bank_transfer_count}}, {{d.transaction_by_post}}],
     {% endfor %}
-  ]);
+   ]);
 
   var view = new google.visualization.DataView(data);
   view.setColumns([
@@ -150,9 +173,10 @@ var digital_takeup_legend;
 var credits_legend;
 var table_1;
 var table_2;
-var tableID=1;
+var tableID=2;
 var loadedCharts1 = false;
 var loadedCharts2 = false;
+var loadedChrats3 = false;
 
 function changeTable(){
   if(tableID % 2 == 0){
@@ -160,7 +184,9 @@ function changeTable(){
     table_2.style.display = 'none';
     if(loadedCharts1 == false){
       drawChartCredit();
+      drawDigitalTakeUpRatio();
       loadedCharts1 = true;
+      loadedChrats3 = true;
     }
 
     setTimeout(function(){
@@ -190,7 +216,7 @@ function changeTable(){
       loadedCharts2 = true;
     }
   }
-  tableID+=1;
+   tableID+=1;
 }
 
 function initializeCharts() {

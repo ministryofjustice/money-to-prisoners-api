@@ -78,7 +78,7 @@ def get_debit_cards(start_of_month, end_of_month):
 
 def transaction_by_post(the_digital_take_up, digital_transactions_count):
     if the_digital_take_up is not None:
-        transaction_by_post = (1 - the_digital_take_up) * digital_transactions_count
+        transaction_by_post = (1 - the_digital_take_up) * digital_transactions_count/the_digital_take_up
     else:
         transaction_by_post = 0
 
@@ -201,8 +201,6 @@ class DashboardTwoView(AdminViewMixin, TemplateView):
         digital_transactions_amount_this_year = queryset_digital_transactions_this_year.aggregate(Sum('amount'))['amount__sum']
         digital_transactions_count_this_financial_year = queryset_digital_transactions_this_financial_year.count()
 
-
-
         context['disbursement_count_previous_week']= disbursement_count_previous_week
         context['disbursement_amount_previous_week'] = disbursement_amount_previous_week
         context['disbursement_count_week_so_far'] = disbursement_count_week_so_far
@@ -229,7 +227,10 @@ class DashboardTwoView(AdminViewMixin, TemplateView):
         context['digital_transactions_count_this_year'] = digital_transactions_count_this_year
         context['digital_transactions_amount_this_year'] =  digital_transactions_amount_this_year
 
-        context['data'] = self.get_monthly_data(month, year)
+        data, data_last_twelve_months = self.get_monthly_data(month, year)
+
+        context['data_last_twelve_months'] = data_last_twelve_months
+        context['data'] = data
         context['savings'] =  self.get_savings(start_of_financial_year, end_of_financial_year, digital_transactions_count_this_financial_year, queryset_digital_transactions_this_financial_year)
         context['user_satisfaction'] = get_user_satisfaction()
         return context
@@ -255,31 +256,45 @@ class DashboardTwoView(AdminViewMixin, TemplateView):
 
     def get_monthly_data(self, month, year):
         data = []
+        data_last_twelve_months = []
         tz = timezone.get_current_timezone()
         start_month, start_month_year = get_next_month(month, year)
 
-        for _ in range(6):
+        for count in range(12):
             next_month, next_month_year = start_month, start_month_year
             start_month, start_month_year = get_previous_month(start_month, start_month_year)
             start_of_month = make_first_of_month(start_month, start_month_year, tz)
             end_of_month = make_first_of_month(next_month, next_month_year, tz)
-
             transaction_by_post_by_month = get_transactions_by_post(start_of_month, end_of_month)
             debit_card_count = get_debit_cards(start_of_month, end_of_month)
             bank_transfer_count = get_bank_transfers(start_of_month, end_of_month)
             disbursement_bank_transfer_count = get_disbursements(start_of_month, end_of_month)
             disbursement_cheque_count = get_disbursements_by_check(start_of_month, end_of_month)
 
-            data.append({
-                'start_of_month': start_of_month,
-                'end_of_month': end_of_month,
-                'transaction_by_post':transaction_by_post_by_month,
-                'debit_card_count': debit_card_count,
-                'bank_transfer_count': bank_transfer_count,
-                'disbursement_bank_transfer_count': disbursement_bank_transfer_count,
-                'disbursement_cheque_count': disbursement_cheque_count,
-            })
+            if count < 6:
+                data.append({
+                    'start_of_month': start_of_month,
+                    'end_of_month': end_of_month,
+                    'transaction_by_post':transaction_by_post_by_month,
+                    'debit_card_count': debit_card_count,
+                    'bank_transfer_count': bank_transfer_count,
+                    'disbursement_bank_transfer_count': disbursement_bank_transfer_count,
+                    'disbursement_cheque_count': disbursement_cheque_count,
+                })
 
-        return data
+            digital_count_each_month_last_twelve_months = get_debit_cards(start_of_month, end_of_month) + get_bank_transfers(start_of_month, end_of_month)
+
+            print("DIGITAL COUNT EACH MONTH", digital_count_each_month_last_twelve_months)
+
+            transaction_by_post_count_each_month_last_twelve_months = get_transactions_by_post(start_of_month, end_of_month)
+
+            data_last_twelve_months.append({
+                'start_of_month': start_of_month,
+                'digital_take_up_count_each_month_last_twelve_months': digital_count_each_month_last_twelve_months,
+                'transaction_by_post_count_each_month_last_twelve_months': transaction_by_post_count_each_month_last_twelve_months
+
+                })
+
+        return data, data_last_twelve_months
 
 
