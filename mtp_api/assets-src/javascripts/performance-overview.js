@@ -86,7 +86,7 @@ django.jQuery(function ($) {
   }
 
   var $chart = $('#performance-overview-chart');
-  if (performanceData && $chart.length === 1) {
+  if (typeof performanceData !== 'undefined' && $chart.length === 1) {
     google.charts.setOnLoadCallback(function () {
       performanceChart($, performanceData, $chart);
     });
