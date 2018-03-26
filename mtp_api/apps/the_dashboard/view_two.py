@@ -201,6 +201,8 @@ class DashboardTwoView(AdminViewMixin, TemplateView):
         digital_transactions_amount_this_year = queryset_digital_transactions_this_year.aggregate(Sum('amount'))['amount__sum']
         digital_transactions_count_this_financial_year = queryset_digital_transactions_this_financial_year.count()
 
+        data, data_last_twelve_months = self.get_monthly_data(month, year)
+
         context['disbursement_count_previous_week']= disbursement_count_previous_week
         context['disbursement_amount_previous_week'] = disbursement_amount_previous_week
         context['disbursement_count_week_so_far'] = disbursement_count_week_so_far
@@ -226,9 +228,6 @@ class DashboardTwoView(AdminViewMixin, TemplateView):
         context['digital_transactions_amount_previous_year'] = digital_transactions_amount_previous_year
         context['digital_transactions_count_this_year'] = digital_transactions_count_this_year
         context['digital_transactions_amount_this_year'] =  digital_transactions_amount_this_year
-
-        data, data_last_twelve_months = self.get_monthly_data(month, year)
-
         context['data_last_twelve_months'] = data_last_twelve_months
         context['data'] = data
         context['savings'] =  self.get_savings(start_of_financial_year, end_of_financial_year, digital_transactions_count_this_financial_year, queryset_digital_transactions_this_financial_year)
@@ -283,8 +282,6 @@ class DashboardTwoView(AdminViewMixin, TemplateView):
                 })
 
             digital_count_each_month_last_twelve_months = get_debit_cards(start_of_month, end_of_month) + get_bank_transfers(start_of_month, end_of_month)
-
-            print("DIGITAL COUNT EACH MONTH", digital_count_each_month_last_twelve_months)
 
             transaction_by_post_count_each_month_last_twelve_months = get_transactions_by_post(start_of_month, end_of_month)
 

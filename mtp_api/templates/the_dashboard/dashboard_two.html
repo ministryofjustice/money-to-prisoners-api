@@ -14,8 +14,6 @@
 google.charts.load('current', {'packages':['corechart']});
 
 
-
-
 var sharedOptions = {
   fontSize: 25,
   color: 'white',
@@ -54,7 +52,7 @@ var sharedOptions = {
   },
 
   backgroundColor: '#27332F',
-  width: 1250,
+  width: 1100,
   height: 750,
   chartArea: {
     left: 10,
@@ -94,7 +92,7 @@ function drawDigitalTakeUpRatio() {
     var chart = new google.visualization.LineChart(document.getElementById('digital_take_up_ratio'));
     var options = Object.assign(sharedOptions);
     options.colors =  ['#85994B', '#2B8CC4']
-    // options.hAxis.logScale = false
+    options.lineWidth = 10,
     chart.draw(data, options);
 }
 
@@ -176,7 +174,7 @@ var table_2;
 var tableID=2;
 var loadedCharts1 = false;
 var loadedCharts2 = false;
-var loadedChrats3 = false;
+var loadedCharts3 = false;
 
 function changeTable(){
   if(tableID % 2 == 0){
@@ -186,7 +184,7 @@ function changeTable(){
       drawChartCredit();
       drawDigitalTakeUpRatio();
       loadedCharts1 = true;
-      loadedChrats3 = true;
+      loadedCharts3 = true;
     }
 
     setTimeout(function(){
@@ -373,7 +371,7 @@ function initializeCharts() {
         <tr>
           <td>
             <div id="credit_bar_chart" style="display:block"></div>
-            <div id="digital_take_up_ratio" class="large-box blue", style="display:none"></div>
+            <div id="digital_take_up_ratio" style="display:none"></div>
           </td>
           <td>
             <table class="table-overview">
