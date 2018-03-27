@@ -146,26 +146,12 @@ class DashboardTwoView(AdminViewMixin, TemplateView):
         start_of_next_month = today.replace(month=next_month, year=next_months_year, day=1)
         start_of_current_year = today.replace(month=1, day=1)
 
-
-        if month > 4 and year:
-            start_of_financial_year = today.replace(month=4, year=year, day=1)
-        else:
-            start_of_financial_year = today.replace(month=4, year=last_year, day=1)
-
-
-        if month > 4 and year:
-            end_of_financial_year = today.replace(month=4, year=next_year, day=30)
-        else:
-            end_of_financial_year = today.replace(month=4, year=year, day=30)
-
         queryset_digital_transactions_previous_week = Credit.objects.filter(received_at__range=(start_of_previous_week,  end_of_previous_week))
         queryset_digital_transactions_week_so_far = Credit.objects.filter(received_at__range=(end_of_previous_week, today))
         queryset_digital_transactions_previous_month = Credit.objects.filter(received_at__range=(start_of_previous_month, start_of_current_month))
         queryset_digital_transactions_this_month = Credit.objects.filter(received_at__range=(start_of_current_month, start_of_next_month))
         queryset_digital_transactions_previous_year = Credit.objects.filter(received_at__range=(start_of_last_year, start_of_current_year))
         queryset_digital_transactions_this_year = Credit.objects.filter(received_at__range=(start_of_current_year, today))
-        queryset_digital_transactions_this_financial_year = Credit.objects.filter(received_at__range=(start_of_financial_year, end_of_financial_year))
-
 
         queryset_disbursement_previous_week = Disbursement.objects.filter(created__range=(start_of_previous_week, end_of_previous_week))
         queryset_disbursement_week_so_far = Disbursement.objects.filter(created__range=(end_of_previous_week, today))
@@ -199,7 +185,6 @@ class DashboardTwoView(AdminViewMixin, TemplateView):
         digital_transactions_amount_previous_year = queryset_digital_transactions_previous_year.aggregate(Sum('amount'))['amount__sum']
         digital_transactions_count_this_year = queryset_digital_transactions_this_year.count()
         digital_transactions_amount_this_year = queryset_digital_transactions_this_year.aggregate(Sum('amount'))['amount__sum']
-        digital_transactions_count_this_financial_year = queryset_digital_transactions_this_financial_year.count()
 
         data, data_last_twelve_months = self.get_monthly_data(month, year)
 
@@ -230,11 +215,26 @@ class DashboardTwoView(AdminViewMixin, TemplateView):
         context['digital_transactions_amount_this_year'] =  digital_transactions_amount_this_year
         context['data_last_twelve_months'] = data_last_twelve_months
         context['data'] = data
-        context['savings'] =  self.get_savings(start_of_financial_year, end_of_financial_year, digital_transactions_count_this_financial_year, queryset_digital_transactions_this_financial_year)
+        context['savings'] =  self.get_savings(today, month, last_year, year)
         context['user_satisfaction'] = get_user_satisfaction()
         return context
 
-    def get_savings(self, start_of_financial_year, end_of_financial_year, digital_transactions_count_this_financial_year, queryset_digital_transactions_this_financial_year):
+    def get_savings(self, today, month, last_year, year):
+
+        if month > 4 and year:
+            start_of_financial_year = today.replace(month=4, year=year, day=1)
+        else:
+            start_of_financial_year = today.replace(month=4, year=last_year, day=1)
+
+
+        if month > 4 and year:
+            end_of_financial_year = today.replace(month=4, year=next_year, day=30)
+        else:
+            end_of_financial_year = today.replace(month=4, year=year, day=30)
+
+        queryset_digital_transactions_this_financial_year = Credit.objects.filter(received_at__range=(start_of_financial_year, end_of_financial_year))
+        digital_transactions_count_this_financial_year = queryset_digital_transactions_this_financial_year.count()
+
         COST_PER_TRANSACTION_BY_POST = 5.73
         COST_PER_TRANSACTION_BY_DIGITAL = 2.22
 
