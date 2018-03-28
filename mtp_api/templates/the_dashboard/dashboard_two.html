@@ -276,42 +276,42 @@ function initializeCharts() {
           <td>
             <table class="table-overview">
               <tr class="border_bottom">
-                <td><h5>Last week</h5></td>
-                <td><h5>This week</h5></td>
+                <td>Last week</td>
+                <td>This week</td>
               </tr>
               <tr>
-                <td><h6>{{disbursement_count_previous_week}} payments</h6></td>
-                <td><h6>{{disbursement_count_week_so_far}} payments</h6></td>
+                <td>{{last_week.disbursement_count}} payments</td>
+                <td>{{this_week.disbursement_count}} payments</td>
               </tr>
               <tr class="table-spacing">
-                <td><h6>{{disbursement_amount_previous_week|format_amount }}</h6></td>
-                <td><h6>{{disbursement_amount_week_so_far|format_amount}}</h6></td>
+                <td>{{last_week.disbursement_amount|format_amount }}</td>
+                <td>{{this_week.disbursement_amount|format_amount}}</td>
               </tr>
 
               <tr class="border_bottom">
-                <td><h5>Last month</h5></td>
-                <td><h5>This month</h5></td>
+                <td>Last month</td>
+                <td>This month</td>
               </tr>
               <tr>
-                <td><h6>{{disbursement_count_last_month}} payments</h6></td>
-                <td><h6>{{disbursement_count_this_month}} payments</h6></td>
+                <td>{{last_month.disbursement_count}} payments</td>
+                <td>{{this_month.disbursement_count}} payments</td>
               </tr>
               <tr class="table-spacing">
-                <td><h6>{{disbursement_amount_last_month|format_amount}}</h6></td>
-                <td><h6>{{disbursement_amount_this_month|format_amount }}</h6></td>
+                <td>{{last_month.disbursement_amount|format_amount }}</td>
+                <td>{{this_month.disbursement_amount|format_amount}}</td>
               </tr>
 
               <tr class="border_bottom">
-                <td><h5>Last year:</h5></td>
-                <td><h5>This year:</h5></td>
+                <td>Last year:</td>
+                <td>This year:</td>
               </tr>
               <tr>
-                <td><h6>{{disbursement_count_previous_year}} payments</h6></td>
-                <td><h6>{{disbursement_count_this_year}} payments</h6></td>
+                <td>{{last_year.disbursement_count}} payments</td>
+                <td>{{this_year.disbursement_count}} payments</td>
               </tr>
               <tr class="table-spacing">
-                <td><h6>{{disbursement_amount_previous_year|format_amount}}</h6></td>
-                <td><h6>{{disbursement_amount_this_year|format_amount}}</h6></td>
+                <td>{{last_year.disbursement_amount|format_amount }}</td>
+                <td>{{this_year.disbursement_amount|format_amount}}</td>
               </tr>
             </table>
           </td>
@@ -328,7 +328,7 @@ function initializeCharts() {
         <tr>
           <td>
             <h2 id="credit_bar_chart_title" style="display:block">Number of monthly credits</h2>
-            <h2 id="digital_take_up_ratio_title" style="display:none">Digital takeup ratio</h2>
+            <h2 id="digital_take_up_ratio_title" style="display:none">Digital take-up</h2>
           </td>
           <td class="width-of-right-sub-title">
             <h2>Digital credits</h2>
@@ -372,50 +372,50 @@ function initializeCharts() {
           <td>
             <table class="table-overview">
               <tr class="border_bottom">
-                <td><h5>Last week</h5></td>
-                <td><h5>This week</h5></td>
+                <td>Last week</td>
+                <td>This week</td>
               </tr>
               <tr>
-                <td><h6>{{digital_transactions_count_previous_week}} credits</h6></td>
-                <td><h6>{{digital_transactions_count_week_so_far}} credits</h6></td>
+                <td>{{last_week.credit_count}} credits</td>
+                <td>{{this_week.credit_count}} credits</td>
               </tr>
               <tr class="table-spacing">
-                <td><h6>{{digital_transactions_amount_previous_week|format_amount}}</h6></td>
-                <td><h6>{{digital_transactions_amount_week_so_far|format_amount}}</h6></td>
+                <td>{{last_week.credit_amount|format_amount}}</td>
+                <td>{{this_week.credit_amount|format_amount}}</td>
               </tr>
 
               <tr class="border_bottom">
-                <td><h5>Last month</h5></td>
-                <td><h5>This month</h5></td>
+                <td>Last month</td>
+                <td>This month</td>
               </tr>
               <tr>
-                <td><h6>{{digital_transactions_count_previous_month}} credits</h6></td>
-                <td><h6>{{digital_transactions_count_this_month}} credits</h6></td>
+                <td>{{last_month.credit_count}} credits</td>
+                <td>{{this_month.credit_count}} credits</td>
               </tr>
               <tr class="table-spacing">
-                <td><h6>{{digital_transactions_amount_previous_month|format_amount}}</h6></td>
-                <td><h6>{{digital_transactions_amount_this_month|format_amount}}</h6></td>
+                <td>{{last_month.credit_amount|format_amount}}</td>
+                <td>{{this_month.credit_amount|format_amount}}</td>
               </tr>
 
               <tr class="border_bottom">
-                <td><h5>Last year:</h5></td>
-                <td><h5>This year:</h5></td>
+                <td>Last year:</td>
+                <td>This year:</td>
               </tr>
               <tr>
-                <td><h6>{{digital_transactions_count_previous_year}} credits</h6></td>
-                <td><h6>{{digital_transactions_count_this_year}} credits</h6></td>
+                <td>{{last_year.credit_count}} credits</td>
+                <td>{{this_year.credit_count}} credits</td>
               </tr>
-              <tr>
-                <td><h6>{{digital_transactions_amount_previous_year|format_amount}}</h6></td>
-                <td><h6>{{digital_transactions_amount_this_year|format_amount}}</h6></td>
+              <tr class="table-spacing">
+                <td>{{last_year.credit_amount|format_amount}}</td>
+                <td>{{this_year.credit_amount|format_amount}}</td>
               </tr>
             </table>
             <div class="satisfaction-box">
-              <h2>User satisfaction:</h2>
+              <h2>User satisfaction</h2>
               <h3>{{user_satisfaction}}%</h3>
             </div>
             <div class="money-saved-box">
-              <h2>Money saved:</h2>
+              <h2>Money saved</h2>
               <h3>{{savings|format_amount}}</h3>
               <h4>in current financial year</h4>
             </div>
