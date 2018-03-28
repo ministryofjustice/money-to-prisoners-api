@@ -136,7 +136,7 @@ class DashboardTwoView(AdminViewMixin, TemplateView):
         month = today.month
         year = today.year
         last_year = year - 1
-        next_year = year + 1
+        # next_year = year + 1
         last_month, last_months_year = get_previous_month(month, year)
         next_month, next_months_year = get_next_month(month, year)
 
@@ -160,19 +160,6 @@ class DashboardTwoView(AdminViewMixin, TemplateView):
         queryset_disbursements_previous_year = Disbursement.objects.filter(created__range=(start_of_last_year, start_of_current_year))
         queryset_disbursements_this_year = Disbursement.objects.filter(created__range=(start_of_current_year, today))
 
-        disbursement_count_previous_week = queryset_disbursement_previous_week.count()
-        disbursement_amount_previous_week = queryset_disbursement_previous_week.aggregate(Sum('amount'))['amount__sum']
-        disbursement_count_week_so_far = queryset_disbursement_week_so_far.count()
-        disbursement_amount_week_so_far = queryset_disbursement_week_so_far.aggregate(Sum('amount'))['amount__sum']
-        disbursement_count_previous_month = queryset_disbursement_previous_month.count()
-        disbursement_amount_previous_month = queryset_disbursement_previous_month.aggregate(Sum('amount'))['amount__sum'] or 0
-        disbursement_count_this_month = queryset_disbursement_this_month.count()
-        disbursement_amount_this_month = queryset_disbursement_this_month.aggregate(Sum('amount'))['amount__sum'] or 0
-        disbursement_count_previous_year = queryset_disbursements_previous_year.count()
-        disbursement_amount_previous_year = queryset_disbursements_previous_year.aggregate(Sum('amount'))['amount__sum']
-        disbursement_count_this_year = queryset_disbursements_this_year.count()
-        disbursement_amount_this_year = queryset_disbursements_this_year.aggregate(Sum('amount'))['amount__sum']
-
         digital_transactions_amount_previous_week = queryset_digital_transactions_previous_week.aggregate(Sum('amount'))['amount__sum']
         digital_transactions_count_previous_week = queryset_digital_transactions_previous_week.count()
         digital_transactions_amount_week_so_far = queryset_digital_transactions_week_so_far.aggregate(Sum('amount'))['amount__sum']
@@ -185,6 +172,19 @@ class DashboardTwoView(AdminViewMixin, TemplateView):
         digital_transactions_amount_previous_year = queryset_digital_transactions_previous_year.aggregate(Sum('amount'))['amount__sum']
         digital_transactions_count_this_year = queryset_digital_transactions_this_year.count()
         digital_transactions_amount_this_year = queryset_digital_transactions_this_year.aggregate(Sum('amount'))['amount__sum']
+
+        disbursement_count_previous_week = queryset_disbursement_previous_week.count()
+        disbursement_amount_previous_week = queryset_disbursement_previous_week.aggregate(Sum('amount'))['amount__sum']
+        disbursement_count_week_so_far = queryset_disbursement_week_so_far.count()
+        disbursement_amount_week_so_far = queryset_disbursement_week_so_far.aggregate(Sum('amount'))['amount__sum']
+        disbursement_count_previous_month = queryset_disbursement_previous_month.count()
+        disbursement_amount_previous_month = queryset_disbursement_previous_month.aggregate(Sum('amount'))['amount__sum'] or 0
+        disbursement_count_this_month = queryset_disbursement_this_month.count()
+        disbursement_amount_this_month = queryset_disbursement_this_month.aggregate(Sum('amount'))['amount__sum'] or 0
+        disbursement_count_previous_year = queryset_disbursements_previous_year.count()
+        disbursement_amount_previous_year = queryset_disbursements_previous_year.aggregate(Sum('amount'))['amount__sum']
+        disbursement_count_this_year = queryset_disbursements_this_year.count()
+        disbursement_amount_this_year = queryset_disbursements_this_year.aggregate(Sum('amount'))['amount__sum']
 
         data, data_last_twelve_months = self.get_monthly_data(month, year)
 
@@ -215,22 +215,19 @@ class DashboardTwoView(AdminViewMixin, TemplateView):
         context['digital_transactions_amount_this_year'] =  digital_transactions_amount_this_year
         context['data_last_twelve_months'] = data_last_twelve_months
         context['data'] = data
-        context['savings'] =  self.get_savings(today, month, last_year, year)
+        context['savings'] =  self.get_savings(today)
         context['user_satisfaction'] = get_user_satisfaction()
         return context
 
-    def get_savings(self, today, month, last_year, year):
 
-        if month > 4 and year:
-            start_of_financial_year = today.replace(month=4, year=year, day=1)
+    def get_savings(self, today):
+
+        if today.month > 3:
+            start_of_financial_year = today.replace(month=4, day=1)
+            end_of_financial_year = today.replace(month=4, year= today.year+1, day=30)
         else:
-            start_of_financial_year = today.replace(month=4, year=last_year, day=1)
-
-
-        if month > 4 and year:
-            end_of_financial_year = today.replace(month=4, year=next_year, day=30)
-        else:
-            end_of_financial_year = today.replace(month=4, year=year, day=30)
+            start_of_financial_year = today.replace(month=4, year=today.year-1, day=1)
+            end_of_financial_year = today.replace(month=4, day=30)
 
         queryset_digital_transactions_this_financial_year = Credit.objects.filter(received_at__range=(start_of_financial_year, end_of_financial_year))
         digital_transactions_count_this_financial_year = queryset_digital_transactions_this_financial_year.count()
@@ -289,8 +286,7 @@ class DashboardTwoView(AdminViewMixin, TemplateView):
                 'start_of_month': start_of_month,
                 'digital_take_up_count_each_month_last_twelve_months': digital_count_each_month_last_twelve_months,
                 'transaction_by_post_count_each_month_last_twelve_months': transaction_by_post_count_each_month_last_twelve_months
-
-                })
+            })
 
         return data, data_last_twelve_months
 

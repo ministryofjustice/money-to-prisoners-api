@@ -15,7 +15,7 @@ body {
 }
 
 img.bottom {
-    vertical-align: text-bottom;
+  vertical-align: text-bottom;
 }
 
 
@@ -43,51 +43,63 @@ td {
   margin-bottom: 50px
 }
 
-.box{
-  width:60px;
-  height:40px;
-  margin-left: 20px;
-  margin-right: 20px;
-}
+.legend {
+  margin-top: 20px;
+  font-size: 30px;
+  font-weight: lighter;
 
-.purple{
-  background:#6F72AF;
-}
+  span {
+    display: inline-block;
+    margin-right: 20px;
+  }
 
-.pink{
-  background:#D53880;
+  span::before {
+    display: inline-block;
+    height: 40px;
+    width: 60px;
+    margin-bottom: -9px;
+    content: " ";
+  }
 }
 
 .yellow {
-  background: #FFBF47;
+  color: #FFBF47;
+
+  .legend &::before {
+    background: #FFBF47;
+  }
 }
 
-.blue {
-  background: #2B8CC4;
+.pink {
+  color: #D53880;
+
+  .legend &::before {
+    background: #D53880;
+  }
+}
+
+.purple {
+  color: #6F72AF;
+
+  .legend &::before {
+    background: #6F72AF;
+  }
 }
 
 .green {
-  background: #85994B;
-}
-
-.purple-text{
-  color: #6F72AF;
-}
-
-.pink-text{
-  color:#D53880;
-}
-
-.yellow-text{
-  color: #FFBF47;
-}
-
-.blue-text{
-  color: #2B8CC4;
-}
-
-.green-text{
   color: #85994B;
+
+  .legend &::before {
+    background: #85994B;
+  }
+}
+
+.blue {
+  color: #2B8CC4;
+
+  .legend &::before {
+    background: #2B8CC4;
+  }
 }
 
 table {

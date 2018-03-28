@@ -252,18 +252,20 @@ function initializeCharts() {
         </tr>
         <tr>
           <td>
-            <table class="length-of-legend-disbursements">
-              <td><div class="box blue"> </div></td>
-              <td><h4 class="blue-text">Cheque</h4></td>
-              <td><div class="box pink"> </div></td>
-              <td><h4 class="pink-text">Bank transfer</h4></td>
-            </table>
+            <div class="legend">
+              <span class="blue">
+                Cheque
+              </span>
+              <span class="pink">
+                Bank transfer
+              </span>
+            </div>
           </td>
           <td>
             <h4 class="annotation-under-right-sub-title">
-              <span class="blue-text">Cheque</span>
-              <span> + </span>
-              <span class="pink-text">Bank transfer</span>
+              <span class="blue">Cheque</span>
+              +
+              <span class="pink">Bank transfer</span>
             </h4>
           </td>
         </tr>
@@ -312,16 +314,6 @@ function initializeCharts() {
                 <td><h6>{{disbursement_amount_this_year|format_amount}}</h6></td>
               </tr>
             </table>
-
-            <div class="satisfaction-box">
-              <h2>User satisfaction:</h2>
-              <h3>{{user_satisfaction}}%</h3>
-            </div>
-            <div class="money-saved-box">
-              <h2>Money saved:</h2>
-              <h3>{{savings|format_amount}}</h3>
-              <h4>in current financial year</h4>
-            </div>
           </td>
         </tr>
       </table>
@@ -344,27 +336,31 @@ function initializeCharts() {
         </tr>
         <tr>
           <td>
-            <table id="credits_legend" class="length-of-legend-credits" style="display:block">
-              <td><div class="box yellow"> </div></td>
-              <td><h4 class="yellow-text">Debit card</h4></td>
-              <td><div class="box pink"></div></td>
-              <td><h4 class="pink-text">Bank transfer</h4></td>
-              <td><div class="box purple"> </div></td>
-              <td><h4 class="purple-text">Post</h4></td>
-            </table>
-
-            <table id="digital_takeup_legend" class="length-of-legend-digital-takeup" style="display:none">
-              <td><div class="box green"> </div></td>
-              <td><h4 class="green-text">Digital (Debit card + Bank transfer) </h4></td>
-              <td><div class="box blue"></div></td>
-              <td><h4 class="blue-text">Post</h4></td>
-            </table>
+            <div id="credits_legend" class="legend">
+              <span class="yellow">
+                Debit card
+              </span>
+              <span class="pink">
+                Bank transfer
+              </span>
+              <span class="purple">
+                Post
+              </span>
+            </div>
+            <div id="digital_takeup_legend" class="legend" style="display:none">
+              <span class="green">
+                Debit card + Bank transfer
+              </span>
+              <span class="blue">
+                Post
+              </span>
+            </div>
           </td>
           <td>
             <h4 class="annotation-under-right-sub-title">
-              <span class="yellow-text">Debit card</span>
-              <span> + </span>
-              <span class="pink-text">bank transfer</span>
+              <span class="yellow">Debit card</span>
+              +
+              <span class="pink">Bank transfer</span>
             </h4>
           </td>
         </tr>
@@ -414,6 +410,15 @@ function initializeCharts() {
                 <td><h6>{{digital_transactions_amount_this_year|format_amount}}</h6></td>
               </tr>
             </table>
+            <div class="satisfaction-box">
+              <h2>User satisfaction:</h2>
+              <h3>{{user_satisfaction}}%</h3>
+            </div>
+            <div class="money-saved-box">
+              <h2>Money saved:</h2>
+              <h3>{{savings|format_amount}}</h3>
+              <h4>in current financial year</h4>
+            </div>
           </td>
         </tr>
       </table>
