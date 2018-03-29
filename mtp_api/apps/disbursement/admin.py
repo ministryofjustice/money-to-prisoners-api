@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from core.admin import add_short_description
+from core.admin import add_short_description, UtcDateRangeFilter
 from disbursement.models import Disbursement, Log, Comment
 from transaction.utils import format_amount
 
@@ -33,7 +33,12 @@ class DisbursementAdmin(admin.ModelAdmin):
         'recipient_name', 'formatted_amount', 'prisoner_number',
         'prison', 'resolution', 'method', 'created'
     )
-    list_filter = ('resolution', 'method', 'prison')
+    list_filter = (
+        'resolution',
+        'method',
+        ('created', UtcDateRangeFilter),
+        'prison',
+    )
     search_fields = ('prisoner_name', 'prisoner_number')
     inlines = (LogAdminInline, CommentAdminInline,)
     date_hierarchy = 'created'
