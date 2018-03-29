@@ -2,25 +2,40 @@ body {
   padding-left: 100px;
   padding-right: 100px;
   padding-top: 30px;
-  padding-bottom: 20px;
+  padding-bottom: 30px;
   margin: 0;
   background-color: #27332F;
   font-family: Arial, Helvetica, sans-serif;
   color: white;
 }
 
-.size-of-page {
-  width: 1720px;
-  height: 930px;
+h1 {
+  font-size: 70px;
+  margin: 0px;
+  font-weight: lighter;
+  margin: 0px;
 }
 
-img.bottom {
-  vertical-align: text-bottom;
+h2 {
+  font-size: 40px;
+  margin: 0px;
 }
 
+h3 {
+  font-size: 35px;
+  font-weight: lighter;
+  margin: 0px;
+}
+
+h4 {
+  font-size: 30px;
+  font-weight: lighter;
+  margin: 0px;
+}
 
 table {
-  border-collapse: collapse!important;
+  width: 100%;
+  border-collapse: collapse !important;
   border-spacing: 0px;
 }
 
@@ -30,19 +45,27 @@ td {
   vertical-align: top;
 }
 
+tr.border_bottom td {
+  border-bottom:1pt solid white;
+}
+
+.size-of-page {
+  width: 1720px;
+  height: 930px;
+}
+
 .width-of-right-sub-title{
   display: inline-block;
   width: 430px;
 }
 
 .annotation-under-right-sub-title {
-  height: 80px;
+  height: 70px;
   padding-top: 20px;
 }
 
-
 .main-title {
-  margin-bottom: 45px
+  margin-bottom: 30px
 }
 
 .legend {
@@ -104,57 +127,6 @@ td {
   }
 }
 
-table {
-  width: 100%;
-}
-
-.length-of-legend-credits {
-  width: 800px;
-  margin-top: 40px;
-  margin-bottom: 0px;
-}
-
-.length-of-legend-digital-takeup {
-  width: 800px;
-  margin-top: 40px;
-  margin-bottom: 0px;
-}
-
-.length-of-legend-disbursements {
-  width: 500px;
-  margin-top: 40px;
-  margin-bottom: 0px;
-}
-
-
-h1 {
-  font-size: 70px;
-  margin: 0px;
-  font-weight: lighter;
-  margin: 0px;
-}
-
-h2 {
-  font-size: 40px;
-  margin: 0px;
-}
-
-h3 {
-  font-size: 35px;
-  font-weight: lighter;
-  margin: 0px;
-}
-
-tr.border_bottom td {
-  border-bottom:1pt solid white;
-}
-
-h4 {
-  font-size: 30px;
-  font-weight: lighter;
-  margin: 0px;
-}
-
 .table-overview {
   font-size: 25px;
   font-weight: lighter;
@@ -168,15 +140,15 @@ h4 {
   }
 }
 
+.table-spacing td {
+  padding-bottom: 35px;
+}
+
 .satisfaction-box {
   margin-top: 20px;
 }
 
 .money-saved-box {
   margin-top: 30px;
-}
-
-.table-spacing td {
-  padding-bottom: 35px;
 }
 

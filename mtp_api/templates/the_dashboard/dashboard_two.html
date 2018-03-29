@@ -101,7 +101,7 @@ function drawChartCredit() {
   var data = google.visualization.arrayToDataTable([
     ['Month', 'Debit', 'Bank transfer', 'Post'],
     {% for d in data_six_months reversed %}
-      ['{{d.start_of_month|date:"M Y"}}', {{d.debit_card_count}}, {{d.bank_transfer_count}}, {{d.post_count}}],
+      ['{{d.start_of_month|date:"M Y"}}', {{d.credit_debit_card_count}}, {{d.credit_bank_transfer_count}}, {{d.post_count}}],
     {% endfor %}
    ]);
 
@@ -414,7 +414,7 @@ function initializeCharts() {
             <div class="money-saved-box">
               <h2>Government <br> savings enabled</h2>
               <h3>{{savings|format_amount}}</h3>
-              <h4>(in current financial year)</h4>
+              <h4>in current financial year</h4>
             </div>
           </td>
         </tr>
