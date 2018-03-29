@@ -51,7 +51,6 @@ INSTALLED_APPS = (
     'service',
     'security',
     'disbursement',
-    'the_dashboard',
 
     # django admin
     'django.contrib.admin',

@@ -136,7 +136,7 @@ class PerformanceDashboardView(AdminViewMixin, TemplateView):
     """
     Django admin view which presents an overview report for MTP
     """
-    template_name = 'dashboard/performance-dashboard.html'
+    template_name = 'performance/dashboard.html'
     required_permissions = ['transaction.view_dashboard']
 
     def get_context_data(self, **kwargs):
