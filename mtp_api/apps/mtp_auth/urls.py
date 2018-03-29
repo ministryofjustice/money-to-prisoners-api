@@ -8,7 +8,7 @@ router.register(r'users', views.UserViewSet)
 router.register(r'roles', views.RoleViewSet)
 
 urlpatterns = [
-
+    url(r'^', include(router.urls)),
     url(r'^change_password/$', views.ChangePasswordView.as_view(),
         name='user-change-password'),
     url(r'^change_password/(?P<code>[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/$',
