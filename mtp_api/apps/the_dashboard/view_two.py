@@ -14,7 +14,11 @@ from performance.models import DigitalTakeupQueryset, DigitalTakeup
 
 
 def get_user_satisfaction():
-    yearly_data = requests.get('https://www.performance.service.gov.uk/data/send-prisoner-money/customer-satisfaction?flatten=true&duration=1&period=year&collect=rating_1%3Asum&collect=rating_2%3Asum&collect=rating_3%3Asum&collect=rating_4%3Asum&collect=rating_5%3Asum&collect=total%3Asum&format=json').json()
+    yearly_data = requests.get(
+        'https://www.performance.service.gov.uk/data/send-prisoner-money/customer-satisfaction?'
+        'flatten=true&duration=1&period=year&collect=rating_1%3Asum&collect=rating_2%3Asum&collect=rating_3%3Asum&'
+        'collect=rating_4%3Asum&collect=rating_5%3Asum&collect=total%3Asum&format=json'
+    ).json()
     yearly_data = yearly_data['data'][0]
 
     total_satisfied_each_year = yearly_data['rating_4:sum'] + yearly_data['rating_5:sum']
@@ -56,22 +60,22 @@ def get_stats_by_method(start_date, end_date):
     }
 
 
-def transaction_by_post(the_digital_take_up, digital_transactions_count):
-    if the_digital_take_up is not None:
-        transaction_by_post = (1 - the_digital_take_up) * digital_transactions_count/the_digital_take_up
+def post_count(digital_take_up, digital_count):
+    if digital_take_up is not None:
+        by_post = (1 - digital_take_up) * digital_count/digital_take_up
     else:
-        transaction_by_post = 0
+        by_post = 0
 
-    return transaction_by_post
+    return by_post
 
 
-def get_transactions_by_post(start_of_month, end_of_month ):
-    queryset_total_number_of_digital_transactions_in_month = Credit.objects.filter(received_at__range=(start_of_month, end_of_month))
-    total_number_of_digital_transactions_in_month = queryset_total_number_of_digital_transactions_in_month.count()
+def estimate_postal_credits(start_of_month, end_of_month ):
+    queryset_digital_in_month = Credit.objects.filter(received_at__range=(start_of_month, end_of_month))
+    digital_in_month_count = queryset_digital_in_month.count()
     queryset_digital_take_up = DigitalTakeup.objects.filter(date__range=(start_of_month, end_of_month)).mean_digital_takeup()
-    transaction_by_post_by_month = transaction_by_post(queryset_digital_take_up, total_number_of_digital_transactions_in_month)
+    post_by_month = post_count(queryset_digital_take_up, digital_in_month_count)
 
-    return round(transaction_by_post_by_month)
+    return round(post_by_month)
 
 
 def get_savings(today):
@@ -82,8 +86,8 @@ def get_savings(today):
         start_of_financial_year = today.replace(month=4, year=today.year-1, day=1)
         end_of_financial_year = today.replace(month=4, day=30)
 
-    queryset_digital_transactions_this_financial_year = Credit.objects.filter(received_at__range=(start_of_financial_year, end_of_financial_year))
-    digital_transactions_count_this_financial_year = queryset_digital_transactions_this_financial_year.count()
+    queryset_digital_this_financial_year = Credit.objects.filter(received_at__range=(start_of_financial_year, end_of_financial_year))
+    digital_count_this_financial_year = queryset_digital_this_financial_year.count()
 
     COST_PER_TRANSACTION_BY_POST = 5.73
     COST_PER_TRANSACTION_BY_DIGITAL = 2.22
@@ -91,14 +95,14 @@ def get_savings(today):
     queryset_digital_takeup_this_financial_year = DigitalTakeup.objects.filter(date__range=(start_of_financial_year, end_of_financial_year))
     digital_take_up_this_financial_year = queryset_digital_takeup_this_financial_year.mean_digital_takeup()
 
-    transaction_by_post_this_financial_year = transaction_by_post(digital_take_up_this_financial_year, digital_transactions_count_this_financial_year)
-    transaction_by_digital_this_financial_year = queryset_digital_transactions_this_financial_year.filter(resolution=CREDIT_RESOLUTION.CREDITED).count()
+    post_this_financial_year = post_count(digital_take_up_this_financial_year, digital_count_this_financial_year)
+    digital_this_financial_year = queryset_digital_this_financial_year.filter(resolution=CREDIT_RESOLUTION.CREDITED).count()
 
-    total_cost_of_transaction_by_post = transaction_by_post_this_financial_year * COST_PER_TRANSACTION_BY_POST
-    total_cost_of_transaction_by_digital = transaction_by_digital_this_financial_year * COST_PER_TRANSACTION_BY_DIGITAL
-    total_cost_if_all_transactions_were_by_post = (transaction_by_post_this_financial_year + transaction_by_digital_this_financial_year) * COST_PER_TRANSACTION_BY_POST
-    actual_cost = total_cost_of_transaction_by_post + total_cost_of_transaction_by_digital
-    savings_made = total_cost_if_all_transactions_were_by_post - actual_cost
+    total_cost_by_post = post_this_financial_year * COST_PER_TRANSACTION_BY_POST
+    total_cost_of_digital = digital_this_financial_year * COST_PER_TRANSACTION_BY_DIGITAL
+    total_cost_if_all_post = (post_this_financial_year + digital_this_financial_year) * COST_PER_TRANSACTION_BY_POST
+    actual_cost = total_cost_by_post + total_cost_of_digital
+    savings_made = total_cost_if_all_post - actual_cost
 
     return round(savings_made)
 
@@ -154,7 +158,7 @@ class DashboardTwoView(AdminViewMixin, TemplateView):
         start_of_next_month = today.replace(month=next_month, year=next_months_year, day=1)
         start_of_current_year = today.replace(month=1, day=1)
 
-        data, data_last_twelve_months = self.get_monthly_data(month, year)
+        data = self.get_monthly_data(month, year)
 
         context['last_week'] = get_overall_stats(start_of_previous_week,  end_of_previous_week)
         context['this_week'] = get_overall_stats(end_of_previous_week, today)
@@ -162,15 +166,15 @@ class DashboardTwoView(AdminViewMixin, TemplateView):
         context['this_month'] = get_overall_stats(start_of_current_month, start_of_next_month)
         context['last_year'] = get_overall_stats(start_of_last_year, start_of_current_year)
         context['this_year'] = get_overall_stats(start_of_current_year, today)
-        context['data_last_twelve_months'] = data_last_twelve_months
         context['data'] = data
+        context['data_six_months'] = data[0:7]
         context['savings'] =  get_savings(today)
         context['user_satisfaction'] = get_user_satisfaction()
         return context
 
     def get_monthly_data(self, month, year):
         data = []
-        data_last_twelve_months = []
+
         tz = timezone.get_current_timezone()
         start_month, start_month_year = get_next_month(month, year)
 
@@ -180,19 +184,13 @@ class DashboardTwoView(AdminViewMixin, TemplateView):
             start_of_month = make_first_of_month(start_month, start_month_year, tz)
             end_of_month = make_first_of_month(next_month, next_month_year, tz)
 
-            transaction_by_post_by_month = get_transactions_by_post(start_of_month, end_of_month)
+            post_by_month = estimate_postal_credits(start_of_month, end_of_month)
             stats_by_method = get_stats_by_method(start_of_month, end_of_month)
-            if count < 6:
-                stats_by_method['start_of_month'] = start_of_month
-                stats_by_method['end_of_month'] = end_of_month
-                stats_by_method['transaction_by_post'] = transaction_by_post_by_month
 
-                data.append(stats_by_method)
+            stats_by_method['start_of_month'] = start_of_month
+            stats_by_method['post_count'] = post_by_month
+            stats_by_method['all_credits'] = stats_by_method['debit_card_count'] + stats_by_method['bank_transfer_count']
 
-            data_last_twelve_months.append({
-                'start_of_month': start_of_month,
-                'digital_take_up_count_each_month_last_twelve_months': stats_by_method['debit_card_count'] + stats_by_method['bank_transfer_count'],
-                'transaction_by_post_count_each_month_last_twelve_months': transaction_by_post_by_month
-            })
+            data.append(stats_by_method)
 
-        return data, data_last_twelve_months
+        return data

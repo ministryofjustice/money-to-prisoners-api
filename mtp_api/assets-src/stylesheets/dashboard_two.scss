@@ -1,6 +1,6 @@
 body {
   padding-left: 100px;
-  padding-right: 200px;
+  padding-right: 100px;
   padding-top: 30px;
   padding-bottom: 20px;
   margin: 0;
@@ -31,16 +31,18 @@ td {
 }
 
 .width-of-right-sub-title{
-  width: 100px;
+  display: inline-block;
+  width: 430px;
 }
 
 .annotation-under-right-sub-title {
   height: 80px;
+  padding-top: 20px;
 }
 
 
 .main-title {
-  margin-bottom: 50px
+  margin-bottom: 45px
 }
 
 .legend {
@@ -147,7 +149,6 @@ tr.border_bottom td {
   border-bottom:1pt solid white;
 }
 
-
 h4 {
   font-size: 30px;
   font-weight: lighter;
@@ -168,11 +169,11 @@ h4 {
 }
 
 .satisfaction-box {
-  margin-top: 40px;
+  margin-top: 20px;
 }
 
 .money-saved-box {
-  margin-top: 40px;
+  margin-top: 30px;
 }
 
 .table-spacing td {

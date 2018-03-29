@@ -8,7 +8,7 @@
   <script src="https://www.google.com/jsapi" type="text/javascript"></script>
   <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
   <link href="{% static 'stylesheets/dashboard_two.css' %}" type="text/css" media="all" rel="stylesheet" />
-  <title>MTP</title>
+  <title>Prisoner Money Statistics</title>
 
 <script>
 google.charts.load('current', {'packages':['corechart']});
@@ -36,7 +36,6 @@ var sharedOptions = {
   },
 
   vAxis:{
-    format: 'long',
     titleTextStyle: {
       fontSize: 30,
       color: 'white'
@@ -84,9 +83,9 @@ function drawDigitalTakeUpRatio() {
       data.addColumn('number', 'Post');
 
       data.addRows([
-        {% for d in data_last_twelve_months reversed %}
-        [new Date('{{d.start_of_month|date:"M Y"}}'), {{d.digital_take_up_count_each_month_last_twelve_months}}, {{d.transaction_by_post_count_each_month_last_twelve_months}}],
-      {% endfor %}
+        {% for d in data reversed %}
+          [new Date('{{d.start_of_month|date:"M Y"}}'), {{d.all_credits}}, {{d.post_count}}],
+        {% endfor %}
       ]);
 
     var chart = new google.visualization.LineChart(document.getElementById('digital_take_up_ratio'));
@@ -101,8 +100,8 @@ function drawDigitalTakeUpRatio() {
 function drawChartCredit() {
   var data = google.visualization.arrayToDataTable([
     ['Month', 'Debit', 'Bank transfer', 'Post'],
-    {% for d in data reversed %}
-      ['{{d.start_of_month|date:"M Y"}}', {{d.debit_card_count}}, {{d.bank_transfer_count}}, {{d.transaction_by_post}}],
+    {% for d in data_six_months reversed %}
+      ['{{d.start_of_month|date:"M Y"}}', {{d.debit_card_count}}, {{d.bank_transfer_count}}, {{d.post_count}}],
     {% endfor %}
    ]);
 
@@ -135,7 +134,7 @@ function drawChartCredit() {
 function drawChartDisbursmentCount() {
   var data = google.visualization.arrayToDataTable([
     ['Month', 'Cheque', 'Bank Transfer'],
-    {% for d in data reversed %}
+    {% for d in data_six_months reversed %}
       ['{{d.start_of_month|date:"M Y"}}', {{d.disbursement_cheque_count}}, {{d.disbursement_bank_transfer_count}}],
     {% endfor %}
   ]);
@@ -187,7 +186,7 @@ function changeTable(){
       loadedCharts3 = true;
     }
 
-    setTimeout(function(){
+    setTimeout(function() {
       digital_take_up_ratio_title.style.display = 'block';
       digital_takeup_legend.style.display = 'block';
       digital_take_up_ratio.style.display = 'block';
@@ -195,9 +194,7 @@ function changeTable(){
       credit_bar_chart_title.style.display = 'none';
       credits_legend.style.display = 'none';
       credit_bar_chart.style.display = 'none';
-    },
-
-       4000);
+    }, 4000);
 
   } else {
     digital_take_up_ratio_title.style.display = 'none';
@@ -238,7 +235,7 @@ function initializeCharts() {
   <body>
      <div id="table_2" class="size-of-page" style="display:none">
       <div class="main-title">
-        <h1><strong>Disbursements</strong> Money sent by prisoners</h1>
+        <h1><strong>Disbursements</strong> (Money sent by prisoners)</h1>
       </div>
 
       <table class="main-table">
@@ -247,7 +244,7 @@ function initializeCharts() {
             <h2>Number of monthly disbursements</h2>
           </td>
           <td class="width-of-right-sub-title">
-            <h2>Digital disbursement</h2>
+            <h2>Digital disbursements</h2>
           </td>
         </tr>
         <tr>
@@ -302,8 +299,8 @@ function initializeCharts() {
               </tr>
 
               <tr class="border_bottom">
-                <td>Last year:</td>
-                <td>This year:</td>
+                <td>Last year</td>
+                <td>This year</td>
               </tr>
               <tr>
                 <td>{{last_year.disbursement_count}} payments</td>
@@ -321,7 +318,7 @@ function initializeCharts() {
 
     <div id="table_1" class="size-of-page" style="display:none">
       <div class="main-title">
-        <h1><strong>Credits</strong> Money to prisoners</h1>
+        <h1><strong>Credits</strong> (Money to prisoners)</h1>
       </div>
 
       <table class="main-table">
@@ -398,8 +395,8 @@ function initializeCharts() {
               </tr>
 
               <tr class="border_bottom">
-                <td>Last year:</td>
-                <td>This year:</td>
+                <td>Last year</td>
+                <td>This year</td>
               </tr>
               <tr>
                 <td>{{last_year.credit_count}} credits</td>
@@ -415,9 +412,9 @@ function initializeCharts() {
               <h3>{{user_satisfaction}}%</h3>
             </div>
             <div class="money-saved-box">
-              <h2>Money saved</h2>
+              <h2>Government <br> savings enabled</h2>
               <h3>{{savings|format_amount}}</h3>
-              <h4>in current financial year</h4>
+              <h4>(in current financial year)</h4>
             </div>
           </td>
         </tr>
