@@ -132,12 +132,12 @@ def make_first_of_month(month, month_year, tz):
     return month_and_year
 
 
-class DashboardTwoView(AdminViewMixin, TemplateView):
+class PerformanceDashboardView(AdminViewMixin, TemplateView):
     """
     Django admin view which presents an overview report for MTP
     """
-    template_name = 'the_dashboard/dashboard_two.html'
-    required_permissions = ['transaction.view_dashboard_two']
+    template_name = 'dashboard/performance-dashboard.html'
+    required_permissions = ['transaction.view_dashboard']
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
