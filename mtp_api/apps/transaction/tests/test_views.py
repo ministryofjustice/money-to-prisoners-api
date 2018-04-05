@@ -3,6 +3,7 @@ from datetime import date, datetime, timedelta, time
 from django.conf import settings
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from mtp_common.test_utils import silence_logger
 from rest_framework import status as http_status
 
@@ -550,8 +551,8 @@ class GetTransactionsFilteredByDateTestCase(GetTransactionsBaseTestCase):
 
         for db_trans, response_trans in zip(db_transactions, results):
             self.assertEqual(
-                db_trans.received_at.strftime('%Y-%m-%dT%H:%M:%SZ'),
-                response_trans['received_at']
+                db_trans.received_at,
+                parse_datetime(response_trans['received_at'])
             )
 
     def test_get_list_received_between_datetimes(self):
