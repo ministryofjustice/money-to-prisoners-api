@@ -65,6 +65,13 @@ class ScheduledCommandAdmin(admin.ModelAdmin):
 site.register(models.ScheduledCommand, ScheduledCommandAdmin)
 
 
+class FileDownloadAdmin(admin.ModelAdmin):
+    list_display = ('date', 'label',)
+
+
+site.register(models.FileDownload, FileDownloadAdmin)
+
+
 class FormFilter(admin.FieldListFilter):
     template = 'core/admin-form-filter.html'
 

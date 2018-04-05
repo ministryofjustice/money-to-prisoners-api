@@ -11,12 +11,20 @@ from django.core.management import call_command
 from django.forms import MediaDefiningClass
 from django.http.response import Http404
 from django.urls import reverse_lazy
+from django.utils.dateparse import parse_date
 from django.utils.decorators import method_decorator
 from django.utils.module_loading import autodiscover_modules
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import FormView, TemplateView
+from mtp_auth.permissions import BankAdminClientIDPermissions
+from rest_framework import generics, mixins, viewsets
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from core.forms import RecreateTestDataForm
+from core.models import FileDownload
+from core.serializers import FileDownloadSerializer
+from core.permissions import ActionsBasedPermissions
 
 logger = logging.getLogger('mtp')
 
@@ -206,3 +214,59 @@ class RecreateTestDataView(AdminViewMixin, FormView):
             form=form,
             command_output=command_output,
         ))
+
+
+class FileDownloadView(
+    mixins.CreateModelMixin, viewsets.GenericViewSet
+):
+    queryset = FileDownload.objects.all()
+    serializer_class = FileDownloadSerializer
+
+    permission_classes = (
+        IsAuthenticated, ActionsBasedPermissions, BankAdminClientIDPermissions
+    )
+
+
+class MissingFileDownloadView(generics.GenericAPIView):
+    queryset = FileDownload.objects.all()
+    action = 'list'
+    permission_classes = (
+        IsAuthenticated, ActionsBasedPermissions, BankAdminClientIDPermissions
+    )
+
+    def get(self, request, *args, **kwargs):
+        dates = self.request.query_params.getlist('date')
+        label = self.request.query_params.get('label')
+        errors = []
+        if not label:
+            errors.append(_('"label" parameter is required'))
+        if not dates:
+            errors.append(_('At least one "date" parameter is required'))
+
+        parsed_dates = []
+        for date in dates:
+            parsed_date = parse_date(date)
+            if not parsed_date:
+                errors.append(
+                    _('Date "%s" could not be parsed - use YYYY-MM-DD format')
+                    % date
+                )
+            else:
+                parsed_dates.append(parsed_date)
+
+        if errors:
+            return Response(data={'errors': errors}, status=400)
+
+        results = self.get_queryset().filter(
+            label=label,
+            date__in=parsed_dates
+        ).values_list('date', flat=True)
+
+        if results.count() == len(parsed_dates):
+            return Response(data={'missing_dates': []}, status=200)
+        else:
+            missing = []
+            for parsed_date in parsed_dates:
+                if parsed_date not in results:
+                    missing.append(parsed_date)
+            return Response(data={'missing_dates': missing}, status=200)

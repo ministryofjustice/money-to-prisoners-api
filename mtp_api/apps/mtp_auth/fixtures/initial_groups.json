@@ -22,7 +22,8 @@
       ["view_transaction", "transaction", "transaction"],
       ["patch_processed_transaction", "transaction", "transaction"],
       ["add_balance", "account", "balance"],
-      ["view_batch", "payment", "batch"]
+      ["view_batch", "payment", "batch"],
+      ["add_filedownload", "core", "filedownload"]
     ]
   }
 },
@@ -107,7 +108,8 @@
     "name": "DisbursementBankAdmin",
     "permissions": [
       ["view_disbursement", "disbursement", "disbursement"],
-      ["change_disbursement", "disbursement", "disbursement"]
+      ["change_disbursement", "disbursement", "disbursement"],
+      ["add_filedownload", "core", "filedownload"]
     ]
   }
 }
