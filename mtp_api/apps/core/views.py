@@ -257,16 +257,20 @@ class MissingFileDownloadView(generics.GenericAPIView):
         if errors:
             return Response(data={'errors': errors}, status=400)
 
-        results = self.get_queryset().filter(
-            label=label,
-            date__in=parsed_dates
-        ).values_list('date', flat=True)
+        # get earliest record to avoid giving false positives for dates before
+        # records began
+        earliest_records = self.get_queryset().filter(label=label).order_by('date')[:1]
+        if len(earliest_records):
+            results = self.get_queryset().filter(
+                label=label,
+                date__in=parsed_dates
+            ).values_list('date', flat=True)
 
-        if results.count() == len(parsed_dates):
-            return Response(data={'missing_dates': []}, status=200)
-        else:
-            missing = []
-            for parsed_date in parsed_dates:
-                if parsed_date not in results:
-                    missing.append(parsed_date)
-            return Response(data={'missing_dates': missing}, status=200)
+            earliest_date = earliest_records[0].date
+            if results.count() != len(parsed_dates):
+                missing = []
+                for parsed_date in parsed_dates:
+                    if parsed_date > earliest_date and parsed_date not in results:
+                        missing.append(parsed_date)
+                return Response(data={'missing_dates': missing}, status=200)
+        return Response(data={'missing_dates': []}, status=200)

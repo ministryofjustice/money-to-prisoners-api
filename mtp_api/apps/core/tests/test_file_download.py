@@ -161,3 +161,44 @@ class MissingFileDownloadTestCase(AuthTestCaseMixin, APITestCase):
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_cuts_off_at_earliest_record(self):
+        user = self.bank_admins[0]
+        self._create_existing_file_downloads()
+
+        params = {
+            'label': BANK_STATEMENT_LABEL,
+            'date': [
+                '2018-02-03', '2018-02-04', '2018-02-05', '2018-02-06',
+                '2018-02-07', '2018-02-08', '2018-02-09'
+            ]
+        }
+        response = self.client.get(
+            reverse('filedownload-missing'), params, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.json(),
+            {'missing_dates': ['2018-02-07', '2018-02-09']}
+        )
+
+    def test_returns_empty_if_no_records_with_label_exist(self):
+        user = self.bank_admins[0]
+
+        params = {
+            'label': BANK_STATEMENT_LABEL,
+            'date': [
+                '2018-02-03', '2018-02-04', '2018-02-05', '2018-02-06',
+                '2018-02-07', '2018-02-08', '2018-02-09'
+            ]
+        }
+        response = self.client.get(
+            reverse('filedownload-missing'), params, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.json(),
+            {'missing_dates': []}
+        )
