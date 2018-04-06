@@ -56,10 +56,11 @@ class CreateBalanceTestCase(AuthTestCaseMixin, APITestCase):
 
     def test_create_balance_only_allows_one_per_date(self):
         user = self.bank_admins[0]
+        balance_date = date.today()
 
         new_balance = {
             'closing_balance': 20000,
-            'date': date.today()
+            'date': balance_date
         }
         response = self.client.post(
             reverse('balance-list'), data=new_balance, format='json',
@@ -69,7 +70,7 @@ class CreateBalanceTestCase(AuthTestCaseMixin, APITestCase):
 
         new_balance = {
             'closing_balance': 40000,
-            'date': date.today()
+            'date': balance_date
         }
         response = self.client.post(
             reverse('balance-list'), data=new_balance, format='json',
@@ -80,7 +81,7 @@ class CreateBalanceTestCase(AuthTestCaseMixin, APITestCase):
         balances = Balance.objects.all()
         self.assertEqual(balances.count(), 1)
         self.assertEqual(balances[0].closing_balance, 20000)
-        self.assertEqual(balances[0].date, date.today())
+        self.assertEqual(balances[0].date, balance_date)
 
 
 class ListBalanceViewTestCase(AuthTestCaseMixin, APITestCase):

@@ -12,6 +12,7 @@ from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
+from model_utils.models import TimeStampedModel
 
 logger = logging.getLogger('mtp')
 
@@ -82,3 +83,11 @@ class TruncUtcDate(TruncBase):
 
 
 models.DateTimeField.register_lookup(TruncUtcDate)
+
+
+class FileDownload(TimeStampedModel):
+    label = models.CharField(max_length=255, db_index=True)
+    date = models.DateField(db_index=True)
+
+    class Meta:
+        unique_together = ('label', 'date')
