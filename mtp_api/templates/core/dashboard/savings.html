@@ -1,0 +1,31 @@
+{% extends 'core/dashboard/module.html' %}
+{% load i18n %}
+{% load credit %}
+
+{% block module_tbody %}
+  {% if dashboard_module.form.is_valid %}
+    <tr>
+      <th colspan="2">
+         {{ dashboard_module.form.cleaned_data.date_range_description }}
+      </th>
+    </tr>
+    {% with data=dashboard_module.calculate_savings %}
+      <tr>
+        <th>{% trans 'Credited through Digital cashbook' %}</th>
+        <td>{{ data.credits_by_mtp|format_number }}</td>
+      </tr>
+      <tr>
+        <th>{% trans 'Postal credits (extrapolated)' %}</th>
+        <td>{{ data.predicted_credits_by_post|format_number }}</td>
+      </tr>
+      <tr>
+        <th>{% trans 'Savings (excluding team costs)' %}</th>
+        <td>{{ data.savings|format_amount }}</td>
+      </tr>
+
+      <tr>
+      <td colspan="2"><pre>{{ data|pprint }}</pre></td>
+      </tr>
+    {% endwith %}
+  {% endif %}
+{% endblock %}

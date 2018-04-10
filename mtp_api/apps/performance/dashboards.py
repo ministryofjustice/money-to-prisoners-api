@@ -10,7 +10,8 @@ from core.dashboards import DashboardModule
 from core.views import DashboardView
 from credit.models import Credit, CREDIT_STATUS
 from disbursement.models import Disbursement, DISBURSEMENT_RESOLUTION
-from performance.models import DigitalTakeup
+from performance.forms import SavingsDashboardForm
+from performance.models import DigitalTakeup, PredictedPostalCredits
 from transaction.utils import format_amount, format_number, format_percentage
 
 CREDITABLE_FILTERS = Credit.STATUS_LOOKUP[CREDIT_STATUS.CREDITED] | \
@@ -305,3 +306,29 @@ def get_credit_chart_data():
         'column_labels': column_labels,
         'rows': rows,
     }
+
+
+@DashboardView.register_dashboard
+class SavingsDashboard(DashboardModule):
+    slug = 'savings'
+    template = 'core/dashboard/savings.html'
+    title = _('Savings enabled')
+    priority = 100
+    column_count = 2
+
+    def __init__(self, view):
+        super().__init__(view)
+        full_date_range = DigitalTakeup.objects.aggregate(earliest=models.Min('date'), latest=models.Max('date'))
+        if not full_date_range['earliest']:
+            self.enabled = False
+            return
+        self.form = SavingsDashboardForm(full_date_range, data=self.cookie_data.dict() if self.cookie_data else {})
+
+    def calculate_savings(self):
+        earliest, latest = self.form.cleaned_data['date_range']
+        predictions = PredictedPostalCredits(from_date=earliest, to_date=latest).all()
+        predictions['savings'] = (
+            (self.form.cleaned_data['transaction_cost_post'] - self.form.cleaned_data['transaction_cost_mtp']) *
+            predictions['credits_by_mtp']
+        )
+        return predictions

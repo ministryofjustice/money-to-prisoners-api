@@ -10,6 +10,7 @@ from django.db import transaction
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 
+from core.dashboards import DashboardChangeForm
 from core.models import ScheduledCommand
 
 logger = logging.getLogger('mtp')
@@ -154,3 +155,43 @@ class DigitalTakeupUploadForm(forms.Form):
             delete_after_next=True
         )
         job.save()
+
+
+class SavingsDashboardForm(DashboardChangeForm):
+    date_range = forms.ChoiceField(label=_('Date range'), required=False)
+    transaction_cost_mtp = forms.DecimalField(label=_('Online cost per transaction'), min_value=0, decimal_places=2)
+    transaction_cost_post = forms.DecimalField(label=_('Postal cost per transaction'), min_value=0, decimal_places=2)
+
+    prevent_auto_reload = True
+
+    def __init__(self, full_date_range, data, **kwargs):
+        self.full_date_range = full_date_range
+        earliest, latest = sorted([d.year - 1 if d.month < 4 else d.year for d in full_date_range.values()])
+        choices = [
+            (str(year), _('%d financial year') % year)
+            for year in range(latest, earliest - 1, -1)
+        ]
+        choices.append(('all', _('Since the beginning')))
+        data.setdefault('date_range', choices[0][0])
+        data.setdefault('transaction_cost_mtp', 2.22)
+        data.setdefault('transaction_cost_post', 5.73)
+        super().__init__(data, **kwargs)
+        self['date_range'].field.choices = choices
+
+    def clean(self):
+        super().clean()
+        choice = self.cleaned_data.get('date_range')
+        choice_descriptions = dict(self['date_range'].field.choices)
+        self.cleaned_data['date_range_description'] = choice_descriptions[choice]
+        if choice == 'all':
+            self.cleaned_data['date_range'] = self.full_date_range['earliest'], self.full_date_range['latest']
+        elif choice:
+            financial_year = int(choice)
+            start_date = datetime.date(financial_year, 4, 1)
+            end_date = datetime.date(financial_year + 1, 4, 1) - datetime.timedelta(days=1)
+            self.cleaned_data['date_range'] = start_date, end_date
+        for key in ('transaction_cost_mtp', 'transaction_cost_post'):
+            value = self.cleaned_data.get(key)
+            if value:
+                self.cleaned_data[key] = int(100 * value)
+        return self.cleaned_data
