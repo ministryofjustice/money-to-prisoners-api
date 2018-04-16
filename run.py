@@ -13,7 +13,10 @@ if __name__ == '__main__':
             raise ImportError
     except ImportError:
         try:
-            from pip import main as pip_main
+            try:
+                from pip._internal import main as pip_main
+            except ImportError:
+                from pip import main as pip_main
         except ImportError:
             raise SystemExit('setuptools and pip are required')
 
