@@ -1,16 +1,14 @@
 import datetime
 
 from django.db import models
-from django.http import HttpResponse
-from django.shortcuts import render
 from django.utils import timezone
 from django.views.generic import TemplateView
 import requests
 
-from credit.models import Credit, CREDIT_RESOLUTION, CREDIT_STATUS
+from credit.models import Credit, CREDIT_RESOLUTION
 from core.views import AdminViewMixin
 from disbursement.models import Disbursement, DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION
-from performance.models import DigitalTakeupQueryset, DigitalTakeup
+from performance.models import DigitalTakeup
 
 COST_PER_TRANSACTION_BY_POST = 5.73
 COST_PER_TRANSACTION_BY_DIGITAL = 2.22
@@ -73,7 +71,7 @@ def post_count(digital_take_up, digital_count):
     return post_count
 
 
-def estimate_postal_credits(start_of_month, end_of_month ):
+def estimate_postal_credits(start_of_month, end_of_month):
     queryset_digital_month = Credit.objects.filter(received_at__range=(start_of_month, end_of_month))
     digital_month_count = queryset_digital_month.count()
     queryset_digital_take_up = DigitalTakeup.objects.filter(
@@ -86,7 +84,7 @@ def estimate_postal_credits(start_of_month, end_of_month ):
 def savings_for_financial_year(today):
     if today.month > 3:
         start_financial_year = today.replace(month=4, day=1)
-        end_financial_year = today.replace(month=4, year= today.year+1, day=30)
+        end_financial_year = today.replace(month=4, year=today.year+1, day=30)
     else:
         start_financial_year = today.replace(month=4, year=today.year-1, day=1)
         end_financial_year = today.replace(month=4, day=30)
@@ -110,7 +108,7 @@ def savings_for_financial_year(today):
 
 
 def get_previous_month(month, year):
-    month -=1
+    month -= 1
     if month == 0:
         month = 12
         year -= 1
@@ -170,7 +168,7 @@ class PerformanceDashboardView(AdminViewMixin, TemplateView):
         context['this_year'] = get_overall_stats(beginning_current_year, today)
         context['data'] = data
         context['data_six_months'] = data[0:7]
-        context['savings'] =  savings_for_financial_year(today)
+        context['savings'] = savings_for_financial_year(today)
         context['user_satisfaction'] = get_user_satisfaction()
         return context
 
