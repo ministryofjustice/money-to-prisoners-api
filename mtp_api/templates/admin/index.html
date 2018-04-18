@@ -13,7 +13,13 @@
           <tbody>
             <tr>
               <th scope="row">
-                <a href="{% url 'admin:dashboard' %}">{% trans 'Dashboard' %}</a>
+                <a href="{% url 'performance_dashboard' %}">{% trans 'New dashboard' %}</a>
+              </th>
+              <td></td>
+            </tr>
+            <tr>
+              <th scope="row">
+                <a href="{% url 'admin:dashboard' %}">{% trans 'Old dashboard' %}</a>
               </th>
               <td></td>
             </tr>

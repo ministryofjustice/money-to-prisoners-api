@@ -6,6 +6,7 @@ from django.views.generic import RedirectView
 from django.utils.translation import gettext_lazy as _
 
 from moj_irat.views import HealthcheckView, PingJsonView
+from performance.view_dashboard import PerformanceDashboardView
 
 urlpatterns = [
     url(r'^$', lambda request: HttpResponse(content_type='text/plain', status=204)),
@@ -19,6 +20,7 @@ urlpatterns = [
     url(r'^', include('service.urls')),
     url(r'^', include('disbursement.urls')),
     url(r'^', include('core.urls')),
+    url(r'^performance-dashboard/$', PerformanceDashboardView.as_view(), name='performance_dashboard'),
 
     url(r'^oauth2/', include(('oauth2_provider.urls', 'oauth2_provider'), namespace='oauth2_provider')),
     url(r'^admin/', admin.site.urls),
