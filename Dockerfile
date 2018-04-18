@@ -8,7 +8,11 @@ ENV TZ=Europe/London
 RUN timedatectl set-timezone Europe/London || true
 
 # install libraries
-RUN apt-get install -y --no-install-recommends software-properties-common build-essential rsync gettext python3-all-dev python3-venv
+RUN apt-get install -y --no-install-recommends \
+  software-properties-common build-essential \
+  gettext rsync \
+  python3-all-dev python3-venv \
+  chromium-browser
 
 # install node.js
 RUN curl -sL https://deb.nodesource.com/setup_8.x | bash -
