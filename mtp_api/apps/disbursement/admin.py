@@ -38,8 +38,9 @@ class DisbursementAdmin(admin.ModelAdmin):
         'method',
         ('created', UtcDateRangeFilter),
         'prison',
+        'recipient_is_company',
     )
-    search_fields = ('prisoner_name', 'prisoner_number')
+    search_fields = ('prisoner_name', 'prisoner_number', 'recipient_first_name', 'recipient_last_name')
     inlines = (LogAdminInline, CommentAdminInline,)
     date_hierarchy = 'created'
     actions = ['display_total_amount']

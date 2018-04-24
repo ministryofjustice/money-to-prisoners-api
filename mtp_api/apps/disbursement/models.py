@@ -28,7 +28,8 @@ class Disbursement(TimeStampedModel):
     remittance_description = models.CharField(max_length=250, blank=True)
 
     # recipient details
-    recipient_first_name = models.CharField(max_length=250)
+    recipient_is_company = models.BooleanField(default=False)
+    recipient_first_name = models.CharField(max_length=250, blank=True)
     recipient_last_name = models.CharField(max_length=250)
     recipient_email = models.EmailField(null=True, blank=True)
 
@@ -82,7 +83,7 @@ class Disbursement(TimeStampedModel):
 
     @property
     def recipient_name(self):
-        return '%s %s' % (self.recipient_first_name, self.recipient_last_name)
+        return '{} {}'.format(self.recipient_first_name, self.recipient_last_name).strip()
 
     @recipient_name.setter
     def recipient_name(self, _):
