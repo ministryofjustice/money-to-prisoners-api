@@ -73,11 +73,47 @@ class CreateDisbursementTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(disbursements[0].resolution, DISBURSEMENT_RESOLUTION.PENDING)
         self.assertEqual(disbursements[0].method, DISBURSEMENT_METHOD.BANK_TRANSFER)
         self.assertEqual(disbursements[0].prisoner_name, prisoner.prisoner_name)
+        self.assertFalse(disbursements[0].recipient_is_company)
 
         logs = Log.objects.all()
         self.assertEqual(logs[0].disbursement, disbursements[0])
         self.assertEqual(logs[0].user, user)
         self.assertEqual(logs[0].action, LOG_ACTIONS.CREATED)
+
+    def test_create_disbursement_to_company(self):
+        user = self.prison_clerks[0]
+
+        prisons = PrisonUserMapping.objects.get_prison_set_for_user(user)
+        prisoner = PrisonerLocation.objects.filter(prison__in=prisons).first()
+
+        new_disbursement = {
+            'amount': 2000,
+            'prisoner_number': prisoner.prisoner_number,
+            'prison': prisoner.prison.nomis_id,
+            'method': 'bank_transfer',
+            'recipient_is_company': True,
+            'recipient_last_name': 'Company Ltd.',
+        }
+
+        response = self.client.post(
+            reverse('disbursement-list'), data=new_disbursement, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        disbursement = Disbursement.objects.first()
+        self.assertEqual(disbursement.resolution, DISBURSEMENT_RESOLUTION.PENDING)
+        self.assertEqual(disbursement.method, DISBURSEMENT_METHOD.BANK_TRANSFER)
+        self.assertEqual(disbursement.prisoner_name, prisoner.prisoner_name)
+        self.assertTrue(disbursement.recipient_is_company)
+        self.assertEqual(disbursement.recipient_first_name, '')
+        self.assertEqual(disbursement.recipient_last_name, 'Company Ltd.')
+
+        log = Log.objects.first()
+        self.assertEqual(log.disbursement, disbursement)
+        self.assertEqual(log.user, user)
+        self.assertEqual(log.action, LOG_ACTIONS.CREATED)
 
     def test_create_disbursement_fails_for_non_permitted_prison(self):
         user = self.prison_clerks[0]
@@ -189,6 +225,21 @@ class ListDisbursementsTestCase(AuthTestCaseMixin, APITestCase):
             [item['amount'] for item in response.data['results']],
             sorted(Disbursement.objects.values_list('amount', flat=True), reverse=True)
         )
+
+    def test_filter_companies(self):
+        fake_disbursement(_quantity=10, prison=self.prison, recipient_is_company=False)
+        disbursement = Disbursement.objects.last()
+        disbursement.recipient_is_company = True
+        disbursement.save()
+        response = self.api_request()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 10)
+        response = self.api_request(recipient_is_company=True)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 1)
+        response = self.api_request(recipient_is_company=False)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 9)
 
 
 class UpdateDisbursementsTestCase(AuthTestCaseMixin, APITestCase):

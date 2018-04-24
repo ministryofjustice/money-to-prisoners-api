@@ -75,6 +75,7 @@ class DisbursementFilter(django_filters.FilterSet):
             'method': ['exact'],
             'amount': ['exact', 'lte', 'gte'],
             'nomis_transaction_id': ['exact'],
+            'recipient_is_company': ['exact'],
         }
 
 
