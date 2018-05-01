@@ -5,10 +5,12 @@ from django.conf import settings
 from django.conf.urls import url
 from django.contrib import admin
 from django.contrib.admin.utils import prepare_lookup_value
+from django.db import models
+from django.forms import widgets
 from django.utils import formats
 from django.utils.translation import gettext_lazy as _
 
-from core import getattr_path, models
+from core import getattr_path, models as core_models
 from core.forms import AdminFilterForm, SidebarDateWidget
 
 
@@ -18,7 +20,7 @@ class AdminSite(admin.AdminSite):
     site_url = None
 
     def get_urls(self):
-        from core.views import DashboardView, RecreateTestDataView
+        from core.views import DashboardView, DownloadPublicKeyView, RecreateTestDataView, UpdateNOMISTokenView
         from payment.views import PaymentSearchView
         from performance.views import DigitalTakeupUploadView
         from prison.views import LoadOffendersView
@@ -26,6 +28,8 @@ class AdminSite(admin.AdminSite):
         return [
             url(r'^dashboard/$', DashboardView.as_view(), name='dashboard'),
             url(r'^dashboard/(?P<slug>[^/]+)/$', DashboardView.as_view(fullscreen=True), name='dashboard_fullscreen'),
+            url(r'^core/token/nomis/public-key/$', DownloadPublicKeyView.as_view(), name='download_public_key'),
+            url(r'^core/token/nomis/change/$', UpdateNOMISTokenView.as_view(), name='update_nomis_token'),
             url(r'^digital-takeup-upload/$', DigitalTakeupUploadView.as_view(), name='digital_takeup_upload'),
             url(r'^payment/payment/search/$', PaymentSearchView.as_view(), name='payment_search'),
             url(r'^prison/prisonerlocation/load-offenders/$', LoadOffendersView.as_view(), name='load_offenders'),
@@ -62,14 +66,14 @@ class ScheduledCommandAdmin(admin.ModelAdmin):
     list_display = ('name', 'arg_string', 'cron_entry', 'next_execution',)
 
 
-site.register(models.ScheduledCommand, ScheduledCommandAdmin)
+site.register(core_models.ScheduledCommand, ScheduledCommandAdmin)
 
 
 class FileDownloadAdmin(admin.ModelAdmin):
     list_display = ('date', 'label',)
 
 
-site.register(models.FileDownload, FileDownloadAdmin)
+site.register(core_models.FileDownload, FileDownloadAdmin)
 
 
 class FormFilter(admin.FieldListFilter):
@@ -231,3 +235,13 @@ class RelatedAnyFieldListFilter(admin.RelatedFieldListFilter):
                     'display': _('Any'),
                 }
             yield c
+
+
+class TokenAdmin(admin.ModelAdmin):
+    list_display = ('name', 'expires')
+    formfield_overrides = {
+        models.TextField: {'widget': widgets.PasswordInput(attrs={'class': 'vTextField'})},
+    }
+
+
+site.register(core_models.Token, TokenAdmin)
