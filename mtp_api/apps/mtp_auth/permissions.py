@@ -1,9 +1,9 @@
 from rest_framework.permissions import BasePermission
 
 from core.permissions import ActionsBasedPermissions
-from .constants import (
+from mtp_auth.constants import (
     CASHBOOK_OAUTH_CLIENT_ID, BANK_ADMIN_OAUTH_CLIENT_ID,
-    NOMS_OPS_OAUTH_CLIENT_ID, SEND_MONEY_CLIENT_ID
+    NOMS_OPS_OAUTH_CLIENT_ID, SEND_MONEY_CLIENT_ID,
 )
 
 

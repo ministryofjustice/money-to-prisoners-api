@@ -6,6 +6,7 @@ from core import views
 
 router = routers.DefaultRouter()
 router.register(r'file-downloads', views.FileDownloadView)
+router.register(r'tokens', views.TokenView)
 
 urlpatterns = [
     url(
