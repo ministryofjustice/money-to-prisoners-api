@@ -91,3 +91,15 @@ class FileDownload(TimeStampedModel):
 
     class Meta:
         unique_together = ('label', 'date')
+
+
+class Token(TimeStampedModel):
+    name = models.CharField(primary_key=True, max_length=20)
+    token = models.TextField()
+    expires = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ('name',)
+
+    def __str__(self):
+        return self.name

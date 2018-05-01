@@ -4,25 +4,28 @@ import logging
 from urllib.parse import unquote as url_unquote
 
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.admin import site
 from django.contrib.admin.models import LogEntry, CHANGE as CHANGE_LOG_ENTRY
 from django.core.exceptions import PermissionDenied
 from django.core.management import call_command
 from django.forms import MediaDefiningClass
-from django.http.response import Http404
+from django.http.response import Http404, HttpResponse
 from django.urls import reverse_lazy
 from django.utils.dateparse import parse_date
 from django.utils.decorators import method_decorator
 from django.utils.module_loading import autodiscover_modules
 from django.utils.translation import gettext_lazy as _
+from django.views import View
 from django.views.generic import FormView, TemplateView
+
 from mtp_auth.permissions import BankAdminClientIDPermissions
 from rest_framework import generics, mixins, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from core.forms import RecreateTestDataForm
-from core.models import FileDownload
+from core.forms import RecreateTestDataForm, UpdateNOMISTokenForm
+from core.models import FileDownload, Token
 from core.serializers import FileDownloadSerializer
 from core.permissions import ActionsBasedPermissions
 
@@ -274,3 +277,41 @@ class MissingFileDownloadView(generics.GenericAPIView):
                         missing.append(parsed_date)
                 return Response(data={'missing_dates': missing}, status=200)
         return Response(data={'missing_dates': []}, status=200)
+
+
+class UpdateNOMISTokenView(AdminViewMixin, FormView):
+    title = _('Update NOMIS API client token')
+    template_name = 'core/nomis-token.html'
+    form_class = UpdateNOMISTokenForm
+    success_url = reverse_lazy('admin:core_token_changelist')
+    superuser_required = True
+
+    def get_context_data(self, **kwargs):
+        context_date = super().get_context_data(**kwargs)
+        context_date['opts'] = Token._meta
+        try:
+            token = Token.objects.get(name='nomis')
+            decoded_token = UpdateNOMISTokenForm.decode_token(token.token)
+            context_date['token'] = token
+            context_date['token_permissions'] = '\n'.join(map(str, decoded_token.get('access', []))) \
+                                                or _('None')
+        except Token.DoesNotExist:
+            pass
+        return context_date
+
+    def form_valid(self, form):
+        Token.objects.update_or_create({
+            'token': form.token_data,
+            'expires': form.decoded_token.get('exp'),
+        }, name='nomis')
+        messages.success(self.request, _('NOMIS API client token updated'))
+        return super().form_valid(form)
+
+
+class DownloadPublicKeyView(AdminViewMixin, View):
+    superuser_required = True
+
+    def get(self, _):
+        response = HttpResponse(settings.NOMIS_API_PUBLIC_KEY.strip(), content_type='application/octet-stream')
+        response['Content-Disposition'] = 'attachment; filename="public-key.pem"'
+        return response
