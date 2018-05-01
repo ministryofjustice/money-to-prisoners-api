@@ -19,15 +19,18 @@ from django.utils.translation import gettext_lazy as _
 from django.views import View
 from django.views.generic import FormView, TemplateView
 
-from mtp_auth.permissions import BankAdminClientIDPermissions
+from mtp_auth.permissions import (
+    get_client_permissions_class,
+    BankAdminClientIDPermissions, CASHBOOK_OAUTH_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID,
+)
 from rest_framework import generics, mixins, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from core.forms import RecreateTestDataForm, UpdateNOMISTokenForm
 from core.models import FileDownload, Token
-from core.serializers import FileDownloadSerializer
-from core.permissions import ActionsBasedPermissions
+from core.permissions import ActionsBasedPermissions, TokenPermissions
+from core.serializers import FileDownloadSerializer, TokenSerializer
 
 logger = logging.getLogger('mtp')
 
@@ -315,3 +318,13 @@ class DownloadPublicKeyView(AdminViewMixin, View):
         response = HttpResponse(settings.NOMIS_API_PUBLIC_KEY.strip(), content_type='application/octet-stream')
         response['Content-Disposition'] = 'attachment; filename="public-key.pem"'
         return response
+
+
+class TokenView(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+    queryset = Token.objects.all()
+    serializer_class = TokenSerializer
+    permission_classes = (
+        IsAuthenticated,
+        get_client_permissions_class(CASHBOOK_OAUTH_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID),
+        TokenPermissions,
+    )

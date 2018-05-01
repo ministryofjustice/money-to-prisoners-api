@@ -100,6 +100,9 @@ class Token(TimeStampedModel):
 
     class Meta:
         ordering = ('name',)
+        permissions = (
+            ('view_token', 'Can view token'),
+        )
 
     def __str__(self):
         return self.name

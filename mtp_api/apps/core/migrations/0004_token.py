@@ -19,6 +19,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'ordering': ('name',),
+                'permissions': (('view_token', 'Can view token'),),
             },
         ),
     ]
