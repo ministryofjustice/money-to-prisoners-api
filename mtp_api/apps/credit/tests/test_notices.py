@@ -1,7 +1,9 @@
 import collections
+import contextlib
 import datetime
 import functools
 import itertools
+import os
 import unittest
 from unittest import mock
 
@@ -281,39 +283,6 @@ class CreatePrisonerNoticesTestCase(NoticesCommandTestCase):
             {
                 'housing_location': {
                     'description': 'LEI-A-2-002',
-                },
-            },
-            {
-                'description': 'LEI-A-2-002',
-                'levels': [
-                    {'type': 'Wing', 'value': 'A'},
-                    {'type': 'Landing', 'value': '2'},
-                    {'type': 'Cell', 'value': '002'},
-                ],
-            },
-        )
-
-    def test_location_api_new_malformed(self):
-        self.call_command(
-            {
-                'housing_location': {
-                    'description': 'LEI-A-2',
-                },
-            },
-            {
-                'description': 'LEI-A-2',
-                'levels': [
-                    {'type': 'Wing', 'value': 'A'},
-                    {'type': 'Landing', 'value': '2'},
-                ],
-            },
-        )
-
-    def test_location_api_new_complete(self):
-        self.call_command(
-            {
-                'housing_location': {
-                    'description': 'LEI-A-2-002',
                     'levels': [
                         {'type': 'Wing', 'value': 'A'},
                         {'type': 'Landing', 'value': '2'},
@@ -332,25 +301,27 @@ class CreatePrisonerNoticesTestCase(NoticesCommandTestCase):
         )
 
 
+@override_nomis_settings
 class SendPrisonerCreditNoticeTestCase(NoticesCommandTestCase):
-    @mock.patch('credit.management.commands.create_prisoner_credit_notices.nomis_get')
-    def test_no_emails_sent_if_prisons_have_addresses(self, nomis_get):
-        nomis_get.side_effect = NotImplementedError
-        call_command('send_prisoner_credit_notices', verbosity=0)
+    @mock.patch('credit.management.commands.create_prisoner_credit_notices.nomis_get_location')
+    def test_no_emails_sent_if_prisons_have_addresses(self, nomis_get_location):
+        nomis_get_location.side_effect = NotImplementedError
+        with open(os.devnull, 'w') as devnull, contextlib.redirect_stderr(devnull):
+            call_command('send_prisoner_credit_notices', verbosity=0)
         self.assertEqual(len(mail.outbox), 0)
 
-    @mock.patch('credit.management.commands.create_prisoner_credit_notices.nomis_get')
-    def test_nothing_credited_sends_no_email(self, nomis_get):
-        nomis_get.side_effect = NotImplementedError
+    @mock.patch('credit.management.commands.create_prisoner_credit_notices.nomis_get_location')
+    def test_nothing_credited_sends_no_email(self, nomis_get_location):
+        nomis_get_location.side_effect = NotImplementedError
         self.assign_email_addresses()
         Credit.objects.credited().delete()
         Disbursement.objects.sent().delete()
         call_command('send_prisoner_credit_notices', verbosity=0)
         self.assertEqual(len(mail.outbox), 0)
 
-    @mock.patch('credit.management.commands.create_prisoner_credit_notices.nomis_get')
-    def test_one_email_per_prison(self, nomis_get):
-        nomis_get.return_value = None
+    @mock.patch('credit.management.commands.create_prisoner_credit_notices.nomis_get_location')
+    def test_one_email_per_prison(self, nomis_get_location):
+        nomis_get_location.return_value = None
         self.assign_email_addresses()
         Disbursement.objects.sent().delete()
         credited_logs = CreditLog.objects.filter(action=CREDIT_ACTIONS.CREDITED).order_by('-created')
