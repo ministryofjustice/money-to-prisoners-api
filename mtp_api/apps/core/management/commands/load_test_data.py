@@ -6,7 +6,8 @@ from django.core.management import BaseCommand, call_command
 
 from account.models import Balance
 from core.tests.utils import (
-    make_test_users, make_test_user_admins, give_superusers_full_access
+    give_superusers_full_access,
+    make_test_users, make_test_user_admins, make_token_retrieval_user,
 )
 from credit.models import Credit
 from disbursement.models import Disbursement
@@ -115,6 +116,8 @@ class Command(BaseCommand):
         make_test_users(clerks_per_prison=clerks_per_prison)
         print_message('Making test user admins')
         make_test_user_admins()
+        print_message('Making token retrieval user')
+        make_token_retrieval_user()
 
         if 'nomis' in prisoners:
             load_prisoner_locations_from_file('test_nomis_prisoner_locations.csv')
