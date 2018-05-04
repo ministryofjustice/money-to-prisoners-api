@@ -6,6 +6,7 @@ from cryptography.hazmat.primitives.asymmetric import ec as elliptic_curves
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.core.files.base import ContentFile
+from django.core.management import call_command
 from django.test import TestCase, override_settings
 from django.urls import reverse
 import jwt
@@ -150,6 +151,18 @@ class TokenRetrievalTestCase(APITestCase, AuthTestCaseMixin, TokenTestCase):
             Permission.objects.get_by_natural_key('view_token', 'core', 'token')
         )
         user.save()
+        for client_id in self.allowed_clients:
+            authorisation = self.get_http_authorization_for_user(user, client_id=client_id)
+            response = self.client.get(self.url, format='json', HTTP_AUTHORIZATION=authorisation)
+            self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+            self.assertJSONEqual(response.content.decode(), {
+                'token': self.token,
+                'expires': None,
+            })
+
+    def test_resetting_data_creates_special_user(self):
+        call_command('load_test_data', verbosity=0)
+        user = User.objects.get(username='_token_retrieval')
         for client_id in self.allowed_clients:
             authorisation = self.get_http_authorization_for_user(user, client_id=client_id)
             response = self.client.get(self.url, format='json', HTTP_AUTHORIZATION=authorisation)

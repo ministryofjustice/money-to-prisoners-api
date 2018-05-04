@@ -1,7 +1,7 @@
 from unittest import mock
 
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import Group, Permission
 from oauth2_provider.models import Application
 
 from mtp_auth.constants import (
@@ -10,9 +10,12 @@ from mtp_auth.constants import (
 )
 from mtp_auth.models import Role, ApplicationUserMapping, PrisonUserMapping
 from mtp_auth.tests.mommy_recipes import (
-    create_prison_clerk, create_prisoner_location_admin, create_bank_admin,
-    create_refund_bank_admin, create_send_money_shared_user, create_user_admin,
-    create_security_staff_user, create_disbursement_bank_admin
+    create_basic_user,
+    create_user_admin,
+    create_prison_clerk,
+    create_prisoner_location_admin, create_security_staff_user,
+    create_bank_admin, create_refund_bank_admin, create_disbursement_bank_admin,
+    create_send_money_shared_user,
 )
 from prison.models import Prison
 
@@ -199,3 +202,16 @@ def make_test_user_admins():
         'bank_admin_uas': refund_bank_admins,
         'security_staff_uas': security_users
     }
+
+
+def make_token_retrieval_user():
+    user = create_basic_user('_token_retrieval')
+    user.user_permissions.add(
+        Permission.objects.get_by_natural_key('view_token', 'core', 'token')
+    )
+    for application in Application.objects.all():
+        ApplicationUserMapping.objects.get_or_create(
+            user=user,
+            application=application,
+        )
+    return user
