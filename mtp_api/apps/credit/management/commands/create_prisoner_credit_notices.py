@@ -2,11 +2,10 @@ import collections
 import datetime
 import pathlib
 
-from django.conf import settings
 from django.core.management import BaseCommand, CommandError
 from django.utils.dateparse import parse_date
 from django.utils.timezone import make_aware, now
-from mtp_common.nomis import get as nomis_get
+from mtp_common.nomis import can_access_nomis, get_location as nomis_get_location
 import requests
 
 from credit.constants import LOG_ACTIONS as CREDIT_ACTIONS
@@ -99,34 +98,9 @@ class Command(BaseCommand):
         bundle.render(str(path))
 
     def get_housing(self, prisoner_number):
+        if not can_access_nomis():
+            return
         try:
-            if not settings.NOMIS_API_BASE_URL:
-                raise ValueError
-            housing = nomis_get(
-                '/offenders/%s/location' % prisoner_number,
-                retries=2
-            )['housing_location']
-            return self.format_housing(housing)
+            return nomis_get_location(prisoner_number, retries=2)['housing_location']
         except (TypeError, KeyError, ValueError, requests.RequestException):
             return
-
-    def format_housing(self, housing):
-        """
-        Supports several versions of the NOMIS api
-        """
-        if not housing:
-            return
-        if isinstance(housing, str):
-            housing = {'description': housing}
-        elif not isinstance(housing, dict) or not housing.get('description'):
-            return
-        levels = housing.get('levels')
-        if not isinstance(levels, list):
-            levels = housing['description'].split('-')
-            levels.pop(0)
-            levels = [
-                {'type': k, 'value': v}
-                for k, v in zip(('Wing', 'Landing', 'Cell'), levels)
-            ]
-            housing['levels'] = levels
-        return housing
