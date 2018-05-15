@@ -101,8 +101,11 @@ class PrisonPerformanceView(AdminViewMixin, TemplateView):
         days_in_past = int(self.request.GET.get('days') or 30)
         context_data['days_in_past'] = days_in_past
 
-        prison_disbursements = Prison.objects.filter(
-            disbursement__created__gte=date.today() - timedelta(days=days_in_past)
+        prison_disbursements = Prison.objects.annotate(
+            disbursement_count=models.Count('disbursement')
+        ).filter(
+            models.Q(disbursement_count=0) |
+            models.Q(disbursement__created__gte=date.today() - timedelta(days=days_in_past))
         ).annotate(
             disbursement_count=models.Count('disbursement')
         ).order_by('nomis_id').distinct()
@@ -123,7 +126,7 @@ class PrisonPerformanceView(AdminViewMixin, TemplateView):
                 prison.credit_uptake = (
                     prison.credit_mtp_count /
                     (prison.credit_mtp_count + prison.credit_post_count)
-                )*100
+                )
 
         if (
             'order_by' in self.request.GET and
