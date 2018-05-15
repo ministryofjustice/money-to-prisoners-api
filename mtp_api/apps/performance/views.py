@@ -1,13 +1,17 @@
+import collections
 from datetime import date, timedelta
+import math
 
 from django.contrib import messages
 from django.contrib.admin.models import LogEntry, ADDITION as ADDITION_LOG_ENTRY
 from django.db import models
 from django.urls import reverse_lazy
+from django.utils import timezone
 from django.utils.formats import date_format
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import FormView, TemplateView
 
+from core.forms import DigitalTakeupReportForm
 from core.views import AdminViewMixin
 from disbursement.models import Disbursement, DISBURSEMENT_RESOLUTION
 from performance.forms import DigitalTakeupUploadForm
@@ -160,3 +164,101 @@ class PrisonPerformanceView(AdminViewMixin, TemplateView):
 
         context_data['prisons'] = prisons
         return context_data
+
+
+class DigitalTakeupReport(AdminViewMixin, TemplateView):
+    title = _('Digital take-up report')
+    template_name = 'performance/digital-takeup-report.html'
+    required_permissions = ['transaction.view_dashboard']
+
+    def get_context_data(self, **kwargs):
+        context_data = super().get_context_data(**kwargs)
+        form = DigitalTakeupReportForm(data=self.request.GET.dict())
+        if not form.is_valid():
+            form = DigitalTakeupReportForm(data={})
+            assert form.is_valid()
+
+        first_of_month = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        if form.cleaned_data['period'] == 'quarterly':
+            rows = self.get_quarterly_rows()
+            current_period = first_of_month.replace(month=math.ceil(first_of_month.month / 3) * 3 - 2)
+
+            def format_date(d):
+                return 'Q%d %d' % (math.ceil(d.month / 3), d.year)
+        elif form.cleaned_data['period'] == 'financial':
+            rows = self.get_financial_year_rows()
+            if first_of_month.month < 4:
+                current_period = first_of_month.replace(year=first_of_month.year - 1, month=4)
+            else:
+                current_period = first_of_month.replace(month=4)
+
+            def format_date(d):
+                if d.month < 4:
+                    year = d.year - 1
+                else:
+                    year = d.year
+                return '%(april)s %(year1)d to %(april)s %(year2)d' % {
+                    'april': _('April'),
+                    'year1': year,
+                    'year2': year + 1,
+                }
+        else:
+            rows = self.get_monthly_rows()
+            current_period = first_of_month
+
+            def format_date(d):
+                return d.strftime('%B %Y')
+
+        context_data['opts'] = DigitalTakeup._meta
+        context_data['form'] = form
+        context_data['show_reported'] = form.cleaned_data['show_reported'] == 'show'
+        context_data['rows'] = self.process_rows(rows, current_period, format_date)
+        return context_data
+
+    def get_monthly_rows(self):
+        yield from DigitalTakeup.objects.digital_takeup_per_month()
+
+    def get_quarterly_rows(self):
+        quarter_end_months = {3, 6, 9, 12}
+        collected = collections.defaultdict(int)
+        for row in self.get_monthly_rows():
+            row_date = row.pop('date')
+            if 'date' not in collected:
+                collected['date'] = row_date
+            for key, value in row.items():
+                collected[key] += value
+            if row_date.month in quarter_end_months:
+                yield collected
+                collected = collections.defaultdict(int)
+        if 'date' in collected:
+            yield collected
+
+    def get_financial_year_rows(self):
+        collected = collections.defaultdict(int)
+        for row in self.get_monthly_rows():
+            row_date = row.pop('date')
+            if 'date' not in collected:
+                collected['date'] = row_date
+            for key, value in row.items():
+                collected[key] += value
+            if row_date.month == 3:
+                yield collected
+                collected = collections.defaultdict(int)
+        if 'date' in collected:
+            yield collected
+
+    def process_rows(self, rows, current_period, format_date):
+        for row in rows:
+            if row['date'] >= current_period:
+                break
+            row['date'] = format_date(row['date'])
+            total_reported = row['reported_credits_by_post'] + row['reported_credits_by_mtp']
+            if total_reported:
+                row['digital_takeup'] = row['reported_credits_by_mtp'] / total_reported
+                row['extrapolated_credits_by_post'] = round(
+                    (1 - row['digital_takeup']) * row['accurate_credits_by_mtp'] / row['digital_takeup']
+                )
+            else:
+                row['digital_takeup'] = None
+                row['extrapolated_credits_by_post'] = None
+            yield row
