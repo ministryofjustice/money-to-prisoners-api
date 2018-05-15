@@ -1,0 +1,99 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+{% load static %}
+
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" type="text/css" href="{% static "admin/css/changelists.css" %}" />
+  <style>
+    .linktable * {
+      border: none;
+    }
+  </style>
+{% endblock %}
+
+
+{% block content %}
+<table class="linktable">
+  <tr>
+    <td>
+      {% if days_in_past == 7 %}<strong>{% else %}<a href="?days=7">{% endif %}
+        {% trans 'Last 7 days' %}
+      {% if days_in_past == 7 %}</strong>{% else %}</a>{% endif %}
+    </td>
+    <td>
+      {% if days_in_past == 30 %}<strong>{% else %}<a href="?days=30">{% endif %}
+        {% trans 'Last 30 days' %}
+      {% if days_in_past == 30 %}</strong>{% else %}</a>{% endif %}
+    </td>
+    <td>
+      {% if days_in_past == 60 %}<strong>{% else %}<a href="?days=60">{% endif %}
+        {% trans 'Last 60 days' %}
+      {% if days_in_past == 60 %}</strong>{% else %}</a>{% endif %}
+    </td>
+    <td>
+      {% if days_in_past == 120 %}<strong>{% else %}<a href="?days=120">{% endif %}
+        {% trans 'Last 120 days' %}
+      {% if days_in_past == 120 %}</strong>{% else %}</a>{% endif %}
+    </td>
+  </tr>
+</table>
+
+<p/>
+
+<div id="changelist">
+  <table>
+    <thead>
+      <tr>
+        <th class="{% if request.GET.order_by == 'nomis_id' %}sorted{% else %}sortable{% endif %}">
+          <div class="text">
+            <a href="?order_by=nomis_id{% if not 'desc' in request.GET %}&desc=1{% endif %}">
+              {% trans 'Prison' %}
+            </a>
+          </div>
+        </th>
+        <th class="{% if request.GET.order_by == 'disbursement_count' %}sorted{% else %}sortable{% endif %}">
+          <div class="text">
+            <a href="?order_by=disbursement_count{% if not 'desc' in request.GET %}&desc=1{% endif %}">
+              {% trans 'Disbursements' %}
+            </a>
+          </div>
+        </th>
+        <th class="{% if request.GET.order_by == 'credit_post_count' %}sorted{% else %}sortable{% endif %}">
+          <div class="text">
+            <a href="?order_by=credit_post_count{% if not 'desc' in request.GET %}&desc=1{% endif %}">
+              {% trans 'Credits by post' %}
+            </a>
+          </div>
+        </th>
+        <th class="{% if request.GET.order_by == 'credit_mtp_count' %}sorted{% else %}sortable{% endif %}">
+          <div class="text">
+            <a href="?order_by=credit_mtp_count{% if not 'desc' in request.GET %}&desc=1{% endif %}">
+              {% trans 'Credits by digital service' %}
+            </a>
+          </div>
+        </th>
+        <th class="{% if request.GET.order_by == 'credit_uptake' %}sorted{% else %}sortable{% endif %}">
+          <div class="text">
+            <a href="?order_by=credit_uptake{% if not 'desc' in request.GET %}&desc=1{% endif %}">
+              {% trans 'Digital takeup' %}
+            </a>
+          </div>
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for prison in prisons %}
+      <tr>
+        <td>{{ prison.name }}</td>
+        <td>{{ prison.disbursement_count }}</td>
+        <td>{{ prison.credit_post_count|default:'—' }}</td>
+        <td>{{ prison.credit_mtp_count|default:'—' }}</td>
+        <td>{{ prison.credit_uptake|format_percentage }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
