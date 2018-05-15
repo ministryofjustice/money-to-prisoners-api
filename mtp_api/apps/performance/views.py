@@ -1,14 +1,17 @@
+from datetime import date, timedelta
+
 from django.contrib import messages
 from django.contrib.admin.models import LogEntry, ADDITION as ADDITION_LOG_ENTRY
 from django.db import models
 from django.urls import reverse_lazy
 from django.utils.formats import date_format
 from django.utils.translation import gettext_lazy as _
-from django.views.generic import FormView
+from django.views.generic import FormView, TemplateView
 
 from core.views import AdminViewMixin
 from performance.forms import DigitalTakeupUploadForm
 from performance.models import DigitalTakeup
+from prison.models import Prison
 
 
 class DigitalTakeupUploadView(AdminViewMixin, FormView):
@@ -81,3 +84,56 @@ class DigitalTakeupUploadView(AdminViewMixin, FormView):
             messages.warning(self.request,
                              _('Credits received do not match those in the spreadsheet:') +
                              '\n' + ', '.join(common_prison_credit_differences))
+
+
+class PrisonPerformanceView(AdminViewMixin, TemplateView):
+    title = _('Prison performance')
+    template_name = 'admin/performance/prison_performance.html'
+    ordering_fields = (
+        'nomis_id', 'credit_post_count', 'credit_mtp_count', 'credit_uptake',
+        'disbursement_count'
+    )
+    required_permissions = ['transaction.view_dashboard']
+
+    def get_context_data(self, **kwargs):
+        context_data = super().get_context_data(**kwargs)
+
+        days_in_past = int(self.request.GET.get('days') or 30)
+        context_data['days_in_past'] = days_in_past
+
+        prison_disbursements = Prison.objects.filter(
+            disbursement__created__gte=date.today() - timedelta(days=days_in_past)
+        ).annotate(
+            disbursement_count=models.Count('disbursement')
+        ).order_by('nomis_id').distinct()
+
+        prison_takeup = Prison.objects.all().annotate(
+            digitaltakeup_count=models.Count('digitaltakeup')
+        ).filter(
+            models.Q(digitaltakeup_count=0) |
+            models.Q(digitaltakeup__date__gte=date.today() - timedelta(days=days_in_past))
+        ).annotate(
+            credit_post_count=models.Sum('digitaltakeup__credits_by_post'),
+            credit_mtp_count=models.Sum('digitaltakeup__credits_by_mtp')
+        ).order_by('nomis_id').distinct()
+
+        for i, prison in enumerate(prison_takeup):
+            prison.disbursement_count = prison_disbursements[i].disbursement_count
+            if prison.credit_mtp_count or prison.credit_post_count:
+                prison.credit_uptake = (
+                    prison.credit_mtp_count /
+                    (prison.credit_mtp_count + prison.credit_post_count)
+                )*100
+
+        if (
+            'order_by' in self.request.GET and
+            self.request.GET['order_by'] in self.ordering_fields
+        ):
+            order_by = self.request.GET['order_by']
+            prison_takeup = sorted(
+                prison_takeup, key=lambda p: getattr(p, order_by, None) or 0,
+                reverse=int(self.request.GET.get('desc', 0))
+            )
+
+        context_data['prisons'] = prison_takeup
+        return context_data
