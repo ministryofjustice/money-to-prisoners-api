@@ -8,6 +8,78 @@
 {% block extrastyle %}
   {{ block.super }}
   <link rel="stylesheet" type="text/css" href="{% static 'admin/css/changelists.css' %}" />
+  <style>
+    #takeup-chart {
+      width: 800px;
+      height: 400px;
+      margin: 10px;
+    }
+  </style>
+{% endblock %}
+{% block extrahead %}
+  {{ block.super }}
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+  <script>
+  google.charts.load('current', {packages: ['corechart']});
+  google.charts.setOnLoadCallback(function () {
+    var chartData = new google.visualization.DataTable({
+      cols: [
+        {'type': 'string', 'label': '{% trans 'Periods' %}'},
+        {% if show_reported %}
+          {'type': 'number', 'label': '{% trans 'Reported digital credits' %}'},
+          {'type': 'number', 'label': '{% trans 'Reported postal credits' %}'},
+        {% endif %}
+        {'type': 'number', 'label': '{% trans 'Digital credits' %}'},
+        {'type': 'number', 'label': '{% trans 'Extrapolated postal credits' %}'}
+      ],
+      rows: [
+        {% for row in rows %}
+          {c:[{v:'{{ row.date }}'},
+              {% if show_reported %}
+                {v:{{ row.reported_credits_by_mtp }}},{v:{{ row.reported_credits_by_post }}},
+              {% endif %}
+              {v:{{ row.accurate_credits_by_mtp }}},{v:{{ row.extrapolated_credits_by_post }}}
+              ]},
+        {% endfor %}
+      ]
+    });
+    var chart = new google.visualization.LineChart(document.getElementById('takeup-chart'));
+    chart.draw(chartData, {
+      fontName: 'Roboto, "Lucida Grande", Verdana, Arial, sans-serif',
+      colors: [
+        {% if show_reported %}
+          '#d5e8f3', '#f9d6d6',
+        {% endif %}
+        '#2b8cc4', '#df3034'
+      ],
+      hAxis: {
+        baselineColor: '#333',
+        textStyle: {color: '#333'}
+      },
+      vAxis: {
+        minValue: 0,
+        format: 'short',
+        baselineColor: '#333',
+        textStyle: {color: '#333'},
+        textPosition: 'in'
+      },
+      chartArea: {
+        top: 30,
+        right: 0,
+        bottom: 50,
+        left: 0
+      },
+      legend: {
+        position: 'top',
+        alignment: 'end',
+        maxLines: 1,
+        textStyle: {
+          color: '#333'
+        }
+      }
+    });
+  });
+  </script>
 {% endblock %}
 
 {% block bodyclass %}{{ block.super }} change-list{% endblock %}
@@ -63,6 +135,8 @@
             {% endfor %}
           </tbody>
         </table>
+
+        <div id="takeup-chart"></div>
 
         <br/>
         <p>

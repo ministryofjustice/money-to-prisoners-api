@@ -207,12 +207,12 @@ class DigitalTakeupReport(AdminViewMixin, TemplateView):
             current_period = first_of_month
 
             def format_date(d):
-                return d.strftime('%B %Y')
+                return d.strftime('%b %Y')
 
         context_data['opts'] = DigitalTakeup._meta
         context_data['form'] = form
         context_data['show_reported'] = form.cleaned_data['show_reported'] == 'show'
-        context_data['rows'] = self.process_rows(rows, current_period, format_date)
+        context_data['rows'] = list(self.process_rows(rows, current_period, format_date))
         return context_data
 
     def get_monthly_rows(self):
