@@ -44,6 +44,25 @@ class SidebarDateWidget(widgets.AdminDateWidget):
         js = ('javascripts/vendor/calendar-overrides.js',)
 
 
+class DigitalTakeupReportForm(forms.Form):
+    period = forms.ChoiceField(label=_('Report type'), choices=(
+        ('monthly', _('Monthly')),
+        ('quarterly', _('Quarterly')),
+        ('financial', _('Financial years')),
+    ), initial='monthly')
+    show_reported = forms.ChoiceField(label=_('Reported data'), choices=(
+        ('hide', _('Hide')),
+        ('show', _('Show')),
+    ), initial='hide')
+
+    def __init__(self, **kwargs):
+        data = kwargs.pop('data', {})
+        for field_name, field in self.base_fields.items():
+            if field_name not in data:
+                data[field_name] = field.initial
+        super().__init__(data=data, **kwargs)
+
+
 class UpdateNOMISTokenForm(forms.Form):
     token = forms.FileField(label=_('Client token file'))
 

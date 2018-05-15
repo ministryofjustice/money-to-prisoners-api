@@ -1,0 +1,7 @@
+<ul>
+  {% for value, label in choices %}
+    <li {% if field.value == value %}class="selected"{% endif %}>
+      <a href="?{{ query_prefix }}{{ field.name }}={{ value }}">{{ label }}</a>
+    </li>
+  {% endfor %}
+</ul>
