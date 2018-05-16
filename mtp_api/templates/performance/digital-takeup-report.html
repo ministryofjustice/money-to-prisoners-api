@@ -12,7 +12,7 @@
     #takeup-chart {
       width: 800px;
       height: 400px;
-      margin: 10px;
+      margin: 10px 8px;
     }
   </style>
 {% endblock %}
@@ -104,6 +104,20 @@
 
         <h3>{{ form.show_reported.label }} *</h3>
         {% admin_choice_list form form.show_reported %}
+
+        <h3>{% trans 'Costs per transaction' %}</h3>
+        <ul>
+          <li>
+            {% blocktrans trimmed with cost=form.cleaned_data.postal_cost|format_amount %}
+              Non-digital cost is {{ cost }}
+            {% endblocktrans %}
+          </li>
+          <li>
+            {% blocktrans trimmed with cost=form.cleaned_data.digital_cost|format_amount %}
+              Digital cost is {{ cost }}
+            {% endblocktrans %}
+          </li>
+        </ul>
       </div>
 
       <div class="results">
@@ -118,6 +132,7 @@
               <th><div class="text"><span>{% trans 'Average digital take-up' %}</span></div></th>
               <th><div class="text"><span>{% trans 'Digital credits' %}</span></div></th>
               <th><div class="text"><span>{% trans 'Extrapolated postal credits' %} *</span></div></th>
+              <th><div class="text"><span>{% trans 'Gross savings enabled' %} †</span></div></th>
             </tr>
           </thead>
           <tbody>
@@ -131,6 +146,7 @@
                 <td>{{ row.digital_takeup|format_percentage }}</td>
                 <td>{{ row.accurate_credits_by_mtp|format_number }}</td>
                 <td>{{ row.extrapolated_credits_by_post|format_number }}</td>
+                <td>{{ row.savings|format_amount }}</td>
               </tr>
             {% endfor %}
           </tbody>
@@ -144,6 +160,10 @@
           {% trans 'Digital take-up is based on reports from NOMIS.' %}
           {% trans 'These reports do not accurately show the number of credits received by post nor digitally.' %}
           {% trans 'Assuming that digital take-up is correct (i.e. the proportion of each), the postal credits are extrapolated from the known number of digital credits which we track.' %}
+        </p>
+        <p>
+          †
+          {% trans 'Gross savings are calculated as the difference between the actual cost and the cost had all transactions been non-digital.' %}
         </p>
       </div>
     </div>

@@ -173,7 +173,11 @@ class PrisonPerformanceView(AdminViewMixin, TemplateView):
 
 
 class DigitalTakeupReport(AdminViewMixin, TemplateView):
-    title = _('Digital take-up report')
+    """
+    gross savings = cost if all transactions were post - actual cost
+                  = digital transactions * cost difference
+    """
+    title = _('Digital take-up & savings report')
     template_name = 'performance/digital-takeup-report.html'
     required_permissions = ['transaction.view_dashboard']
 
@@ -184,6 +188,7 @@ class DigitalTakeupReport(AdminViewMixin, TemplateView):
             form = DigitalTakeupReportForm(data={})
             assert form.is_valid(), 'Empty form should be valid'
 
+        cost_difference = form.cleaned_data['postal_cost'] - form.cleaned_data['digital_cost']
         first_of_month = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         if form.cleaned_data['period'] == 'quarterly':
             rows = self.get_quarterly_rows()
@@ -218,7 +223,7 @@ class DigitalTakeupReport(AdminViewMixin, TemplateView):
         context_data['opts'] = DigitalTakeup._meta
         context_data['form'] = form
         context_data['show_reported'] = form.cleaned_data['show_reported'] == 'show'
-        context_data['rows'] = list(self.process_rows(rows, current_period, format_date))
+        context_data['rows'] = list(self.process_rows(rows, current_period, format_date, cost_difference))
         return context_data
 
     def get_monthly_rows(self):
@@ -253,7 +258,7 @@ class DigitalTakeupReport(AdminViewMixin, TemplateView):
         if 'date' in collected:
             yield collected
 
-    def process_rows(self, rows, current_period, format_date):
+    def process_rows(self, rows, current_period, format_date, cost_difference):
         for row in rows:
             if row['date'] >= current_period:
                 break
@@ -264,7 +269,9 @@ class DigitalTakeupReport(AdminViewMixin, TemplateView):
                 row['extrapolated_credits_by_post'] = round(
                     (1 - row['digital_takeup']) * row['accurate_credits_by_mtp'] / row['digital_takeup']
                 )
+                row['savings'] = row['accurate_credits_by_mtp'] * cost_difference
             else:
                 row['digital_takeup'] = None
                 row['extrapolated_credits_by_post'] = None
+                row['savings'] = None
             yield row

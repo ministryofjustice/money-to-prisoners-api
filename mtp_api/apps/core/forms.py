@@ -81,6 +81,8 @@ class DigitalTakeupReportForm(forms.Form):
         ('hide', _('Hide')),
         ('show', _('Show')),
     ), initial='hide')
+    postal_cost = forms.IntegerField(label=_('Cost per postal transaction'), min_value=0, initial=573)
+    digital_cost = forms.IntegerField(label=_('Cost per digital transaction'), min_value=0, initial=222)
 
     def __init__(self, **kwargs):
         data = kwargs.pop('data', {})
