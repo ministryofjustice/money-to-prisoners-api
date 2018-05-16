@@ -9,6 +9,7 @@ from django.utils.translation import gettext_lazy as _
 from django.views.generic import FormView, TemplateView
 
 from core.views import AdminViewMixin
+from disbursement.models import Disbursement, DISBURSEMENT_RESOLUTION
 from performance.forms import DigitalTakeupUploadForm
 from performance.models import DigitalTakeup
 from prison.models import Prison
@@ -94,49 +95,68 @@ class PrisonPerformanceView(AdminViewMixin, TemplateView):
         'disbursement_count'
     )
     required_permissions = ['transaction.view_dashboard']
+    excluded_nomis_ids = {'ZCH'}
 
     def get_context_data(self, **kwargs):
         context_data = super().get_context_data(**kwargs)
 
         days_in_past = int(self.request.GET.get('days') or 30)
         context_data['days_in_past'] = days_in_past
+        since_date = date.today() - timedelta(days=days_in_past)
 
-        prison_disbursements = Prison.objects.annotate(
-            disbursement_count=models.Count('disbursement')
-        ).filter(
-            models.Q(disbursement_count=0) |
-            models.Q(disbursement__created__gte=date.today() - timedelta(days=days_in_past))
-        ).annotate(
-            disbursement_count=models.Count('disbursement')
-        ).order_by('nomis_id').distinct()
+        prisons = Prison.objects.exclude(
+            nomis_id__in=self.excluded_nomis_ids
+         ).values_list('nomis_id', 'name')
 
-        prison_takeup = Prison.objects.all().annotate(
-            digitaltakeup_count=models.Count('digitaltakeup')
-        ).filter(
-            models.Q(digitaltakeup_count=0) |
-            models.Q(digitaltakeup__date__gte=date.today() - timedelta(days=days_in_past))
-        ).annotate(
-            credit_post_count=models.Sum('digitaltakeup__credits_by_post'),
-            credit_mtp_count=models.Sum('digitaltakeup__credits_by_mtp')
-        ).order_by('nomis_id').distinct()
+        prisons = {
+            nomis_id: {
+                'name': prison,
+                'disbursement_count': 0,
+                'credit_post_count': None,
+                'credit_mtp_count': None,
+                'credit_uptake': None,
+            }
+            for nomis_id, prison in prisons
+         }
 
-        for i, prison in enumerate(prison_takeup):
-            prison.disbursement_count = prison_disbursements[i].disbursement_count
-            if prison.credit_mtp_count or prison.credit_post_count:
-                prison.credit_uptake = (
-                    prison.credit_mtp_count /
-                    (prison.credit_mtp_count + prison.credit_post_count)
-                )
+        disbursements = Disbursement.objects.exclude(
+            prison__in=self.excluded_nomis_ids,
+            resolution=DISBURSEMENT_RESOLUTION.SENT, created__date__gte=since_date,
+        ).values('prison').order_by('prison').annotate(count=models.Count('*'))
+        for row in disbursements:
+            prisons[row['prison']]['disbursement_count'] = row['count']
 
+        takeup = DigitalTakeup.objects.filter(
+            date__gte=since_date
+        ).values('prison').order_by('prison').annotate(
+            credit_post_count=models.Sum('credits_by_post'),
+            credit_mtp_count=models.Sum('credits_by_mtp')
+        )
+
+        for row in takeup:
+            credit_post_count, credit_mtp_count = row['credit_post_count'], row['credit_mtp_count']
+            if credit_post_count or credit_mtp_count:
+                credit_uptake = credit_mtp_count / (credit_post_count + credit_mtp_count)
+            else:
+                credit_uptake = None
+            prisons[row['prison']].update(
+                credit_post_count=credit_post_count,
+                credit_mtp_count=credit_mtp_count,
+                credit_uptake=credit_uptake,
+            )
+
+        prisons = prisons.values()
+        order_by = 'nomis_id'
         if (
             'order_by' in self.request.GET and
             self.request.GET['order_by'] in self.ordering_fields
         ):
-            order_by = self.request.GET['order_by']
-            prison_takeup = sorted(
-                prison_takeup, key=lambda p: getattr(p, order_by, None) or 0,
-                reverse=int(self.request.GET.get('desc', 0))
-            )
+            order_by = self.request.GET.get('order_by')
 
-        context_data['prisons'] = prison_takeup
+        prisons = sorted(
+            prisons, key=lambda p: p.get(order_by) or 0,
+            reverse=int(self.request.GET.get('desc', 0))
+        )
+
+        context_data['prisons'] = prisons
         return context_data
