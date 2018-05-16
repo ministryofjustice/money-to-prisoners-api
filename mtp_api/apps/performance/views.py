@@ -11,7 +11,7 @@ from django.utils.formats import date_format
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import FormView, TemplateView
 
-from core.forms import DigitalTakeupReportForm
+from core.forms import DigitalTakeupReportForm, PrisonPerformaceForm
 from core.views import AdminViewMixin
 from disbursement.models import Disbursement, DISBURSEMENT_RESOLUTION
 from performance.forms import DigitalTakeupUploadForm
@@ -103,34 +103,40 @@ class PrisonPerformanceView(AdminViewMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context_data = super().get_context_data(**kwargs)
+        form = PrisonPerformaceForm(data=self.request.GET.dict())
+        if not form.is_valid():
+            form = PrisonPerformaceForm(data={})
+            assert form.is_valid(), 'Empty form should be valid'
 
-        days_in_past = int(self.request.GET.get('days') or 30)
-        context_data['days_in_past'] = days_in_past
-        since_date = date.today() - timedelta(days=days_in_past)
+        since_date = date.today() - timedelta(days=int(form.cleaned_data['days']))
 
         prisons = Prison.objects.exclude(
             nomis_id__in=self.excluded_nomis_ids
-         ).values_list('nomis_id', 'name')
+        ).values_list('nomis_id', 'name')
 
         prisons = {
             nomis_id: {
                 'name': prison,
+                'nomis_id': nomis_id,
                 'disbursement_count': 0,
                 'credit_post_count': None,
                 'credit_mtp_count': None,
                 'credit_uptake': None,
             }
             for nomis_id, prison in prisons
-         }
+        }
 
         disbursements = Disbursement.objects.exclude(
             prison__in=self.excluded_nomis_ids,
+        ).filter(
             resolution=DISBURSEMENT_RESOLUTION.SENT, created__date__gte=since_date,
         ).values('prison').order_by('prison').annotate(count=models.Count('*'))
         for row in disbursements:
             prisons[row['prison']]['disbursement_count'] = row['count']
 
-        takeup = DigitalTakeup.objects.filter(
+        takeup = DigitalTakeup.objects.exclude(
+            prison__in=self.excluded_nomis_ids,
+        ).filter(
             date__gte=since_date
         ).values('prison').order_by('prison').annotate(
             credit_post_count=models.Sum('credits_by_post'),
@@ -150,18 +156,18 @@ class PrisonPerformanceView(AdminViewMixin, TemplateView):
             )
 
         prisons = prisons.values()
-        order_by = 'nomis_id'
-        if (
-            'order_by' in self.request.GET and
-            self.request.GET['order_by'] in self.ordering_fields
-        ):
-            order_by = self.request.GET.get('order_by')
-
         prisons = sorted(
-            prisons, key=lambda p: p.get(order_by) or 0,
-            reverse=int(self.request.GET.get('desc', 0))
+            prisons, key=lambda p: p[form.cleaned_data['order_by']] or 0,
+            reverse=bool(form.cleaned_data['desc'])
         )
 
+        days_query = '&'.join(
+            '%s=%s' % (name, value)
+            for name, value in form.cleaned_data.items()
+            if name not in {'order_by', 'desc'}
+        )
+        context_data['form'] = form
+        context_data['days_query'] = days_query
         context_data['prisons'] = prisons
         return context_data
 
@@ -176,7 +182,7 @@ class DigitalTakeupReport(AdminViewMixin, TemplateView):
         form = DigitalTakeupReportForm(data=self.request.GET.dict())
         if not form.is_valid():
             form = DigitalTakeupReportForm(data={})
-            assert form.is_valid()
+            assert form.is_valid(), 'Empty form should be valid'
 
         first_of_month = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         if form.cleaned_data['period'] == 'quarterly':

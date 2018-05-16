@@ -44,6 +44,33 @@ class SidebarDateWidget(widgets.AdminDateWidget):
         js = ('javascripts/vendor/calendar-overrides.js',)
 
 
+class PrisonPerformaceForm(forms.Form):
+    days = forms.ChoiceField(label=_('Period'), choices=(
+        ('7', _('Last 7 days')),
+        ('30', _('Last 30 days')),
+        ('60', _('Last 60 days')),
+        ('120', _('Last 120 days')),
+    ), initial='30')
+    order_by = forms.ChoiceField(choices=(
+        ('nomis_id', _('Prison')),
+        ('credit_post_count', _('Credits by post')),
+        ('credit_mtp_count', _('Credits by digital service')),
+        ('credit_uptake', _('Digital take-up')),
+        ('disbursement_count', _('Disbursements')),
+    ), initial='nomis_id')
+    desc = forms.ChoiceField(choices=(
+        ('', _('Ascending')),
+        ('1', _('Descending')),
+    ), required=False)
+
+    def __init__(self, **kwargs):
+        data = kwargs.pop('data', {})
+        for field_name, field in self.base_fields.items():
+            if field_name not in data:
+                data[field_name] = field.initial
+        super().__init__(data=data, **kwargs)
+
+
 class DigitalTakeupReportForm(forms.Form):
     period = forms.ChoiceField(label=_('Report type'), choices=(
         ('monthly', _('Monthly')),
