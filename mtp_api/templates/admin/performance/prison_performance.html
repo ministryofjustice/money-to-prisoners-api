@@ -49,35 +49,35 @@
       <tr>
         <th class="{% if request.GET.order_by == 'nomis_id' %}sorted{% else %}sortable{% endif %}">
           <div class="text">
-            <a href="?order_by=nomis_id{% if not 'desc' in request.GET %}&desc=1{% endif %}">
+            <a href="?order_by=nomis_id{% if not 'desc' in request.GET %}&amp;desc=1{% endif %}">
               {% trans 'Prison' %}
             </a>
           </div>
         </th>
         <th class="{% if request.GET.order_by == 'disbursement_count' %}sorted{% else %}sortable{% endif %}">
           <div class="text">
-            <a href="?order_by=disbursement_count{% if not 'desc' in request.GET %}&desc=1{% endif %}">
+            <a href="?order_by=disbursement_count{% if not 'desc' in request.GET %}&amp;desc=1{% endif %}">
               {% trans 'Disbursements' %}
             </a>
           </div>
         </th>
         <th class="{% if request.GET.order_by == 'credit_post_count' %}sorted{% else %}sortable{% endif %}">
           <div class="text">
-            <a href="?order_by=credit_post_count{% if not 'desc' in request.GET %}&desc=1{% endif %}">
+            <a href="?order_by=credit_post_count{% if not 'desc' in request.GET %}&amp;desc=1{% endif %}">
               {% trans 'Credits by post' %}
             </a>
           </div>
         </th>
         <th class="{% if request.GET.order_by == 'credit_mtp_count' %}sorted{% else %}sortable{% endif %}">
           <div class="text">
-            <a href="?order_by=credit_mtp_count{% if not 'desc' in request.GET %}&desc=1{% endif %}">
+            <a href="?order_by=credit_mtp_count{% if not 'desc' in request.GET %}&amp;desc=1{% endif %}">
               {% trans 'Credits by digital service' %}
             </a>
           </div>
         </th>
         <th class="{% if request.GET.order_by == 'credit_uptake' %}sorted{% else %}sortable{% endif %}">
           <div class="text">
-            <a href="?order_by=credit_uptake{% if not 'desc' in request.GET %}&desc=1{% endif %}">
+            <a href="?order_by=credit_uptake{% if not 'desc' in request.GET %}&amp;desc=1{% endif %}">
               {% trans 'Digital takeup' %}
             </a>
           </div>
@@ -88,9 +88,9 @@
     {% for prison in prisons %}
       <tr>
         <td>{{ prison.name }}</td>
-        <td>{{ prison.disbursement_count }}</td>
-        <td>{{ prison.credit_post_count|default:'—' }}</td>
-        <td>{{ prison.credit_mtp_count|default:'—' }}</td>
+        <td>{{ prison.disbursement_count|format_number }}</td>
+        <td>{{ prison.credit_post_count|format_number }}</td>
+        <td>{{ prison.credit_mtp_count|format_number }}</td>
         <td>{{ prison.credit_uptake|format_percentage }}</td>
       </tr>
     {% endfor %}
