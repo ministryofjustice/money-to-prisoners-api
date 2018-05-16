@@ -22,9 +22,10 @@ def format_number_filter(value):
 
 @register.filter(name='format_percentage')
 def format_percentage_filter(value):
-    if value is None:
-        return '–'
-    return format_percentage(value)
+    try:
+        return format_percentage(float(value))
+    except (TypeError, ValueError):
+        return '—'
 
 
 @register.filter
