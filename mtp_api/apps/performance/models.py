@@ -33,32 +33,34 @@ class DigitalTakeupQueryset(models.QuerySet):
                 'digital_takeup_per_day': mean(value['digital_takeup'] for value in group),
             }
 
-    def digital_takeup_per_month(self):
+    def digital_takeup_per_month(self, since=None):
         """
         Per-month digital take-up averages
-        NB: Starts on 1/1/2017 because the data prior to that is poor
         :return:  generator
         """
+        if since is None:
+            today = datetime.date.today()
+            since = max(DigitalTakeup.reports_start, today.replace(year=today.year - 2, month=1, day=1))
         with connection.cursor() as cursor:
             cursor.execute('''
                 WITH credit_count AS (
                   SELECT date_trunc('month', received_at) AS date,
                     COUNT(*) AS accurate_credits_by_mtp
                   FROM credit_credit
-                  WHERE resolution = 'credited' AND received_at >= %(min_date)s
+                  WHERE resolution = 'credited' AND received_at >= %(since)s
                   GROUP BY date_trunc('month', received_at)
                 ), average_takeup AS (
                   SELECT date_trunc('month', date) AS date,
                     SUM(credits_by_post) AS reported_credits_by_post,
                     SUM(credits_by_mtp) AS reported_credits_by_mtp
                   FROM performance_digitaltakeup
-                  WHERE date >= %(min_date)s
+                  WHERE date >= %(since)s
                   GROUP BY date_trunc('month', date)
                 )
                 SELECT credit_count.date, accurate_credits_by_mtp, reported_credits_by_post, reported_credits_by_mtp
                 FROM credit_count FULL OUTER JOIN average_takeup ON credit_count.date = average_takeup.date
                 ORDER BY credit_count.date
-            ''', params={'min_date': datetime.date(2017, 1, 1)})
+            ''', params={'since': since})
             return dictfetchall(cursor)
 
     def mean_digital_takeup(self):
@@ -86,6 +88,8 @@ class DigitalTakeup(models.Model):
     amount_by_mtp = models.IntegerField(verbose_name=_('Amount sent digitally'), null=True)
 
     objects = DigitalTakeupQueryset.as_manager()
+
+    reports_start = datetime.date(2017, 1, 1)
 
     class Meta:
         unique_together = ('date', 'prison')
