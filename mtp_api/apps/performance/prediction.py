@@ -98,7 +98,7 @@ def train_digital_takeup():
             row['reported_credits_by_post'],
             row['reported_credits_by_mtp'],
         )
-        for row in DigitalTakeup.objects.digital_takeup_per_month()
+        for row in DigitalTakeup.objects.digital_takeup_per_month(since=DigitalTakeup.reports_start)
     ]
     rows = np.array(rows, dtype='int64')
     x = rows[..., 0]
