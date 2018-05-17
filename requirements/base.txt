@@ -18,3 +18,5 @@ requests>=2.12,<3
 transifex-client>=0.12
 xlrd>=1.0.0,<2
 reportlab>=3.4,<4
+numpy>=1.14
+scipy>=1.1

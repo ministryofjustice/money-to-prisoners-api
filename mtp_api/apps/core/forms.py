@@ -1,4 +1,5 @@
 import datetime
+import math
 
 import pytz
 from django import forms
@@ -81,6 +82,10 @@ class DigitalTakeupReportForm(forms.Form):
         ('hide', _('Hide')),
         ('show', _('Show')),
     ), initial='hide')
+    show_predictions = forms.ChoiceField(label=_('Predictions'), choices=(
+        ('hide', _('Hide')),
+        ('show', _('Show')),
+    ), initial='hide')
     postal_cost = forms.IntegerField(label=_('Cost per postal transaction'), min_value=0, initial=573)
     digital_cost = forms.IntegerField(label=_('Cost per digital transaction'), min_value=0, initial=222)
 
@@ -90,6 +95,73 @@ class DigitalTakeupReportForm(forms.Form):
             if field_name not in data:
                 data[field_name] = field.initial
         super().__init__(data=data, **kwargs)
+
+    @property
+    def current_period(self):
+        first_of_month = now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        period = self.cleaned_data['period']
+        if period == 'quarterly':
+            return first_of_month.replace(month=math.ceil(first_of_month.month / 3) * 3 - 2)
+        elif period == 'financial':
+            if first_of_month.month < 4:
+                return first_of_month.replace(year=first_of_month.year - 1, month=4)
+            else:
+                return first_of_month.replace(month=4)
+        return first_of_month
+
+    @property
+    def period_formatter(self):
+        period = self.cleaned_data['period']
+        if period == 'quarterly':
+            return lambda d: 'Q%d %d' % (math.ceil(d.month / 3), d.year)
+        elif period == 'financial':
+            def format_date(d):
+                if d.month < 4:
+                    year = d.year - 1
+                else:
+                    year = d.year
+                return '%(april)s %(year1)d to %(april)s %(year2)d' % {
+                    'april': _('April'),
+                    'year1': year,
+                    'year2': year + 1,
+                }
+
+            return format_date
+        return lambda d: d.strftime('%b %Y')
+
+    @property
+    def prediction_scale(self):
+        period = self.cleaned_data['period']
+        if period == 'quarterly':
+            return 3
+        if period == 'financial':
+            return 12
+        return 1
+
+    def get_periods_to_predict(self, date):
+        period = self.cleaned_data['period']
+        if period == 'quarterly':
+            # this quarter and next 2
+            for _ in range(1, 4):  # noqa: F402
+                month = date.month + 3
+                if month > 12:
+                    date = date.replace(year=date.year + 1)
+                    month = 1
+                date = date.replace(month=month)
+                yield date
+        elif period == 'financial':
+            # this financial year and next
+            yield date.replace(year=date.year + 1)
+            yield date.replace(year=date.year + 2)
+        else:
+            # this month and next 11
+            for _ in range(1, 13):  # noqa: F402
+                month = date.month + 1
+                if month > 12:
+                    date = date.replace(year=date.year + 1)
+                    month = 1
+                date = date.replace(month=month)
+                yield date
 
 
 class UpdateNOMISTokenForm(forms.Form):
