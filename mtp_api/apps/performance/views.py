@@ -1,12 +1,11 @@
 import collections
 from datetime import date, timedelta
-import math
+import json
 
 from django.contrib import messages
 from django.contrib.admin.models import LogEntry, ADDITION as ADDITION_LOG_ENTRY
 from django.db import models
 from django.urls import reverse_lazy
-from django.utils import timezone
 from django.utils.formats import date_format
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import FormView, TemplateView
@@ -174,8 +173,11 @@ class PrisonPerformanceView(AdminViewMixin, TemplateView):
 
 class DigitalTakeupReport(AdminViewMixin, TemplateView):
     """
-    gross savings = cost if all transactions were post - actual cost
+    Uses *reported* digital and postal credits to calculate digital take-up.
+    Using this, the scaled/extrapolated postal credits are inferred from accurately counted credits.
+    Gross savings = cost if all transactions were post - actual cost
                   = digital transactions * cost difference
+    Uses trained curves for predicting future digital and postal credits and hence digital take-up and savings.
     """
     title = _('Digital take-up & savings report')
     template_name = 'performance/digital-takeup-report.html'
@@ -188,42 +190,23 @@ class DigitalTakeupReport(AdminViewMixin, TemplateView):
             form = DigitalTakeupReportForm(data={})
             assert form.is_valid(), 'Empty form should be valid'
 
-        cost_difference = form.cleaned_data['postal_cost'] - form.cleaned_data['digital_cost']
-        first_of_month = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         if form.cleaned_data['period'] == 'quarterly':
             rows = self.get_quarterly_rows()
-            current_period = first_of_month.replace(month=math.ceil(first_of_month.month / 3) * 3 - 2)
-
-            def format_date(d):
-                return 'Q%d %d' % (math.ceil(d.month / 3), d.year)
         elif form.cleaned_data['period'] == 'financial':
             rows = self.get_financial_year_rows()
-            if first_of_month.month < 4:
-                current_period = first_of_month.replace(year=first_of_month.year - 1, month=4)
-            else:
-                current_period = first_of_month.replace(month=4)
-
-            def format_date(d):
-                if d.month < 4:
-                    year = d.year - 1
-                else:
-                    year = d.year
-                return '%(april)s %(year1)d to %(april)s %(year2)d' % {
-                    'april': _('April'),
-                    'year1': year,
-                    'year2': year + 1,
-                }
         else:
             rows = self.get_monthly_rows()
-            current_period = first_of_month
-
-            def format_date(d):
-                return d.strftime('%b %Y')
 
         context_data['opts'] = DigitalTakeup._meta
         context_data['form'] = form
         context_data['show_reported'] = form.cleaned_data['show_reported'] == 'show'
-        context_data['rows'] = list(self.process_rows(rows, current_period, format_date, cost_difference))
+        context_data['rows'] = list(self.process_rows(rows, form))
+
+        context_data['show_predictions'] = form.cleaned_data['show_predictions'] == 'show'
+        if context_data['show_predictions']:
+            self.predict_rows(context_data['rows'], form)
+
+        context_data['chart_rows_json'] = self.process_chart_rows(context_data['rows'])
         return context_data
 
     def get_monthly_rows(self):
@@ -258,11 +241,18 @@ class DigitalTakeupReport(AdminViewMixin, TemplateView):
         if 'date' in collected:
             yield collected
 
-    def process_rows(self, rows, current_period, format_date, cost_difference):
+    def process_rows(self, rows, form):
+        current_period = form.current_period
+        format_date = form.period_formatter
+        cost_difference = form.cleaned_data['postal_cost'] - form.cleaned_data['digital_cost']
+
         for row in rows:
             if row['date'] >= current_period:
                 break
-            row['date'] = format_date(row['date'])
+            row.update(
+                date_label=format_date(row['date']),
+                predicted=False,
+            )
             total_reported = row['reported_credits_by_post'] + row['reported_credits_by_mtp']
             if total_reported:
                 row['digital_takeup'] = row['reported_credits_by_mtp'] / total_reported
@@ -275,3 +265,46 @@ class DigitalTakeupReport(AdminViewMixin, TemplateView):
                 row['extrapolated_credits_by_post'] = None
                 row['savings'] = None
             yield row
+
+    def predict_rows(self, rows, form):
+        from performance.prediction import date_to_curve_point, load_curve
+
+        if not rows:
+            return
+
+        format_date = form.period_formatter
+        scale_factor = form.prediction_scale
+        cost_difference = form.cleaned_data['postal_cost'] - form.cleaned_data['digital_cost']
+
+        predicted_credits_by_post = load_curve('extrapolated_credits_by_post')
+        predicted_credits_by_mtp = load_curve('accurate_credits_by_mtp')
+        last_date = rows[-1]['date']
+        for period in form.get_periods_to_predict(last_date):
+            x = date_to_curve_point(period)
+            predicted_post = int(round(predicted_credits_by_post.get_value(x) * scale_factor))
+            predicted_mtp = int(round(predicted_credits_by_mtp.get_value(x) * scale_factor))
+            rows.append({
+                'predicted': True,
+                'date': period,
+                'date_label': format_date(period),
+                'reported_credits_by_post': None,
+                'reported_credits_by_mtp': None,
+                'extrapolated_credits_by_post': predicted_post,
+                'accurate_credits_by_mtp': predicted_mtp,
+                'digital_takeup': predicted_mtp / (predicted_post + predicted_mtp),
+                'savings': predicted_mtp * cost_difference
+            })
+
+    def process_chart_rows(self, rows):
+        return json.dumps([
+            {'c': [
+                {'v': row['date_label']},
+                {'v': row['reported_credits_by_mtp']},
+                {'v': row['reported_credits_by_post']},
+                {'v': row['accurate_credits_by_mtp']},
+                {'v': not row['predicted']},
+                {'v': row['extrapolated_credits_by_post']},
+                {'v': not row['predicted']},
+            ]}
+            for row in rows
+        ], separators=(',', ':'))

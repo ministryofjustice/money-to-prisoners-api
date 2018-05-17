@@ -24,25 +24,20 @@
   google.charts.setOnLoadCallback(function () {
     var chartData = new google.visualization.DataTable({
       cols: [
-        {'type': 'string', 'label': '{% trans 'Periods' %}'},
-        {% if show_reported %}
-          {'type': 'number', 'label': '{% trans 'Reported digital credits' %}'},
-          {'type': 'number', 'label': '{% trans 'Reported postal credits' %}'},
-        {% endif %}
-        {'type': 'number', 'label': '{% trans 'Digital credits' %}'},
-        {'type': 'number', 'label': '{% trans 'Extrapolated postal credits' %}'}
+        {type: 'string', label: '{% trans 'Periods' %}'},
+        {type: 'number', label: '{% trans 'Reported digital credits' %}'},
+        {type: 'number', label: '{% trans 'Reported postal credits' %}'},
+        {type: 'number', label: '{% trans 'Digital credits' %}'},
+        {type: 'boolean', role: 'certainty'},
+        {type: 'number', label: '{% trans 'Scaled postal credits' %}'},
+        {type: 'boolean', role: 'certainty'}
       ],
-      rows: [
-        {% for row in rows %}
-          {c:[{v:'{{ row.date }}'},
-              {% if show_reported %}
-                {v:{{ row.reported_credits_by_mtp }}},{v:{{ row.reported_credits_by_post }}},
-              {% endif %}
-              {v:{{ row.accurate_credits_by_mtp }}},{v:{{ row.extrapolated_credits_by_post }}}
-              ]},
-        {% endfor %}
-      ]
+      rows: {{ chart_rows_json|safe }}
     });
+    {% if not show_reported %}
+      chartData = new google.visualization.DataView(chartData);
+      chartData.hideColumns([1, 2]);
+    {% endif %}
     var chart = new google.visualization.LineChart(document.getElementById('takeup-chart'));
     chart.draw(chartData, {
       fontName: 'Roboto, "Lucida Grande", Verdana, Arial, sans-serif',
@@ -105,7 +100,10 @@
         <h3>{{ form.show_reported.label }} *</h3>
         {% admin_choice_list form form.show_reported %}
 
-        <h3>{% trans 'Costs per transaction' %}</h3>
+        <h3>{{ form.show_predictions.label }} ‡</h3>
+        {% admin_choice_list form form.show_predictions %}
+
+        <h3>{% trans 'Costs per transaction' %} †</h3>
         <ul>
           <li>
             {% blocktrans trimmed with cost=form.cleaned_data.postal_cost|format_amount %}
@@ -131,23 +129,33 @@
               {% endif %}
               <th><div class="text"><span>{% trans 'Average digital take-up' %}</span></div></th>
               <th><div class="text"><span>{% trans 'Digital credits' %}</span></div></th>
-              <th><div class="text"><span>{% trans 'Extrapolated postal credits' %} *</span></div></th>
+              <th><div class="text"><span>{% trans 'Scaled postal credits' %} *</span></div></th>
               <th><div class="text"><span>{% trans 'Gross savings enabled' %} †</span></div></th>
             </tr>
           </thead>
           <tbody>
-            {% for row in rows %}
-              <tr class="{% cycle 'row1' 'row2' %}">
-                <td>{{ row.date }}</td>
-                {% if show_reported %}
-                  <td class="quiet">{{ row.reported_credits_by_mtp|format_number }}</td>
-                  <td class="quiet">{{ row.reported_credits_by_post|format_number }}</td>
-                {% endif %}
-                <td>{{ row.digital_takeup|format_percentage }}</td>
-                <td>{{ row.accurate_credits_by_mtp|format_number }}</td>
-                <td>{{ row.extrapolated_credits_by_post|format_number }}</td>
-                <td>{{ row.savings|format_amount }}</td>
-              </tr>
+            {% regroup rows by predicted as grouped_rows %}
+            {% for rows in grouped_rows %}
+              {% if rows.grouper %}
+                <tr class="{% cycle 'row1' 'row2' as row_styles %}">
+                  <td colspan="{% if show_reported %}7{% else %}5{% endif %}" style="text-align:center">
+                    {% trans 'Predictions begin' %}
+                  </td>
+                </tr>
+              {% endif %}
+              {% for row in rows.list %}
+                <tr class="{% cycle row_styles %}">
+                  <td>{{ row.date_label }}</td>
+                  {% if show_reported %}
+                    <td class="quiet">{{ row.reported_credits_by_mtp|format_number }}</td>
+                    <td class="quiet">{{ row.reported_credits_by_post|format_number }}</td>
+                  {% endif %}
+                  <td>{{ row.digital_takeup|format_percentage }}</td>
+                  <td>{{ row.accurate_credits_by_mtp|format_number }}</td>
+                  <td>{{ row.extrapolated_credits_by_post|format_number }}</td>
+                  <td>{{ row.savings|format_amount }}</td>
+                </tr>
+              {% endfor %}
             {% endfor %}
           </tbody>
         </table>
@@ -159,11 +167,15 @@
           *
           {% trans 'Digital take-up is based on reports from NOMIS.' %}
           {% trans 'These reports do not accurately show the number of credits received by post nor digitally.' %}
-          {% trans 'Assuming that digital take-up is correct (i.e. the proportion of each), the postal credits are extrapolated from the known number of digital credits which we track.' %}
+          {% trans 'Assuming that digital take-up is correct (i.e. the proportion of each), the postal credits are scaled from the known number of digital credits which we track.' %}
         </p>
         <p>
           †
           {% trans 'Gross savings are calculated as the difference between the actual cost and the cost had all transactions been non-digital.' %}
+        </p>
+        <p>
+          ‡
+          {% trans 'Digital credits and scaled postal credits are predicted based on historic data.' %}
         </p>
       </div>
     </div>
