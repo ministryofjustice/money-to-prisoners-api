@@ -14,9 +14,9 @@ def date_to_curve_point(d):
 
 
 def curve_point_to_date(x):
-    year, month = divmod(x - 1, 12)
-    month += 1
-    return datetime.date(year, month, 1)
+    # convert integer back to date: 1 -> January 2017
+    year, month = divmod(int(x) - 1, 12)
+    return datetime.date(year + 2017, month + 1, 1)
 
 
 class Curve:
@@ -70,11 +70,11 @@ class Logarithmic(Curve):
 known_curves = {
     'accurate_credits_by_mtp': {
         'curve': Logarithmic,
-        'defaults': np.array([8203.01875499, 93.74114044, -30.66596447], dtype='float64')
+        'defaults': np.array([13172.569034617629, 7.367266511948048, 6.162053008237821], dtype='float64')
     },
     'extrapolated_credits_by_post': {
         'curve': Hyperbolic,
-        'defaults': np.array([607678.489, 10.1228151], dtype='float64'),
+        'defaults': np.array([638691.206324438, 10.794945675794787], dtype='float64'),
     },
 }
 
