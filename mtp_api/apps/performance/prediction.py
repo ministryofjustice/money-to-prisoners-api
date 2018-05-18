@@ -1,6 +1,7 @@
 import datetime
 import os
 
+from django.utils.timezone import now
 import numpy as np
 from scipy import optimize
 
@@ -91,6 +92,7 @@ def train_curve(key, x, y):
 
 
 def train_digital_takeup():
+    first_of_month = now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     rows = [
         (
             date_to_curve_point(row['date']),
@@ -99,6 +101,7 @@ def train_digital_takeup():
             row['reported_credits_by_mtp'],
         )
         for row in DigitalTakeup.objects.digital_takeup_per_month(since=DigitalTakeup.reports_start)
+        if row['date'] < first_of_month
     ]
     rows = np.array(rows, dtype='int64')
     x = rows[..., 0]
