@@ -40,6 +40,8 @@ NOTIFICATION_TARGETS = Choices(
     ('CASHBOOK_ALL', 'cashbook_all', 'Cashbook: all apps'),
     ('CASHBOOK_CASHBOOK', 'cashbook_cashbook', 'Cashbook: cashbook app'),
     ('CASHBOOK_DISBURSEMENTS', 'cashbook_disbursements', 'Cashbook: disbursements app'),
+    ('NOMS_OPS_LOGIN', 'noms_ops_login', 'Noms Ops: before login'),
+    ('NOMS_OPS_SECURITY_DASHBOARD', 'noms_ops_security_dashboard', 'Noms Ops: security dashboard'),
 )
 
 
