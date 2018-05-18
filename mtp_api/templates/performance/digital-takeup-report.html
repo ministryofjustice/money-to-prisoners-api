@@ -38,7 +38,11 @@
       chartData = new google.visualization.DataView(chartData);
       chartData.hideColumns([1, 2]);
     {% endif %}
-    var chart = new google.visualization.LineChart(document.getElementById('takeup-chart'));
+    var chart = document.getElementById('takeup-chart');
+    if (!chart) {
+      return;
+    }
+    chart = new google.visualization.LineChart(chart);
     chart.draw(chartData, {
       fontName: 'Roboto, "Lucida Grande", Verdana, Arial, sans-serif',
       colors: [
@@ -119,48 +123,56 @@
       </div>
 
       <div class="results">
-        <table>
-          <thead>
-            <tr>
-              <th></th>
-              {% if show_reported %}
-                <th><div class="text quiet"><span>{% trans 'Reported digital credits' %} *</span></div></th>
-                <th><div class="text quiet"><span>{% trans 'Reported postal credits' %} *</span></div></th>
-              {% endif %}
-              <th><div class="text"><span>{% trans 'Average digital take-up' %}</span></div></th>
-              <th><div class="text"><span>{% trans 'Digital credits' %}</span></div></th>
-              <th><div class="text"><span>{% trans 'Scaled postal credits' %} *</span></div></th>
-              <th><div class="text"><span>{% trans 'Gross savings enabled' %} †</span></div></th>
-            </tr>
-          </thead>
-          <tbody>
-            {% regroup rows by predicted as grouped_rows %}
-            {% for rows in grouped_rows %}
-              {% if rows.grouper %}
-                <tr class="{% cycle 'row1' 'row2' as row_styles %}">
-                  <td colspan="{% if show_reported %}7{% else %}5{% endif %}" style="text-align:center">
-                    {% trans 'Predictions begin' %}
-                  </td>
-                </tr>
-              {% endif %}
-              {% for row in rows.list %}
-                <tr class="{% cycle row_styles %}">
-                  <td>{{ row.date_label }}</td>
-                  {% if show_reported %}
-                    <td class="quiet">{{ row.reported_credits_by_mtp|format_number }}</td>
-                    <td class="quiet">{{ row.reported_credits_by_post|format_number }}</td>
-                  {% endif %}
-                  <td>{{ row.digital_takeup|format_percentage }}</td>
-                  <td>{{ row.accurate_credits_by_mtp|format_number }}</td>
-                  <td>{{ row.extrapolated_credits_by_post|format_number }}</td>
-                  <td>{{ row.savings|format_amount }}</td>
-                </tr>
-              {% endfor %}
-            {% endfor %}
-          </tbody>
-        </table>
+        {% if rows %}
 
-        <div id="takeup-chart"></div>
+          <table>
+            <thead>
+              <tr>
+                <th></th>
+                {% if show_reported %}
+                  <th><div class="text quiet"><span>{% trans 'Reported digital credits' %} *</span></div></th>
+                  <th><div class="text quiet"><span>{% trans 'Reported postal credits' %} *</span></div></th>
+                {% endif %}
+                <th><div class="text"><span>{% trans 'Average digital take-up' %}</span></div></th>
+                <th><div class="text"><span>{% trans 'Digital credits' %}</span></div></th>
+                <th><div class="text"><span>{% trans 'Scaled postal credits' %} *</span></div></th>
+                <th><div class="text"><span>{% trans 'Gross savings enabled' %} †</span></div></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% regroup rows by predicted as grouped_rows %}
+              {% for rows in grouped_rows %}
+                {% if rows.grouper %}
+                  <tr class="{% cycle 'row1' 'row2' as row_styles %}">
+                    <td colspan="{% if show_reported %}7{% else %}5{% endif %}" style="text-align:center">
+                      {% trans 'Predictions begin' %}
+                    </td>
+                  </tr>
+                {% endif %}
+                {% for row in rows.list %}
+                  <tr class="{% cycle row_styles %}">
+                    <td>{{ row.date_label }}</td>
+                    {% if show_reported %}
+                      <td class="quiet">{{ row.reported_credits_by_mtp|format_number }}</td>
+                      <td class="quiet">{{ row.reported_credits_by_post|format_number }}</td>
+                    {% endif %}
+                    <td>{{ row.digital_takeup|format_percentage }}</td>
+                    <td>{{ row.accurate_credits_by_mtp|format_number }}</td>
+                    <td>{{ row.extrapolated_credits_by_post|format_number }}</td>
+                    <td>{{ row.savings|format_amount }}</td>
+                  </tr>
+                {% endfor %}
+              {% endfor %}
+            </tbody>
+          </table>
+
+          <div id="takeup-chart"></div>
+
+        {% else %}
+          <p class="errornote">
+            {% trans 'No data reported.' %}
+          </p>
+        {% endif %}
 
         <br/>
         <p>

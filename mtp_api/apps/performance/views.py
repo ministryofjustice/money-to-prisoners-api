@@ -220,7 +220,10 @@ class DigitalTakeupReport(AdminViewMixin, TemplateView):
             if 'date' not in collected:
                 collected['date'] = row_date
             for key, value in row.items():
-                collected[key] += value
+                if value is None:
+                    collected[key] = None
+                else:
+                    collected[key] += value
             if row_date.month in quarter_end_months:
                 yield collected
                 collected = collections.defaultdict(int)
@@ -234,7 +237,10 @@ class DigitalTakeupReport(AdminViewMixin, TemplateView):
             if 'date' not in collected:
                 collected['date'] = row_date
             for key, value in row.items():
-                collected[key] += value
+                if value is None:
+                    collected[key] = None
+                else:
+                    collected[key] += value
             if row_date.month == 3:
                 yield collected
                 collected = collections.defaultdict(int)
