@@ -1,3 +1,4 @@
+$ = django.jQuery;
 google.charts.load('current', {'packages':['corechart']});
 
 var sharedOptions = {
@@ -59,27 +60,35 @@ var sharedOptions = {
   textStyle: {
     fontSize: 10,
     color: 'white'
+  },
+
+  chartArea: {
+    width: '100%',
+    backgroundColor: {
+      stroke: 'white',
+      strokeWidth: 1
+    }
   }
 };
 
+
 function drawDigitalTakeUp() {
-   var data = new google.visualization.DataTable();
+  var data = new google.visualization.DataTable();
       data.addColumn('date', 'Month');
       data.addColumn('number', 'Digital');
       data.addColumn('number', 'Post');
 
       data.addRows(digitalTakeupData);
 
-    var chart = new google.visualization.LineChart(document.getElementById('digital_take_up'));
-    var options = Object.assign(sharedOptions);
-    options.colors =  ['#85994B', '#2B8CC4']
-    options.lineWidth = 10,
-    chart.draw(data, options);
+  var chart = new google.visualization.LineChart(document.getElementById('digital_take_up_chart'));
+  var options = Object.assign(sharedOptions);
+  options.colors =  ['#85994B', '#2B8CC4'];
+  options.lineWidth = 10;
+  chart.draw(data, options);
 }
 
 function drawChartCredit() {
   var data = google.visualization.arrayToDataTable(creditData);
-
   var view = new google.visualization.DataView(data);
   view.setColumns([
     0,
@@ -108,7 +117,6 @@ function drawChartCredit() {
 
 function drawChartDisbursmentCount() {
   var data = google.visualization.arrayToDataTable(disbursementData);
-
   var view = new google.visualization.DataView(data);
   view.setColumns([
     0,
@@ -131,70 +139,107 @@ function drawChartDisbursmentCount() {
   chart.draw(view, options);
 }
 
-var credit_bar_chart_title;
-var digital_take_up_title;
-var transaction_bar_chart;
-var digital_take_up;
-var digital_takeup_legend;
-var credits_legend;
-var table_1;
-var table_2;
-var tableID=2;
-var loadedCharts1 = false;
-var loadedCharts2 = false;
-var loadedCharts3 = false;
+var creditsPage;
+var disbursementsPage;
+var digitalTakeUpChartTitle;
+var digitalTakeupChartLegend;
+var digitalTakeUpChart;
+var creditsChartTitle;
+var creditsChartLegend;
+var creditsChart;
+var frame=1;
+var loadFrame1 = false;
+var loadFrame2 = false;
+var loadFrame3 = false;
+var timer;
+var timeOnPage = 4000;
 
 function changeTable(){
-  if(tableID % 2 == 0){
-    table_1.style.display = 'block';
-    table_2.style.display = 'none';
-    if(loadedCharts1 == false){
-      drawChartCredit();
-      drawDigitalTakeUp();
-      loadedCharts1 = true;
-      loadedCharts3 = true;
-    }
-
-    setTimeout(function() {
-      digital_take_up_title.style.display = 'block';
-      digital_takeup_legend.style.display = 'block';
-      digital_take_up.style.display = 'block';
-
-      credit_bar_chart_title.style.display = 'none';
-      credits_legend.style.display = 'none';
-      credit_bar_chart.style.display = 'none';
-    }, 4000);
-
-  } else {
-    digital_take_up_title.style.display = 'none';
-    credit_bar_chart_title.style.display = 'block';
-    digital_take_up.style.display = 'none';
-    credit_bar_chart.style.display = 'block'
-    credits_legend.style.display = 'block';
-    digital_takeup_legend.style.display = 'none';
-
-    table_1.style.display = 'none';
-    table_2.style.display = 'block';
-    if(loadedCharts2 == false){
-      drawChartDisbursmentCount();
-      loadedCharts2 = true;
-    }
+  if(frame == 1) {
+    disbursmentsPage();
   }
-   tableID+=1;
+  else if(frame == 2) {
+    creditsPageTakeUpChart();
+  }
+  else {
+    creditsPageMonthlyChart();
+    frame=0;
+  }
+
+  frame+=1;
+}
+
+
+function disbursmentsPage() {
+  creditsPage.style.display = 'none';
+  disbursementsPage.style.display = 'block';
+  if(loadFrame1 == false){
+    drawChartDisbursmentCount();
+    loadFrame1 = true;
+  }
+}
+
+function creditsPageTakeUpChart() {
+  creditsPage.style.display = 'block';
+  disbursementsPage.style.display = 'none';
+
+  digitalTakeUpChartTitle.style.display = 'block';
+  digitalTakeupChartLegend.style.display = 'block';
+  digitalTakeUpChart.style.display = 'block';
+
+  creditsChartTitle.style.display = 'none';
+  creditsChartLegend.style.display = 'none';
+  creditsChart.style.display = 'none';
+
+  if(loadFrame2 == false) {
+    drawDigitalTakeUp();
+    loadFrame2 = true;
+  }
+}
+
+function creditsPageMonthlyChart() {
+  creditsPage.style.display = 'block';
+  disbursementsPage.style.display = 'none';
+
+  digitalTakeUpChartTitle.style.display = 'none';
+  digitalTakeupChartLegend.style.display = 'none';
+  digitalTakeUpChart.style.display = 'none';
+
+  creditsChartTitle.style.display = 'block';
+  creditsChartLegend.style.display = 'block';
+  creditsChart.style.display = 'block';
+
+  if(loadFrame3 == false){
+    drawChartCredit();
+    loadFrame3 = true;
+  }
 }
 
 function initializeCharts() {
-  table_1 = document.getElementById('table_1');
-  table_2 = document.getElementById('table_2');
-  digital_takeup_legend = document.getElementById('digital_takeup_legend');
-  credits_legend = document.getElementById('credits_legend');
-  digital_take_up = document.getElementById('digital_take_up');
-  credit_bar_chart = document.getElementById('credit_bar_chart');
-  credit_bar_chart_title = document.getElementById('credit_bar_chart_title');
-  digital_take_up_title = document.getElementById('digital_take_up_title');
+  creditsPage = document.getElementById('credits_page');
+  disbursementsPage = document.getElementById('disbursements_page');
+  digitalTakeUpChartTitle = document.getElementById('digital_take_up_title');
+  digitalTakeupChartLegend = document.getElementById('digital_takeup_legend');
+  digitalTakeUpChart = document.getElementById('digital_take_up_chart');
+  creditsChartTitle = document.getElementById('credit_bar_chart_title');
+  creditsChartLegend = document.getElementById('credits_legend');
+  creditsChart = document.getElementById('credit_bar_chart');
 
   changeTable();
-  setInterval(changeTable, 8000);
+
+  timer = setInterval(changeTable, timeOnPage);
+
+  $('#play_control').click(function (e) {
+    e.preventDefault();
+    if(timer) {
+      clearInterval(timer);
+      timer = null;
+      $('#play_control').text("Start");
+    } else {
+      timer = setInterval(changeTable, timeOnPage);
+      $('#play_control').text("Pause");
+    }
+  });
 }
 
- google.charts.setOnLoadCallback(initializeCharts);
+google.charts.setOnLoadCallback(initializeCharts);

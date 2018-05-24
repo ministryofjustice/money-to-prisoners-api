@@ -27,7 +27,7 @@ def get_user_satisfaction():
 
     total = total_satisfied_year + total_not_satisfied_year
     try:
-        return round((total_satisfied_year/total) * 100, 2)
+        return round((total_satisfied_year/total) * 100)
     except ZeroDivisionError:
         return 'No rating'
 
@@ -190,7 +190,7 @@ class PerformanceDashboardView(AdminViewMixin, TemplateView):
             stats_by_method['start_of_month'] = start_of_month
             stats_by_method['post_count'] = post_by_month
             stats_by_method['all_credits'] = (
-                stats_by_method['credit_debit_card_count'] + stats_by_method['credit_bank_transfer_count']
+            stats_by_method['credit_debit_card_count'] + stats_by_method['credit_bank_transfer_count']
             )
 
             data.append(stats_by_method)

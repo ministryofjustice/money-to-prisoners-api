@@ -7,16 +7,16 @@ register = template.Library()
 
 
 @register.filter(name='format_amount')
-def format_amount_filter(value):
-    return format_amount(value, trim_empty_pence=True) or '—'
+def format_amount_filter(value, truncate_after=None):
+    return format_amount(value, trim_empty_pence=True, truncate_after=truncate_after) or '—'
 
 
 @register.filter(name='format_number')
-def format_number_filter(value):
+def format_number_filter(value, truncate_after=None):
     if value is None:
         return '—'
     if isinstance(value, (int, float)):
-        return format_number(value)
+        return format_number(value, truncate_after)
     return value
 
 

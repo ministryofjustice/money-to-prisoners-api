@@ -7,6 +7,15 @@ body {
   background-color: #27332F;
   font-family: Arial, Helvetica, sans-serif;
   color: white;
+  font-size: 25px;
+}
+
+a.pause-button {
+  position: fixed;
+  bottom: 20px;
+  left: 30;
+  padding: 4px 8px;
+  color: white;
 }
 
 h1 {
@@ -33,20 +42,10 @@ h4 {
   margin: 0px;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse !important;
-  border-spacing: 0px;
-}
-
 td {
   margin: 0px;
   padding: 0px;
   vertical-align: top;
-}
-
-tr.border_bottom td {
-  border-bottom:1pt solid white;
 }
 
 .size-of-page {
@@ -54,14 +53,20 @@ tr.border_bottom td {
   height: 930px;
 }
 
+.charts-container {
+  padding-right: 60px;
+}
+
 .width-of-right-sub-title{
   display: inline-block;
   width: 430px;
+  padding-left: 50px;
 }
 
 .annotation-under-right-sub-title {
   height: 70px;
   padding-top: 20px;
+  padding-left: 50px;
 }
 
 .main-title {
@@ -127,28 +132,29 @@ tr.border_bottom td {
   }
 }
 
-.table-overview {
-  font-size: 25px;
-  font-weight: lighter;
-  width: 350px;
-  height: 400px;
-  margin-top: 0px;
-  margin-bottom: 0px;
-
-  th, td {
-    padding: 6px 0;
-  }
+.column-spacing tr td {
+    width: 190px;
 }
 
-.table-spacing td {
-  padding-bottom: 35px;
+.table-overview {
+  border-collapse: separate;
+  border-spacing: 50px 0px;
+  font-size: 25px;
+  height: 360px;
+  margin-bottom: 30px;
+  tr th {
+    text-align: left;
+    border-bottom: 1pt solid white;
+  }
 }
 
 .satisfaction-box {
   margin-top: 20px;
+  padding-left: 50px;
 }
 
 .money-saved-box {
   margin-top: 30px;
+  padding-left: 50px;
 }
 
