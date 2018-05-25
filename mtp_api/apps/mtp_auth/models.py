@@ -81,10 +81,17 @@ class Login(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     application = models.ForeignKey('oauth2_provider.Application', on_delete=models.CASCADE)
 
+    ignored_usernames = {
+        'transaction-uploader', 'prisoner-location-uploader',
+        'send-money', 'bank-admin-cacher', '_token_retrieval',
+    }
+
     @classmethod
     def user_logged_in(cls, sender, request, user, **kwargs):
         application = getattr(request, 'client', None)
         if not application:
+            return
+        if user.username in cls.ignored_usernames:
             return
         cls.objects.create(user=user, application=application)
 
