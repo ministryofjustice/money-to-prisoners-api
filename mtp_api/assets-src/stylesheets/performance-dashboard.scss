@@ -103,34 +103,34 @@ td {
 }
 
 .pink {
-  color: #D53880;
+  color: $pink;
 
   .legend &::before {
-    background: #D53880;
+    background: $pink;
   }
 }
 
 .purple {
-  color: #6F72AF;
+  color: $mauve;
 
   .legend &::before {
-    background: #6F72AF;
+    background: $mauve;
   }
 }
 
 .green {
-  color: #85994B;
+  color: $grass-green;
 
   .legend &::before {
-    background: #85994B;
+    background: $grass-green;
   }
 }
 
 .blue {
-  color: #2B8CC4;
+  color: $light-blue;
 
   .legend &::before {
-    background: #2B8CC4;
+    background: $light-blue;
   }
 }
 
