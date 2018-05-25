@@ -1224,16 +1224,17 @@ class UserApplicationValidationTestCase(AuthBaseTestCase):
         creds = base64.b64encode(bytes('%s:%s' % (client_id, client_secret), 'utf8')).decode('utf-8')
         return 'Basic %s' % creds
 
-    def login(self, username, application_client_id):
-        return self.client.post(
-            reverse('oauth2_provider:token'),
-            {
-                'grant_type': 'password',
-                'username': username,
-                'password': username,
-            },
-            HTTP_AUTHORIZATION=self._create_basic_auth(application_client_id, application_client_id)
-        )
+    def login(self, username, application_client_id, ignored_usernames=()):
+        with mock.patch.object(Login, 'ignored_usernames', set(ignored_usernames)):
+            return self.client.post(
+                reverse('oauth2_provider:token'),
+                {
+                    'grant_type': 'password',
+                    'username': username,
+                    'password': username,
+                },
+                HTTP_AUTHORIZATION=self._create_basic_auth(application_client_id, application_client_id)
+            )
 
     def assertCanLogin(self, username, application_client_id):  # noqa
         response = self.login(username, application_client_id)
@@ -1262,6 +1263,12 @@ class UserApplicationValidationTestCase(AuthBaseTestCase):
                 if application == allowed_application:
                     continue
                 self.assertCannotLogin(random.choice(user_list).username, application)
+
+    def test_special_logins_ignored(self):
+        (user, *_), application = self.users_and_apps[5]
+        logins = Login.objects.count()
+        self.login(user.username, application, (user.username,))
+        self.assertEqual(logins, Login.objects.count(), 'Login should not have been counted')
 
 
 class AccountLockoutTestCase(AuthBaseTestCase):
