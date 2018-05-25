@@ -170,6 +170,7 @@ class PerformanceDashboardView(AdminViewMixin, TemplateView):
         context['data_six_months'] = data[0:7]
         context['savings'] = savings_for_financial_year(today)
         context['user_satisfaction'] = get_user_satisfaction()
+
         return context
 
     def get_monthly_data(self, month, year):
@@ -190,7 +191,7 @@ class PerformanceDashboardView(AdminViewMixin, TemplateView):
             stats_by_method['start_of_month'] = start_of_month
             stats_by_method['post_count'] = post_by_month
             stats_by_method['all_credits'] = (
-            stats_by_method['credit_debit_card_count'] + stats_by_method['credit_bank_transfer_count']
+                stats_by_method['credit_debit_card_count'] + stats_by_method['credit_bank_transfer_count']
             )
 
             data.append(stats_by_method)

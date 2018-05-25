@@ -4,10 +4,10 @@
 <html>
 <head>
   <title>Prisoner Money Statistics</title>
-  <link href="{% static 'stylesheets/performance-dashboard.css' %}" type="text/css" media="all" rel="stylesheet" />
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
   <script type="text/javascript" src="{% static 'admin/js/vendor/jquery/jquery.min.js' %}"></script>
   <script type="text/javascript" src="{% static 'admin/js/jquery.init.js' %}"></script>
-  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+  <link href="{% static 'stylesheets/performance-dashboard.css' %}" type="text/css" media="all" rel="stylesheet" />
   <script>
     var creditData = [
       ['Month', 'Debit', 'Bank transfer', 'Post'],
@@ -214,6 +214,6 @@
         </tr>
       </table>
     </div>
-    <a class="pause-button", id="play_control" href="#">Pause</a>
+    <a class="pause-button" id="play_control" href="#">Pause</a>
   </body>
 </html>

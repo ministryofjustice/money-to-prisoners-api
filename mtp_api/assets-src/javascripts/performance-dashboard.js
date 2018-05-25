@@ -1,5 +1,7 @@
-$ = django.jQuery;
-google.charts.load('current', {'packages':['corechart']});
+/* globals django, google, creditData, digitalTakeupData, disbursementData */
+
+var $ = django.jQuery;
+google.charts.load('current', { 'packages': ['corechart']});
 
 var sharedOptions = {
   fontSize: 25,
@@ -22,7 +24,7 @@ var sharedOptions = {
     }
   },
 
-  vAxis:{
+  vAxis: {
     titleTextStyle: {
       fontSize: 30,
       color: 'white'
@@ -40,13 +42,7 @@ var sharedOptions = {
   backgroundColor: '#27332F',
   width: 1100,
   height: 750,
-  chartArea: {
-    left: 10,
-    right: 20,
-    top: 70,
-    width: '50%',
-    height: '70%'
-  },
+
   legend: {
     position: 'none'
   },
@@ -63,31 +59,34 @@ var sharedOptions = {
   },
 
   chartArea: {
+    left: 10,
+    right: 20,
+    top: 70,
+    height: '70%',
     width: '100%',
     backgroundColor: {
       stroke: 'white',
       strokeWidth: 1
-    }
-  }
+    },
+  },
 };
 
 
-function drawDigitalTakeUp() {
+function drawDigitalTakeUp () {
   var data = new google.visualization.DataTable();
-      data.addColumn('date', 'Month');
-      data.addColumn('number', 'Digital');
-      data.addColumn('number', 'Post');
-
-      data.addRows(digitalTakeupData);
+  data.addColumn('date', 'Month');
+  data.addColumn('number', 'Digital');
+  data.addColumn('number', 'Post');
+  data.addRows(digitalTakeupData);
 
   var chart = new google.visualization.LineChart(document.getElementById('digital_take_up_chart'));
   var options = Object.assign(sharedOptions);
-  options.colors =  ['#85994B', '#2B8CC4'];
+  options.colors = ['#85994B', '#2B8CC4'];
   options.lineWidth = 10;
   chart.draw(data, options);
 }
 
-function drawChartCredit() {
+function drawChartCredit () {
   var data = google.visualization.arrayToDataTable(creditData);
   var view = new google.visualization.DataView(data);
   view.setColumns([
@@ -95,17 +94,17 @@ function drawChartCredit() {
     1,
     {
       sourceColumn: 1,
-      role: "annotation",
+      role: 'annotation',
     },
     2,
     {
       sourceColumn: 2,
-      role: "annotation" ,
+      role: 'annotation',
     },
     3,
     {
       sourceColumn: 3,
-      role: "annotation" ,
+      role: 'annotation',
     }
   ]);
 
@@ -115,7 +114,7 @@ function drawChartCredit() {
   chart.draw(view, options);
 }
 
-function drawChartDisbursmentCount() {
+function drawChartDisbursmentCount () {
   var data = google.visualization.arrayToDataTable(disbursementData);
   var view = new google.visualization.DataView(data);
   view.setColumns([
@@ -123,12 +122,12 @@ function drawChartDisbursmentCount() {
     1,
     {
       sourceColumn: 1,
-      role: "annotation"
+      role: 'annotation',
     },
     2,
     {
       sourceColumn: 2,
-      role: "annotation"
+      role: 'annotation',
     },
   ]);
 
@@ -147,39 +146,24 @@ var digitalTakeUpChart;
 var creditsChartTitle;
 var creditsChartLegend;
 var creditsChart;
-var frame=1;
+var frame = 1;
 var loadFrame1 = false;
 var loadFrame2 = false;
 var loadFrame3 = false;
 var timer;
 var timeOnPage = 4000;
 
-function changeTable(){
-  if(frame == 1) {
-    disbursmentsPage();
-  }
-  else if(frame == 2) {
-    creditsPageTakeUpChart();
-  }
-  else {
-    creditsPageMonthlyChart();
-    frame=0;
-  }
 
-  frame+=1;
-}
-
-
-function disbursmentsPage() {
+function disbursmentsPage () {
   creditsPage.style.display = 'none';
   disbursementsPage.style.display = 'block';
-  if(loadFrame1 == false){
+  if (loadFrame1 === false) {
     drawChartDisbursmentCount();
     loadFrame1 = true;
   }
 }
 
-function creditsPageTakeUpChart() {
+function creditsPageTakeUpChart () {
   creditsPage.style.display = 'block';
   disbursementsPage.style.display = 'none';
 
@@ -191,13 +175,13 @@ function creditsPageTakeUpChart() {
   creditsChartLegend.style.display = 'none';
   creditsChart.style.display = 'none';
 
-  if(loadFrame2 == false) {
+  if (loadFrame2 === false) {
     drawDigitalTakeUp();
     loadFrame2 = true;
   }
 }
 
-function creditsPageMonthlyChart() {
+function creditsPageMonthlyChart () {
   creditsPage.style.display = 'block';
   disbursementsPage.style.display = 'none';
 
@@ -209,13 +193,26 @@ function creditsPageMonthlyChart() {
   creditsChartLegend.style.display = 'block';
   creditsChart.style.display = 'block';
 
-  if(loadFrame3 == false){
+  if (loadFrame3 === false) {
     drawChartCredit();
     loadFrame3 = true;
   }
 }
 
-function initializeCharts() {
+function changeTable () {
+  if (frame === 1) {
+    disbursmentsPage();
+  } else if (frame === 2) {
+    creditsPageTakeUpChart();
+  } else {
+    creditsPageMonthlyChart();
+    frame = 0;
+  }
+
+  frame += 1;
+}
+
+function initializeCharts () {
   creditsPage = document.getElementById('credits_page');
   disbursementsPage = document.getElementById('disbursements_page');
   digitalTakeUpChartTitle = document.getElementById('digital_take_up_title');
@@ -231,13 +228,13 @@ function initializeCharts() {
 
   $('#play_control').click(function (e) {
     e.preventDefault();
-    if(timer) {
+    if (timer) {
       clearInterval(timer);
       timer = null;
-      $('#play_control').text("Start");
+      $('#play_control').text('Start');
     } else {
       timer = setInterval(changeTable, timeOnPage);
-      $('#play_control').text("Pause");
+      $('#play_control').text('Pause');
     }
   });
 }

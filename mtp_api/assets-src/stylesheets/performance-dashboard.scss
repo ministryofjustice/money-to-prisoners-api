@@ -1,3 +1,5 @@
+@import 'colours/palette';
+
 body {
   padding-left: 100px;
   padding-right: 100px;
@@ -57,7 +59,7 @@ td {
   padding-right: 60px;
 }
 
-.width-of-right-sub-title{
+.width-of-right-sub-title {
   display: inline-block;
   width: 430px;
   padding-left: 50px;
@@ -70,7 +72,7 @@ td {
 }
 
 .main-title {
-  margin-bottom: 30px
+  margin-bottom: 30px;
 }
 
 .legend {
@@ -88,15 +90,15 @@ td {
     height: 40px;
     width: 60px;
     margin-bottom: -9px;
-    content: " ";
+    content: ' ';
   }
 }
 
 .yellow {
-  color: #FFBF47;
+  color: $yellow;
 
   .legend &::before {
-    background: #FFBF47;
+    background: $yellow;
   }
 }
 
@@ -133,7 +135,7 @@ td {
 }
 
 .column-spacing tr td {
-    width: 190px;
+  width: 190px;
 }
 
 .table-overview {
@@ -142,6 +144,7 @@ td {
   font-size: 25px;
   height: 360px;
   margin-bottom: 30px;
+
   tr th {
     text-align: left;
     border-bottom: 1pt solid white;
