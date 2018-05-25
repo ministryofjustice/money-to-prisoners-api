@@ -24,7 +24,7 @@ from mtp_auth.constants import (
     BANK_ADMIN_OAUTH_CLIENT_ID, CASHBOOK_OAUTH_CLIENT_ID,
     NOMS_OPS_OAUTH_CLIENT_ID, SEND_MONEY_CLIENT_ID
 )
-from mtp_auth.models import Role, FailedLoginAttempt, PasswordChangeRequest
+from mtp_auth.models import Role, Login, FailedLoginAttempt, PasswordChangeRequest
 from mtp_auth.tests.mommy_recipes import create_prison_clerk
 from mtp_auth.views import ResetPasswordView
 from mtp_auth.tests.utils import AuthTestCaseMixin
@@ -1240,12 +1240,17 @@ class UserApplicationValidationTestCase(AuthBaseTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK, msg='User %s should not be allowed into %s' % (
             username, application_client_id
         ))
+        login = Login.objects.order_by('-created').first()
+        self.assertEqual(login.user.username, username)
+        self.assertEqual(login.application.client_id, application_client_id)
 
     def assertCannotLogin(self, username, application_client_id):  # noqa
+        logins = Login.objects.count()
         response = self.login(username, application_client_id)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, msg='User %s should be allowed into %s' % (
             username, application_client_id
         ))
+        self.assertEqual(logins, Login.objects.count(), 'Login should not have been counted')
 
     def test_users_can_log_into_own_application(self):
         for user_list, allowed_application in self.users_and_apps:

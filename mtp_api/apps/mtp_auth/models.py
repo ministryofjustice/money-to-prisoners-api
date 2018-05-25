@@ -3,7 +3,7 @@ from types import MethodType
 import uuid
 
 from django.conf import settings
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, user_logged_in
 from django.db import models
 from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
@@ -74,6 +74,25 @@ class Role(models.Model):
     @property
     def groups(self):
         return [self.key_group] + list(self.other_groups.all())
+
+
+class Login(models.Model):
+    created = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    application = models.ForeignKey('oauth2_provider.Application', on_delete=models.CASCADE)
+
+    @classmethod
+    def user_logged_in(cls, sender, request, user, **kwargs):
+        application = getattr(request, 'client', None)
+        if not application:
+            return
+        cls.objects.create(user=user, application=application)
+
+    def __str__(self):
+        return '%s logged into %s' % (self.user.username, self.application.name)
+
+
+user_logged_in.connect(Login.user_logged_in)
 
 
 class FailedLoginAttemptManager(models.Manager):
