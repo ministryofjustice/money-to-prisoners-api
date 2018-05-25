@@ -1,3 +1,5 @@
+@import 'colours/palette';
+
 body {
   padding-left: 100px;
   padding-right: 100px;
@@ -6,6 +8,15 @@ body {
   margin: 0;
   background-color: #27332F;
   font-family: Arial, Helvetica, sans-serif;
+  color: white;
+  font-size: 25px;
+}
+
+a.pause-button {
+  position: fixed;
+  bottom: 20px;
+  left: 30;
+  padding: 4px 8px;
   color: white;
 }
 
@@ -33,20 +44,10 @@ h4 {
   margin: 0px;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse !important;
-  border-spacing: 0px;
-}
-
 td {
   margin: 0px;
   padding: 0px;
   vertical-align: top;
-}
-
-tr.border_bottom td {
-  border-bottom:1pt solid white;
 }
 
 .size-of-page {
@@ -54,18 +55,24 @@ tr.border_bottom td {
   height: 930px;
 }
 
-.width-of-right-sub-title{
+.charts-container {
+  padding-right: 60px;
+}
+
+.width-of-right-sub-title {
   display: inline-block;
   width: 430px;
+  padding-left: 50px;
 }
 
 .annotation-under-right-sub-title {
   height: 70px;
   padding-top: 20px;
+  padding-left: 50px;
 }
 
 .main-title {
-  margin-bottom: 30px
+  margin-bottom: 30px;
 }
 
 .legend {
@@ -83,72 +90,74 @@ tr.border_bottom td {
     height: 40px;
     width: 60px;
     margin-bottom: -9px;
-    content: " ";
+    content: ' ';
   }
 }
 
 .yellow {
-  color: #FFBF47;
+  color: $yellow;
 
   .legend &::before {
-    background: #FFBF47;
+    background: $yellow;
   }
 }
 
 .pink {
-  color: #D53880;
+  color: $pink;
 
   .legend &::before {
-    background: #D53880;
+    background: $pink;
   }
 }
 
 .purple {
-  color: #6F72AF;
+  color: $mauve;
 
   .legend &::before {
-    background: #6F72AF;
+    background: $mauve;
   }
 }
 
 .green {
-  color: #85994B;
+  color: $grass-green;
 
   .legend &::before {
-    background: #85994B;
+    background: $grass-green;
   }
 }
 
 .blue {
-  color: #2B8CC4;
+  color: $light-blue;
 
   .legend &::before {
-    background: #2B8CC4;
+    background: $light-blue;
   }
+}
+
+.column-spacing tr td {
+  width: 190px;
 }
 
 .table-overview {
+  border-collapse: separate;
+  border-spacing: 50px 0px;
   font-size: 25px;
-  font-weight: lighter;
-  width: 350px;
-  height: 400px;
-  margin-top: 0px;
-  margin-bottom: 0px;
+  height: 360px;
+  margin-bottom: 30px;
 
-  th, td {
-    padding: 6px 0;
+  tr th {
+    text-align: left;
+    border-bottom: 1pt solid white;
   }
-}
-
-.table-spacing td {
-  padding-bottom: 35px;
 }
 
 .satisfaction-box {
   margin-top: 20px;
+  padding-left: 50px;
 }
 
 .money-saved-box {
   margin-top: 30px;
+  padding-left: 50px;
 }
 

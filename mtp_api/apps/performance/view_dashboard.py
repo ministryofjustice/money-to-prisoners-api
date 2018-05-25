@@ -27,7 +27,7 @@ def get_user_satisfaction():
 
     total = total_satisfied_year + total_not_satisfied_year
     try:
-        return round((total_satisfied_year/total) * 100, 2)
+        return round((total_satisfied_year/total) * 100)
     except ZeroDivisionError:
         return 'No rating'
 
@@ -158,7 +158,7 @@ class PerformanceDashboardView(AdminViewMixin, TemplateView):
         beginning_next_month = today.replace(month=next_month, year=next_months_year, day=1)
         beginning_current_year = today.replace(month=1, day=1)
 
-        data = self.get_monthly_data(month, year)
+        data = self.get_monthly_data(last_month, last_months_year)
 
         context['last_week'] = get_overall_stats(beginning_previous_week,  end_previous_week)
         context['this_week'] = get_overall_stats(end_previous_week, today)
@@ -170,6 +170,7 @@ class PerformanceDashboardView(AdminViewMixin, TemplateView):
         context['data_six_months'] = data[0:7]
         context['savings'] = savings_for_financial_year(today)
         context['user_satisfaction'] = get_user_satisfaction()
+
         return context
 
     def get_monthly_data(self, month, year):
@@ -194,5 +195,4 @@ class PerformanceDashboardView(AdminViewMixin, TemplateView):
             )
 
             data.append(stats_by_method)
-
         return data
