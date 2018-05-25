@@ -1,7 +1,11 @@
+import datetime
 import textwrap
 
 from django.core.management import BaseCommand, call_command
+from django.utils.timezone import now
 from mtp_common.stack import StackException, is_first_instance
+
+from mtp_auth.models import Login
 
 
 class Command(BaseCommand):
@@ -24,5 +28,6 @@ class Command(BaseCommand):
             call_command('clear_oauth2_tokens', verbosity=verbosity)
             call_command('clear_password_change_requests', verbosity=verbosity)
             call_command('clear_abandoned_payments', age=7, verbosity=verbosity)
+            Login.objects.filter(created_lt=now() - datetime.timedelta(days=365)).delete()
         elif verbosity:
             self.stdout.write('Clean-up tasks do not run on secondary instances')
