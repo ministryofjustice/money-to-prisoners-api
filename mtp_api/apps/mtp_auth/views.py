@@ -1,27 +1,35 @@
+import collections
+import datetime
 import logging
 from urllib.parse import urlsplit, urlunsplit, urlencode, parse_qs
 
 from django.contrib.auth import password_validation, get_user_model
 from django.contrib.auth.password_validation import get_default_password_validators
 from django.core.exceptions import NON_FIELD_ERRORS
-from django.db import models
+from django.db import connection, models
 from django.db.transaction import atomic
 from django.forms import ValidationError
 from django.http import Http404
 from django.utils.decorators import method_decorator
+from django.utils.timezone import now
 from django.utils.translation import gettext, gettext_lazy as _
 from django.views.decorators.debug import sensitive_post_parameters, sensitive_variables
+from django.views.generic import TemplateView
 from mtp_common.tasks import send_email
+from oauth2_provider.models import Application
 from rest_framework import viewsets, generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import FailedLoginAttempt, PrisonUserMapping, Role, PasswordChangeRequest
-from .permissions import UserPermissions, AnyAdminClientIDPermissions
-from .serializers import (
+from core.views import AdminViewMixin
+from mtp_auth.forms import LoginStatsForm
+from mtp_auth.models import FailedLoginAttempt, PrisonUserMapping, Role, PasswordChangeRequest
+from mtp_auth.permissions import UserPermissions, AnyAdminClientIDPermissions
+from mtp_auth.serializers import (
     RoleSerializer, UserSerializer, ChangePasswordSerializer, ResetPasswordSerializer,
     ChangePasswordWithCodeSerializer
 )
+from prison.models import Prison
 
 User = get_user_model()
 
@@ -289,3 +297,86 @@ class ResetPasswordView(generics.GenericAPIView):
                 return Response(status=status.HTTP_204_NO_CONTENT)
         else:
             return self.failure_response(serializer.errors)
+
+
+class LoginStatsView(AdminViewMixin, TemplateView):
+    title = _('Login stats')
+    template_name = 'admin/mtp_auth/login-stats.html'
+    required_permissions = ['transaction.view_dashboard']
+    excluded_nomis_ids = {'ZCH'}
+
+    def get_context_data(self, **kwargs):
+        context_data = super().get_context_data(**kwargs)
+        form = LoginStatsForm(data=self.request.GET.dict())
+        if not form.is_valid():
+            form = LoginStatsForm(data={})
+            assert form.is_valid(), 'Empty form should be valid'
+
+        context_data['form'] = form
+        context_data['prisons'] = self.get_prisons()
+        months = list(self.get_months())
+        current_month_progress = months.pop(0)
+        context_data['months'] = months
+        context_data['login_counts'] = self.get_login_counts(
+            form.cleaned_data['application'],
+            current_month_progress,
+            months,
+        )
+        return context_data
+
+    def get_prisons(self):
+        prisons = list(Prison.objects.exclude(
+            nomis_id__in=self.excluded_nomis_ids
+        ).order_by('nomis_id').values_list('nomis_id', 'name'))
+        prisons.append((None, _('Prison not specified')))
+        return prisons
+
+    def get_months(self):
+        today = now()
+        month_start = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        month = month_start.month + 1
+        if month > 12:
+            next_month = month_start.replace(year=month_start.year + 1, month=1)
+        else:
+            next_month = month_start.replace(month=month)
+        month_end = next_month - datetime.timedelta(days=1)
+        yield today.day / month_end.day
+
+        for _ in range(4):  # noqa: F402
+            yield month_start
+            month = month_start.month - 1
+            if month < 1:
+                month_start = month_start.replace(year=month_start.year - 1, month=12)
+            else:
+                month_start = month_start.replace(month=month)
+
+    def get_login_counts(self, application, current_month_progress, months):
+        login_count_query = '''
+            WITH users AS (
+              SELECT user_id, COUNT(*) AS login_count
+              FROM mtp_auth_login
+              WHERE application_id = %(application_id)s AND date_trunc('month', created) = %(month)s
+              GROUP BY user_id
+            )
+            SELECT prison_id, SUM(login_count)::integer AS login_count
+            FROM users
+            LEFT OUTER JOIN mtp_auth_prisonusermapping ON mtp_auth_prisonusermapping.user_id = users.user_id
+            LEFT OUTER JOIN mtp_auth_prisonusermapping_prisons ON
+              mtp_auth_prisonusermapping_prisons.prisonusermapping_id = mtp_auth_prisonusermapping.id
+            GROUP BY prison_id
+        '''
+        try:
+            application = Application.objects.get(client_id=application)
+        except Application.DoesNotExist:
+            return
+        login_counts = collections.defaultdict(int)
+        for i, month in enumerate(months):
+            scale = current_month_progress if i == 0 else 1
+            with connection.cursor() as cursor:
+                cursor.execute(login_count_query, {
+                    'application_id': application.id,
+                    'month': month.date(),
+                })
+                for prison_id, login_count in cursor.fetchall():
+                    login_counts[(prison_id, month)] = round(login_count / scale)
+        return login_counts

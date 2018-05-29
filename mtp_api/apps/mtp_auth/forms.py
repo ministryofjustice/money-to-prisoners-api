@@ -1,7 +1,10 @@
+from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
+
+from mtp_auth.constants import CASHBOOK_OAUTH_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID
 
 User = get_user_model()
 
@@ -61,3 +64,17 @@ class RestrictedUserChangeForm(UserChangeForm):
                                       code='non_unique_email')
 
         return email
+
+
+class LoginStatsForm(forms.Form):
+    application = forms.ChoiceField(label=_('Application'), choices=(
+        (CASHBOOK_OAUTH_CLIENT_ID, 'Digital cashbook'),
+        (NOMS_OPS_OAUTH_CLIENT_ID, 'Prisoner money intelligence'),
+    ), initial=CASHBOOK_OAUTH_CLIENT_ID)
+
+    def __init__(self, **kwargs):
+        data = kwargs.pop('data', {})
+        for field_name, field in self.base_fields.items():
+            if field_name not in data:
+                data[field_name] = field.initial
+        super().__init__(data=data, **kwargs)

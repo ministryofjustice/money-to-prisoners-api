@@ -1,0 +1,116 @@
+{% extends 'admin/base_site.html' %}
+{% load i18n %}
+{% load static %}
+{% load credit %}
+{% load login_counts %}
+{% load simple_admin %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" type="text/css" href="{% static 'admin/css/changelists.css' %}" />
+{% endblock %}
+{% block extrahead %}
+  {{ block.super }}
+  <script type="text/javascript" src="{% static 'admin/js/vendor/jquery/jquery.min.js' %}"></script>
+  <script type="text/javascript" src="{% static 'admin/js/jquery.init.js' %}"></script>
+  <script>
+    django.jQuery(function ($) {
+      function compareRows(row1, row2, columnIndex, reverse) {
+        var value1 = $('td', row1).eq(columnIndex).data('sort');
+        var value2 = $('td', row2).eq(columnIndex).data('sort');
+        if (value1 < value2) {
+          return -1 * reverse;
+        }
+        if (value1 > value2) {
+          return 1 * reverse;
+        }
+        return 0;
+      }
+
+      $('.login-table thead a').click(function (e) {
+        e.preventDefault();
+        var $column = $(this).parents('th');
+        var columnIndex = $column.index();
+        var $tableBody = $column.parents('.login-table').find('tbody');
+        var sortedRows = $('tr', $tableBody[0]).toArray().sort(function (row1, row2) {
+          var sortValue = compareRows(row1, row2, columnIndex, columnIndex === 0 ? 1 : -1);
+          if (columnIndex !== 0 && sortValue === 0) {
+            return compareRows(row1, row2, 0, 1);
+          }
+          return sortValue;
+        });
+        $.each(sortedRows, function () {
+          $tableBody.append(this);
+        });
+      });
+    });
+  </script>
+{% endblock %}
+
+{% block bodyclass %}{{ block.super }} change-list{% endblock %}
+
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo; {{ title }}
+  </div>
+{% endblock %}
+
+{% block content %}
+  <div id="content-main">
+    <div id="changelist" class="module filtered">
+      <div id="changelist-filter">
+        <h2>{% trans 'Filter' %}</h2>
+        <h3>{{ form.application.label }}</h3>
+        {% admin_choice_list form form.application %}
+      </div>
+
+      <div class="results">
+        <table class="login-table">
+          <thead>
+          <tr>
+            <th>
+              <div class="text"><a href="#">Prison</a></div>
+            </th>
+            {% for month in months %}
+              <th>
+                <div class="text"><a href="#">
+                  {% if forloop.first %}
+                    {% trans 'Expected this month' %} *
+                  {% else %}
+                    {{ month|date:'F' }}
+                  {% endif %}
+                </a></div>
+              </th>
+            {% endfor %}
+          </tr>
+          </thead>
+          <tbody>
+            {% if login_counts is None %}
+              <tr>
+                <td></td>
+                <td colspan="{{ month_names|length }}">{% trans 'Data unavailable' %}</td>
+              </tr>
+            {% else %}
+              {% for prison_id, prison_name in prisons %}
+                <tr>
+                  <td data-sort="{{ prison_id|default_if_none:'~' }}">{{ prison_name }}</td>
+                  {% for month in months %}
+                    {% get_login_count login_counts prison_id month as login_count %}
+                    <td data-sort="{{ login_count }}">{{ login_count|format_number }}</td>
+                  {% endfor %}
+                </tr>
+              {% endfor %}
+            {% endif %}
+          </tbody>
+        </table>
+        <br/>
+        <p>
+          *
+          {% trans 'The number of logins this month assumes the same constant rate of logins as seen so far.' %}
+          {% trans 'This will be inaccurate at the beginning of the month.' %}
+        </p>
+      </div>
+    </div>
+  </div>
+{% endblock %}

@@ -21,6 +21,7 @@ class AdminSite(admin.AdminSite):
 
     def get_urls(self):
         from core.views import DashboardView, DownloadPublicKeyView, RecreateTestDataView, UpdateNOMISTokenView
+        from mtp_auth.views import LoginStatsView
         from payment.views import PaymentSearchView
         from performance.views import DigitalTakeupUploadView, DigitalTakeupReport, PrisonPerformanceView
         from prison.views import LoadOffendersView
@@ -38,6 +39,7 @@ class AdminSite(admin.AdminSite):
             url(r'^prison/prisonerlocation/load-offenders/$', LoadOffendersView.as_view(), name='load_offenders'),
             url(r'^recreate-test-data/$', RecreateTestDataView.as_view(), name='recreate_test_data'),
             url(r'^prison-performance/$', PrisonPerformanceView.as_view(), name='prison-performance'),
+            url(r'^login-stats/$', LoginStatsView.as_view(), name='login-stats'),
         ] + super().get_urls()
 
     def index(self, request, extra_context=None):
