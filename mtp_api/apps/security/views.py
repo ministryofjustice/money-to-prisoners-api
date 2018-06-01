@@ -53,6 +53,10 @@ class SenderProfileListFilter(django_filters.FilterSet):
     card_expiry_date = django_filters.CharFilter(name='debit_card_details__card_expiry_date')
     card_number_last_digits = django_filters.CharFilter(name='debit_card_details__card_number_last_digits')
     sender_email = django_filters.CharFilter(name='debit_card_details__sender_email__email', lookup_expr='icontains')
+    sender_postcode = django_filters.CharFilter(
+        name='debit_card_details__postcode',
+        lookup_expr='icontains'
+    )
 
     prisoners = django_filters.ModelMultipleChoiceFilter(name='prisoners', queryset=PrisonerProfile.objects.all())
     prisoner_count__lte = django_filters.NumberFilter(name='prisoner_count', lookup_expr='lte')
