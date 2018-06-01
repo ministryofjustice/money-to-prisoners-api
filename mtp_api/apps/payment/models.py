@@ -74,7 +74,7 @@ class Payment(TimeStampedModel):
     card_expiry_date = models.CharField(max_length=5, blank=True, null=True)
     card_brand = models.CharField(max_length=250, blank=True, null=True)
 
-    ip_address = models.GenericIPAddressField(blank=True, null=True)
+    ip_address = models.GenericIPAddressField(blank=True, null=True, db_index=True)
 
     billing_address = models.ForeignKey(
         BillingAddress, on_delete=models.SET_NULL, null=True, blank=True
