@@ -53,13 +53,7 @@ class BillingAddress(models.Model):
         return re.sub(r'[\s-]+', '', self.postcode).upper() if self.postcode else self.postcode
 
     def __str__(self):
-        return '{line1}, {line2}, {city}, {postcode}, {country}'.format(
-            line1=self.line1,
-            line2=self.line2,
-            city=self.city,
-            postcode=self.postcode,
-            country=self.country
-        )
+        return ', '.join(filter(None, (self.line1, self.line2, self.city, self.postcode, self.country)))
 
 
 class Payment(TimeStampedModel):

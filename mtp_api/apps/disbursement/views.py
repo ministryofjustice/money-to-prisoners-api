@@ -27,45 +27,45 @@ from .serializers import (
 
 class DisbursementFilter(django_filters.FilterSet):
     logged_at__lt = annotate_filter(
-        IsoDateTimeFilter(name='logged_at', lookup_expr='lt'),
+        IsoDateTimeFilter(field_name='logged_at', lookup_expr='lt'),
         {'logged_at': TruncUtcDate('log__created')}
     )
     logged_at__gte = annotate_filter(
-        IsoDateTimeFilter(name='logged_at', lookup_expr='gte'),
+        IsoDateTimeFilter(field_name='logged_at', lookup_expr='gte'),
         {'logged_at': TruncUtcDate('log__created')}
     )
-    resolution = MultipleValueFilter(name='resolution')
+    resolution = MultipleValueFilter(field_name='resolution')
 
     exclude_amount__endswith = django_filters.CharFilter(
-        name='amount', lookup_expr='endswith', exclude=True
+        field_name='amount', lookup_expr='endswith', exclude=True
     )
     exclude_amount__regex = django_filters.CharFilter(
-        name='amount', lookup_expr='regex', exclude=True
+        field_name='amount', lookup_expr='regex', exclude=True
     )
     amount__endswith = django_filters.CharFilter(
-        name='amount', lookup_expr='endswith'
+        field_name='amount', lookup_expr='endswith'
     )
     amount__regex = django_filters.CharFilter(
-        name='amount', lookup_expr='regex'
+        field_name='amount', lookup_expr='regex'
     )
 
-    prisoner_number = django_filters.CharFilter(name='prisoner_number', lookup_expr='iexact')
-    prisoner_name = django_filters.CharFilter(name='prisoner_name', lookup_expr='icontains')
+    prisoner_number = django_filters.CharFilter(field_name='prisoner_number', lookup_expr='iexact')
+    prisoner_name = django_filters.CharFilter(field_name='prisoner_name', lookup_expr='icontains')
 
     prison = django_filters.ModelMultipleChoiceFilter(queryset=Prison.objects.all())
-    prison_region = django_filters.CharFilter(name='prison__region')
-    prison_category = MultipleValueFilter(name='prison__categories__name')
-    prison_population = MultipleValueFilter(name='prison__populations__name')
+    prison_region = django_filters.CharFilter(field_name='prison__region')
+    prison_category = MultipleValueFilter(field_name='prison__categories__name')
+    prison_population = MultipleValueFilter(field_name='prison__populations__name')
 
-    recipient_name = django_filters.CharFilter(name='recipient_name', lookup_expr='icontains')
-    recipient_email = django_filters.CharFilter(name='recipient_email', lookup_expr='icontains')
+    recipient_name = django_filters.CharFilter(field_name='recipient_name', lookup_expr='icontains')
+    recipient_email = django_filters.CharFilter(field_name='recipient_email', lookup_expr='icontains')
 
-    city = django_filters.CharFilter(name='city', lookup_expr='iexact')
-    postcode = django_filters.CharFilter(name='postcode', lookup_expr='icontains')
+    city = django_filters.CharFilter(field_name='city', lookup_expr='iexact')
+    postcode = django_filters.CharFilter(field_name='postcode', lookup_expr='icontains')
 
-    sort_code = django_filters.CharFilter(name='sort_code')
-    account_number = django_filters.CharFilter(name='account_number')
-    roll_number = django_filters.CharFilter(name='roll_number')
+    sort_code = django_filters.CharFilter(field_name='sort_code')
+    account_number = django_filters.CharFilter(field_name='account_number')
+    roll_number = django_filters.CharFilter(field_name='roll_number')
 
     class Meta:
         model = Disbursement

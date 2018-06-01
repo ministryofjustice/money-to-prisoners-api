@@ -133,68 +133,61 @@ class PostcodeFilter(django_filters.CharFilter):
 
 class CreditListFilter(django_filters.FilterSet):
     status = StatusChoiceFilter(choices=CREDIT_STATUS.choices)
-    user = django_filters.ModelChoiceFilter(name='owner', queryset=User.objects.all())
+    user = django_filters.ModelChoiceFilter(field_name='owner', queryset=User.objects.all())
     valid = ValidCreditFilter(widget=django_filters.widgets.BooleanWidget)
 
-    prisoner_name = django_filters.CharFilter(name='prisoner_name', lookup_expr='icontains')
+    prisoner_name = django_filters.CharFilter(field_name='prisoner_name', lookup_expr='icontains')
     prison = django_filters.ModelMultipleChoiceFilter(queryset=Prison.objects.all())
-    prison__isnull = django_filters.BooleanFilter(name='prison', lookup_expr='isnull')
-    prison_region = django_filters.CharFilter(name='prison__region')
-    prison_category = MultipleValueFilter(name='prison__categories__name')
-    prison_population = MultipleValueFilter(name='prison__populations__name')
+    prison__isnull = django_filters.BooleanFilter(field_name='prison', lookup_expr='isnull')
+    prison_region = django_filters.CharFilter(field_name='prison__region')
+    prison_category = MultipleValueFilter(field_name='prison__categories__name')
+    prison_population = MultipleValueFilter(field_name='prison__populations__name')
 
     search = CreditTextSearchFilter()
     sender_name = MultipleFieldCharFilter(
-        name=('transaction__sender_name', 'payment__cardholder_name',),
+        field_name=('transaction__sender_name', 'payment__cardholder_name',),
         lookup_expr='icontains'
     )
-    sender_sort_code = django_filters.CharFilter(name='transaction__sender_sort_code')
-    sender_account_number = django_filters.CharFilter(name='transaction__sender_account_number')
-    sender_roll_number = django_filters.CharFilter(name='transaction__sender_roll_number')
-    sender_name__isblank = BlankStringFilter(name='transaction__sender_name')
-    sender_sort_code__isblank = BlankStringFilter(name='transaction__sender_sort_code')
-    sender_account_number__isblank = BlankStringFilter(name='transaction__sender_account_number')
-    sender_roll_number__isblank = BlankStringFilter(name='transaction__sender_roll_number')
+    sender_sort_code = django_filters.CharFilter(field_name='transaction__sender_sort_code')
+    sender_account_number = django_filters.CharFilter(field_name='transaction__sender_account_number')
+    sender_roll_number = django_filters.CharFilter(field_name='transaction__sender_roll_number')
+    sender_name__isblank = BlankStringFilter(field_name='transaction__sender_name')
+    sender_sort_code__isblank = BlankStringFilter(field_name='transaction__sender_sort_code')
+    sender_account_number__isblank = BlankStringFilter(field_name='transaction__sender_account_number')
+    sender_roll_number__isblank = BlankStringFilter(field_name='transaction__sender_roll_number')
 
-    card_expiry_date = django_filters.CharFilter(
-        name='payment__card_expiry_date')
-    card_number_last_digits = django_filters.CharFilter(
-        name='payment__card_number_last_digits')
-    sender_email = django_filters.CharFilter(
-        name='payment__email',
-        lookup_expr='icontains'
-    )
-    sender_postcode = PostcodeFilter(
-        name='payment__billing_address__postcode',
-    )
+    card_expiry_date = django_filters.CharFilter(field_name='payment__card_expiry_date')
+    card_number_last_digits = django_filters.CharFilter(field_name='payment__card_number_last_digits')
+    sender_email = django_filters.CharFilter(field_name='payment__email', lookup_expr='icontains')
+    sender_postcode = PostcodeFilter(field_name='payment__billing_address__postcode')
 
     exclude_amount__endswith = django_filters.CharFilter(
-        name='amount', lookup_expr='endswith', exclude=True
+        field_name='amount', lookup_expr='endswith', exclude=True
     )
     exclude_amount__regex = django_filters.CharFilter(
-        name='amount', lookup_expr='regex', exclude=True
+        field_name='amount', lookup_expr='regex', exclude=True
     )
     amount__endswith = django_filters.CharFilter(
-        name='amount', lookup_expr='endswith'
+        field_name='amount', lookup_expr='endswith'
     )
     amount__regex = django_filters.CharFilter(
-        name='amount', lookup_expr='regex'
+        field_name='amount', lookup_expr='regex'
     )
 
     received_at__lt = IsoDateTimeFilter(
-        name='received_at', lookup_expr='lt'
+        field_name='received_at', lookup_expr='lt'
     )
     received_at__gte = IsoDateTimeFilter(
-        name='received_at', lookup_expr='gte'
+        field_name='received_at', lookup_expr='gte'
     )
     source = CreditSourceFilter()
-    pk = MultipleValueFilter(name='pk')
+    pk = MultipleValueFilter(field_name='pk')
     logged_at__lt = annotate_filter(
-        IsoDateTimeFilter(name='logged_at', lookup_expr='lt'),
+        IsoDateTimeFilter(field_name='logged_at', lookup_expr='lt'),
         {'logged_at': TruncUtcDate('log__created')}
     )
     logged_at__gte = annotate_filter(
-        IsoDateTimeFilter(name='logged_at', lookup_expr='gte'),
+        IsoDateTimeFilter(field_name='logged_at', lookup_expr='gte'),
         {'logged_at': TruncUtcDate('log__created')}
     )
 
