@@ -50,7 +50,7 @@ class BillingAddress(models.Model):
 
     @property
     def normalised_postcode(self):
-        return re.sub(r'\s', '', self.postcode).upper() if self.postcode else self.postcode
+        return re.sub(r'[\s-]+', '', self.postcode).upper() if self.postcode else self.postcode
 
     def __str__(self):
         return '{line1}, {line2}, {city}, {postcode}, {country}'.format(

@@ -8,9 +8,9 @@ import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
 from rest_framework import generics, mixins, status as drf_status, viewsets
-from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from core.filters import (
     BlankStringFilter, StatusChoiceFilter, IsoDateTimeFilter,
@@ -120,6 +120,17 @@ class CreditSourceFilter(django_filters.ChoiceFilter):
         return qs
 
 
+class PostcodeFilter(django_filters.CharFilter):
+    def __init__(self, **kwargs):
+        kwargs['lookup_expr'] = 'iregex'
+        super().__init__(**kwargs)
+
+    def filter(self, qs, value):
+        value = re.sub(r'[^0-9A-Za-z]+', '', value)
+        value = r'\s*'.join(value)
+        return super().filter(qs, value)
+
+
 class CreditListFilter(django_filters.FilterSet):
     status = StatusChoiceFilter(choices=CREDIT_STATUS.choices)
     user = django_filters.ModelChoiceFilter(name='owner', queryset=User.objects.all())
@@ -152,6 +163,9 @@ class CreditListFilter(django_filters.FilterSet):
     sender_email = django_filters.CharFilter(
         name='payment__email',
         lookup_expr='icontains'
+    )
+    sender_postcode = PostcodeFilter(
+        name='payment__billing_address__postcode',
     )
 
     exclude_amount__endswith = django_filters.CharFilter(
