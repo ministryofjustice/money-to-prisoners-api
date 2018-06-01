@@ -30,10 +30,10 @@ logger = logging.getLogger('mtp')
 class TransactionListFilter(django_filters.FilterSet):
     status = StatusChoiceFilter(choices=TRANSACTION_STATUS.choices)
     received_at__lt = IsoDateTimeFilter(
-        name='received_at', lookup_expr='lt'
+        field_name='received_at', lookup_expr='lt'
     )
     received_at__gte = IsoDateTimeFilter(
-        name='received_at', lookup_expr='gte'
+        field_name='received_at', lookup_expr='gte'
     )
     pk = MultipleValueFilter(name='pk')
 

@@ -43,7 +43,7 @@ class BatchView(
 
 class PaymentListFilter(django_filters.FilterSet):
     modified__lt = IsoDateTimeFilter(
-        name='modified', lookup_expr='lt'
+        field_name='modified', lookup_expr='lt'
     )
 
     class Meta:

@@ -5,6 +5,8 @@ from django.utils.dateparse import parse_datetime
 from django.utils.formats import get_format
 from django.utils.functional import lazy
 import django_filters
+import django_filters.fields
+import django_filters.utils
 from rest_framework.filters import OrderingFilter
 
 
@@ -29,7 +31,7 @@ class MultipleFieldCharFilter(django_filters.CharFilter):
             return qs
 
         q = Q()
-        for n in set(self.name):
+        for n in set(self.field_name):
             if self.conjoined:
                 qs = self.get_method(qs)(**{'%s__%s' % (n, lookup): value})
             else:
@@ -44,7 +46,7 @@ class MultipleFieldCharFilter(django_filters.CharFilter):
         if self._label is None and hasattr(self, 'parent'):
             model = self.parent._meta.model
             fields = []
-            for name in self.name:
+            for name in self.field_name:
                 fields.append(django_filters.utils.label_for_filter(
                     model, name, self.lookup_expr, self.exclude
                 ))
@@ -59,7 +61,7 @@ class MultipleFieldCharFilter(django_filters.CharFilter):
 class BlankStringFilter(django_filters.BooleanFilter):
     def filter(self, qs, value):
         if value:
-            qs = self.get_method(qs)(**{'%s__exact' % self.name: ''})
+            qs = self.get_method(qs)(**{'%s__exact' % self.field_name: ''})
         return qs
 
 
