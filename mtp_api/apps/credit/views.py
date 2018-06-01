@@ -160,6 +160,7 @@ class CreditListFilter(django_filters.FilterSet):
     card_number_last_digits = django_filters.CharFilter(field_name='payment__card_number_last_digits')
     sender_email = django_filters.CharFilter(field_name='payment__email', lookup_expr='icontains')
     sender_postcode = PostcodeFilter(field_name='payment__billing_address__postcode')
+    sender_ip_address = django_filters.CharFilter(field_name='payment__ip_address')
 
     exclude_amount__endswith = django_filters.CharFilter(
         field_name='amount', lookup_expr='endswith', exclude=True
