@@ -3,8 +3,8 @@ import shutil
 import tempfile
 from urllib.parse import urljoin
 
+from anymail.message import AnymailMessage
 from django.conf import settings
-from django.core.mail import EmailMultiAlternatives
 from django.core.management import BaseCommand, call_command
 from django.template import loader as template_loader
 from django.utils.translation import gettext as _
@@ -68,11 +68,12 @@ class Command(BaseCommand):
         }
         text_body = template_loader.get_template('credit/prisoner-notice-email.txt').render(template_context)
         html_body = template_loader.get_template('credit/prisoner-notice-email.html').render(template_context)
-        email = EmailMultiAlternatives(
+        email = AnymailMessage(
             subject=self.subject,
             body=text_body.strip('\n'),
             from_email=self.from_address,
-            to=[credit_notice_email.email]
+            to=[credit_notice_email.email],
+            tags=['prisoner-notice'],
         )
         email.attach_alternative(html_body, 'text/html')
         email.attach_file(str(path), mimetype='application/pdf')

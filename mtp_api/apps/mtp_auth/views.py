@@ -275,7 +275,8 @@ class ResetPasswordView(generics.GenericAPIView):
                     context={
                         'change_password_url': change_password_url,
                     },
-                    html_template='mtp_auth/create_new_password.html'
+                    html_template='mtp_auth/create_new_password.html',
+                    anymail_tags=['new-password'],
                 )
                 return Response(status=status.HTTP_204_NO_CONTENT)
             else:
@@ -291,7 +292,8 @@ class ResetPasswordView(generics.GenericAPIView):
                     user.email, 'mtp_auth/reset_password.txt',
                     gettext('Your new Prisoner Money password'),
                     context={'username': user.username, 'password': password},
-                    html_template='mtp_auth/reset_password.html'
+                    html_template='mtp_auth/reset_password.html',
+                    anymail_tags=['reset-password'],
                 )
 
                 return Response(status=status.HTTP_204_NO_CONTENT)

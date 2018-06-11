@@ -155,7 +155,8 @@ class UserSerializer(serializers.ModelSerializer):
             gettext('Your new %(service_name)s account is ready to use') % {
                 'service_name': role.application.name
             },
-            context=context, html_template='mtp_auth/new_user.html'
+            context=context, html_template='mtp_auth/new_user.html',
+            anymail_tags=['new-user'],
         )
 
         return new_user
