@@ -1,0 +1,57 @@
+{% extends 'admin/base_site.html' %}
+{% load i18n %}
+{% load credit %}
+
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo; {{ view.title }}
+  </div>
+{% endblock %}
+
+{% block content %}
+  <div id="content-main">
+    <table>
+      <thead>
+        <tr>
+          <th>{% trans 'Last 30 days' %}</th>
+          <th>{% trans 'All mail' %}</th>
+          <th>{% trans 'Prisoner notices' %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th>{% trans 'Delivered' %}</th>
+          <td>{{ all_mail.delivered|format_number }}</td>
+          <td>{{ notices.delivered|format_number }}</td>
+        </tr>
+        <tr>
+          <th>{% trans 'Opened' %} *</th>
+          <td>{{ all_mail.opened|format_number }}</td>
+          <td>{{ notices.opened|format_number }}</td>
+        </tr>
+        <tr>
+          <th>{% trans 'Failed' %} †</th>
+          <td>{{ all_mail.failed|format_number }}</td>
+          <td>{{ notices.failed|format_number }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <br/>
+    <p>
+      *
+      {% trans 'Each time a person views the email, it counts as a new open.' %}
+      {% trans 'Some email clients block images so will not be tracked.' %}
+      <br/>
+      †
+      {% trans 'Emails can bounce if addresses are invalid or the user’s mailbox is full.' %}
+      {% trans 'Also, our email provider permits users to complain or unsubscribe.' %}
+    </p>
+    <p>
+      <a href="https://app.mailgun.com/app/reporting/engagement">
+        {% trans 'More info' %}
+      </a>
+    </p>
+  </div>
+{% endblock %}

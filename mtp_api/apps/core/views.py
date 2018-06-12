@@ -1,7 +1,10 @@
+import collections
+import datetime
+from email.utils import format_datetime as datetime_to_rfc2822
 from io import StringIO
 import json
 import logging
-from urllib.parse import unquote as url_unquote
+from urllib.parse import unquote as url_unquote, urljoin
 
 from django.conf import settings
 from django.contrib import messages
@@ -15,14 +18,12 @@ from django.urls import reverse_lazy
 from django.utils.dateparse import parse_date
 from django.utils.decorators import method_decorator
 from django.utils.module_loading import autodiscover_modules
+from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 from django.views import View
+from django.views.decorators.debug import sensitive_variables
 from django.views.generic import FormView, TemplateView
-
-from mtp_auth.permissions import (
-    get_client_permissions_class,
-    BankAdminClientIDPermissions, CASHBOOK_OAUTH_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID,
-)
+import requests
 from rest_framework import generics, mixins, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -31,6 +32,10 @@ from core.forms import RecreateTestDataForm, UpdateNOMISTokenForm
 from core.models import FileDownload, Token
 from core.permissions import ActionsBasedPermissions, TokenPermissions
 from core.serializers import FileDownloadSerializer, TokenSerializer
+from mtp_auth.permissions import (
+    get_client_permissions_class,
+    BankAdminClientIDPermissions, CASHBOOK_OAUTH_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID,
+)
 
 logger = logging.getLogger('mtp')
 
@@ -328,3 +333,78 @@ class TokenView(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         get_client_permissions_class(CASHBOOK_OAUTH_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID),
         TokenPermissions,
     )
+
+
+class EmailStatsView(AdminViewMixin, TemplateView):
+    title = _('Email stats')
+    template_name = 'core/email-stats.html'
+    required_permissions = ['transaction.view_dashboard']
+
+    @method_decorator(sensitive_variables('key'))
+    def get_context_data(self, **kwargs):
+        context_data = super().get_context_data(**kwargs)
+        key = settings.ANYMAIL['MAILGUN_API_KEY']
+        domain = settings.ANYMAIL['MAILGUN_SENDER_DOMAIN']
+        if not key or not domain:
+            return context_data
+
+        base_url = 'https://api.mailgun.net/v3/%s/' % domain
+        today = now().replace(hour=0, minute=0, second=0, microsecond=0)
+        earliest = datetime_to_rfc2822(today - datetime.timedelta(days=30))
+        latest = datetime_to_rfc2822(today)
+        events = ['delivered', 'failed', 'opened']
+
+        def mailgun_request(url, params=None):
+            response = requests.get(url, params=params, auth=('api', key))
+            data = response.json()
+            if response.status_code != 200:
+                logger.warning('Mailgun error: %s' % data.get('message', response.reason))
+                return {}
+            return data
+
+        def collect_stats(tag=None):
+            if tag:
+                endpoint = 'tags/%s/stats' % tag
+            else:
+                endpoint = 'stats/total'
+            response = mailgun_request(urljoin(base_url, endpoint), params={
+                'event': events,
+                'start': earliest,
+                'end': latest,
+                'resolution': 'day',
+            })
+            collected = collections.defaultdict(int)
+            for stat in response.get('stats', []):
+                collected['delivered'] += stat['delivered']['total']
+                collected['failed'] += stat['failed']['permanent']['total']
+                collected['opened'] += stat['opened']['total']
+            return collected
+
+        def collect_events(**filters):
+            collected = collections.defaultdict(int)
+            next_url = None
+            while True:
+                if next_url:
+                    response = mailgun_request(next_url)
+                else:
+                    response = mailgun_request(urljoin(base_url, 'events'), params={
+                        'begin': latest,
+                        'end': earliest,
+                        'limit': 300,
+                        'event': ' OR '.join(events),
+                        **filters
+                    })
+                if not response.get('items'):
+                    break
+                for item in response['items']:
+                    collected[item['event']] += 1
+                next_url = response.get('paging', {}).get('next')
+                if not next_url:
+                    break
+            return collected
+
+        context_data.update(
+            all_mail=collect_stats(),
+            notices=collect_stats('credit-notices'),
+        )
+        return context_data
