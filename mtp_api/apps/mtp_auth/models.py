@@ -6,8 +6,9 @@ from django.conf import settings
 from django.contrib.auth import get_user_model, user_logged_in
 from django.db import models
 from django.utils.timezone import now
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext, gettext_lazy as _
 from model_utils.models import TimeStampedModel
+from mtp_common.tasks import send_email
 
 from prison.models import Prison
 
@@ -127,6 +128,27 @@ class FailedLoginAttemptManager(models.Manager):
             user=user,
             application=client,
         )
+        failed_attempts = self.get_queryset().filter(user=user, application=client)
+        if failed_attempts.count() == settings.MTP_AUTH_LOCKOUT_COUNT:
+            roles = Role.objects.get_roles_for_user(user)
+            roles = list(filter(lambda role: role.application == client, roles))
+            if roles:
+                service_name = client.name
+                login_url = roles[0].login_url
+            else:
+                service_name = None
+                login_url = None
+            email_context = {
+                'service_name': service_name,
+                'lockout_period': settings.MTP_AUTH_LOCKOUT_LOCKOUT_PERIOD // 60,
+                'login_url': login_url,
+            }
+            send_email(
+                user.email, 'mtp_auth/account_locked.txt',
+                gettext('Your %(service_name)s account is temporarily locked') % email_context,
+                context=email_context, html_template='mtp_auth/account_locked.html',
+                anymail_tags=['account-locked'],
+            )
 
 
 class FailedLoginAttempt(TimeStampedModel):

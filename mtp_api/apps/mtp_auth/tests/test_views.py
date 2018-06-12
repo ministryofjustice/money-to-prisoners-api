@@ -1394,6 +1394,23 @@ class AccountLockoutTestCase(AuthBaseTestCase):
         self.assertTrue(FailedLoginAttempt.objects.is_locked_out(prison_clerk, bank_admin_client))
         self.assertFalse(FailedLoginAttempt.objects.is_locked_out(prison_clerk, cashbook_client))
 
+    @override_settings(ENVIRONMENT='prod')
+    def test_email_sent_when_account_locked(self):
+        prison_clerk = self.prison_clerks[0]
+        cashbook_client = Application.objects.get(client_id=CASHBOOK_OAUTH_CLIENT_ID)
+
+        for _ in range(settings.MTP_AUTH_LOCKOUT_COUNT - 1):
+            self.fail_login(prison_clerk, cashbook_client)
+        self.assertEqual(len(mail.outbox), 0, msg='Email should not be sent')
+        self.fail_login(prison_clerk, cashbook_client)
+        self.assertEqual(len(mail.outbox), 1, msg='Email should be sent')
+        for _ in range(settings.MTP_AUTH_LOCKOUT_COUNT):
+            self.fail_login(prison_clerk, cashbook_client)
+        self.assertEqual(len(mail.outbox), 1, msg='Only one email should be sent')
+
+        latest_email = mail.outbox[0]
+        self.assertIn(cashbook_client.name, latest_email.body)
+
 
 class ChangePasswordTestCase(AuthBaseTestCase):
     def setUp(self):
