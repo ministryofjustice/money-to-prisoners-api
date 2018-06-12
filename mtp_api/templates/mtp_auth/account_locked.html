@@ -1,0 +1,26 @@
+{% extends 'mtp_common/email_base.html' %}
+{% load i18n %}
+
+{% block inner_content %}
+  <p>
+    {% blocktrans trimmed with service_name=service_name|default:'Prisoner Money' %}
+      Your {{ service_name }} password has been entered incorrectly too many times so your account is temporarily locked.
+    {% endblocktrans %}
+  </p>
+
+  <p>
+    {% if login_url %}
+      {% blocktrans trimmed with login_url=login_url|urlize %}
+        After {{ lockout_period }} minutes, you can reset your password by going to the log-in page ({{ login_url }}) and clicking ‘Forgotten your password?’.
+      {% endblocktrans %}
+    {% else %}
+      {% blocktrans trimmed %}
+        After {{ lockout_period }} minutes, you can reset your password by going to the log-in page and clicking ‘Forgotten your password?’.
+      {% endblocktrans %}
+    {% endif %}
+  </p>
+
+  <p>
+    {% trans 'If urgent, your business hub manager can unlock your account.' %}
+  </p>
+{% endblock %}
