@@ -28,6 +28,6 @@ class Command(BaseCommand):
             call_command('clear_oauth2_tokens', verbosity=verbosity)
             call_command('clear_password_change_requests', verbosity=verbosity)
             call_command('clear_abandoned_payments', age=7, verbosity=verbosity)
-            Login.objects.filter(created_lt=now() - datetime.timedelta(days=365)).delete()
+            Login.objects.filter(created__lt=now() - datetime.timedelta(days=365)).delete()
         elif verbosity:
             self.stdout.write('Clean-up tasks do not run on secondary instances')
