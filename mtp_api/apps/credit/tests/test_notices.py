@@ -260,25 +260,10 @@ class CreatePrisonerNoticesTestCase(NoticesCommandTestCase):
             self.latest_log.created.date()
         )
 
-    def test_location_api_missing(self):
+    def test_location_missing(self):
         self.call_command({}, None)
 
-    def test_location_api_old(self):
-        self.call_command(
-            {
-                'housing_location': 'LEI-A-2-002',
-            },
-            {
-                'description': 'LEI-A-2-002',
-                'levels': [
-                    {'type': 'Wing', 'value': 'A'},
-                    {'type': 'Landing', 'value': '2'},
-                    {'type': 'Cell', 'value': '002'},
-                ],
-            },
-        )
-
-    def test_location_api_new(self):
+    def test_location_present(self):
         self.call_command(
             {
                 'housing_location': {
@@ -296,6 +281,30 @@ class CreatePrisonerNoticesTestCase(NoticesCommandTestCase):
                     {'type': 'Wing', 'value': 'A'},
                     {'type': 'Landing', 'value': '2'},
                     {'type': 'Cell', 'value': '002'},
+                ],
+            },
+        )
+
+    def test_location_long_form(self):
+        self.call_command(
+            {
+                'housing_location': {
+                    'description': 'HEI-1-1-A-001',
+                    'levels': [
+                        {'type': 'Block', 'value': '1'},
+                        {'type': 'Tier', 'value': '1'},
+                        {'type': 'Spur', 'value': 'A'},
+                        {'type': 'Cell', 'value': '001'},
+                    ],
+                },
+            },
+            {
+                'description': 'HEI-1-1-A-001',
+                'levels': [
+                    {'type': 'Block', 'value': '1'},
+                    {'type': 'Tier', 'value': '1'},
+                    {'type': 'Spur', 'value': 'A'},
+                    {'type': 'Cell', 'value': '001'},
                 ],
             },
         )
