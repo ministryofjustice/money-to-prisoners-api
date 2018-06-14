@@ -152,13 +152,8 @@ class PrisonerCreditNoticeBundle(NoticeBundle):
         if isinstance(location, dict):
             levels = location.get('levels')
             if levels:
-                level_labels = {
-                    'Wing': _('Wing'),
-                    'Landing': _('Landing'),
-                    'Cell': _('Cell'),
-                }
                 labels = [
-                    (level_labels.get(level.get('type')), level.get('value'))
+                    (level.get('type'), level.get('value'))
                     for level in levels
                 ]
             else:
