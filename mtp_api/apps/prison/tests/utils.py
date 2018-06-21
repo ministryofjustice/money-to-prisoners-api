@@ -20,9 +20,10 @@ def random_prisoner_dob():
 
 
 def random_prisoner_number():
-    # format: A\d{4}[A-Z]{2}
-    return 'A%s%s' % (
-        get_random_string(allowed_chars='0123456789', length=4),
+    # format: 98% A\d{4}[A-Z]{2} and 2% [B-Z]\d{4}[A-Z]{2}
+    return (
+        get_random_string(allowed_chars='BCDEFGHIJKLMNOPQRSTUVWXYZ', length=1) if random.random() > 0.98 else 'A' +
+        get_random_string(allowed_chars='0123456789', length=4) +
         get_random_string(allowed_chars='ABCDEFGHIJKLMNOPQRSTUVWXYZ', length=2)
     )
 
