@@ -30,7 +30,7 @@ class Command(BaseCommand):
         parser.add_argument('--protect-prisoner-locations', action='store_true',
                             help='Prevents prisoner locations from being deleted')
         parser.add_argument('--protect-transactions', action='store_true',
-                            help='Prevents existing credits/payments/transactions from being deleted')
+                            help='Prevents existing credits/payments/transactions/disbursements from being deleted')
 
     def handle(self, *args, **options):
         if settings.ENVIRONMENT == 'prod':

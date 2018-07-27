@@ -37,10 +37,10 @@ class Command(BaseCommand):
         parser.add_argument('--protect-credits', action='store_true',
                             help='Prevents existing credits from being deleted')
         parser.add_argument('--prisons', nargs='*', default=['sample'],
-                            choices=['sample', 'nomis', 'mtp', 'nomis-api-dev'],
+                            choices=['sample', 'nomis', 'mtp', 'nomis-api-dev', 'nomis-api-t3'],
                             help='Create prisons from these sets')
         parser.add_argument('--prisoners', nargs='*', default=['sample'],
-                            choices=['sample', 'nomis', 'nomis-api-dev'],
+                            choices=['sample', 'nomis', 'nomis-api-dev', 'nomis-api-t3'],
                             help='Create prisoners from these sets')
         parser.add_argument('--number-of-prisoners', default=50, type=int,
                             help='Number of sample prisoners to create (no effect for nomis)')
@@ -106,6 +106,8 @@ class Command(BaseCommand):
             fixtures.append('test_nomis_mtp_prisons.json')
         if 'nomis-api-dev' in prisons:
             fixtures.append('dev_nomis_api_prisons.json')
+        if 'nomis-api-t3' in prisons:
+            fixtures.append('t3_nomis_api_prisons.json')
         print_message('Loading default user group and selected prison fixtures')
         call_command('loaddata', *fixtures, verbosity=verbosity)
 
@@ -123,6 +125,8 @@ class Command(BaseCommand):
             load_prisoner_locations_from_file('test_nomis_prisoner_locations.csv')
         if 'nomis-api-dev' in prisoners:
             load_prisoner_locations_from_file('dev_nomis_api_prisoner_locations.csv')
+        if 'nomis-api-t3' in prisoners:
+            load_prisoner_locations_from_file('t3_nomis_api_prisoner_locations.csv')
         if 'sample' in prisoners:
             load_random_prisoner_locations(number_of_prisoners=number_of_prisoners)
 

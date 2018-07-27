@@ -13,10 +13,11 @@ import jwt
 class RecreateTestDataForm(forms.Form):
     scenario = forms.ChoiceField(
         choices=(
-            ('cashbook', _('User testing the Cashbook service')),
-            ('nomis-api-dev', _('NOMIS API dev env data')),
+            ('nomis-api-t3', _('NOMIS API T3 env data (Berwyn)')),
+            ('cashbook', _('User testing the Cashbook service (do not use)')),
+            ('nomis-api-dev', _('NOMIS API dev env data (do not use)')),
             ('random', _('Random set of credits')),
-            ('delete-locations-credits', _('Delete prisoner location and credit data')),
+            ('delete-locations-credits', _('Delete prisoner locations, credits and disbursements')),
         ),
     )
     number_of_transactions = forms.IntegerField(initial=20)

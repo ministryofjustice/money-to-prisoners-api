@@ -1,0 +1,28 @@
+[
+  {
+    "model": "prison.prison",
+    "pk": "BWI",
+    "fields": {
+      "name": "HMP/YOI Berwyn",
+      "general_ledger_code": "10201160",
+      "created": "2018-07-26T12:00:00Z",
+      "modified": "2018-07-26T12:00:00Z",
+      "region": "Wales",
+      "populations": [1, 3, 4],
+      "categories": [3, 5]
+    }
+  },
+  {
+    "model": "prison.prison",
+    "pk": "LEI",
+    "fields": {
+      "name": "HMP Leeds",
+      "general_ledger_code": "10200590",
+      "created": "2018-07-26T12:00:00Z",
+      "modified": "2018-07-26T12:00:00Z",
+      "region": "Yorkshire and Humberside",
+      "populations": [1, 3],
+      "categories": [2]
+    }
+  }
+]
