@@ -42,7 +42,7 @@ class ApplicationUserMapping(TimeStampedModel):
 
 class RoleManager(models.Manager):
     def get_roles_for_user(self, user):
-        return Role.objects.filter(key_group__in=user.groups.all())
+        return self.get_queryset().filter(key_group__in=user.groups.all())
 
     def get_managed_roles_for_user(self, user):
         for role in self.get_roles_for_user(user):
@@ -75,6 +75,11 @@ class Role(models.Model):
     @property
     def groups(self):
         return [self.key_group] + list(self.other_groups.all())
+
+    def assign_to_user(self, user):
+        ApplicationUserMapping.objects.get_or_create(user=user, application=self.application)
+        for group in self.groups:
+            user.groups.add(group)
 
 
 class Login(models.Model):
