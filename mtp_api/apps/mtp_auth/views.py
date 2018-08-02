@@ -3,7 +3,10 @@ import datetime
 import logging
 from urllib.parse import urlsplit, urlunsplit, urlencode, parse_qs
 
+from django.contrib.admin.models import LogEntry, CHANGE as CHANGE_LOG_ENTRY, DELETION as DELETION_LOG_ENTRY
+from django.contrib.admin.options import get_content_type_for_model
 from django.contrib.auth import password_validation, get_user_model
+from django.contrib.auth.models import Group
 from django.core.exceptions import NON_FIELD_ERRORS
 from django.db import connection, models
 from django.db.transaction import atomic
@@ -17,16 +20,21 @@ from django.views.generic import TemplateView
 from mtp_common.tasks import send_email
 from oauth2_provider.models import Application
 from rest_framework import viewsets, generics, status
+from rest_framework.exceptions import ValidationError as RestValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from core.views import AdminViewMixin
 from mtp_auth.forms import LoginStatsForm
-from mtp_auth.models import FailedLoginAttempt, PrisonUserMapping, Role, PasswordChangeRequest
-from mtp_auth.permissions import UserPermissions, AnyAdminClientIDPermissions
+from mtp_auth.models import (
+    ApplicationUserMapping, PrisonUserMapping, Role,
+    FailedLoginAttempt, PasswordChangeRequest, AccountRequest,
+)
+from mtp_auth.permissions import UserPermissions, AnyAdminClientIDPermissions, AccountRequestPremissions
 from mtp_auth.serializers import (
-    RoleSerializer, UserSerializer, ChangePasswordSerializer, ResetPasswordSerializer,
-    ChangePasswordWithCodeSerializer
+    RoleSerializer, UserSerializer, AccountRequestSerializer,
+    ChangePasswordSerializer, ResetPasswordSerializer, ChangePasswordWithCodeSerializer,
+    generate_new_password,
 )
 from prison.models import Prison
 
@@ -286,6 +294,123 @@ class ResetPasswordView(generics.GenericAPIView):
                 return Response(status=status.HTTP_204_NO_CONTENT)
         else:
             return self.failure_response(serializer.errors)
+
+
+class AccountRequestViewSet(viewsets.ModelViewSet):
+    queryset = AccountRequest.objects.none()
+    permission_classes = (AccountRequestPremissions,)
+    serializer_class = AccountRequestSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        if not user.is_authenticated:
+            return super().get_queryset()
+        roles = Role.objects.get_roles_for_user(user)
+        queryset = AccountRequest.objects.filter(role__in=roles)
+        prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(user).values_list('pk', flat=True))
+        if prisons:
+            queryset = queryset.filter(prison__in=prisons)
+        return queryset
+
+    def update(self, request, *args, **kwargs):
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        user_admin = request.data.get('user_admin') is True
+        try:
+            user = User.objects.get_by_natural_key(instance.username)
+            if request.user.pk == user.pk:
+                raise RestValidationError({'username': _('You cannot confirm changes to yourself')})
+            if user.is_superuser:
+                raise RestValidationError({'username': _('Super users cannot be edited')})
+            # inactive users get re-activated
+            user.is_active = True
+            user.save()
+            # existing non-superadmins have their prisons, applications and groups replaced
+            user.groups.clear()
+            PrisonUserMapping.objects.filter(user=user).delete()
+            ApplicationUserMapping.objects.filter(user=user).delete()
+            user_existed = True
+            password = None
+        except User.DoesNotExist:
+            user = User.objects.create(
+                first_name=instance.first_name,
+                last_name=instance.last_name,
+                email=instance.email,
+                username=instance.username,
+            )
+            password = generate_new_password()
+            user.set_password(password)
+            user.save()
+            user_existed = False
+
+        role = instance.role
+        role.assign_to_user(user)
+        if user_admin:
+            user.groups.add(Group.objects.get(name='UserAdmin'))
+        PrisonUserMapping.objects.assign_prisons_from_user(request.user, user)
+
+        context = {
+            'username': user.username,
+            'password': password,
+            'service_name': role.application.name,
+            'login_url': role.login_url,
+        }
+        if user_existed:
+            context.pop('password')
+            send_email(
+                user.email, 'mtp_auth/user_moved.txt',
+                gettext('Your new %(service_name)s account is ready to use') % {
+                    'service_name': role.application.name,
+                },
+                context=context, html_template='mtp_auth/user_moved.html',
+                anymail_tags=['user-moved'],
+            )
+        else:
+            send_email(
+                user.email, 'mtp_auth/new_user.txt',
+                gettext('Your new %(service_name)s account is ready to use') % {
+                    'service_name': role.application.name,
+                },
+                context=context, html_template='mtp_auth/new_user.html',
+                anymail_tags=['new-user'],
+            )
+
+        LogEntry.objects.log_action(
+            user_id=request.user.pk,
+            content_type_id=get_content_type_for_model(user).pk,
+            object_id=user.pk,
+            object_repr=gettext('Accepted account request for %(username)s') % {
+                'username': user.username,
+            },
+            action_flag=CHANGE_LOG_ENTRY,
+        )
+
+        instance.delete()
+        return Response({})
+
+    def perform_destroy(self, instance):
+        context = {
+            'service_name': instance.role.application.name,
+        }
+        send_email(
+            instance.email, 'mtp_auth/account_request_denied.txt',
+            gettext('Account access for %(service_name)s was denied') % context,
+            context=context,
+            html_template='mtp_auth/account_request_denied.html',
+            anymail_tags=['account-request-denied'],
+        )
+        LogEntry.objects.log_action(
+            user_id=self.request.user.pk,
+            content_type_id=get_content_type_for_model(instance).pk,
+            object_id=instance.pk,
+            object_repr=gettext('Declined account request from %(username)s') % {
+                'username': instance.username,
+            },
+            action_flag=DELETION_LOG_ENTRY,
+        )
+        super().perform_destroy(instance)
 
 
 class LoginStatsView(AdminViewMixin, TemplateView):

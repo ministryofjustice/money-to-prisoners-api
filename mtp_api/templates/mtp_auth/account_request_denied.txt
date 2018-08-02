@@ -1,0 +1,4 @@
+{% load i18n %}
+{% blocktrans trimmed %}
+Your request to access {{ service_name }} was denied.
+{% endblocktrans %}

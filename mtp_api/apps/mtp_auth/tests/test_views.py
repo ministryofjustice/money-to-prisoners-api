@@ -13,6 +13,7 @@ from django.core import mail
 from django.urls import reverse, reverse_lazy
 from django.test import override_settings
 from django.utils.timezone import now
+from model_mommy import mommy
 from mtp_common.test_utils import silence_logger
 from oauth2_provider.models import AccessToken, Application, RefreshToken
 from rest_framework import status
@@ -24,8 +25,12 @@ from mtp_auth.constants import (
     BANK_ADMIN_OAUTH_CLIENT_ID, CASHBOOK_OAUTH_CLIENT_ID,
     NOMS_OPS_OAUTH_CLIENT_ID, SEND_MONEY_CLIENT_ID
 )
-from mtp_auth.models import Role, Login, FailedLoginAttempt, PasswordChangeRequest
-from mtp_auth.tests.mommy_recipes import create_prison_clerk
+from mtp_auth.models import (
+    PrisonUserMapping, Role,
+    Login, FailedLoginAttempt,
+    PasswordChangeRequest, AccountRequest,
+)
+from mtp_auth.tests.mommy_recipes import basic_user, create_prison_clerk
 from mtp_auth.views import ResetPasswordView
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from prison.models import Prison
@@ -1670,3 +1675,684 @@ class ChangePasswordWithCodeTestCase(AuthBaseTestCase):
         user = authenticate(username=self.user.username, password=self.current_password)
         self.assertEqual(self.user.username, getattr(user, 'username', None),
                          msg='Cannot log in with old password')
+
+
+@mock.patch(
+    'mtp_auth.permissions.AccountRequestPremissions',
+    (CASHBOOK_OAUTH_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID)
+)
+class AccountRequestTestCase(AuthBaseTestCase):
+    url_detail = reverse_lazy('accountrequest-detail')
+
+    def setUp(self):
+        super().setUp()
+        self.users = make_test_users(clerks_per_prison=1)
+        self.users.update(make_test_user_admins())
+        for role in Role.objects.all():
+            role.login_url = 'http://localhost/%s/' % role.application.client_id
+            role.save()
+
+    def test_create_requests(self):
+        url_list = reverse('accountrequest-list')
+        valid = [
+            {
+                'first_name': 'Mark', 'last_name': 'Smith',
+                'email': 'm@mtp.local', 'username': 'abc123',
+                'role': 'prison-clerk', 'prison': 'IXB',
+            },
+            {
+                'first_name': 'Mark', 'last_name': 'Smith',
+                'email': 'm@mtp.local', 'username': 'abc123',
+                'role': 'security', 'prison': 'IXB',
+                'reason': 'abc',
+            },
+        ]
+        for item in valid:
+            response = self.client.post(url_list, data=item, format='json')
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED, msg=response.content)
+            response_data = response.json()
+            self.assertDictEqual(item, {
+                key: value
+                for key, value in response_data.items()
+                if key in item
+            })
+        self.assertEqual(AccountRequest.objects.count(), len(valid))
+
+    def test_invalid_creation_requests(self):
+        url_list = reverse('accountrequest-list')
+        invalid = [
+            # no data
+            None,
+            # incorrect app
+            {
+                'first_name': 'Mark', 'last_name': 'Smith',
+                'email': 'm@mtp.local', 'username': 'abc123',
+                'role': '~nonexistant', 'prison': 'IXB',
+            },
+            # missing text
+            {
+                'first_name': 'Mark', 'last_name': '',
+                'email': 'm@mtp.local', 'username': 'abc123',
+                'role': 'prison-clerk', 'prison': 'IXB',
+            },
+            # invalid email
+            {
+                'first_name': 'Mark', 'last_name': 'Smith',
+                'email': 'mark', 'username': 'abc123',
+                'role': 'prison-clerk', 'prison': 'IXB',
+            },
+            # missing prison
+            {
+                'first_name': 'Mark', 'last_name': 'Smith',
+                'email': 'm@mtp.local', 'username': 'abc123',
+                'role': 'prison-clerk', 'prison': None,
+            },
+            # app by pk not client_id
+            {
+                'first_name': 'Mark', 'last_name': 'Smith',
+                'email': 'm@mtp.local', 'username': 'abc123',
+                'role': Role.objects.first().pk, 'prison': 'IXB',
+            },
+        ]
+        for item in invalid:
+            response = self.client.post(url_list, data=item, format='json')
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, msg=response.content)
+        self.assertFalse(AccountRequest.objects.exists())
+
+    def test_cannot_create_if_authenticated(self):
+        url_list = reverse('accountrequest-list')
+        user = self.users['prison_clerks'][0]
+        response = self.client.post(url_list, data={
+            'first_name': 'Mark', 'last_name': 'Smith',
+            'email': 'm@mtp.local', 'username': 'abc123',
+            'role': 'prison-clerk', 'prison': 'IXB',
+        }, format='json', HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user))
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, msg=response.content)
+        self.assertFalse(AccountRequest.objects.exists())
+
+    def test_cannot_create_with_same_role_and_username(self):
+        url_list = reverse('accountrequest-list')
+        response = self.client.post(url_list, data={
+            'first_name': 'Mark', 'last_name': 'Smith',
+            'email': 'mark@mtp.local', 'username': 'abc123',
+            'role': 'prison-clerk', 'prison': 'IXB',
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, msg=response.content)
+        response = self.client.post(url_list, data={
+            'first_name': 'Mary', 'last_name': 'Johns',
+            'email': 'mary@mtp.local', 'username': 'abc123',
+            'role': 'prison-clerk', 'prison': 'INP',
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, msg=response.content)
+        self.assertEqual(AccountRequest.objects.count(), 1)
+        response = self.client.post(url_list, data={
+            'first_name': 'Mary', 'last_name': 'Johns',
+            'email': 'mary@mtp.local', 'username': 'abc123',
+            'role': 'security', 'prison': 'INP',
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, msg=response.content)
+        self.assertEqual(AccountRequest.objects.count(), 2)
+
+    def test_authentication_requried(self):
+        url_list = reverse('accountrequest-list')
+        for method in ('get', 'put', 'patch', 'delete'):  # post allowed
+            response = getattr(self.client, method)(url_list)
+            self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        AccountRequest.objects.create(
+            first_name='Mark', last_name='Smith',
+            email='m@mtp.local', username='abc123',
+            role=Role.objects.get(name='prison-clerk'),
+            prison=Prison.objects.get(nomis_id='IXB'),
+        )
+        url_detail = reverse('accountrequest-detail', kwargs={'pk': AccountRequest.objects.last().pk})
+        for method in ('get', 'post', 'put', 'patch', 'delete'):
+            response = getattr(self.client, method)(url_detail)
+            self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_user_admin_required(self):
+        user = self.users['prison_clerks'][0]
+        AccountRequest.objects.create(
+            first_name='Mark', last_name='Smith',
+            email='m@mtp.local', username='abc123',
+            role=Role.objects.get(name='prison-clerk'),
+            prison=Prison.objects.get(nomis_id='IXB'),
+        )
+        url_list = reverse('accountrequest-list')
+        url_detail = reverse('accountrequest-detail', kwargs={'pk': AccountRequest.objects.last().pk})
+
+        response = self.client.get(
+            url_list,
+            format='json', HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, msg=response.content)
+        response = self.client.get(
+            url_detail,
+            format='json', HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, msg=response.content)
+
+    def test_only_supported_apps(self):
+        admin = self.users['bank_admin_uas'][0]
+        url_list = reverse('accountrequest-list')
+        response = self.client.get(
+            url_list,
+            format='json', HTTP_AUTHORIZATION=self.get_http_authorization_for_user(admin)
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, msg=response.content)
+
+    def test_list_requests(self):
+        admin = self.users['prison_clerk_uas'][0]
+        prison = admin.prisonusermapping.prisons.first()
+        url_list = reverse('accountrequest-list')
+
+        response = self.client.get(
+            url_list,
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(admin, client_id=CASHBOOK_OAUTH_CLIENT_ID)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, msg=response.content)
+        response_data = response.json()
+        self.assertEqual(response_data['count'], 0)
+
+        AccountRequest.objects.create(
+            first_name='Mark', last_name='Smith',
+            email='m123@mtp.local', username='abc123',
+            role=Role.objects.get(name='prison-clerk'),
+            prison=prison,
+        )
+        response = self.client.get(
+            url_list,
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(admin, client_id=CASHBOOK_OAUTH_CLIENT_ID)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, msg=response.content)
+        response_data = response.json()
+        self.assertEqual(response_data['count'], 1)
+        self.assertEqual(response_data['results'][0]['email'], 'm123@mtp.local')
+
+    def test_request_details(self):
+        admin = self.users['prison_clerk_uas'][0]
+        role = Role.objects.get(name='prison-clerk')
+        prison = admin.prisonusermapping.prisons.first()
+        request = mommy.make(AccountRequest, role=role, prison=prison)
+        url_detail = reverse('accountrequest-detail', kwargs={'pk': request.pk})
+        response = self.client.get(
+            url_detail,
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(admin, client_id=CASHBOOK_OAUTH_CLIENT_ID)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, msg=response.content)
+        response_data = response.json()
+        for key in ('first_name', 'last_name', 'email', 'username', 'reason'):
+            self.assertEqual(getattr(request, key), response_data[key])
+        self.assertEqual(request.role.name, response_data['role'])
+        self.assertEqual(request.prison.nomis_id, response_data['prison'])
+
+    def test_cannot_list_other_roles(self):
+        admin = self.users['prison_clerk_uas'][0]
+        role = Role.objects.get(name='prison-clerk')
+        prison = admin.prisonusermapping.prisons.first()
+        url_list = reverse('accountrequest-list')
+
+        visible_requests = mommy.make(AccountRequest, 3, role=role, prison=prison)
+        invisible_requests = []
+        for another_role in Role.objects.exclude(name='prison-clerk'):
+            invisible_requests.append(mommy.make(AccountRequest, role=another_role, prison=prison))
+
+        response = self.client.get(
+            url_list,
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(admin, client_id=CASHBOOK_OAUTH_CLIENT_ID)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, msg=response.content)
+        response_data = response.json()
+        self.assertEqual(response_data['count'], 3)
+        self.assertTrue(all(
+            result['role'] == 'prison-clerk'
+            for result in response_data['results']
+        ))
+
+        url_detail = reverse('accountrequest-detail', kwargs={'pk': random.choice(visible_requests).pk})
+        response = self.client.get(
+            url_detail,
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(admin, client_id=CASHBOOK_OAUTH_CLIENT_ID)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, msg=response.content)
+        response_data = response.json()
+        self.assertEqual(response_data['role'], 'prison-clerk')
+
+        for invisible_request in invisible_requests:
+            url_detail = reverse('accountrequest-detail', kwargs={'pk': invisible_request.pk})
+            with silence_logger('django.request', level=logging.ERROR):
+                response = self.client.get(
+                    url_detail,
+                    format='json',
+                    HTTP_AUTHORIZATION=self.get_http_authorization_for_user(admin, client_id=CASHBOOK_OAUTH_CLIENT_ID)
+                )
+            self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND, msg=response.content)
+
+    def test_cannot_list_from_different_application(self):
+        admin = self.users['prison_clerk_uas'][0]
+        cashbook_role = Role.objects.get(name='prison-clerk')
+        prison = admin.prisonusermapping.prisons.first()
+        Role.objects.get(name='security').assign_to_user(admin)
+        url_list = reverse('accountrequest-list')
+
+        mommy.make(AccountRequest, 3, role=cashbook_role, prison=prison)
+        response = self.client.get(
+            url_list,
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(admin, client_id=NOMS_OPS_OAUTH_CLIENT_ID)
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, msg=response.content)
+
+    def test_cannot_list_other_prisons(self):
+        admin = self.users['prison_clerk_uas'][0]
+        role = Role.objects.get(name='prison-clerk')
+        prison = admin.prisonusermapping.prisons.first()
+        url_list = reverse('accountrequest-list')
+
+        another_prison = Prison.objects.exclude(nomis_id=prison.nomis_id).first()
+        visible_requests = mommy.make(AccountRequest, 3, role=role, prison=prison)
+        invisible_requests = mommy.make(AccountRequest, 5, role=role, prison=another_prison)
+
+        response = self.client.get(
+            url_list,
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(admin, client_id=CASHBOOK_OAUTH_CLIENT_ID)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, msg=response.content)
+        response_data = response.json()
+        self.assertEqual(response_data['count'], 3)
+        self.assertTrue(all(
+            result['prison'] == prison.nomis_id
+            for result in response_data['results']
+        ))
+
+        url_detail = reverse('accountrequest-detail', kwargs={'pk': random.choice(visible_requests).pk})
+        response = self.client.get(
+            url_detail,
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(admin, client_id=CASHBOOK_OAUTH_CLIENT_ID)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, msg=response.content)
+        response_data = response.json()
+        self.assertEqual(response_data['prison'], prison.nomis_id)
+
+        url_detail = reverse('accountrequest-detail', kwargs={'pk': random.choice(invisible_requests).pk})
+        with silence_logger('django.request', level=logging.ERROR):
+            response = self.client.get(
+                url_detail,
+                format='json',
+                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(admin, client_id=CASHBOOK_OAUTH_CLIENT_ID)
+            )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND, msg=response.content)
+
+    def test_decline_requests(self):
+        admin = self.users['prison_clerk_uas'][0]
+        role = Role.objects.get(name='prison-clerk')
+        prison = admin.prisonusermapping.prisons.first()
+        user_count = User.objects.count()
+
+        request = AccountRequest.objects.create(
+            first_name='Mark', last_name='Smith',
+            email='mark@example.com', username='abc123',
+            role=role, prison=prison,
+        )
+        url_detail = reverse('accountrequest-detail', kwargs={'pk': request.pk})
+        response = self.client.delete(
+            url_detail,
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(admin, client_id=CASHBOOK_OAUTH_CLIENT_ID)
+        )
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT, msg=response.content)
+
+        latest_email = mail.outbox[-1]
+        self.assertSequenceEqual(latest_email.to, ['mark@example.com'])
+        self.assertIn(role.application.name, latest_email.subject)
+        self.assertIn(role.application.name, latest_email.body)
+
+        self.assertFalse(AccountRequest.objects.exists())
+        self.assertEqual(User.objects.count(), user_count)
+
+    def test_confirm_new_requests(self):
+        admin = self.users['prison_clerk_uas'][0]
+        role = Role.objects.get(name='prison-clerk')
+        prison = admin.prisonusermapping.prisons.first()
+        user_count = User.objects.count()
+
+        def assert_user_created(payload, user_admin):
+            request = mommy.make(AccountRequest, role=role, prison=prison)
+            url_detail = reverse('accountrequest-detail', kwargs={'pk': request.pk})
+            response = self.client.patch(
+                url_detail,
+                data=payload,
+                format='json',
+                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(admin, client_id=CASHBOOK_OAUTH_CLIENT_ID)
+            )
+            self.assertEqual(response.status_code, status.HTTP_200_OK, msg=response.content)
+
+            user = User.objects.get(username=request.username)
+            for key in ('first_name', 'last_name', 'email'):
+                self.assertEqual(getattr(user, key), getattr(request, key))
+            self.assertFalse(user.is_staff)
+            self.assertFalse(user.is_superuser)
+            self.assertIs(user.groups.filter(name='UserAdmin').exists(), user_admin)
+            self.assertSequenceEqual(
+                user.prisonusermapping.prisons.values_list('nomis_id', flat=True),
+                [prison.nomis_id]
+            )
+
+            latest_email = mail.outbox[-1]
+            self.assertSequenceEqual(latest_email.to, [request.email])
+            self.assertIn(role.application.name, latest_email.subject)
+            self.assertIn(role.application.name, latest_email.body)
+            self.assertIn(role.login_url, latest_email.body)
+            self.assertIn(user.username, latest_email.body)
+            password = re.search(r'Password:\s+(\S+)', latest_email.body).group(1)
+            self.assertTrue(user.check_password(password))
+
+        assert_user_created({}, user_admin=False)
+        self.assertFalse(AccountRequest.objects.exists())
+        self.assertEqual(User.objects.count(), user_count + 1)
+
+        assert_user_created({'user_admin': True}, user_admin=True)
+        self.assertFalse(AccountRequest.objects.exists())
+        self.assertEqual(User.objects.count(), user_count + 2)
+
+    def test_confirm_new_requests_with_multiple_prisons(self):
+        admin = self.users['prison_clerk_uas'][0]
+        role = Role.objects.get(name='prison-clerk')
+        prison = admin.prisonusermapping.prisons.first()
+        PrisonUserMapping.objects.assign_prisons_to_user(admin, Prison.objects.all())
+        user_count = User.objects.count()
+
+        request = mommy.make(AccountRequest, role=role, prison=prison)
+        url_detail = reverse('accountrequest-detail', kwargs={'pk': request.pk})
+        response = self.client.patch(
+            url_detail,
+            data={},
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(admin, client_id=CASHBOOK_OAUTH_CLIENT_ID)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, msg=response.content)
+
+        user = User.objects.get(username=request.username)
+        self.assertSetEqual(
+            set(user.prisonusermapping.prisons.values_list('nomis_id', flat=True)),
+            set(Prison.objects.values_list('nomis_id', flat=True)),
+            msg='User should get all prisons, not just requested one'
+        )
+
+        self.assertFalse(AccountRequest.objects.exists())
+        self.assertEqual(User.objects.count(), user_count + 1)
+
+    def test_confirm_requests_with_existing_user(self):
+        admin = self.users['prison_clerk_uas'][0]
+        role = Role.objects.get(name='prison-clerk')
+        prison = admin.prisonusermapping.prisons.first()
+        user_count = User.objects.count()
+
+        # all variations move to above role and prison
+        another_role = 'security'
+        another_prison = Prison.objects.exclude(nomis_id=prison.nomis_id).first().nomis_id
+        scenarios = [
+            {
+                'scenario': 'no previous role',
+                'previous_role': None, 'previous_prisons': [],
+                'previous_extra_groups': [],
+                'user_admin': False,
+            },
+            {
+                'scenario': 'role change',
+                'previous_role': another_role, 'previous_prisons': [prison.nomis_id],
+                'previous_extra_groups': [],
+                'user_admin': False,
+            },
+            {
+                'scenario': 'prison change',
+                'previous_role': role.name, 'previous_prisons': [another_prison],
+                'previous_extra_groups': [],
+                'user_admin': False,
+            },
+            {
+                'scenario': 'one prison removed',
+                'previous_role': role.name, 'previous_prisons': [prison.nomis_id, another_prison],
+                'previous_extra_groups': [],
+                'user_admin': False,
+            },
+            {
+                'scenario': 'no prison before',
+                'previous_role': role.name, 'previous_prisons': [],
+                'previous_extra_groups': [],
+                'user_admin': False,
+            },
+            {
+                'scenario': 'prison and role change',
+                'previous_role': another_role, 'previous_prisons': [another_prison],
+                'previous_extra_groups': [],
+                'user_admin': False,
+            },
+            {
+                'scenario': 'prison and role and group change',
+                'previous_role': another_role, 'previous_prisons': [another_prison],
+                'previous_extra_groups': ['BankAdmin'],
+                'user_admin': False,
+            },
+            {
+                'scenario': 'prison and role and admin change',
+                'previous_role': another_role, 'previous_prisons': [another_prison],
+                'previous_extra_groups': [],
+                'user_admin': True,
+            },
+            {
+                'scenario': 'prison and role change and admin stays',
+                'previous_role': another_role, 'previous_prisons': [another_prison],
+                'previous_extra_groups': ['BankAdmin', 'UserAdmin'],
+                'user_admin': True,
+            },
+            {
+                'scenario': 'prison and role change and admin removed',
+                'previous_role': another_role, 'previous_prisons': [another_prison],
+                'previous_extra_groups': ['UserAdmin'],
+                'user_admin': False,
+            },
+        ]
+        for scenario in scenarios:
+            user = basic_user.make(is_active=random.random() > 0.2)
+            if scenario['previous_role']:
+                Role.objects.get(name=scenario['previous_role']).assign_to_user(user)
+            if scenario['previous_prisons']:
+                PrisonUserMapping.objects.create(user=user).prisons.set([
+                    Prison.objects.get(nomis_id=p)
+                    for p in scenario['previous_prisons']
+                ])
+            for group in scenario['previous_extra_groups']:
+                user.groups.add(Group.objects.get(name=group))
+
+            request = mommy.make(
+                AccountRequest,
+                first_name=user.first_name, last_name=user.last_name,
+                email=user.email, username=user.username,
+                role=role, prison=prison,
+            )
+            url_detail = reverse('accountrequest-detail', kwargs={'pk': request.pk})
+            response = self.client.patch(
+                url_detail,
+                data={'user_admin': scenario['user_admin']},
+                format='json',
+                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(admin, client_id=CASHBOOK_OAUTH_CLIENT_ID)
+            )
+            self.assertEqual(response.status_code, status.HTTP_200_OK, msg=response.content)
+
+            refreshed_user = User.objects.get(username=user.username)
+            for key in ('first_name', 'last_name', 'email'):
+                self.assertEqual(getattr(refreshed_user, key), getattr(user, key))
+            self.assertFalse(refreshed_user.is_superuser)
+            self.assertTrue(refreshed_user.is_active)
+            self.assertEqual(refreshed_user.is_staff, user.is_staff)
+            self.assertIs(refreshed_user.groups.filter(name='UserAdmin').exists(), scenario['user_admin'])
+            if scenario['previous_extra_groups']:
+                self.assertFalse(any(
+                    refreshed_user.groups.filter(name=group).exists()
+                    for group in scenario['previous_extra_groups']
+                    if group != 'UserAdmin'
+                ))
+            self.assertSequenceEqual(
+                refreshed_user.prisonusermapping.prisons.values_list('nomis_id', flat=True),
+                [prison.nomis_id]
+            )
+
+            latest_email = mail.outbox[-1]
+            self.assertSequenceEqual(latest_email.to, [request.email])
+            self.assertIn(role.application.name, latest_email.subject)
+            self.assertIn(role.application.name, latest_email.body)
+            self.assertIn(role.login_url, latest_email.body)
+            self.assertIn(refreshed_user.username, latest_email.body)
+            self.assertNotIn('Password', latest_email.body)
+
+        self.assertFalse(AccountRequest.objects.exists())
+        self.assertEqual(User.objects.count(), user_count + len(scenarios))
+
+    def test_confirm_requests_with_existing_user_with_multiple_prisons(self):
+        admin = self.users['prison_clerk_uas'][0]
+        role = Role.objects.get(name='prison-clerk')
+        prison = admin.prisonusermapping.prisons.first()
+        PrisonUserMapping.objects.assign_prisons_to_user(admin, Prison.objects.all())
+        user_count = User.objects.count()
+
+        user = basic_user.make(is_active=random.random() > 0.2)
+        Role.objects.get(name='security').assign_to_user(user)
+        request = mommy.make(
+            AccountRequest,
+            first_name=user.first_name, last_name=user.last_name,
+            email=user.email, username=user.username,
+            role=role, prison=prison,
+        )
+        url_detail = reverse('accountrequest-detail', kwargs={'pk': request.pk})
+        response = self.client.patch(
+            url_detail,
+            data={},
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(admin, client_id=CASHBOOK_OAUTH_CLIENT_ID)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, msg=response.content)
+
+        user = User.objects.get(username=request.username)
+        self.assertSetEqual(
+            set(user.prisonusermapping.prisons.values_list('nomis_id', flat=True)),
+            set(Prison.objects.values_list('nomis_id', flat=True)),
+            msg='User should get all prisons, not just requested one'
+        )
+
+        self.assertFalse(AccountRequest.objects.exists())
+        self.assertEqual(User.objects.count(), user_count + 1)
+
+    def test_cannot_confirm_superadmin_change(self):
+        admin = self.users['prison_clerk_uas'][0]
+        role = Role.objects.get(name='prison-clerk')
+        prison = admin.prisonusermapping.prisons.first()
+
+        # security user in same prison with superadmin flag
+        user = basic_user.make(is_superuser=True)
+        previous_email = user.email
+        Role.objects.get(name='security').assign_to_user(user)
+        PrisonUserMapping.objects.create(user=user).prisons.set([prison])
+
+        # request to move to cashbook in same prison, change email and make user admin
+        request = mommy.make(
+            AccountRequest,
+            first_name=user.first_name, last_name=user.last_name,
+            username=user.username,
+            role=role, prison=prison,
+        )
+        url_detail = reverse('accountrequest-detail', kwargs={'pk': request.pk})
+        response = self.client.patch(
+            url_detail,
+            data={'user_admin': True},
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(admin, client_id=CASHBOOK_OAUTH_CLIENT_ID)
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, msg=response.content)
+        self.assertIn('Super users cannot be edited', response.content.decode())
+
+        self.assertEqual(user.email, previous_email)
+        self.assertSequenceEqual(
+            user.groups.values_list('name', flat=True),
+            ['Security']
+        )
+        self.assertSequenceEqual(
+            user.prisonusermapping.prisons.values_list('nomis_id', flat=True),
+            [prison.nomis_id]
+        )
+
+    def test_cannot_confirm_self_change(self):
+        admin = self.users['prison_clerk_uas'][0]
+        role = Role.objects.get(name='prison-clerk')
+        prison = admin.prisonusermapping.prisons.first()
+
+        user = admin
+        previous_email = user.email
+
+        # request to move to cashbook in same prison, change email and make user admin
+        request = mommy.make(
+            AccountRequest,
+            first_name=user.first_name, last_name=user.last_name,
+            username=user.username,
+            role=role, prison=prison,
+        )
+        url_detail = reverse('accountrequest-detail', kwargs={'pk': request.pk})
+        response = self.client.patch(
+            url_detail,
+            data={'user_admin': True},
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(admin, client_id=CASHBOOK_OAUTH_CLIENT_ID)
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, msg=response.content)
+        self.assertIn('You cannot confirm changes to yourself', response.content.decode())
+
+        self.assertEqual(user.email, previous_email)
+        self.assertSequenceEqual(
+            user.groups.values_list('name', flat=True),
+            ['PrisonClerk', 'UserAdmin']
+        )
+        self.assertSequenceEqual(
+            user.prisonusermapping.prisons.values_list('nomis_id', flat=True),
+            [prison.nomis_id]
+        )
+
+    def test_cannot_action_unowned_requests(self):
+        admin = self.users['prison_clerk_uas'][0]
+        role = Role.objects.get(name='prison-clerk')
+        prison = admin.prisonusermapping.prisons.first()
+        user_count = User.objects.count()
+
+        another_role = Role.objects.exclude(name='prison-clerk').first()
+        self.assertNotIn(another_role, Role.objects.get_roles_for_user(admin))
+        another_prison = Prison.objects.exclude(nomis_id=prison.nomis_id).first()
+        invisible_requests = [
+            mommy.make(AccountRequest, role=role, prison=another_prison),
+            mommy.make(AccountRequest, role=another_role, prison=prison),
+        ]
+        for request in invisible_requests:
+            url_detail = reverse('accountrequest-detail', kwargs={'pk': request.pk})
+            with silence_logger('django.request', level=logging.ERROR):
+                response = self.client.delete(
+                    url_detail,
+                    format='json',
+                    HTTP_AUTHORIZATION=self.get_http_authorization_for_user(admin, client_id=CASHBOOK_OAUTH_CLIENT_ID)
+                )
+            self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND, msg=response.content)
+            with silence_logger('django.request', level=logging.ERROR):
+                response = self.client.patch(
+                    url_detail,
+                    data={'user_admin': True},
+                    format='json',
+                    HTTP_AUTHORIZATION=self.get_http_authorization_for_user(admin, client_id=CASHBOOK_OAUTH_CLIENT_ID)
+                )
+            self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND, msg=response.content)
+
+        self.assertEqual(AccountRequest.objects.count(), 2)
+        self.assertEqual(User.objects.count(), user_count)
