@@ -4,7 +4,6 @@ import logging
 from urllib.parse import urlsplit, urlunsplit, urlencode, parse_qs
 
 from django.contrib.auth import password_validation, get_user_model
-from django.contrib.auth.password_validation import get_default_password_validators
 from django.core.exceptions import NON_FIELD_ERRORS
 from django.db import connection, models
 from django.db.transaction import atomic
@@ -212,18 +211,6 @@ class ResetPasswordView(generics.GenericAPIView):
                             'please enter your unique username'),
     }
 
-    @classmethod
-    def generate_new_password(cls):
-        validators = get_default_password_validators()
-        for __ in range(5):
-            password = User.objects.make_random_password(length=10)
-            try:
-                for validator in validators:
-                    validator.validate(password)
-            except ValidationError:
-                continue
-            return password
-
     def failure_response(self, errors, field=NON_FIELD_ERRORS):
         if isinstance(errors, str):
             errors = {
@@ -280,7 +267,7 @@ class ResetPasswordView(generics.GenericAPIView):
                 )
                 return Response(status=status.HTTP_204_NO_CONTENT)
             else:
-                password = self.generate_new_password()
+                password = generate_new_password()
                 if not password:
                     logger.error('Password could not be generated; have validators changed?')
                     return self.failure_response('generic')
