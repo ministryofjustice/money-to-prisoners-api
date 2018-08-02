@@ -11,7 +11,7 @@ from oauth2_provider.models import Grant, AccessToken, RefreshToken, get_applica
 
 from core.admin import add_short_description
 from mtp_auth.forms import RestrictedUserCreationForm, RestrictedUserChangeForm
-from mtp_auth.models import Role, ApplicationUserMapping, FailedLoginAttempt, PrisonUserMapping
+from mtp_auth.models import Role, ApplicationUserMapping, FailedLoginAttempt, PrisonUserMapping, AccountRequest
 
 User = get_user_model()
 Application = get_application_model()
@@ -122,3 +122,13 @@ class UserAdmin(DjangoUserAdmin):
                                                                or obj.prisonusermapping.prisons.count() == 0):
             messages.error(request, _('Prison clerks must be assigned to a prison.'))
         return response
+
+
+@admin.register(AccountRequest)
+class AccountRequestAdmin(ModelAdmin):
+    list_display = ('username', 'email', 'role', 'prison', 'user_exists')
+    list_filter = ('role', 'prison')
+
+    @add_short_description(_('existing user'))
+    def user_exists(self, instance):
+        return _boolean_icon(User.objects.filter(username=instance.username).exists())

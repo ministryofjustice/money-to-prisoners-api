@@ -4,6 +4,7 @@ import uuid
 
 from django.conf import settings
 from django.contrib.auth import get_user_model, user_logged_in
+from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils.timezone import now
 from django.utils.translation import gettext, gettext_lazy as _
@@ -175,6 +176,24 @@ class PasswordChangeRequest(TimeStampedModel):
 
     def __str__(self):
         return '{user} {created}'.format(user=self.user, created=self.created)
+
+
+class AccountRequest(TimeStampedModel):
+    # NB: these fields must be synchronised with any changes to the user model
+    username = models.CharField(max_length=150, validators=[AbstractUser.username_validator])
+    first_name = models.CharField(max_length=30)
+    last_name = models.CharField(max_length=30)
+    email = models.EmailField()
+
+    reason = models.TextField(blank=True)
+    role = models.ForeignKey(Role, related_name='+', on_delete=models.CASCADE)
+    prison = models.ForeignKey(Prison, related_name='+', on_delete=models.CASCADE)
+
+    class Meta:
+        ordering = ('created',)
+
+    def __str__(self):
+        return 'Account request {model.username} > {model.role}, {model.prison}'.format(model=self)
 
 
 def patch_user_model():
