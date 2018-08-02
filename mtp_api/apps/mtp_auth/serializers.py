@@ -1,13 +1,14 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.auth.password_validation import get_default_password_validators
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.transaction import atomic
-from django.utils.translation import gettext
+from django.utils.translation import gettext, gettext_lazy as _
 from mtp_common.tasks import send_email
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
-from .models import PrisonUserMapping, Role, ApplicationUserMapping, FailedLoginAttempt
+from .models import PrisonUserMapping, Role, ApplicationUserMapping, FailedLoginAttempt, AccountRequest
 from .validators import CaseInsensitiveUniqueValidator
 
 User = get_user_model()
@@ -225,3 +226,41 @@ class ResetPasswordSerializer(serializers.Serializer):
 
 class ChangePasswordWithCodeSerializer(serializers.Serializer):
     new_password = serializers.CharField()
+
+
+class UniqueKeyRelatedField(serializers.PrimaryKeyRelatedField):
+    def __init__(self, unique_key, **kwargs):
+        super().__init__(**kwargs)
+        self.unique_key = unique_key
+
+    def use_pk_only_optimization(self):
+        return self.unique_key == 'pk'
+
+    def to_internal_value(self, data):
+        try:
+            return self.get_queryset().get(**{self.unique_key: data})
+        except ObjectDoesNotExist:
+            self.fail('does_not_exist', pk_value=data)
+        except (TypeError, ValueError):
+            self.fail('incorrect_type', data_type=type(data).__name__)
+
+    def to_representation(self, value):
+        return getattr(value, self.unique_key)
+
+
+class AccountRequestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AccountRequest
+        fields = '__all__'
+        validators = [
+            serializers.UniqueTogetherValidator(
+                queryset=AccountRequest.objects.all(),
+                fields=('role', 'username'),
+                message=_('You have already requested access to this service')
+            )
+        ]
+
+    def get_fields(self):
+        fields = super().get_fields()
+        fields['role'] = UniqueKeyRelatedField(unique_key='name', queryset=Role.objects.all())
+        return fields

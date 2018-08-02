@@ -56,3 +56,28 @@ class NomsOpsClientIDPermissions(ClientIDPermissions):
 
 class SendMoneyClientIDPermissions(ClientIDPermissions):
     client_id = SEND_MONEY_CLIENT_ID
+
+
+class AccountRequestPremissions(BasePermission):
+    supported_clients = (CASHBOOK_OAUTH_CLIENT_ID,)
+
+    def has_permission(self, request, view):
+        action = getattr(view, 'action', '')
+        if action == 'create':
+            return request.user and not request.user.is_authenticated
+        if action in ('list', 'retrieve', 'partial_update', 'destroy'):
+            return self.is_user_admin(request) and self.supported_app(request)
+        return False
+
+    def is_user_admin(self, request):
+        return (
+            request.user and
+            request.user.is_authenticated and
+            request.user.groups.filter(name='UserAdmin').exists()
+        )
+
+    def supported_app(self, request):
+        return request.auth.application.client_id in self.supported_clients
+
+    def has_object_permission(self, request, view, obj):
+        return obj.role.application == request.auth.application

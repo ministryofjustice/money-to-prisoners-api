@@ -1,0 +1,10 @@
+{% extends 'mtp_common/email_base.html' %}
+{% load i18n %}
+
+{% block inner_content %}
+  <p>
+    {% blocktrans trimmed %}
+      Your request to access {{ service_name }} was denied.
+    {% endblocktrans %}
+  </p>
+{% endblock %}
