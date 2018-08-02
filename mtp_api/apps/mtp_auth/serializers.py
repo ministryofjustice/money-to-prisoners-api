@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
+from django.contrib.auth.password_validation import get_default_password_validators
 from django.db.transaction import atomic
 from django.utils.translation import gettext
 from mtp_common.tasks import send_email
@@ -10,6 +11,20 @@ from .models import PrisonUserMapping, Role, ApplicationUserMapping, FailedLogin
 from .validators import CaseInsensitiveUniqueValidator
 
 User = get_user_model()
+
+
+def generate_new_password():
+    from django.forms import ValidationError
+
+    validators = get_default_password_validators()
+    for __ in range(5):
+        password = User.objects.make_random_password(length=10)
+        try:
+            for validator in validators:
+                validator.validate(password)
+        except ValidationError:
+            continue
+        return password
 
 
 class RoleSerializer(serializers.ModelSerializer):
@@ -127,7 +142,7 @@ class UserSerializer(serializers.ModelSerializer):
 
         new_user = super().create(validated_data)
 
-        password = User.objects.make_random_password(length=10)
+        password = generate_new_password()
         new_user.set_password(password)
         new_user.save()
 
