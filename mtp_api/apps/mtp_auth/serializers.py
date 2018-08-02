@@ -140,9 +140,7 @@ class UserSerializer(serializers.ModelSerializer):
             for prison in prisons:
                 pu.prisons.add(prison)
 
-        ApplicationUserMapping.objects.create(user=new_user, application=role.application)
-        for group in role.groups:
-            new_user.groups.add(group)
+        role.assign_to_user(new_user)
 
         context = {
             'username': new_user.username,
