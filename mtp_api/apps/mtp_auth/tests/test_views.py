@@ -508,7 +508,7 @@ class CreateUserTestCase(AuthBaseTestCase):
         else:
             self.assertNotIn('UserAdmin', new_user.groups.values_list('name', flat=True))
 
-        latest_email = mail.outbox[0]
+        latest_email = mail.outbox[-1]
         self.assertIn(user_data['username'], latest_email.body)
         if expected_login_link:
             self.assertIn('sign in at', latest_email.body)
@@ -1408,7 +1408,7 @@ class AccountLockoutTestCase(AuthBaseTestCase):
             self.fail_login(prison_clerk, cashbook_client)
         self.assertEqual(len(mail.outbox), 1, msg='Only one email should be sent')
 
-        latest_email = mail.outbox[0]
+        latest_email = mail.outbox[-1]
         self.assertIn(cashbook_client.name, latest_email.body)
 
 
@@ -1570,7 +1570,7 @@ class ResetPasswordTestCase(AuthBaseTestCase):
         self.assertEqual(PasswordChangeRequest.objects.all().count(), 0,
                          msg='Password change request should not be created')
 
-        latest_email = mail.outbox[0]
+        latest_email = mail.outbox[-1]
         self.assertIn(self.user.username, latest_email.body)
         self.assertNotIn(self.current_password, latest_email.body)
         password_match = re.search(r'Password: (?P<password>[^\n]+)', latest_email.body)
@@ -1611,7 +1611,7 @@ class ResetPasswordTestCase(AuthBaseTestCase):
         change_request = PasswordChangeRequest.objects.all().first()
         self.assertTrue(
             'http://localhost/path?reset_code=%s' % str(change_request.code) in
-            mail.outbox[0].body
+            mail.outbox[-1].body
         )
 
 
