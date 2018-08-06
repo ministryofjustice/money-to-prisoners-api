@@ -15,10 +15,18 @@ from prison.models import Prison
 
 
 class PrisonUserMappingManager(models.Manager):
+    def assign_prisons_from_user(self, from_user, to_user):
+        prisons = self.get_prison_set_for_user(from_user)
+        if len(prisons) > 0:
+            self.assign_prisons_to_user(to_user, prisons)
+
+    def assign_prisons_to_user(self, user, prisons):
+        mapping, _ = self.get_or_create(user=user)
+        mapping.prisons.set(prisons)
 
     def get_prison_set_for_user(self, user):
         try:
-            return PrisonUserMapping.objects.get(user=user).prisons.all()
+            return self.get_queryset().get(user=user).prisons.all()
         except PrisonUserMapping.DoesNotExist:
             return Prison.objects.none()
 
