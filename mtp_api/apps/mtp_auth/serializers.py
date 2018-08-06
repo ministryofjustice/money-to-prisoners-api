@@ -149,12 +149,7 @@ class UserSerializer(serializers.ModelSerializer):
         if make_user_admin:
             new_user.groups.add(Group.objects.get(name='UserAdmin'))
 
-        prisons = PrisonUserMapping.objects.get_prison_set_for_user(creating_user)
-        if len(prisons) > 0:
-            pu = PrisonUserMapping.objects.create(user=new_user)
-            for prison in prisons:
-                pu.prisons.add(prison)
-
+        PrisonUserMapping.objects.assign_prisons_from_user(creating_user, new_user)
         role.assign_to_user(new_user)
 
         context = {

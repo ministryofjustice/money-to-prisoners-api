@@ -94,9 +94,7 @@ def make_applications():
 def give_superusers_full_access():
     super_admins = get_user_model().objects.filter(is_superuser=True)
     for super_admin in super_admins:
-        mapping = PrisonUserMapping.objects.get_or_create(user=super_admin)[0]
-        for prison in Prison.objects.all():
-            mapping.prisons.add(prison)
+        PrisonUserMapping.objects.assign_prisons_to_user(super_admin, Prison.objects.all())
         for application in Application.objects.all():
             ApplicationUserMapping.objects.get_or_create(
                 user=super_admin,
