@@ -319,9 +319,9 @@ class AccountRequestViewSet(viewsets.ModelViewSet):
             user = User.objects.get_by_natural_key(username)
             if user.is_superuser:
                 raise RestValidationError({'username': _('Super users cannot be edited')})
-            confirm_changes = self.request.data.get('confirm-changes', '').lower() == 'true'
-            if not confirm_changes:
-                roles = Role.objects.get_roles_for_user(user)
+            roles = Role.objects.get_roles_for_user(user)
+            changing_role = self.request.data.get('change-role', '').lower() == 'true'
+            if roles and not changing_role:
                 raise RestValidationError({
                     '__mtp__': {
                         'condition': 'user-exists',
