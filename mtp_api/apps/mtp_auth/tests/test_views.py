@@ -1816,7 +1816,18 @@ class AccountRequestTestCase(AuthBaseTestCase):
             'first_name': 'Mary', 'last_name': 'Johns',
             'email': 'mary@mtp.local', 'username': 'abc123',
             'role': 'prison-clerk', 'prison': 'INP',
-            'confirm-changes': 'True',
+            'change-role': 'True',
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, msg=response.content)
+        self.assertEqual(AccountRequest.objects.count(), 1)
+
+    def test_create_for_existing_user_without_roles_without_confirmation(self):
+        url_list = reverse('accountrequest-list')
+        basic_user.make(username='abc123')
+        response = self.client.post(url_list, data={
+            'first_name': 'Mary', 'last_name': 'Johns',
+            'email': 'mary@mtp.local', 'username': 'abc123',
+            'role': 'prison-clerk', 'prison': 'INP',
         }, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, msg=response.content)
         self.assertEqual(AccountRequest.objects.count(), 1)
@@ -1828,7 +1839,7 @@ class AccountRequestTestCase(AuthBaseTestCase):
             'first_name': 'Mary', 'last_name': 'Johns',
             'email': 'mary@mtp.local', 'username': 'abc123',
             'role': 'prison-clerk', 'prison': 'INP',
-            'confirm-changes': 'True',
+            'change-role': 'True',
         }, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, msg=response.content)
         self.assertFalse(AccountRequest.objects.exists())
@@ -1844,7 +1855,7 @@ class AccountRequestTestCase(AuthBaseTestCase):
             'first_name': 'Mary', 'last_name': 'Johns',
             'email': 'mary@mtp.local', 'username': 'abc123',
             'role': 'prison-clerk', 'prison': 'INP',
-            'confirm-changes': 'True',
+            'change-role': 'True',
         }, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, msg=response.content)
         response_data = response.json()
