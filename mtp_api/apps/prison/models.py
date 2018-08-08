@@ -85,7 +85,7 @@ class PrisonerLocation(TimeStampedModel):
 
 
 class PrisonerCreditNoticeEmail(models.Model):
-    prison = models.OneToOneField(Prison)
+    prison = models.OneToOneField(Prison, on_delete=models.CASCADE)
     email = models.EmailField()
 
     class Meta:

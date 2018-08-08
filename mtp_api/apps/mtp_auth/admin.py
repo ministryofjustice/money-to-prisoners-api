@@ -6,7 +6,9 @@ from django.contrib.admin.templatetags.admin_list import _boolean_icon
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.utils.translation import gettext_lazy as _
-from oauth2_provider.admin import RawIDAdmin
+from oauth2_provider.admin import (
+    ApplicationAdmin, GrantAdmin, AccessTokenAdmin, RefreshTokenAdmin
+)
 from oauth2_provider.models import Grant, AccessToken, RefreshToken, get_application_model
 
 from core.admin import add_short_description
@@ -18,31 +20,10 @@ Application = get_application_model()
 for _model in [User, Application, Grant, AccessToken, RefreshToken]:
     admin.site.unregister(_model)
 
-
-@admin.register(Application)
-class ApplicationAdmin(RawIDAdmin):
-    ordering = ('name',)
-    list_display = ('name', 'client_id')
-
-
-@admin.register(Grant)
-class GrantAdmin(RawIDAdmin):
-    ordering = ('-expires',)
-    list_display = ('code', 'application', 'user', 'expires')
-    list_filter = ('application',)
-
-
-class RefreshTokenInline(admin.StackedInline):
-    model = RefreshToken
-    raw_id_fields = ('user',)
-
-
-@admin.register(AccessToken)
-class AccessTokenAdmin(RawIDAdmin):
-    ordering = ('-expires',)
-    list_display = ('token', 'application', 'user', 'expires')
-    list_filter = ('application',)
-    inlines = (RefreshTokenInline,)
+admin.site.register(Application, ApplicationAdmin)
+admin.site.register(Grant, GrantAdmin)
+admin.site.register(AccessToken, AccessTokenAdmin)
+admin.site.register(RefreshToken, RefreshTokenAdmin)
 
 
 @admin.register(Role)
