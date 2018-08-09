@@ -23,6 +23,7 @@ from rest_framework import viewsets, generics, status
 from rest_framework.exceptions import ValidationError as RestValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.settings import api_settings
 
 from core.views import AdminViewMixin
 from mtp_auth.forms import LoginStatsForm
@@ -311,6 +312,36 @@ class AccountRequestViewSet(viewsets.ModelViewSet):
         if prisons:
             queryset = queryset.filter(prison__in=prisons)
         return queryset
+
+    def perform_create(self, serializer):
+        username = serializer.validated_data['username']
+        try:
+            user = User.objects.get_by_natural_key(username)
+            if user.is_superuser:
+                raise RestValidationError({'username': _('Super users cannot be edited')})
+            confirm_changes = self.request.data.get('confirm-changes', '').lower() == 'true'
+            if not confirm_changes:
+                roles = Role.objects.get_roles_for_user(user)
+                raise RestValidationError({
+                    '__mtp__': {
+                        'condition': 'user-exists',
+                        'roles': [
+                            {
+                                'role': role.name,
+                                'application': role.application.name,
+                                'login_url': role.login_url,
+                            }
+                            for role in roles
+                        ]
+                    },
+                    api_settings.NON_FIELD_ERRORS_KEY: _('This username already exists'),
+                })
+            # copy user details that shouldn't change
+            for key in ('first_name', 'last_name', 'email'):
+                serializer.validated_data[key] = getattr(user, key)
+        except User.DoesNotExist:
+            pass
+        super().perform_create(serializer)
 
     def update(self, request, *args, **kwargs):
         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)

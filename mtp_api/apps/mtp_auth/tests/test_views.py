@@ -1793,6 +1793,68 @@ class AccountRequestTestCase(AuthBaseTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, msg=response.content)
         self.assertEqual(AccountRequest.objects.count(), 2)
 
+    def test_cannot_create_for_existing_user_if_not_confirmed(self):
+        url_list = reverse('accountrequest-list')
+        user = basic_user.make(username='abc123')
+        role = Role.objects.get(name='security')
+        role.assign_to_user(user)
+
+        response = self.client.post(url_list, data={
+            'first_name': 'Mary', 'last_name': 'Johns',
+            'email': 'mary@mtp.local', 'username': 'abc123',
+            'role': 'prison-clerk', 'prison': 'INP',
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, msg=response.content)
+        response_data = response.json()
+        self.assertDictEqual(response_data['__mtp__'], {
+            'condition': 'user-exists',
+            'roles': [{'role': role.name, 'application': role.application.name, 'login_url': role.login_url}]
+        })
+        self.assertFalse(AccountRequest.objects.exists())
+
+        response = self.client.post(url_list, data={
+            'first_name': 'Mary', 'last_name': 'Johns',
+            'email': 'mary@mtp.local', 'username': 'abc123',
+            'role': 'prison-clerk', 'prison': 'INP',
+            'confirm-changes': 'True',
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, msg=response.content)
+        self.assertEqual(AccountRequest.objects.count(), 1)
+
+    def test_cannot_create_for_existing_superuser(self):
+        url_list = reverse('accountrequest-list')
+        basic_user.make(username='abc123', is_superuser=True)
+        response = self.client.post(url_list, data={
+            'first_name': 'Mary', 'last_name': 'Johns',
+            'email': 'mary@mtp.local', 'username': 'abc123',
+            'role': 'prison-clerk', 'prison': 'INP',
+            'confirm-changes': 'True',
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, msg=response.content)
+        self.assertFalse(AccountRequest.objects.exists())
+
+    def test_creating_for_existing_user_copies_user_fields(self):
+        url_list = reverse('accountrequest-list')
+        copied_fields = {
+            'first_name': 'Mark', 'last_name': 'Smith',
+            'email': 'mark@mtp.local', 'username': 'abc123',
+        }
+        basic_user.make(**copied_fields)
+        response = self.client.post(url_list, data={
+            'first_name': 'Mary', 'last_name': 'Johns',
+            'email': 'mary@mtp.local', 'username': 'abc123',
+            'role': 'prison-clerk', 'prison': 'INP',
+            'confirm-changes': 'True',
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, msg=response.content)
+        response_data = response.json()
+        self.assertDictEqual(copied_fields, {
+            key: value
+            for key, value in response_data.items()
+            if key in copied_fields
+        })
+        self.assertEqual(AccountRequest.objects.count(), 1)
+
     def test_authentication_requried(self):
         url_list = reverse('accountrequest-list')
         for method in ('get', 'put', 'patch', 'delete'):  # post allowed
