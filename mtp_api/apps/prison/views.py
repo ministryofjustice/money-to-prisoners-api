@@ -10,7 +10,7 @@ from django.utils.dateparse import parse_date
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import FormView
 from rest_framework import generics, mixins, viewsets, status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from core.permissions import ActionsBasedPermissions, ActionsBasedViewPermissions
@@ -140,7 +140,7 @@ class PrisonerValidityView(mixins.ListModelMixin, viewsets.GenericViewSet):
 
 
 class PrisonView(mixins.ListModelMixin, viewsets.GenericViewSet):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (AllowAny,)
     serializer_class = PrisonSerializer
     queryset = Prison.objects.all()
 
