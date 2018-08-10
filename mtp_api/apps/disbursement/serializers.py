@@ -20,7 +20,8 @@ class PrisonerInPrisonValidator:
             try:
                 PrisonerLocation.objects.get(
                     prisoner_number=prisoner_number,
-                    prison=prison
+                    prison=prison,
+                    active=True
                 )
             except PrisonerLocation.DoesNotExist:
                 raise serializers.ValidationError(
@@ -102,7 +103,8 @@ class DisbursementSerializer(serializers.ModelSerializer):
     @atomic
     def create(self, validated_data):
         validated_data['prisoner_name'] = PrisonerLocation.objects.get(
-            prisoner_number=validated_data['prisoner_number']
+            prisoner_number=validated_data['prisoner_number'],
+            active=True
         ).prisoner_name
         new_disbursement = super().create(validated_data)
         disbursement_created.send(
@@ -116,7 +118,8 @@ class DisbursementSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         if 'prisoner_number' in validated_data:
             validated_data['prisoner_name'] = PrisonerLocation.objects.get(
-                prisoner_number=validated_data['prisoner_number']
+                prisoner_number=validated_data['prisoner_number'],
+                active=True
             ).prisoner_name
         updated_disbursement = super().update(instance, validated_data)
         if validated_data:
