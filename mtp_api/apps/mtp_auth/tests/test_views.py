@@ -2131,7 +2131,7 @@ class AccountRequestTestCase(AuthBaseTestCase):
         self.assertFalse(AccountRequest.objects.exists())
         self.assertEqual(User.objects.count(), user_count + 1)
 
-        assert_user_created({'user_admin': True}, user_admin=True)
+        assert_user_created({'user_admin': 'true'}, user_admin=True)
         self.assertFalse(AccountRequest.objects.exists())
         self.assertEqual(User.objects.count(), user_count + 2)
 
@@ -2254,7 +2254,7 @@ class AccountRequestTestCase(AuthBaseTestCase):
             url_detail = reverse('accountrequest-detail', kwargs={'pk': request.pk})
             response = self.client.patch(
                 url_detail,
-                data={'user_admin': scenario['user_admin']},
+                data={'user_admin': 'true' if scenario['user_admin'] else 'false'},
                 format='json',
                 HTTP_AUTHORIZATION=self.get_http_authorization_for_user(admin, client_id=CASHBOOK_OAUTH_CLIENT_ID)
             )
@@ -2344,7 +2344,7 @@ class AccountRequestTestCase(AuthBaseTestCase):
         url_detail = reverse('accountrequest-detail', kwargs={'pk': request.pk})
         response = self.client.patch(
             url_detail,
-            data={'user_admin': True},
+            data={'user_admin': 'true'},
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(admin, client_id=CASHBOOK_OAUTH_CLIENT_ID)
         )
@@ -2379,7 +2379,7 @@ class AccountRequestTestCase(AuthBaseTestCase):
         url_detail = reverse('accountrequest-detail', kwargs={'pk': request.pk})
         response = self.client.patch(
             url_detail,
-            data={'user_admin': True},
+            data={'user_admin': 'true'},
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(admin, client_id=CASHBOOK_OAUTH_CLIENT_ID)
         )
@@ -2421,7 +2421,7 @@ class AccountRequestTestCase(AuthBaseTestCase):
             with silence_logger('django.request', level=logging.ERROR):
                 response = self.client.patch(
                     url_detail,
-                    data={'user_admin': True},
+                    data={'user_admin': 'true'},
                     format='json',
                     HTTP_AUTHORIZATION=self.get_http_authorization_for_user(admin, client_id=CASHBOOK_OAUTH_CLIENT_ID)
                 )
