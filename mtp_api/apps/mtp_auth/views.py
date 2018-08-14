@@ -348,7 +348,7 @@ class AccountRequestViewSet(viewsets.ModelViewSet):
 
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
-        user_admin = request.data.get('user_admin') is True
+        user_admin = request.data.get('user_admin', '').lower() == 'true'
         try:
             user = User.objects.get_by_natural_key(instance.username)
             if request.user.pk == user.pk:
