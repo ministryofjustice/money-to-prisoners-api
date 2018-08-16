@@ -56,7 +56,7 @@ class PrisonerCreditNoticeTestCase(unittest.TestCase):
     text_per_update = 3
     text_per_message = 2
 
-    def assertPageUpdates(self, show_page, draw_string, updates_per_page):  # noqa
+    def assertPageUpdates(self, show_page, draw_string, updates_per_page):  # noqa: N802
         self.assertEqual(show_page.call_count, len(updates_per_page))
         self.assertEqual(draw_string.call_count, (
             self.text_per_template * len(updates_per_page) +

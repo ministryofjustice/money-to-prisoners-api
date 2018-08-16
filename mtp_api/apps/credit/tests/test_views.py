@@ -845,7 +845,7 @@ class TransactionSenderDetailsCreditListTestCase(SecurityCreditListTestCase):
 
 
 class CreditListWithBlankStringFiltersTestCase(SecurityCreditListTestCase):
-    def assertAllResponsesHaveBlankField(self, filters, blank_fields, expected_filter):  # noqa
+    def assertAllResponsesHaveBlankField(self, filters, blank_fields, expected_filter):  # noqa: N802
         expected_results = list(filter(expected_filter, self._get_managed_prison_credits()))
 
         url = self._get_url(**filters)
