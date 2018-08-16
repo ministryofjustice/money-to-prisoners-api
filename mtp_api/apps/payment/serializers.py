@@ -49,6 +49,7 @@ class PaymentSerializer(serializers.ModelSerializer):
             'card_brand',
             'ip_address',
             'billing_address',
+            'modified',
         )
 
     @atomic
