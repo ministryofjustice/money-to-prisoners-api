@@ -30,7 +30,7 @@ class TransactionDashboardTestCase(DashboardTestCase):
                                                        email='admin@mtp.local')
         self.client.login(username='admin', password='adminadmin')
 
-    def assertAmountInContent(self, amount, response):  # noqa
+    def assertAmountInContent(self, amount, response):  # noqa: N802
         if amount:
             creditable_amount = format_amount(amount, trim_empty_pence=True)
         else:

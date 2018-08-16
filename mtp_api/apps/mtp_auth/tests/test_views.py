@@ -59,12 +59,12 @@ class AuthBaseTestCase(APITestCase, AuthTestCaseMixin):
         'test_prisons.json',
     ]
 
-    def assertSamePrisons(self, left_user, right_user, msg=None):  # noqa
+    def assertSamePrisons(self, left_user, right_user, msg=None):  # noqa: N802
         left_prisons = prison_set(left_user)
         right_prisons = prison_set(right_user)
         self.assertSetEqual(left_prisons, right_prisons, msg=msg or 'Users do not have matching prison sets')
 
-    def assertSubsetPrisons(self, left_user, right_user, msg=None):  # noqa
+    def assertSubsetPrisons(self, left_user, right_user, msg=None):  # noqa: N802
         left_prisons = prison_set(left_user)
         right_prisons = prison_set(right_user)
         self.assertTrue(left_prisons.issubset(right_prisons), msg=msg or 'User prison set is not a subset')
@@ -168,7 +168,7 @@ class RoleTestCase(AuthBaseTestCase):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    def assertCanListRoles(self, user, expected_roles, url=None):  # noqa
+    def assertCanListRoles(self, user, expected_roles, url=None):  # noqa: N802
         response = self.client.get(
             url or self.url, format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
@@ -365,7 +365,7 @@ class ListUserTestCase(AuthBaseTestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def assertCanListUsers(self, requester, allowed_client_ids, exact_prison_match=True):  # noqa
+    def assertCanListUsers(self, requester, allowed_client_ids, exact_prison_match=True):  # noqa: N802
         response = self.client.get(
             self.get_url(),
             format='json',
@@ -475,7 +475,7 @@ class CreateUserTestCase(AuthBaseTestCase):
         self.assertEqual(User.objects.filter(username=user_data['username']).count(), 0)
 
     @override_settings(ENVIRONMENT='prod')
-    def assertUserCreated(self, requester, user_data, client_id, groups,  # noqa
+    def assertUserCreated(self, requester, user_data, client_id, groups,  # noqa: N802
                           target_client_id=None, expected_login_link=None):
         response = self.client.post(
             self.get_url(),
@@ -670,7 +670,7 @@ class CreateUserTestCase(AuthBaseTestCase):
             expected_login_link='https://noms-ops.local/login/',
         )
 
-    def assertUserNotCreated(self, requester, data):  # noqa
+    def assertUserNotCreated(self, requester, data):  # noqa: N802
         response = self.client.post(
             self.get_url(),
             format='json',
@@ -819,7 +819,7 @@ class UpdateUserTestCase(AuthBaseTestCase):
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(requester)
         )
 
-    def assertUserUpdated(self, requester, username, user_data):  # noqa
+    def assertUserUpdated(self, requester, username, user_data):  # noqa: N802
         response = self._update_user(requester, username, user_data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         user_data.pop('user_admin', None)
@@ -827,7 +827,7 @@ class UpdateUserTestCase(AuthBaseTestCase):
         User.objects.get(username=username, **user_data)
         return response
 
-    def assertUserNotUpdated(self, requester, username, user_data):  # noqa
+    def assertUserNotUpdated(self, requester, username, user_data):  # noqa: N802
         user = User.objects.get(username=username)
         original_user_data = {
             attr: getattr(user, attr, None) for attr in user_data.keys()
@@ -1148,11 +1148,11 @@ class DeleteUserTestCase(AuthBaseTestCase):
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(requester)
         )
 
-    def assertUserDeleted(self, requester, username):  # noqa
+    def assertUserDeleted(self, requester, username):  # noqa: N802
         self._delete_user(requester, username)
         self.assertFalse(User.objects.get_by_natural_key(username).is_active)
 
-    def assertUserNotDeleted(self, requester, username):  # noqa
+    def assertUserNotDeleted(self, requester, username):  # noqa: N802
         with silence_logger('django.request', level=logging.ERROR):
             self._delete_user(requester, username)
         self.assertTrue(User.objects.get_by_natural_key(username).is_active)
@@ -1241,7 +1241,7 @@ class UserApplicationValidationTestCase(AuthBaseTestCase):
                 HTTP_AUTHORIZATION=self._create_basic_auth(application_client_id, application_client_id)
             )
 
-    def assertCanLogin(self, username, application_client_id):  # noqa
+    def assertCanLogin(self, username, application_client_id):  # noqa: N802
         response = self.login(username, application_client_id)
         self.assertEqual(response.status_code, status.HTTP_200_OK, msg='User %s should not be allowed into %s' % (
             username, application_client_id
@@ -1250,7 +1250,7 @@ class UserApplicationValidationTestCase(AuthBaseTestCase):
         self.assertEqual(login.user.username, username)
         self.assertEqual(login.application.client_id, application_client_id)
 
-    def assertCannotLogin(self, username, application_client_id):  # noqa
+    def assertCannotLogin(self, username, application_client_id):  # noqa: N802
         logins = Login.objects.count()
         response = self.login(username, application_client_id)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, msg='User %s should be allowed into %s' % (
@@ -1501,7 +1501,7 @@ class ResetPasswordTestCase(AuthBaseTestCase):
         self.user.set_password(self.current_password)
         self.user.save()
 
-    def assertErrorResponse(self, response, error_dict):  # noqa
+    def assertErrorResponse(self, response, error_dict):  # noqa: N802
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         error = json.loads(response.content.decode('utf-8')).get('errors', {})
         for key, value in error_dict.items():
@@ -1570,7 +1570,7 @@ class ResetPasswordTestCase(AuthBaseTestCase):
         })
 
     @override_settings(ENVIRONMENT='prod')
-    def assertPasswordReset(self, username):  # noqa
+    def assertPasswordReset(self, username):  # noqa: N802
         response = self.client.post(self.reset_url, {'username': username})
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         user = authenticate(username=self.user.username, password=self.current_password)

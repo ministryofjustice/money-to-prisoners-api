@@ -35,7 +35,7 @@ class TokenTestCase(TestCase):
     def make_client_token(self, payload):
         return jwt.encode(payload, key=self.private_ec_key, algorithm='ES256').decode()
 
-    def assertAccessiblyOnlyBySuperuser(self, url, sentinel):  # noqa
+    def assertAccessiblyOnlyBySuperuser(self, url, sentinel):  # noqa: N802
         response = self.client.get(url)
         self.assertNotContains(response, sentinel, status_code=http_status.HTTP_302_FOUND)
 

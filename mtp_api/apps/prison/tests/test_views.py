@@ -350,13 +350,13 @@ class PrisonerValidityViewTestCase(AuthTestCaseMixin, APITestCase):
             if prisoner_dob != cannot_equal:
                 return prisoner_dob
 
-    def assertValidResponse(self, response, expected_data):  # noqa
+    def assertValidResponse(self, response, expected_data):  # noqa: N802
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         response_data = response.json()
         self.assertEqual(response_data['count'], 1)
         self.assertSequenceEqual(response_data['results'], [expected_data])
 
-    def assertEmptyResponse(self, response):  # noqa
+    def assertEmptyResponse(self, response):  # noqa: N802
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         response_data = response.json()
         self.assertEqual(response_data['count'], 0)

@@ -432,7 +432,7 @@ class ListPaymentViewTestCase(AuthTestCaseMixin, APITestCase):
 class PaymentSearchAdminView(TestCase):
     url = reverse_lazy('admin:payment_search')
 
-    def assertCannotAccessPaymentSearch(self, msg):  # noqa
+    def assertCannotAccessPaymentSearch(self, msg):  # noqa: N802
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 302, msg=msg)
 
