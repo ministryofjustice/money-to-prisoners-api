@@ -8,7 +8,7 @@ from django.contrib.admin.options import get_content_type_for_model
 from django.contrib.auth import password_validation, get_user_model
 from django.contrib.auth.models import Group
 from django.core.exceptions import NON_FIELD_ERRORS
-from django.db import connection, models
+from django.db import connection
 from django.db.transaction import atomic
 from django.forms import ValidationError
 from django.http import Http404
@@ -70,26 +70,30 @@ class UserViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """
         Set of users for user account management AND looking up details of self.
-        Set is determined by matching set of prisons if some exist OR by key group as determined by Role models.
-        If a user falls into multiple roles, they can only edit themselves.
+        If request user is a super admin, they only get themselves back.
+        If request user has more than one role, they get just themselves back.
+        Otherwise returns all users who have the same role (determined by key group) AND matching prison set.
+        Inactive users are always returned.
         """
         user = self.request.user
-        queryset = User.objects.filter(is_superuser=user.is_superuser).order_by('username')
+
+        key_groups = set(Role.objects.values_list('key_group', flat=True))
+        user_groups = set(user.groups.values_list('pk', flat=True))
+        user_key_groups = list(key_groups.intersection(user_groups))
+        if len(user_key_groups) != 1 or user.is_superuser:
+            return User.objects.filter(pk=user.pk)
+        user_key_group = user_key_groups[0]
+
+        queryset = User.objects.exclude(is_superuser=True).filter(groups=user_key_group).order_by('username')
 
         prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(user).values_list('pk', flat=True))
         if prisons:
             for prison in prisons:
                 queryset = queryset.filter(prisonusermapping__prisons=prison)
-            return queryset
-
-        key_groups = set(Role.objects.values_list('key_group', flat=True))
-        user_groups = set(user.groups.values_list('pk', flat=True))
-        user_key_groups = list(key_groups.intersection(user_groups))
-        if len(user_key_groups) == 1:
+        else:
             queryset = queryset.filter(prisonusermapping__isnull=True)
-            return queryset.filter(models.Q(groups=user_key_groups[0]) | models.Q(pk=user.pk)).distinct()
 
-        return User.objects.filter(pk=user.pk)
+        return queryset
 
     def get_object(self):
         """

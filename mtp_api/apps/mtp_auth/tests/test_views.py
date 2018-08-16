@@ -387,16 +387,33 @@ class ListUserTestCase(AuthBaseTestCase):
         return response.data['results']
 
     def test_list_users_in_same_role(self):
+        self.assertCanListUsers(self.cashbook_uas[0], {'cashbook'})
         self.assertCanListUsers(self.bank_uas[0], {'bank-admin'})
         self.assertCanListUsers(self.pla_uas[0], {'noms-ops'})
         self.assertCanListUsers(self.security_uas[0], {'noms-ops'})
 
     def test_list_users_in_same_prison(self):
-        users = self.assertCanListUsers(self.cashbook_uas[0], {'cashbook', 'noms-ops'})
-        self.assertIn(self.security_uas[1].username, (user['username'] for user in users))
+        users = self.assertCanListUsers(self.cashbook_uas[0], {'cashbook'})
+        users = set(user['username'] for user in users)
+        self.assertIn(self.cashbook_uas[0].username, users)
+        self.assertIn(self.prison_clerks[0].username, users)
+        self.assertNotIn(self.cashbook_uas[1].username, users)
+        self.assertNotIn(self.prison_clerks[1].username, users)
+        self.assertTrue(all(
+            user.username not in users
+            for user in (self.security_staff + self.security_uas)
+        ))
 
-        users = self.assertCanListUsers(self.security_uas[1], {'cashbook', 'noms-ops'})
-        self.assertIn(self.cashbook_uas[0].username, (user['username'] for user in users))
+        users = self.assertCanListUsers(self.security_uas[1], {'noms-ops'})
+        users = set(user['username'] for user in users)
+        self.assertIn(self.security_uas[1].username, users)
+        self.assertIn(self.security_staff[1].username, users)
+        self.assertNotIn(self.security_uas[0].username, users)
+        self.assertNotIn(self.security_staff[0].username, users)
+        self.assertTrue(all(
+            user.username not in users
+            for user in (self.prison_clerks + self.cashbook_uas)
+        ))
 
     def test_list_users_in_multiple_prisons(self):
         # create new cashbook users linked to all prisons
@@ -1051,21 +1068,6 @@ class UpdateUserTestCase(AuthBaseTestCase):
         self.assertNotIn('PrisonClerk', groups)
         self.assertIn('Security', groups)
 
-    def test_can_change_role_in_own_prison_but_different_app(self):
-        user_data = {
-            'role': 'prison-clerk'
-        }
-        self.assertUserUpdated(
-            self.cashbook_uas[0],
-            self.security_users[1].username,
-            user_data
-        )
-        updated_user = User.objects.get(username=self.security_users[1].username)
-        groups = set(updated_user.groups.values_list('name', flat=True))
-        self.assertNotIn('UserAdmin', groups)
-        self.assertIn('PrisonClerk', groups)
-        self.assertNotIn('Security', groups)
-
     def test_cannot_change_own_role(self):
         user_data = {
             'role': 'prison-clerk'
@@ -1121,7 +1123,25 @@ class UpdateUserTestCase(AuthBaseTestCase):
                 user_data
             )
         updated_user = User.objects.get(username=self.prison_clerks[1].username)
-        self.assertIn('PrisonClerk', updated_user.groups.values_list('name', flat=True))
+        groups = set(updated_user.groups.values_list('name', flat=True))
+        self.assertIn('PrisonClerk', groups)
+        self.assertNotIn('Security', groups)
+
+    def test_cannot_change_role_in_own_prison_but_different_app(self):
+        user_data = {
+            'role': 'prison-clerk'
+        }
+        with silence_logger('django.request', level=logging.ERROR):
+            self.assertUserNotUpdated(
+                self.cashbook_uas[0],
+                self.security_users[1].username,
+                user_data
+            )
+        updated_user = User.objects.get(username=self.security_users[1].username)
+        groups = set(updated_user.groups.values_list('name', flat=True))
+        self.assertNotIn('UserAdmin', groups)
+        self.assertIn('Security', groups)
+        self.assertNotIn('PrisonClerk', groups)
 
 
 class DeleteUserTestCase(AuthBaseTestCase):
