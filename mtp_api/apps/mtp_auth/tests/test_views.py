@@ -203,21 +203,15 @@ class RoleTestCase(AuthBaseTestCase):
         user = random.choice(self.users_with_no_role)
         self.assertCanListRoles(user, [], self.url + '?managed')
 
-    def test_bank_admin_user_manages_only_self(self):
+    def test_user_in_role_manages_only_same_role(self):
+        user = random.choice(self.cashbook_uas)
+        self.assertCanListRoles(user, ['prison-clerk'], self.url + '?managed')
         user = random.choice(self.bank_uas)
         self.assertCanListRoles(user, ['bank-admin'], self.url + '?managed')
-
-    def test_pla_user_manages_only_self(self):
         user = random.choice(self.pla_uas)
         self.assertCanListRoles(user, ['prisoner-location-admin'], self.url + '?managed')
-
-    def test_cashbook_user_manages_security_too(self):
-        user = random.choice(self.cashbook_uas)
-        self.assertCanListRoles(user, ['prison-clerk', 'security'], self.url + '?managed')
-
-    def test_security_user_manages_cashbook_too(self):
         user = random.choice(self.security_uas)
-        self.assertCanListRoles(user, ['prison-clerk', 'security'], self.url + '?managed')
+        self.assertCanListRoles(user, ['security'], self.url + '?managed')
 
 
 class GetUserTestCase(AuthBaseTestCase):
@@ -588,22 +582,6 @@ class CreateUserTestCase(AuthBaseTestCase):
             [Group.objects.get(name='Security')]
         )
 
-    def test_create_security_staff_as_prison_clerk(self):
-        user_data = {
-            'username': 'new-security-staff',
-            'first_name': 'New',
-            'last_name': 'Security Staff',
-            'email': 'nss@mtp.local',
-            'role': 'security',
-        }
-        self.assertUserCreated(
-            self.cashbook_uas[0],
-            user_data,
-            'cashbook',
-            [Group.objects.get(name='Security')],
-            target_client_id='noms-ops',
-        )
-
     def test_create_prison_clerk(self):
         user_data = {
             'username': 'new-prison-clerk',
@@ -617,22 +595,6 @@ class CreateUserTestCase(AuthBaseTestCase):
             user_data,
             'cashbook',
             [Group.objects.get(name='PrisonClerk')]
-        )
-
-    def test_create_prison_clerk_as_security(self):
-        user_data = {
-            'username': 'new-prison-clerk',
-            'first_name': 'New',
-            'last_name': 'Prison Clerk',
-            'email': 'pc@mtp.local',
-            'role': 'prison-clerk',
-        }
-        self.assertUserCreated(
-            self.security_uas[0],
-            user_data,
-            'noms-ops',
-            [Group.objects.get(name='PrisonClerk')],
-            target_client_id='cashbook'
         )
 
     def test_create_cashbook_user_admin(self):
@@ -667,24 +629,6 @@ class CreateUserTestCase(AuthBaseTestCase):
             'cashbook',
             [Group.objects.get(name='PrisonClerk')],
             expected_login_link='https://cashbook.local/login/',
-        )
-
-    def test_login_link_present_for_different_role(self):
-        Role.objects.filter(name='security').update(login_url='https://noms-ops.local/login/')
-        user_data = {
-            'username': 'new-security-staff',
-            'first_name': 'New',
-            'last_name': 'Security Staff',
-            'email': 'nss@mtp.local',
-            'role': 'security',
-        }
-        self.assertUserCreated(
-            self.cashbook_uas[0],
-            user_data,
-            'cashbook',
-            [Group.objects.get(name='Security')],
-            target_client_id='noms-ops',
-            expected_login_link='https://noms-ops.local/login/',
         )
 
     def assertUserNotCreated(self, requester, data):  # noqa: N802
@@ -1037,24 +981,8 @@ class UpdateUserTestCase(AuthBaseTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertFalse(response.json()['is_locked_out'])
 
-    def test_can_change_role_in_own_app(self):
+    def test_can_change_admin_level_in_own_app(self):
         user_data = {
-            'role': 'security'
-        }
-        self.assertUserUpdated(
-            self.cashbook_uas[0],
-            self.prison_clerks[0].username,
-            user_data
-        )
-        updated_user = User.objects.get(username=self.prison_clerks[0].username)
-        groups = set(updated_user.groups.values_list('name', flat=True))
-        self.assertNotIn('UserAdmin', groups)
-        self.assertNotIn('PrisonClerk', groups)
-        self.assertIn('Security', groups)
-
-    def test_can_change_role_and_admin_level_in_own_app(self):
-        user_data = {
-            'role': 'security',
             'user_admin': True,
         }
         self.assertUserUpdated(
@@ -1065,8 +993,8 @@ class UpdateUserTestCase(AuthBaseTestCase):
         updated_user = User.objects.get(username=self.prison_clerks[0].username)
         groups = set(updated_user.groups.values_list('name', flat=True))
         self.assertIn('UserAdmin', groups)
-        self.assertNotIn('PrisonClerk', groups)
-        self.assertIn('Security', groups)
+        self.assertIn('PrisonClerk', groups)
+        self.assertNotIn('Security', groups)
 
     def test_cannot_change_own_role(self):
         user_data = {
@@ -1080,7 +1008,7 @@ class UpdateUserTestCase(AuthBaseTestCase):
             )
         updated_user = User.objects.get(username=self.security_uas[1].username)
         self.assertNotIn('PrisonClerk', updated_user.groups.values_list('name', flat=True))
-        self.assertIn('Cannot change own access permissions', response.data)
+        self.assertIn('Invalid role: prison-clerk', response.data['role'])
 
     def test_cannot_change_to_unknown_role(self):
         user_data = {

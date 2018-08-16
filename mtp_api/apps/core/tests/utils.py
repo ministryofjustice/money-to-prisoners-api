@@ -88,8 +88,6 @@ def make_applications():
         SEND_MONEY_CLIENT_ID, 'Send money to someone in prison',
     )
 
-    Role.objects.get(name='prison-clerk').managed_roles.add(Role.objects.get(name='security'))
-
 
 def give_superusers_full_access():
     super_admins = get_user_model().objects.filter(is_superuser=True)

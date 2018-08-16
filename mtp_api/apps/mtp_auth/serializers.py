@@ -121,7 +121,7 @@ class UserSerializer(serializers.ModelSerializer):
             user = self.context['request'].user
             managed_roles = {
                 role.name: role
-                for role in Role.objects.get_managed_roles_for_user(user)
+                for role in Role.objects.get_roles_for_user(user)
             }
             try:
                 self.initial_data['role'] = managed_roles[role]

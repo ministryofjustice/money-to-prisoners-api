@@ -53,7 +53,7 @@ class RoleViewSet(viewsets.mixins.ListModelMixin, viewsets.GenericViewSet):
         queryset = super().get_queryset()
         if 'managed' in self.request.query_params:
             user = self.request.user
-            managed_roles = Role.objects.get_managed_roles_for_user(user)
+            managed_roles = Role.objects.get_roles_for_user(user)
             queryset = queryset.filter(pk__in=set(role.pk for role in managed_roles))
         return queryset
 

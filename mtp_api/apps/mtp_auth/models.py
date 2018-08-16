@@ -53,24 +53,18 @@ class RoleManager(models.Manager):
     def get_roles_for_user(self, user):
         return self.get_queryset().filter(key_group__in=user.groups.all())
 
-    def get_managed_roles_for_user(self, user):
-        for role in self.get_roles_for_user(user):
-            yield role
-            yield from role.managed_roles.all()
-
 
 class Role(models.Model):
     """
     This model defines the application and group mappings a user must have to fit into a specific role.
     Users must be in exactly one key group to be able to manage users. When a new user is created,
     they are assigned a role and gain access to associated application and groups. Separate logic also
-    means that they inherit the creating user's prison set.
+    means that they inherit the creating/approving user's prison set.
     """
     name = models.CharField(max_length=30, unique=True)
     key_group = models.OneToOneField('auth.Group', unique=True, on_delete=models.CASCADE)
     other_groups = models.ManyToManyField('auth.Group', blank=True, related_name='+')
     application = models.ForeignKey('oauth2_provider.Application', related_name='+', on_delete=models.CASCADE)
-    managed_roles = models.ManyToManyField('self', blank=True)
     login_url = models.URLField(null=True)
 
     objects = RoleManager()
