@@ -304,7 +304,7 @@ class UpdateNOMISTokenView(AdminViewMixin, FormView):
 
     def form_valid(self, form):
         Token.objects.update_or_create({
-            'token': form.token_data,
+            'token': form.token_data.decode(),
             'expires': form.decoded_token.get('exp'),
         }, name='nomis')
         messages.success(self.request, _('NOMIS API client token updated'))

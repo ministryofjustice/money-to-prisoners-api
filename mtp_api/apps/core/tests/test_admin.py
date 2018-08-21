@@ -51,6 +51,7 @@ class RecreateTestDataViewTestCase(TestCase):
 
         self.make_superuser(log_into_client=True)
         with mock.patch.object(Command, 'handle') as method:
+            method.return_value = ''
             with silence_logger():
                 response = self.client.post(self.url, data={
                     'scenario': 'random',

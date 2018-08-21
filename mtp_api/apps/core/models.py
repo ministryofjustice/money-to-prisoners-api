@@ -10,7 +10,6 @@ from django.db import models
 from django.db.models.functions.datetime import TruncBase
 from django.dispatch import receiver
 from django.utils import timezone
-from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 from model_utils.models import TimeStampedModel
 
@@ -68,17 +67,15 @@ def set_next_execution(sender, instance, **kwargs):
 
 
 class TruncUtcDate(TruncBase):
+    kind = 'date'
     lookup_name = 'utcdate'
-
-    @cached_property
-    def output_field(self):
-        return models.DateField()
+    output_field = models.DateField()
 
     def as_sql(self, compiler, connection):
+        # Cast to date rather than truncate to date.
         lhs, lhs_params = compiler.compile(self.lhs)
         tzname = 'utc' if settings.USE_TZ else None
-        sql, tz_params = connection.ops.datetime_cast_date_sql(lhs, tzname)
-        lhs_params.extend(tz_params)
+        sql = connection.ops.datetime_cast_date_sql(lhs, tzname)
         return sql, lhs_params
 
 
