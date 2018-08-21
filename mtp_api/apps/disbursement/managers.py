@@ -1,5 +1,6 @@
+from django.conf import settings
 from django.db import models
-from django.db.models.functions import Concat
+from django.db.models.functions import Cast, Concat
 from django.db.transaction import atomic
 
 from . import InvalidDisbursementStateException
@@ -59,7 +60,20 @@ class DisbursementManager(models.Manager):
             Log.objects.disbursements_confirmed(to_update, user)
         elif resolution == DISBURSEMENT_RESOLUTION.SENT:
             Log.objects.disbursements_sent(to_update, user)
-        to_update.update(resolution=resolution)
+
+        if resolution == DISBURSEMENT_RESOLUTION.SENT:
+            to_update.update(
+                resolution=resolution,
+                invoice_number=Concat(
+                    models.Value('PMD'),
+                    Cast(
+                        models.F('id') + settings.INVOICE_NUMBER_BASE,
+                        output_field=models.CharField()
+                    )
+                )
+            )
+        else:
+            to_update.update(resolution=resolution)
 
 
 class LogManager(models.Manager):
