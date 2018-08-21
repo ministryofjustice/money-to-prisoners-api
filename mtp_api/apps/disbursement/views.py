@@ -67,6 +67,8 @@ class DisbursementFilter(django_filters.FilterSet):
     account_number = django_filters.CharFilter(field_name='account_number')
     roll_number = django_filters.CharFilter(field_name='roll_number')
 
+    invoice_number = django_filters.CharFilter(field_name='invoice_number', lookup_expr='iexact')
+
     class Meta:
         model = Disbursement
         fields = {
