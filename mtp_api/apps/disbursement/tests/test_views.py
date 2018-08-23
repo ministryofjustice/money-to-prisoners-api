@@ -526,6 +526,8 @@ class UpdateDisbursementResolutionTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(disbursements.count(), 2)
         self.assertEqual(disbursements[0].resolution, DISBURSEMENT_RESOLUTION.SENT)
         self.assertEqual(disbursements[1].resolution, DISBURSEMENT_RESOLUTION.SENT)
+        self.assertEqual(disbursements[0].invoice_number, disbursement1._generate_invoice_number())
+        self.assertEqual(disbursements[1].invoice_number, disbursement2._generate_invoice_number())
 
         logs = Log.objects.all()
         self.assertEqual(logs[0].disbursement, disbursements[0])

@@ -93,7 +93,6 @@ class DisbursementSerializer(serializers.ModelSerializer):
     prison_name = serializers.SerializerMethodField()
     prisoner_name = serializers.CharField(required=False)
     resolution = serializers.CharField(read_only=True)
-    invoice_number = serializers.SerializerMethodField()
 
     class Meta:
         model = Disbursement
@@ -136,15 +135,6 @@ class DisbursementSerializer(serializers.ModelSerializer):
             return Prison.objects.get(pk=obj.prison_id).name
         except Prison.DoesNotExist:
             return None
-
-    @classmethod
-    def get_invoice_number(cls, obj):
-        # invoice number pattern was changed from id 100 to be prefixed with PMD for easier searching in AP
-        invoice_number = 1000000 + obj.id
-        if invoice_number < 1000100:
-            return str(invoice_number)
-        else:
-            return 'PMD%s' % invoice_number
 
 
 class DisbursementIdsSerializer(serializers.Serializer):

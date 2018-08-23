@@ -45,6 +45,7 @@ class Disbursement(TimeStampedModel):
     roll_number = models.CharField(max_length=50, blank=True, null=True)
 
     nomis_transaction_id = models.CharField(max_length=50, blank=True, null=True)
+    invoice_number = models.CharField(max_length=50, blank=True, null=True)
 
     objects = DisbursementManager.from_queryset(DisbursementQuerySet)()
 
@@ -133,9 +134,13 @@ class Disbursement(TimeStampedModel):
         if not self.resolution_permitted(DISBURSEMENT_RESOLUTION.SENT):
             raise InvalidDisbursementStateException([self.id])
         self.resolution = DISBURSEMENT_RESOLUTION.SENT
+        self.invoice_number = self._generate_invoice_number()
         self.save()
         disbursement_sent.send(
             sender=Disbursement, disbursement=self, by_user=by_user)
+
+    def _generate_invoice_number(self):
+        return 'PMD%s' % (settings.INVOICE_NUMBER_BASE + self.id)
 
 
 class Log(TimeStampedModel):

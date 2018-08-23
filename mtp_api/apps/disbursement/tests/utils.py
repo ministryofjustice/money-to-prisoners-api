@@ -144,6 +144,9 @@ def setup_disbursement(end_date, disbursement_counter, data):
 
     with MockModelTimestamps(data['created'], data['modified']):
         new_disbursement = Disbursement.objects.create(**data)
+        if new_disbursement.resolution == DISBURSEMENT_RESOLUTION.SENT:
+            new_disbursement.invoice_number = new_disbursement._generate_invoice_number()
+            new_disbursement.save()
 
     create_disbursement_logs(new_disbursement)
     return new_disbursement
