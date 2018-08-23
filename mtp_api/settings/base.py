@@ -6,6 +6,7 @@ https://docs.djangoproject.com/en/1.9/ref/settings/
 """
 import os
 import sys
+from urllib.parse import urljoin
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
@@ -118,6 +119,10 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'assets'),
     os.path.join(BASE_DIR, 'assets-static'),
 ]
+
+PUBLIC_STATIC_URL = os.environ.get(
+    'PUBLIC_STATIC_URL', urljoin(SITE_URL, STATIC_URL)
+)
 
 TEMPLATES = [
     {
