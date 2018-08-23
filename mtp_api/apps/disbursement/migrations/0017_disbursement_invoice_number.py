@@ -9,7 +9,10 @@ from django.db.models.functions import Cast, Concat
 def populate_invoice_number(apps, schema_editor):
     Disbursement = apps.get_model('disbursement', 'Disbursement')
     Disbursement.objects.filter(id__lt=100).update(
-        invoice_number=Cast(models.F('id'), output_field=models.CharField())
+        invoice_number=Cast(
+            models.F('id') + settings.INVOICE_NUMBER_BASE,
+            output_field=models.CharField()
+        )
     )
     Disbursement.objects.filter(id__gte=100).update(
         invoice_number=Concat(
