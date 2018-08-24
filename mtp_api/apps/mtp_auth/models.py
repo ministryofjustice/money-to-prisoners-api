@@ -137,6 +137,13 @@ class FailedLoginAttemptManager(models.Manager):
                 failed_attempts.delete()
         return False
 
+    def is_lockout_imminent(self, user, client=None):
+        failed_attempts = self.get_queryset().filter(user=user)
+        if client:
+            failed_attempts = failed_attempts.filter(application=client)
+        failed_attempt_count = failed_attempts.count()
+        return failed_attempt_count == (settings.MTP_AUTH_LOCKOUT_COUNT - 1)
+
     def delete_failed_attempts(self, user, client):
         self.get_queryset().filter(
             user=user,
