@@ -126,10 +126,23 @@ class FailedLoginAttemptManager(models.Manager):
         if not failed_attempt_count:
             return False
 
-        last_failed_attempt = failed_attempts.first()
-        lockout_period = datetime.timedelta(seconds=settings.MTP_AUTH_LOCKOUT_LOCKOUT_PERIOD)
-        return failed_attempt_count >= settings.MTP_AUTH_LOCKOUT_COUNT and \
-            last_failed_attempt.created > now() - lockout_period
+        if failed_attempt_count >= settings.MTP_AUTH_LOCKOUT_COUNT:
+            last_failed_attempt = failed_attempts.first()
+            lockout_cutoff = now() - datetime.timedelta(
+                seconds=settings.MTP_AUTH_LOCKOUT_LOCKOUT_PERIOD
+            )
+            if last_failed_attempt.created > lockout_cutoff:
+                return True
+            else:
+                failed_attempts.delete()
+        return False
+
+    def is_lockout_imminent(self, user, client=None):
+        failed_attempts = self.get_queryset().filter(user=user)
+        if client:
+            failed_attempts = failed_attempts.filter(application=client)
+        failed_attempt_count = failed_attempts.count()
+        return failed_attempt_count == (settings.MTP_AUTH_LOCKOUT_COUNT - 1)
 
     def delete_failed_attempts(self, user, client):
         self.get_queryset().filter(

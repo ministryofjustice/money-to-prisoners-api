@@ -1307,17 +1307,21 @@ class AccountLockoutTestCase(AuthBaseTestCase):
                 }
             )
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        return response
 
     def test_account_lockout_on_too_many_attempts(self):
         prison_clerk = self.prison_clerks[0]
         cashbook_client = Application.objects.get(client_id=CASHBOOK_OAUTH_CLIENT_ID)
 
-        for _ in range(settings.MTP_AUTH_LOCKOUT_COUNT):
+        for i in range(settings.MTP_AUTH_LOCKOUT_COUNT):
             self.assertFalse(FailedLoginAttempt.objects.is_locked_out(prison_clerk, cashbook_client))
-            self.fail_login(prison_clerk, cashbook_client)
+            response = self.fail_login(prison_clerk, cashbook_client)
+            if i + 1 == settings.MTP_AUTH_LOCKOUT_COUNT - 1:
+                self.assertEqual(response.content, b'{"error": "lockout_imminent"}')
 
         self.assertTrue(FailedLoginAttempt.objects.is_locked_out(prison_clerk, cashbook_client))
-        self.fail_login(prison_clerk, cashbook_client)
+        response = self.fail_login(prison_clerk, cashbook_client)
+        self.assertEqual(response.content, b'{"error": "locked_out"}')
 
     def test_account_lockout_on_too_many_attempts_without_case_sensitivity(self):
         prison_clerk = self.prison_clerks[0]
