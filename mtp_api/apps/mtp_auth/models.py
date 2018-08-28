@@ -212,6 +212,17 @@ class AccountRequest(TimeStampedModel):
         return 'Account request {model.username} > {model.role}, {model.prison}'.format(model=self)
 
 
+class Flag(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='flags')
+    name = models.SlugField()
+
+    class Meta:
+        unique_together = [('user', 'name')]
+
+    def __str__(self):
+        return self.name
+
+
 def patch_user_model():
     user_model = get_user_model()
 

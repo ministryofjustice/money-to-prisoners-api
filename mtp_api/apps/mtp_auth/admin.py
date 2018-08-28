@@ -13,7 +13,7 @@ from oauth2_provider.models import Grant, AccessToken, RefreshToken, get_applica
 
 from core.admin import add_short_description
 from mtp_auth.forms import RestrictedUserCreationForm, RestrictedUserChangeForm
-from mtp_auth.models import Role, ApplicationUserMapping, FailedLoginAttempt, PrisonUserMapping, AccountRequest
+from mtp_auth.models import Role, ApplicationUserMapping, FailedLoginAttempt, PrisonUserMapping, AccountRequest, Flag
 
 User = get_user_model()
 Application = get_application_model()
@@ -60,6 +60,11 @@ class PrisonUserMappingAdmin(ModelAdmin):
                + suffix
 
 
+class FlagInline(admin.TabularInline):
+    model = Flag
+    extra = 0
+
+
 @admin.register(User)
 class UserAdmin(DjangoUserAdmin):
     list_display = DjangoUserAdmin.list_display + ('account_locked',)
@@ -70,6 +75,7 @@ class UserAdmin(DjangoUserAdmin):
     actions = DjangoUserAdmin.actions + ['remove_account_lockouts']
     add_form = RestrictedUserCreationForm
     form = RestrictedUserChangeForm
+    inlines = DjangoUserAdmin.inlines + [FlagInline]
 
     def remove_account_lockouts(self, request, instances):
         accounts = []

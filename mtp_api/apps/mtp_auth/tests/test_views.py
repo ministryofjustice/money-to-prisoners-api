@@ -26,7 +26,7 @@ from mtp_auth.constants import (
     NOMS_OPS_OAUTH_CLIENT_ID, SEND_MONEY_CLIENT_ID
 )
 from mtp_auth.models import (
-    PrisonUserMapping, Role,
+    PrisonUserMapping, Role, Flag,
     Login, FailedLoginAttempt,
     PasswordChangeRequest, AccountRequest,
 )
@@ -222,14 +222,13 @@ class GetUserTestCase(AuthBaseTestCase):
         self.prisoner_location_admins = test_users['prisoner_location_admins']
         self.bank_admins = test_users['bank_admins']
         self.refund_bank_admins = test_users['refund_bank_admins']
+        self.security_users = test_users['security_staff']
         self.send_money_users = test_users['send_money_users']
         self.test_users = (
             self.prison_clerks + self.prisoner_location_admins +
-            self.bank_admins + self.refund_bank_admins
+            self.bank_admins + self.refund_bank_admins + self.security_users
         )
         self.bank_uas = make_test_user_admins()['bank_admin_uas']
-
-        self.prisons = Prison.objects.all()
 
     def _get_url(self, username):
         return reverse('user-detail', kwargs={'username': username})
@@ -295,7 +294,7 @@ class GetUserTestCase(AuthBaseTestCase):
 
     def test_correct_roles_returned(self):
         roles = [['prison-clerk'], ['prison-clerk'], ['prison-clerk'], ['prison-clerk'],
-                 ['prisoner-location-admin'], [], ['bank-admin']]
+                 ['prisoner-location-admin'], [], ['bank-admin'], ['security']]
         for user, roles in zip(self.test_users, roles):
             url = self._get_url(user.username)
             response = self.client.get(
@@ -305,6 +304,45 @@ class GetUserTestCase(AuthBaseTestCase):
             self.assertEqual(response.status_code, status.HTTP_200_OK)
 
             self.assertListEqual(response.data['roles'], roles)
+
+    def test_correct_prisons_returned(self):
+        for user in self.prison_clerks:
+            url = self._get_url(user.username)
+            response = self.client.get(
+                url, format='json',
+                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+            )
+            self.assertListEqual(
+                response.json()['prisons'],
+                list(
+                    {'nomis_id': prison.nomis_id,
+                     'name': prison.name,
+                     'pre_approval_required': prison.pre_approval_required}
+                    for prison in user.prisonusermapping.prisons.all()
+                )
+            )
+
+    def test_correct_flags_returned(self):
+        for user in self.test_users:
+            url = self._get_url(user.username)
+            response = self.client.get(
+                url, format='json',
+                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+            )
+            self.assertListEqual(response.json()['flags'], [])
+
+        user_1, user_2 = self.security_users[:2]
+        Flag.objects.create(user=user_1, name='abc')
+        Flag.objects.create(user=user_2, name='abc')
+        Flag.objects.create(user=user_2, name='123')
+        flags = [['abc'], ['123', 'abc']]
+        for user, flags in zip(self.security_users[:2], flags):
+            url = self._get_url(user.username)
+            response = self.client.get(
+                url, format='json',
+                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+            )
+            self.assertListEqual(response.json()['flags'], flags)
 
     def test_all_valid_usernames_retrievable(self):
         username = 'dotted.name'
