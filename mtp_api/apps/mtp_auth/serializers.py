@@ -49,6 +49,7 @@ class RoleSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     roles = serializers.SerializerMethodField()
+    flags = serializers.SerializerMethodField()
     permissions = serializers.SerializerMethodField()
     user_admin = serializers.SerializerMethodField()
     prisons = serializers.SerializerMethodField()
@@ -65,6 +66,7 @@ class UserSerializer(serializers.ModelSerializer):
             'email',
             'is_active',
             'roles',
+            'flags',
             'permissions',
             'user_admin',
             'prisons',
@@ -99,6 +101,9 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_roles(self, obj):
         return sorted(Role.objects.get_roles_for_user(obj).values_list('name', flat=True))
+
+    def get_flags(self, obj):
+        return sorted(obj.flags.values_list('name', flat=True))
 
     def get_permissions(self, obj):
         return obj.get_all_permissions()
