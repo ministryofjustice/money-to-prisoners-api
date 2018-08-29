@@ -40,8 +40,6 @@ class ActionsBasedPermissions(BasePermission):
         'destroy': ['%(app_label)s.delete_%(model_name)s']
     }
 
-    authenticated_users_only = True
-
     def get_required_permissions(self, action, model_cls):
         """
         Given a model and an HTTP method, return the list of permission
@@ -57,7 +55,7 @@ class ActionsBasedPermissions(BasePermission):
         # well. This is on purpose :-)
         return [perm % kwargs for perm in self.actions_perms_map[action]]
 
-    def has_permission(self, request, view):
+    def user_has_action_permissions(self, user, view):
         if not hasattr(view, 'action'):
             msg = "%s has to have an 'action' property or you have to use a ViewSet"
             raise ImproperlyConfigured(msg % self.__class__.__name__)
@@ -71,19 +69,19 @@ class ActionsBasedPermissions(BasePermission):
             queryset = view.get_queryset()
         except AttributeError:
             queryset = getattr(view, 'queryset', None)
-
-        assert queryset is not None, (
-            'Cannot apply DjangoModelPermissions on a view that '
-            'does not have `.queryset` property or overrides the '
-            '`.get_queryset()` method.')
+        if queryset is None:
+            msg = (
+                'Cannot apply %s on a view that '
+                'does not have `.queryset` property or overrides the '
+                '`.get_queryset()` method.'
+            )
+            raise ImproperlyConfigured(msg % self.__class__.__name__)
 
         perms = self.get_required_permissions(view.action, queryset.model)
+        return user.has_perms(perms)
 
-        return (
-            request.user and
-            (request.user.is_authenticated or not self.authenticated_users_only) and
-            request.user.has_perms(perms)
-        )
+    def has_permission(self, request, view):
+        return self.user_has_action_permissions(request.user, view)
 
 
 class ActionsBasedViewPermissions(ActionsBasedPermissions):

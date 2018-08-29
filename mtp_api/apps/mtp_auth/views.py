@@ -29,12 +29,12 @@ from rest_framework.settings import api_settings
 from core.views import AdminViewMixin
 from mtp_auth.forms import LoginStatsForm
 from mtp_auth.models import (
-    ApplicationUserMapping, PrisonUserMapping, Role,
+    ApplicationUserMapping, PrisonUserMapping, Role, Flag,
     FailedLoginAttempt, PasswordChangeRequest, AccountRequest,
 )
 from mtp_auth.permissions import UserPermissions, AnyAdminClientIDPermissions, AccountRequestPremissions
 from mtp_auth.serializers import (
-    RoleSerializer, UserSerializer, AccountRequestSerializer,
+    RoleSerializer, UserSerializer, FlagSerializer, AccountRequestSerializer,
     ChangePasswordSerializer, ResetPasswordSerializer, ChangePasswordWithCodeSerializer,
     generate_new_password,
 )
@@ -59,6 +59,35 @@ class RoleViewSet(viewsets.mixins.ListModelMixin, viewsets.GenericViewSet):
         return queryset
 
 
+def get_managed_user_queryset(user):
+    """
+    Set of users for user account management AND looking up details of self.
+    If request user is a super admin, they only get themselves back.
+    If request user has more than one role, they get just themselves back.
+    Otherwise returns all users who have the same role (determined by key group) AND matching prison set.
+    Inactive users are always returned.
+
+    NB: Does not check that the user has management permissions
+    """
+    user_key_groups = list(user.groups.filter(
+        pk__in=Role.objects.values_list('key_group')
+    ).values_list('pk', flat=True))
+    if len(user_key_groups) != 1 or user.is_superuser:
+        return User.objects.filter(pk=user.pk)
+    user_key_group = user_key_groups[0]
+
+    queryset = User.objects.exclude(is_superuser=True).filter(groups=user_key_group).order_by('username')
+
+    prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(user).values_list('pk', flat=True))
+    if prisons:
+        for prison in prisons:
+            queryset = queryset.filter(prisonusermapping__prisons=prison)
+    else:
+        queryset = queryset.filter(prisonusermapping__isnull=True)
+
+    return queryset
+
+
 class UserViewSet(viewsets.ModelViewSet):
     lookup_field = 'username__iexact'
     lookup_url_kwarg = 'username'
@@ -69,32 +98,7 @@ class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
 
     def get_queryset(self):
-        """
-        Set of users for user account management AND looking up details of self.
-        If request user is a super admin, they only get themselves back.
-        If request user has more than one role, they get just themselves back.
-        Otherwise returns all users who have the same role (determined by key group) AND matching prison set.
-        Inactive users are always returned.
-        """
-        user = self.request.user
-
-        key_groups = set(Role.objects.values_list('key_group', flat=True))
-        user_groups = set(user.groups.values_list('pk', flat=True))
-        user_key_groups = list(key_groups.intersection(user_groups))
-        if len(user_key_groups) != 1 or user.is_superuser:
-            return User.objects.filter(pk=user.pk)
-        user_key_group = user_key_groups[0]
-
-        queryset = User.objects.exclude(is_superuser=True).filter(groups=user_key_group).order_by('username')
-
-        prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(user).values_list('pk', flat=True))
-        if prisons:
-            for prison in prisons:
-                queryset = queryset.filter(prisonusermapping__prisons=prison)
-        else:
-            queryset = queryset.filter(prisonusermapping__isnull=True)
-
-        return queryset
+        return get_managed_user_queryset(self.request.user)
 
     def get_object(self):
         """
@@ -126,20 +130,60 @@ class UserViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         user = self.get_object()
-        if user != request.user:
+        if request.user == user or request.user.has_perm('auth.delete_user'):
             self.perform_destroy(user)
             return Response(status=status.HTTP_204_NO_CONTENT)
         else:
             return Response(
                 status=status.HTTP_400_BAD_REQUEST,
                 data={
-                    '__all__': [_('You cannot disable yourself')]
+                    api_settings.NON_FIELD_ERRORS_KEY: [_('You cannot delete other users')]
                 },
             )
 
     def perform_destroy(self, instance):
         instance.is_active = False
         instance.save()
+
+
+class UserFlagViewSet(viewsets.mixins.DestroyModelMixin, viewsets.mixins.ListModelMixin, viewsets.GenericViewSet):
+    lookup_field = 'name'
+    queryset = Flag.objects.all()
+    permission_classes = (IsAuthenticated,)
+    serializer_class = FlagSerializer
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = None
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        user = request.user
+        if user.has_perm('auth.change_user'):
+            queryset = get_managed_user_queryset(user)
+        else:
+            queryset = User.objects.filter(pk=user.pk)
+        try:
+            self.user = queryset.get(username=self.kwargs.get('user_username'))
+        except User.DoesNotExist:
+            raise Http404
+
+    def get_queryset(self):
+        return super().get_queryset().filter(user=self.user)
+
+    def update(self, request, *args, **kwargs):
+        try:
+            self.get_object()
+            return Response({}, status=status.HTTP_200_OK)
+        except Http404:
+            data = {
+                'user': self.user.pk,
+                'name': kwargs.get('name') or '',
+            }
+            serializer = self.get_serializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response({}, status=status.HTTP_201_CREATED)
 
 
 @method_decorator(sensitive_post_parameters('old_password', 'new_password'), name='dispatch')

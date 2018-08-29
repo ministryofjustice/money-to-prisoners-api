@@ -12,6 +12,17 @@ class UserPermissions(ActionsBasedPermissions):
     actions_perms_map.update({
         'list': ['%(app_label)s.change_%(model_name)s'],
     })
+    actions_allowed_on_self = {'partial_update', 'destroy'}
+
+    def has_permission(self, request, view):
+        if view.action in self.actions_allowed_on_self:
+            return True
+        return super().has_permission(request, view)
+
+    def has_object_permission(self, request, view, obj):
+        if view.action in self.actions_allowed_on_self:
+            return obj == request.user or self.user_has_action_permissions(request.user, view)
+        return super().has_object_permission(request, view, obj)
 
 
 class ClientIDPermissions(BasePermission):

@@ -9,8 +9,11 @@ from mtp_common.tasks import send_email
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
-from .models import PrisonUserMapping, Role, ApplicationUserMapping, FailedLoginAttempt, AccountRequest
-from .validators import CaseInsensitiveUniqueValidator
+from mtp_auth.models import (
+    ApplicationUserMapping, PrisonUserMapping, Role, Flag,
+    FailedLoginAttempt, AccountRequest,
+)
+from mtp_auth.validators import CaseInsensitiveUniqueValidator
 
 User = get_user_model()
 
@@ -49,15 +52,17 @@ class RoleSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     roles = serializers.SerializerMethodField()
-    flags = serializers.SerializerMethodField()
+    flags = serializers.SlugRelatedField(slug_field='name', read_only=True, many=True)
     permissions = serializers.SerializerMethodField()
     user_admin = serializers.SerializerMethodField()
     prisons = serializers.SerializerMethodField()
     is_locked_out = serializers.SerializerMethodField()
 
+    allowed_self_updates = {'first_name', 'last_name', 'email'}
+
     class Meta:
         model = User
-        read_only_fields = ('pk',)
+        read_only_fields = ('pk', 'flags')
         fields = (
             'pk',
             'username',
@@ -101,9 +106,6 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_roles(self, obj):
         return sorted(Role.objects.get_roles_for_user(obj).values_list('name', flat=True))
-
-    def get_flags(self, obj):
-        return sorted(obj.flags.values_list('name', flat=True))
 
     def get_permissions(self, obj):
         return obj.get_all_permissions()
@@ -181,8 +183,8 @@ class UserSerializer(serializers.ModelSerializer):
         updating_user = self.context['request'].user
         was_user_admin = user.groups.filter(pk=user_admin_group.pk).exists()
 
-        if user.pk == updating_user.pk and ('user_admin' in validated_data or 'role' in validated_data):
-            # cannot edit one's own role or admin status
+        if user.pk == updating_user.pk and any(field not in self.allowed_self_updates for field in validated_data):
+            # cannot edit one's own role, admin status, etc
             raise serializers.ValidationError('Cannot change own access permissions')
 
         role = validated_data.pop('role', None)
@@ -211,6 +213,15 @@ class UserSerializer(serializers.ModelSerializer):
             FailedLoginAttempt.objects.filter(user=updated_user).delete()
 
         return updated_user
+
+
+class FlagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Flag
+        fields = ('user', 'name')
+
+    def to_representation(self, instance):
+        return instance.name
 
 
 class ChangePasswordSerializer(serializers.Serializer):

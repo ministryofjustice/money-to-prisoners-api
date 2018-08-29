@@ -92,6 +92,7 @@ def make_applications():
 def give_superusers_full_access():
     super_admins = get_user_model().objects.filter(is_superuser=True)
     for super_admin in super_admins:
+        super_admin.flags.get_or_create(name='hmpps-employee')
         PrisonUserMapping.objects.assign_prisons_to_user(super_admin, Prison.objects.all())
         for application in Application.objects.all():
             ApplicationUserMapping.objects.get_or_create(
