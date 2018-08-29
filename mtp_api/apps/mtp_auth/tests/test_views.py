@@ -329,20 +329,23 @@ class GetUserTestCase(AuthBaseTestCase):
                 url, format='json',
                 HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
             )
-            self.assertListEqual(response.json()['flags'], [])
+            self.assertListEqual(
+                response.json()['flags'],
+                ['hmpps-employee'] if user in self.security_users else []
+            )
 
         user_1, user_2 = self.security_users[:2]
         Flag.objects.create(user=user_1, name='abc')
         Flag.objects.create(user=user_2, name='abc')
         Flag.objects.create(user=user_2, name='123')
-        flags = [['abc'], ['123', 'abc']]
+        flags = [['abc', 'hmpps-employee'], ['123', 'abc', 'hmpps-employee']]
         for user, flags in zip(self.security_users[:2], flags):
             url = self._get_url(user.username)
             response = self.client.get(
                 url, format='json',
                 HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
             )
-            self.assertListEqual(response.json()['flags'], flags)
+            self.assertListEqual(sorted(response.json()['flags']), flags)
 
     def test_all_valid_usernames_retrievable(self):
         username = 'dotted.name'
@@ -367,6 +370,201 @@ class GetUserTestCase(AuthBaseTestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['username'], username)
+
+
+class UserFlagTestCase(AuthBaseTestCase):
+    def setUp(self):
+        super().setUp()
+        test_users = make_test_users(clerks_per_prison=1)
+        test_admins = make_test_user_admins()
+        self.prison_clerk = test_users['prison_clerks'][0]
+        self.user_url = reverse('user-detail', kwargs={'username': self.prison_clerk.username})
+        self.flags_url = reverse('user-flags-list', kwargs={'user_username': self.prison_clerk.username})
+        prison = self.prison_clerk.prisonusermapping.prisons.first()
+        self.prison_clerk_ua = next(filter(
+            lambda user: user.prisonusermapping.prisons.first() == prison,
+            test_admins['prison_clerk_uas']
+        ))
+        self.another_prison_clerk_ua = next(filter(
+            lambda user: user.prisonusermapping.prisons.first() != prison,
+            test_admins['prison_clerk_uas']
+        ))
+
+    def get_flag_url(self, flag):
+        return reverse('user-flags-detail', kwargs={
+            'user_username': self.prison_clerk.username,
+            'name': flag,
+        })
+
+    def assertCanListFlags(self, authorisation, sorted_flags):  # noqa: N802
+        response = self.client.get(
+            self.user_url,
+            format='json', HTTP_AUTHORIZATION=authorisation
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertListEqual(sorted(response.json()['flags']), sorted_flags)
+        response = self.client.get(
+            self.flags_url,
+            format='json', HTTP_AUTHORIZATION=authorisation
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertListEqual(sorted(response.json()['results']), sorted_flags)
+
+    def assertCannotListFlags(self, authorisation, expected_status=status.HTTP_404_NOT_FOUND):  # noqa: N802
+        with silence_logger('django.request', level=logging.ERROR):
+            response = self.client.get(
+                self.user_url,
+                format='json', HTTP_AUTHORIZATION=authorisation
+            )
+        self.assertEqual(response.status_code, expected_status)
+        with silence_logger('django.request', level=logging.ERROR):
+            response = self.client.get(
+                self.flags_url,
+                format='json', HTTP_AUTHORIZATION=authorisation
+            )
+        self.assertEqual(response.status_code, expected_status)
+
+    def assertCanSetFlag(self, authorisation, flag, expected_status=status.HTTP_201_CREATED):  # noqa: N802
+        response = self.client.put(
+            self.get_flag_url(flag),
+            format='json', HTTP_AUTHORIZATION=authorisation
+        )
+        self.assertEqual(response.status_code, expected_status)
+        self.assertDictEqual(response.json(), {})
+
+    def assertCannotSetFlag(self, authorisation, flag, expected_status=status.HTTP_400_BAD_REQUEST):  # noqa: N802
+        with silence_logger('django.request', level=logging.ERROR):
+            response = self.client.put(
+                self.get_flag_url(flag),
+                format='json', HTTP_AUTHORIZATION=authorisation
+            )
+        self.assertEqual(response.status_code, expected_status)
+        if expected_status == status.HTTP_400_BAD_REQUEST:
+            self.assertIn('name', response.json())
+
+    def assertCanRemoveFlag(self, authorisation, flag):  # noqa: N802
+        response = self.client.delete(
+            self.get_flag_url(flag),
+            format='json', HTTP_AUTHORIZATION=authorisation
+        )
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(response.content)
+
+    def assertCannotRemoveFlag(self, authorisation, flag):  # noqa: N802
+        with silence_logger('django.request', level=logging.ERROR):
+            response = self.client.delete(
+                self.get_flag_url(flag),
+                format='json', HTTP_AUTHORIZATION=authorisation
+            )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_can_set_own_flags(self):
+        prison_clerk_auth = self.get_http_authorization_for_user(self.prison_clerk)
+        self.assertCanListFlags(prison_clerk_auth, [])
+        self.assertCanSetFlag(prison_clerk_auth, 'flag1')
+        self.assertCanListFlags(prison_clerk_auth, ['flag1'])
+        self.assertCanSetFlag(prison_clerk_auth, 'flag1', status.HTTP_200_OK)
+        self.assertCanListFlags(prison_clerk_auth, ['flag1'])
+        self.assertCanSetFlag(prison_clerk_auth, 'FLAG1')
+        self.assertCanListFlags(prison_clerk_auth, ['FLAG1', 'flag1'])
+
+    def test_can_remove_own_flags(self):
+        prison_clerk_auth = self.get_http_authorization_for_user(self.prison_clerk)
+        Flag.objects.create(user=self.prison_clerk, name='flag1')
+        Flag.objects.create(user=self.prison_clerk, name='flag2')
+        self.assertCanRemoveFlag(prison_clerk_auth, 'flag1')
+        self.assertCanListFlags(prison_clerk_auth, ['flag2'])
+        self.assertCannotRemoveFlag(prison_clerk_auth, 'other')
+        self.assertCanRemoveFlag(prison_clerk_auth, 'flag2')
+        self.assertCannotRemoveFlag(prison_clerk_auth, 'flag2')
+        self.assertFalse(Flag.objects.filter(user=self.prison_clerk).exists())
+
+    def test_cannot_set_invalid_flag(self):
+        prison_clerk_auth = self.get_http_authorization_for_user(self.prison_clerk)
+        self.assertCannotSetFlag(prison_clerk_auth, ' ')
+        self.assertCannotSetFlag(prison_clerk_auth, 'a 1')
+
+    def test_invalid_methods_on_flag_detail(self):
+        prison_clerk_auth = self.get_http_authorization_for_user(self.prison_clerk)
+        response = self.client.post(
+            self.get_flag_url('flag1'), data={'name': 'flag2'},
+            format='json', HTTP_AUTHORIZATION=prison_clerk_auth
+        )
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        response = self.client.patch(
+            self.get_flag_url('flag1'), data={'name': 'flag2'},
+            format='json', HTTP_AUTHORIZATION=prison_clerk_auth
+        )
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_cannot_edit_flags_via_user_view(self):
+        prison_clerk_auth = self.get_http_authorization_for_user(self.prison_clerk)
+        Flag.objects.create(user=self.prison_clerk, name='flag1')
+        response = self.client.patch(
+            self.user_url, data={'flags': ['flag2', 'flag3'], 'first_name': 'New name'},
+            format='json', HTTP_AUTHORIZATION=prison_clerk_auth
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertSetEqual(
+            set(Flag.objects.filter(user=self.prison_clerk).values_list('name', flat=True)),
+            {'flag1'}
+        )
+
+        prison_clerk_ua_auth = self.get_http_authorization_for_user(self.prison_clerk_ua)
+        response = self.client.patch(
+            self.user_url, data={'flags': ['flag2', 'flag3'], 'first_name': 'New name'},
+            format='json', HTTP_AUTHORIZATION=prison_clerk_ua_auth
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertSetEqual(
+            set(Flag.objects.filter(user=self.prison_clerk).values_list('name', flat=True)),
+            {'flag1'}
+        )
+
+    def test_can_set_managed_flags(self):
+        prison_clerk_ua_auth = self.get_http_authorization_for_user(self.prison_clerk_ua)
+        self.assertCanListFlags(prison_clerk_ua_auth, [])
+        self.assertCanSetFlag(prison_clerk_ua_auth, 'flag1')
+        self.assertCanListFlags(prison_clerk_ua_auth, ['flag1'])
+        self.assertCanSetFlag(prison_clerk_ua_auth, 'flag1', status.HTTP_200_OK)
+        self.assertCanListFlags(prison_clerk_ua_auth, ['flag1'])
+        self.assertCanSetFlag(prison_clerk_ua_auth, 'FLAG1')
+        self.assertCanListFlags(prison_clerk_ua_auth, ['FLAG1', 'flag1'])
+
+        response = self.client.get(
+            reverse('user-flags-list', kwargs={'user_username': self.prison_clerk_ua.username}),
+            format='json', HTTP_AUTHORIZATION=prison_clerk_ua_auth
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertListEqual(sorted(response.json()['results']), [], msg='Own flags modified!')
+
+    def test_can_remove_managed_flags(self):
+        prison_clerk_ua_auth = self.get_http_authorization_for_user(self.prison_clerk_ua)
+        Flag.objects.create(user=self.prison_clerk, name='flag1')
+        Flag.objects.create(user=self.prison_clerk, name='flag2')
+        self.assertCanRemoveFlag(prison_clerk_ua_auth, 'flag1')
+        self.assertCanListFlags(prison_clerk_ua_auth, ['flag2'])
+        self.assertCannotRemoveFlag(prison_clerk_ua_auth, 'other')
+        self.assertCanRemoveFlag(prison_clerk_ua_auth, 'flag2')
+        self.assertCannotRemoveFlag(prison_clerk_ua_auth, 'flag2')
+        self.assertFalse(Flag.objects.filter(user=self.prison_clerk).exists())
+
+    def test_cannot_view_others_flags(self):
+        another_prison_clerk_auth = self.get_http_authorization_for_user(self.another_prison_clerk_ua)
+        self.assertCannotListFlags(another_prison_clerk_auth)
+
+    def test_cannot_set_others_flags(self):
+        another_prison_clerk_auth = self.get_http_authorization_for_user(self.another_prison_clerk_ua)
+        self.assertCannotSetFlag(another_prison_clerk_auth, 'flag1', status.HTTP_404_NOT_FOUND)
+
+    def test_cannot_remove_others_flags(self):
+        another_prison_clerk_auth = self.get_http_authorization_for_user(self.another_prison_clerk_ua)
+        Flag.objects.create(user=self.prison_clerk, name='flag1')
+        self.assertCannotRemoveFlag(another_prison_clerk_auth, 'flag1')
+        self.assertSetEqual(
+            set(Flag.objects.filter(user=self.prison_clerk).values_list('name', flat=True)),
+            {'flag1'}
+        )
 
 
 class ListUserTestCase(AuthBaseTestCase):
@@ -850,7 +1048,7 @@ class UpdateUserTestCase(AuthBaseTestCase):
 
     def test_upgrade_normal_user_to_admin_succeeds(self):
         user_data = {
-            'user_admin': True
+            'user_admin': True,
         }
         self.assertUserUpdated(
             self.bank_uas[0],
@@ -862,7 +1060,7 @@ class UpdateUserTestCase(AuthBaseTestCase):
 
     def test_upgrade_user_of_other_application_fails(self):
         user_data = {
-            'user_admin': True
+            'user_admin': True,
         }
         with silence_logger('django.request', level=logging.ERROR):
             self.assertUserNotUpdated(
@@ -875,7 +1073,7 @@ class UpdateUserTestCase(AuthBaseTestCase):
 
     def test_downgrade_admin_user_to_normal_succeeds(self):
         user_data = {
-            'user_admin': False
+            'user_admin': False,
         }
         self.assertUserUpdated(
             self.bank_uas[0],
@@ -887,7 +1085,7 @@ class UpdateUserTestCase(AuthBaseTestCase):
 
     def test_downgrade_self_fails(self):
         user_data = {
-            'user_admin': False
+            'user_admin': False,
         }
         with silence_logger('django.request', level=logging.ERROR):
             response = self.assertUserNotUpdated(
@@ -914,29 +1112,41 @@ class UpdateUserTestCase(AuthBaseTestCase):
     def test_update_user_as_normal_user_fails(self):
         user_data = {
             'first_name': 'New',
-            'last_name': 'Name'
+            'last_name': 'Name',
         }
-        self.assertUserNotUpdated(
-            self.refund_bank_admins[0],
+        with silence_logger('django.request', level=logging.ERROR):
+            self.assertUserNotUpdated(
+                self.refund_bank_admins[0],
+                self.bank_admins[0].username,
+                user_data
+            )
+
+    def test_update_self_as_normal_user_succeeds(self):
+        user_data = {
+            'first_name': 'New',
+            'last_name': 'Name',
+            'email': 'ba@mtp.local',
+        }
+        self.assertUserUpdated(
+            self.bank_admins[0],
             self.bank_admins[0].username,
             user_data
         )
 
-    def test_update_self_as_normal_user_fails(self):
+    def test_cannot_deactivate_self(self):
         user_data = {
-            'first_name': 'New',
-            'last_name': 'Name'
+            'is_active': False,
         }
         self.assertUserNotUpdated(
-            self.bank_admins[0],
-            self.bank_admins[0].username,
+            self.security_users[0],
+            self.security_users[0].username,
             user_data
         )
 
     def test_update_prison_clerk_in_same_prison_succeeds(self):
         user_data = {
             'first_name': 'New',
-            'last_name': 'Name'
+            'last_name': 'Name',
         }
         self.assertUserUpdated(
             self.cashbook_uas[0],
@@ -947,7 +1157,7 @@ class UpdateUserTestCase(AuthBaseTestCase):
     def test_update_prison_clerk_in_different_prison_fails(self):
         user_data = {
             'first_name': 'New',
-            'last_name': 'Name'
+            'last_name': 'Name',
         }
         with silence_logger('django.request', level=logging.ERROR):
             self.assertUserNotUpdated(
@@ -1184,8 +1394,8 @@ class DeleteUserTestCase(AuthBaseTestCase):
             self.prison_clerks[0].username
         )
 
-    def test_user_deleting_self_fails(self):
-        self.assertUserNotDeleted(
+    def test_user_deleting_self_allowed(self):
+        self.assertUserDeleted(
             self.cashbook_uas[0],
             self.cashbook_uas[0].username
         )

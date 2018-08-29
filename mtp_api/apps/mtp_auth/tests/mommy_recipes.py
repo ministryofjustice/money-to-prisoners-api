@@ -106,6 +106,8 @@ def create_security_staff_user(name_and_password='security-staff', prisons=()):
             prisons=prisons,
         )
 
+    ssu.flags.create(name='hmpps-employee')
+
     return ssu
 
 
