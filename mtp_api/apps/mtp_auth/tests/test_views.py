@@ -1962,14 +1962,14 @@ class AccountRequestTestCase(AuthBaseTestCase):
         admin = self.users['prison_clerk_uas'][0]
         cashbook_role = Role.objects.get(name='prison-clerk')
         prison = admin.prisonusermapping.prisons.first()
-        Role.objects.get(name='security').assign_to_user(admin)
+        Role.objects.get(name='bank-admin').assign_to_user(admin)
         url_list = reverse('accountrequest-list')
 
         mommy.make(AccountRequest, 3, role=cashbook_role, prison=prison)
         response = self.client.get(
             url_list,
             format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(admin, client_id=NOMS_OPS_OAUTH_CLIENT_ID)
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(admin, client_id=BANK_ADMIN_OAUTH_CLIENT_ID)
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, msg=response.content)
 
