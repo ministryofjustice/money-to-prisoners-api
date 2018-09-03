@@ -1,4 +1,6 @@
 from django.db.models import Count
+from django.db.models.fields import IntegerField
+from django.db.models.functions import Cast
 from django.shortcuts import get_object_or_404
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
@@ -7,7 +9,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.settings import api_settings
 
-from core.filters import MultipleFieldCharFilter, MultipleValueFilter
+from core.filters import (
+    MultipleFieldCharFilter, MultipleValueFilter, annotate_filter
+)
 from core.permissions import ActionsBasedPermissions
 from credit.constants import CREDIT_SOURCE
 from credit.views import GetCredits
@@ -94,22 +98,31 @@ class SenderProfileListFilter(django_filters.FilterSet):
         field_name='prison_count', lookup_expr='gte'
     )
 
+    credit_count__gte = annotate_filter(
+        django_filters.NumberFilter(
+            field_name='credit_count', lookup_expr='gte'
+        ),
+        {'credit_count': Cast('totals__credit_count', IntegerField())}
+    )
+    credit_count__lte = annotate_filter(
+        django_filters.NumberFilter(
+            field_name='credit_count', lookup_expr='lte'
+        ),
+        {'credit_count': Cast('totals__credit_count', IntegerField())}
+    )
+
     class Meta:
         model = SenderProfile
         fields = {
-            'credit_count': ['lte', 'gte'],
-            'credit_total': ['lte', 'gte'],
             'modified': ['lt', 'gte'],
+            'totals__time_period': ['exact'],
         }
 
 
 class SenderProfileView(
     mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
 ):
-    queryset = SenderProfile.objects.all().annotate(
-        prisoner_count=Count('prisoners', distinct=True),
-        prison_count=Count('prisons', distinct=True),
-    )
+    queryset = SenderProfile.objects.all().distinct()
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter,)
     filter_class = SenderProfileListFilter
     serializer_class = SenderProfileSerializer
@@ -167,8 +180,6 @@ class PrisonerProfileListFilter(django_filters.FilterSet):
         fields = {
             'prisoner_number': ['exact'],
             'prisoner_dob': ['exact'],
-            'credit_count': ['lte', 'gte'],
-            'credit_total': ['lte', 'gte'],
             'modified': ['lt', 'gte'],
         }
 
@@ -176,9 +187,7 @@ class PrisonerProfileListFilter(django_filters.FilterSet):
 class PrisonerProfileView(
     mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
 ):
-    queryset = PrisonerProfile.objects.all().annotate(
-        sender_count=Count('senders', distinct=True)
-    )
+    queryset = PrisonerProfile.objects.all()
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter,)
     filter_class = PrisonerProfileListFilter
     serializer_class = PrisonerProfileSerializer
