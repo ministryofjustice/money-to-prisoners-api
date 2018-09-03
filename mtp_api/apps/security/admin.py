@@ -26,8 +26,8 @@ class DebitCardSenderDetailsAdminInline(admin.StackedInline):
 
 @admin.register(SenderProfile)
 class SenderProfileAdmin(admin.ModelAdmin):
-    ordering = ('-credit_count',)
-    list_display = ('sender_names', 'sender_type', 'credit_count', 'formatted_credit_total')
+    ordering = ('-pk',)
+    list_display = ('sender_names', 'sender_type',)
     inlines = (BankTransferSenderDetailsAdminInline, DebitCardSenderDetailsAdminInline)
     search_fields = (
         'bank_transfer_details__sender_bank_account__sender_name',
@@ -52,22 +52,14 @@ class SenderProfileAdmin(admin.ModelAdmin):
             sender_types.append(gettext('Debit card'))
         return ', '.join(sender_types)
 
-    @add_short_description(_('credit total'))
-    def formatted_credit_total(self, instance):
-        return format_amount(instance.credit_total)
-
 
 @admin.register(PrisonerProfile)
 class PrisonerProfileAdmin(admin.ModelAdmin):
-    ordering = ('-credit_count',)
-    list_display = ('prisoner_number', 'credit_count', 'formatted_credit_total')
+    ordering = ('-pk',)
+    list_display = ('prisoner_number',)
     search_fields = ('prisoner_name', 'prisoner_number', 'prisons__name', 'provided_name__name')
-    readonly_fields = ('prisons', 'provided_names')
+    readonly_fields = ('prisons', 'provided_names',)
     exclude = ('senders',)
-
-    @add_short_description(_('credit total'))
-    def formatted_credit_total(self, instance):
-        return format_amount(instance.credit_total)
 
     @add_short_description(_('names specified by senders'))
     def provided_names(self, instance):
