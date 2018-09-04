@@ -36,7 +36,7 @@ logger = logging.getLogger('mtp')
 class PrisonerLocationView(
     mixins.CreateModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
 ):
-    queryset = PrisonerLocation.objects.all()
+    queryset = PrisonerLocation.objects.all().filter(active=True)
 
     permission_classes = (
         IsAuthenticated, ActionsBasedViewPermissions,
