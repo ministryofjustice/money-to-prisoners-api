@@ -1,3 +1,4 @@
+from datetime import date, timedelta
 import itertools
 
 from django.urls import reverse
@@ -240,6 +241,35 @@ class ListDisbursementsTestCase(AuthTestCaseMixin, APITestCase):
         response = self.api_request(recipient_is_company=False)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count'], 9)
+
+    def test_get_by_logged_at(self):
+        fake_disbursement(_quantity=20, prison=self.prison)
+        minimum_created_date = date.today() - timedelta(days=1)
+
+        response = self.api_request(
+            log__action='created',
+            logged_at__gte=minimum_created_date
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(
+            Disbursement.objects.filter(
+                log__action='created',
+                log__created__utcdate__gte=minimum_created_date
+            ).count(),
+            response.data['count']
+        )
+
+        pks = [item['id'] for item in response.data['results']]
+        for disbursement in Disbursement.objects.filter(pk__in=pks):
+            for log in disbursement.log_set.all():
+                if log.action == 'created':
+                    self.assertGreaterEqual(log.created.date(), minimum_created_date)
+
+        for disbursement in Disbursement.objects.exclude(pk__in=pks):
+            for log in disbursement.log_set.all():
+                if log.action == 'created':
+                    self.assertLess(log.created.date(), minimum_created_date)
 
 
 class UpdateDisbursementsTestCase(AuthTestCaseMixin, APITestCase):
