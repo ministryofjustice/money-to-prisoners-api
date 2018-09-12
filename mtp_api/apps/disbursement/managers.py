@@ -61,7 +61,7 @@ class DisbursementManager(models.Manager):
         elif resolution == DISBURSEMENT_RESOLUTION.SENT:
             Log.objects.disbursements_sent(to_update, user)
 
-        if resolution == DISBURSEMENT_RESOLUTION.SENT:
+        if resolution == DISBURSEMENT_RESOLUTION.CONFIRMED:
             to_update.update(
                 resolution=resolution,
                 invoice_number=Concat(
