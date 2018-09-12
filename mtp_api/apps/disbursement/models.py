@@ -124,6 +124,7 @@ class Disbursement(TimeStampedModel):
         self.resolution = DISBURSEMENT_RESOLUTION.CONFIRMED
         if nomis_transaction_id:
             self.nomis_transaction_id = nomis_transaction_id
+        self.invoice_number = self._generate_invoice_number()
         self.save()
         disbursement_confirmed.send(
             sender=Disbursement, disbursement=self, by_user=by_user)
@@ -134,7 +135,6 @@ class Disbursement(TimeStampedModel):
         if not self.resolution_permitted(DISBURSEMENT_RESOLUTION.SENT):
             raise InvalidDisbursementStateException([self.id])
         self.resolution = DISBURSEMENT_RESOLUTION.SENT
-        self.invoice_number = self._generate_invoice_number()
         self.save()
         disbursement_sent.send(
             sender=Disbursement, disbursement=self, by_user=by_user)
