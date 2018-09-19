@@ -3,7 +3,7 @@
 
 {% block inner_content %}
   <p>
-    {% blocktrans trimmed with service_name=service_name|default:'Prisoner Money' %}
+    {% blocktrans trimmed %}
       Your {{ service_name }} password has been entered incorrectly too many times so your account is temporarily locked.
     {% endblocktrans %}
   </p>
