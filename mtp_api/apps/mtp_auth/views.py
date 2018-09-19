@@ -13,6 +13,7 @@ from django.db.transaction import atomic
 from django.forms import ValidationError
 from django.http import Http404
 from django.utils.decorators import method_decorator
+from django.utils.text import capfirst
 from django.utils.timezone import now
 from django.utils.translation import gettext, gettext_lazy as _
 from django.views.decorators.debug import sensitive_post_parameters, sensitive_variables
@@ -257,6 +258,7 @@ class ResetPasswordView(generics.GenericAPIView):
             if not user.email:
                 return self.failure_response('no_email', field='username')
 
+            service_name = gettext('Prisoner Money').lower()
             if serializer.validated_data.get('create_password'):
                 change_request, _ = PasswordChangeRequest.objects.get_or_create(user=user)
                 change_password_url = urlsplit(
@@ -271,8 +273,11 @@ class ResetPasswordView(generics.GenericAPIView):
                 change_password_url = urlunsplit(change_password_url)
                 send_email(
                     user.email, 'mtp_auth/create_new_password.txt',
-                    gettext('Create a new Prisoner Money password'),
+                    capfirst(gettext('Create a new %(service_name)s password') % {
+                        'service_name': service_name,
+                    }),
                     context={
+                        'service_name': service_name,
                         'change_password_url': change_password_url,
                     },
                     html_template='mtp_auth/create_new_password.html',
@@ -290,8 +295,14 @@ class ResetPasswordView(generics.GenericAPIView):
 
                 send_email(
                     user.email, 'mtp_auth/reset_password.txt',
-                    gettext('Your new Prisoner Money password'),
-                    context={'username': user.username, 'password': password},
+                    capfirst(gettext('Your new %(service_name)s password') % {
+                        'service_name': service_name,
+                    }),
+                    context={
+                        'service_name': service_name,
+                        'username': user.username,
+                        'password': password,
+                    },
                     html_template='mtp_auth/reset_password.html',
                     anymail_tags=['reset-password'],
                 )
@@ -389,25 +400,21 @@ class AccountRequestViewSet(viewsets.ModelViewSet):
         context = {
             'username': user.username,
             'password': password,
-            'service_name': role.application.name,
+            'service_name': role.application.name.lower(),
             'login_url': role.login_url,
         }
         if user_existed:
             context.pop('password')
             send_email(
                 user.email, 'mtp_auth/user_moved.txt',
-                gettext('Your new %(service_name)s account is ready to use') % {
-                    'service_name': role.application.name,
-                },
+                capfirst(gettext('Your new %(service_name)s account is ready to use') % context),
                 context=context, html_template='mtp_auth/user_moved.html',
                 anymail_tags=['user-moved'],
             )
         else:
             send_email(
                 user.email, 'mtp_auth/new_user.txt',
-                gettext('Your new %(service_name)s account is ready to use') % {
-                    'service_name': role.application.name,
-                },
+                capfirst(gettext('Your new %(service_name)s account is ready to use') % context),
                 context=context, html_template='mtp_auth/new_user.html',
                 anymail_tags=['new-user'],
             )
@@ -427,11 +434,11 @@ class AccountRequestViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         context = {
-            'service_name': instance.role.application.name,
+            'service_name': instance.role.application.name.lower(),
         }
         send_email(
             instance.email, 'mtp_auth/account_request_denied.txt',
-            gettext('Account access for %(service_name)s was denied') % context,
+            capfirst(gettext('Account access for %(service_name)s was denied') % context),
             context=context,
             html_template='mtp_auth/account_request_denied.html',
             anymail_tags=['account-request-denied'],

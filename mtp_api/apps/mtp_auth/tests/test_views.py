@@ -508,8 +508,7 @@ class CreateUserTestCase(AuthBaseTestCase):
         new_user = User.objects.get(**user_data)
         self.assertEqual(
             list(
-                new_user.applicationusermapping_set.all()
-                .values_list('application__client_id', flat=True)
+                new_user.applicationusermapping_set.values_list('application__client_id', flat=True)
             ),
             [target_client_id]
         )
@@ -532,7 +531,7 @@ class CreateUserTestCase(AuthBaseTestCase):
         else:
             self.assertNotIn('sign in at', latest_email.body)
         self.assertEqual(
-            'Your new %s account is ready to use' % Application.objects.get(client_id=target_client_id).name,
+            'Your new %s account is ready to use' % Application.objects.get(client_id=target_client_id).name.lower(),
             latest_email.subject
         )
 
@@ -1366,7 +1365,7 @@ class AccountLockoutTestCase(AuthBaseTestCase):
         self.assertEqual(len(mail.outbox), 1, msg='Only one email should be sent')
 
         latest_email = mail.outbox[-1]
-        self.assertIn(cashbook_client.name, latest_email.body)
+        self.assertIn(cashbook_client.name.lower(), latest_email.body)
 
 
 class ChangePasswordTestCase(AuthBaseTestCase):
@@ -2036,8 +2035,8 @@ class AccountRequestTestCase(AuthBaseTestCase):
 
         latest_email = mail.outbox[-1]
         self.assertSequenceEqual(latest_email.to, ['mark@example.com'])
-        self.assertIn(role.application.name, latest_email.subject)
-        self.assertIn(role.application.name, latest_email.body)
+        self.assertIn(role.application.name.lower(), latest_email.subject)
+        self.assertIn(role.application.name.lower(), latest_email.body)
 
         self.assertFalse(AccountRequest.objects.exists())
         self.assertEqual(User.objects.count(), user_count)
@@ -2072,8 +2071,8 @@ class AccountRequestTestCase(AuthBaseTestCase):
 
             latest_email = mail.outbox[-1]
             self.assertSequenceEqual(latest_email.to, [request.email])
-            self.assertIn(role.application.name, latest_email.subject)
-            self.assertIn(role.application.name, latest_email.body)
+            self.assertIn(role.application.name.lower(), latest_email.subject)
+            self.assertIn(role.application.name.lower(), latest_email.body)
             self.assertIn(role.login_url, latest_email.body)
             self.assertIn(user.username, latest_email.body)
             password = re.search(r'Password:\s+(\S+)', latest_email.body).group(1)
@@ -2232,8 +2231,8 @@ class AccountRequestTestCase(AuthBaseTestCase):
 
             latest_email = mail.outbox[-1]
             self.assertSequenceEqual(latest_email.to, [request.email])
-            self.assertIn(role.application.name, latest_email.subject)
-            self.assertIn(role.application.name, latest_email.body)
+            self.assertIn(role.application.name.lower(), latest_email.subject)
+            self.assertIn(role.application.name.lower(), latest_email.body)
             self.assertIn(role.login_url, latest_email.body)
             self.assertIn(refreshed_user.username, latest_email.body)
             self.assertNotIn('Password', latest_email.body)
