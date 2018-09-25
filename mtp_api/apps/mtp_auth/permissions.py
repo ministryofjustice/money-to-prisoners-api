@@ -38,8 +38,7 @@ def get_client_permissions_class(*client_ids):
 
 
 class AnyAdminClientIDPermissions(ClientIDPermissions):
-    client_id = (CASHBOOK_OAUTH_CLIENT_ID, BANK_ADMIN_OAUTH_CLIENT_ID,
-                 NOMS_OPS_OAUTH_CLIENT_ID)
+    client_id = (CASHBOOK_OAUTH_CLIENT_ID, BANK_ADMIN_OAUTH_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID)
 
 
 class CashbookClientIDPermissions(ClientIDPermissions):
@@ -59,7 +58,7 @@ class SendMoneyClientIDPermissions(ClientIDPermissions):
 
 
 class AccountRequestPremissions(BasePermission):
-    supported_clients = (CASHBOOK_OAUTH_CLIENT_ID,)
+    supported_clients = (CASHBOOK_OAUTH_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID)
 
     def has_permission(self, request, view):
         action = getattr(view, 'action', '')

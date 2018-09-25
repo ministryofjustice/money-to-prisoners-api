@@ -270,7 +270,7 @@ OAUTH2_PROVIDER = {
 }
 OAUTH2_PROVIDER_APPLICATION_MODEL = 'oauth2_provider.Application'
 MTP_AUTH_LOCKOUT_COUNT = 5  # 5 times
-MTP_AUTH_LOCKOUT_LOCKOUT_PERIOD = 10 * 60  # 10 minutes
+MTP_AUTH_LOCKOUT_LOCKOUT_PERIOD = 10 * 60  # 10 minutes, update mtp-common locked_out message if changes
 
 REF_CODE_BASE = 900001
 CARD_REF_CODE_BASE = 800001

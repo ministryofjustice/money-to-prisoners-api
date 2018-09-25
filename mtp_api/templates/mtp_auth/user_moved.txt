@@ -1,7 +1,5 @@
 {% load i18n %}
-{% blocktrans trimmed with service_name=service_name|default:'Prisoner Money' %}
-Your account can now be used with the {{ service_name }} service.
-{% endblocktrans %}
+{% blocktrans trimmed %}Your account can now be used with the {{ service_name }} service.{% endblocktrans %}
 
 {% trans 'Username' %}: {{ username }}
 

@@ -8,11 +8,12 @@ from django.contrib.admin.options import get_content_type_for_model
 from django.contrib.auth import password_validation, get_user_model
 from django.contrib.auth.models import Group
 from django.core.exceptions import NON_FIELD_ERRORS
-from django.db import connection, models
+from django.db import connection
 from django.db.transaction import atomic
 from django.forms import ValidationError
 from django.http import Http404
 from django.utils.decorators import method_decorator
+from django.utils.text import capfirst
 from django.utils.timezone import now
 from django.utils.translation import gettext, gettext_lazy as _
 from django.views.decorators.debug import sensitive_post_parameters, sensitive_variables
@@ -53,7 +54,7 @@ class RoleViewSet(viewsets.mixins.ListModelMixin, viewsets.GenericViewSet):
         queryset = super().get_queryset()
         if 'managed' in self.request.query_params:
             user = self.request.user
-            managed_roles = Role.objects.get_managed_roles_for_user(user)
+            managed_roles = Role.objects.get_roles_for_user(user)
             queryset = queryset.filter(pk__in=set(role.pk for role in managed_roles))
         return queryset
 
@@ -70,26 +71,30 @@ class UserViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """
         Set of users for user account management AND looking up details of self.
-        Set is determined by matching set of prisons if some exist OR by key group as determined by Role models.
-        If a user falls into multiple roles, they can only edit themselves.
+        If request user is a super admin, they only get themselves back.
+        If request user has more than one role, they get just themselves back.
+        Otherwise returns all users who have the same role (determined by key group) AND matching prison set.
+        Inactive users are always returned.
         """
         user = self.request.user
-        queryset = User.objects.filter(is_superuser=user.is_superuser).order_by('username')
+
+        key_groups = set(Role.objects.values_list('key_group', flat=True))
+        user_groups = set(user.groups.values_list('pk', flat=True))
+        user_key_groups = list(key_groups.intersection(user_groups))
+        if len(user_key_groups) != 1 or user.is_superuser:
+            return User.objects.filter(pk=user.pk)
+        user_key_group = user_key_groups[0]
+
+        queryset = User.objects.exclude(is_superuser=True).filter(groups=user_key_group).order_by('username')
 
         prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(user).values_list('pk', flat=True))
         if prisons:
             for prison in prisons:
                 queryset = queryset.filter(prisonusermapping__prisons=prison)
-            return queryset
-
-        key_groups = set(Role.objects.values_list('key_group', flat=True))
-        user_groups = set(user.groups.values_list('pk', flat=True))
-        user_key_groups = list(key_groups.intersection(user_groups))
-        if len(user_key_groups) == 1:
+        else:
             queryset = queryset.filter(prisonusermapping__isnull=True)
-            return queryset.filter(models.Q(groups=user_key_groups[0]) | models.Q(pk=user.pk)).distinct()
 
-        return User.objects.filter(pk=user.pk)
+        return queryset
 
     def get_object(self):
         """
@@ -253,6 +258,7 @@ class ResetPasswordView(generics.GenericAPIView):
             if not user.email:
                 return self.failure_response('no_email', field='username')
 
+            service_name = gettext('Prisoner Money').lower()
             if serializer.validated_data.get('create_password'):
                 change_request, _ = PasswordChangeRequest.objects.get_or_create(user=user)
                 change_password_url = urlsplit(
@@ -267,8 +273,11 @@ class ResetPasswordView(generics.GenericAPIView):
                 change_password_url = urlunsplit(change_password_url)
                 send_email(
                     user.email, 'mtp_auth/create_new_password.txt',
-                    gettext('Create a new Prisoner Money password'),
+                    capfirst(gettext('Create a new %(service_name)s password') % {
+                        'service_name': service_name,
+                    }),
                     context={
+                        'service_name': service_name,
                         'change_password_url': change_password_url,
                     },
                     html_template='mtp_auth/create_new_password.html',
@@ -286,8 +295,14 @@ class ResetPasswordView(generics.GenericAPIView):
 
                 send_email(
                     user.email, 'mtp_auth/reset_password.txt',
-                    gettext('Your new Prisoner Money password'),
-                    context={'username': user.username, 'password': password},
+                    capfirst(gettext('Your new %(service_name)s password') % {
+                        'service_name': service_name,
+                    }),
+                    context={
+                        'service_name': service_name,
+                        'username': user.username,
+                        'password': password,
+                    },
                     html_template='mtp_auth/reset_password.html',
                     anymail_tags=['reset-password'],
                 )
@@ -385,25 +400,21 @@ class AccountRequestViewSet(viewsets.ModelViewSet):
         context = {
             'username': user.username,
             'password': password,
-            'service_name': role.application.name,
+            'service_name': role.application.name.lower(),
             'login_url': role.login_url,
         }
         if user_existed:
             context.pop('password')
             send_email(
                 user.email, 'mtp_auth/user_moved.txt',
-                gettext('Your new %(service_name)s account is ready to use') % {
-                    'service_name': role.application.name,
-                },
+                capfirst(gettext('Your new %(service_name)s account is ready to use') % context),
                 context=context, html_template='mtp_auth/user_moved.html',
                 anymail_tags=['user-moved'],
             )
         else:
             send_email(
                 user.email, 'mtp_auth/new_user.txt',
-                gettext('Your new %(service_name)s account is ready to use') % {
-                    'service_name': role.application.name,
-                },
+                capfirst(gettext('Your new %(service_name)s account is ready to use') % context),
                 context=context, html_template='mtp_auth/new_user.html',
                 anymail_tags=['new-user'],
             )
@@ -423,11 +434,11 @@ class AccountRequestViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         context = {
-            'service_name': instance.role.application.name,
+            'service_name': instance.role.application.name.lower(),
         }
         send_email(
             instance.email, 'mtp_auth/account_request_denied.txt',
-            gettext('Account access for %(service_name)s was denied') % context,
+            capfirst(gettext('Account access for %(service_name)s was denied') % context),
             context=context,
             html_template='mtp_auth/account_request_denied.html',
             anymail_tags=['account-request-denied'],
