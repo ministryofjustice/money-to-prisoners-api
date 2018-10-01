@@ -68,9 +68,9 @@ class UpdateSecurityProfilesTestCase(TestCase):
         new_transactions[0]['received_at'] = timezone.now()
 
         new_transactions[0]['sender_name'] = bank_details.sender_name
-        new_transactions[0]['sender_sort_code'] = bank_details.sender_sort_code
-        new_transactions[0]['sender_account_number'] = bank_details.sender_account_number
-        new_transactions[0]['sender_roll_number'] = bank_details.sender_roll_number
+        new_transactions[0]['sender_sort_code'] = bank_details.sender_bank_account.sort_code
+        new_transactions[0]['sender_account_number'] = bank_details.sender_bank_account.account_number
+        new_transactions[0]['sender_roll_number'] = bank_details.sender_bank_account.roll_number
 
         new_transactions[0]['prisoner_number'] = prisoner_to_update.prisoner_number
         new_transactions[0]['prisoner_dob'] = prisoner_to_update.prisoner_dob
@@ -191,7 +191,7 @@ class UpdateSecurityProfilesTestCase(TestCase):
         call_command('update_security_profiles', verbosity=0)
 
         prisoner_profile.refresh_from_db()
-        recipient_names = list(recipient_name.name for recipient_name in prisoner_profile.recipient_names.all())
+        recipient_names = list(recipient_name.name for recipient_name in prisoner_profile.provided_names.all())
         self.assertEqual(recipient_names[-1], 'Mr. John Doe')
 
 

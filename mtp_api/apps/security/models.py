@@ -9,6 +9,7 @@ from model_utils.models import TimeStampedModel
 
 from core.models import ScheduledCommand
 from credit.models import Credit
+from disbursement.models import Disbursement
 from prison.models import Prison
 from .managers import PrisonProfileManager
 from .signals import prisoner_profile_current_prisons_need_updating
@@ -36,15 +37,19 @@ class SenderProfile(TimeStampedModel):
                 models.Q.__or__,
                 chain(
                     (
-                        models.Q(transaction__sender_name=d.sender_name,
-                                 transaction__sender_sort_code=d.sender_sort_code,
-                                 transaction__sender_account_number=d.sender_account_number,
-                                 transaction__sender_roll_number=d.sender_roll_number)
+                        models.Q(
+                            transaction__sender_name=d.sender_name,
+                            transaction__sender_sort_code=d.sender_bank_account.sort_code,
+                            transaction__sender_account_number=d.sender_bank_account.account_number,
+                            transaction__sender_roll_number=d.sender_bank_account.roll_number
+                        )
                         for d in self.bank_transfer_details.all()
                     ),
                     (
-                        models.Q(payment__card_number_last_digits=d.card_number_last_digits,
-                                 payment__card_expiry_date=d.card_expiry_date)
+                        models.Q(
+                            payment__card_number_last_digits=d.card_number_last_digits,
+                            payment__card_expiry_date=d.card_expiry_date
+                        )
                         for d in self.debit_card_details.all()
                     )
                 )
@@ -69,11 +74,22 @@ class SenderProfile(TimeStampedModel):
         return sorted(set(filter(lambda name: (name or '').strip() or _('(Unknown)'), self.get_sender_names())))
 
 
+class BankAccount(models.Model):
+    sort_code = models.CharField(max_length=50, blank=True)
+    account_number = models.CharField(max_length=50, blank=True)
+    roll_number = models.CharField(max_length=50, blank=True)
+
+    class Meta:
+        unique_together = (
+            ('sort_code', 'account_number', 'roll_number'),
+        )
+
+
 class BankTransferSenderDetails(TimeStampedModel):
     sender_name = models.CharField(max_length=250, blank=True)
-    sender_sort_code = models.CharField(max_length=50, blank=True)
-    sender_account_number = models.CharField(max_length=50, blank=True)
-    sender_roll_number = models.CharField(max_length=50, blank=True)
+    sender_bank_account = models.ForeignKey(
+        BankAccount, on_delete=models.CASCADE, related_name='senders'
+    )
     sender = models.ForeignKey(
         SenderProfile, on_delete=models.CASCADE, related_name='bank_transfer_details'
     )
@@ -81,9 +97,6 @@ class BankTransferSenderDetails(TimeStampedModel):
     class Meta:
         ordering = ('created',)
         verbose_name_plural = 'bank transfer sender details'
-        unique_together = (
-            ('sender_name', 'sender_sort_code', 'sender_account_number', 'sender_roll_number'),
-        )
 
     def __str__(self):
         return self.sender_name
@@ -177,11 +190,11 @@ class PrisonerProfile(TimeStampedModel):
         self.save()
 
 
-class PrisonerRecipientName(models.Model):
+class ProvidedPrisonerName(models.Model):
     name = models.CharField(max_length=250)
     prisoner = models.ForeignKey(
         PrisonerProfile, on_delete=models.CASCADE,
-        related_name='recipient_names', related_query_name='recipient_name',
+        related_name='provided_names', related_query_name='provided_name',
     )
 
     class Meta:
@@ -189,6 +202,60 @@ class PrisonerRecipientName(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class RecipientProfile(TimeStampedModel):
+    disbursement_count = models.IntegerField(default=0)
+    disbursement_total = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ('created',)
+        permissions = (
+            ('view_recipientprofile', 'Can view recipient profile'),
+        )
+
+    def __str__(self):
+        return 'Recipient %s' % self.id
+
+    @property
+    def disbursement_filters(self):
+        try:
+            return reduce(
+                models.Q.__or__,
+                chain(
+                    (
+                        models.Q(
+                            sort_code=d.recipient_bank_account.sort_code,
+                            account_number=d.recipient_bank_account.account_number,
+                            roll_number=d.recipient_bank_account.roll_number
+                        )
+                        for d in self.bank_transfer_details.all()
+                    )
+                )
+            )
+        except TypeError:
+            return models.Q(pk=None)
+
+    def update_totals(self):
+        queryset = Disbursement.objects.filter(self.disbursement_filters)
+        totals = queryset.aggregate(disbursement_count=models.Count('pk'),
+                                    disbursement_total=models.Sum('amount'))
+        self.disbursement_count = totals.get('disbursement_count') or 0
+        self.disbursement_total = totals.get('disbursement_total') or 0
+        self.save()
+
+
+class BankTransferRecipientDetails(TimeStampedModel):
+    recipient_bank_account = models.ForeignKey(
+        BankAccount, on_delete=models.CASCADE, related_name='recipients'
+    )
+    recipient = models.ForeignKey(
+        RecipientProfile, on_delete=models.CASCADE, related_name='bank_transfer_details'
+    )
+
+    class Meta:
+        ordering = ('created',)
+        verbose_name_plural = 'bank transfer recipient details'
 
 
 class SavedSearch(TimeStampedModel):

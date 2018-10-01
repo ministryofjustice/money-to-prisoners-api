@@ -5,8 +5,9 @@ from django.core.management import BaseCommand, CommandError
 
 from credit.models import Credit
 from security.models import (
-    SenderProfile, BankTransferSenderDetails, DebitCardSenderDetails, CardholderName, SenderEmail,
-    PrisonerProfile, PrisonerRecipientName,
+    SenderProfile, BankTransferSenderDetails, DebitCardSenderDetails,
+    CardholderName, SenderEmail, PrisonerProfile, ProvidedPrisonerName,
+    BankAccount
 )
 
 logger = logging.getLogger('mtp')
@@ -111,21 +112,24 @@ class Command(BaseCommand):
         try:
             sender_profile = SenderProfile.objects.get(
                 bank_transfer_details__sender_name=credit.sender_name,
-                bank_transfer_details__sender_sort_code=credit.sender_sort_code,
-                bank_transfer_details__sender_account_number=credit.sender_account_number,
-                bank_transfer_details__sender_roll_number=credit.sender_roll_number
+                bank_transfer_details__sender_bank_account__sort_code=credit.sender_sort_code,
+                bank_transfer_details__sender_bank_account__account_number=credit.sender_account_number,
+                bank_transfer_details__sender_bank_account__roll_number=credit.sender_roll_number
             )
         except SenderProfile.DoesNotExist:
             if self.verbose:
                 self.stdout.write('Creating bank transfer profile for %s' % credit.sender_name)
+            bank_account, _ = BankAccount.objects.get_or_create(
+                sort_code=credit.sender_sort_code,
+                account_number=credit.sender_account_number,
+                roll_number=credit.sender_roll_number
+            )
             sender_profile = SenderProfile()
             sender_profile.save()
             sender_profile.bank_transfer_details.add(
                 BankTransferSenderDetails(
                     sender_name=credit.sender_name,
-                    sender_sort_code=credit.sender_sort_code,
-                    sender_account_number=credit.sender_account_number,
-                    sender_roll_number=credit.sender_roll_number
+                    sender_bank_account=bank_account
                 ),
                 bulk=False
             )
@@ -204,12 +208,12 @@ class Command(BaseCommand):
             )
             if recipient_name:
                 try:
-                    prisoner_profile.recipient_names.get(
+                    prisoner_profile.provided_names.get(
                         name=recipient_name
                     )
-                except PrisonerRecipientName.DoesNotExist:
-                    prisoner_profile.recipient_names.add(
-                        PrisonerRecipientName(name=recipient_name),
+                except ProvidedPrisonerName.DoesNotExist:
+                    prisoner_profile.provided_names.add(
+                        ProvidedPrisonerName(name=recipient_name),
                         bulk=False
                     )
         except PrisonerProfile.DoesNotExist:
@@ -223,8 +227,8 @@ class Command(BaseCommand):
             )
             prisoner_profile.save()
             if recipient_name:
-                prisoner_profile.recipient_names.add(
-                    PrisonerRecipientName(name=recipient_name), bulk=False
+                prisoner_profile.provided_names.add(
+                    ProvidedPrisonerName(name=recipient_name), bulk=False
                 )
 
         prisoner_profile.credit_count += 1

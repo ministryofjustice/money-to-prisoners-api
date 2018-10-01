@@ -28,9 +28,9 @@ class SenderProfileTestCase(TestCase):
 
         credits = Credit.objects.filter(
             transaction__sender_name=bank_details.sender_name,
-            transaction__sender_sort_code=bank_details.sender_sort_code,
-            transaction__sender_account_number=bank_details.sender_account_number,
-            transaction__sender_roll_number=bank_details.sender_roll_number
+            transaction__sender_sort_code=bank_details.sender_bank_account.sort_code,
+            transaction__sender_account_number=bank_details.sender_bank_account.account_number,
+            transaction__sender_roll_number=bank_details.sender_bank_account.roll_number
         ).order_by('id')
 
         filtered_credits = Credit.objects.filter(
@@ -64,16 +64,16 @@ class SenderProfileTestCase(TestCase):
 
         credits_1 = Credit.objects.filter(
             transaction__sender_name=bank_details.sender_name,
-            transaction__sender_sort_code=bank_details.sender_sort_code,
-            transaction__sender_account_number=bank_details.sender_account_number,
-            transaction__sender_roll_number=bank_details.sender_roll_number
+            transaction__sender_sort_code=bank_details.sender_bank_account.sort_code,
+            transaction__sender_account_number=bank_details.sender_bank_account.account_number,
+            transaction__sender_roll_number=bank_details.sender_bank_account.roll_number
         )
 
         credits_2 = Credit.objects.filter(
             transaction__sender_name=extra_bank_details.sender_name,
-            transaction__sender_sort_code=extra_bank_details.sender_sort_code,
-            transaction__sender_account_number=extra_bank_details.sender_account_number,
-            transaction__sender_roll_number=extra_bank_details.sender_roll_number
+            transaction__sender_sort_code=extra_bank_details.sender_bank_account.sort_code,
+            transaction__sender_account_number=extra_bank_details.sender_bank_account.account_number,
+            transaction__sender_roll_number=extra_bank_details.sender_bank_account.roll_number
         )
 
         credits_3 = Credit.objects.filter(
