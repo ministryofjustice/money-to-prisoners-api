@@ -4,10 +4,13 @@ from django.db.transaction import atomic
 from django.core.management import BaseCommand, CommandError
 
 from credit.models import Credit
+from disbursement.constants import DISBURSEMENT_METHOD
+from disbursement.models import Disbursement
+from prison.models import PrisonerLocation
 from security.models import (
     SenderProfile, BankTransferSenderDetails, DebitCardSenderDetails,
     CardholderName, SenderEmail, PrisonerProfile, ProvidedPrisonerName,
-    BankAccount
+    BankAccount, RecipientProfile, BankTransferRecipientDetails
 )
 
 logger = logging.getLogger('mtp')
@@ -15,6 +18,7 @@ logger = logging.getLogger('mtp')
 
 class Command(BaseCommand):
     anonymous_sender = None
+    cheque_recipient = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -46,6 +50,14 @@ class Command(BaseCommand):
         if recreate:
             self.delete_profiles()
 
+        try:
+            self.handle_credit_update(batch_size, recreate)
+            self.handle_disbursement_update(batch_size, recreate)
+        finally:
+            self.stdout.write('Updating prisoner profiles for current locations')
+            PrisonerProfile.objects.update_current_prisons()
+
+    def handle_credit_update(self, batch_size, recreate):
         new_credits = Credit.objects.filter(sender_profile__isnull=True).order_by('pk')
         new_credits_count = new_credits.count()
         if not new_credits_count:
@@ -55,8 +67,10 @@ class Command(BaseCommand):
             self.stdout.write('Updating profiles for (at least) %d new credits' % new_credits_count)
 
         try:
-            self.anonymous_sender = SenderProfile.objects.get(bank_transfer_details__isnull=True,
-                                                              debit_card_details__isnull=True)
+            self.anonymous_sender = SenderProfile.objects.get(
+                bank_transfer_details__isnull=True,
+                debit_card_details__isnull=True
+            )
         except SenderProfile.DoesNotExist:
             if self.verbose:
                 self.stdout.write('Creating anonymous sender')
@@ -64,35 +78,82 @@ class Command(BaseCommand):
         except SenderProfile.MultipleObjectsReturned:
             raise CommandError('Multiple sender profiles exist with no linked debit card or bank transfer details')
 
+        processed_count = 0
+        while True:
+            count = self.process_credit_batch(new_credits[0:batch_size])
+            if count == 0:
+                break
+            processed_count += count
+            if self.verbose:
+                self.stdout.write('Processed %d credits' % processed_count)
+
+        self.stdout.write(self.style.SUCCESS('Done'))
+
+    def handle_disbursement_update(self, batch_size, recreate):
+        new_disbursements = Disbursement.objects.filter(
+            recipient_profile__isnull=True
+        ).order_by('pk')
+        new_disbursements_count = new_disbursements.count()
+        if not new_disbursements_count:
+            self.stdout.write(self.style.SUCCESS('No new disbursements'))
+            return
+        else:
+            self.stdout.write('Updating profiles for (at least) %d new disbursements' % new_disbursements_count)
+
         try:
-            processed_count = 0
-            while True:
-                count = self.process_batch(new_credits[0:batch_size])
-                if count == 0:
-                    break
-                processed_count += count
-                if self.verbose:
-                    self.stdout.write('Processed %d credits' % processed_count)
-        finally:
-            self.stdout.write('Updating prisoner profiles for current locations')
-            PrisonerProfile.objects.update_current_prisons()
+            self.cheque_recipient = RecipientProfile.objects.get(
+                bank_transfer_details__isnull=True
+            )
+        except RecipientProfile.DoesNotExist:
+            if self.verbose:
+                self.stdout.write('Creating anonymous recipient')
+            self.cheque_recipient = RecipientProfile.objects.create()
+        except RecipientProfile.MultipleObjectsReturned:
+            raise CommandError('Multiple recipient profiles exist with no linked bank transfer details')
+
+        processed_count = 0
+        while True:
+            count = self.process_disbursement_batch(new_disbursements[0:batch_size])
+            if count == 0:
+                break
+            processed_count += count
+            if self.verbose:
+                self.stdout.write('Processed %d disbursements' % processed_count)
 
         self.stdout.write(self.style.SUCCESS('Done'))
 
     @atomic()
-    def process_batch(self, new_credits):
+    def process_credit_batch(self, new_credits):
         for credit in new_credits:
-            self.create_or_update_profiles(credit)
+            self.create_or_update_profiles_for_credit(credit)
         return len(new_credits)
 
-    def create_or_update_profiles(self, credit):
+    @atomic()
+    def process_disbursement_batch(self, new_disbursements):
+        for disbursement in new_disbursements:
+            self.create_or_update_profiles_for_disbursement(disbursement)
+        return len(new_disbursements)
+
+    def create_or_update_profiles_for_credit(self, credit):
         sender_profile = self.create_or_update_sender_profile(credit)
         credit.sender_profile = sender_profile
         if credit.prison:
             sender_profile.prisons.add(credit.prison)
-            prisoner_profile = self.create_or_update_prisoner_profile(credit, sender_profile)
+            prisoner_profile = self.create_or_update_prisoner_profile_for_credit(
+                credit, sender_profile
+            )
             credit.prisoner_profile = prisoner_profile
         credit.save()
+
+    def create_or_update_profiles_for_disbursement(self, disbursement):
+        recipient_profile = self.create_or_update_recipient_profile(disbursement)
+        disbursement.recipient_profile = recipient_profile
+        recipient_profile.prisons.add(disbursement.prison)
+        prisoner_profile = self.create_or_update_prisoner_profile_for_disbursement(
+            disbursement, recipient_profile
+        )
+        disbursement.prisoner_profile = prisoner_profile
+        disbursement.save()
 
     def create_or_update_sender_profile(self, credit):
         if hasattr(credit, 'transaction'):
@@ -197,38 +258,27 @@ class Command(BaseCommand):
 
         return sender_profile
 
-    def create_or_update_prisoner_profile(self, credit, sender):
-        recipient_name = ''
-        if hasattr(credit, 'payment'):
-            recipient_name = credit.payment.recipient_name or recipient_name
-        try:
-            prisoner_profile = PrisonerProfile.objects.get(
-                prisoner_number=credit.prisoner_number,
-                prisoner_dob=credit.prisoner_dob
-            )
-            if recipient_name:
-                try:
-                    prisoner_profile.provided_names.get(
-                        name=recipient_name
-                    )
-                except ProvidedPrisonerName.DoesNotExist:
-                    prisoner_profile.provided_names.add(
-                        ProvidedPrisonerName(name=recipient_name),
-                        bulk=False
-                    )
-        except PrisonerProfile.DoesNotExist:
-            if self.verbose:
-                self.stdout.write('Creating prisoner profile for %s' % credit.prisoner_number)
-            prisoner_profile = PrisonerProfile(
-                single_offender_id=credit.single_offender_id,
+    def create_or_update_prisoner_profile_for_credit(self, credit, sender):
+        prisoner_profile, _ = PrisonerProfile.objects.update_or_create(
+            prisoner_number=credit.prisoner_number,
+            defaults=dict(
                 prisoner_name=credit.prisoner_name,
-                prisoner_number=credit.prisoner_number,
-                prisoner_dob=credit.prisoner_dob
+                single_offender_id=credit.single_offender_id,
+                prisoner_dob=credit.prisoner_dob,
             )
-            prisoner_profile.save()
-            if recipient_name:
+        )
+        provided_name = ''
+        if hasattr(credit, 'payment'):
+            provided_name = credit.payment.recipient_name or provided_name
+        if provided_name:
+            try:
+                prisoner_profile.provided_names.get(
+                    name=provided_name
+                )
+            except ProvidedPrisonerName.DoesNotExist:
                 prisoner_profile.provided_names.add(
-                    ProvidedPrisonerName(name=recipient_name), bulk=False
+                    ProvidedPrisonerName(name=provided_name),
+                    bulk=False
                 )
 
         prisoner_profile.credit_count += 1
@@ -237,6 +287,64 @@ class Command(BaseCommand):
         prisoner_profile.senders.add(sender)
         prisoner_profile.save()
         return prisoner_profile
+
+    def create_or_update_prisoner_profile_for_disbursement(self, disbursement, recipient):
+        prisoner_info = dict(prisoner_name=disbursement.prisoner_name)
+        try:
+            prisoner_info.update(
+                prisoner_dob=PrisonerLocation.objects.get(
+                    prisoner_number=disbursement.prisoner_number, active=True
+                ).prisoner_dob
+            )
+        except PrisonerLocation.DoesNotExist:
+            pass
+
+        prisoner_profile, _ = PrisonerProfile.objects.get_or_create(
+            prisoner_number=disbursement.prisoner_number,
+            defaults=prisoner_info
+        )
+
+        prisoner_profile.disbursement_count += 1
+        prisoner_profile.disbursement_total += disbursement.amount
+        prisoner_profile.prisons.add(disbursement.prison)
+        prisoner_profile.recipients.add(recipient)
+        prisoner_profile.save()
+        return prisoner_profile
+
+    def create_or_update_recipient_profile(self, disbursement):
+        if disbursement.method == DISBURSEMENT_METHOD.CHEQUE:
+            return self.cheque_recipient
+
+        try:
+            recipient_profile = RecipientProfile.objects.get(
+                bank_transfer_details__recipient_bank_account__sort_code=disbursement.sort_code,
+                bank_transfer_details__recipient_bank_account__account_number=disbursement.account_number,
+                bank_transfer_details__recipient_bank_account__roll_number=disbursement.roll_number or ''
+            )
+        except RecipientProfile.DoesNotExist:
+            if self.verbose:
+                self.stdout.write(
+                    'Creating bank transfer profile for %s' %
+                    disbursement.recipient_name
+                )
+            bank_account, _ = BankAccount.objects.get_or_create(
+                sort_code=disbursement.sort_code,
+                account_number=disbursement.account_number,
+                roll_number=disbursement.roll_number or ''
+            )
+            recipient_profile = RecipientProfile()
+            recipient_profile.save()
+            recipient_profile.bank_transfer_details.add(
+                BankTransferRecipientDetails(
+                    recipient_bank_account=bank_account
+                ),
+                bulk=False
+            )
+
+        recipient_profile.disbursement_count += 1
+        recipient_profile.disbursement_total += disbursement.amount
+        recipient_profile.save()
+        return recipient_profile
 
     def handle_totals(self, batch_size):
         profiles = (

@@ -4,13 +4,19 @@ from django.utils import timezone
 
 from core.tests.utils import make_test_users
 from credit.models import Credit
+from disbursement.constants import DISBURSEMENT_METHOD
+from disbursement.models import Disbursement
+from disbursement.tests.utils import (
+    generate_disbursements, generate_initial_disbursement_data,
+    create_disbursements
+)
 from payment.constants import PAYMENT_STATUS
 from payment.tests.utils import (
     create_payments, generate_payments, generate_initial_payment_data
 )
 from prison.models import PrisonerLocation, Prison
 from prison.tests.utils import load_random_prisoner_locations
-from security.models import SenderProfile, PrisonerProfile
+from security.models import SenderProfile, PrisonerProfile, RecipientProfile
 from transaction.tests.utils import (
     create_transactions, generate_transactions, generate_initial_transactions_data
 )
@@ -29,18 +35,44 @@ class UpdateSecurityProfilesTestCase(TestCase):
     def test_update_security_profiles_initial(self):
         generate_transactions(transaction_batch=100, days_of_history=5)
         generate_payments(payment_batch=100, days_of_history=5)
+        generate_disbursements(disbursement_batch=100, days_of_history=5)
         call_command('update_security_profiles', verbosity=0)
 
         for sender_profile in SenderProfile.objects.all():
             credits = Credit.objects.filter(sender_profile.credit_filters)
-            self.assertEqual(sum([credit.amount for credit in credits]), sender_profile.credit_total)
+            self.assertEqual(
+                sum([credit.amount for credit in credits]),
+                sender_profile.credit_total
+            )
             self.assertEqual(len(credits), sender_profile.credit_count)
 
+        for recipient_profile in RecipientProfile.objects.filter(
+            bank_transfer_details__isnull=False
+        ):
+            disbursements = Disbursement.objects.filter(recipient_profile.disbursement_filters)
+            self.assertEqual(
+                sum([disbursement.amount for disbursement in disbursements]),
+                recipient_profile.disbursement_total
+            )
+            self.assertEqual(len(disbursements), recipient_profile.disbursement_count)
+
         for prisoner_profile in PrisonerProfile.objects.all():
-            self.assertTrue(prisoner_profile.single_offender_id)
+            if prisoner_profile.credits.count():
+                self.assertTrue(prisoner_profile.single_offender_id)
+
             credits = Credit.objects.filter(prisoner_profile.credit_filters)
-            self.assertEqual(sum([credit.amount for credit in credits]), prisoner_profile.credit_total)
+            self.assertEqual(
+                sum([credit.amount for credit in credits]),
+                prisoner_profile.credit_total
+            )
             self.assertEqual(len(credits), prisoner_profile.credit_count)
+
+            disbursements = Disbursement.objects.filter(prisoner_profile.disbursement_filters)
+            self.assertEqual(
+                sum([disbursement.amount for disbursement in disbursements]),
+                prisoner_profile.disbursement_total
+            )
+            self.assertEqual(len(disbursements), prisoner_profile.disbursement_count)
 
     def test_update_security_profiles_subsequent_bank_transfer(self):
         generate_transactions(transaction_batch=100, days_of_history=5)
@@ -156,6 +188,59 @@ class UpdateSecurityProfilesTestCase(TestCase):
         self.assertEqual(
             prisoner_to_update.credit_total,
             initial_prisoner_credit_total + new_payments[0]['amount']
+        )
+
+    def test_update_security_profiles_subsequent_disbursement(self):
+        generate_transactions(transaction_batch=100, days_of_history=5)
+        generate_payments(payment_batch=100, days_of_history=5)
+        generate_disbursements(disbursement_batch=100, days_of_history=5)
+        call_command('update_security_profiles', verbosity=0)
+
+        recipient_to_update = RecipientProfile.objects.filter(
+            bank_transfer_details__isnull=False,
+            prisoners__isnull=False
+        ).first()
+        bank_details = recipient_to_update.bank_transfer_details.first()
+        prisoner_to_update = recipient_to_update.prisoners.first()
+
+        initial_recipient_disbursement_count = recipient_to_update.disbursement_count
+        initial_recipient_disbursement_total = recipient_to_update.disbursement_total
+        initial_prisoner_disbursement_count = prisoner_to_update.disbursement_count
+        initial_prisoner_disbursement_total = prisoner_to_update.disbursement_total
+
+        new_disbursements = generate_initial_disbursement_data(
+            tot=1, days_of_history=0
+        )
+
+        new_disbursements[0]['method'] = DISBURSEMENT_METHOD.BANK_TRANSFER
+        new_disbursements[0]['sort_code'] = bank_details.recipient_bank_account.sort_code
+        new_disbursements[0]['account_number'] = bank_details.recipient_bank_account.account_number
+        new_disbursements[0]['roll_number'] = bank_details.recipient_bank_account.roll_number
+
+        new_disbursements[0]['prisoner_number'] = prisoner_to_update.prisoner_number
+        new_disbursements[0]['prisoner_name'] = prisoner_to_update.prisoner_name
+
+        create_disbursements(new_disbursements)
+        call_command('update_security_profiles', verbosity=0)
+
+        recipient_to_update.refresh_from_db()
+        self.assertEqual(
+            recipient_to_update.disbursement_count,
+            initial_recipient_disbursement_count + 1
+        )
+        self.assertEqual(
+            recipient_to_update.disbursement_total,
+            initial_recipient_disbursement_total + new_disbursements[0]['amount']
+        )
+
+        prisoner_to_update.refresh_from_db()
+        self.assertEqual(
+            prisoner_to_update.disbursement_count,
+            initial_prisoner_disbursement_count + 1
+        )
+        self.assertEqual(
+            prisoner_to_update.disbursement_total,
+            initial_prisoner_disbursement_total + new_disbursements[0]['amount']
         )
 
     def test_update_prisoner_profiles(self):

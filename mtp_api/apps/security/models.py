@@ -84,6 +84,12 @@ class BankAccount(models.Model):
             ('sort_code', 'account_number', 'roll_number'),
         )
 
+    def __str__(self):
+        return (
+            'BankAccount{sort_code=%s, account_number=%s, roll_number=%s}' %
+            (self.sort_code, self.account_number, self.roll_number or 'n/a')
+        )
+
 
 class BankTransferSenderDetails(TimeStampedModel):
     sender_name = models.CharField(max_length=250, blank=True)
@@ -149,64 +155,11 @@ class SenderEmail(models.Model):
         return self.email
 
 
-class PrisonerProfile(TimeStampedModel):
-    prisoner_name = models.CharField(max_length=250)
-    prisoner_number = models.CharField(max_length=250, db_index=True)
-    single_offender_id = models.UUIDField(blank=True, null=True)
-    prisoner_dob = models.DateField()
-    credit_count = models.IntegerField(default=0)
-    credit_total = models.IntegerField(default=0)
-    current_prison = models.ForeignKey(
-        Prison, on_delete=models.SET_NULL, null=True, related_name='current_prisoners'
-    )
-
-    prisons = models.ManyToManyField(Prison, related_name='historic_prisoners')
-    senders = models.ManyToManyField(SenderProfile, related_name='prisoners')
-
-    objects = PrisonProfileManager()
-
-    class Meta:
-        ordering = ('created',)
-        permissions = (
-            ('view_prisonerprofile', 'Can view prisoner profile'),
-        )
-        unique_together = (
-            ('prisoner_number', 'prisoner_dob',),
-        )
-
-    def __str__(self):
-        return self.prisoner_number
-
-    @property
-    def credit_filters(self):
-        return models.Q(prisoner_name=self.prisoner_name, prisoner_dob=self.prisoner_dob)
-
-    def update_totals(self):
-        queryset = Credit.objects.filter(self.credit_filters)
-        totals = queryset.aggregate(credit_count=models.Count('pk'),
-                                    credit_total=models.Sum('amount'))
-        self.credit_count = totals.get('credit_count') or 0
-        self.credit_total = totals.get('credit_total') or 0
-        self.save()
-
-
-class ProvidedPrisonerName(models.Model):
-    name = models.CharField(max_length=250)
-    prisoner = models.ForeignKey(
-        PrisonerProfile, on_delete=models.CASCADE,
-        related_name='provided_names', related_query_name='provided_name',
-    )
-
-    class Meta:
-        ordering = ('pk',)
-
-    def __str__(self):
-        return self.name
-
-
 class RecipientProfile(TimeStampedModel):
     disbursement_count = models.IntegerField(default=0)
     disbursement_total = models.IntegerField(default=0)
+
+    prisons = models.ManyToManyField(Prison, related_name='recipients')
 
     class Meta:
         ordering = ('created',)
@@ -227,7 +180,7 @@ class RecipientProfile(TimeStampedModel):
                         models.Q(
                             sort_code=d.recipient_bank_account.sort_code,
                             account_number=d.recipient_bank_account.account_number,
-                            roll_number=d.recipient_bank_account.roll_number
+                            roll_number=d.recipient_bank_account.roll_number or None
                         )
                         for d in self.bank_transfer_details.all()
                     )
@@ -256,6 +209,68 @@ class BankTransferRecipientDetails(TimeStampedModel):
     class Meta:
         ordering = ('created',)
         verbose_name_plural = 'bank transfer recipient details'
+
+
+class PrisonerProfile(TimeStampedModel):
+    prisoner_name = models.CharField(max_length=250)
+    prisoner_number = models.CharField(max_length=250, db_index=True)
+    single_offender_id = models.UUIDField(blank=True, null=True)
+    prisoner_dob = models.DateField(blank=True, null=True)
+    credit_count = models.IntegerField(default=0)
+    credit_total = models.IntegerField(default=0)
+    disbursement_count = models.IntegerField(default=0)
+    disbursement_total = models.IntegerField(default=0)
+    current_prison = models.ForeignKey(
+        Prison, on_delete=models.SET_NULL, null=True, related_name='current_prisoners'
+    )
+
+    prisons = models.ManyToManyField(Prison, related_name='historic_prisoners')
+    senders = models.ManyToManyField(SenderProfile, related_name='prisoners')
+    recipients = models.ManyToManyField(RecipientProfile, related_name='prisoners')
+
+    objects = PrisonProfileManager()
+
+    class Meta:
+        ordering = ('created',)
+        permissions = (
+            ('view_prisonerprofile', 'Can view prisoner profile'),
+        )
+        unique_together = (
+            ('prisoner_number', 'prisoner_dob',),
+        )
+
+    def __str__(self):
+        return self.prisoner_number
+
+    @property
+    def credit_filters(self):
+        return models.Q(prisoner_number=self.prisoner_number, prisoner_dob=self.prisoner_dob)
+
+    @property
+    def disbursement_filters(self):
+        return models.Q(prisoner_number=self.prisoner_number)
+
+    def update_totals(self):
+        queryset = Credit.objects.filter(self.credit_filters)
+        totals = queryset.aggregate(credit_count=models.Count('pk'),
+                                    credit_total=models.Sum('amount'))
+        self.credit_count = totals.get('credit_count') or 0
+        self.credit_total = totals.get('credit_total') or 0
+        self.save()
+
+
+class ProvidedPrisonerName(models.Model):
+    name = models.CharField(max_length=250)
+    prisoner = models.ForeignKey(
+        PrisonerProfile, on_delete=models.CASCADE,
+        related_name='provided_names', related_query_name='provided_name',
+    )
+
+    class Meta:
+        ordering = ('pk',)
+
+    def __str__(self):
+        return self.name
 
 
 class SavedSearch(TimeStampedModel):
