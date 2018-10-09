@@ -47,6 +47,15 @@ class Disbursement(TimeStampedModel):
     nomis_transaction_id = models.CharField(max_length=50, blank=True, null=True)
     invoice_number = models.CharField(max_length=50, blank=True, null=True)
 
+    recipient_profile = models.ForeignKey(
+        'security.RecipientProfile', related_name='disbursements', blank=True, null=True,
+        on_delete=models.SET_NULL
+    )
+    prisoner_profile = models.ForeignKey(
+        'security.PrisonerProfile', related_name='disbursements', blank=True, null=True,
+        on_delete=models.SET_NULL
+    )
+
     objects = DisbursementManager.from_queryset(DisbursementQuerySet)()
 
     class Meta:

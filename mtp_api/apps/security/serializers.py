@@ -8,6 +8,15 @@ from .models import (
 
 
 class BankTransferSenderDetailsSerializer(serializers.ModelSerializer):
+    sender_sort_code = serializers.CharField(
+        source='sender_bank_account.sort_code'
+    )
+    sender_account_number = serializers.CharField(
+        source='sender_bank_account.account_number'
+    )
+    sender_roll_number = serializers.CharField(
+        source='sender_bank_account.roll_number'
+    )
 
     class Meta:
         model = BankTransferSenderDetails
@@ -75,7 +84,7 @@ class PrisonerProfileSerializer(serializers.ModelSerializer):
     sender_count = serializers.IntegerField()
     prisons = PrisonSerializer(many=True)
     current_prison = PrisonSerializer()
-    recipient_names = serializers.SerializerMethodField()
+    provided_names = serializers.SerializerMethodField()
 
     class Meta:
         model = PrisonerProfile
@@ -91,11 +100,11 @@ class PrisonerProfileSerializer(serializers.ModelSerializer):
             'modified',
             'prisons',
             'current_prison',
-            'recipient_names',
+            'provided_names',
         )
 
-    def get_recipient_names(self, obj):
-        return list(obj.recipient_names.values_list('name', flat=True))
+    def get_provided_names(self, obj):
+        return list(obj.provided_names.values_list('name', flat=True))
 
 
 class SearchFilterSerializer(serializers.ModelSerializer):
