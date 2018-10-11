@@ -77,6 +77,10 @@ class ActionsBasedPermissions(BasePermission):
             )
             raise ImproperlyConfigured(msg % self.__class__.__name__)
 
+        # http method does not map to an action, should really cause 405 not 403
+        if not view.action:
+            return False
+
         perms = self.get_required_permissions(view.action, queryset.model)
         return user.has_perms(perms)
 
