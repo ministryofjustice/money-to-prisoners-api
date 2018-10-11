@@ -125,6 +125,15 @@ class RetrieveActionsBasedPermissionsTests(BaseActionsBasedPermissionsTests):
         response = self.test_view(request, pk=self.group.pk)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    def test_missing_action_does_not_error(self):
+        request = factory.post(
+            '/', {'name': 'foobar'}, format='json',
+            HTTP_AUTHORIZATION=self.permitted_credentials
+        )
+
+        response = self.test_view(request)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
 
 class UpdateActionsBasedPermissionsTests(BaseActionsBasedPermissionsTests):
 
