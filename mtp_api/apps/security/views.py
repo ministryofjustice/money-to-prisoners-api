@@ -1,4 +1,3 @@
-from django.db.models import Count
 from django.db.models.fields import IntegerField
 from django.db.models.functions import Cast
 from django.shortcuts import get_object_or_404
