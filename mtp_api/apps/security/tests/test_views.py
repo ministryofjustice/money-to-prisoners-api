@@ -45,6 +45,8 @@ class SecurityViewTestCase(APITestCase, AuthTestCaseMixin):
 
         if 'limit' not in filters:
             filters['limit'] = 1000
+        if 'totals__time_period' not in filters:
+            filters['totals__time_period'] = TIME_PERIOD.ALL_TIME
         response = self.client.get(
             url, filters, format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)

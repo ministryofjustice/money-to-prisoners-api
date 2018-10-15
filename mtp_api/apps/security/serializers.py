@@ -18,7 +18,6 @@ class BankTransferSenderDetailsSerializer(serializers.ModelSerializer):
         source='sender_bank_account.roll_number'
     )
 
-
     class Meta:
         model = BankTransferSenderDetails
         fields = (
