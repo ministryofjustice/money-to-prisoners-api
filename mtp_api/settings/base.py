@@ -54,6 +54,7 @@ INSTALLED_APPS = (
     'service',
     'security',
     'disbursement',
+    'notification',
 
     # django admin
     'django.contrib.admin',

@@ -6,7 +6,7 @@ from django.db.transaction import atomic
 from django.core.management import BaseCommand, CommandError
 
 from credit.models import Credit
-from disbursement.constants import DISBURSEMENT_METHOD
+from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION
 from disbursement.models import Disbursement
 from prison.models import PrisonerLocation
 from security.constants import TIME_PERIOD, get_start_date_for_time_period
@@ -96,7 +96,8 @@ class Command(BaseCommand):
 
     def handle_disbursement_update(self, batch_size, recreate):
         new_disbursements = Disbursement.objects.filter(
-            recipient_profile__isnull=True
+            recipient_profile__isnull=True,
+            resolution=DISBURSEMENT_RESOLUTION.SENT
         ).order_by('pk')
         new_disbursements_count = new_disbursements.count()
         if not new_disbursements_count:
@@ -344,6 +345,7 @@ class Command(BaseCommand):
         return recipient_profile
 
     def handle_totals(self):
+        self.stdout.write('Updating totals for security profiles')
         self.update_credit_counts()
         self.update_credit_totals()
         self.update_disbursement_counts()
@@ -355,7 +357,6 @@ class Command(BaseCommand):
         self.update_sender_counts()
         self.update_recipient_counts()
         self.stdout.write(self.style.SUCCESS('Done'))
-
 
     def update_credit_counts(self):
         for profile, totals in [
@@ -402,7 +403,6 @@ class Command(BaseCommand):
                     ), 0)
                 )
 
-
     def update_disbursement_counts(self):
         for profile, totals in [
             (RecipientProfile, RecipientTotals), (PrisonerProfile, PrisonerTotals)
@@ -411,7 +411,7 @@ class Command(BaseCommand):
                 start = get_start_date_for_time_period(time_period)
                 related_field = profile.disbursements.rel.remote_field.name
                 totals.objects.filter(time_period=time_period).update(
-                    disbursement_count=Subquery(
+                    disbursement_count=Coalesce(Subquery(
                         profile.objects.filter(
                             id=OuterRef('%s_id' % related_field),
                         ).annotate(
@@ -423,7 +423,7 @@ class Command(BaseCommand):
                                 distinct=True
                             )
                         ).values('disbursement_count')[:1]
-                    )
+                    ), 0)
                 )
 
     def update_disbursement_totals(self):
@@ -434,7 +434,7 @@ class Command(BaseCommand):
                 start = get_start_date_for_time_period(time_period)
                 related_field = profile.disbursements.rel.remote_field.name
                 totals.objects.filter(time_period=time_period).update(
-                    disbursement_total=Subquery(
+                    disbursement_total=Coalesce(Subquery(
                         profile.objects.filter(
                             id=OuterRef('%s_id' % related_field),
                         ).annotate(
@@ -445,7 +445,7 @@ class Command(BaseCommand):
                                 )
                             )
                         ).values('disbursement_total')[:1]
-                    )
+                    ), 0)
                 )
 
     def update_sender_prisoner_counts(self):
@@ -467,12 +467,11 @@ class Command(BaseCommand):
                 ), 0)
             )
 
-
     def update_recipient_prisoner_counts(self):
         for time_period in TIME_PERIOD.values:
             start = get_start_date_for_time_period(time_period)
             RecipientTotals.objects.filter(time_period=time_period).update(
-                prisoner_count=Subquery(
+                prisoner_count=Coalesce(Subquery(
                     RecipientProfile.objects.filter(
                         id=OuterRef('recipient_profile_id'),
                     ).annotate(
@@ -484,9 +483,8 @@ class Command(BaseCommand):
                             distinct=True
                         )
                     ).values('prisoner_count')[:1]
-                )
+                ), 0)
             )
-
 
     def update_sender_prison_counts(self):
         for time_period in TIME_PERIOD.values:
@@ -511,7 +509,7 @@ class Command(BaseCommand):
         for time_period in TIME_PERIOD.values:
             start = get_start_date_for_time_period(time_period)
             RecipientTotals.objects.filter(time_period=time_period).update(
-                prison_count=Subquery(
+                prison_count=Coalesce(Subquery(
                     RecipientProfile.objects.filter(
                         id=OuterRef('recipient_profile_id'),
                     ).annotate(
@@ -523,7 +521,7 @@ class Command(BaseCommand):
                             distinct=True
                         )
                     ).values('prison_count')[:1]
-                )
+                ), 0)
             )
 
     def update_sender_counts(self):
@@ -549,9 +547,9 @@ class Command(BaseCommand):
         for time_period in TIME_PERIOD.values:
             start = get_start_date_for_time_period(time_period)
             PrisonerTotals.objects.filter(time_period=time_period).update(
-                sender_count=Subquery(
-                    SenderProfile.objects.filter(
-                        id=OuterRef('recipient_profile_id'),
+                recipient_count=Coalesce(Subquery(
+                    PrisonerProfile.objects.filter(
+                        id=OuterRef('prisoner_profile_id'),
                     ).annotate(
                         recipient_count=Count(
                             'disbursements__recipient_profile',
@@ -561,7 +559,7 @@ class Command(BaseCommand):
                             distinct=True
                         )
                     ).values('recipient_count')[:1]
-                )
+                ), 0)
             )
 
     @atomic()

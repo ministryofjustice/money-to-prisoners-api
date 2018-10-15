@@ -1,4 +1,3 @@
-from django.db.models import Count
 from django.db.models.fields import IntegerField
 from django.db.models.functions import Cast
 from django.shortcuts import get_object_or_404
@@ -78,11 +77,17 @@ class SenderProfileListFilter(django_filters.FilterSet):
     prisoners = django_filters.ModelMultipleChoiceFilter(
         field_name='prisoners', queryset=PrisonerProfile.objects.all()
     )
-    prisoner_count__lte = django_filters.NumberFilter(
-        field_name='prisoner_count', lookup_expr='lte'
+    prisoner_count__gte = annotate_filter(
+        django_filters.NumberFilter(
+            field_name='prisoner_count', lookup_expr='gte'
+        ),
+        {'prisoner_count': Cast('totals__prisoner_count', IntegerField())}
     )
-    prisoner_count__gte = django_filters.NumberFilter(
-        field_name='prisoner_count', lookup_expr='gte'
+    prisoner_count__lte = annotate_filter(
+        django_filters.NumberFilter(
+            field_name='prisoner_count', lookup_expr='lte'
+        ),
+        {'prisoner_count': Cast('totals__prisoner_count', IntegerField())}
     )
 
     prison = django_filters.ModelMultipleChoiceFilter(
@@ -91,11 +96,17 @@ class SenderProfileListFilter(django_filters.FilterSet):
     prison_region = django_filters.CharFilter(field_name='prisons__region')
     prison_population = MultipleValueFilter(field_name='prisons__populations__name')
     prison_category = MultipleValueFilter(field_name='prisons__categories__name')
-    prison_count__lte = django_filters.NumberFilter(
-        field_name='prison_count', lookup_expr='lte'
+    prison_count__gte = annotate_filter(
+        django_filters.NumberFilter(
+            field_name='prison_count', lookup_expr='gte'
+        ),
+        {'prison_count': Cast('totals__prison_count', IntegerField())}
     )
-    prison_count__gte = django_filters.NumberFilter(
-        field_name='prison_count', lookup_expr='gte'
+    prison_count__lte = annotate_filter(
+        django_filters.NumberFilter(
+            field_name='prison_count', lookup_expr='lte'
+        ),
+        {'prison_count': Cast('totals__prison_count', IntegerField())}
     )
 
     credit_count__gte = annotate_filter(
@@ -127,8 +138,11 @@ class SenderProfileView(
     filter_class = SenderProfileListFilter
     serializer_class = SenderProfileSerializer
     ordering_param = api_settings.ORDERING_PARAM
-    ordering_fields = ('prisoner_count', 'prison_count', 'credit_count', 'credit_total',)
-    default_ordering = ('-prisoner_count',)
+    ordering_fields = (
+        'totals__prisoner_count', 'totals__prison_count', 'totals__credit_count',
+        'totals__credit_total',
+    )
+    default_ordering = ('-totals__prisoner_count',)
 
     permission_classes = (
         IsAuthenticated, SecurityProfilePermissions, NomsOpsClientIDPermissions
@@ -168,11 +182,17 @@ class PrisonerProfileListFilter(django_filters.FilterSet):
     senders = django_filters.ModelMultipleChoiceFilter(
         name='senders', queryset=SenderProfile.objects.all()
     )
-    sender_count__lte = django_filters.NumberFilter(
-        name='sender_count', lookup_expr='lte'
+    sender_count__gte = annotate_filter(
+        django_filters.NumberFilter(
+            field_name='sender_count', lookup_expr='gte'
+        ),
+        {'sender_count': Cast('totals__sender_count', IntegerField())}
     )
-    sender_count__gte = django_filters.NumberFilter(
-        name='sender_count', lookup_expr='gte'
+    sender_count__lte = annotate_filter(
+        django_filters.NumberFilter(
+            field_name='sender_count', lookup_expr='lte'
+        ),
+        {'sender_count': Cast('totals__sender_count', IntegerField())}
     )
 
     class Meta:
@@ -181,6 +201,7 @@ class PrisonerProfileListFilter(django_filters.FilterSet):
             'prisoner_number': ['exact'],
             'prisoner_dob': ['exact'],
             'modified': ['lt', 'gte'],
+            'totals__time_period': ['exact'],
         }
 
 
@@ -191,8 +212,11 @@ class PrisonerProfileView(
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter,)
     filter_class = PrisonerProfileListFilter
     serializer_class = PrisonerProfileSerializer
-    ordering_fields = ('sender_count', 'credit_count', 'credit_total', 'prisoner_name', 'prisoner_number')
-    default_ordering = ('-sender_count',)
+    ordering_fields = (
+        'totals__sender_count', 'totals__credit_count', 'totals__credit_total',
+        'prisoner_name', 'prisoner_number'
+    )
+    default_ordering = ('-totals__sender_count',)
 
     permission_classes = (
         IsAuthenticated, SecurityProfilePermissions, NomsOpsClientIDPermissions
