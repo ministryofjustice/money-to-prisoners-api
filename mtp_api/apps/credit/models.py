@@ -23,7 +23,7 @@ logger = logging.getLogger('mtp')
 
 
 class Credit(TimeStampedModel):
-    amount = models.PositiveIntegerField(db_index=True)
+    amount = models.BigIntegerField(db_index=True)
     received_at = models.DateTimeField(auto_now=False, blank=True, null=True, db_index=True)
 
     prisoner_number = models.CharField(max_length=250, blank=True, null=True, db_index=True)
