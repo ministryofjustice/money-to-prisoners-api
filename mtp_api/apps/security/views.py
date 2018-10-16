@@ -50,13 +50,13 @@ class SenderProfileListFilter(django_filters.FilterSet):
 
     source = SenderCreditSourceFilter()
     sender_sort_code = django_filters.CharFilter(
-        field_name='bank_transfer_details__sender_bank_account__sender_sort_code'
+        field_name='bank_transfer_details__sender_bank_account__sort_code'
     )
     sender_account_number = django_filters.CharFilter(
-        field_name='bank_transfer_details__sender_bank_account__sender_account_number'
+        field_name='bank_transfer_details__sender_bank_account__account_number'
     )
     sender_roll_number = django_filters.CharFilter(
-        field_name='bank_transfer_details__sender_bank_account__sender_roll_number'
+        field_name='bank_transfer_details__sender_bank_account__roll_number'
     )
     card_expiry_date = django_filters.CharFilter(
         field_name='debit_card_details__card_expiry_date'

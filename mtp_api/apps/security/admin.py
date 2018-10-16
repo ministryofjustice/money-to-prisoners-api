@@ -61,7 +61,7 @@ class SenderProfileAdmin(admin.ModelAdmin):
 class PrisonerProfileAdmin(admin.ModelAdmin):
     ordering = ('-credit_count',)
     list_display = ('prisoner_number', 'credit_count', 'formatted_credit_total')
-    search_fields = ('prisoner_name', 'prisoner_number', 'prisons__name', 'recipient_name__name')
+    search_fields = ('prisoner_name', 'prisoner_number', 'prisons__name', 'provided_name__name')
     readonly_fields = ('prisons', 'provided_names')
     exclude = ('senders',)
 
