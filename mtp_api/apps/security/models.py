@@ -16,8 +16,8 @@ from .signals import prisoner_profile_current_prisons_need_updating
 
 
 class SenderProfile(TimeStampedModel):
-    credit_count = models.IntegerField(default=0)
-    credit_total = models.IntegerField(default=0)
+    credit_count = models.BigIntegerField(default=0)
+    credit_total = models.BigIntegerField(default=0)
 
     prisons = models.ManyToManyField(Prison, related_name='senders')
 
@@ -156,8 +156,8 @@ class SenderEmail(models.Model):
 
 
 class RecipientProfile(TimeStampedModel):
-    disbursement_count = models.IntegerField(default=0)
-    disbursement_total = models.IntegerField(default=0)
+    disbursement_count = models.BigIntegerField(default=0)
+    disbursement_total = models.BigIntegerField(default=0)
 
     prisons = models.ManyToManyField(Prison, related_name='recipients')
 
@@ -216,8 +216,8 @@ class PrisonerProfile(TimeStampedModel):
     prisoner_number = models.CharField(max_length=250, db_index=True)
     single_offender_id = models.UUIDField(blank=True, null=True)
     prisoner_dob = models.DateField(blank=True, null=True)
-    credit_count = models.IntegerField(default=0)
-    credit_total = models.IntegerField(default=0)
+    credit_count = models.BigIntegerField(default=0)
+    credit_total = models.BigIntegerField(default=0)
     disbursement_count = models.IntegerField(default=0)
     disbursement_total = models.IntegerField(default=0)
     current_prison = models.ForeignKey(

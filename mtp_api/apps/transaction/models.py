@@ -12,7 +12,7 @@ from transaction.utils import format_amount
 
 
 class Transaction(TimeStampedModel):
-    amount = models.PositiveIntegerField()
+    amount = models.BigIntegerField()
     category = models.CharField(max_length=50, choices=TRANSACTION_CATEGORY, db_index=True)
     source = models.CharField(max_length=50, choices=TRANSACTION_SOURCE, db_index=True)
 
