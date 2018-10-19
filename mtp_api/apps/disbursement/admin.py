@@ -44,6 +44,7 @@ class DisbursementAdmin(admin.ModelAdmin):
     inlines = (LogAdminInline, CommentAdminInline,)
     date_hierarchy = 'created'
     actions = ['display_total_amount']
+    readonly_fields = ('recipient_profile', 'prisoner_profile',)
 
     @add_short_description(_('amount'))
     def formatted_amount(self, instance):
