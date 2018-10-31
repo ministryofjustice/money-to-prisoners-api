@@ -345,6 +345,7 @@ class Command(BaseCommand):
         return recipient_profile
 
     def handle_totals(self):
+        self.stdout.write('Updating totals for security profiles')
         self.update_credit_counts()
         self.update_credit_totals()
         self.update_disbursement_counts()
@@ -546,7 +547,7 @@ class Command(BaseCommand):
         for time_period in TIME_PERIOD.values:
             start = get_start_date_for_time_period(time_period)
             PrisonerTotals.objects.filter(time_period=time_period).update(
-                sender_count=Coalesce(Subquery(
+                recipient_count=Coalesce(Subquery(
                     PrisonerProfile.objects.filter(
                         id=OuterRef('prisoner_profile_id'),
                     ).annotate(

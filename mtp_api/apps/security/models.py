@@ -9,6 +9,7 @@ from django.utils.translation import gettext_lazy as _
 from model_utils.models import TimeStampedModel
 
 from core.models import ScheduledCommand
+from disbursement.constants import DISBURSEMENT_RESOLUTION
 from prison.models import Prison
 from .constants import TIME_PERIOD
 from .managers import PrisonProfileManager
@@ -183,7 +184,7 @@ class RecipientProfile(TimeStampedModel):
                         for d in self.bank_transfer_details.all()
                     )
                 )
-            )
+            ) & models.Q(resolution=DISBURSEMENT_RESOLUTION.SENT)
         except TypeError:
             return models.Q(pk=None)
 
@@ -246,7 +247,10 @@ class PrisonerProfile(TimeStampedModel):
 
     @property
     def disbursement_filters(self):
-        return models.Q(prisoner_number=self.prisoner_number)
+        return (
+            models.Q(prisoner_number=self.prisoner_number)
+            & models.Q(resolution=DISBURSEMENT_RESOLUTION.SENT)
+        )
 
 
 class PrisonerTotals(models.Model):
