@@ -270,3 +270,34 @@ class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):
                     self.assertEqual(credit_event.credit.id, first_credit['id'])
                     trigger_found = True
             self.assertTrue(trigger_found)
+
+    def test_get_events_filtered_by_date(self):
+        generate_transactions(transaction_batch=100, days_of_history=5)
+        generate_payments(payment_batch=100, days_of_history=5)
+        generate_disbursements(disbursement_batch=100, days_of_history=5)
+        user = self.security_staff[0]
+
+        start = timezone.now() - timedelta(days=2)
+        # viewable subscription
+        subscription = Subscription.objects.create(
+            rule='VOX', user=user, start=start
+        )
+        subscription.parameters.add(
+            Parameter(field='amount__gte', value=100), bulk=False
+        )
+        subscription.create_events()
+
+        lt = timezone.now()
+        gte = start + timedelta(days=1)
+        response = self.client.get(
+            reverse('event-list'),
+            {'created__lt': lt, 'created__gte': gte},
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(
+            response.data['count'],
+            Event.objects.filter(created__gte=gte, created__lt=lt).count()
+        )

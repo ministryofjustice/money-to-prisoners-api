@@ -1,11 +1,14 @@
 from collections import OrderedDict
 
 from django.db.models import QuerySet
+import django_filters
+from django_filters.rest_framework import DjangoFilterBackend
 from extended_choices import Choices
-from rest_framework import mixins, viewsets, views
+from rest_framework import filters, mixins, viewsets, views
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from core.filters import IsoDateTimeFilter
 from core.permissions import ActionsBasedPermissions
 from .models import Subscription, Event
 from .rules import RULES
@@ -25,10 +28,26 @@ class SubscriptionView(
         return self.queryset.filter(user=self.request.user)
 
 
+class EventViewFilter(django_filters.FilterSet):
+    created__lt = IsoDateTimeFilter(
+        field_name='created', lookup_expr='lt'
+    )
+    created__gte = IsoDateTimeFilter(
+        field_name='created', lookup_expr='gte'
+    )
+
+    class Meta:
+        model = Event
+        fields = ('created__lt', 'created__gte',)
+
+
 class EventView(mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = Event.objects.all().order_by('id').prefetch_related(
         'credits').prefetch_related('disbursements')
     serializer_class = EventSerializer
+    filter_backends = (DjangoFilterBackend, filters.OrderingFilter,)
+    filter_class = EventViewFilter
+    default_ordering = ('-pk',)
 
     permission_classes = (IsAuthenticated, ActionsBasedPermissions)
 

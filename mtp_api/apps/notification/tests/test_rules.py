@@ -81,11 +81,10 @@ class RuleTestCase(TestCase):
         subscription.create_events()
 
         credits = Credit.objects.filter(sender_profile__in=Credit.objects.filter(
-                created__gte=start,
-                sender_profile__totals__time_period=TIME_PERIOD.LAST_7_DAYS,
-                sender_profile__totals__credit_count__gte=5
-            ).values_list('sender_profile', flat=True).distinct()
-        )
+            created__gte=start,
+            sender_profile__totals__time_period=TIME_PERIOD.LAST_7_DAYS,
+            sender_profile__totals__credit_count__gte=5
+        ).values_list('sender_profile', flat=True).distinct())
         credit_events = list(chain(*[
             event.credits.all() for event in
             Event.objects.filter(credits__isnull=False)
@@ -111,7 +110,8 @@ class RuleTestCase(TestCase):
         )
         subscription.create_events()
 
-        disbursements = Disbursement.objects.filter(recipient_profile__in=Disbursement.objects.filter(
+        disbursements = Disbursement.objects.filter(
+            recipient_profile__in=Disbursement.objects.filter(
                 created__gte=start,
                 recipient_profile__totals__time_period=TIME_PERIOD.LAST_7_DAYS,
                 recipient_profile__totals__disbursement_count__gte=5
@@ -143,11 +143,10 @@ class RuleTestCase(TestCase):
         subscription.create_events()
 
         credits = Credit.objects.filter(prisoner_profile__in=Credit.objects.filter(
-                created__gte=start,
-                prisoner_profile__totals__time_period=TIME_PERIOD.LAST_7_DAYS,
-                prisoner_profile__totals__sender_count__gte=3
-            ).values_list('prisoner_profile', flat=True).distinct()
-        )
+            created__gte=start,
+            prisoner_profile__totals__time_period=TIME_PERIOD.LAST_7_DAYS,
+            prisoner_profile__totals__sender_count__gte=3
+        ).values_list('prisoner_profile', flat=True).distinct())
         credit_events = list(chain(*[
             event.credits.all() for event in
             Event.objects.filter(credits__isnull=False)
@@ -173,7 +172,8 @@ class RuleTestCase(TestCase):
         )
         subscription.create_events()
 
-        disbursements = Disbursement.objects.filter(recipient_profile__in=Disbursement.objects.filter(
+        disbursements = Disbursement.objects.filter(
+            prisoner_profile__in=Disbursement.objects.filter(
                 created__gte=start,
                 prisoner_profile__totals__time_period=TIME_PERIOD.LAST_7_DAYS,
                 prisoner_profile__totals__recipient_count__gte=3
@@ -205,11 +205,10 @@ class RuleTestCase(TestCase):
         subscription.create_events()
 
         credits = Credit.objects.filter(sender_profile__in=Credit.objects.filter(
-                created__gte=start,
-                sender_profile__totals__time_period=TIME_PERIOD.LAST_7_DAYS,
-                sender_profile__totals__prisoner_count__gte=3
-            ).values_list('sender_profile', flat=True).distinct()
-        )
+            created__gte=start,
+            sender_profile__totals__time_period=TIME_PERIOD.LAST_7_DAYS,
+            sender_profile__totals__prisoner_count__gte=3
+        ).values_list('sender_profile', flat=True).distinct())
         credit_events = list(chain(*[
             event.credits.all() for event in
             Event.objects.filter(credits__isnull=False)
@@ -235,7 +234,8 @@ class RuleTestCase(TestCase):
         )
         subscription.create_events()
 
-        disbursements = Disbursement.objects.filter(recipient_profile__in=Disbursement.objects.filter(
+        disbursements = Disbursement.objects.filter(
+            recipient_profile__in=Disbursement.objects.filter(
                 created__gte=start,
                 recipient_profile__totals__time_period=TIME_PERIOD.LAST_7_DAYS,
                 recipient_profile__totals__prisoner_count__gte=3
