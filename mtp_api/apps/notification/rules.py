@@ -46,7 +46,7 @@ class BaseRule():
     def get_max_event_ref_number(self, subscription):
         try:
             max_ref_number = Event.objects.filter(
-                subscription__user=subscription.user
+                user=subscription.user
             ).latest('ref_number').ref_number
         except Event.DoesNotExist:
             max_ref_number = 0
@@ -84,15 +84,18 @@ class QueryRule(BaseRule):
         ).exclude(
             created__lt=subscription.start
         ).exclude(
-            events__subscription=subscription
+            events__rule=subscription.rule,
+            events__user=subscription.user
         )
 
         max_ref_number = self.get_max_event_ref_number(subscription)
         for record in records:
             max_ref_number += 1
             event = Event.objects.create(
-                subscription=subscription,
-                ref_number=max_ref_number
+                rule=subscription.rule,
+                user=subscription.user,
+                ref_number=max_ref_number,
+                description=RULES[subscription.rule].description
             )
 
             if self.model == Credit:
@@ -155,7 +158,8 @@ class TimePeriodQuantityRule(BaseRule):
                 related_field = 'disbursement'
 
             all_records = model_set.exclude(
-                events__subscription=subscription
+                events__rule=subscription.rule,
+                events__user=subscription.user
             )
 
             triggering_records = all_records.exclude(
@@ -165,8 +169,10 @@ class TimePeriodQuantityRule(BaseRule):
             if len(triggering_records):
                 max_ref_number = self.get_max_event_ref_number(subscription) + 1
                 event = Event.objects.create(
-                    subscription=subscription,
-                    ref_number=max_ref_number
+                    rule=subscription.rule,
+                    user=subscription.user,
+                    ref_number=max_ref_number,
+                    description=RULES[subscription.rule].description
                 )
                 triggering_record = triggering_records[0]
                 other_records = all_records.exclude(pk=triggering_record.pk)

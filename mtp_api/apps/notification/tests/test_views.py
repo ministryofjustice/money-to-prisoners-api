@@ -262,7 +262,7 @@ class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):
             first_credit = event['credits'][0]
 
             db_event = Event.objects.get(
-                subscription__user=user, ref_number=event['ref_number']
+                user=user, ref_number=event['ref_number']
             )
             trigger_found = False
             for credit_event in db_event.eventcredit_set.all():

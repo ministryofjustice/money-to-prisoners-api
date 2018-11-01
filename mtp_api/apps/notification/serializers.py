@@ -73,7 +73,6 @@ class OrderedDisbursementSerializer(DisbursementSerializer):
 class EventSerializer(serializers.ModelSerializer):
     credits = OrderedCreditSerializer(source='eventcredit_set', many=True)
     disbursements = OrderedDisbursementSerializer(source='eventdisbursement_set', many=True)
-    rule = serializers.CharField(source='subscription.rule')
 
     class Meta:
         model = Event
@@ -83,4 +82,5 @@ class EventSerializer(serializers.ModelSerializer):
             'disbursements',
             'created',
             'rule',
+            'description',
         )
