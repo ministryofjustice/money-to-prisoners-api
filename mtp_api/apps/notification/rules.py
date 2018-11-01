@@ -15,6 +15,7 @@ from .models import Event, EventCredit, EventDisbursement
 INPUT_TYPES = Choices(
     ('NUMBER', 'number', _('Number')),
     ('STRING', 'string', _('String')),
+    ('AMOUNT', 'amount', _('Amount')),
 )
 
 
@@ -185,9 +186,9 @@ class TimePeriodQuantityRule(BaseRule):
                 relation_model.objects.bulk_create(event_relations)
 
 
-amount_input = Input('amount__gte', INPUT_TYPES.NUMBER)
+amount_input = Input('amount__gte', INPUT_TYPES.AMOUNT)
 not_whole_amount_input = Input(
-    'amount__endswith', INPUT_TYPES.NUMBER, default_value='00', exclude=True
+    'amount__endswith', INPUT_TYPES.STRING, default_value='00', exclude=True
 )
 time_period_input = Input(
     'totals__time_period', INPUT_TYPES.STRING, choices=TIME_PERIOD
