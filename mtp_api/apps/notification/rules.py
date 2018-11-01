@@ -210,7 +210,10 @@ RULES = {
     ),
     'CSFREQ': TimePeriodQuantityRule(
         Credit,
-        _('More than {} credits from the same debit card or bank account to any prisoner within {}'),
+        _(
+            'More than {totals__credit_count__gte} credits from the same debit '
+            'card or bank account to any prisoner within {totals__time_period}'
+        ),
         [
             time_period_input,
             Input('totals__credit_count__gte', INPUT_TYPES.NUMBER),
@@ -219,7 +222,10 @@ RULES = {
     ),
     'DRFREQ': TimePeriodQuantityRule(
         Disbursement,
-        _('More than {} disbursements from any prisoner to the same bank account within {}'),
+        _(
+            'More than {totals__disbursement_count__gte} disbursements from '
+            'any prisoner to the same bank account within {totals__time_period}'
+        ),
         [
             time_period_input,
             Input('totals__disbursement_count__gte', INPUT_TYPES.NUMBER),
@@ -228,7 +234,10 @@ RULES = {
     ),
     'CSNUM': TimePeriodQuantityRule(
         Credit,
-        _('A prisoner getting money from more than {} debit cards or bank accounts within {}'),
+        _(
+            'A prisoner getting money from more than {totals__sender_count__gte} '
+            'debit cards or bank accounts within {totals__time_period}'
+        ),
         [
             time_period_input,
             Input('totals__sender_count__gte', INPUT_TYPES.NUMBER),
@@ -237,7 +246,10 @@ RULES = {
     ),
     'DRNUM': TimePeriodQuantityRule(
         Disbursement,
-        _('A prisoner sending money to more than {} bank accounts within {}'),
+        _(
+            'A prisoner sending money to more than {totals__recipient_count__gte} '
+            'bank accounts within {totals__time_period}'
+        ),
         [
             time_period_input,
             Input('totals__recipient_count__gte', INPUT_TYPES.NUMBER),
@@ -246,7 +258,10 @@ RULES = {
     ),
     'CPNUM': TimePeriodQuantityRule(
         Credit,
-        _('A debit card of bank account sending money to more than {} prisoners within {}'),
+        _(
+            'A debit card of bank account sending money to more than '
+            '{totals__prisoner_count__gte} prisoners within {totals__time_period}'
+        ),
         [
             time_period_input,
             Input('totals__prisoner_count__gte', INPUT_TYPES.NUMBER),
@@ -255,7 +270,10 @@ RULES = {
     ),
     'DPNUM': TimePeriodQuantityRule(
         Disbursement,
-        _('A bank account getting money from more than {} prisoners within {}'),
+        _(
+            'A bank account getting money from more than {totals__prisoner_count__gte} '
+            'prisoners within {totals__time_period}'
+        ),
         [
             time_period_input,
             Input('totals__prisoner_count__gte', INPUT_TYPES.NUMBER),
@@ -264,7 +282,7 @@ RULES = {
     ),
     'VOX': CombinedRule(
         None,
-        'Credits or disbursements over £{}',
+        'Credits or disbursements over £{amount__gte}',
         [amount_input],
         rules=[
             QueryRule(Credit, None, []),
