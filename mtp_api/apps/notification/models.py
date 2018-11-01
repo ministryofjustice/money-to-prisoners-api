@@ -28,6 +28,7 @@ class Subscription(models.Model):
         permissions = (
             ('view_subscription', 'Can view subscription'),
         )
+        unique_together = ('user', 'rule')
 
     def create_events(self):
         from .rules import RULES
