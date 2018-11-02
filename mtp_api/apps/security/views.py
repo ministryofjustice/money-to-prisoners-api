@@ -138,8 +138,11 @@ class SenderProfileView(
     filter_class = SenderProfileListFilter
     serializer_class = SenderProfileSerializer
     ordering_param = api_settings.ORDERING_PARAM
-    ordering_fields = ('prisoner_count', 'prison_count', 'credit_count', 'credit_total',)
-    default_ordering = ('-prisoner_count',)
+    ordering_fields = (
+        'totals__prisoner_count', 'totals__prison_count', 'totals__credit_count',
+        'totals__credit_total',
+    )
+    default_ordering = ('-totals__prisoner_count',)
 
     permission_classes = (
         IsAuthenticated, SecurityProfilePermissions, NomsOpsClientIDPermissions
@@ -209,8 +212,11 @@ class PrisonerProfileView(
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter,)
     filter_class = PrisonerProfileListFilter
     serializer_class = PrisonerProfileSerializer
-    ordering_fields = ('sender_count', 'credit_count', 'credit_total', 'prisoner_name', 'prisoner_number')
-    default_ordering = ('-sender_count',)
+    ordering_fields = (
+        'totals__sender_count', 'totals__credit_count', 'totals__credit_total',
+        'prisoner_name', 'prisoner_number'
+    )
+    default_ordering = ('-totals__sender_count',)
 
     permission_classes = (
         IsAuthenticated, SecurityProfilePermissions, NomsOpsClientIDPermissions
