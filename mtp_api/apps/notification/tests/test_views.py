@@ -244,7 +244,7 @@ class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):
         )
         subscription.parameters.add(
             Parameter(field='totals__time_period', value=TIME_PERIOD.LAST_7_DAYS),
-            Parameter(field='totals__credit_count', value=2),
+            Parameter(field='totals__credit_count__gte', value=2),
             bulk=False
         )
         subscription.create_events()

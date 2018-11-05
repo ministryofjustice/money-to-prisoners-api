@@ -6,10 +6,10 @@ from extended_choices import Choices
 
 
 TIME_PERIOD = Choices(
-    ('ALL_TIME', 'all_time', _('All time')),
-    ('LAST_7_DAYS', 'last_7_days', _('Last 7 days')),
-    ('LAST_30_DAYS', 'last_30_days', _('Last 30 days')),
-    ('LAST_6_MONTHS', 'last_6_months', _('Last 6 months')),
+    ('ALL_TIME', 'all_time', _('all time')),
+    ('LAST_7_DAYS', 'last_7_days', _('last 7 days')),
+    ('LAST_30_DAYS', 'last_30_days', _('last 30 days')),
+    ('LAST_6_MONTHS', 'last_6_months', _('last 6 months')),
 )
 
 

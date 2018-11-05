@@ -10,6 +10,7 @@ from disbursement.models import Disbursement
 from mtp_auth.models import PrisonUserMapping
 from security.constants import TIME_PERIOD
 from security.models import PrisonerProfile, SenderProfile, RecipientProfile
+from transaction.utils import format_amount
 from .models import Event, EventCredit, EventDisbursement
 
 INPUT_TYPES = Choices(
@@ -19,7 +20,8 @@ INPUT_TYPES = Choices(
 )
 
 
-class BaseRule():
+class BaseRule:
+    parent = None
 
     def __init__(self, model, description, inputs, static_inputs=[]):
         self.model = model
@@ -52,8 +54,21 @@ class BaseRule():
             max_ref_number = 0
         return max_ref_number
 
+    def get_event_description(self, subscription):
+        if self.parent:
+            return self.parent.get_event_description(subscription)
+        input_values = {}
+        parameters = subscription.parameters.all()
+        for rule_input in self.inputs:
+            for parameter in parameters:
+                if parameter.field == rule_input.field:
+                    input_values[rule_input.field] = (
+                        rule_input.get_display_value(parameter)
+                    )
+        return RULES[subscription.rule].description.format(**input_values)
 
-class Input():
+
+class Input:
 
     def __init__(
         self, field, input_type, choices=None, default_value=None,
@@ -64,6 +79,17 @@ class Input():
         self.choices = choices
         self.default_value = default_value
         self.exclude = exclude
+
+    def get_display_value(self, parameter):
+        value = parameter.value
+        if self.choices and isinstance(self.choices, Choices):
+            try:
+                value = self.choices.for_value(value).display
+            except KeyError:
+                pass
+        elif self.input_type == INPUT_TYPES.AMOUNT:
+            value = format_amount(int(value), trim_empty_pence=True, pound_sign=False)
+        return value
 
 
 class QueryRule(BaseRule):
@@ -95,7 +121,7 @@ class QueryRule(BaseRule):
                 rule=subscription.rule,
                 user=subscription.user,
                 ref_number=max_ref_number,
-                description=RULES[subscription.rule].description
+                description=self.get_event_description(subscription)
             )
 
             if self.model == Credit:
@@ -116,6 +142,8 @@ class CombinedRule(BaseRule):
 
     def __init__(self, model, description, inputs, rules=[], *args, **kwargs):
         self.rules = rules
+        for rule in self.rules:
+            rule.parent = self
         super().__init__(model, description, inputs, *args, **kwargs)
 
     def create_events(self, subscription):
@@ -172,7 +200,7 @@ class TimePeriodQuantityRule(BaseRule):
                     rule=subscription.rule,
                     user=subscription.user,
                     ref_number=max_ref_number,
-                    description=RULES[subscription.rule].description
+                    description=self.get_event_description(subscription)
                 )
                 triggering_record = triggering_records[0]
                 other_records = all_records.exclude(pk=triggering_record.pk)
@@ -218,7 +246,7 @@ RULES = {
         Credit,
         _(
             'More than {totals__credit_count__gte} credits from the same debit '
-            'card or bank account to any prisoner within {totals__time_period}'
+            'card or bank account to any prisoner in {totals__time_period}'
         ),
         [
             time_period_input,
@@ -230,7 +258,7 @@ RULES = {
         Disbursement,
         _(
             'More than {totals__disbursement_count__gte} disbursements from '
-            'any prisoner to the same bank account within {totals__time_period}'
+            'any prisoner to the same bank account in {totals__time_period}'
         ),
         [
             time_period_input,
@@ -242,7 +270,7 @@ RULES = {
         Credit,
         _(
             'A prisoner getting money from more than {totals__sender_count__gte} '
-            'debit cards or bank accounts within {totals__time_period}'
+            'debit cards or bank accounts in {totals__time_period}'
         ),
         [
             time_period_input,
@@ -254,7 +282,7 @@ RULES = {
         Disbursement,
         _(
             'A prisoner sending money to more than {totals__recipient_count__gte} '
-            'bank accounts within {totals__time_period}'
+            'bank accounts in {totals__time_period}'
         ),
         [
             time_period_input,
@@ -266,7 +294,7 @@ RULES = {
         Credit,
         _(
             'A debit card of bank account sending money to more than '
-            '{totals__prisoner_count__gte} prisoners within {totals__time_period}'
+            '{totals__prisoner_count__gte} prisoners in {totals__time_period}'
         ),
         [
             time_period_input,
@@ -278,7 +306,7 @@ RULES = {
         Disbursement,
         _(
             'A bank account getting money from more than {totals__prisoner_count__gte} '
-            'prisoners within {totals__time_period}'
+            'prisoners in {totals__time_period}'
         ),
         [
             time_period_input,

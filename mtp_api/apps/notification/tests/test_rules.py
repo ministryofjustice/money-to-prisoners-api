@@ -259,17 +259,17 @@ class RuleTestCase(TestCase):
             rule='VOX', user=user, start=start
         )
         subscription.parameters.add(
-            Parameter(field='amount__gte', value=100),
+            Parameter(field='amount__gte', value=1000),
             bulk=False
         )
         subscription.create_events()
 
         credits = Credit.objects.filter(
-            amount__gte=100,
+            amount__gte=1000,
             created__gte=start
         )
         disbursements = Disbursement.objects.filter(
-            amount__gte=100,
+            amount__gte=1000,
             created__gte=start,
             resolution=DISBURSEMENT_RESOLUTION.SENT
         )
@@ -299,7 +299,7 @@ class RuleTestCase(TestCase):
             rule='VOX', user=user, start=start
         )
         subscription.parameters.add(
-            Parameter(field='amount__gte', value=100),
+            Parameter(field='amount__gte', value=1000),
             bulk=False
         )
         subscription.create_events()
@@ -376,3 +376,41 @@ class RuleTestCase(TestCase):
             len(Event.objects.all())
         )
         self.assertEqual(expected_triggers, triggering_credits)
+
+    def test_event_description_for_time_period_rule(self):
+        call_command('update_security_profiles')
+        user = self.security_staff[0]
+
+        start = timezone.now() - timedelta(days=2)
+        subscription = Subscription.objects.create(
+            rule='CSNUM', user=user, start=start
+        )
+        subscription.parameters.add(
+            Parameter(field='totals__time_period', value=TIME_PERIOD.LAST_7_DAYS),
+            Parameter(field='totals__sender_count__gte', value=3),
+            bulk=False
+        )
+        subscription.create_events()
+
+        for event in Event.objects.all():
+            self.assertEqual(
+                'A prisoner getting money from more than 3 '
+                'debit cards or bank accounts in last 7 days',
+                event.description
+            )
+
+    def test_event_description_for_combined_rule(self):
+        user = self.security_staff[0]
+
+        start = timezone.now() - timedelta(days=2)
+        subscription = Subscription.objects.create(
+            rule='VOX', user=user, start=start
+        )
+        subscription.parameters.add(
+            Parameter(field='amount__gte', value=1000),
+            bulk=False
+        )
+        subscription.create_events()
+
+        for event in Event.objects.all():
+            self.assertEqual('Credits or disbursements over £10', event.description)
