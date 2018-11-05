@@ -293,7 +293,7 @@ RULES = {
     'CPNUM': TimePeriodQuantityRule(
         Credit,
         _(
-            'A debit card of bank account sending money to more than '
+            'A debit card or bank account sending money to more than '
             '{totals__prisoner_count__gte} prisoners in {totals__time_period}'
         ),
         [
