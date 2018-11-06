@@ -133,7 +133,10 @@ class SenderProfileListFilter(django_filters.FilterSet):
 class SenderProfileView(
     mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
 ):
-    queryset = SenderProfile.objects.all().distinct()
+    queryset = SenderProfile.objects.all().prefetch_related(
+        'bank_transfer_details').prefetch_related(
+        'debit_card_details').prefetch_related(
+        'totals')
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter,)
     filter_class = SenderProfileListFilter
     serializer_class = SenderProfileSerializer
@@ -208,7 +211,10 @@ class PrisonerProfileListFilter(django_filters.FilterSet):
 class PrisonerProfileView(
     mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
 ):
-    queryset = PrisonerProfile.objects.all()
+    queryset = PrisonerProfile.objects.all().prefetch_related(
+        'prisons').prefetch_related(
+        'provided_names').prefetch_related(
+        'totals')
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter,)
     filter_class = PrisonerProfileListFilter
     serializer_class = PrisonerProfileSerializer
