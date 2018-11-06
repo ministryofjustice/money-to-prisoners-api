@@ -65,7 +65,12 @@ class Disbursement(TimeStampedModel):
             ('view_disbursement', 'Can view disbursements'),
         )
         indexes = [
-            models.Index(fields=['created'])
+            models.Index(fields=['created', 'id']),
+            models.Index(fields=['-created', 'id']),
+            models.Index(fields=['amount', 'id']),
+            models.Index(fields=['-amount', 'id']),
+            models.Index(fields=['prisoner_number', 'id']),
+            models.Index(fields=['-prisoner_number', 'id']),
         ]
 
     @staticmethod

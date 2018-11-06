@@ -92,6 +92,15 @@ class SenderTotals(models.Model):
         SenderProfile, on_delete=models.CASCADE, related_name='totals'
     )
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['credit_count']),
+            models.Index(fields=['credit_total']),
+            models.Index(fields=['prison_count']),
+            models.Index(fields=['prisoner_count']),
+            models.Index(fields=['time_period']),
+        ]
+
 
 class BankTransferSenderDetails(TimeStampedModel):
     sender_name = models.CharField(max_length=250, blank=True)
@@ -213,6 +222,15 @@ class RecipientTotals(models.Model):
         RecipientProfile, on_delete=models.CASCADE, related_name='totals'
     )
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['disbursement_count']),
+            models.Index(fields=['disbursement_total']),
+            models.Index(fields=['prison_count']),
+            models.Index(fields=['prisoner_count']),
+            models.Index(fields=['time_period']),
+        ]
+
 
 class PrisonerProfile(TimeStampedModel):
     prisoner_name = models.CharField(max_length=250)
@@ -265,6 +283,17 @@ class PrisonerTotals(models.Model):
     prisoner_profile = models.ForeignKey(
         PrisonerProfile, on_delete=models.CASCADE, related_name='totals'
     )
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['credit_count']),
+            models.Index(fields=['credit_total']),
+            models.Index(fields=['disbursement_count']),
+            models.Index(fields=['disbursement_total']),
+            models.Index(fields=['sender_count']),
+            models.Index(fields=['recipient_count']),
+            models.Index(fields=['time_period']),
+        ]
 
 
 class ProvidedPrisonerName(models.Model):

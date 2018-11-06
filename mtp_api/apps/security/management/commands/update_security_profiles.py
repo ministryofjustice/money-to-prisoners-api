@@ -359,6 +359,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('Done'))
 
     def update_credit_counts(self):
+        self.stdout.write('Updating credit counts for security profiles')
         for profile, totals in [
             (SenderProfile, SenderTotals), (PrisonerProfile, PrisonerTotals)
         ]:
@@ -382,6 +383,7 @@ class Command(BaseCommand):
                 )
 
     def update_credit_totals(self):
+        self.stdout.write('Updating credit totals for security profiles')
         for profile, totals in [
             (SenderProfile, SenderTotals), (PrisonerProfile, PrisonerTotals)
         ]:
@@ -404,6 +406,7 @@ class Command(BaseCommand):
                 )
 
     def update_disbursement_counts(self):
+        self.stdout.write('Updating disbursement counts for security profiles')
         for profile, totals in [
             (RecipientProfile, RecipientTotals), (PrisonerProfile, PrisonerTotals)
         ]:
@@ -427,6 +430,7 @@ class Command(BaseCommand):
                 )
 
     def update_disbursement_totals(self):
+        self.stdout.write('Updating disbursement totals for security profiles')
         for profile, totals in [
             (RecipientProfile, RecipientTotals), (PrisonerProfile, PrisonerTotals)
         ]:
@@ -449,6 +453,7 @@ class Command(BaseCommand):
                 )
 
     def update_sender_prisoner_counts(self):
+        self.stdout.write('Updating prisoner counts for sender profiles')
         for time_period in TIME_PERIOD.values:
             start = get_start_date_for_time_period(time_period)
             SenderTotals.objects.filter(time_period=time_period).update(
@@ -468,6 +473,7 @@ class Command(BaseCommand):
             )
 
     def update_recipient_prisoner_counts(self):
+        self.stdout.write('Updating prisoner counts for recipient profiles')
         for time_period in TIME_PERIOD.values:
             start = get_start_date_for_time_period(time_period)
             RecipientTotals.objects.filter(time_period=time_period).update(
@@ -487,6 +493,7 @@ class Command(BaseCommand):
             )
 
     def update_sender_prison_counts(self):
+        self.stdout.write('Updating prison counts for sender profiles')
         for time_period in TIME_PERIOD.values:
             start = get_start_date_for_time_period(time_period)
             SenderTotals.objects.filter(time_period=time_period).update(
@@ -506,6 +513,7 @@ class Command(BaseCommand):
             )
 
     def update_recipient_prison_counts(self):
+        self.stdout.write('Updating prison counts for recipient profiles')
         for time_period in TIME_PERIOD.values:
             start = get_start_date_for_time_period(time_period)
             RecipientTotals.objects.filter(time_period=time_period).update(
@@ -525,6 +533,7 @@ class Command(BaseCommand):
             )
 
     def update_sender_counts(self):
+        self.stdout.write('Updating sender counts for prisoner profiles')
         for time_period in TIME_PERIOD.values:
             start = get_start_date_for_time_period(time_period)
             PrisonerTotals.objects.filter(time_period=time_period).update(
@@ -544,6 +553,7 @@ class Command(BaseCommand):
             )
 
     def update_recipient_counts(self):
+        self.stdout.write('Updating recipient counts for prisoner profiles')
         for time_period in TIME_PERIOD.values:
             start = get_start_date_for_time_period(time_period)
             PrisonerTotals.objects.filter(time_period=time_period).update(
