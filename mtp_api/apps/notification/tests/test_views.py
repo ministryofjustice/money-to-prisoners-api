@@ -269,6 +269,14 @@ class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):
                 if credit_event.triggering:
                     self.assertEqual(credit_event.credit.id, first_credit['id'])
                     trigger_found = True
+
+            # check subsequent credits ordered by received_at
+            last_date = None
+            for credit in event['credits'][1:]:
+                if last_date:
+                    self.assertGreaterEqual(last_date, credit['received_at'])
+                last_date = credit['received_at']
+
             self.assertTrue(trigger_found)
 
     def test_get_events_filtered_by_date(self):

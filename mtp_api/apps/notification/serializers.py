@@ -6,7 +6,7 @@ from credit.models import Credit
 from credit.serializers import SecurityCreditSerializer
 from disbursement.models import Disbursement
 from disbursement.serializers import DisbursementSerializer
-from .models import Subscription, Parameter, Event
+from .models import Subscription, Parameter, Event, EventCredit, EventDisbursement
 
 
 class ParameterSerializer(serializers.ModelSerializer):
@@ -46,7 +46,14 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
 class OrderedListSerializer(serializers.ListSerializer):
     def to_representation(self, data):
-        data = data.all().order_by('-triggering') if isinstance(data, models.Manager) else data
+        if isinstance(data, models.Manager):
+            if data.model == EventCredit:
+                ordering = ('-triggering', '-credit__received_at',)
+            elif data.model == EventDisbursement:
+                ordering = ('-triggering', '-disbursement__created',)
+            else:
+                ordering = ('-triggering',)
+            data = data.all().order_by(*ordering)
         return super().to_representation(data)
 
 
