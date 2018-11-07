@@ -32,11 +32,12 @@ class Command(BaseCommand):
         super().add_arguments(parser)
         parser.add_argument('--batch-size', type=int, default=200,
                             help='Number of credits to process in one atomic transaction')
-        parser.add_argument('--totals', action='store_true', help='Recalculates the credit counts and totals only')
+        parser.add_argument('--totals-only', action='store_true', help='Recalculates the counts and totals only')
+        parser.add_argument('--skip-totals', action='store_true', help='Does not recalculate the counts and totals')
         parser.add_argument('--recreate', action='store_true', help='Deletes existing sender and prisoner profiles')
 
     def handle(self, **options):
-        if options['totals'] and options['recreate']:
+        if options['totals_only'] and options['recreate']:
             raise CommandError('Cannot recalculate totals when deleting all profiles')
 
         self.verbose = options['verbosity'] > 1
@@ -45,10 +46,12 @@ class Command(BaseCommand):
         if batch_size < 1:
             raise CommandError('Batch size must be at least 1')
 
-        if options['totals']:
+        if options['totals_only']:
             self.handle_totals()
         else:
             self.handle_update(batch_size=batch_size, recreate=options['recreate'])
+            if not options['skip_totals']:
+                self.handle_totals()
 
     def handle_update(self, batch_size, recreate):
         if recreate:
@@ -60,7 +63,6 @@ class Command(BaseCommand):
         finally:
             self.stdout.write('Updating prisoner profiles for current locations')
             PrisonerProfile.objects.update_current_prisons()
-            self.handle_totals()
 
     def handle_credit_update(self, batch_size, recreate):
         new_credits = Credit.objects.filter(sender_profile__isnull=True).order_by('pk')
