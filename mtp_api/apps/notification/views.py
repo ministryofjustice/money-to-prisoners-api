@@ -77,7 +77,7 @@ class RuleView(views.APIView):
 
                 if input_field.choices and isinstance(input_field.choices, QuerySet):
                     input_dict['choices'] = [
-                        (obj.pk, str(obj),) for obj in input_field.choices
+                        (obj.pk, str(obj),) for obj in input_field.choices.all()
                     ]
                 elif input_field.choices and isinstance(input_field.choices, Choices):
                     input_dict['choices'] = input_field.choices.choices
