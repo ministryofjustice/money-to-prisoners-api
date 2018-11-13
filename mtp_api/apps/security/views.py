@@ -14,12 +14,16 @@ from core.filters import (
 from core.permissions import ActionsBasedPermissions
 from credit.constants import CREDIT_SOURCE
 from credit.views import GetCredits
+from disbursement.views import GetDisbursementsView
 from mtp_auth.permissions import NomsOpsClientIDPermissions
 from prison.models import Prison
-from .models import SenderProfile, PrisonerProfile, SavedSearch
+from .models import (
+    SenderProfile, PrisonerProfile, RecipientProfile, SavedSearch
+)
 from .permissions import SecurityProfilePermissions
 from .serializers import (
-    SenderProfileSerializer, PrisonerProfileSerializer, SavedSearchSerializer
+    SenderProfileSerializer, PrisonerProfileSerializer, SavedSearchSerializer,
+    RecipientProfileSerializer
 )
 
 
@@ -134,9 +138,12 @@ class SenderProfileView(
     mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
 ):
     queryset = SenderProfile.objects.all().prefetch_related(
-        'bank_transfer_details').prefetch_related(
-        'debit_card_details').prefetch_related(
-        'totals')
+        'bank_transfer_details'
+    ).prefetch_related(
+        'debit_card_details'
+    ).prefetch_related(
+        'totals'
+    )
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter,)
     filter_class = SenderProfileListFilter
     serializer_class = SenderProfileSerializer
@@ -212,9 +219,12 @@ class PrisonerProfileView(
     mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
 ):
     queryset = PrisonerProfile.objects.all().prefetch_related(
-        'prisons').prefetch_related(
-        'provided_names').prefetch_related(
-        'totals')
+        'prisons'
+    ).prefetch_related(
+        'provided_names'
+    ).prefetch_related(
+        'totals'
+    )
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter,)
     filter_class = PrisonerProfileListFilter
     serializer_class = PrisonerProfileSerializer
@@ -236,6 +246,134 @@ class PrisonerProfileCreditsView(
     def list(self, request, prisoner_pk=None):
         prisoner = get_object_or_404(PrisonerProfile, pk=prisoner_pk)
         queryset = self.get_queryset().filter(prisoner_profile=prisoner)
+        queryset = self.filter_queryset(queryset)
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+
+class PrisonerProfileDisbursementsView(
+    GetDisbursementsView
+):
+
+    def list(self, request, prisoner_pk=None):
+        prisoner = get_object_or_404(PrisonerProfile, pk=prisoner_pk)
+        queryset = self.get_queryset().filter(prisoner_profile=prisoner)
+        queryset = self.filter_queryset(queryset)
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+
+class RecipientProfileListFilter(django_filters.FilterSet):
+    recipient_sort_code = django_filters.CharFilter(
+        field_name='bank_transfer_details__recipient_bank_account__sort_code'
+    )
+    recipient_account_number = django_filters.CharFilter(
+        field_name='bank_transfer_details__recipient_bank_account__account_number'
+    )
+    recipient_roll_number = django_filters.CharFilter(
+        field_name='bank_transfer_details__recipient_bank_account__roll_number'
+    )
+
+    prisoners = django_filters.ModelMultipleChoiceFilter(
+        field_name='prisoners', queryset=PrisonerProfile.objects.all()
+    )
+    prisoner_count__gte = annotate_filter(
+        django_filters.NumberFilter(
+            field_name='prisoner_count', lookup_expr='gte'
+        ),
+        {'prisoner_count': Cast('totals__prisoner_count', IntegerField())}
+    )
+    prisoner_count__lte = annotate_filter(
+        django_filters.NumberFilter(
+            field_name='prisoner_count', lookup_expr='lte'
+        ),
+        {'prisoner_count': Cast('totals__prisoner_count', IntegerField())}
+    )
+
+    prison = django_filters.ModelMultipleChoiceFilter(
+        field_name='prisons', queryset=Prison.objects.all()
+    )
+    prison_region = django_filters.CharFilter(field_name='prisons__region')
+    prison_population = MultipleValueFilter(field_name='prisons__populations__name')
+    prison_category = MultipleValueFilter(field_name='prisons__categories__name')
+    prison_count__gte = annotate_filter(
+        django_filters.NumberFilter(
+            field_name='prison_count', lookup_expr='gte'
+        ),
+        {'prison_count': Cast('totals__prison_count', IntegerField())}
+    )
+    prison_count__lte = annotate_filter(
+        django_filters.NumberFilter(
+            field_name='prison_count', lookup_expr='lte'
+        ),
+        {'prison_count': Cast('totals__prison_count', IntegerField())}
+    )
+
+    credit_count__gte = annotate_filter(
+        django_filters.NumberFilter(
+            field_name='credit_count', lookup_expr='gte'
+        ),
+        {'credit_count': Cast('totals__credit_count', IntegerField())}
+    )
+    credit_count__lte = annotate_filter(
+        django_filters.NumberFilter(
+            field_name='credit_count', lookup_expr='lte'
+        ),
+        {'credit_count': Cast('totals__credit_count', IntegerField())}
+    )
+
+    class Meta:
+        model = RecipientProfile
+        fields = {
+            'modified': ['lt', 'gte'],
+            'totals__time_period': ['exact'],
+        }
+
+
+class RecipientProfileView(
+    mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
+):
+    queryset = RecipientProfile.objects.exclude(
+        bank_transfer_details__isnull=True
+    ).prefetch_related(
+        'bank_transfer_details'
+    ).prefetch_related(
+        'totals'
+    )
+    filter_backends = (DjangoFilterBackend, filters.OrderingFilter,)
+    filter_class = RecipientProfileListFilter
+    serializer_class = RecipientProfileSerializer
+    ordering_param = api_settings.ORDERING_PARAM
+    ordering_fields = (
+        'totals__prisoner_count', 'totals__prison_count',
+        'totals__disbursement_count', 'totals__disbursement_total',
+    )
+    default_ordering = ('-totals__prisoner_count',)
+
+    permission_classes = (
+        IsAuthenticated, SecurityProfilePermissions, NomsOpsClientIDPermissions
+    )
+
+
+class RecipientProfileDisbursementsView(
+    GetDisbursementsView
+):
+
+    def list(self, request, recipient_pk=None):
+        recipient = get_object_or_404(RecipientProfile, pk=recipient_pk)
+        queryset = self.get_queryset().filter(recipient_profile=recipient)
         queryset = self.filter_queryset(queryset)
 
         page = self.paginate_queryset(queryset)

@@ -9,12 +9,17 @@ from rest_framework.test import APITestCase
 
 from core.tests.utils import make_test_users
 from credit.models import Credit
+from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION
+from disbursement.models import Disbursement
+from disbursement.tests.utils import generate_disbursements
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from mtp_auth.tests.mommy_recipes import create_security_staff_user
 from payment.tests.utils import generate_payments
 from prison.tests.utils import load_random_prisoner_locations
 from security.constants import TIME_PERIOD
-from security.models import SenderProfile, PrisonerProfile, SavedSearch, SearchFilter
+from security.models import (
+    SenderProfile, PrisonerProfile, SavedSearch, SearchFilter, RecipientProfile
+)
 from transaction.tests.utils import generate_transactions
 
 
@@ -29,6 +34,7 @@ class SecurityViewTestCase(APITestCase, AuthTestCaseMixin):
         load_random_prisoner_locations()
         generate_transactions(transaction_batch=100, days_of_history=5)
         generate_payments(payment_batch=100, days_of_history=5)
+        generate_disbursements(disbursement_batch=150, days_of_history=5)
         call_command('update_security_profiles')
 
     def _get_unauthorised_application_users(self):
@@ -168,6 +174,78 @@ class SenderCreditListTestCase(SecurityViewTestCase):
             self.assertTrue(credit.id in [d['id'] for d in data])
 
 
+class RecipientProfileListTestCase(SecurityViewTestCase):
+
+    def _get_url(self, *args, **kwargs):
+        return reverse('recipientprofile-list')
+
+    def test_filter_by_prisoner_count(self):
+        data = self._get_list(
+            self._get_authorised_user(),
+            prisoner_count__gte=3,
+            totals__time_period='all_time'
+        )['results']
+        prisoner_counts = Disbursement.objects.filter(
+            method=DISBURSEMENT_METHOD.BANK_TRANSFER,
+            resolution=DISBURSEMENT_RESOLUTION.SENT
+        ).values(
+            'sort_code', 'account_number', 'roll_number',
+        ).order_by(
+            'sort_code', 'account_number', 'roll_number',
+        ).annotate(prisoner_count=Count('prisoner_number', distinct=True))
+
+        prisoner_counts = prisoner_counts.filter(prisoner_count__gte=3)
+
+        self.assertEqual(
+            len(prisoner_counts), len(data)
+        )
+
+    def test_filter_by_prison(self):
+        data = self._get_list(self._get_authorised_user(), prison='IXB')['results']
+
+        recipient_profiles = RecipientProfile.objects.filter(
+            prisoners__prisons__nomis_id='IXB',
+            bank_transfer_details__isnull=False
+        ).distinct()
+
+        self.assertEqual(len(data), recipient_profiles.count())
+        for recipient in recipient_profiles:
+            self.assertTrue(recipient.id in [d['id'] for d in data])
+
+    def test_filter_by_multiple_prisons(self):
+        data = self._get_list(self._get_authorised_user(), prison=['IXB', 'INP'])['results']
+
+        recipient_profiles = RecipientProfile.objects.filter(
+            Q(prisoners__prisons__nomis_id='IXB') |
+            Q(prisoners__prisons__nomis_id='INP'),
+            bank_transfer_details__isnull=False
+        ).distinct()
+
+        self.assertEqual(len(data), recipient_profiles.count())
+        for recipient in recipient_profiles:
+            self.assertTrue(recipient.id in [d['id'] for d in data])
+
+
+class RecipientDisbursementListTestCase(SecurityViewTestCase):
+
+    def _get_url(self, *args, **kwargs):
+        return reverse('recipient-disbursements-list', args=args)
+
+    def test_list_disbursements_for_recipient(self):
+        recipient = RecipientProfile.objects.last()  # first is anonymous/cheque
+        data = self._get_list(
+            self._get_authorised_user(), path_params=[recipient.id]
+        )['results']
+        self.assertGreater(len(data), 0)
+
+        disbursements = Disbursement.objects.filter(recipient.disbursement_filters)
+        self.assertEqual(
+            len(disbursements), len(data)
+        )
+        for disbursement in disbursements:
+            self.assertTrue(disbursement.id in [d['id'] for d in data])
+
+
 class PrisonerProfileListTestCase(SecurityViewTestCase):
 
     def _get_url(self, *args, **kwargs):
@@ -237,6 +315,26 @@ class PrisonerCreditListTestCase(SecurityViewTestCase):
         )
         for credit in credits:
             self.assertTrue(credit.id in [d['id'] for d in data])
+
+
+class PrisonerDisbursementListTestCase(SecurityViewTestCase):
+
+    def _get_url(self, *args, **kwargs):
+        return reverse('prisoner-disbursements-list', args=args)
+
+    def test_list_disbursements_for_prisoner(self):
+        prisoner = PrisonerProfile.objects.first()
+        data = self._get_list(
+            self._get_authorised_user(), path_params=[prisoner.id]
+        )['results']
+        self.assertTrue(len(data) > 0)
+
+        disbursements = Disbursement.objects.filter(prisoner.disbursement_filters)
+        self.assertEqual(
+            len(disbursements), len(data)
+        )
+        for disbursement in disbursements:
+            self.assertTrue(disbursement.id in [d['id'] for d in data])
 
 
 class CreateSavedSearchTestCase(APITestCase, AuthTestCaseMixin):
