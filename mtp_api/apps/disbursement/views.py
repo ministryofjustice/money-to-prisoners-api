@@ -91,9 +91,9 @@ class DisbursementViewMixin:
         return queryset
 
 
-class DisbursementView(
-    DisbursementViewMixin, mixins.CreateModelMixin, mixins.ListModelMixin,
-    mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet
+class GetDisbursementsView(
+    DisbursementViewMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet
 ):
     queryset = Disbursement.objects.all().order_by('-id')
     serializer_class = DisbursementSerializer
@@ -107,6 +107,11 @@ class DisbursementView(
             BANK_ADMIN_OAUTH_CLIENT_ID
         )
     )
+
+
+class DisbursementView(
+    mixins.CreateModelMixin, mixins.UpdateModelMixin, GetDisbursementsView
+):
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()

@@ -3,7 +3,8 @@ from rest_framework import serializers
 from prison.models import Prison
 from .models import (
     SenderProfile, BankTransferSenderDetails, DebitCardSenderDetails,
-    PrisonerProfile, SavedSearch, SearchFilter, SenderTotals, PrisonerTotals
+    PrisonerProfile, SavedSearch, SearchFilter, SenderTotals, PrisonerTotals,
+    RecipientProfile, RecipientTotals, BankTransferRecipientDetails
 )
 
 
@@ -110,6 +111,47 @@ class PrisonerProfileSerializer(serializers.ModelSerializer):
 
     def get_provided_names(self, obj):
         return list(obj.provided_names.values_list('name', flat=True))
+
+
+class BankTransferRecipientDetailsSerializer(serializers.ModelSerializer):
+    recipient_sort_code = serializers.CharField(
+        source='recipient_bank_account.sort_code'
+    )
+    recipient_account_number = serializers.CharField(
+        source='recipient_bank_account.account_number'
+    )
+    recipient_roll_number = serializers.CharField(
+        source='recipient_bank_account.roll_number'
+    )
+
+    class Meta:
+        model = BankTransferRecipientDetails
+        fields = (
+            'recipient_sort_code',
+            'recipient_account_number',
+            'recipient_roll_number',
+        )
+
+
+class RecipientTotalsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RecipientTotals
+        fields = '__all__'
+
+
+class RecipientProfileSerializer(serializers.ModelSerializer):
+    bank_transfer_details = BankTransferRecipientDetailsSerializer(many=True)
+    totals = RecipientTotalsSerializer(many=True)
+
+    class Meta:
+        model = RecipientProfile
+        fields = (
+            'id',
+            'bank_transfer_details',
+            'created',
+            'modified',
+            'totals',
+        )
 
 
 class SearchFilterSerializer(serializers.ModelSerializer):
