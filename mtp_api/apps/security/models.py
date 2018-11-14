@@ -69,6 +69,10 @@ class BankAccount(models.Model):
     account_number = models.CharField(max_length=50, blank=True)
     roll_number = models.CharField(max_length=50, blank=True)
 
+    monitoring_users = models.ManyToManyField(
+        User, related_name='monitored_bank_accounts'
+    )
+
     class Meta:
         unique_together = (
             ('sort_code', 'account_number', 'roll_number'),
@@ -79,6 +83,23 @@ class BankAccount(models.Model):
             'BankAccount{sort_code=%s, account_number=%s, roll_number=%s}' %
             (self.sort_code, self.account_number, self.roll_number or 'n/a')
         )
+
+
+class BankTransferSenderDetails(TimeStampedModel):
+    sender_name = models.CharField(max_length=250, blank=True)
+    sender_bank_account = models.ForeignKey(
+        BankAccount, on_delete=models.CASCADE, related_name='senders'
+    )
+    sender = models.ForeignKey(
+        SenderProfile, on_delete=models.CASCADE, related_name='bank_transfer_details'
+    )
+
+    class Meta:
+        ordering = ('created',)
+        verbose_name_plural = 'bank transfer sender details'
+
+    def __str__(self):
+        return self.sender_name
 
 
 class SenderTotals(models.Model):
@@ -102,29 +123,16 @@ class SenderTotals(models.Model):
         ]
 
 
-class BankTransferSenderDetails(TimeStampedModel):
-    sender_name = models.CharField(max_length=250, blank=True)
-    sender_bank_account = models.ForeignKey(
-        BankAccount, on_delete=models.CASCADE, related_name='senders'
-    )
-    sender = models.ForeignKey(
-        SenderProfile, on_delete=models.CASCADE, related_name='bank_transfer_details'
-    )
-
-    class Meta:
-        ordering = ('created',)
-        verbose_name_plural = 'bank transfer sender details'
-
-    def __str__(self):
-        return self.sender_name
-
-
 class DebitCardSenderDetails(TimeStampedModel):
     card_number_last_digits = models.CharField(max_length=4, blank=True, null=True, db_index=True)
     card_expiry_date = models.CharField(max_length=5, blank=True, null=True)
     postcode = models.CharField(max_length=250, blank=True, null=True, db_index=True)
     sender = models.ForeignKey(
         SenderProfile, on_delete=models.CASCADE, related_name='debit_card_details'
+    )
+
+    monitoring_users = models.ManyToManyField(
+        User, related_name='monitored_debit_cards'
     )
 
     class Meta:
@@ -244,6 +252,10 @@ class PrisonerProfile(TimeStampedModel):
     prisons = models.ManyToManyField(Prison, related_name='historic_prisoners')
     senders = models.ManyToManyField(SenderProfile, related_name='prisoners')
     recipients = models.ManyToManyField(RecipientProfile, related_name='prisoners')
+
+    monitoring_users = models.ManyToManyField(
+        User, related_name='monitored_prisoners'
+    )
 
     objects = PrisonProfileManager()
 

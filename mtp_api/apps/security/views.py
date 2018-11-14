@@ -3,7 +3,7 @@ from django.db.models.functions import Cast
 from django.shortcuts import get_object_or_404
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, mixins, viewsets
+from rest_framework import filters, mixins, viewsets, status, decorators
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.settings import api_settings
@@ -44,6 +44,32 @@ class SenderCreditSourceFilter(django_filters.ChoiceFilter):
                 bank_transfer_details__isnull=True
             )
         return qs
+
+
+class MonitorProfileMixin(viewsets.GenericViewSet):
+
+    def get_monitor_object(self):
+        return self.get_object()
+
+    @decorators.action(
+        methods=['post'], detail=True,
+        permission_classes=[IsAuthenticated, NomsOpsClientIDPermissions],
+        url_path='monitor', url_name='monitor'
+    )
+    def monitor(self, request, pk=None):
+        obj = self.get_monitor_object()
+        obj.monitoring_users.add(request.user)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @decorators.action(
+        methods=['post'], detail=True,
+        permission_classes=[IsAuthenticated, NomsOpsClientIDPermissions],
+        url_path='unmonitor', url_name='unmonitor'
+    )
+    def unmonitor(self, request, pk=None):
+        obj = self.get_monitor_object()
+        obj.monitoring_users.remove(request.user)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class SenderProfileListFilter(django_filters.FilterSet):
@@ -135,7 +161,8 @@ class SenderProfileListFilter(django_filters.FilterSet):
 
 
 class SenderProfileView(
-    mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
+    mixins.ListModelMixin, mixins.RetrieveModelMixin, MonitorProfileMixin,
+    viewsets.GenericViewSet
 ):
     queryset = SenderProfile.objects.all().prefetch_related(
         'bank_transfer_details'
@@ -157,6 +184,15 @@ class SenderProfileView(
     permission_classes = (
         IsAuthenticated, SecurityProfilePermissions, NomsOpsClientIDPermissions
     )
+
+    def get_monitor_object(self):
+        profile = self.get_object()
+        bank_details = profile.bank_transfer_details.first()
+        card_details = profile.debit_card_details.first()
+        if bank_details:
+            return bank_details.sender_bank_account
+        elif card_details:
+            return card_details
 
 
 class SenderProfileCreditsView(
@@ -216,7 +252,8 @@ class PrisonerProfileListFilter(django_filters.FilterSet):
 
 
 class PrisonerProfileView(
-    mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
+    mixins.ListModelMixin, mixins.RetrieveModelMixin, MonitorProfileMixin,
+    viewsets.GenericViewSet
 ):
     queryset = PrisonerProfile.objects.all().prefetch_related(
         'prisons'
@@ -343,7 +380,8 @@ class RecipientProfileListFilter(django_filters.FilterSet):
 
 
 class RecipientProfileView(
-    mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
+    mixins.ListModelMixin, mixins.RetrieveModelMixin, MonitorProfileMixin,
+    viewsets.GenericViewSet
 ):
     queryset = RecipientProfile.objects.exclude(
         bank_transfer_details__isnull=True
@@ -365,6 +403,12 @@ class RecipientProfileView(
     permission_classes = (
         IsAuthenticated, SecurityProfilePermissions, NomsOpsClientIDPermissions
     )
+
+    def get_monitor_object(self):
+        obj = super().get_object()
+        bank_details = obj.bank_transfer_details.first()
+        if bank_details:
+            return bank_details.recipient_bank_account
 
 
 class RecipientProfileDisbursementsView(
