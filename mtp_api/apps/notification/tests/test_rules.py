@@ -14,6 +14,8 @@ from notification.models import Subscription, Parameter, Event, EventCredit
 from payment.tests.utils import generate_payments
 from prison.tests.utils import load_random_prisoner_locations
 from security.constants import TIME_PERIOD
+from security.models import BankAccount, DebitCardSenderDetails
+from transaction.tests.utils import generate_transactions
 
 
 class RuleTestCase(TestCase):
@@ -414,3 +416,106 @@ class RuleTestCase(TestCase):
 
         for event in Event.objects.all():
             self.assertEqual('Credits or disbursements over £10', event.description)
+
+    def test_create_events_for_monitored_bank_account(self):
+        generate_transactions(transaction_batch=200, days_of_history=3)
+        call_command('update_security_profiles')
+        user = self.security_staff[0]
+
+        bank_account = BankAccount.objects.first()
+        bank_account.monitoring_users.add(user)
+
+        start = timezone.now() - timedelta(days=2)
+        subscription = Subscription.objects.create(
+            rule='MON', user=user, start=start
+        )
+        subscription.create_events()
+
+        credits = Credit.objects.filter(
+            sender_profile__bank_transfer_details__sender_bank_account=bank_account
+        )
+        disbursements = Disbursement.objects.filter(
+            recipient_profile__bank_transfer_details__recipient_bank_account=bank_account
+        )
+        credit_events = list(chain(*[
+            event.credits.all() for event in
+            Event.objects.filter(credits__isnull=False)
+        ]))
+        disbursement_events = list(chain(*[
+            event.disbursements.all() for event in
+            Event.objects.filter(disbursements__isnull=False)
+        ]))
+
+        self.assertEqual(
+            set(credits),
+            set(credit_events)
+        )
+        self.assertEqual(
+            set(disbursements),
+            set(disbursement_events)
+        )
+
+    def test_create_events_for_monitored_prisoner(self):
+        call_command('update_security_profiles')
+        user = self.security_staff[0]
+
+        prisoner = Credit.objects.filter(prisoner_profile__isnull=False
+            ).first().prisoner_profile
+        prisoner.monitoring_users.add(user)
+
+        start = timezone.now() - timedelta(days=2)
+        subscription = Subscription.objects.create(
+            rule='MON', user=user, start=start
+        )
+        subscription.create_events()
+
+        credits = Credit.objects.filter(
+            prisoner_number=prisoner.prisoner_number
+        )
+        disbursements = Disbursement.objects.filter(
+            resolution=DISBURSEMENT_RESOLUTION.SENT,
+            prisoner_number=prisoner.prisoner_number
+        )
+        credit_events = list(chain(*[
+            event.credits.all() for event in
+            Event.objects.filter(credits__isnull=False)
+        ]))
+        disbursement_events = list(chain(*[
+            event.disbursements.all() for event in
+            Event.objects.filter(disbursements__isnull=False)
+        ]))
+
+        self.assertEqual(
+            set(credits),
+            set(credit_events)
+        )
+        self.assertEqual(
+            set(disbursements),
+            set(disbursement_events)
+        )
+
+    def test_create_events_for_monitored_debit_card(self):
+        call_command('update_security_profiles')
+        user = self.security_staff[0]
+
+        debit_card = DebitCardSenderDetails.objects.first()
+        debit_card.monitoring_users.add(user)
+
+        start = timezone.now() - timedelta(days=2)
+        subscription = Subscription.objects.create(
+            rule='MON', user=user, start=start
+        )
+        subscription.create_events()
+
+        credits = Credit.objects.filter(
+            sender_profile__debit_card_details=debit_card
+        )
+        credit_events = list(chain(*[
+            event.credits.all() for event in
+            Event.objects.filter(credits__isnull=False)
+        ]))
+
+        self.assertEqual(
+            set(credits),
+            set(credit_events)
+        )
