@@ -17,17 +17,19 @@ INPUT_TYPES = Choices(
     ('NUMBER', 'number', _('Number')),
     ('STRING', 'string', _('String')),
     ('AMOUNT', 'amount', _('Amount')),
+    ('OBJECT_ID', 'object_id', _('Object ID')),
 )
 
 
 class BaseRule:
     parent = None
 
-    def __init__(self, model, description, inputs, static_inputs=[]):
+    def __init__(self, model, description, inputs, static_inputs=[], limit_prisons=True):
         self.model = model
         self.description = description
         self.inputs = inputs
         self.static_inputs = static_inputs
+        self.limit_prisons = limit_prisons
 
     def create_events(self, subscription):
         raise NotImplementedError
@@ -39,8 +41,8 @@ class BaseRule:
             in subscription.parameters.all()
         ]
         static_parameters = [
-            ~Q(**{i.field: i.default_value}) if i.exclude
-            else Q(**{i.field: i.default_value}) for i
+            ~Q(**{i.field: i.get_default_value(subscription)}) if i.exclude
+            else Q(**{i.field: i.get_default_value(subscription)}) for i
             in self.static_inputs
         ]
         return reduce(Q.__and__, provided_parameters + static_parameters)
@@ -80,6 +82,9 @@ class Input:
         self.default_value = default_value
         self.exclude = exclude
 
+    def get_default_value(self, subscription):
+        return self.default_value
+
     def get_display_value(self, parameter):
         value = parameter.value
         if self.choices and isinstance(self.choices, Choices):
@@ -92,11 +97,17 @@ class Input:
         return value
 
 
+class DefaultUserInput(Input):
+
+    def get_default_value(self, subscription):
+        return subscription.user
+
+
 class QueryRule(BaseRule):
 
     def get_query(self, subscription):
         query = super().get_query(subscription)
-        if self.model in (Credit, Disbursement):
+        if self.limit_prisons and self.model in (Credit, Disbursement):
             prisons = PrisonUserMapping.objects.get_prison_set_for_user(
                 subscription.user
             )
@@ -151,7 +162,7 @@ class CombinedRule(BaseRule):
             rule.create_events(subscription)
 
 
-class TimePeriodQuantityRule(BaseRule):
+class ProfileRule(BaseRule):
 
     def __init__(self, model, description, inputs, profile=None, *args, **kwargs):
         self.profile = profile
@@ -159,7 +170,9 @@ class TimePeriodQuantityRule(BaseRule):
 
     def get_query(self, subscription):
         query = super().get_query(subscription)
-        if self.profile in (PrisonerProfile, SenderProfile, RecipientProfile):
+        if self.limit_prisons and self.profile in (
+            PrisonerProfile, SenderProfile, RecipientProfile
+        ):
             prisons = PrisonUserMapping.objects.get_prison_set_for_user(
                 subscription.user
             )
@@ -233,6 +246,65 @@ sent_disbursements_only = Input(
 
 
 RULES = {
+    'MON': CombinedRule(
+        None,
+        _('All transactions you’re monitoring — prisoners, debit cards, bank accounts'),
+        [],
+        rules=[
+            ProfileRule(
+                Credit,
+                None,
+                [],
+                static_inputs=[DefaultUserInput(
+                    'bank_transfer_details__sender_bank_account__monitoring_users',
+                    INPUT_TYPES.OBJECT_ID
+                )],
+                profile=SenderProfile,
+                limit_prisons=False
+            ),
+            ProfileRule(
+                Credit,
+                None,
+                [],
+                static_inputs=[DefaultUserInput(
+                    'debit_card_details__monitoring_users', INPUT_TYPES.OBJECT_ID
+                )],
+                profile=SenderProfile,
+                limit_prisons=False
+            ),
+            ProfileRule(
+                Credit,
+                None,
+                [],
+                static_inputs=[DefaultUserInput(
+                    'monitoring_users', INPUT_TYPES.OBJECT_ID
+                )],
+                profile=PrisonerProfile,
+                limit_prisons=False
+            ),
+            ProfileRule(
+                Disbursement,
+                None,
+                [],
+                static_inputs=[DefaultUserInput(
+                    'bank_transfer_details__recipient_bank_account__monitoring_users',
+                    INPUT_TYPES.OBJECT_ID
+                )],
+                profile=RecipientProfile,
+                limit_prisons=False
+            ),
+            ProfileRule(
+                Disbursement,
+                None,
+                [],
+                static_inputs=[DefaultUserInput(
+                    'monitoring_users', INPUT_TYPES.OBJECT_ID
+                )],
+                profile=PrisonerProfile,
+                limit_prisons=False
+            ),
+        ]
+    ),
     'NWN': CombinedRule(
         None,
         _('Credits or disbursements that are not a whole number'),
@@ -242,7 +314,7 @@ RULES = {
             QueryRule(Disbursement, None, [], static_inputs=[not_whole_amount_input, sent_disbursements_only])
         ]
     ),
-    'CSFREQ': TimePeriodQuantityRule(
+    'CSFREQ': ProfileRule(
         Credit,
         _(
             'More than {totals__credit_count__gte} credits from the same debit '
@@ -254,7 +326,7 @@ RULES = {
         ],
         profile=SenderProfile
     ),
-    'DRFREQ': TimePeriodQuantityRule(
+    'DRFREQ': ProfileRule(
         Disbursement,
         _(
             'More than {totals__disbursement_count__gte} disbursements from '
@@ -266,7 +338,7 @@ RULES = {
         ],
         profile=RecipientProfile
     ),
-    'CSNUM': TimePeriodQuantityRule(
+    'CSNUM': ProfileRule(
         Credit,
         _(
             'A prisoner getting money from more than {totals__sender_count__gte} '
@@ -278,7 +350,7 @@ RULES = {
         ],
         profile=PrisonerProfile
     ),
-    'DRNUM': TimePeriodQuantityRule(
+    'DRNUM': ProfileRule(
         Disbursement,
         _(
             'A prisoner sending money to more than {totals__recipient_count__gte} '
@@ -290,7 +362,7 @@ RULES = {
         ],
         profile=PrisonerProfile
     ),
-    'CPNUM': TimePeriodQuantityRule(
+    'CPNUM': ProfileRule(
         Credit,
         _(
             'A debit card or bank account sending money to more than '
@@ -302,7 +374,7 @@ RULES = {
         ],
         profile=SenderProfile
     ),
-    'DPNUM': TimePeriodQuantityRule(
+    'DPNUM': ProfileRule(
         Disbursement,
         _(
             'A bank account getting money from more than {totals__prisoner_count__gte} '
