@@ -60,6 +60,7 @@ class SenderProfileSerializer(serializers.ModelSerializer):
     bank_transfer_details = BankTransferSenderDetailsSerializer(many=True)
     debit_card_details = DebitCardSenderDetailsSerializer(many=True)
     totals = SenderTotalsSerializer(many=True)
+    monitoring = serializers.BooleanField()
 
     class Meta:
         model = SenderProfile
@@ -70,6 +71,7 @@ class SenderProfileSerializer(serializers.ModelSerializer):
             'created',
             'modified',
             'totals',
+            'monitoring',
         )
 
 
@@ -93,6 +95,7 @@ class PrisonerProfileSerializer(serializers.ModelSerializer):
     current_prison = PrisonSerializer()
     provided_names = serializers.SerializerMethodField()
     totals = PrisonerTotalsSerializer(many=True)
+    monitoring = serializers.BooleanField()
 
     class Meta:
         model = PrisonerProfile
@@ -107,6 +110,7 @@ class PrisonerProfileSerializer(serializers.ModelSerializer):
             'current_prison',
             'provided_names',
             'totals',
+            'monitoring',
         )
 
     def get_provided_names(self, obj):
@@ -142,6 +146,7 @@ class RecipientTotalsSerializer(serializers.ModelSerializer):
 class RecipientProfileSerializer(serializers.ModelSerializer):
     bank_transfer_details = BankTransferRecipientDetailsSerializer(many=True)
     totals = RecipientTotalsSerializer(many=True)
+    monitoring = serializers.BooleanField()
 
     class Meta:
         model = RecipientProfile
@@ -151,6 +156,7 @@ class RecipientProfileSerializer(serializers.ModelSerializer):
             'created',
             'modified',
             'totals',
+            'monitoring',
         )
 
 
