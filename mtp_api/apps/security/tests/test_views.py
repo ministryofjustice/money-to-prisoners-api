@@ -153,6 +153,24 @@ class SenderProfileListTestCase(SecurityViewTestCase):
                 if totals.time_period == TIME_PERIOD.LAST_7_DAYS:
                     self.assertLess(totals.credit_count, minimum_credit_count)
 
+    def test_filter_by_monitoring(self):
+        user = self._get_authorised_user()
+        profiles = SenderProfile.objects.filter(
+            bank_transfer_details__isnull=False
+        )[:2]
+
+        for profile in profiles:
+            profile.bank_transfer_details.first().sender_bank_account.monitoring_users.add(user)
+
+        sender_profiles = SenderProfile.objects.filter(
+            bank_transfer_details__sender_bank_account__monitoring_users=user
+        )
+        data = self._get_list(user, monitoring=True)['results']
+
+        self.assertEqual(len(data), sender_profiles.count())
+        for sender in sender_profiles:
+            self.assertTrue(sender.id in [d['id'] for d in data])
+
 
 class SenderCreditListTestCase(SecurityViewTestCase):
 
@@ -220,6 +238,24 @@ class RecipientProfileListTestCase(SecurityViewTestCase):
             Q(prisoners__prisons__nomis_id='INP'),
             bank_transfer_details__isnull=False
         ).distinct()
+
+        self.assertEqual(len(data), recipient_profiles.count())
+        for recipient in recipient_profiles:
+            self.assertTrue(recipient.id in [d['id'] for d in data])
+
+    def test_filter_by_monitoring(self):
+        user = self._get_authorised_user()
+        profiles = RecipientProfile.objects.filter(
+            bank_transfer_details__isnull=False
+        )[:2]
+
+        for profile in profiles:
+            profile.bank_transfer_details.first().recipient_bank_account.monitoring_users.add(user)
+
+        recipient_profiles = RecipientProfile.objects.filter(
+            bank_transfer_details__recipient_bank_account__monitoring_users=user
+        )
+        data = self._get_list(user, monitoring=True)['results']
 
         self.assertEqual(len(data), recipient_profiles.count())
         for recipient in recipient_profiles:
@@ -295,6 +331,21 @@ class PrisonerProfileListTestCase(SecurityViewTestCase):
         self.assertEqual(
             greater_than_3_count, len(data)
         )
+
+    def test_filter_by_monitoring(self):
+        user = self._get_authorised_user()
+        profiles = PrisonerProfile.objects.all()[:2]
+        for profile in profiles:
+            profile.monitoring_users.add(user)
+
+        prisoner_profiles = PrisonerProfile.objects.filter(
+            monitoring_users=user
+        )
+        data = self._get_list(user, monitoring=True)['results']
+
+        self.assertEqual(len(data), prisoner_profiles.count())
+        for prisoner in prisoner_profiles:
+            self.assertTrue(prisoner.id in [d['id'] for d in data])
 
 
 class PrisonerCreditListTestCase(SecurityViewTestCase):

@@ -459,8 +459,9 @@ class RuleTestCase(TestCase):
         call_command('update_security_profiles')
         user = self.security_staff[0]
 
-        prisoner = Credit.objects.filter(prisoner_profile__isnull=False
-            ).first().prisoner_profile
+        prisoner = Credit.objects.filter(
+            prisoner_profile__isnull=False
+        ).first().prisoner_profile
         prisoner.monitoring_users.add(user)
 
         start = timezone.now() - timedelta(days=2)

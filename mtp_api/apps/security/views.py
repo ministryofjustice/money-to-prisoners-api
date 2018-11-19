@@ -1,4 +1,5 @@
-from django.db.models.fields import IntegerField
+from django.db.models import Case, When, Value, Q
+from django.db.models.fields import IntegerField, BooleanField
 from django.db.models.functions import Cast
 from django.shortcuts import get_object_or_404
 import django_filters
@@ -151,6 +152,7 @@ class SenderProfileListFilter(django_filters.FilterSet):
         ),
         {'credit_count': Cast('totals__credit_count', IntegerField())}
     )
+    monitoring = django_filters.BooleanFilter()
 
     class Meta:
         model = SenderProfile
@@ -193,6 +195,21 @@ class SenderProfileView(
             return bank_details.sender_bank_account
         elif card_details:
             return card_details
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        qs = qs.annotate(
+            monitoring=Case(
+                When(
+                    Q(bank_transfer_details__sender_bank_account__monitoring_users=self.request.user) |
+                    Q(debit_card_details__monitoring_users=self.request.user),
+                    then=Value(True)
+                ),
+                default=Value(False),
+                output_field=BooleanField()
+            )
+        )
+        return qs
 
 
 class SenderProfileCreditsView(
@@ -240,6 +257,7 @@ class PrisonerProfileListFilter(django_filters.FilterSet):
         ),
         {'sender_count': Cast('totals__sender_count', IntegerField())}
     )
+    monitoring = django_filters.BooleanFilter()
 
     class Meta:
         model = PrisonerProfile
@@ -274,6 +292,19 @@ class PrisonerProfileView(
     permission_classes = (
         IsAuthenticated, SecurityProfilePermissions, NomsOpsClientIDPermissions
     )
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        qs = qs.annotate(
+            monitoring=Case(
+                When(
+                    monitoring_users=self.request.user, then=Value(True)
+                ),
+                default=Value(False),
+                output_field=BooleanField()
+            )
+        )
+        return qs
 
 
 class PrisonerProfileCreditsView(
@@ -370,6 +401,7 @@ class RecipientProfileListFilter(django_filters.FilterSet):
         ),
         {'credit_count': Cast('totals__credit_count', IntegerField())}
     )
+    monitoring = django_filters.BooleanFilter()
 
     class Meta:
         model = RecipientProfile
@@ -409,6 +441,20 @@ class RecipientProfileView(
         bank_details = obj.bank_transfer_details.first()
         if bank_details:
             return bank_details.recipient_bank_account
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        qs = qs.annotate(
+            monitoring=Case(
+                When(
+                    bank_transfer_details__recipient_bank_account__monitoring_users=self.request.user,
+                    then=Value(True)
+                ),
+                default=Value(False),
+                output_field=BooleanField()
+            )
+        )
+        return qs
 
 
 class RecipientProfileDisbursementsView(
