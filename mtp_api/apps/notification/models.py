@@ -7,6 +7,7 @@ from model_utils.models import TimeStampedModel
 
 from credit.models import Credit
 from disbursement.models import Disbursement
+from .constants import EMAIL_FREQUENCY
 
 
 def validate_rule_code(value):
@@ -79,3 +80,8 @@ class EventDisbursement(models.Model):
     event = models.ForeignKey(Event, on_delete=models.CASCADE)
     disbursement = models.ForeignKey(Disbursement, on_delete=models.CASCADE)
     triggering = models.BooleanField(default=False)
+
+
+class EmailNotificationPreferences(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    frequency = models.CharField(max_length=50, choices=EMAIL_FREQUENCY)

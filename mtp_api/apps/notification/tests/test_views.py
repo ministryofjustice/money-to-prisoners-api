@@ -6,7 +6,10 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from notification.models import Subscription, Parameter, Event
+from notification.constants import EMAIL_FREQUENCY
+from notification.models import (
+    Subscription, Parameter, Event, EmailNotificationPreferences
+)
 from notification.rules import RULES
 from core.tests.utils import make_test_users
 from credit.models import Credit
@@ -309,3 +312,62 @@ class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):
             response.data['count'],
             Event.objects.filter(created__gte=gte, created__lt=lt).count()
         )
+
+
+class EmailPreferencesViewTestCase(AuthTestCaseMixin, APITestCase):
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
+
+    def setUp(self):
+        super().setUp()
+        test_users = make_test_users()
+        self.security_staff = test_users['security_staff']
+
+    def test_set_frequency(self):
+        user = self.security_staff[0]
+
+        response = self.client.post(
+            reverse('emailpreferences-list'), {'frequency': EMAIL_FREQUENCY.DAILY},
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(
+            EmailNotificationPreferences.objects.get(user=user).frequency,
+            EMAIL_FREQUENCY.DAILY
+        )
+
+    def test_unset_frequency(self):
+        user = self.security_staff[0]
+        EmailNotificationPreferences.objects.create(
+            user=user, frequency=EMAIL_FREQUENCY.DAILY
+        )
+
+        response = self.client.post(
+            reverse('emailpreferences-list'), {'frequency': EMAIL_FREQUENCY.NEVER},
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(
+            EmailNotificationPreferences.objects.filter(user=user).count(), 0
+        )
+
+    def test_get_frequency(self):
+        user = self.security_staff[0]
+
+        # check with no frequency set
+        response = self.client.get(
+            reverse('emailpreferences-list'),
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'frequency': EMAIL_FREQUENCY.NEVER})
+
+        # check with daily frequency set
+        EmailNotificationPreferences.objects.create(
+            user=user, frequency=EMAIL_FREQUENCY.DAILY
+        )
+        response = self.client.get(
+            reverse('emailpreferences-list'),
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'frequency': EMAIL_FREQUENCY.DAILY})
