@@ -4,13 +4,14 @@ from django.db.models import QuerySet
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from extended_choices import Choices
-from rest_framework import filters, mixins, viewsets, views
+from rest_framework import filters, mixins, viewsets, views, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from core.filters import IsoDateTimeFilter
 from core.permissions import ActionsBasedPermissions
-from .models import Subscription, Event
+from .constants import EMAIL_FREQUENCY
+from .models import Subscription, Event, EmailNotificationPreferences
 from .rules import RULES
 from .serializers import SubscriptionSerializer, EventSerializer
 
@@ -93,3 +94,34 @@ class RuleView(views.APIView):
             ('previous', None),
             ('results', rules)
         ]))
+
+
+class EmailPreferencesView(viewsets.ViewSet):
+    permission_classes = (IsAuthenticated,)
+
+    def list(self, request, *args, **kwargs):
+        try:
+            frequency = EmailNotificationPreferences.objects.get(
+                user=request.user
+            ).frequency
+        except EmailNotificationPreferences.DoesNotExist:
+            frequency = EMAIL_FREQUENCY.NEVER
+        return Response(
+            {'frequency': frequency}
+        )
+
+    def create(self, request, *args, **kwargs):
+        frequency = request.data.get('frequency')
+        if frequency not in EMAIL_FREQUENCY.values:
+            return Response(
+                'Must provide a recognized "frequency" value',
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user = request.user
+        EmailNotificationPreferences.objects.filter(user=user).delete()
+        if frequency != EMAIL_FREQUENCY.NEVER:
+            EmailNotificationPreferences.objects.create(
+                user=user, frequency=frequency
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
