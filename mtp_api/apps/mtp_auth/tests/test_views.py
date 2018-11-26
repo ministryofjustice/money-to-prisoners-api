@@ -784,7 +784,8 @@ class CreateUserTestCase(AuthBaseTestCase):
             user_data,
             'bank-admin',
             [Group.objects.get(name='BankAdmin'),
-             Group.objects.get(name='RefundBankAdmin')]
+             Group.objects.get(name='RefundBankAdmin')],
+            expected_login_link='http://localhost/bank-admin/',
         )
 
     def test_create_prisoner_location_admin(self):
@@ -799,7 +800,8 @@ class CreateUserTestCase(AuthBaseTestCase):
             self.pla_uas[0],
             user_data,
             'noms-ops',
-            [Group.objects.get(name='PrisonerLocationAdmin')]
+            [Group.objects.get(name='PrisonerLocationAdmin')],
+            expected_login_link='http://localhost/noms-ops/',
         )
 
     def test_create_security_staff(self):
@@ -814,7 +816,8 @@ class CreateUserTestCase(AuthBaseTestCase):
             self.security_uas[0],
             user_data,
             'noms-ops',
-            [Group.objects.get(name='Security')]
+            [Group.objects.get(name='Security')],
+            expected_login_link='http://localhost/noms-ops/',
         )
 
     def test_create_prison_clerk(self):
@@ -829,7 +832,8 @@ class CreateUserTestCase(AuthBaseTestCase):
             self.cashbook_uas[0],
             user_data,
             'cashbook',
-            [Group.objects.get(name='PrisonClerk')]
+            [Group.objects.get(name='PrisonClerk')],
+            expected_login_link='http://localhost/cashbook/',
         )
 
     def test_create_cashbook_user_admin(self):
@@ -846,24 +850,8 @@ class CreateUserTestCase(AuthBaseTestCase):
             user_data,
             'cashbook',
             [Group.objects.get(name='PrisonClerk'),
-             Group.objects.get(name='UserAdmin')]
-        )
-
-    def test_login_link_present(self):
-        Role.objects.filter(name='prison-clerk').update(login_url='https://cashbook.local/login/')
-        user_data = {
-            'username': 'new-prison-clerk',
-            'first_name': 'New',
-            'last_name': 'Prison Clerk',
-            'email': 'pc@mtp.local',
-            'role': 'prison-clerk',
-        }
-        self.assertUserCreated(
-            self.cashbook_uas[0],
-            user_data,
-            'cashbook',
-            [Group.objects.get(name='PrisonClerk')],
-            expected_login_link='https://cashbook.local/login/',
+             Group.objects.get(name='UserAdmin')],
+            expected_login_link='http://localhost/cashbook/',
         )
 
     def assertUserNotCreated(self, requester, data):  # noqa: N802
@@ -1887,9 +1875,6 @@ class AccountRequestTestCase(AuthBaseTestCase):
         super().setUp()
         self.users = make_test_users(clerks_per_prison=1)
         self.users.update(make_test_user_admins())
-        for role in Role.objects.all():
-            role.login_url = 'http://localhost/%s/' % role.application.client_id
-            role.save()
 
     def test_create_requests(self):
         url_list = reverse('accountrequest-list')

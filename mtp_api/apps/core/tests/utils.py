@@ -67,6 +67,7 @@ def make_applications():
                 name=role['name'],
                 application=new_app,
                 key_group=key_group,
+                login_url='http://localhost/%s/' % client_id,
             )
             role.other_groups.set(groups)
 
