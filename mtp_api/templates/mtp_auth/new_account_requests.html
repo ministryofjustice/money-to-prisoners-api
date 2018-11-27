@@ -1,0 +1,22 @@
+{% extends 'mtp_common/email_base.html' %}
+{% load i18n %}
+
+{% block inner_content %}
+  <p>
+    {% if names|length == 1 %}
+      {% blocktrans trimmed with name=names.0 %}
+        {{ name }} has requested access to the {{ service_name }}.
+      {% endblocktrans %}
+    {% else %}
+      {% blocktrans trimmed with number=names|length %}
+        {{ number }} users have requested access to the {{ service_name }}.
+      {% endblocktrans %}
+    {% endif %}
+  </p>
+
+  <p>
+    {% blocktrans trimmed %}
+      <a href="{{ login_url }}">Log into the {{ service_name }}</a> to approve or reject them.
+    {% endblocktrans %}
+  </p>
+{% endblock %}
