@@ -157,6 +157,7 @@ class CreditListFilter(django_filters.FilterSet):
     sender_roll_number__isblank = BlankStringFilter(field_name='transaction__sender_roll_number')
 
     card_expiry_date = django_filters.CharFilter(field_name='payment__card_expiry_date')
+    card_number_first_digits = django_filters.CharFilter(field_name='payment__card_number_first_digits')
     card_number_last_digits = django_filters.CharFilter(field_name='payment__card_number_last_digits')
     sender_email = django_filters.CharFilter(field_name='payment__email', lookup_expr='icontains')
     sender_postcode = PostcodeFilter(field_name='payment__billing_address__postcode')

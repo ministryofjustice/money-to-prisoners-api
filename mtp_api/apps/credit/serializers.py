@@ -103,6 +103,7 @@ class SecurityCreditSerializer(CreditSerializer):
     sender_sort_code = serializers.CharField(read_only=True)
     sender_account_number = serializers.CharField(read_only=True)
     sender_roll_number = serializers.CharField(read_only=True)
+    card_number_first_digits = serializers.CharField(read_only=True)
     card_number_last_digits = serializers.CharField(read_only=True)
     card_expiry_date = serializers.CharField(read_only=True)
     sender_profile = serializers.PrimaryKeyRelatedField(read_only=True)
@@ -117,6 +118,7 @@ class SecurityCreditSerializer(CreditSerializer):
             'sender_sort_code',
             'sender_account_number',
             'sender_roll_number',
+            'card_number_first_digits',
             'card_number_last_digits',
             'card_expiry_date',
             'sender_profile',

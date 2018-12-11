@@ -4,6 +4,7 @@ import random
 import uuid
 
 from django.utils import timezone
+from django.utils.crypto import get_random_string
 from faker import Faker
 
 from core.tests.utils import MockModelTimestamps
@@ -52,7 +53,8 @@ def get_sender_prisoner_pairs():
         senders.append(
             {
                 'cardholder_name': full_name,
-                'card_number_last_digits': ''.join([str(random.randint(0, 9)) for _ in range(4)]),
+                'card_number_first_digits': get_random_string(6, '0123456789') if random.random() > 0.2 else None,
+                'card_number_last_digits': get_random_string(4, '0123456789'),
                 'card_expiry_date': expiry_date.strftime('%m/%y'),
                 'ip_address': fake.ipv4(),
                 'email': '%s@mail.local' % full_name.replace(' ', '.'),

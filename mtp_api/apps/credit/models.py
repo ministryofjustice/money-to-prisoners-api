@@ -200,6 +200,10 @@ class Credit(TimeStampedModel):
         return self.payment.email if hasattr(self, 'payment') else None
 
     @property
+    def card_number_first_digits(self):
+        return self.payment.card_number_first_digits if hasattr(self, 'payment') else None
+
+    @property
     def card_number_last_digits(self):
         return self.payment.card_number_last_digits if hasattr(self, 'payment') else None
 

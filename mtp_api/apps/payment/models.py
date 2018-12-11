@@ -70,6 +70,7 @@ class Payment(TimeStampedModel):
     batch = models.ForeignKey(Batch, on_delete=models.SET_NULL, null=True, blank=True)
 
     cardholder_name = models.CharField(max_length=250, blank=True, null=True)
+    card_number_first_digits = models.CharField(max_length=6, blank=True, null=True)
     card_number_last_digits = models.CharField(max_length=4, blank=True, null=True)
     card_expiry_date = models.CharField(max_length=5, blank=True, null=True)
     card_brand = models.CharField(max_length=250, blank=True, null=True)
