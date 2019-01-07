@@ -44,6 +44,7 @@ class Transaction(TimeStampedModel):
             Q(credit__blocked=False)
         ),
         TRANSACTION_STATUS.REFUNDABLE: (
+            Q(source=TRANSACTION_SOURCE.BANK_TRANSFER) &
             Q(incomplete_sender_info=False) & (
                 Q(credit__isnull=False) & (
                     Q(credit__prison__isnull=True) |
