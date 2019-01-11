@@ -50,7 +50,10 @@ class CreditTextSearchFilter(django_filters.CharFilter):
     - sender_name
     - amount (input is expected as £nn.nn but is reformatted for search)
     """
-    fields = ['prisoner_name', 'prisoner_number', 'sender_name', 'amount']
+    fields = [
+        'prisoner_name', 'prisoner_number', 'sender_name', 'amount',
+        'payment__uuid'
+    ]
 
     def filter(self, qs, value):
         if not value:
@@ -80,6 +83,10 @@ class CreditTextSearchFilter(django_filters.CharFilter):
                         models.Q(**{'transaction__sender_name__icontains': word})
                         | models.Q(**{'payment__cardholder_name__icontains': word})
                     )
+                elif field == 'payment__uuid':
+                    if len(word) == 8:
+                        return models.Q(**{'%s__startswith' % field: word})
+                    return None
 
                 return models.Q(**{'%s__icontains' % field: word})
 
@@ -161,6 +168,8 @@ class CreditListFilter(django_filters.FilterSet):
     sender_email = django_filters.CharFilter(field_name='payment__email', lookup_expr='icontains')
     sender_postcode = PostcodeFilter(field_name='payment__billing_address__postcode')
     sender_ip_address = django_filters.CharFilter(field_name='payment__ip_address')
+
+    payment_reference = django_filters.CharFilter(field_name='payment__uuid', lookup_expr='startswith')
 
     exclude_amount__endswith = django_filters.CharFilter(
         field_name='amount', lookup_expr='endswith', exclude=True
