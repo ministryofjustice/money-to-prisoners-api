@@ -110,7 +110,8 @@
     "permissions": [
       ["view_disbursement", "disbursement", "disbursement"],
       ["change_disbursement", "disbursement", "disbursement"],
-      ["add_filedownload", "core", "filedownload"]
+      ["add_filedownload", "core", "filedownload"],
+      ["add_comment", "disbursement", "comment"]
     ]
   }
 }
