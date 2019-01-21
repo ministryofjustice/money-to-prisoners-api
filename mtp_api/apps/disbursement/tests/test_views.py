@@ -589,6 +589,7 @@ class UpdateDisbursementResolutionTestCase(AuthTestCaseMixin, APITestCase):
             method=DISBURSEMENT_METHOD.BANK_TRANSFER,
             recipient_first_name='Sam',
             recipient_last_name='Hall',
+            resolution=DISBURSEMENT_RESOLUTION.REJECTED,
         )
 
         response = self.client.post(
@@ -603,6 +604,87 @@ class UpdateDisbursementResolutionTestCase(AuthTestCaseMixin, APITestCase):
         disbursements = Disbursement.objects.all()
         self.assertEqual(disbursements.count(), 2)
         self.assertEqual(disbursements[0].resolution, DISBURSEMENT_RESOLUTION.PENDING)
-        self.assertEqual(disbursements[1].resolution, DISBURSEMENT_RESOLUTION.PENDING)
+        self.assertEqual(disbursements[1].resolution, DISBURSEMENT_RESOLUTION.REJECTED)
+
+        self.assertEqual(Log.objects.all().count(), 0)
+
+    def test_cancel_disbursements(self):
+        user = self.bank_admins[0]
+
+        disbursement1 = Disbursement.objects.create(
+            amount=1000,
+            prisoner_number='A1234BC',
+            prison=Prison.objects.get(pk='IXB'),
+            method=DISBURSEMENT_METHOD.BANK_TRANSFER,
+            recipient_first_name='Sam',
+            recipient_last_name='Hall',
+            resolution=DISBURSEMENT_RESOLUTION.CONFIRMED
+        )
+        disbursement2 = Disbursement.objects.create(
+            amount=1000,
+            prisoner_number='A1234BD',
+            prison=Prison.objects.get(pk='INP'),
+            method=DISBURSEMENT_METHOD.BANK_TRANSFER,
+            recipient_first_name='Sam',
+            recipient_last_name='Hall',
+            resolution=DISBURSEMENT_RESOLUTION.SENT
+        )
+
+        response = self.client.post(
+            reverse('disbursement-cancel'),
+            data={'disbursement_ids': [disbursement1.id, disbursement2.id]},
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        disbursements = Disbursement.objects.all()
+        self.assertEqual(disbursements.count(), 2)
+        self.assertEqual(disbursements[0].resolution, DISBURSEMENT_RESOLUTION.CANCELLED)
+        self.assertEqual(disbursements[1].resolution, DISBURSEMENT_RESOLUTION.CANCELLED)
+
+        logs = Log.objects.all()
+        self.assertEqual(logs[0].disbursement, disbursements[0])
+        self.assertEqual(logs[0].user, user)
+        self.assertEqual(logs[0].action, LOG_ACTIONS.CANCELLED)
+        self.assertEqual(logs[1].disbursement, disbursements[1])
+        self.assertEqual(logs[1].user, user)
+        self.assertEqual(logs[1].action, LOG_ACTIONS.CANCELLED)
+
+    def test_cannot_cancel_unconfirmed_disbursement(self):
+        user = self.bank_admins[0]
+
+        disbursement1 = Disbursement.objects.create(
+            amount=1000,
+            prisoner_number='A1234BC',
+            prison=Prison.objects.get(pk='IXB'),
+            method=DISBURSEMENT_METHOD.BANK_TRANSFER,
+            recipient_first_name='Sam',
+            recipient_last_name='Hall',
+        )
+        disbursement2 = Disbursement.objects.create(
+            amount=1000,
+            prisoner_number='A1234BD',
+            prison=Prison.objects.get(pk='INP'),
+            method=DISBURSEMENT_METHOD.BANK_TRANSFER,
+            recipient_first_name='Sam',
+            recipient_last_name='Hall',
+            resolution=DISBURSEMENT_RESOLUTION.REJECTED,
+        )
+
+        response = self.client.post(
+            reverse('disbursement-cancel'),
+            data={'disbursement_ids': [disbursement1.id, disbursement2.id]},
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+
+        disbursements = Disbursement.objects.all()
+        self.assertEqual(disbursements.count(), 2)
+        self.assertEqual(disbursements[0].resolution, DISBURSEMENT_RESOLUTION.PENDING)
+        self.assertEqual(disbursements[1].resolution, DISBURSEMENT_RESOLUTION.REJECTED)
 
         self.assertEqual(Log.objects.all().count(), 0)

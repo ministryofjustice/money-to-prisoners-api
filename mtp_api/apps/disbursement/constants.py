@@ -8,6 +8,7 @@ LOG_ACTIONS = Choices(
     ('REJECTED', 'rejected', _('Rejected')),
     ('CONFIRMED', 'confirmed', _('Confirmed')),
     ('SENT', 'sent', _('Sent')),
+    ('CANCELLED', 'cancelled', _('Cancelled')),
 )
 
 
@@ -17,6 +18,7 @@ DISBURSEMENT_RESOLUTION = Choices(
     ('PRECONFIRMED', 'preconfirmed', _('Pre-confirmed')),
     ('CONFIRMED', 'confirmed', _('Confirmed')),
     ('SENT', 'sent', _('Sent')),
+    ('CANCELLED', 'cancelled', _('Cancelled')),
 )
 
 DISBURSEMENT_METHOD = Choices(

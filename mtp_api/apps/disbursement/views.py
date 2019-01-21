@@ -100,7 +100,7 @@ class DisbursementView(
     filter_class = DisbursementFilter
     filter_backends = (DjangoFilterBackend, SafeOrderingFilter)
     ordering_fields = ('created', 'amount', 'resolution', 'method', 'recipient_name',
-                       'prisoner_number', 'prisoner_name')
+                       'prisoner_number', 'prisoner_name', 'log__created')
     permission_classes = (
         IsAuthenticated, ActionsBasedViewPermissions, get_client_permissions_class(
             CASHBOOK_OAUTH_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID,
@@ -184,6 +184,14 @@ class SendDisbursementsView(ResolveDisbursementsView):
     )
 
 
+class CancelDisbursementsView(ResolveDisbursementsView):
+    resolution = DISBURSEMENT_RESOLUTION.CANCELLED
+
+    permission_classes = (
+        IsAuthenticated, ActionsBasedViewPermissions, BankAdminClientIDPermissions
+    )
+
+
 class ConfirmDisbursementsView(DisbursementViewMixin, APIView):
     serializer_class = DisbursementConfirmationSerializer
     action = 'update'
@@ -241,7 +249,9 @@ class CommentView(
     serializer_class = CommentSerializer
 
     permission_classes = (
-        IsAuthenticated, ActionsBasedViewPermissions, CashbookClientIDPermissions
+        IsAuthenticated, ActionsBasedViewPermissions, get_client_permissions_class(
+            CASHBOOK_OAUTH_CLIENT_ID, BANK_ADMIN_OAUTH_CLIENT_ID
+        )
     )
 
     def get_serializer(self, *args, **kwargs):

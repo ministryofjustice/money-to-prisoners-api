@@ -8,7 +8,7 @@ from .constants import LOG_ACTIONS, DISBURSEMENT_RESOLUTION, DISBURSEMENT_METHOD
 from .managers import DisbursementManager, DisbursementQuerySet, LogManager
 from .signals import (
     disbursement_confirmed, disbursement_created, disbursement_rejected,
-    disbursement_sent, disbursement_edited
+    disbursement_sent, disbursement_edited, disbursement_cancelled
 )
 from prison.models import Prison
 from transaction.utils import format_amount
@@ -71,13 +71,15 @@ class Disbursement(TimeStampedModel):
     @staticmethod
     def get_permitted_state(new_resolution):
         if new_resolution == DISBURSEMENT_RESOLUTION.SENT:
-            return DISBURSEMENT_RESOLUTION.CONFIRMED
+            return [DISBURSEMENT_RESOLUTION.CONFIRMED]
         elif new_resolution == DISBURSEMENT_RESOLUTION.CONFIRMED:
-            return DISBURSEMENT_RESOLUTION.PRECONFIRMED
+            return [DISBURSEMENT_RESOLUTION.PRECONFIRMED]
         elif new_resolution == DISBURSEMENT_RESOLUTION.PENDING:
-            return DISBURSEMENT_RESOLUTION.PRECONFIRMED
+            return [DISBURSEMENT_RESOLUTION.PRECONFIRMED]
+        elif new_resolution == DISBURSEMENT_RESOLUTION.CANCELLED:
+            return [DISBURSEMENT_RESOLUTION.CONFIRMED, DISBURSEMENT_RESOLUTION.SENT]
         else:
-            return DISBURSEMENT_RESOLUTION.PENDING
+            return [DISBURSEMENT_RESOLUTION.PENDING]
 
     def __str__(self):
         return 'Disbursement {id}, {amount} {prisoner} > {recipient}, {status}'.format(
@@ -89,7 +91,7 @@ class Disbursement(TimeStampedModel):
         )
 
     def resolution_permitted(self, new_resolution):
-        return self.resolution == self.get_permitted_state(new_resolution)
+        return self.resolution in self.get_permitted_state(new_resolution)
 
     @property
     def recipient_name(self):
@@ -146,6 +148,16 @@ class Disbursement(TimeStampedModel):
         self.resolution = DISBURSEMENT_RESOLUTION.SENT
         self.save()
         disbursement_sent.send(
+            sender=Disbursement, disbursement=self, by_user=by_user)
+
+    def cancel(self, by_user):
+        if self.resolution == DISBURSEMENT_RESOLUTION.CANCELLED:
+            return
+        if not self.resolution_permitted(DISBURSEMENT_RESOLUTION.CANCELLED):
+            raise InvalidDisbursementStateException([self.id])
+        self.resolution = DISBURSEMENT_RESOLUTION.CANCELLED
+        self.save()
+        disbursement_cancelled.send(
             sender=Disbursement, disbursement=self, by_user=by_user)
 
     def _generate_invoice_number(self):
@@ -220,3 +232,8 @@ def disbursement_confirmed_receiver(sender, disbursement, by_user, **kwargs):
 @receiver(disbursement_sent)
 def disbursement_sent_receiver(sender, disbursement, by_user, **kwargs):
     Log.objects.disbursements_sent([disbursement], by_user)
+
+
+@receiver(disbursement_cancelled)
+def disbursement_cancelled_receiver(sender, disbursement, by_user, **kwargs):
+    Log.objects.disbursements_cancelled([disbursement], by_user)

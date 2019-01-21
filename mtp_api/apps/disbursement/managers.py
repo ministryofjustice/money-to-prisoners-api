@@ -43,7 +43,7 @@ class DisbursementManager(models.Manager):
     def update_resolution(self, queryset, disbursement_ids, resolution, user):
         to_update = queryset.filter(
             pk__in=disbursement_ids,
-            resolution__in=[self.model.get_permitted_state(resolution), resolution]
+            resolution__in=self.model.get_permitted_state(resolution) + [resolution]
         ).select_for_update()
 
         ids_to_update = [c.id for c in to_update]
@@ -60,6 +60,8 @@ class DisbursementManager(models.Manager):
             Log.objects.disbursements_confirmed(to_update, user)
         elif resolution == DISBURSEMENT_RESOLUTION.SENT:
             Log.objects.disbursements_sent(to_update, user)
+        elif resolution == DISBURSEMENT_RESOLUTION.CANCELLED:
+            Log.objects.disbursements_cancelled(to_update, user)
 
         if resolution == DISBURSEMENT_RESOLUTION.CONFIRMED:
             to_update.update(
@@ -103,3 +105,6 @@ class LogManager(models.Manager):
 
     def disbursements_sent(self, disbursements, by_user):
         self._log_action(LOG_ACTIONS.SENT, disbursements, by_user)
+
+    def disbursements_cancelled(self, disbursements, by_user):
+        self._log_action(LOG_ACTIONS.CANCELLED, disbursements, by_user)

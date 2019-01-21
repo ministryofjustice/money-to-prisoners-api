@@ -19,5 +19,7 @@ urlpatterns = [
         views.ConfirmDisbursementsView.as_view(), name='disbursement-confirm'),
     url(r'^disbursements/actions/send/$',
         views.SendDisbursementsView.as_view(), name='disbursement-send'),
+    url(r'^disbursements/actions/cancel/$',
+        views.CancelDisbursementsView.as_view(), name='disbursement-cancel'),
     url(r'^', include(router.urls)),
 ]
