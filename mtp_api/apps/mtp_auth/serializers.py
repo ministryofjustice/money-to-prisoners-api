@@ -14,6 +14,7 @@ from mtp_auth.models import (
     FailedLoginAttempt, AccountRequest,
 )
 from mtp_auth.validators import CaseInsensitiveUniqueValidator
+from prison.models import Prison
 
 User = get_user_model()
 
@@ -58,7 +59,7 @@ class UserSerializer(serializers.ModelSerializer):
     prisons = serializers.SerializerMethodField()
     is_locked_out = serializers.SerializerMethodField()
 
-    allowed_self_updates = {'first_name', 'last_name', 'email'}
+    allowed_self_updates = {'first_name', 'last_name', 'email', 'prisons'}
 
     class Meta:
         model = User
@@ -136,6 +137,13 @@ class UserSerializer(serializers.ModelSerializer):
             except KeyError:
                 raise serializers.ValidationError({'role': 'Invalid role: %s' % role})
 
+        prisons = self.initial_data.get('prisons')
+        if prisons:
+            prison_objects = Prison.objects.filter(
+                nomis_id__in=[prison['nomis_id'] for prison in prisons]
+            )
+            attrs['prisons'] = prison_objects
+
         return super().validate(attrs)
 
     @atomic
@@ -190,6 +198,7 @@ class UserSerializer(serializers.ModelSerializer):
         role = validated_data.pop('role', None)
         make_user_admin = validated_data.pop('user_admin', was_user_admin)
         is_locked_out = validated_data.pop('is_locked_out', None)
+        prisons = validated_data.pop('prisons', None)
 
         updated_user = super().update(user, validated_data)
 
@@ -211,6 +220,15 @@ class UserSerializer(serializers.ModelSerializer):
 
         if is_locked_out is False:
             FailedLoginAttempt.objects.filter(user=updated_user).delete()
+
+        if prisons:
+            if updated_user.pk != updating_user.pk:
+                raise serializers.ValidationError('Cannot change another user\'s prisons')
+            user_groups = updated_user.groups.all()
+            if len(user_groups) == 1 and user_groups[0].name == 'Security':
+                PrisonUserMapping.objects.assign_prisons_to_user(updated_user, prisons)
+            else:
+                raise serializers.ValidationError('Only security users can change prisons')
 
         return updated_user
 

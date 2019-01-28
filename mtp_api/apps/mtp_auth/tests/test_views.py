@@ -1306,6 +1306,70 @@ class UpdateUserTestCase(AuthBaseTestCase):
         self.assertIn('Security', groups)
         self.assertNotIn('PrisonClerk', groups)
 
+    def test_update_prison_set_for_security_user(self):
+        user = self.security_users[1]
+        current_prisons = PrisonUserMapping.objects.get_prison_set_for_user(
+            user
+        ).all()
+        new_prison = Prison.objects.exclude(
+            nomis_id__in=current_prisons.values_list('nomis_id', flat=True)
+        ).first()
+        user_data = {
+            'prisons': [{'nomis_id': new_prison.nomis_id}]
+        }
+        response = self._update_user(user, user.username, user_data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        updated_user = User.objects.get(username=user.username)
+        updated_prison = PrisonUserMapping.objects.get_prison_set_for_user(
+            updated_user
+        )
+        self.assertEqual(len(updated_prison), 1)
+        self.assertEqual(updated_prison.first(), new_prison)
+
+    def test_cannot_update_prison_set_for_security_user_admin(self):
+        user = self.security_uas[1]
+        current_prisons = PrisonUserMapping.objects.get_prison_set_for_user(
+            user
+        ).all()
+        new_prison = Prison.objects.exclude(
+            nomis_id__in=current_prisons.values_list('nomis_id', flat=True)
+        ).first()
+        user_data = {
+            'prisons': [{'nomis_id': new_prison.nomis_id}]
+        }
+        response = self._update_user(user, user.username, user_data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        updated_user = User.objects.get(username=user.username)
+        updated_prison = PrisonUserMapping.objects.get_prison_set_for_user(
+            updated_user
+        ).all()
+        self.assertEqual(
+            list(updated_prison.values_list('nomis_id', flat=True)),
+            list(current_prisons.values_list('nomis_id', flat=True))
+        )
+
+    def test_cannot_update_prison_set_for_cashbook_user(self):
+        user = self.prison_clerks[1]
+        current_prisons = PrisonUserMapping.objects.get_prison_set_for_user(
+            user
+        ).all()
+        new_prison = Prison.objects.exclude(
+            nomis_id__in=current_prisons.values_list('nomis_id', flat=True)
+        ).first()
+        user_data = {
+            'prisons': [{'nomis_id': new_prison.nomis_id}]
+        }
+        response = self._update_user(user, user.username, user_data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        updated_user = User.objects.get(username=user.username)
+        updated_prison = PrisonUserMapping.objects.get_prison_set_for_user(
+            updated_user
+        ).all()
+        self.assertEqual(
+            list(updated_prison.values_list('nomis_id', flat=True)),
+            list(current_prisons.values_list('nomis_id', flat=True))
+        )
+
 
 class DeleteUserTestCase(AuthBaseTestCase):
     def setUp(self):
