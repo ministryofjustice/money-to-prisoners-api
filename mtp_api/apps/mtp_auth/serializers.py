@@ -138,7 +138,7 @@ class UserSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({'role': 'Invalid role: %s' % role})
 
         prisons = self.initial_data.get('prisons')
-        if prisons:
+        if prisons is not None:
             prison_objects = Prison.objects.filter(
                 nomis_id__in=[prison['nomis_id'] for prison in prisons]
             )
@@ -221,7 +221,7 @@ class UserSerializer(serializers.ModelSerializer):
         if is_locked_out is False:
             FailedLoginAttempt.objects.filter(user=updated_user).delete()
 
-        if prisons:
+        if prisons is not None:
             if updated_user.pk != updating_user.pk:
                 raise serializers.ValidationError('Cannot change another user\'s prisons')
             user_groups = updated_user.groups.all()

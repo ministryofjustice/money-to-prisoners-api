@@ -1306,7 +1306,7 @@ class UpdateUserTestCase(AuthBaseTestCase):
         self.assertIn('Security', groups)
         self.assertNotIn('PrisonClerk', groups)
 
-    def test_update_prison_set_for_security_user(self):
+    def test_update_prison_for_security_user(self):
         user = self.security_users[1]
         current_prisons = PrisonUserMapping.objects.get_prison_set_for_user(
             user
@@ -1325,6 +1325,51 @@ class UpdateUserTestCase(AuthBaseTestCase):
         )
         self.assertEqual(len(updated_prison), 1)
         self.assertEqual(updated_prison.first(), new_prison)
+
+    def test_update_multiple_prisons_for_security_user(self):
+        user = self.security_users[1]
+        new_prisons = Prison.objects.all()
+        user_data = {
+            'prisons': [
+                {'nomis_id': prison.nomis_id} for prison in new_prisons
+            ]
+        }
+        response = self._update_user(user, user.username, user_data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        updated_user = User.objects.get(username=user.username)
+        updated_prisons = PrisonUserMapping.objects.get_prison_set_for_user(
+            updated_user
+        )
+        self.assertEqual(len(updated_prisons), len(new_prisons))
+        self.assertEqual(
+            list(updated_prisons.values_list('nomis_id', flat=True)),
+            list(new_prisons.values_list('nomis_id', flat=True))
+        )
+
+    def test_remove_all_prisons_for_security_user(self):
+        user = self.security_users[1]
+        user_data = {'prisons': []}
+        response = self._update_user(user, user.username, user_data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        updated_user = User.objects.get(username=user.username)
+        updated_prisons = PrisonUserMapping.objects.get_prison_set_for_user(
+            updated_user
+        )
+        self.assertEqual(len(updated_prisons), 0)
+
+    def test_user_update_without_prisons_does_not_remove_all(self):
+        user = self.security_users[1]
+        current_prisons = PrisonUserMapping.objects.get_prison_set_for_user(
+            user
+        ).all()
+        user_data = {}
+        response = self._update_user(user, user.username, user_data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        updated_user = User.objects.get(username=user.username)
+        updated_prisons = PrisonUserMapping.objects.get_prison_set_for_user(
+            updated_user
+        )
+        self.assertEqual(len(updated_prisons), len(current_prisons))
 
     def test_cannot_update_prison_set_for_security_user_admin(self):
         user = self.security_uas[1]

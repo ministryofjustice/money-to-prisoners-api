@@ -23,7 +23,10 @@ class PrisonUserMappingManager(models.Manager):
 
     def assign_prisons_to_user(self, user, prisons):
         mapping, _ = self.get_or_create(user=user)
-        mapping.prisons.set(prisons)
+        if len(prisons):
+            mapping.prisons.set(prisons)
+        else:
+            mapping.delete()
 
     def get_prison_set_for_user(self, user):
         try:
