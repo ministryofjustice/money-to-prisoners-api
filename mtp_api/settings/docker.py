@@ -13,12 +13,14 @@ DEBUG = os.environ.get('DEBUG') == 'True'
 ALLOWED_HOSTS = [
     'localhost',
     '.dsd.io',
-    '.service.gov.uk'
+    '.service.gov.uk',
+    '.svc.cluster.local',
 ]
 
 # security tightening
 if ENVIRONMENT != 'local':
-    SECURE_SSL_REDIRECT = True  # also done at nginx level
+    # ssl redirect done at nginx and kubernetes level
+    # SECURE_SSL_REDIRECT = True
     # strict-transport set at nginx level
     # SECURE_HSTS_SECONDS = 31536000
     # SECURE_HSTS_INCLUDE_SUBDOMAINS = True
