@@ -1342,8 +1342,8 @@ class UpdateUserTestCase(AuthBaseTestCase):
         )
         self.assertEqual(len(updated_prisons), len(new_prisons))
         self.assertEqual(
-            list(updated_prisons.values_list('nomis_id', flat=True)),
-            list(new_prisons.values_list('nomis_id', flat=True))
+            set(updated_prisons.values_list('nomis_id', flat=True)),
+            set(new_prisons.values_list('nomis_id', flat=True))
         )
 
     def test_remove_all_prisons_for_security_user(self):
@@ -1389,8 +1389,8 @@ class UpdateUserTestCase(AuthBaseTestCase):
             updated_user
         ).all()
         self.assertEqual(
-            list(updated_prison.values_list('nomis_id', flat=True)),
-            list(current_prisons.values_list('nomis_id', flat=True))
+            set(updated_prison.values_list('nomis_id', flat=True)),
+            set(current_prisons.values_list('nomis_id', flat=True))
         )
 
     def test_cannot_update_prison_set_for_cashbook_user(self):
@@ -1411,8 +1411,8 @@ class UpdateUserTestCase(AuthBaseTestCase):
             updated_user
         ).all()
         self.assertEqual(
-            list(updated_prison.values_list('nomis_id', flat=True)),
-            list(current_prisons.values_list('nomis_id', flat=True))
+            set(updated_prison.values_list('nomis_id', flat=True)),
+            set(current_prisons.values_list('nomis_id', flat=True))
         )
 
 
