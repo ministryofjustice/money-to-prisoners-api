@@ -42,6 +42,9 @@ class Prison(TimeStampedModel):
     categories = models.ManyToManyField(Category)
     pre_approval_required = models.BooleanField(default=False)
 
+    private_estate = models.BooleanField(default=False)
+    cms_establishment_code = models.CharField(max_length=10, blank=True)
+
     name_prefixes = ('HMP/YOI', 'HMP', 'HMYOI/RC', 'HMYOI', 'IRC', 'STC')
     re_prefixes = re.compile(r'^(%s)?' % (' |'.join(('HMP & YOI', 'HMYOI & RC') + name_prefixes) + ' '))
 
@@ -58,6 +61,26 @@ class Prison(TimeStampedModel):
     @property
     def short_name(self):
         return self.shorten_name(self.name)
+
+
+class PrisonBankAccount(models.Model):
+    prison = models.OneToOneField(Prison, on_delete=models.CASCADE)
+
+    address_line1 = models.CharField(max_length=250)
+    address_line2 = models.CharField(max_length=250, blank=True)
+    city = models.CharField(max_length=250)
+    postcode = models.CharField(max_length=250)
+
+    sort_code = models.CharField(max_length=50)
+    account_number = models.CharField(max_length=50)
+
+    remittance_email = models.EmailField()
+
+    class Meta:
+        ordering = ('prison',)
+
+    def __str__(self):
+        return self.prison.name
 
 
 class PrisonerLocation(TimeStampedModel):

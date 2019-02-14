@@ -3,7 +3,7 @@ from django.contrib.admin import ModelAdmin
 from django.utils.translation import gettext
 
 from core.admin import DateFilter
-from prison.models import Prison, PrisonerLocation, Population, Category, PrisonerCreditNoticeEmail
+from prison.models import Prison, PrisonBankAccount, PrisonerLocation, Population, Category, PrisonerCreditNoticeEmail
 
 
 @admin.register(Population)
@@ -18,8 +18,8 @@ class CategoryAdmin(ModelAdmin):
 
 @admin.register(Prison)
 class PrisonAdmin(ModelAdmin):
-    list_display = ('name', 'nomis_id', 'general_ledger_code')
-    list_filter = ('region', 'populations', 'categories')
+    list_display = ('name', 'nomis_id', 'general_ledger_code', 'private_estate')
+    list_filter = ('region', 'populations', 'categories', 'private_estate')
     search_fields = ('nomis_id', 'general_ledger_code', 'name', 'region')
 
     def save_model(self, request, obj, form, change):
@@ -28,6 +28,11 @@ class PrisonAdmin(ModelAdmin):
             self.message_user(request=request, level=messages.WARNING,
                               message=gettext('Prison name does not start with a standard prefix.') +
                               ' (%s)' % ', '.join(Prison.name_prefixes))
+
+
+@admin.register(PrisonBankAccount)
+class PrisonBankAccountAdmin(ModelAdmin):
+    list_display = ('prison', 'remittance_email')
 
 
 @admin.register(PrisonerLocation)
