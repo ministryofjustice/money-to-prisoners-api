@@ -35,6 +35,8 @@ class PrisonSerializer(serializers.ModelSerializer):
             'populations',
             'categories',
             'pre_approval_required',
+            'private_estate',
+            'cms_establishment_code',
         )
 
 
