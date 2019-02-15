@@ -361,6 +361,9 @@ class PrivateEstateBatch(TimeStampedModel):
         ordering = ('date',)
         get_latest_by = 'date'
         verbose_name_plural = 'private estate batches'
+        permissions = (
+            ('view_privateestatebatch', 'Can view batch'),
+        )
 
     def __str__(self):
         return '%s %s' % (self.prison, self.date)

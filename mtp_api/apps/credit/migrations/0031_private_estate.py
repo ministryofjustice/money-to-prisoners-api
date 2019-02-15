@@ -23,6 +23,7 @@ class Migration(migrations.Migration):
                 'verbose_name_plural': 'private estate batches',
                 'ordering': ('date',),
                 'get_latest_by': 'date',
+                'permissions': (('view_privateestatebatch', 'Can view batch'),),
             },
         ),
         migrations.AddField(

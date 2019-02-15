@@ -2,7 +2,7 @@ from django.db import transaction
 from django.utils.translation import gettext as _
 from rest_framework import serializers
 
-from .models import PrisonerLocation, Prison, Category, Population
+from .models import PrisonerLocation, Prison, Category, Population, PrisonBankAccount
 
 
 class PopulationSerializer(serializers.ModelSerializer):
@@ -78,3 +78,9 @@ class PrisonerValiditySerializer(serializers.ModelSerializer):
             'prisoner_number',
             'prisoner_dob',
         )
+
+
+class PrisonBankAccountSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PrisonBankAccount
+        fields = '__all__'

@@ -4,7 +4,8 @@ from rest_framework import serializers
 
 from payment.serializers import BillingAddressSerializer
 from prison.models import Prison
-from .models import Credit, Comment, ProcessingBatch
+from prison.serializers import PrisonBankAccountSerializer
+from .models import Credit, Comment, ProcessingBatch, PrivateEstateBatch
 
 User = get_user_model()
 
@@ -160,3 +161,17 @@ class CreditsGroupedByCreditedSerializer(serializers.Serializer):
             return User.objects.get(pk=instance['owner']).get_full_name()
         except User.DoesNotExist:
             return _('Unknown')
+
+
+class PrivateEstateBatchSerializer(serializers.ModelSerializer):
+    total_amount = serializers.IntegerField()
+    bank_account = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PrivateEstateBatch
+        read_only_fields = ('date', 'prison')
+        fields = ('date', 'prison', 'total_amount', 'bank_account')
+
+    def get_bank_account(self, instance):
+        serialiser = PrisonBankAccountSerializer()
+        return serialiser.to_representation(instance.prison.prisonbankaccount)

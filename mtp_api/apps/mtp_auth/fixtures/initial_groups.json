@@ -23,7 +23,8 @@
       ["patch_processed_transaction", "transaction", "transaction"],
       ["add_balance", "account", "balance"],
       ["view_batch", "payment", "batch"],
-      ["add_filedownload", "core", "filedownload"]
+      ["add_filedownload", "core", "filedownload"],
+      ["view_privateestatebatch", "credit", "privateestatebatch"]
     ]
   }
 },
