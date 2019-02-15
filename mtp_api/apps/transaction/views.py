@@ -14,6 +14,7 @@ from core.filters import (
     MultipleValueFilter
 )
 from credit import InvalidCreditStateException
+from credit.models import PrivateEstateBatch
 from mtp_auth.permissions import BankAdminClientIDPermissions
 from payment.models import Payment
 from transaction.models import Transaction
@@ -127,4 +128,7 @@ class ReconcileTransactionsView(generics.GenericAPIView):
                 parsed_start_date, parsed_end_date, request.user)
             Payment.objects.reconcile(
                 parsed_start_date, parsed_end_date, request.user)
+
+        PrivateEstateBatch.objects.create_batches(parsed_start_date, parsed_end_date)
+
         return Response(status=204)

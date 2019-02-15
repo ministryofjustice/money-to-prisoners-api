@@ -175,3 +175,26 @@ class CreditingTimeManager(models.Manager):
                 JOIN adjustments ON adjustments.day_of_week = EXTRACT(ISODOW FROM credit_credit.received_at);
             ''', (LOG_ACTIONS.CREDITED,))
             return cursor.rowcount
+
+
+class PrivateEstateBatchManager(models.Manager):
+    @atomic
+    def create_batches(self, start_date, end_date):
+        from credit.models import Credit
+        from prison.models import Prison
+
+        batch_date = start_date.date()
+        credit_list = Credit.objects \
+            .filter(
+                received_at__gte=start_date,
+                received_at__lt=end_date,
+                private_estate_batch__isnull=True,  # to ensure that a sent batch doesn't get modified
+                prison__private_estate=True,
+            ) \
+            .filter(
+                Credit.STATUS_LOOKUP[CREDIT_STATUS.CREDIT_PENDING] |
+                Credit.STATUS_LOOKUP[CREDIT_STATUS.CREDITED]
+            )
+        for prison in Prison.objects.filter(private_estate=True):
+            batch, _ = self.get_or_create(prison=prison, date=batch_date)
+            credit_list.filter(prison=prison).update(private_estate_batch=batch)
