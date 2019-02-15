@@ -15,7 +15,7 @@ from payment.models import Payment
 from transaction.models import Transaction
 from transaction.utils import format_amount
 from .constants import CREDIT_SOURCE, CREDIT_STATUS, LOG_ACTIONS
-from .models import Credit, Log, Comment, ProcessingBatch
+from .models import Credit, Log, Comment, ProcessingBatch, PrivateEstateBatch
 
 
 class LogAdminInline(admin.TabularInline):
@@ -215,3 +215,14 @@ class ProcessingBatchAdmin(admin.ModelAdmin):
 
     def credit_count(self, instance):
         return len(instance.credits.all())
+
+
+@admin.register(PrivateEstateBatch)
+class PrivateEstateBatchAdmin(admin.ModelAdmin):
+    list_display = ('date', 'prison', 'total_amount',)
+    list_filter = ('prison',)
+    date_hierarchy = 'date'
+
+    @add_short_description(_('amount'))
+    def total_amount(self, instance):
+        return format_amount(instance.total_amount)

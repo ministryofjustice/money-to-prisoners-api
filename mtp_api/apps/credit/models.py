@@ -11,7 +11,10 @@ from django.utils import timezone
 from model_utils.models import TimeStampedModel
 
 from credit.constants import LOG_ACTIONS, CREDIT_RESOLUTION, CREDIT_STATUS, CREDIT_SOURCE
-from credit.managers import CreditManager, CompletedCreditManager, CreditQuerySet, LogManager, CreditingTimeManager
+from credit.managers import (
+    CreditManager, CompletedCreditManager, CreditQuerySet, LogManager, CreditingTimeManager,
+    PrivateEstateBatchManager,
+)
 from credit.signals import (
     credit_created, credit_credited, credit_refunded, credit_reconciled,
     credit_prisons_need_updating, credit_reviewed, credit_set_manual
@@ -45,6 +48,9 @@ class Credit(TimeStampedModel):
                                        on_delete=models.SET_NULL)
     prisoner_profile = models.ForeignKey('security.PrisonerProfile', related_name='credits', blank=True, null=True,
                                          on_delete=models.SET_NULL)
+
+    private_estate_batch = models.ForeignKey('credit.PrivateEstateBatch', null=True, blank=True,
+                                             on_delete=models.SET_NULL)
 
     objects = CompletedCreditManager.from_queryset(CreditQuerySet)()
     objects_all = CreditManager.from_queryset(CreditQuerySet)()
@@ -343,6 +349,25 @@ class ProcessingBatch(TimeStampedModel):
         if now - last_updated < timedelta(minutes=2):
             return False
         return True
+
+
+class PrivateEstateBatch(TimeStampedModel):
+    date = models.DateField()
+    prison = models.ForeignKey(Prison, on_delete=models.CASCADE)
+
+    objects = PrivateEstateBatchManager()
+
+    class Meta:
+        ordering = ('date',)
+        get_latest_by = 'date'
+        verbose_name_plural = 'private estate batches'
+
+    def __str__(self):
+        return '%s %s' % (self.prison, self.date)
+
+    @property
+    def total_amount(self):
+        return self.credit_set.aggregate(total=models.Sum('amount'))['total']
 
 
 @receiver(post_save, sender=Credit, dispatch_uid='update_prison_for_credit')
