@@ -2,7 +2,7 @@ from django.conf.urls import url, include
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import routers
 
-from . import views as views
+from . import views
 
 router = routers.DefaultRouter()
 router.register(r'comments', views.CommentView)
@@ -15,4 +15,6 @@ urlpatterns = [
     url(r'^credits/actions/setmanual/$', views.SetManualCredits.as_view(), name='setmanual-credit'),
     url(r'^credits/processed/$', views.CreditsGroupedByCreditedList.as_view(), name='credit-processed-list'),
     url(r'^credits/', include(router.urls)),
+    url(r'^private-estate-batches/$', views.PrivateEstateBatchView.as_view({'get': 'list'}),
+        name='private-estate-batch-list'),
 ]

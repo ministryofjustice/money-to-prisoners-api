@@ -9,3 +9,10 @@ class CreditPermissions(ActionsBasedPermissions):
         'review': ['%(app_label)s.review_%(model_name)s'],
         'credit': ['%(app_label)s.credit_%(model_name)s'],
     })
+
+
+class PrivateEstateBatchPermissions(ActionsBasedPermissions):
+    actions_perms_map = ActionsBasedPermissions.actions_perms_map.copy()
+    actions_perms_map.update({
+        'list': ['%(app_label)s.view_%(model_name)s'],
+    })

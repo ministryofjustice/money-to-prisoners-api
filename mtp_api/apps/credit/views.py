@@ -21,18 +21,18 @@ from core.models import TruncUtcDate
 from core.permissions import ActionsBasedPermissions
 from mtp_auth.models import PrisonUserMapping
 from mtp_auth.permissions import (
-    CashbookClientIDPermissions, NomsOpsClientIDPermissions,
-    get_client_permissions_class, CASHBOOK_OAUTH_CLIENT_ID,
-    NOMS_OPS_OAUTH_CLIENT_ID, BANK_ADMIN_OAUTH_CLIENT_ID
+    CashbookClientIDPermissions, BankAdminClientIDPermissions, NomsOpsClientIDPermissions,
+    CASHBOOK_OAUTH_CLIENT_ID, BANK_ADMIN_OAUTH_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID,
+    get_client_permissions_class,
 )
 from prison.models import Prison
 from .constants import CREDIT_STATUS, CREDIT_SOURCE, LOG_ACTIONS
-from .models import Credit, Comment, ProcessingBatch
-from .permissions import CreditPermissions
+from .models import Credit, Comment, ProcessingBatch, PrivateEstateBatch
+from .permissions import CreditPermissions, PrivateEstateBatchPermissions
 from .serializers import (
     CreditSerializer, SecurityCreditSerializer, CreditedOnlyCreditSerializer,
     IdsCreditSerializer, CommentSerializer, ProcessingBatchSerializer,
-    CreditsGroupedByCreditedSerializer
+    CreditsGroupedByCreditedSerializer, PrivateEstateBatchSerializer,
 )
 
 User = get_user_model()
@@ -436,3 +436,20 @@ class ProcessingBatchView(
 
     def get_queryset(self):
         return self.queryset.filter(user=self.request.user).order_by('-id')
+
+
+class PrivateEstateBatchFilter(django_filters.FilterSet):
+    class Meta:
+        model = PrivateEstateBatch
+        fields = ('date',)
+
+
+class PrivateEstateBatchView(mixins.ListModelMixin, viewsets.GenericViewSet):
+    queryset = PrivateEstateBatch.objects.all()
+    serializer_class = PrivateEstateBatchSerializer
+    filter_backends = (DjangoFilterBackend,)
+    filter_class = PrivateEstateBatchFilter
+
+    permission_classes = (
+        IsAuthenticated, PrivateEstateBatchPermissions, BankAdminClientIDPermissions,
+    )
