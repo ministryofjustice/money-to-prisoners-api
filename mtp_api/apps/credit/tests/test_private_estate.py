@@ -2,6 +2,7 @@ import datetime
 
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from model_mommy import mommy
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -77,7 +78,7 @@ class PrivateEstateBatchTestCase(AuthTestCaseMixin, APITestCase):
         expected_batch = PrivateEstateBatch.objects.filter(date=date_with_batch).first()
 
         user = self.bank_admins[0]
-        url = reverse('private-estate-batch-list')
+        url = reverse('privateestatebatch-list')
         response = self.client.get(
             url, {'date': date_with_batch}, format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
@@ -95,9 +96,55 @@ class PrivateEstateBatchTestCase(AuthTestCaseMixin, APITestCase):
         date_with_batch = Credit.objects.credited().filter(prison__private_estate=True).earliest().received_at.date()
 
         user = self.prison_clerks[0]
-        url = reverse('private-estate-batch-list')
+        url = reverse('privateestatebatch-list')
         response = self.client.get(
             url, {'date': date_with_batch}, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_bank_admin_can_list_credits_in_batch(self):
+        date_with_batch = Credit.objects.credited().filter(prison__private_estate=True).earliest().received_at.date()
+        expected_batch = PrivateEstateBatch.objects.filter(date=date_with_batch).first()
+
+        user = self.bank_admins[0]
+        url = reverse('privateestatebatch-credit-list', kwargs={
+            'batch_ref': '%s/%s' % (
+                expected_batch.prison.nomis_id,
+                expected_batch.date.isoformat(),
+            )
+        })
+        response = self.client.get(
+            url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        credits_list = response.data['results']
+        self.assertTrue(all(
+            parse_datetime(credit['received_at']).date() == date_with_batch
+            for credit in credits_list
+        ))
+        self.assertTrue(all(
+            credit['prison'] == self.private_prison.nomis_id
+            for credit in credits_list
+        ))
+        self.assertSetEqual(
+            set(credit['id'] for credit in credits_list),
+            set(expected_batch.credit_set.values_list('pk', flat=True)),
+        )
+
+    def test_others_cannot_list_credits_in_batch(self):
+        date_with_batch = Credit.objects.credited().filter(prison__private_estate=True).earliest().received_at.date()
+        expected_batch = PrivateEstateBatch.objects.filter(date=date_with_batch).first()
+
+        user = self.prison_clerks[0]
+        url = reverse('privateestatebatch-credit-list', kwargs={
+            'batch_ref': '%s/%s' % (
+                expected_batch.prison.nomis_id,
+                expected_batch.date.isoformat(),
+            )
+        })
+        response = self.client.get(
+            url, format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
