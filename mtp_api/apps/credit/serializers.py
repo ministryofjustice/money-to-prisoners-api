@@ -3,7 +3,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from payment.serializers import BillingAddressSerializer
-from prison.models import Prison
+from prison.models import Prison, PrisonBankAccount
 from prison.serializers import PrisonBankAccountSerializer
 from .models import Credit, Comment, ProcessingBatch, PrivateEstateBatch
 
@@ -174,4 +174,7 @@ class PrivateEstateBatchSerializer(serializers.ModelSerializer):
 
     def get_bank_account(self, instance):
         serialiser = PrisonBankAccountSerializer()
-        return serialiser.to_representation(instance.prison.prisonbankaccount)
+        try:
+            return serialiser.to_representation(instance.prison.prisonbankaccount)
+        except PrisonBankAccount.DoesNotExist:
+            return None
