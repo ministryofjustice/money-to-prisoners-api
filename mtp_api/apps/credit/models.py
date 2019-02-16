@@ -364,6 +364,7 @@ class PrivateEstateBatch(TimeStampedModel):
         permissions = (
             ('view_privateestatebatch', 'Can view batch'),
         )
+        unique_together = (('date', 'prison'),)
 
     def __str__(self):
         return '%s %s' % (self.prison, self.date)
