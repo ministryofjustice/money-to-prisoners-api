@@ -99,6 +99,16 @@ class CreditSerializer(serializers.ModelSerializer):
             return None
 
 
+class PrivateEstateBatchCreditSerializer(CreditSerializer):
+    billing_address = BillingAddressSerializer()
+
+    class Meta:
+        model = Credit
+        fields = CreditSerializer.Meta.fields + (
+            'billing_address',
+        )
+
+
 class SecurityCreditSerializer(CreditSerializer):
     prison_name = serializers.SerializerMethodField()
     sender_sort_code = serializers.CharField(read_only=True)

@@ -8,6 +8,7 @@ import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
 from rest_framework import generics, mixins, status as drf_status, viewsets
+from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -32,7 +33,8 @@ from .permissions import CreditPermissions, PrivateEstateBatchPermissions
 from .serializers import (
     CreditSerializer, SecurityCreditSerializer, CreditedOnlyCreditSerializer,
     IdsCreditSerializer, CommentSerializer, ProcessingBatchSerializer,
-    CreditsGroupedByCreditedSerializer, PrivateEstateBatchSerializer,
+    PrivateEstateBatchSerializer, PrivateEstateBatchCreditSerializer,
+    CreditsGroupedByCreditedSerializer,
 )
 
 User = get_user_model()
@@ -444,7 +446,7 @@ class PrivateEstateBatchFilter(django_filters.FilterSet):
         fields = ('date',)
 
 
-class PrivateEstateBatchView(mixins.ListModelMixin, viewsets.GenericViewSet):
+class PrivateEstateBatchView(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     queryset = PrivateEstateBatch.objects.all()
     serializer_class = PrivateEstateBatchSerializer
     filter_backends = (DjangoFilterBackend,)
@@ -453,3 +455,37 @@ class PrivateEstateBatchView(mixins.ListModelMixin, viewsets.GenericViewSet):
     permission_classes = (
         IsAuthenticated, PrivateEstateBatchPermissions, BankAdminClientIDPermissions,
     )
+
+    lookup_url_kwarg = 'ref'
+    lookup_value_regex = r'[A-Za-z0-9]{3}/\d\d\d\d-\d\d-\d\d'
+
+    def get_object(self):
+        queryset = self.filter_queryset(self.get_queryset())
+        prison, date = self.kwargs[self.lookup_url_kwarg].split('/', 1)
+        obj = get_object_or_404(queryset, prison=prison, date=date)
+        self.check_object_permissions(self.request, obj)
+        return obj
+
+
+class PrivateEstateBatchCreditsView(GetCredits):
+    permission_classes = (
+        IsAuthenticated, CreditPermissions, BankAdminClientIDPermissions,
+    )
+
+    def get_serializer_class(self):
+        return PrivateEstateBatchCreditSerializer
+
+    def list(self, request, **kwargs):
+        prison, date = kwargs['batch_ref'].split('/', 1)
+        batch = get_object_or_404(PrivateEstateBatchView.queryset, prison=prison, date=date)
+
+        queryset = self.get_queryset().filter(private_estate_batch=batch)
+        queryset = self.filter_queryset(queryset)
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
