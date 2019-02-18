@@ -39,7 +39,6 @@ class Subscription(models.Model):
 class Parameter(models.Model):
     field = models.CharField(max_length=250)
     value = models.CharField(max_length=250)
-    exclude = models.BooleanField(default=False)
     subscription = models.ForeignKey(
         Subscription,
         on_delete=models.CASCADE,
@@ -54,7 +53,6 @@ class Event(TimeStampedModel):
         related_name='events',
     )
     rule = models.CharField(max_length=8, validators=[validate_rule_code])
-    ref_number = models.IntegerField()
     email_sent = models.BooleanField(default=False)
     description = models.CharField(max_length=500, blank=True)
     credits = models.ManyToManyField(

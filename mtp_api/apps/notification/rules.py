@@ -24,37 +24,22 @@ INPUT_TYPES = Choices(
 class BaseRule:
     parent = None
 
-    def __init__(self, model, description, inputs, static_inputs=[], limit_prisons=True):
+    def __init__(self, model, description, inputs, limit_prisons=True):
         self.model = model
         self.description = description
         self.inputs = inputs
-        self.static_inputs = static_inputs
         self.limit_prisons = limit_prisons
 
     def create_events(self, subscription):
         raise NotImplementedError
 
     def get_query(self, subscription):
-        provided_parameters = [
-            ~Q(**{p.field: p.value}) if p.exclude
-            else Q(**{p.field: p.value}) for p
-            in subscription.parameters.all()
+        parameters = [
+            ~Q(**{i.field: i.get_value(subscription)}) if i.exclude
+            else Q(**{i.field: i.get_value(subscription)}) for i
+            in self.inputs
         ]
-        static_parameters = [
-            ~Q(**{i.field: i.get_default_value(subscription)}) if i.exclude
-            else Q(**{i.field: i.get_default_value(subscription)}) for i
-            in self.static_inputs
-        ]
-        return reduce(Q.__and__, provided_parameters + static_parameters)
-
-    def get_max_event_ref_number(self, subscription):
-        try:
-            max_ref_number = Event.objects.filter(
-                user=subscription.user
-            ).latest('ref_number').ref_number
-        except Event.DoesNotExist:
-            max_ref_number = 0
-        return max_ref_number
+        return reduce(Q.__and__, parameters)
 
     def get_event_description(self, subscription):
         if self.parent:
@@ -67,26 +52,31 @@ class BaseRule:
                     input_values[rule_input.field] = (
                         rule_input.get_display_value(parameter)
                     )
-        return RULES[subscription.rule].description.format(**input_values)
+        return self.description.format(**input_values)
 
 
 class Input:
 
     def __init__(
         self, field, input_type, choices=None, default_value=None,
-        exclude=False
+        exclude=False, editable=False
     ):
         self.field = field
         self.input_type = input_type
         self.choices = choices
         self.default_value = default_value
         self.exclude = exclude
+        self.editable = editable
 
-    def get_default_value(self, subscription):
+    def get_value(self, subscription):
+        if self.editable:
+            for parameter in subscription.parameters.all():
+                if parameter.field == self.field:
+                    return parameter.value
         return self.default_value
 
-    def get_display_value(self, parameter):
-        value = parameter.value
+    def get_display_value(self, subscription):
+        value = self.get_value(subscription)
         if self.choices and isinstance(self.choices, Choices):
             try:
                 value = self.choices.for_value(value).display
@@ -99,7 +89,7 @@ class Input:
 
 class DefaultUserInput(Input):
 
-    def get_default_value(self, subscription):
+    def get_value(self, subscription):
         return subscription.user
 
 
@@ -125,13 +115,10 @@ class QueryRule(BaseRule):
             events__user=subscription.user
         )
 
-        max_ref_number = self.get_max_event_ref_number(subscription)
         for record in records:
-            max_ref_number += 1
             event = Event.objects.create(
                 rule=subscription.rule,
                 user=subscription.user,
-                ref_number=max_ref_number,
                 description=self.get_event_description(subscription)
             )
 
@@ -208,11 +195,9 @@ class ProfileRule(BaseRule):
             ).order_by('-created')[:1]
 
             if len(triggering_records):
-                max_ref_number = self.get_max_event_ref_number(subscription) + 1
                 event = Event.objects.create(
                     rule=subscription.rule,
                     user=subscription.user,
-                    ref_number=max_ref_number,
                     description=self.get_event_description(subscription)
                 )
                 triggering_record = triggering_records[0]
@@ -233,12 +218,13 @@ class ProfileRule(BaseRule):
                 relation_model.objects.bulk_create(event_relations)
 
 
-amount_input = Input('amount__gte', INPUT_TYPES.AMOUNT)
+amount_input = Input('amount__gte', INPUT_TYPES.AMOUNT, default_value=12000)
 not_whole_amount_input = Input(
     'amount__endswith', INPUT_TYPES.STRING, default_value='00', exclude=True
 )
 time_period_input = Input(
-    'totals__time_period', INPUT_TYPES.STRING, choices=TIME_PERIOD
+    'totals__time_period', INPUT_TYPES.STRING, choices=TIME_PERIOD,
+    default_value=TIME_PERIOD.LAST_30_DAYS
 )
 sent_disbursements_only = Input(
     'resolution', INPUT_TYPES.STRING, default_value=DISBURSEMENT_RESOLUTION.SENT
@@ -254,8 +240,7 @@ RULES = {
             ProfileRule(
                 Credit,
                 None,
-                [],
-                static_inputs=[DefaultUserInput(
+                [DefaultUserInput(
                     'bank_transfer_details__sender_bank_account__monitoring_users',
                     INPUT_TYPES.OBJECT_ID
                 )],
@@ -265,8 +250,7 @@ RULES = {
             ProfileRule(
                 Credit,
                 None,
-                [],
-                static_inputs=[DefaultUserInput(
+                [DefaultUserInput(
                     'debit_card_details__monitoring_users', INPUT_TYPES.OBJECT_ID
                 )],
                 profile=SenderProfile,
@@ -275,8 +259,7 @@ RULES = {
             ProfileRule(
                 Credit,
                 None,
-                [],
-                static_inputs=[DefaultUserInput(
+                [DefaultUserInput(
                     'monitoring_users', INPUT_TYPES.OBJECT_ID
                 )],
                 profile=PrisonerProfile,
@@ -285,8 +268,7 @@ RULES = {
             ProfileRule(
                 Disbursement,
                 None,
-                [],
-                static_inputs=[DefaultUserInput(
+                [DefaultUserInput(
                     'bank_transfer_details__recipient_bank_account__monitoring_users',
                     INPUT_TYPES.OBJECT_ID
                 )],
@@ -296,8 +278,7 @@ RULES = {
             ProfileRule(
                 Disbursement,
                 None,
-                [],
-                static_inputs=[DefaultUserInput(
+                [DefaultUserInput(
                     'monitoring_users', INPUT_TYPES.OBJECT_ID
                 )],
                 profile=PrisonerProfile,
@@ -310,8 +291,8 @@ RULES = {
         _('Credits or disbursements that are not a whole number'),
         [],
         rules=[
-            QueryRule(Credit, None, [], static_inputs=[not_whole_amount_input]),
-            QueryRule(Disbursement, None, [], static_inputs=[not_whole_amount_input, sent_disbursements_only])
+            QueryRule(Credit, None, [not_whole_amount_input]),
+            QueryRule(Disbursement, None, [not_whole_amount_input, sent_disbursements_only])
         ]
     ),
     'CSFREQ': ProfileRule(
@@ -322,7 +303,7 @@ RULES = {
         ),
         [
             time_period_input,
-            Input('totals__credit_count__gte', INPUT_TYPES.NUMBER),
+            Input('totals__credit_count__gte', INPUT_TYPES.NUMBER, default_value=5),
         ],
         profile=SenderProfile
     ),
@@ -334,7 +315,7 @@ RULES = {
         ),
         [
             time_period_input,
-            Input('totals__disbursement_count__gte', INPUT_TYPES.NUMBER),
+            Input('totals__disbursement_count__gte', INPUT_TYPES.NUMBER, default_value=5),
         ],
         profile=RecipientProfile
     ),
@@ -346,7 +327,7 @@ RULES = {
         ),
         [
             time_period_input,
-            Input('totals__sender_count__gte', INPUT_TYPES.NUMBER),
+            Input('totals__sender_count__gte', INPUT_TYPES.NUMBER, default_value=5),
         ],
         profile=PrisonerProfile
     ),
@@ -358,7 +339,7 @@ RULES = {
         ),
         [
             time_period_input,
-            Input('totals__recipient_count__gte', INPUT_TYPES.NUMBER),
+            Input('totals__recipient_count__gte', INPUT_TYPES.NUMBER, default_value=5),
         ],
         profile=PrisonerProfile
     ),
@@ -370,7 +351,7 @@ RULES = {
         ),
         [
             time_period_input,
-            Input('totals__prisoner_count__gte', INPUT_TYPES.NUMBER),
+            Input('totals__prisoner_count__gte', INPUT_TYPES.NUMBER, default_value=5),
         ],
         profile=SenderProfile
     ),
@@ -382,7 +363,7 @@ RULES = {
         ),
         [
             time_period_input,
-            Input('totals__prisoner_count__gte', INPUT_TYPES.NUMBER),
+            Input('totals__prisoner_count__gte', INPUT_TYPES.NUMBER, default_value=5),
         ],
         profile=RecipientProfile
     ),
@@ -392,7 +373,7 @@ RULES = {
         [amount_input],
         rules=[
             QueryRule(Credit, None, []),
-            QueryRule(Disbursement, None, [], static_inputs=[sent_disbursements_only])
+            QueryRule(Disbursement, None, [sent_disbursements_only])
         ]
     ),
 }
