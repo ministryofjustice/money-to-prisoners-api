@@ -446,7 +446,10 @@ class PrivateEstateBatchFilter(django_filters.FilterSet):
         fields = ('date',)
 
 
-class PrivateEstateBatchView(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+class PrivateEstateBatchView(
+    mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.UpdateModelMixin,
+    viewsets.GenericViewSet
+):
     queryset = PrivateEstateBatch.objects.all()
     serializer_class = PrivateEstateBatchSerializer
     filter_backends = (DjangoFilterBackend,)
@@ -465,6 +468,18 @@ class PrivateEstateBatchView(mixins.ListModelMixin, mixins.RetrieveModelMixin, v
         obj = get_object_or_404(queryset, prison=prison, date=date)
         self.check_object_permissions(self.request, obj)
         return obj
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        if not partial:
+            return Response(status=drf_status.HTTP_405_METHOD_NOT_ALLOWED)
+        batch = self.get_object()
+        if (request.data or {}).get('credited'):
+            with transaction.atomic():
+                for credit in batch.credit_set.credit_pending():
+                    credit.credit_prisoner(self.request.user, nomis_transaction_id=None)
+            return Response(status=drf_status.HTTP_204_NO_CONTENT)
+        return Response(status=drf_status.HTTP_400_BAD_REQUEST)
 
 
 class PrivateEstateBatchCreditsView(GetCredits):

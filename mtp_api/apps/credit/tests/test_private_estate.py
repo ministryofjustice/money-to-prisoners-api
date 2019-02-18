@@ -1,5 +1,6 @@
 import datetime
 
+from django.contrib.auth.models import Permission
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
@@ -8,6 +9,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from core.tests.utils import make_test_users
+from credit.constants import CREDIT_RESOLUTION
 from credit.models import Credit, PrivateEstateBatch
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from payment.tests.utils import generate_payments
@@ -145,6 +147,65 @@ class PrivateEstateBatchTestCase(AuthTestCaseMixin, APITestCase):
         })
         response = self.client.get(
             url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_special_bank_admin_can_credit_batch(self):
+        date_with_batch = Credit.objects.credited().filter(prison__private_estate=True).earliest().received_at.date()
+        expected_batch = PrivateEstateBatch.objects.filter(date=date_with_batch).first()
+        some_credit = expected_batch.credit_set.first()
+        some_credit.resolution = CREDIT_RESOLUTION.PENDING
+        some_credit.save()
+
+        user = self.bank_admins[0]
+        user.user_permissions.add(Permission.objects.get(codename='change_privateestatebatch'))
+        url = reverse('privateestatebatch-detail', kwargs={
+            'ref': '%s/%s' % (
+                expected_batch.prison.nomis_id,
+                expected_batch.date.isoformat(),
+            )
+        })
+        response = self.client.patch(
+            url, {'credited': True}, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertTrue(all(
+            credit.credited
+            for credit in expected_batch.credit_set.all()
+        ))
+
+    def test_normal_bank_admin_cannot_credit_batch(self):
+        date_with_batch = Credit.objects.credited().filter(prison__private_estate=True).earliest().received_at.date()
+        expected_batch = PrivateEstateBatch.objects.filter(date=date_with_batch).first()
+
+        user = self.bank_admins[0]
+        url = reverse('privateestatebatch-detail', kwargs={
+            'ref': '%s/%s' % (
+                expected_batch.prison.nomis_id,
+                expected_batch.date.isoformat(),
+            )
+        })
+        response = self.client.patch(
+            url, {'credited': True}, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_others_cannot_credit_batch(self):
+        date_with_batch = Credit.objects.credited().filter(prison__private_estate=True).earliest().received_at.date()
+        expected_batch = PrivateEstateBatch.objects.filter(date=date_with_batch).first()
+
+        user = self.prison_clerks[0]
+        url = reverse('privateestatebatch-detail', kwargs={
+            'ref': '%s/%s' % (
+                expected_batch.prison.nomis_id,
+                expected_batch.date.isoformat(),
+            )
+        })
+        response = self.client.patch(
+            url, {'credited': True}, format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
