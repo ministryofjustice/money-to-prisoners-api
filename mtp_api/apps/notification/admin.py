@@ -25,12 +25,11 @@ class SubscriptionAdmin(admin.ModelAdmin):
 
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
-    list_display = ('rule', 'user', 'ref_number', 'description')
+    list_display = ('rule', 'user', 'description')
 
 
 @admin.register(EventCredit)
 class EventCreditAdmin(admin.ModelAdmin):
-    search_fields = ('event__ref_number',)
     list_display = ('event', 'credit',)
     exclude = ('credit', 'event',)
     readonly_fields = ('credit_link', 'event_link',)
@@ -48,8 +47,7 @@ class EventCreditAdmin(admin.ModelAdmin):
     @add_short_description(_('event'))
     def event_link(self, instance):
         link = reverse('admin:notification_event_change', args=(instance.event.pk,))
-        description = '%(code)s, %(date)s' % {
-            'code': instance.event.ref_number,
+        description = '%(date)s' % {
             'date': format_date(timezone.localtime(instance.event.created), 'd/m/Y'),
         }
         return format_html('<a href="{}">{}</a>', link, description)
@@ -57,7 +55,6 @@ class EventCreditAdmin(admin.ModelAdmin):
 
 @admin.register(EventDisbursement)
 class EventDisbursementAdmin(admin.ModelAdmin):
-    search_fields = ('event__ref_number',)
     list_display = ('event', 'disbursement',)
     exclude = ('disbursement', 'event',)
     readonly_fields = ('disbursement_link', 'event_link',)
@@ -75,8 +72,7 @@ class EventDisbursementAdmin(admin.ModelAdmin):
     @add_short_description(_('event'))
     def event_link(self, instance):
         link = reverse('admin:notification_event_change', args=(instance.event.pk,))
-        description = '%(code)s, %(date)s' % {
-            'code': instance.event.ref_number,
+        description = '%(date)s' % {
             'date': format_date(timezone.localtime(instance.event.created), 'd/m/Y'),
         }
         return format_html('<a href="{}">{}</a>', link, description)
