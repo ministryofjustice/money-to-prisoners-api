@@ -443,7 +443,10 @@ class ProcessingBatchView(
 class PrivateEstateBatchFilter(django_filters.FilterSet):
     class Meta:
         model = PrivateEstateBatch
-        fields = ('date',)
+        fields = {
+            'date': ['exact', 'gte', 'lt'],
+            'prison': ['exact'],
+        }
 
 
 class PrivateEstateBatchView(
