@@ -15,7 +15,6 @@ class ParameterSerializer(serializers.ModelSerializer):
         fields = (
             'field',
             'value',
-            'exclude',
         )
 
 
