@@ -53,7 +53,10 @@ class EventView(mixins.ListModelMixin, viewsets.GenericViewSet):
     permission_classes = (IsAuthenticated, ActionsBasedPermissions)
 
     def get_queryset(self):
-        return self.queryset.filter(user=self.request.user)
+        subscribed_rules = Subscription.objects.filter(
+            user=self.request.user
+        ).values_list('rule', flat=True)
+        return self.queryset.filter(rule__in=subscribed_rules)
 
 
 class RuleView(views.APIView):

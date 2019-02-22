@@ -40,14 +40,11 @@ class RuleTestCase(TestCase):
 
         credits = Credit.objects.exclude(
             amount__endswith='00'
-        ).filter(
-            created__gte=start
         )
         disbursements = Disbursement.objects.exclude(
             amount__endswith='00'
         ).filter(
             resolution=DISBURSEMENT_RESOLUTION.SENT,
-            created__gte=start
         )
         credit_events = [
             event.credits.first() for event in
@@ -83,7 +80,6 @@ class RuleTestCase(TestCase):
         subscription.create_events()
 
         credits = Credit.objects.filter(sender_profile__in=Credit.objects.filter(
-            created__gte=start,
             sender_profile__totals__time_period=TIME_PERIOD.LAST_7_DAYS,
             sender_profile__totals__credit_count__gte=5
         ).values_list('sender_profile', flat=True).distinct())
@@ -114,7 +110,6 @@ class RuleTestCase(TestCase):
 
         disbursements = Disbursement.objects.filter(
             recipient_profile__in=Disbursement.objects.filter(
-                created__gte=start,
                 recipient_profile__totals__time_period=TIME_PERIOD.LAST_7_DAYS,
                 recipient_profile__totals__disbursement_count__gte=5
             ).values_list('recipient_profile', flat=True).distinct()
@@ -145,7 +140,6 @@ class RuleTestCase(TestCase):
         subscription.create_events()
 
         credits = Credit.objects.filter(prisoner_profile__in=Credit.objects.filter(
-            created__gte=start,
             prisoner_profile__totals__time_period=TIME_PERIOD.LAST_7_DAYS,
             prisoner_profile__totals__sender_count__gte=3
         ).values_list('prisoner_profile', flat=True).distinct())
@@ -176,7 +170,6 @@ class RuleTestCase(TestCase):
 
         disbursements = Disbursement.objects.filter(
             prisoner_profile__in=Disbursement.objects.filter(
-                created__gte=start,
                 prisoner_profile__totals__time_period=TIME_PERIOD.LAST_7_DAYS,
                 prisoner_profile__totals__recipient_count__gte=3
             ).values_list('prisoner_profile', flat=True).distinct()
@@ -207,7 +200,6 @@ class RuleTestCase(TestCase):
         subscription.create_events()
 
         credits = Credit.objects.filter(sender_profile__in=Credit.objects.filter(
-            created__gte=start,
             sender_profile__totals__time_period=TIME_PERIOD.LAST_7_DAYS,
             sender_profile__totals__prisoner_count__gte=3
         ).values_list('sender_profile', flat=True).distinct())
@@ -238,7 +230,6 @@ class RuleTestCase(TestCase):
 
         disbursements = Disbursement.objects.filter(
             recipient_profile__in=Disbursement.objects.filter(
-                created__gte=start,
                 recipient_profile__totals__time_period=TIME_PERIOD.LAST_7_DAYS,
                 recipient_profile__totals__prisoner_count__gte=3
             ).values_list('recipient_profile', flat=True).distinct()
@@ -267,12 +258,10 @@ class RuleTestCase(TestCase):
         subscription.create_events()
 
         credits = Credit.objects.filter(
-            amount__gte=1000,
-            created__gte=start
+            amount__gte=1000
         )
         disbursements = Disbursement.objects.filter(
             amount__gte=1000,
-            created__gte=start,
             resolution=DISBURSEMENT_RESOLUTION.SENT
         )
         credit_events = [
@@ -356,7 +345,6 @@ class RuleTestCase(TestCase):
         subscription.create_events()
 
         relevant_credits = Credit.objects.filter(
-            created__gte=start,
             prisoner_profile__totals__time_period=TIME_PERIOD.LAST_7_DAYS,
             prisoner_profile__totals__sender_count__gte=3
         )

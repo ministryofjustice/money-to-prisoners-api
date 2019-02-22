@@ -224,10 +224,10 @@ class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         triggering_credits = Credit.objects.filter(
-            amount__gte=100, created__gte=start
+            amount__gte=100,
         )
         triggering_disbursements = Disbursement.objects.filter(
-            amount__gte=100, created__gte=start, resolution=DISBURSEMENT_RESOLUTION.SENT
+            amount__gte=100, resolution=DISBURSEMENT_RESOLUTION.SENT
         )
         self.assertEqual(
             response.data['count'],

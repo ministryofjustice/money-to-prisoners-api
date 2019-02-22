@@ -47,13 +47,7 @@ class Parameter(models.Model):
 
 
 class Event(TimeStampedModel):
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name='events',
-    )
     rule = models.CharField(max_length=8, validators=[validate_rule_code])
-    email_sent = models.BooleanField(default=False)
     description = models.CharField(max_length=500, blank=True)
     credits = models.ManyToManyField(
         Credit, through='EventCredit', related_name='events'
