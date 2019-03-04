@@ -111,7 +111,9 @@
     "permissions": [
       ["view_disbursement", "disbursement", "disbursement"],
       ["change_disbursement", "disbursement", "disbursement"],
-      ["add_filedownload", "core", "filedownload"]
+      ["add_filedownload", "core", "filedownload"],
+      ["view_privateestatebatch", "credit", "privateestatebatch"],
+      ["patch_processed_transaction", "transaction", "transaction"]
     ]
   }
 }
