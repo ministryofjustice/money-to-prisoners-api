@@ -1,0 +1,1 @@
+SHORT_DATETIME_FORMAT = 'd/m/Y H:i'  # '25/10/2006 14:30'

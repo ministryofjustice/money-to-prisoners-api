@@ -110,6 +110,7 @@ TIME_ZONE = 'Europe/London'
 USE_I18N = True
 USE_L10N = True
 USE_TZ = True
+FORMAT_MODULE_PATH = ['mtp_api.settings.formats']
 
 
 # Static files (CSS, JavaScript, Images)
