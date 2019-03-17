@@ -1,0 +1,76 @@
+version: 2.1
+jobs:
+  build-test-push:
+    docker:
+      - image: ${ECR_ENDPOINT}/prisoner-money/money-to-prisoners:deploy-tools
+    environment:
+      app: api
+    working_directory: /tmp/repo
+    steps:
+      - checkout
+      - run:
+          name: Inspect tags
+          command: |
+            echo export tag=${app}.${CIRCLE_BRANCH}.${CIRCLE_SHA1:0:7} > /tmp/mtp-env.sh
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: Build docker image
+          command: |
+            source /tmp/mtp-env.sh
+            docker build \
+              --pull --force-rm \
+              --build-arg APP_GIT_COMMIT=${CIRCLE_SHA1} \
+              --build-arg APP_GIT_BRANCH=${CIRCLE_BRANCH} \
+              --build-arg APP_BUILD_TAG=${tag} \
+              --build-arg APP_BUILD_DATE=$(date +%FT%T%z) \
+              --tag ${tag} \
+              .
+      - run:
+          name: Test docker image
+          command: |
+            source /tmp/mtp-env.sh
+            docker run \
+              --name postgres \
+              --detach \
+              -e POSTGRES_USER=postgres \
+              -e POSTGRES_PASSWORD=postgres \
+              -e POSTGRES_DB=mtp_api \
+              circleci/postgres:10.6-alpine
+            sleep 10
+            docker run \
+              --name ${app} \
+              -e DJANGO_SETTINGS_MODULE=mtp_api.settings.jenkins \
+              -e DB_PASSWORD=postgres \
+              -e DB_USERNAME=postgres \
+              -e DB_HOST=postgres \
+              --link postgres \
+              ${tag} \
+              /bin/bash -c 'mkdir /app/reports && /app/venv/bin/pip install -r requirements/jenkins.txt && /app/venv/bin/python manage.py test --verbosity=2'
+            docker cp ${app}:/app/reports /tmp/reports
+            mkdir /tmp/reports/${app} && mv /tmp/reports/junit.xml /tmp/reports/${app}
+            docker rm ${app}
+            docker stop postgres
+            docker rm postgres
+      - store_artifacts:
+          path: /tmp/reports
+      - store_test_results:
+          path: /tmp/reports
+      - run:
+          name: Push docker image
+          command: |
+            source /tmp/mtp-env.sh
+            $(aws ecr get-login --region eu-west-1 --no-include-email)
+            echo "Pushing ${tag} to ECR"
+            docker tag ${tag} ${ECR_ENDPOINT}/prisoner-money/money-to-prisoners:${tag}
+            docker push ${ECR_ENDPOINT}/prisoner-money/money-to-prisoners:${tag}
+            if [[ "${CIRCLE_BRANCH}" == "master" ]]; then
+              echo "Pushing ${app} to ECR (acts as latest)"
+              docker tag ${tag} ${ECR_ENDPOINT}/prisoner-money/money-to-prisoners:${app}
+              docker push ${ECR_ENDPOINT}/prisoner-money/money-to-prisoners:${app}
+            fi
+workflows:
+  version: 2
+  build-test-push:
+    jobs:
+      - build-test-push
