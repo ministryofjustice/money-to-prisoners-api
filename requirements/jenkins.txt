@@ -1,4 +1,4 @@
 # Place jenkins-only dependencies here
 -r dev.txt
 
-django-jenkins==0.18.1
+django-jenkins>=0.110,<1
