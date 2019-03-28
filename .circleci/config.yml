@@ -60,7 +60,7 @@ jobs:
           name: Push docker image
           command: |
             source /tmp/mtp-env.sh
-            $(aws ecr get-login --region eu-west-1 --no-include-email)
+            $(aws ecr get-login --region ${AWS_DEFAULT_REGION} --no-include-email)
             echo "Pushing ${tag} to ECR"
             docker tag ${tag} ${ECR_ENDPOINT}/prisoner-money/money-to-prisoners:${tag}
             docker push ${ECR_ENDPOINT}/prisoner-money/money-to-prisoners:${tag}
