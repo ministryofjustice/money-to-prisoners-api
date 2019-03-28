@@ -17,7 +17,7 @@ from payment.tests.utils import (
 from prison.models import PrisonerLocation, Prison
 from prison.tests.utils import load_random_prisoner_locations
 from security.constants import TIME_PERIOD
-from security.models import SenderProfile, PrisonerProfile, RecipientProfile
+from security.models import SenderProfile, PrisonerProfile, RecipientProfile, SenderTotals
 from transaction.tests.utils import (
     create_transactions, generate_transactions, generate_initial_transactions_data
 )
@@ -40,26 +40,25 @@ class UpdateSecurityProfilesTestCase(TestCase):
         call_command('update_security_profiles', verbosity=0)
 
         for sender_profile in SenderProfile.objects.all():
-            credits = Credit.objects.filter(sender_profile.credit_filters)
+            SenderTotals.objects.filter(sender_profile=sender_profile).update_all_totals()
             self.assertEqual(
-                sum([credit.amount for credit in credits]),
-                sender_profile.totals.get(time_period=TIME_PERIOD.ALL_TIME).credit_total
+                len(sender_profile.credits.all()),
+                sender_profile.totals.get(time_period=TIME_PERIOD.ALL_TIME).credit_count
             )
             self.assertEqual(
-                len(credits),
-                sender_profile.totals.get(time_period=TIME_PERIOD.ALL_TIME).credit_count
+                sum([credit.amount for credit in sender_profile.credits.all()]),
+                sender_profile.totals.get(time_period=TIME_PERIOD.ALL_TIME).credit_total
             )
 
         for recipient_profile in RecipientProfile.objects.filter(
             bank_transfer_details__isnull=False
         ):
-            disbursements = Disbursement.objects.filter(recipient_profile.disbursement_filters)
             self.assertEqual(
-                sum([disbursement.amount for disbursement in disbursements]),
+                sum([disbursement.amount for disbursement in recipient_profile.disbursements.all()]),
                 recipient_profile.totals.get(time_period=TIME_PERIOD.ALL_TIME).disbursement_total
             )
             self.assertEqual(
-                len(disbursements),
+                len(recipient_profile.disbursements.all()),
                 recipient_profile.totals.get(time_period=TIME_PERIOD.ALL_TIME).disbursement_count
             )
 
@@ -67,23 +66,21 @@ class UpdateSecurityProfilesTestCase(TestCase):
             if prisoner_profile.credits.count():
                 self.assertTrue(prisoner_profile.single_offender_id)
 
-            credits = Credit.objects.filter(prisoner_profile.credit_filters)
             self.assertEqual(
-                sum([credit.amount for credit in credits]),
+                sum([credit.amount for credit in prisoner_profile.credits.all()]),
                 prisoner_profile.totals.get(time_period=TIME_PERIOD.ALL_TIME).credit_total
             )
             self.assertEqual(
-                len(credits),
+                len(prisoner_profile.credits.all()),
                 prisoner_profile.totals.get(time_period=TIME_PERIOD.ALL_TIME).credit_count
             )
 
-            disbursements = Disbursement.objects.filter(prisoner_profile.disbursement_filters)
             self.assertEqual(
-                sum([disbursement.amount for disbursement in disbursements]),
+                sum([disbursement.amount for disbursement in prisoner_profile.disbursements.all()]),
                 prisoner_profile.totals.get(time_period=TIME_PERIOD.ALL_TIME).disbursement_total
             )
             self.assertEqual(
-                len(disbursements),
+                len(prisoner_profile.disbursements.all()),
                 prisoner_profile.totals.get(time_period=TIME_PERIOD.ALL_TIME).disbursement_count
             )
 

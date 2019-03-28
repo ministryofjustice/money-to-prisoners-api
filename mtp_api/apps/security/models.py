@@ -12,7 +12,10 @@ from core.models import ScheduledCommand
 from disbursement.constants import DISBURSEMENT_RESOLUTION
 from prison.models import Prison
 from .constants import TIME_PERIOD
-from .managers import PrisonProfileManager
+from .managers import (
+    PrisonProfileManager, SenderTotalsQuerySet, RecipientTotalsQuerySet,
+    PrisonerTotalsQuerySet
+)
 from .signals import prisoner_profile_current_prisons_need_updating
 
 
@@ -27,33 +30,6 @@ class SenderProfile(TimeStampedModel):
 
     def __str__(self):
         return 'Sender %s' % self.id
-
-    @property
-    def credit_filters(self):
-        try:
-            return reduce(
-                models.Q.__or__,
-                chain(
-                    (
-                        models.Q(
-                            transaction__sender_name=d.sender_name,
-                            transaction__sender_sort_code=d.sender_bank_account.sort_code,
-                            transaction__sender_account_number=d.sender_bank_account.account_number,
-                            transaction__sender_roll_number=d.sender_bank_account.roll_number
-                        )
-                        for d in self.bank_transfer_details.all()
-                    ),
-                    (
-                        models.Q(
-                            payment__card_number_last_digits=d.card_number_last_digits,
-                            payment__card_expiry_date=d.card_expiry_date
-                        )
-                        for d in self.debit_card_details.all()
-                    )
-                )
-            )
-        except TypeError:
-            return models.Q(pk=None)
 
     def get_sender_names(self):
         yield from (details.sender_name for details in self.bank_transfer_details.all())
@@ -113,7 +89,12 @@ class SenderTotals(models.Model):
         SenderProfile, on_delete=models.CASCADE, related_name='totals'
     )
 
+    objects = SenderTotalsQuerySet.as_manager()
+
     class Meta:
+        unique_together = (
+            ('sender_profile', 'time_period',),
+        )
         indexes = [
             models.Index(fields=['credit_count']),
             models.Index(fields=['credit_total']),
@@ -186,25 +167,6 @@ class RecipientProfile(TimeStampedModel):
     def __str__(self):
         return 'Recipient %s' % self.id
 
-    @property
-    def disbursement_filters(self):
-        try:
-            return reduce(
-                models.Q.__or__,
-                chain(
-                    (
-                        models.Q(
-                            sort_code=d.recipient_bank_account.sort_code,
-                            account_number=d.recipient_bank_account.account_number,
-                            roll_number=d.recipient_bank_account.roll_number or None
-                        )
-                        for d in self.bank_transfer_details.all()
-                    )
-                )
-            ) & models.Q(resolution=DISBURSEMENT_RESOLUTION.SENT)
-        except TypeError:
-            return models.Q(pk=None)
-
 
 class BankTransferRecipientDetails(TimeStampedModel):
     recipient_bank_account = models.ForeignKey(
@@ -230,7 +192,12 @@ class RecipientTotals(models.Model):
         RecipientProfile, on_delete=models.CASCADE, related_name='totals'
     )
 
+    objects = RecipientTotalsQuerySet.as_manager()
+
     class Meta:
+        unique_together = (
+            ('recipient_profile', 'time_period',),
+        )
         indexes = [
             models.Index(fields=['disbursement_count']),
             models.Index(fields=['disbursement_total']),
@@ -271,17 +238,6 @@ class PrisonerProfile(TimeStampedModel):
     def __str__(self):
         return self.prisoner_number
 
-    @property
-    def credit_filters(self):
-        return models.Q(prisoner_number=self.prisoner_number, prisoner_dob=self.prisoner_dob)
-
-    @property
-    def disbursement_filters(self):
-        return (
-            models.Q(prisoner_number=self.prisoner_number)
-            & models.Q(resolution=DISBURSEMENT_RESOLUTION.SENT)
-        )
-
 
 class PrisonerTotals(models.Model):
     credit_count = models.IntegerField(default=0)
@@ -296,7 +252,12 @@ class PrisonerTotals(models.Model):
         PrisonerProfile, on_delete=models.CASCADE, related_name='totals'
     )
 
+    objects = PrisonerTotalsQuerySet.as_manager()
+
     class Meta:
+        unique_together = (
+            ('prisoner_profile', 'time_period',),
+        )
         indexes = [
             models.Index(fields=['credit_count']),
             models.Index(fields=['credit_total']),
@@ -361,31 +322,16 @@ def update_current_prisons(*args, **kwargs):
 @receiver(post_save, sender=SenderProfile, dispatch_uid='post_save_create_sender_totals')
 def post_save_create_sender_totals(sender, instance, created, *args, **kwargs):
     if created:
-        sender_totals = []
-        for time_period in TIME_PERIOD.values:
-            sender_totals.append(SenderTotals(
-                sender_profile=instance, time_period=time_period
-            ))
-        SenderTotals.objects.bulk_create(sender_totals)
+        SenderTotals.objects.create_totals_for_profile(instance)
 
 
 @receiver(post_save, sender=PrisonerProfile, dispatch_uid='post_save_create_prisoner_totals')
 def post_save_create_prisoner_totals(sender, instance, created, *args, **kwargs):
     if created:
-        prisoner_totals = []
-        for time_period in TIME_PERIOD.values:
-            prisoner_totals.append(PrisonerTotals(
-                prisoner_profile=instance, time_period=time_period
-            ))
-        PrisonerTotals.objects.bulk_create(prisoner_totals)
+        PrisonerTotals.objects.create_totals_for_profile(instance)
 
 
 @receiver(post_save, sender=RecipientProfile, dispatch_uid='post_save_create_recipient_totals')
 def post_save_create_recipient_totals(sender, instance, created, *args, **kwargs):
     if created:
-        recipient_totals = []
-        for time_period in TIME_PERIOD.values:
-            recipient_totals.append(RecipientTotals(
-                recipient_profile=instance, time_period=time_period
-            ))
-        RecipientTotals.objects.bulk_create(recipient_totals)
+        RecipientTotals.objects.create_totals_for_profile(instance)
