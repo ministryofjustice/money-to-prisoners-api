@@ -184,11 +184,10 @@ class SenderCreditListTestCase(SecurityViewTestCase):
         )['results']
         self.assertGreater(len(data), 0)
 
-        credits = Credit.objects.filter(sender.credit_filters)
         self.assertEqual(
-            len(credits), len(data)
+            len(sender.credits.all()), len(data)
         )
-        for credit in credits:
+        for credit in sender.credits.all():
             self.assertTrue(credit.id in [d['id'] for d in data])
 
 
@@ -274,11 +273,10 @@ class RecipientDisbursementListTestCase(SecurityViewTestCase):
         )['results']
         self.assertGreater(len(data), 0)
 
-        disbursements = Disbursement.objects.filter(recipient.disbursement_filters)
         self.assertEqual(
-            len(disbursements), len(data)
+            len(recipient.disbursements.all()), len(data)
         )
-        for disbursement in disbursements:
+        for disbursement in recipient.disbursements.all():
             self.assertTrue(disbursement.id in [d['id'] for d in data])
 
 
@@ -360,11 +358,10 @@ class PrisonerCreditListTestCase(SecurityViewTestCase):
         )['results']
         self.assertTrue(len(data) > 0)
 
-        credits = Credit.objects.filter(prisoner.credit_filters)
         self.assertEqual(
-            len(credits), len(data)
+            len(prisoner.credits.all()), len(data)
         )
-        for credit in credits:
+        for credit in prisoner.credits.all():
             self.assertTrue(credit.id in [d['id'] for d in data])
 
 
@@ -380,11 +377,10 @@ class PrisonerDisbursementListTestCase(SecurityViewTestCase):
         )['results']
         self.assertTrue(len(data) > 0)
 
-        disbursements = Disbursement.objects.filter(prisoner.disbursement_filters)
         self.assertEqual(
-            len(disbursements), len(data)
+            len(prisoner.disbursements.all()), len(data)
         )
-        for disbursement in disbursements:
+        for disbursement in prisoner.disbursements.all():
             self.assertTrue(disbursement.id in [d['id'] for d in data])
 
 

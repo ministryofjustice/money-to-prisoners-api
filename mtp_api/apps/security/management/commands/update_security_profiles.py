@@ -1,7 +1,5 @@
 import logging
 
-from django.db.models import Count, Sum, Subquery, OuterRef, Q
-from django.db.models.functions import Coalesce
 from django.db.transaction import atomic
 from django.core.management import BaseCommand, CommandError
 
@@ -9,7 +7,6 @@ from credit.models import Credit
 from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION
 from disbursement.models import Disbursement
 from prison.models import PrisonerLocation
-from security.constants import TIME_PERIOD, get_start_date_for_time_period
 from security.models import (
     SenderProfile, BankTransferSenderDetails, DebitCardSenderDetails,
     CardholderName, SenderEmail, PrisonerProfile, ProvidedPrisonerName,
@@ -33,7 +30,6 @@ class Command(BaseCommand):
         parser.add_argument('--batch-size', type=int, default=200,
                             help='Number of credits to process in one atomic transaction')
         parser.add_argument('--totals-only', action='store_true', help='Recalculates the counts and totals only')
-        parser.add_argument('--skip-totals', action='store_true', help='Does not recalculate the counts and totals')
         parser.add_argument('--recreate', action='store_true', help='Deletes existing sender and prisoner profiles')
 
     def handle(self, **options):
@@ -50,8 +46,6 @@ class Command(BaseCommand):
             self.handle_totals()
         else:
             self.handle_update(batch_size=batch_size, recreate=options['recreate'])
-            if not options['skip_totals']:
-                self.handle_totals()
 
     def handle_update(self, batch_size, recreate):
         if recreate:
@@ -153,6 +147,13 @@ class Command(BaseCommand):
             credit.prisoner_profile = prisoner_profile
         credit.save()
 
+        SenderTotals.objects.filter(
+            sender_profile=credit.sender_profile
+        ).update_all_totals()
+        PrisonerTotals.objects.filter(
+            prisoner_profile=credit.prisoner_profile
+        ).update_all_totals_for_credit()
+
     def create_or_update_profiles_for_disbursement(self, disbursement):
         recipient_profile = self.create_or_update_recipient_profile(disbursement)
         disbursement.recipient_profile = recipient_profile
@@ -162,6 +163,13 @@ class Command(BaseCommand):
         )
         disbursement.prisoner_profile = prisoner_profile
         disbursement.save()
+
+        RecipientTotals.objects.filter(
+            recipient_profile=disbursement.recipient_profile
+        ).update_all_totals()
+        PrisonerTotals.objects.filter(
+            prisoner_profile=disbursement.prisoner_profile
+        ).update_all_totals_for_disbursement()
 
     def create_or_update_sender_profile(self, credit):
         if hasattr(credit, 'transaction'):
@@ -348,231 +356,10 @@ class Command(BaseCommand):
 
     def handle_totals(self):
         self.stdout.write('Updating totals for security profiles')
-        self.update_credit_counts()
-        self.update_credit_totals()
-        self.update_disbursement_counts()
-        self.update_disbursement_totals()
-        self.update_sender_prisoner_counts()
-        self.update_sender_prison_counts()
-        self.update_recipient_prisoner_counts()
-        self.update_recipient_prison_counts()
-        self.update_sender_counts()
-        self.update_recipient_counts()
+        SenderTotals.objects.update_all_totals()
+        RecipientTotals.objects.update_all_totals()
+        PrisonerTotals.objects.update_all_totals()
         self.stdout.write(self.style.SUCCESS('Done'))
-
-    def update_credit_counts(self):
-        self.stdout.write('Updating credit counts for security profiles')
-        for profile, totals in [
-            (SenderProfile, SenderTotals), (PrisonerProfile, PrisonerTotals)
-        ]:
-            for time_period in TIME_PERIOD.values:
-                start = get_start_date_for_time_period(time_period)
-                related_field = profile.credits.rel.remote_field.name
-                totals.objects.filter(time_period=time_period).update(
-                    credit_count=Coalesce(Subquery(
-                        profile.objects.filter(
-                            id=OuterRef('%s_id' % related_field),
-                        ).annotate(
-                            credit_count=Count(
-                                'credits',
-                                filter=Q(
-                                    credits__received_at__gte=start,
-                                ),
-                                distinct=True
-                            )
-                        ).values('credit_count')[:1]
-                    ), 0)
-                )
-
-    def update_credit_totals(self):
-        self.stdout.write('Updating credit totals for security profiles')
-        for profile, totals in [
-            (SenderProfile, SenderTotals), (PrisonerProfile, PrisonerTotals)
-        ]:
-            for time_period in TIME_PERIOD.values:
-                start = get_start_date_for_time_period(time_period)
-                related_field = profile.credits.rel.remote_field.name
-                totals.objects.filter(time_period=time_period).update(
-                    credit_total=Coalesce(Subquery(
-                        profile.objects.filter(
-                            id=OuterRef('%s_id' % related_field),
-                        ).annotate(
-                            credit_total=Sum(
-                                'credits__amount',
-                                filter=Q(
-                                    credits__received_at__gte=start,
-                                )
-                            )
-                        ).values('credit_total')[:1]
-                    ), 0)
-                )
-
-    def update_disbursement_counts(self):
-        self.stdout.write('Updating disbursement counts for security profiles')
-        for profile, totals in [
-            (RecipientProfile, RecipientTotals), (PrisonerProfile, PrisonerTotals)
-        ]:
-            for time_period in TIME_PERIOD.values:
-                start = get_start_date_for_time_period(time_period)
-                related_field = profile.disbursements.rel.remote_field.name
-                totals.objects.filter(time_period=time_period).update(
-                    disbursement_count=Coalesce(Subquery(
-                        profile.objects.filter(
-                            id=OuterRef('%s_id' % related_field),
-                        ).annotate(
-                            disbursement_count=Count(
-                                'disbursements',
-                                filter=Q(
-                                    disbursements__created__gte=start,
-                                ),
-                                distinct=True
-                            )
-                        ).values('disbursement_count')[:1]
-                    ), 0)
-                )
-
-    def update_disbursement_totals(self):
-        self.stdout.write('Updating disbursement totals for security profiles')
-        for profile, totals in [
-            (RecipientProfile, RecipientTotals), (PrisonerProfile, PrisonerTotals)
-        ]:
-            for time_period in TIME_PERIOD.values:
-                start = get_start_date_for_time_period(time_period)
-                related_field = profile.disbursements.rel.remote_field.name
-                totals.objects.filter(time_period=time_period).update(
-                    disbursement_total=Coalesce(Subquery(
-                        profile.objects.filter(
-                            id=OuterRef('%s_id' % related_field),
-                        ).annotate(
-                            disbursement_total=Sum(
-                                'disbursements__amount',
-                                filter=Q(
-                                    disbursements__created__gte=start,
-                                )
-                            )
-                        ).values('disbursement_total')[:1]
-                    ), 0)
-                )
-
-    def update_sender_prisoner_counts(self):
-        self.stdout.write('Updating prisoner counts for sender profiles')
-        for time_period in TIME_PERIOD.values:
-            start = get_start_date_for_time_period(time_period)
-            SenderTotals.objects.filter(time_period=time_period).update(
-                prisoner_count=Coalesce(Subquery(
-                    SenderProfile.objects.filter(
-                        id=OuterRef('sender_profile_id'),
-                    ).annotate(
-                        prisoner_count=Count(
-                            'credits__prisoner_profile',
-                            filter=Q(
-                                credits__received_at__gte=start,
-                            ),
-                            distinct=True
-                        )
-                    ).values('prisoner_count')[:1]
-                ), 0)
-            )
-
-    def update_recipient_prisoner_counts(self):
-        self.stdout.write('Updating prisoner counts for recipient profiles')
-        for time_period in TIME_PERIOD.values:
-            start = get_start_date_for_time_period(time_period)
-            RecipientTotals.objects.filter(time_period=time_period).update(
-                prisoner_count=Coalesce(Subquery(
-                    RecipientProfile.objects.filter(
-                        id=OuterRef('recipient_profile_id'),
-                    ).annotate(
-                        prisoner_count=Count(
-                            'disbursements__prisoner_profile',
-                            filter=Q(
-                                disbursements__created__gte=start,
-                            ),
-                            distinct=True
-                        )
-                    ).values('prisoner_count')[:1]
-                ), 0)
-            )
-
-    def update_sender_prison_counts(self):
-        self.stdout.write('Updating prison counts for sender profiles')
-        for time_period in TIME_PERIOD.values:
-            start = get_start_date_for_time_period(time_period)
-            SenderTotals.objects.filter(time_period=time_period).update(
-                prison_count=Coalesce(Subquery(
-                    SenderProfile.objects.filter(
-                        id=OuterRef('sender_profile_id'),
-                    ).annotate(
-                        prison_count=Count(
-                            'credits__prison',
-                            filter=Q(
-                                credits__received_at__gte=start,
-                            ),
-                            distinct=True
-                        )
-                    ).values('prison_count')[:1]
-                ), 0)
-            )
-
-    def update_recipient_prison_counts(self):
-        self.stdout.write('Updating prison counts for recipient profiles')
-        for time_period in TIME_PERIOD.values:
-            start = get_start_date_for_time_period(time_period)
-            RecipientTotals.objects.filter(time_period=time_period).update(
-                prison_count=Coalesce(Subquery(
-                    RecipientProfile.objects.filter(
-                        id=OuterRef('recipient_profile_id'),
-                    ).annotate(
-                        prison_count=Count(
-                            'disbursements__prison',
-                            filter=Q(
-                                disbursements__created__gte=start,
-                            ),
-                            distinct=True
-                        )
-                    ).values('prison_count')[:1]
-                ), 0)
-            )
-
-    def update_sender_counts(self):
-        self.stdout.write('Updating sender counts for prisoner profiles')
-        for time_period in TIME_PERIOD.values:
-            start = get_start_date_for_time_period(time_period)
-            PrisonerTotals.objects.filter(time_period=time_period).update(
-                sender_count=Coalesce(Subquery(
-                    PrisonerProfile.objects.filter(
-                        id=OuterRef('prisoner_profile_id'),
-                    ).annotate(
-                        sender_count=Count(
-                            'credits__sender_profile',
-                            filter=Q(
-                                credits__received_at__gte=start,
-                            ),
-                            distinct=True
-                        )
-                    ).values('sender_count')[:1]
-                ), 0)
-            )
-
-    def update_recipient_counts(self):
-        self.stdout.write('Updating recipient counts for prisoner profiles')
-        for time_period in TIME_PERIOD.values:
-            start = get_start_date_for_time_period(time_period)
-            PrisonerTotals.objects.filter(time_period=time_period).update(
-                recipient_count=Coalesce(Subquery(
-                    PrisonerProfile.objects.filter(
-                        id=OuterRef('prisoner_profile_id'),
-                    ).annotate(
-                        recipient_count=Count(
-                            'disbursements__recipient_profile',
-                            filter=Q(
-                                disbursements__created__gte=start,
-                            ),
-                            distinct=True
-                        )
-                    ).values('recipient_count')[:1]
-                ), 0)
-            )
 
     @atomic()
     def delete_profiles(self):
