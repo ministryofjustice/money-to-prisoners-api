@@ -42,9 +42,6 @@ RUN set -ex; mkdir -p \
   static \
   media \
   spooler
-RUN set -ex; chown www-data:www-data \
-  media \
-  spooler
 
 # install virtual environment
 RUN set -ex; \
@@ -52,13 +49,18 @@ RUN set -ex; \
   venv/bin/pip install -U setuptools pip wheel
 
 # cache python packages, unless requirements change
-ADD ./requirements requirements
+COPY ./requirements requirements
 RUN venv/bin/pip install -r requirements/docker.txt
 
-# add app and build it
-ADD . /app
+# add app, build it and switch to www-data
+COPY . /app
 RUN set -ex; \
-  venv/bin/python run.py --requirements-file requirements/docker.txt build
+  venv/bin/python run.py --requirements-file requirements/docker.txt build \
+  && \
+  test $(id -u www-data) = 33 \
+  && \
+  chown -R www-data:www-data /app
+USER 33
 
 ARG APP_GIT_COMMIT
 ARG APP_GIT_BRANCH
