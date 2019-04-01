@@ -6,9 +6,8 @@ The API app for the Money to Prisoners service. Currently, there are no APIs tha
 
 ## Requirements
 
-- Unix-like platform with Python 3.4+ and NodeJS
-- PostgreSQL 9.4+
-- [Docker](https://www.docker.com/products/docker) is used for deployment, optional for development
+- Unix-like platform with Python 3.6+ and NodeJS
+- PostgreSQL
 
 ## Developing locally
 
@@ -65,3 +64,7 @@ Which will return something like:
 ```
 
 Use the `access_token` in the response in subsequent requests.
+
+## Deploying
+
+This is handled by [money-to-prisoners-deploy](https://github.com/ministryofjustice/money-to-prisoners-deploy/).
