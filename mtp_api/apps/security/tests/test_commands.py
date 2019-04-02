@@ -3,9 +3,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from core.tests.utils import make_test_users
-from credit.models import Credit
 from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION
-from disbursement.models import Disbursement
 from disbursement.tests.utils import (
     generate_disbursements, generate_initial_disbursement_data,
     create_disbursements

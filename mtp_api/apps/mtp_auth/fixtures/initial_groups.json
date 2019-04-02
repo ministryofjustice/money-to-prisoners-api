@@ -100,10 +100,7 @@
       ["change_savedsearch", "security", "savedsearch"],
       ["delete_savedsearch", "security", "savedsearch"],
       ["view_recipientprofile", "security", "recipientprofile"],
-      ["view_subscription", "notification", "subscription"],
-      ["view_event", "notification", "event"],
-      ["add_subscription", "notification", "subscription"],
-      ["delete_subscription", "notification", "subscription"]
+      ["view_event", "notification", "event"]
     ]
   }
 },
