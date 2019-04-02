@@ -6,6 +6,9 @@ from django.core.management import BaseCommand, CommandError
 from credit.models import Credit
 from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION
 from disbursement.models import Disbursement
+from notification.rules import (
+    create_credit_notifications, create_disbursement_notifications
+)
 from prison.models import PrisonerLocation
 from security.models import (
     SenderProfile, BankTransferSenderDetails, DebitCardSenderDetails,
@@ -128,12 +131,14 @@ class Command(BaseCommand):
     def process_credit_batch(self, new_credits):
         for credit in new_credits:
             self.create_or_update_profiles_for_credit(credit)
+            create_credit_notifications(credit)
         return len(new_credits)
 
     @atomic()
     def process_disbursement_batch(self, new_disbursements):
         for disbursement in new_disbursements:
             self.create_or_update_profiles_for_disbursement(disbursement)
+            create_disbursement_notifications(disbursement)
         return len(new_disbursements)
 
     def create_or_update_profiles_for_credit(self, credit):

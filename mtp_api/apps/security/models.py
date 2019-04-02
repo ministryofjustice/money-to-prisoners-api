@@ -1,6 +1,3 @@
-from functools import reduce
-from itertools import chain
-
 from django.contrib.auth.models import User
 from django.db import models
 from django.db.models.signals import post_save
@@ -9,7 +6,6 @@ from django.utils.translation import gettext_lazy as _
 from model_utils.models import TimeStampedModel
 
 from core.models import ScheduledCommand
-from disbursement.constants import DISBURSEMENT_RESOLUTION
 from prison.models import Prison
 from .constants import TIME_PERIOD
 from .managers import (

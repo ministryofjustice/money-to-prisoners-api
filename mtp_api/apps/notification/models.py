@@ -1,12 +1,13 @@
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from model_utils.models import TimeStampedModel
 
 from credit.models import Credit
 from disbursement.models import Disbursement
+from security.models import (
+    SenderProfile, RecipientProfile, PrisonerProfile
+)
 from .constants import EMAIL_FREQUENCY
 
 
@@ -16,45 +17,10 @@ def validate_rule_code(value):
         raise ValidationError(_('"%s" is not a recognised rule') % value)
 
 
-class Subscription(models.Model):
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name='subscriptions',
-    )
-    rule = models.CharField(max_length=8, validators=[validate_rule_code])
-    start = models.DateTimeField(default=timezone.now)
-
-    class Meta:
-        permissions = (
-            ('view_subscription', 'Can view subscription'),
-        )
-        unique_together = ('user', 'rule')
-
-    def create_events(self):
-        from .rules import RULES
-        RULES[self.rule].create_events(self)
-
-
-class Parameter(models.Model):
-    field = models.CharField(max_length=250)
-    value = models.CharField(max_length=250)
-    subscription = models.ForeignKey(
-        Subscription,
-        on_delete=models.CASCADE,
-        related_name='parameters',
-    )
-
-
-class Event(TimeStampedModel):
+class Event(models.Model):
     rule = models.CharField(max_length=8, validators=[validate_rule_code])
     description = models.CharField(max_length=500, blank=True)
-    credits = models.ManyToManyField(
-        Credit, through='EventCredit', related_name='events'
-    )
-    disbursements = models.ManyToManyField(
-        Disbursement, through='EventDisbursement', related_name='events'
-    )
+    triggered_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         permissions = (
@@ -62,16 +28,39 @@ class Event(TimeStampedModel):
         )
 
 
-class EventCredit(models.Model):
-    event = models.ForeignKey(Event, on_delete=models.CASCADE)
+class CreditEvent(models.Model):
+    event = models.OneToOneField(
+        Event, on_delete=models.CASCADE, related_name='credit_event'
+    )
     credit = models.ForeignKey(Credit, on_delete=models.CASCADE)
-    triggering = models.BooleanField(default=False)
 
 
-class EventDisbursement(models.Model):
-    event = models.ForeignKey(Event, on_delete=models.CASCADE)
+class DisbursementEvent(models.Model):
+    event = models.OneToOneField(
+        Event, on_delete=models.CASCADE, related_name='disbursement_event'
+    )
     disbursement = models.ForeignKey(Disbursement, on_delete=models.CASCADE)
-    triggering = models.BooleanField(default=False)
+
+
+class SenderProfileEvent(models.Model):
+    event = models.OneToOneField(
+        Event, on_delete=models.CASCADE, related_name='sender_profile_event'
+    )
+    sender_profile = models.ForeignKey(SenderProfile, on_delete=models.CASCADE)
+
+
+class RecipientProfileEvent(models.Model):
+    event = models.OneToOneField(
+        Event, on_delete=models.CASCADE, related_name='recipient_profile_event'
+    )
+    recipient_profile = models.ForeignKey(RecipientProfile, on_delete=models.CASCADE)
+
+
+class PrisonerProfileEvent(models.Model):
+    event = models.OneToOneField(
+        Event, on_delete=models.CASCADE, related_name='prisoner_profile_event'
+    )
+    prisoner_profile = models.ForeignKey(PrisonerProfile, on_delete=models.CASCADE)
 
 
 class EmailNotificationPreferences(models.Model):

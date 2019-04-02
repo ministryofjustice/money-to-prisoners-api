@@ -1,9 +1,7 @@
 from collections import OrderedDict
 
-from django.db.models import QuerySet
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
-from extended_choices import Choices
 from rest_framework import filters, mixins, viewsets, views, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -11,40 +9,53 @@ from rest_framework.response import Response
 from core.filters import IsoDateTimeFilter
 from core.permissions import ActionsBasedPermissions
 from .constants import EMAIL_FREQUENCY
-from .models import Subscription, Event, EmailNotificationPreferences
+from .models import Event, EmailNotificationPreferences
 from .rules import RULES
-from .serializers import SubscriptionSerializer, EventSerializer
-
-
-class SubscriptionView(
-    mixins.CreateModelMixin, mixins.DestroyModelMixin, mixins.ListModelMixin,
-    viewsets.GenericViewSet
-):
-    queryset = Subscription.objects.all().order_by('id')
-    serializer_class = SubscriptionSerializer
-
-    permission_classes = (IsAuthenticated, ActionsBasedPermissions)
-
-    def get_queryset(self):
-        return self.queryset.filter(user=self.request.user)
+from .serializers import EventSerializer
 
 
 class EventViewFilter(django_filters.FilterSet):
-    created__lt = IsoDateTimeFilter(
-        field_name='created', lookup_expr='lt'
+    triggered_at__lt = IsoDateTimeFilter(
+        field_name='triggered_at', lookup_expr='lt'
     )
-    created__gte = IsoDateTimeFilter(
-        field_name='created', lookup_expr='gte'
+    triggered_at__gte = IsoDateTimeFilter(
+        field_name='triggered_at', lookup_expr='gte'
+    )
+    for_credit = django_filters.BooleanFilter(
+        field_name='credit_event', lookup_expr='isnull', exclude=True
+    )
+    for_disbursement = django_filters.BooleanFilter(
+        field_name='disbursement_event', lookup_expr='isnull', exclude=True
+    )
+    for_sender_profile = django_filters.BooleanFilter(
+        field_name='sender_profile_event', lookup_expr='isnull', exclude=True
+    )
+    for_recipient_profile = django_filters.BooleanFilter(
+        field_name='recipient_profile_event', lookup_expr='isnull', exclude=True
+    )
+    for_prisoner_profile = django_filters.BooleanFilter(
+        field_name='prisoner_profile_event', lookup_expr='isnull', exclude=True
     )
 
     class Meta:
         model = Event
-        fields = ('created__lt', 'created__gte',)
+        fields = {
+            'rule': ['exact'],
+        }
 
 
 class EventView(mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = Event.objects.all().order_by('id').prefetch_related(
-        'credits').prefetch_related('disbursements')
+        'credit_event__credit'
+    ).prefetch_related(
+        'disbursement_event__disbursement'
+    ).prefetch_related(
+        'sender_profile_event__sender_profile'
+    ).prefetch_related(
+        'recipient_profile_event__recipient_profile'
+    ).prefetch_related(
+        'prisoner_profile_event__prisoner_profile'
+    )
     serializer_class = EventSerializer
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter,)
     filter_class = EventViewFilter
@@ -52,43 +63,17 @@ class EventView(mixins.ListModelMixin, viewsets.GenericViewSet):
 
     permission_classes = (IsAuthenticated, ActionsBasedPermissions)
 
-    def get_queryset(self):
-        subscribed_rules = Subscription.objects.filter(
-            user=self.request.user
-        ).values_list('rule', flat=True)
-        return self.queryset.filter(rule__in=subscribed_rules)
-
 
 class RuleView(views.APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request, *args, **kwargs):
         rules = []
-
         for rule in RULES:
             rule_dict = {
                 'code': rule,
                 'description': RULES[rule].description
             }
-            inputs = []
-            for input_field in RULES[rule].inputs:
-                input_dict = {
-                    'field': input_field.field,
-                    'input_type': input_field.input_type,
-                    'default_value': input_field.default_value,
-                    'exclude': input_field.exclude
-                }
-
-                if input_field.choices and isinstance(input_field.choices, QuerySet):
-                    input_dict['choices'] = [
-                        (obj.pk, str(obj),) for obj in input_field.choices.all()
-                    ]
-                elif input_field.choices and isinstance(input_field.choices, Choices):
-                    input_dict['choices'] = input_field.choices.choices
-                else:
-                    input_dict['choices'] = input_field.choices
-                inputs.append(input_dict)
-            rule_dict['inputs'] = inputs
             rules.append(rule_dict)
 
         return Response(OrderedDict([

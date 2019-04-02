@@ -1,92 +1,37 @@
-from django.db import models
-from django.db.transaction import atomic
 from rest_framework import serializers
 
-from credit.models import Credit
 from credit.serializers import SecurityCreditSerializer
-from disbursement.models import Disbursement
 from disbursement.serializers import DisbursementSerializer
-from .models import Subscription, Parameter, Event, EventCredit, EventDisbursement
-
-
-class ParameterSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Parameter
-        fields = (
-            'field',
-            'value',
-        )
-
-
-class SubscriptionSerializer(serializers.ModelSerializer):
-    parameters = ParameterSerializer(many=True, required=False)
-
-    class Meta:
-        model = Subscription
-        fields = (
-            'id',
-            'rule',
-            'parameters',
-        )
-
-    @atomic
-    def create(self, validated_data):
-        user = self.context['request'].user
-        validated_data['user'] = user
-        parameters = validated_data.pop('parameters')
-        subscription = super().create(validated_data)
-        for parameter in parameters:
-            Parameter.objects.create(
-                subscription=subscription,
-                **parameter
-            )
-        return subscription
-
-
-class OrderedListSerializer(serializers.ListSerializer):
-    def to_representation(self, data):
-        if isinstance(data, models.Manager):
-            if data.model == EventCredit:
-                ordering = ('-triggering', '-credit__received_at',)
-            elif data.model == EventDisbursement:
-                ordering = ('-triggering', '-disbursement__created',)
-            else:
-                ordering = ('-triggering',)
-            data = data.all().order_by(*ordering)
-        return super().to_representation(data)
-
-
-class OrderedCreditSerializer(SecurityCreditSerializer):
-    def to_representation(self, data):
-        return super().to_representation(data.credit)
-
-    class Meta:
-        model = Credit
-        fields = SecurityCreditSerializer.Meta.fields
-        list_serializer_class = OrderedListSerializer
-
-
-class OrderedDisbursementSerializer(DisbursementSerializer):
-    def to_representation(self, data):
-        return super().to_representation(data.disbursement)
-
-    class Meta:
-        model = Disbursement
-        fields = DisbursementSerializer.Meta.fields
-        list_serializer_class = OrderedListSerializer
+from security.serializers import (
+    PrisonerProfileSerializer, SenderProfileSerializer,
+    RecipientProfileSerializer
+)
+from .models import Event
 
 
 class EventSerializer(serializers.ModelSerializer):
-    credits = OrderedCreditSerializer(source='eventcredit_set', many=True)
-    disbursements = OrderedDisbursementSerializer(source='eventdisbursement_set', many=True)
+    credit = SecurityCreditSerializer(source='credit_event.credit')
+    disbursement = DisbursementSerializer(source='disbursement_event.disbursement')
+    sender_profile = SenderProfileSerializer(
+        source='sender_profile_event.sender_profile'
+    )
+    recipient_profile = RecipientProfileSerializer(
+        source='recipient_profile_event.recipient_profile'
+    )
+    prisoner_profile = PrisonerProfileSerializer(
+        source='prisoner_profile_event.prisoner_profile'
+    )
 
     class Meta:
         model = Event
         fields = (
             'id',
-            'credits',
-            'disbursements',
-            'created',
+            'credit',
+            'disbursement',
+            'sender_profile',
+            'recipient_profile',
+            'prisoner_profile',
+            'triggered_at',
             'rule',
             'description',
         )

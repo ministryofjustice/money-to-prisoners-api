@@ -60,7 +60,7 @@ class SenderProfileSerializer(serializers.ModelSerializer):
     bank_transfer_details = BankTransferSenderDetailsSerializer(many=True)
     debit_card_details = DebitCardSenderDetailsSerializer(many=True)
     totals = SenderTotalsSerializer(many=True)
-    monitoring = serializers.BooleanField()
+    monitoring = serializers.SerializerMethodField()
 
     class Meta:
         model = SenderProfile
@@ -73,6 +73,16 @@ class SenderProfileSerializer(serializers.ModelSerializer):
             'totals',
             'monitoring',
         )
+
+    def get_monitoring(self, obj):
+        monitoring = getattr(obj, 'monitoring', None)
+        if monitoring is None:
+            monitoring = (
+                self.request.user in
+                obj.bank_transfer_details.sender_bank_account.monitoring_users or
+                self.request.user in obj.debit_card_details.monitoring_users
+            )
+        return monitoring
 
 
 class PrisonSerializer(serializers.ModelSerializer):
@@ -95,7 +105,7 @@ class PrisonerProfileSerializer(serializers.ModelSerializer):
     current_prison = PrisonSerializer()
     provided_names = serializers.SerializerMethodField()
     totals = PrisonerTotalsSerializer(many=True)
-    monitoring = serializers.BooleanField()
+    monitoring = serializers.SerializerMethodField()
 
     class Meta:
         model = PrisonerProfile
@@ -112,6 +122,12 @@ class PrisonerProfileSerializer(serializers.ModelSerializer):
             'totals',
             'monitoring',
         )
+
+    def get_monitoring(self, obj):
+        monitoring = getattr(obj, 'monitoring', None)
+        if monitoring is None:
+            monitoring = self.request.user in obj.monitoring_users
+        return monitoring
 
     def get_provided_names(self, obj):
         return list(obj.provided_names.values_list('name', flat=True))
@@ -146,7 +162,7 @@ class RecipientTotalsSerializer(serializers.ModelSerializer):
 class RecipientProfileSerializer(serializers.ModelSerializer):
     bank_transfer_details = BankTransferRecipientDetailsSerializer(many=True)
     totals = RecipientTotalsSerializer(many=True)
-    monitoring = serializers.BooleanField()
+    monitoring = serializers.SerializerMethodField()
 
     class Meta:
         model = RecipientProfile
@@ -158,6 +174,15 @@ class RecipientProfileSerializer(serializers.ModelSerializer):
             'totals',
             'monitoring',
         )
+
+    def get_monitoring(self, obj):
+        monitoring = getattr(obj, 'monitoring', None)
+        if monitoring is None:
+            monitoring = (
+                self.request.user in
+                obj.bank_transfer_details.sender_bank_account.monitoring_users
+            )
+        return monitoring
 
 
 class SearchFilterSerializer(serializers.ModelSerializer):
