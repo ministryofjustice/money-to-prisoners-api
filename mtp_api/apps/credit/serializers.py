@@ -176,11 +176,12 @@ class CreditsGroupedByCreditedSerializer(serializers.Serializer):
 class PrivateEstateBatchSerializer(serializers.ModelSerializer):
     total_amount = serializers.IntegerField()
     bank_account = serializers.SerializerMethodField()
+    remittance_emails = serializers.SerializerMethodField()
 
     class Meta:
         model = PrivateEstateBatch
         read_only_fields = ('date', 'prison')
-        fields = ('date', 'prison', 'total_amount', 'bank_account')
+        fields = ('date', 'prison', 'total_amount', 'bank_account', 'remittance_emails')
 
     def get_bank_account(self, instance):
         serialiser = PrisonBankAccountSerializer()
@@ -188,3 +189,9 @@ class PrivateEstateBatchSerializer(serializers.ModelSerializer):
             return serialiser.to_representation(instance.prison.prisonbankaccount)
         except PrisonBankAccount.DoesNotExist:
             return None
+
+    def get_remittance_emails(self, instance):
+        return [
+            remittance_email.email
+            for remittance_email in instance.prison.remittanceemail_set.all().order_by('pk')
+        ]
