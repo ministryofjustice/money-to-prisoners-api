@@ -74,7 +74,16 @@ class PrisonBankAccount(models.Model):
     sort_code = models.CharField(max_length=50)
     account_number = models.CharField(max_length=50)
 
-    remittance_email = models.EmailField()
+    class Meta:
+        ordering = ('prison',)
+
+    def __str__(self):
+        return self.prison.name
+
+
+class RemittanceEmail(models.Model):
+    prison = models.ForeignKey(Prison, on_delete=models.CASCADE)
+    email = models.EmailField()
 
     class Meta:
         ordering = ('prison',)
