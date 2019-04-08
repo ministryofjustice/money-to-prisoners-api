@@ -307,6 +307,19 @@ OFFENDER_API_CLIENT_SECRET = os.environ.get('OFFENDER_API_CLIENT_SECRET', '')
 
 INVOICE_NUMBER_BASE = 1000000
 
+NOMS_OPS_NOTIFICATIONS_URL = os.environ.get(
+    'NOMS_OPS_NOTIFICATIONS_URL',
+    'https://localhost:8003/security/notifications/'
+)
+NOMS_OPS_SETTINGS_URL = os.environ.get(
+    'NOMS_OPS_SETTINGS_URL',
+    'https://localhost:8003/settings/'
+)
+NOMS_OPS_FEEDBACK_URL = os.environ.get(
+    'NOMS_OPS_FEEDBACK_URL',
+    'https://localhost:8003/feedback/'
+)
+
 try:
     from .local import *  # noqa
 except ImportError:
