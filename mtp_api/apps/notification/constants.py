@@ -13,15 +13,18 @@ EMAIL_FREQUENCY = Choices(
 )
 
 
-def get_notification_period_start(email_frequency):
+def get_notification_period(email_frequency):
+    """
+    Returns start and end datetime of previous day, week, or month
+    """
     today = timezone.make_aware(
         datetime.combine(timezone.now(), time.min)
     )
     if email_frequency == EMAIL_FREQUENCY.DAILY:
-        return today - timedelta(days=1)
+        return today - timedelta(days=1), today
     elif email_frequency == EMAIL_FREQUENCY.WEEKLY:
-        return today - timedelta(days=7)
+        start_of_this_week = today - timedelta(days=today.weekday())
+        return start_of_this_week - timedelta(days=7), start_of_this_week
     elif email_frequency == EMAIL_FREQUENCY.MONTHLY:
-        # returns first day of previous month
         first = today.replace(day=1)
-        return (first - timedelta(days=1)).replace(day=1)
+        return (first - timedelta(days=1)).replace(day=1), first

@@ -1,17 +1,13 @@
-from datetime import timedelta
-
 from django.core import mail
 from django.core.management import call_command
 from django.test import TestCase, override_settings
-from django.utils import timezone
 
 from core.tests.utils import make_test_users
 from disbursement.tests.utils import generate_disbursements
 from notification.constants import EMAIL_FREQUENCY
-from notification.models import Event, EmailNotificationPreferences
+from notification.models import EmailNotificationPreferences
 from payment.tests.utils import generate_payments
 from prison.tests.utils import load_random_prisoner_locations
-from security.constants import TIME_PERIOD
 
 
 class SendNotificationEmailsTestCase(TestCase):
@@ -24,8 +20,22 @@ class SendNotificationEmailsTestCase(TestCase):
         load_random_prisoner_locations()
         generate_payments(payment_batch=200, days_of_history=3)
         generate_disbursements(disbursement_batch=200, days_of_history=3)
-        call_command('update_security_profiles')
 
     @override_settings(ENVIRONMENT='prod')
     def test_send_email_notifications(self):
-        pass
+        call_command('update_security_profiles')
+        EmailNotificationPreferences(
+            user=self.security_staff[0], frequency=EMAIL_FREQUENCY.DAILY
+        ).save()
+        call_command('send_notification_emails', frequency=EMAIL_FREQUENCY.DAILY)
+
+        self.assertEqual(len(mail.outbox), 1)
+
+    @override_settings(ENVIRONMENT='prod')
+    def test_does_not_send_email_notifications_for_no_events(self):
+        EmailNotificationPreferences(
+            user=self.security_staff[0], frequency=EMAIL_FREQUENCY.DAILY
+        ).save()
+        call_command('send_notification_emails', frequency=EMAIL_FREQUENCY.DAILY)
+
+        self.assertEqual(len(mail.outbox), 0)
