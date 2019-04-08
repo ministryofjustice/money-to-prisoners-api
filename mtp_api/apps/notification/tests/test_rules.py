@@ -99,7 +99,7 @@ class RuleTestCase(TestCase):
         call_command('update_security_profiles')
 
         credits = Credit.objects.filter(sender_profile__in=Credit.objects.filter(
-            sender_profile__totals__time_period=TIME_PERIOD.LAST_30_DAYS,
+            sender_profile__totals__time_period=TIME_PERIOD.LAST_4_WEEKS,
             sender_profile__totals__credit_count__gte=4
         ).values_list('sender_profile', flat=True).distinct())
         for credit in credits:
@@ -108,7 +108,7 @@ class RuleTestCase(TestCase):
             self.assert_event_matches_record(event, credit, SenderProfile)
 
         credits = Credit.objects.exclude(sender_profile__in=Credit.objects.filter(
-            sender_profile__totals__time_period=TIME_PERIOD.LAST_30_DAYS,
+            sender_profile__totals__time_period=TIME_PERIOD.LAST_4_WEEKS,
             sender_profile__totals__credit_count__gte=4
         ).values_list('sender_profile', flat=True).distinct())
         for credit in credits:
@@ -119,7 +119,7 @@ class RuleTestCase(TestCase):
 
         disbursements = Disbursement.objects.filter(
             recipient_profile__in=Disbursement.objects.filter(
-                recipient_profile__totals__time_period=TIME_PERIOD.LAST_30_DAYS,
+                recipient_profile__totals__time_period=TIME_PERIOD.LAST_4_WEEKS,
                 recipient_profile__totals__disbursement_count__gte=4
             ).values_list('recipient_profile', flat=True).distinct()
         )
@@ -130,7 +130,7 @@ class RuleTestCase(TestCase):
 
         disbursements = Disbursement.objects.exclude(
             recipient_profile__in=Disbursement.objects.filter(
-                recipient_profile__totals__time_period=TIME_PERIOD.LAST_30_DAYS,
+                recipient_profile__totals__time_period=TIME_PERIOD.LAST_4_WEEKS,
                 recipient_profile__totals__disbursement_count__gte=4
             ).values_list('recipient_profile', flat=True).distinct()
         )
@@ -141,7 +141,7 @@ class RuleTestCase(TestCase):
         call_command('update_security_profiles')
 
         credits = Credit.objects.filter(prisoner_profile__in=Credit.objects.filter(
-            prisoner_profile__totals__time_period=TIME_PERIOD.LAST_30_DAYS,
+            prisoner_profile__totals__time_period=TIME_PERIOD.LAST_4_WEEKS,
             prisoner_profile__totals__sender_count__gte=4
         ).values_list('prisoner_profile', flat=True).distinct())
         for credit in credits:
@@ -150,7 +150,7 @@ class RuleTestCase(TestCase):
             self.assert_event_matches_record(event, credit, PrisonerProfile)
 
         credits = Credit.objects.exclude(prisoner_profile__in=Credit.objects.filter(
-            prisoner_profile__totals__time_period=TIME_PERIOD.LAST_30_DAYS,
+            prisoner_profile__totals__time_period=TIME_PERIOD.LAST_4_WEEKS,
             prisoner_profile__totals__sender_count__gte=4
         ).values_list('prisoner_profile', flat=True).distinct())
         for credit in credits:
@@ -161,7 +161,7 @@ class RuleTestCase(TestCase):
 
         disbursements = Disbursement.objects.filter(
             prisoner_profile__in=Disbursement.objects.filter(
-                prisoner_profile__totals__time_period=TIME_PERIOD.LAST_30_DAYS,
+                prisoner_profile__totals__time_period=TIME_PERIOD.LAST_4_WEEKS,
                 prisoner_profile__totals__recipient_count__gte=4
             ).values_list('prisoner_profile', flat=True).distinct()
         )
@@ -172,7 +172,7 @@ class RuleTestCase(TestCase):
 
         disbursements = Disbursement.objects.exclude(
             prisoner_profile__in=Disbursement.objects.filter(
-                prisoner_profile__totals__time_period=TIME_PERIOD.LAST_30_DAYS,
+                prisoner_profile__totals__time_period=TIME_PERIOD.LAST_4_WEEKS,
                 prisoner_profile__totals__recipient_count__gte=4
             ).values_list('prisoner_profile', flat=True).distinct()
         )
@@ -183,7 +183,7 @@ class RuleTestCase(TestCase):
         call_command('update_security_profiles')
 
         credits = Credit.objects.filter(sender_profile__in=Credit.objects.filter(
-            sender_profile__totals__time_period=TIME_PERIOD.LAST_30_DAYS,
+            sender_profile__totals__time_period=TIME_PERIOD.LAST_4_WEEKS,
             sender_profile__totals__prisoner_count__gte=4
         ).values_list('sender_profile', flat=True).distinct())
         for credit in credits:
@@ -192,7 +192,7 @@ class RuleTestCase(TestCase):
             self.assert_event_matches_record(event, credit, SenderProfile)
 
         credits = Credit.objects.exclude(sender_profile__in=Credit.objects.filter(
-            sender_profile__totals__time_period=TIME_PERIOD.LAST_30_DAYS,
+            sender_profile__totals__time_period=TIME_PERIOD.LAST_4_WEEKS,
             sender_profile__totals__prisoner_count__gte=4
         ).values_list('sender_profile', flat=True).distinct())
         for credit in credits:
@@ -203,7 +203,7 @@ class RuleTestCase(TestCase):
 
         disbursements = Disbursement.objects.filter(
             recipient_profile__in=Disbursement.objects.filter(
-                recipient_profile__totals__time_period=TIME_PERIOD.LAST_30_DAYS,
+                recipient_profile__totals__time_period=TIME_PERIOD.LAST_4_WEEKS,
                 recipient_profile__totals__prisoner_count__gte=4
             ).values_list('recipient_profile', flat=True).distinct()
         )
@@ -214,7 +214,7 @@ class RuleTestCase(TestCase):
 
         disbursements = Disbursement.objects.exclude(
             recipient_profile__in=Disbursement.objects.filter(
-                recipient_profile__totals__time_period=TIME_PERIOD.LAST_30_DAYS,
+                recipient_profile__totals__time_period=TIME_PERIOD.LAST_4_WEEKS,
                 recipient_profile__totals__prisoner_count__gte=4
             ).values_list('recipient_profile', flat=True).distinct()
         )
@@ -257,6 +257,6 @@ class RuleTestCase(TestCase):
         for event in Event.objects.filter(rule='CSNUM'):
             self.assertEqual(
                 'A prisoner getting money from more than 4 '
-                'debit cards or bank accounts in last 30 days',
+                'debit cards or bank accounts in last 4 weeks',
                 event.description
             )
