@@ -147,7 +147,7 @@ RULES = {
         total='credit_count',
         profile='sender_profile',
         limit=4,
-        time_period=TIME_PERIOD.LAST_30_DAYS
+        time_period=TIME_PERIOD.LAST_4_WEEKS
     ),
     'DRFREQ': TotalsRule(
         'DRFREQ',
@@ -158,7 +158,7 @@ RULES = {
         total='disbursement_count',
         profile='recipient_profile',
         limit=4,
-        time_period=TIME_PERIOD.LAST_30_DAYS
+        time_period=TIME_PERIOD.LAST_4_WEEKS
     ),
     'CSNUM': TotalsRule(
         'CSNUM',
@@ -169,7 +169,7 @@ RULES = {
         total='sender_count',
         profile='prisoner_profile',
         limit=4,
-        time_period=TIME_PERIOD.LAST_30_DAYS
+        time_period=TIME_PERIOD.LAST_4_WEEKS
     ),
     'DRNUM': TotalsRule(
         'DRNUM',
@@ -180,7 +180,7 @@ RULES = {
         total='recipient_count',
         profile='prisoner_profile',
         limit=4,
-        time_period=TIME_PERIOD.LAST_30_DAYS
+        time_period=TIME_PERIOD.LAST_4_WEEKS
     ),
     'CPNUM': TotalsRule(
         'CPNUM',
@@ -191,7 +191,7 @@ RULES = {
         total='prisoner_count',
         profile='sender_profile',
         limit=4,
-        time_period=TIME_PERIOD.LAST_30_DAYS
+        time_period=TIME_PERIOD.LAST_4_WEEKS
     ),
     'DPNUM': TotalsRule(
         'DPNUM',
@@ -202,6 +202,6 @@ RULES = {
         total='prisoner_count',
         profile='recipient_profile',
         limit=4,
-        time_period=TIME_PERIOD.LAST_30_DAYS
+        time_period=TIME_PERIOD.LAST_4_WEEKS
     ),
 }
