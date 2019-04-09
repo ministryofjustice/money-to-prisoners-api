@@ -5,7 +5,7 @@ from unittest import mock
 from django.core.management import call_command
 from django.test import TestCase
 from django.utils.text import slugify
-from django.utils.timezone import now
+from django.utils.timezone import now, localtime
 from faker import Faker
 from model_mommy import mommy
 
@@ -27,7 +27,7 @@ class AccountRequestEmailTestCase(TestCase):
     def test_emails_correctly_grouped(self):
         from mtp_auth.management.commands.send_account_request_emails import Command
 
-        today = now().replace(hour=0, minute=0, second=0, microsecond=0)
+        today = localtime(now()).replace(hour=0, minute=0, second=0, microsecond=0)
 
         def yesterday_sometime():
             return today - datetime.timedelta(seconds=random.randrange(1, 86400))
