@@ -1,4 +1,5 @@
 from django.db import connection, models
+from django.db.models import Q
 from django.db.transaction import atomic
 
 from . import InvalidCreditStateException
@@ -32,6 +33,13 @@ class CreditQuerySet(models.QuerySet):
             .values('received_at_date') \
             .order_by('received_at_date') \
             .annotate(amount_per_day=models.Sum('amount'))
+
+    def get_monitored_credits(self, user):
+        return self.filter(
+            Q(sender_profile__bank_transfer_details__sender_bank_account__monitoring_users=user) |
+            Q(sender_profile__debit_card_details__monitoring_users=user) |
+            Q(prisoner_profile__monitoring_users=user)
+        )
 
 
 class CreditManager(models.Manager):

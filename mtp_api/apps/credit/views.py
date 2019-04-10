@@ -82,8 +82,8 @@ class CreditTextSearchFilter(django_filters.CharFilter):
                         return models.Q(**{'%s__startswith' % field: amount})
                 elif field == 'sender_name':
                     return (
-                        models.Q(**{'transaction__sender_name__icontains': word})
-                        | models.Q(**{'payment__cardholder_name__icontains': word})
+                        models.Q(**{'transaction__sender_name__icontains': word}) |
+                        models.Q(**{'payment__cardholder_name__icontains': word})
                     )
                 elif field == 'payment__uuid':
                     if len(word) == 8:
@@ -138,6 +138,13 @@ class PostcodeFilter(django_filters.CharFilter):
         value = re.sub(r'[^0-9A-Za-z]+', '', value)
         value = r'\s*'.join(value)
         return super().filter(qs, value)
+
+
+class MonitoredProfileFilter(django_filters.BooleanFilter):
+    def filter(self, qs, value):
+        if value:
+            return qs.get_monitored_credits(self.parent.request.user)
+        return qs
 
 
 class CreditListFilter(django_filters.FilterSet):
@@ -202,6 +209,7 @@ class CreditListFilter(django_filters.FilterSet):
         IsoDateTimeFilter(field_name='logged_at', lookup_expr='gte'),
         {'logged_at': TruncUtcDate('log__created')}
     )
+    monitored = MonitoredProfileFilter()
 
     class Meta:
         model = Credit
