@@ -1,13 +1,13 @@
 import pathlib
 import shutil
 import tempfile
-from urllib.parse import urljoin
 
 from anymail.message import AnymailMessage
 from django.conf import settings
 from django.core.management import BaseCommand, call_command
 from django.template import loader as template_loader
-from django.utils.translation import gettext as _
+from django.utils.translation import gettext_lazy as _, activate, get_language
+from mtp_common.tasks import default_from_address, prepare_context
 
 from prison.models import PrisonerCreditNoticeEmail
 
@@ -21,7 +21,7 @@ class Command(BaseCommand):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.subject = _('These prisoners’ accounts have been credited')
-        self.from_address = getattr(settings, 'MAILGUN_FROM_ADDRESS', '') or settings.DEFAULT_FROM_EMAIL
+        self.from_address = default_from_address()
         self.verbosity = 1
 
     def add_arguments(self, parser):
@@ -43,6 +43,10 @@ class Command(BaseCommand):
                 self.stderr.write('No known email addresses')
             return
 
+        if not get_language():
+            language = getattr(settings, 'LANGUAGE_CODE', 'en')
+            activate(language)
+
         bundle_dir = pathlib.Path(tempfile.mkdtemp())
         try:
             for credit_notice_email in credit_notice_emails:
@@ -63,13 +67,11 @@ class Command(BaseCommand):
                 self.stdout.write('Nothing to send to %s' % credit_notice_email)
             return
 
-        template_context = {
-            'static_url': urljoin(settings.SITE_URL, settings.STATIC_URL),
-        }
+        template_context = prepare_context()
         text_body = template_loader.get_template('credit/prisoner-notice-email.txt').render(template_context)
         html_body = template_loader.get_template('credit/prisoner-notice-email.html').render(template_context)
         email = AnymailMessage(
-            subject=self.subject,
+            subject=str(self.subject),
             body=text_body.strip('\n'),
             from_email=self.from_address,
             to=[credit_notice_email.email],
