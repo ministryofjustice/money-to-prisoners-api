@@ -3,9 +3,10 @@ from django.core.management import BaseCommand
 from django.utils.translation import gettext_lazy as _
 from mtp_common.tasks import send_email
 
+from credit.models import Credit
+from disbursement.models import Disbursement
 from notification.constants import EMAIL_FREQUENCY, get_notification_period
 from notification.models import Event, EmailNotificationPreferences
-from security.utils import get_monitored_credits, get_monitored_disbursements
 
 
 class Command(BaseCommand):
@@ -58,12 +59,12 @@ class Command(BaseCommand):
 
         for preference in preferences:
             user = preference.user
-            monitored_credits = get_monitored_credits(
-                user, received_at__gte=period_start, received_at__lt=period_end
-            )
-            monitored_disbursements = get_monitored_disbursements(
-                user, created__gte=period_start, created__lt=period_end
-            )
+            monitored_credits = Credit.objects.filter(
+                received_at__gte=period_start, received_at__lt=period_end
+            ).get_monitored_credits(user)
+            monitored_disbursements = Disbursement.objects.filter(
+                created__gte=period_start, created__lt=period_end
+            ).get_monitored_disbursements(user)
             monitored_count = monitored_credits.count() + monitored_disbursements.count()
             total_notifications = total_events + monitored_count
             if total_notifications > 0:
