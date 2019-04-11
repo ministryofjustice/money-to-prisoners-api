@@ -129,15 +129,45 @@ class Command(BaseCommand):
 
     @atomic()
     def process_credit_batch(self, new_credits):
+        sender_profiles = []
+        prisoner_profiles = []
         for credit in new_credits:
             self.create_or_update_profiles_for_credit(credit)
+            if credit.sender_profile:
+                sender_profiles.append(credit.sender_profile)
+            if credit.prisoner_profile:
+                prisoner_profiles.append(credit.prisoner_profile)
+
+        SenderTotals.objects.filter(
+            sender_profile__in=sender_profiles
+        ).update_all_totals()
+        PrisonerTotals.objects.filter(
+            prisoner_profile__in=prisoner_profiles
+        ).update_all_totals_for_credit()
+
+        for credit in new_credits:
             create_credit_notifications(credit)
         return len(new_credits)
 
     @atomic()
     def process_disbursement_batch(self, new_disbursements):
+        recipient_profiles = []
+        prisoner_profiles = []
         for disbursement in new_disbursements:
             self.create_or_update_profiles_for_disbursement(disbursement)
+            if disbursement.recipient_profile:
+                recipient_profiles.append(disbursement.recipient_profile)
+            if disbursement.prisoner_profile:
+                prisoner_profiles.append(disbursement.prisoner_profile)
+
+        RecipientTotals.objects.filter(
+            recipient_profile__in=recipient_profiles
+        ).update_all_totals()
+        PrisonerTotals.objects.filter(
+            prisoner_profile__in=prisoner_profiles
+        ).update_all_totals_for_disbursement()
+
+        for disbursement in new_disbursements:
             create_disbursement_notifications(disbursement)
         return len(new_disbursements)
 
@@ -152,13 +182,6 @@ class Command(BaseCommand):
             credit.prisoner_profile = prisoner_profile
         credit.save()
 
-        SenderTotals.objects.filter(
-            sender_profile=credit.sender_profile
-        ).update_all_totals()
-        PrisonerTotals.objects.filter(
-            prisoner_profile=credit.prisoner_profile
-        ).update_all_totals_for_credit()
-
     def create_or_update_profiles_for_disbursement(self, disbursement):
         recipient_profile = self.create_or_update_recipient_profile(disbursement)
         disbursement.recipient_profile = recipient_profile
@@ -168,13 +191,6 @@ class Command(BaseCommand):
         )
         disbursement.prisoner_profile = prisoner_profile
         disbursement.save()
-
-        RecipientTotals.objects.filter(
-            recipient_profile=disbursement.recipient_profile
-        ).update_all_totals()
-        PrisonerTotals.objects.filter(
-            prisoner_profile=disbursement.prisoner_profile
-        ).update_all_totals_for_disbursement()
 
     def create_or_update_sender_profile(self, credit):
         if hasattr(credit, 'transaction'):
