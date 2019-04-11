@@ -10,31 +10,20 @@ from notification.models import (
 from security.models import SenderProfile, RecipientProfile, PrisonerProfile
 from security.constants import TIME_PERIOD
 
+CREDIT_RULES = ['NWN', 'HA', 'CSFREQ', 'CSNUM', 'CPNUM']
+DISBURSEMENT_RULES = ['NWN', 'HA', 'DRFREQ', 'DRNUM', 'DPNUM']
+
 
 def create_credit_notifications(credit):
-    if RULES['NWN'].triggered(credit):
-        RULES['NWN'].create_event(credit)
-    if RULES['HA'].triggered(credit):
-        RULES['HA'].create_event(credit)
-    if RULES['CSFREQ'].triggered(credit):
-        RULES['CSFREQ'].create_event(credit)
-    if RULES['CSNUM'].triggered(credit):
-        RULES['CSNUM'].create_event(credit)
-    if RULES['CPNUM'].triggered(credit):
-        RULES['CPNUM'].create_event(credit)
+    for rule in CREDIT_RULES:
+        if RULES[rule].triggered(credit):
+            RULES[rule].create_event(credit)
 
 
 def create_disbursement_notifications(disbursement):
-    if RULES['NWN'].triggered(disbursement):
-        RULES['NWN'].create_event(disbursement)
-    if RULES['HA'].triggered(disbursement):
-        RULES['HA'].create_event(disbursement)
-    if RULES['DRFREQ'].triggered(disbursement):
-        RULES['DRFREQ'].create_event(disbursement)
-    if RULES['DRNUM'].triggered(disbursement):
-        RULES['DRNUM'].create_event(disbursement)
-    if RULES['DPNUM'].triggered(disbursement):
-        RULES['DPNUM'].create_event(disbursement)
+    for rule in DISBURSEMENT_RULES:
+        if RULES[rule].triggered(disbursement):
+            RULES[rule].create_event(disbursement)
 
 
 class BaseRule:
