@@ -16,6 +16,8 @@ ENVIRONMENT = os.environ.get('ENV', 'local')
 APP_BUILD_DATE = os.environ.get('APP_BUILD_DATE')
 APP_GIT_COMMIT = os.environ.get('APP_GIT_COMMIT')
 
+TEAM_EMAIL = os.environ.get('TEAM_EMAIL', 'mtp@localhost')
+
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
