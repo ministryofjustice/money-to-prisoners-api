@@ -75,14 +75,9 @@ class SenderProfileSerializer(serializers.ModelSerializer):
         )
 
     def get_monitoring(self, obj):
-        monitoring = getattr(obj, 'monitoring', None)
-        if monitoring is None:
-            monitoring = (
-                self.request.user in
-                obj.bank_transfer_details.sender_bank_account.monitoring_users or
-                self.request.user in obj.debit_card_details.monitoring_users
-            )
-        return monitoring
+        # returns None where this is a nested serializer, because it's probably
+        # not worth the extra queries (unless it turns out it is)
+        return getattr(obj, 'monitoring', None)
 
 
 class PrisonSerializer(serializers.ModelSerializer):
