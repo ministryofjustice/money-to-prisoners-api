@@ -1,5 +1,6 @@
 from collections import OrderedDict
 
+from django.db.models import Subquery, OuterRef, F
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, viewsets, views, status
@@ -12,6 +13,20 @@ from .constants import EMAIL_FREQUENCY
 from .models import Event, EmailNotificationPreferences
 from .rules import RULES
 from .serializers import EventSerializer
+
+
+class GroupByProfileFilter(django_filters.CharFilter):
+    def filter(self, qs, value):
+        if value in ['sender_profile', 'recipient_profile', 'prisoner_profile']:
+            group_field = '%s_event__%s' % (value, value)
+            qs = qs.annotate(
+                latest=Subquery(
+                    qs.filter(
+                        **{group_field: OuterRef(group_field)}
+                    ).order_by('-triggered_at').values('id')[:1]
+                )
+            ).filter(id=F('latest'))
+        return qs
 
 
 class EventViewFilter(django_filters.FilterSet):
@@ -36,6 +51,7 @@ class EventViewFilter(django_filters.FilterSet):
     for_prisoner_profile = django_filters.BooleanFilter(
         field_name='prisoner_profile_event', lookup_expr='isnull', exclude=True
     )
+    group_by = GroupByProfileFilter()
 
     class Meta:
         model = Event

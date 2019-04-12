@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.core.management import call_command
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
@@ -131,6 +132,69 @@ class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):
 
         for event in response.data['results']:
             self.assertNotEqual(event['credit'], None)
+
+    def test_get_events_grouped_by_profile(self):
+        generate_payments(payment_batch=200, days_of_history=5)
+        call_command('update_security_profiles')
+        user = self.security_staff[0]
+
+        response = self.client.get(
+            reverse('event-list'),
+            {'rule': 'CSFREQ', 'group_by': 'sender_profile'},
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreater(response.data['count'], 0)
+
+        latest = {}
+        for event in Event.objects.filter(rule='CSFREQ'):
+            profile_id = event.sender_profile_event.sender_profile.id
+            if profile_id not in latest:
+                latest[profile_id] = event
+            else:
+                if latest[profile_id].triggered_at < event.triggered_at:
+                    latest[profile_id] = event
+
+        latest_ids = [e.id for e in latest.values()]
+        self.assertEqual(response.data['count'], len(latest_ids))
+        for event in response.data['results']:
+            if event['id'] not in latest_ids:
+                self.fail()
+
+    def test_get_events_grouped_by_profile_and_filtered(self):
+        generate_payments(payment_batch=200, days_of_history=5)
+        call_command('update_security_profiles')
+        user = self.security_staff[0]
+
+        lt = timezone.now() - timedelta(days=2)
+        gte = lt - timedelta(days=3)
+        response = self.client.get(
+            reverse('event-list'),
+            {'rule': 'CSFREQ', 'group_by': 'sender_profile',
+             'triggered_at__lt': lt, 'triggered_at__gte': gte},
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreater(response.data['count'], 0)
+
+        latest = {}
+        for event in Event.objects.filter(
+            rule='CSFREQ', triggered_at__gte=gte, triggered_at__lt=lt
+        ):
+            profile_id = event.sender_profile_event.sender_profile.id
+            if profile_id not in latest:
+                latest[profile_id] = event
+            else:
+                if latest[profile_id].triggered_at < event.triggered_at:
+                    latest[profile_id] = event
+
+        latest_ids = [e.id for e in latest.values()]
+        self.assertEqual(response.data['count'], len(latest_ids))
+        for event in response.data['results']:
+            if event['id'] not in latest_ids:
+                self.fail()
 
 
 class EmailPreferencesViewTestCase(AuthTestCaseMixin, APITestCase):
