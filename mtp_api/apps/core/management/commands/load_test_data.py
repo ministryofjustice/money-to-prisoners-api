@@ -17,7 +17,9 @@ from payment.tests.utils import generate_payments
 from performance.tests.utils import generate_digital_takeup
 from prison.models import Prison
 from prison.tests.utils import load_prisoner_locations_from_file, load_random_prisoner_locations
-from security.models import SenderProfile, PrisonerProfile, SavedSearch
+from security.models import (
+    SenderProfile, PrisonerProfile, SavedSearch, RecipientProfile
+)
 from transaction.models import Transaction
 from transaction.tests.utils import generate_transactions
 
@@ -87,6 +89,7 @@ class Command(BaseCommand):
             PrisonerProfile.objects.all().delete()
             SavedSearch.objects.all().delete()
             Disbursement.objects.all().delete()
+            RecipientProfile.objects.all().delete()
 
         user_set = get_user_model().objects.exclude(username__in=protect_usernames or [])
         if protect_superusers:

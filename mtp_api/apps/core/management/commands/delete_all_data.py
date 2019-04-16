@@ -7,9 +7,12 @@ from django.core.management import BaseCommand, CommandError
 from account.models import Balance
 from credit.models import Credit
 from disbursement.models import Disbursement
+from notification.models import Event
 from payment.models import Batch, Payment
 from prison.models import Prison, PrisonerLocation
-from security.models import SenderProfile, PrisonerProfile, SavedSearch
+from security.models import (
+    RecipientProfile, SenderProfile, PrisonerProfile, SavedSearch
+)
 from transaction.models import Transaction
 
 
@@ -56,6 +59,8 @@ class Command(BaseCommand):
             PrisonerProfile.objects.all().delete()
             SavedSearch.objects.all().delete()
             Disbursement.objects.all().delete()
+            RecipientProfile.objects.all().delete()
+            Event.objects.all().delete()
 
         if not protect_prisoner_locations:
             print_message('Deleting all prisoner locations')

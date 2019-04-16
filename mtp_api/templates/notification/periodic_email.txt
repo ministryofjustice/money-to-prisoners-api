@@ -1,0 +1,66 @@
+{% load i18n %}
+
+{% blocktrans trimmed with name=user.first_name %}
+Dear {{ name }},
+{% endblocktrans %}
+
+{% blocktrans trimmed with start=period_start|date:'d/m/Y' %}
+Here are your notifications from the prisoner money intelligence tool for the {{ period }} commencing {{ start }}.
+{% endblocktrans %}
+
+{% blocktrans trimmed count count=total_notifications %}
+You have {{ total_notifications }} notification to view
+{% plural %}
+You have {{ total_notifications }} notifications to view
+{% endblocktrans %}
+
+{% trans 'View your notifications:' %} {{ notifications_url }}
+
+{% trans 'Monitored transactions' %}
+
+{% blocktrans trimmed count count=monitored_transactions with num=monitored_transactions|default:'No' %}
+{{ num }} notification
+{% plural %}
+{{ num }} notifications
+{% endblocktrans %}
+
+{% trans 'Credits or disbursements' %}
+
+{% blocktrans trimmed count count=transaction_amount_events with num=transaction_amount_events|default:'No' %}
+{{ num }} notification
+{% plural %}
+{{ num }} notifications
+{% endblocktrans %}
+
+{% trans 'Number of credits/disbursements sent' %}
+
+{% blocktrans trimmed count count=frequency_events with num=frequency_events|default:'No' %}
+{{ num }} notification
+{% plural %}
+{{ num }} notifications
+{% endblocktrans %}
+
+{% trans 'Number of people outside prison receiving/sending money' %}
+
+{% blocktrans trimmed count count=many_senders_receivers_events with num=many_senders_receivers_events|default:'No' %}
+{{ num }} notification
+{% plural %}
+{{ num }} notifications
+{% endblocktrans %}
+
+{% trans 'Number of prisoners receiving/sending money' %}
+
+{% blocktrans trimmed count count=many_prisoners_events with num=many_prisoners_events|default:'No' %}
+{{ num }} notification
+{% plural %}
+{{ num }} notifications
+{% endblocktrans %}
+
+{% trans 'View your notifications:' %} {{ notifications_url }}
+
+{% trans 'You can turn these email notifications off at any time from your settings screen:' %} {{ settings_url }}
+
+{% trans 'All your feedback helps us improve the tool:' %}  {{ feedback_url }}
+
+Kind regards,
+Prisoner money team

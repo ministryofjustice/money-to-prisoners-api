@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
 from django.db.models.functions import Cast, Concat
 from django.db.transaction import atomic
 
@@ -31,6 +32,12 @@ class DisbursementQuerySet(models.QuerySet):
             .values('created_date') \
             .order_by('created_date') \
             .annotate(amount_per_day=models.Sum('amount'))
+
+    def get_monitored_disbursements(self, user):
+        return self.filter(
+            Q(recipient_profile__bank_transfer_details__recipient_bank_account__monitoring_users=user) |
+            Q(prisoner_profile__monitoring_users=user)
+        )
 
 
 class DisbursementManager(models.Manager):

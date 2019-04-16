@@ -99,7 +99,8 @@
       ["add_savedsearch", "security", "savedsearch"],
       ["change_savedsearch", "security", "savedsearch"],
       ["delete_savedsearch", "security", "savedsearch"],
-      ["view_recipientprofile", "security", "recipientprofile"]
+      ["view_recipientprofile", "security", "recipientprofile"],
+      ["view_event", "notification", "event"]
     ]
   }
 },
