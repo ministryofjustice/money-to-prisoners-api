@@ -9,6 +9,7 @@ from rest_framework.response import Response
 
 from core.filters import IsoDateTimeFilter
 from core.permissions import ActionsBasedPermissions
+from prison.models import Prison
 from .constants import EMAIL_FREQUENCY
 from .models import Event, EmailNotificationPreferences
 from .rules import RULES
@@ -52,6 +53,14 @@ class EventViewFilter(django_filters.FilterSet):
         field_name='prisoner_profile_event', lookup_expr='isnull', exclude=True
     )
     group_by = GroupByProfileFilter()
+    credit_prison = django_filters.ModelMultipleChoiceFilter(
+        field_name='credit_event__credit__prison',
+        queryset=Prison.objects.all()
+    )
+    disbursement_prison = django_filters.ModelMultipleChoiceFilter(
+        field_name='disbursement_event__disbursement__prison',
+        queryset=Prison.objects.all()
+    )
 
     class Meta:
         model = Event
