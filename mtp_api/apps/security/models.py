@@ -9,14 +9,16 @@ from core.models import ScheduledCommand
 from prison.models import Prison
 from .constants import TIME_PERIOD
 from .managers import (
-    PrisonProfileManager, SenderTotalsQuerySet, RecipientTotalsQuerySet,
-    PrisonerTotalsQuerySet
+    PrisonerProfileManager, SenderTotalsQuerySet, RecipientTotalsQuerySet,
+    PrisonerTotalsQuerySet, SenderProfileManager, RecipientProfileManager
 )
 from .signals import prisoner_profile_current_prisons_need_updating
 
 
 class SenderProfile(TimeStampedModel):
     prisons = models.ManyToManyField(Prison, related_name='senders')
+
+    objects = SenderProfileManager()
 
     class Meta:
         ordering = ('created',)
@@ -154,6 +156,8 @@ class SenderEmail(models.Model):
 class RecipientProfile(TimeStampedModel):
     prisons = models.ManyToManyField(Prison, related_name='recipients')
 
+    objects = RecipientProfileManager()
+
     class Meta:
         ordering = ('created',)
         permissions = (
@@ -220,7 +224,7 @@ class PrisonerProfile(TimeStampedModel):
         User, related_name='monitored_prisoners'
     )
 
-    objects = PrisonProfileManager()
+    objects = PrisonerProfileManager()
 
     class Meta:
         ordering = ('created',)

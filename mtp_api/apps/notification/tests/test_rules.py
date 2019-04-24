@@ -4,7 +4,7 @@ from django.test import TestCase
 from core.tests.utils import make_test_users
 from credit.models import Credit
 from disbursement.models import Disbursement
-from disbursement.constants import DISBURSEMENT_RESOLUTION
+from disbursement.constants import DISBURSEMENT_RESOLUTION, DISBURSEMENT_METHOD
 from disbursement.tests.utils import generate_disbursements
 from notification.models import (
     Event, SenderProfileEvent, RecipientProfileEvent, PrisonerProfileEvent
@@ -120,7 +120,8 @@ class RuleTestCase(TestCase):
         disbursements = Disbursement.objects.filter(
             recipient_profile__in=Disbursement.objects.filter(
                 recipient_profile__totals__time_period=TIME_PERIOD.LAST_4_WEEKS,
-                recipient_profile__totals__disbursement_count__gte=4
+                recipient_profile__totals__disbursement_count__gte=4,
+                method=DISBURSEMENT_METHOD.BANK_TRANSFER
             ).values_list('recipient_profile', flat=True).distinct()
         )
         for disbursement in disbursements:
@@ -134,6 +135,12 @@ class RuleTestCase(TestCase):
                 recipient_profile__totals__disbursement_count__gte=4
             ).values_list('recipient_profile', flat=True).distinct()
         )
+        for disbursement in disbursements:
+            self.assertFalse(RULES['DRFREQ'].triggered(disbursement))
+
+    def test_cheque_recipient_does_not_trigger_drfreq(self):
+        call_command('update_security_profiles')
+        disbursements = Disbursement.objects.filter(method=DISBURSEMENT_METHOD.CHEQUE)
         for disbursement in disbursements:
             self.assertFalse(RULES['DRFREQ'].triggered(disbursement))
 
@@ -204,7 +211,8 @@ class RuleTestCase(TestCase):
         disbursements = Disbursement.objects.filter(
             recipient_profile__in=Disbursement.objects.filter(
                 recipient_profile__totals__time_period=TIME_PERIOD.LAST_4_WEEKS,
-                recipient_profile__totals__prisoner_count__gte=4
+                recipient_profile__totals__prisoner_count__gte=4,
+                method=DISBURSEMENT_METHOD.BANK_TRANSFER
             ).values_list('recipient_profile', flat=True).distinct()
         )
         for disbursement in disbursements:
