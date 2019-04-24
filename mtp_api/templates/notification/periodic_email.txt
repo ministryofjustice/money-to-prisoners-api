@@ -32,7 +32,7 @@ You have {{ total_notifications }} notifications to view
 {{ num }} notifications
 {% endblocktrans %}
 
-{% trans 'Number of credits/disbursements sent' %}
+{% trans 'Debit cards or bank accounts with frequent transactions' %}
 
 {% blocktrans trimmed count count=frequency_events with num=frequency_events|default:'No' %}
 {{ num }} notification
@@ -40,7 +40,7 @@ You have {{ total_notifications }} notifications to view
 {{ num }} notifications
 {% endblocktrans %}
 
-{% trans 'Number of people outside prison receiving/sending money' %}
+{% trans 'Prisoners sending money to or receiving money from several debit cards or bank accounts' %}
 
 {% blocktrans trimmed count count=many_senders_receivers_events with num=many_senders_receivers_events|default:'No' %}
 {{ num }} notification
@@ -48,7 +48,7 @@ You have {{ total_notifications }} notifications to view
 {{ num }} notifications
 {% endblocktrans %}
 
-{% trans 'Number of prisoners receiving/sending money' %}
+{% trans 'Debit cards or bank accounts sending money to or receiving money from several prisoners' %}
 
 {% blocktrans trimmed count count=many_prisoners_events with num=many_prisoners_events|default:'No' %}
 {{ num }} notification
