@@ -93,6 +93,19 @@ class TotalsRule(BaseRule):
 
     def triggered(self, record):
         profile = self.get_event_trigger(record)
+        if isinstance(profile, SenderProfile):
+            try:
+                if profile == SenderProfile.objects.get_anonymous_sender():
+                    return False
+            except SenderProfile.DoesNotExist:
+                pass
+        elif isinstance(profile, RecipientProfile):
+            try:
+                if profile == RecipientProfile.objects.get_cheque_recipient():
+                    return False
+            except RecipientProfile.DoesNotExist:
+                pass
+
         if profile:
             totals = profile.totals.get(time_period=self.kwargs['time_period'])
             if getattr(totals, self.kwargs['total']) >= self.kwargs['limit']:

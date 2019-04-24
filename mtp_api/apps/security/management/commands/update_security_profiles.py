@@ -71,10 +71,7 @@ class Command(BaseCommand):
             self.stdout.write('Updating profiles for (at least) %d new credits' % new_credits_count)
 
         try:
-            self.anonymous_sender = SenderProfile.objects.get(
-                bank_transfer_details__isnull=True,
-                debit_card_details__isnull=True
-            )
+            self.anonymous_sender = SenderProfile.objects.get_anonymous_sender()
         except SenderProfile.DoesNotExist:
             if self.verbose:
                 self.stdout.write('Creating anonymous sender')
@@ -106,9 +103,7 @@ class Command(BaseCommand):
             self.stdout.write('Updating profiles for (at least) %d new disbursements' % new_disbursements_count)
 
         try:
-            self.cheque_recipient = RecipientProfile.objects.get(
-                bank_transfer_details__isnull=True
-            )
+            self.cheque_recipient = RecipientProfile.objects.get_cheque_recipient()
         except RecipientProfile.DoesNotExist:
             if self.verbose:
                 self.stdout.write('Creating anonymous recipient')

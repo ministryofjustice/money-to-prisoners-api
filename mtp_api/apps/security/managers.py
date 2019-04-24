@@ -5,7 +5,7 @@ from django.db.models.functions import Coalesce
 from security.constants import TIME_PERIOD, get_start_date_for_time_period
 
 
-class PrisonProfileManager(models.Manager):
+class PrisonerProfileManager(models.Manager):
 
     @transaction.atomic
     def update_current_prisons(self):
@@ -19,6 +19,23 @@ class PrisonProfileManager(models.Manager):
                 'AND pl.active is True '
                 'WHERE security_prisonerprofile.id = pp.id '
             )
+
+
+class SenderProfileManager(models.Manager):
+
+    def get_anonymous_sender(self):
+        return self.get(
+            bank_transfer_details__isnull=True,
+            debit_card_details__isnull=True
+        )
+
+
+class RecipientProfileManager(models.Manager):
+
+    def get_cheque_recipient(self):
+        return self.get(
+            bank_transfer_details__isnull=True
+        )
 
 
 class TotalsQuerySet(models.QuerySet):
