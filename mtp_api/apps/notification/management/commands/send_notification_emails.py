@@ -78,7 +78,10 @@ class Command(BaseCommand):
                     'frequency_events': frequency_events,
                     'many_senders_receivers_events': many_senders_receivers_events,
                     'many_prisoners_events': many_prisoners_events,
-                    'notifications_url': settings.NOMS_OPS_NOTIFICATIONS_URL,
+                    'notifications_url': '{path}/{date}/'.format(
+                        path=settings.NOMS_OPS_NOTIFICATIONS_URL,
+                        date=period_start.date().isoformat()
+                    ),
                     'settings_url': settings.NOMS_OPS_SETTINGS_URL,
                     'feedback_url': settings.NOMS_OPS_FEEDBACK_URL,
                 }
