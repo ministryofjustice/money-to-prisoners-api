@@ -84,6 +84,7 @@ class Command(BaseCommand):
                     ),
                     'settings_url': settings.NOMS_OPS_SETTINGS_URL,
                     'feedback_url': settings.NOMS_OPS_FEEDBACK_URL,
+                    'staff_email': True
                 }
                 send_email(
                     user.email, 'notification/periodic_email.txt',

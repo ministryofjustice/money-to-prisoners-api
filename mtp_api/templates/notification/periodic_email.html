@@ -1,6 +1,8 @@
 {% extends 'mtp_common/email_base.html' %}
 {% load i18n %}
 
+{% block title %}{% trans 'Monitor prisoner money' %}{% endblock %}
+
 {% block inner_content %}
   <p>
     {% blocktrans trimmed with name=user.first_name %}
@@ -10,7 +12,7 @@
 
   <p>
     {% blocktrans trimmed with start=period_start|date:'d/m/Y' %}
-      Here are your notifications from the prisoner money intelligence tool for the {{ period }} commencing {{ start }}.
+      Here are your notifications for the {{ period }} commencing {{ start }}.
     {% endblocktrans %}
   </p>
 
