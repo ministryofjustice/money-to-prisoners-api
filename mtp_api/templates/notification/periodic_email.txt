@@ -5,7 +5,7 @@ Dear {{ name }},
 {% endblocktrans %}
 
 {% blocktrans trimmed with start=period_start|date:'d/m/Y' %}
-Here are your notifications from the prisoner money intelligence tool for the {{ period }} commencing {{ start }}.
+Here are your notifications for the {{ period }} commencing {{ start }}.
 {% endblocktrans %}
 
 {% blocktrans trimmed count count=total_notifications %}
