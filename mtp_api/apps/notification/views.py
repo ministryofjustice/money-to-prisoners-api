@@ -3,11 +3,11 @@ from collections import OrderedDict
 from django.db.models import Subquery, OuterRef, F
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, mixins, viewsets, views, status
+from rest_framework import mixins, viewsets, views, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from core.filters import IsoDateTimeFilter
+from core.filters import IsoDateTimeFilter, SafeOrderingFilter
 from core.permissions import ActionsBasedPermissions
 from prison.models import Prison
 from .constants import EMAIL_FREQUENCY
@@ -82,9 +82,8 @@ class EventView(mixins.ListModelMixin, viewsets.GenericViewSet):
         'prisoner_profile_event__prisoner_profile'
     )
     serializer_class = EventSerializer
-    filter_backends = (DjangoFilterBackend, filters.OrderingFilter,)
+    filter_backends = (DjangoFilterBackend, SafeOrderingFilter,)
     filter_class = EventViewFilter
-    default_ordering = ('-pk',)
 
     permission_classes = (IsAuthenticated, ActionsBasedPermissions)
 

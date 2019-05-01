@@ -26,6 +26,10 @@ class Event(models.Model):
         permissions = (
             ('view_event', 'Can view event'),
         )
+        indexes = [
+            models.Index(fields=['-triggered_at', 'id']),
+            models.Index(fields=['rule']),
+        ]
 
 
 class CreditEvent(models.Model):
