@@ -10,7 +10,7 @@ from mtp_auth.models import PrisonUserMapping
 from notification.constants import EMAIL_FREQUENCY
 from notification.constants import get_notification_period
 from notification.management.commands.send_notification_emails import (
-    get_notification_counts
+    get_notification_count
 )
 from notification.models import Event, EmailNotificationPreferences
 from payment.tests.utils import generate_payments
@@ -47,7 +47,7 @@ class SendNotificationEmailsTestCase(TestCase):
 
         self.assertEqual(len(mail.outbox), 0)
 
-    def _check_notification_counts(self, counts, events):
+    def _check_notification_count(self, total_notifications, events):
         prisoner_profiles = defaultdict(set)
         recipient_profiles = defaultdict(set)
         sender_profiles = defaultdict(set)
@@ -72,23 +72,23 @@ class SendNotificationEmailsTestCase(TestCase):
                     prisoner_profiles[event.rule].add(profile_id)
                     total_count += 1
 
-        self.assertEqual(counts['total_notifications'], total_count)
+        self.assertEqual(total_notifications, total_count)
 
-    def test_notification_counts_for_national_security(self):
+    def test_notification_count_for_national_security(self):
         call_command('update_security_profiles')
         user = self.security_staff[0]
         period_start, period_end = get_notification_period(EMAIL_FREQUENCY.DAILY)
-        counts = get_notification_counts(user, period_start, period_end)
+        total_notifications = get_notification_count(user, period_start, period_end)
         events = Event.objects.filter(
             triggered_at__gte=period_start, triggered_at__lt=period_end
         )
-        self._check_notification_counts(counts, events)
+        self._check_notification_count(total_notifications, events)
 
-    def test_notification_counts_for_prison_security(self):
+    def test_notification_count_for_prison_security(self):
         call_command('update_security_profiles')
         user = self.security_staff[1]
         period_start, period_end = get_notification_period(EMAIL_FREQUENCY.DAILY)
-        counts = get_notification_counts(user, period_start, period_end)
+        total_notifications = get_notification_count(user, period_start, period_end)
 
         prisons = PrisonUserMapping.objects.get_prison_set_for_user(user)
         credit_events = Event.objects.filter(
@@ -101,7 +101,7 @@ class SendNotificationEmailsTestCase(TestCase):
             disbursement_event__disbursement__prison__in=prisons,
             triggered_at__gte=period_start, triggered_at__lt=period_end
         )
-        self._check_notification_counts(
-            counts,
+        self._check_notification_count(
+            total_notifications,
             credit_events.union(disbursement_events)
         )

@@ -16,48 +16,6 @@ You have {{ total_notifications }} notifications to view
 
 {% trans 'View your notifications:' %} {{ notifications_url }}
 
-{% trans 'Monitored transactions' %}
-
-{% blocktrans trimmed count count=monitored_transactions with num=monitored_transactions|default:'No' %}
-{{ num }} notification
-{% plural %}
-{{ num }} notifications
-{% endblocktrans %}
-
-{% trans 'Credits or disbursements' %}
-
-{% blocktrans trimmed count count=transaction_amount_events with num=transaction_amount_events|default:'No' %}
-{{ num }} notification
-{% plural %}
-{{ num }} notifications
-{% endblocktrans %}
-
-{% trans 'Debit cards or bank accounts with frequent transactions' %}
-
-{% blocktrans trimmed count count=frequency_events with num=frequency_events|default:'No' %}
-{{ num }} notification
-{% plural %}
-{{ num }} notifications
-{% endblocktrans %}
-
-{% trans 'Prisoners sending money to or receiving money from several debit cards or bank accounts' %}
-
-{% blocktrans trimmed count count=many_senders_receivers_events with num=many_senders_receivers_events|default:'No' %}
-{{ num }} notification
-{% plural %}
-{{ num }} notifications
-{% endblocktrans %}
-
-{% trans 'Debit cards or bank accounts sending money to or receiving money from several prisoners' %}
-
-{% blocktrans trimmed count count=many_prisoners_events with num=many_prisoners_events|default:'No' %}
-{{ num }} notification
-{% plural %}
-{{ num }} notifications
-{% endblocktrans %}
-
-{% trans 'View your notifications:' %} {{ notifications_url }}
-
 {% trans 'You can turn these email notifications off at any time from your settings screen:' %} {{ settings_url }}
 
 {% trans 'All your feedback helps us improve the tool:' %}  {{ feedback_url }}

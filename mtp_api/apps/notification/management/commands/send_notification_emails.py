@@ -33,21 +33,16 @@ class Command(BaseCommand):
 
         for preference in preferences:
             user = preference.user
-            counts = get_notification_counts(
+            total_notifications = get_notification_count(
                 user, period_start, period_end, memo_table
             )
 
-            if counts['total_notifications'] > 0:
+            if total_notifications > 0:
                 email_context = {
                     'user': user,
                     'period': period,
                     'period_start': period_start,
-                    'total_notifications': counts['total_notifications'],
-                    'monitored_transactions': counts['monitored_count'],
-                    'transaction_amount_events': counts['transaction_amount_events'],
-                    'frequency_events': counts['frequency_events'],
-                    'many_senders_receivers_events': counts['many_senders_receivers_events'],
-                    'many_prisoners_events': counts['many_prisoners_events'],
+                    'total_notifications': total_notifications,
                     'notifications_url': '{path}/{date}/'.format(
                         path=settings.NOMS_OPS_NOTIFICATIONS_URL,
                         date=period_start.date().isoformat()
@@ -59,22 +54,20 @@ class Command(BaseCommand):
                 send_email(
                     user.email, 'notification/periodic_email.txt',
                     _('You have %s prisoner money intelligence tool notifications')
-                    % counts['total_notifications'],
+                    % total_notifications,
                     context=email_context,
                     html_template='notification/periodic_email.html',
                     anymail_tags=['intelligence-notifications'],
                 )
 
 
-def get_notification_counts(user, period_start, period_end, memo_table=None):
+def get_notification_count(user, period_start, period_end, memo_table=None):
     prisons = PrisonUserMapping.objects.get_prison_set_for_user(user)
     key = '.'.join(sorted(list(prisons.values_list('pk', flat=True))))
 
     if memo_table is not None and key in memo_table:
-        counts = memo_table[key].copy()
+        total_events = memo_table[key]
     else:
-        counts = {}
-
         prison_filter = Q()
         if key:
             prison_filter |= (
@@ -86,10 +79,10 @@ def get_notification_counts(user, period_start, period_end, memo_table=None):
             prison_filter,
             triggered_at__gte=period_start, triggered_at__lt=period_end
         )
-        counts['transaction_amount_events'] = events.filter(
+        transaction_amount_events = events.filter(
             rule__in=['NWN', 'HA']
         ).count()
-        counts['frequency_events'] = (
+        frequency_events = (
             events.filter(rule='CSFREQ').values(
                 'sender_profile_event__sender_profile'
             ).distinct().count() +
@@ -97,12 +90,15 @@ def get_notification_counts(user, period_start, period_end, memo_table=None):
                 'recipient_profile_event__recipient_profile'
             ).distinct().count()
         )
-        counts['many_senders_receivers_events'] = (
-            events.filter(rule__in=['CSNUM', 'DRNUM']).values(
+        many_senders_receivers_events = (
+            events.filter(rule='CSNUM').values(
+                'prisoner_profile_event__prisoner_profile'
+            ).distinct().count() +
+            events.filter(rule='DRNUM').values(
                 'prisoner_profile_event__prisoner_profile'
             ).distinct().count()
         )
-        counts['many_prisoners_events'] = (
+        many_prisoners_events = (
             events.filter(rule='CPNUM').values(
                 'sender_profile_event__sender_profile'
             ).distinct().count() +
@@ -110,12 +106,12 @@ def get_notification_counts(user, period_start, period_end, memo_table=None):
                 'recipient_profile_event__recipient_profile'
             ).distinct().count()
         )
-        counts['total_events'] = (
-            counts['transaction_amount_events'] + counts['frequency_events'] +
-            counts['many_senders_receivers_events'] + counts['many_prisoners_events']
+        total_events = (
+            transaction_amount_events + frequency_events +
+            many_senders_receivers_events + many_prisoners_events
         )
         if memo_table is not None:
-            memo_table[key] = counts.copy()
+            memo_table[key] = total_events
 
     monitored_credits = Credit.objects.filter(
         received_at__gte=period_start, received_at__lt=period_end
@@ -123,8 +119,6 @@ def get_notification_counts(user, period_start, period_end, memo_table=None):
     monitored_disbursements = Disbursement.objects.filter(
         created__gte=period_start, created__lt=period_end
     ).get_monitored_disbursements(user)
-    counts['monitored_count'] = monitored_credits.count() + monitored_disbursements.count()
+    monitored_count = monitored_credits.count() + monitored_disbursements.count()
 
-    counts['total_notifications'] = counts['total_events'] + counts['monitored_count']
-
-    return counts
+    return total_events + monitored_count
