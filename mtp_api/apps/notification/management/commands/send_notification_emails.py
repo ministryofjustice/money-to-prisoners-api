@@ -1,3 +1,5 @@
+from urllib.parse import urljoin
+
 from django.conf import settings
 from django.core.management import BaseCommand
 from django.db.models import Q
@@ -31,6 +33,11 @@ class Command(BaseCommand):
         else:
             period = _('month')
 
+        notifications_period_url = urljoin(
+            settings.NOMS_OPS_NOTIFICATIONS_URL,
+            '%s/' % period_start.date().isoformat()
+        )
+
         for preference in preferences:
             user = preference.user
             total_notifications = get_notification_count(
@@ -43,10 +50,7 @@ class Command(BaseCommand):
                     'period': period,
                     'period_start': period_start,
                     'total_notifications': total_notifications,
-                    'notifications_url': '{path}/{date}/'.format(
-                        path=settings.NOMS_OPS_NOTIFICATIONS_URL,
-                        date=period_start.date().isoformat()
-                    ),
+                    'notifications_url': notifications_period_url,
                     'settings_url': settings.NOMS_OPS_SETTINGS_URL,
                     'feedback_url': settings.NOMS_OPS_FEEDBACK_URL,
                     'staff_email': True
