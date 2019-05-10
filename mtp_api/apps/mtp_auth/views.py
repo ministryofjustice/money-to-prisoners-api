@@ -377,7 +377,11 @@ class AccountRequestViewSet(viewsets.ModelViewSet):
         try:
             user = User.objects.get_by_natural_key(username)
             if user.is_superuser:
-                raise RestValidationError({'username': _('Super users cannot be edited')})
+                raise RestValidationError({
+                    api_settings.NON_FIELD_ERRORS_KEY: _(
+                        'Super users cannot be edited'
+                    )
+                })
             roles = Role.objects.get_roles_for_user(user)
             changing_role = self.request.data.get('change-role', '').lower() == 'true'
             if roles and not changing_role:
@@ -393,7 +397,9 @@ class AccountRequestViewSet(viewsets.ModelViewSet):
                             for role in roles
                         ]
                     },
-                    api_settings.NON_FIELD_ERRORS_KEY: _('This username already exists'),
+                    api_settings.NON_FIELD_ERRORS_KEY: _(
+                        'This username already exists'
+                    ),
                 })
             # copy user details that shouldn't change
             for key in ('first_name', 'last_name', 'email'):
@@ -411,9 +417,17 @@ class AccountRequestViewSet(viewsets.ModelViewSet):
         try:
             user = User.objects.get_by_natural_key(instance.username)
             if request.user.pk == user.pk:
-                raise RestValidationError({'username': _('You cannot confirm changes to yourself')})
+                raise RestValidationError({
+                    api_settings.NON_FIELD_ERRORS_KEY: _(
+                        'You cannot confirm changes to yourself'
+                    )
+                })
             if user.is_superuser:
-                raise RestValidationError({'username': _('Super users cannot be edited')})
+                raise RestValidationError({
+                    api_settings.NON_FIELD_ERRORS_KEY: _(
+                        'Super users cannot be edited'
+                    )
+                })
             # inactive users get re-activated
             user.is_active = True
             user.save()
