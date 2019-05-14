@@ -160,6 +160,11 @@ class CreditListFilter(django_filters.FilterSet):
     prison_population = MultipleValueFilter(field_name='prison__populations__name')
 
     search = CreditTextSearchFilter()
+
+    sender = MultipleFieldCharFilter(
+        field_name=('transaction__sender_name', 'payment__cardholder_name', 'payment__email'),
+        lookup_expr='icontains'
+    )
     sender_name = MultipleFieldCharFilter(
         field_name=('transaction__sender_name', 'payment__cardholder_name',),
         lookup_expr='icontains'
