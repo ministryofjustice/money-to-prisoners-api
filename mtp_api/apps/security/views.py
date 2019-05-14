@@ -285,7 +285,8 @@ class PrisonerProfileView(
     serializer_class = PrisonerProfileSerializer
     ordering_fields = (
         'totals__sender_count', 'totals__credit_count', 'totals__credit_total',
-        'prisoner_name', 'prisoner_number'
+        'totals__recipient_count', 'totals__disbursement_count', 'totals__disbursement_total',
+        'prisoner_name', 'prisoner_number',
     )
     default_ordering = ('-totals__sender_count',)
 
