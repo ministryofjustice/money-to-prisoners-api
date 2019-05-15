@@ -16,9 +16,12 @@ from .rules import RULES
 from .serializers import EventSerializer
 
 
-class GroupByProfileFilter(django_filters.CharFilter):
+class GroupByFilter(django_filters.CharFilter):
     def filter(self, qs, value):
-        if value in ['sender_profile', 'recipient_profile', 'prisoner_profile']:
+        if value in [
+            'sender_profile', 'recipient_profile', 'prisoner_profile',
+            'credit', 'disbursement'
+        ]:
             group_field = '%s_event__%s' % (value, value)
             qs = qs.annotate(
                 latest=Subquery(
@@ -52,7 +55,7 @@ class EventViewFilter(django_filters.FilterSet):
     for_prisoner_profile = django_filters.BooleanFilter(
         field_name='prisoner_profile_event', lookup_expr='isnull', exclude=True
     )
-    group_by = GroupByProfileFilter()
+    group_by = GroupByFilter()
     credit_prison = django_filters.ModelMultipleChoiceFilter(
         field_name='credit_event__credit__prison',
         queryset=Prison.objects.all()
