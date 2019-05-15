@@ -80,6 +80,30 @@ class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):
             triggering_credits.count() + triggering_disbursements.count()
         )
 
+    def test_get_events_filtered_by_rules(self):
+        generate_transactions(transaction_batch=100, days_of_history=5)
+        generate_payments(payment_batch=100, days_of_history=5)
+        generate_disbursements(disbursement_batch=100, days_of_history=5)
+        call_command('update_security_profiles')
+        user = self.security_staff[0]
+
+        response = self.client.get(
+            reverse('event-list'),
+            {'limit': 1000, 'rule': ['HA', 'NWN']},
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreater(response.data['count'], 0)
+
+        self.assertEqual(
+            response.data['count'],
+            Event.objects.filter(rule='HA').count() +
+            Event.objects.filter(rule='NWN').count()
+        )
+        for event in response.data['results']:
+            self.assertIn(event['rule'], ('HA', 'NWN'))
+
     def test_get_events_filtered_by_date(self):
         generate_transactions(transaction_batch=100, days_of_history=5)
         generate_payments(payment_batch=100, days_of_history=5)

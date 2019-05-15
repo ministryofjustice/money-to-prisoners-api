@@ -7,7 +7,7 @@ from rest_framework import mixins, viewsets, views, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from core.filters import IsoDateTimeFilter, SafeOrderingFilter
+from core.filters import IsoDateTimeFilter, SafeOrderingFilter, MultipleValueFilter
 from core.permissions import ActionsBasedPermissions
 from prison.models import Prison
 from .constants import EMAIL_FREQUENCY
@@ -61,12 +61,11 @@ class EventViewFilter(django_filters.FilterSet):
         field_name='disbursement_event__disbursement__prison',
         queryset=Prison.objects.all()
     )
+    rule = MultipleValueFilter()
 
     class Meta:
         model = Event
-        fields = {
-            'rule': ['exact'],
-        }
+        fields = {}
 
 
 class EventView(mixins.ListModelMixin, viewsets.GenericViewSet):
