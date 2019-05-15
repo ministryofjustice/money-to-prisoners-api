@@ -75,7 +75,11 @@ class MonitorProfileMixin(viewsets.GenericViewSet):
 
 class SenderProfileListFilter(django_filters.FilterSet):
     sender = MultipleFieldCharFilter(
-        field_name=('transaction__sender_name', 'payment__cardholder_name', 'payment__email'),
+        field_name=(
+            'bank_transfer_details__sender_name',
+            'debit_card_details__cardholder_name__name',
+            'debit_card_details__sender_email__email',
+        ),
         lookup_expr='icontains'
     )
     sender_name = MultipleFieldCharFilter(
