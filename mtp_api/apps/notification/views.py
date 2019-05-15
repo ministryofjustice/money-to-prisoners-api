@@ -1,13 +1,13 @@
 from collections import OrderedDict
 
-from django.db.models import Subquery, OuterRef, F
+from django.db.models import Subquery, OuterRef, F, Q
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, viewsets, views, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from core.filters import IsoDateTimeFilter, SafeOrderingFilter
+from core.filters import IsoDateTimeFilter, SafeOrderingFilter, MultipleValueFilter
 from core.permissions import ActionsBasedPermissions
 from prison.models import Prison
 from .constants import EMAIL_FREQUENCY
@@ -61,12 +61,11 @@ class EventViewFilter(django_filters.FilterSet):
         field_name='disbursement_event__disbursement__prison',
         queryset=Prison.objects.all()
     )
+    rule = MultipleValueFilter()
 
     class Meta:
         model = Event
-        fields = {
-            'rule': ['exact'],
-        }
+        fields = {}
 
 
 class EventView(mixins.ListModelMixin, viewsets.GenericViewSet):
@@ -86,6 +85,11 @@ class EventView(mixins.ListModelMixin, viewsets.GenericViewSet):
     filter_class = EventViewFilter
 
     permission_classes = (IsAuthenticated, ActionsBasedPermissions)
+
+    def get_queryset(self):
+        return self.queryset.filter(
+            Q(user=self.request.user) | Q(user__isnull=True)
+        )
 
 
 class RuleView(views.APIView):
