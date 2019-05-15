@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -21,6 +22,7 @@ class Event(models.Model):
     rule = models.CharField(max_length=8, validators=[validate_rule_code])
     description = models.CharField(max_length=500, blank=True)
     triggered_at = models.DateTimeField(null=True, blank=True)
+    user = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE)
 
     class Meta:
         permissions = (

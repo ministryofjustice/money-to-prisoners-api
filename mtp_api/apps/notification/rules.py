@@ -10,20 +10,20 @@ from notification.models import (
 from security.models import SenderProfile, RecipientProfile, PrisonerProfile
 from security.constants import TIME_PERIOD
 
-CREDIT_RULES = ['NWN', 'HA', 'CSFREQ', 'CSNUM', 'CPNUM']
-DISBURSEMENT_RULES = ['NWN', 'HA', 'DRFREQ', 'DRNUM', 'DPNUM']
+CREDIT_RULES = ['MONP', 'MONS', 'NWN', 'HA', 'CSFREQ', 'CSNUM', 'CPNUM']
+DISBURSEMENT_RULES = ['MONP', 'MONR', 'NWN', 'HA', 'DRFREQ', 'DRNUM', 'DPNUM']
 
 
 def create_credit_notifications(credit):
     for rule in CREDIT_RULES:
         if RULES[rule].triggered(credit):
-            RULES[rule].create_event(credit)
+            RULES[rule].create_events(credit)
 
 
 def create_disbursement_notifications(disbursement):
     for rule in DISBURSEMENT_RULES:
         if RULES[rule].triggered(disbursement):
-            RULES[rule].create_event(disbursement)
+            RULES[rule].create_events(disbursement)
 
 
 class BaseRule:
@@ -48,10 +48,9 @@ class BaseRule:
     def get_event_trigger(self, record):
         return record
 
-    @atomic
-    def create_event(self, record):
+    def create_event(self, record, user=None):
         event_relations = []
-        event = Event(rule=self.code, description=self.description)
+        event = Event(rule=self.code, description=self.description, user=user)
         if isinstance(record, Credit):
             event.triggered_at = record.received_at
             event.save()
@@ -82,6 +81,10 @@ class BaseRule:
             event_relation.save()
 
         return event
+
+    @atomic
+    def create_events(self, record):
+        return [self.create_event(record)]
 
 
 class TotalsRule(BaseRule):
@@ -131,7 +134,42 @@ class HighAmountRule(BaseRule):
         return record.amount >= self.kwargs['limit']
 
 
+class MonitoredRule(BaseRule):
+
+    @atomic
+    def create_events(self, record):
+        profile = self.get_event_trigger(record)
+        return [
+            self.create_event(record, user=user)
+            for user in profile.get_monitoring_users().all()
+        ]
+
+    def triggered(self, record):
+        profile = self.get_event_trigger(record)
+        if profile and profile.get_monitoring_users().count():
+            return True
+        return False
+
+    def get_event_trigger(self, record):
+        return getattr(record, self.kwargs['profile'])
+
+
 RULES = {
+    'MONP': MonitoredRule(
+        'MONP',
+        _('Credits or disbursements for prisoners you are monitoring'),
+        profile='prisoner_profile',
+    ),
+    'MONS': MonitoredRule(
+        'MONS',
+        _('Credits for senders you are monitoring'),
+        profile='sender_profile',
+    ),
+    'MONR': MonitoredRule(
+        'MONR',
+        _('Disbursements for recipients you are monitoring'),
+        profile='recipient_profile',
+    ),
     'NWN': NotWholeNumberRule(
         'NWN',
         _('Credits or disbursements that are not a whole number'),
