@@ -74,6 +74,10 @@ class MonitorProfileMixin(viewsets.GenericViewSet):
 
 
 class SenderProfileListFilter(django_filters.FilterSet):
+    sender = MultipleFieldCharFilter(
+        field_name=('transaction__sender_name', 'payment__cardholder_name', 'payment__email'),
+        lookup_expr='icontains'
+    )
     sender_name = MultipleFieldCharFilter(
         field_name=(
             'bank_transfer_details__sender_name',
@@ -285,7 +289,8 @@ class PrisonerProfileView(
     serializer_class = PrisonerProfileSerializer
     ordering_fields = (
         'totals__sender_count', 'totals__credit_count', 'totals__credit_total',
-        'prisoner_name', 'prisoner_number'
+        'totals__recipient_count', 'totals__disbursement_count', 'totals__disbursement_total',
+        'prisoner_name', 'prisoner_number',
     )
     default_ordering = ('-totals__sender_count',)
 
