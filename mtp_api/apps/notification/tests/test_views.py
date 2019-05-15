@@ -17,6 +17,7 @@ from disbursement.tests.utils import generate_disbursements
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from payment.tests.utils import generate_payments
 from prison.tests.utils import load_random_prisoner_locations
+from security.models import PrisonerProfile
 from transaction.tests.utils import generate_transactions
 
 
@@ -56,13 +57,13 @@ class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):
 
         for credit in Credit.objects.all():
             if RULES['HA'].triggered(credit):
-                RULES['HA'].create_event(credit)
+                RULES['HA'].create_events(credit)
         for disbursement in Disbursement.objects.filter(resolution=DISBURSEMENT_RESOLUTION.SENT):
             if RULES['HA'].triggered(disbursement):
-                RULES['HA'].create_event(disbursement)
+                RULES['HA'].create_events(disbursement)
 
         response = self.client.get(
-            reverse('event-list'), format='json',
+            reverse('event-list'), {'limit': 1000}, format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -87,16 +88,16 @@ class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):
 
         for credit in Credit.objects.all():
             if RULES['HA'].triggered(credit):
-                RULES['HA'].create_event(credit)
+                RULES['HA'].create_events(credit)
         for disbursement in Disbursement.objects.filter(resolution=DISBURSEMENT_RESOLUTION.SENT):
             if RULES['HA'].triggered(disbursement):
-                RULES['HA'].create_event(disbursement)
+                RULES['HA'].create_events(disbursement)
 
         lt = timezone.now()
         gte = lt - timedelta(days=2)
         response = self.client.get(
             reverse('event-list'),
-            {'triggered_at__lt': lt, 'triggered_at__gte': gte},
+            {'triggered_at__lt': lt, 'triggered_at__gte': gte, 'limit': 1000},
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
@@ -116,14 +117,14 @@ class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):
 
         for credit in Credit.objects.all():
             if RULES['HA'].triggered(credit):
-                RULES['HA'].create_event(credit)
+                RULES['HA'].create_events(credit)
         for disbursement in Disbursement.objects.filter(resolution=DISBURSEMENT_RESOLUTION.SENT):
             if RULES['HA'].triggered(disbursement):
-                RULES['HA'].create_event(disbursement)
+                RULES['HA'].create_events(disbursement)
 
         response = self.client.get(
             reverse('event-list'),
-            {'for_credit': True},
+            {'for_credit': True, 'limit': 1000},
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
@@ -140,7 +141,7 @@ class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):
 
         response = self.client.get(
             reverse('event-list'),
-            {'rule': 'CSFREQ', 'group_by': 'sender_profile'},
+            {'rule': 'CSFREQ', 'group_by': 'sender_profile', 'limit': 1000},
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
@@ -172,7 +173,7 @@ class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):
         response = self.client.get(
             reverse('event-list'),
             {'rule': 'CSFREQ', 'group_by': 'sender_profile',
-             'triggered_at__lt': lt, 'triggered_at__gte': gte},
+             'triggered_at__lt': lt, 'triggered_at__gte': gte, 'limit': 1000},
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
@@ -195,6 +196,40 @@ class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):
         for event in response.data['results']:
             if event['id'] not in latest_ids:
                 self.fail()
+
+    def test_get_monitoring_events_for_user(self):
+        generate_payments(payment_batch=200, days_of_history=5)
+        call_command('update_security_profiles')
+        user = self.security_staff[0]
+
+        prisoner_profile = PrisonerProfile.objects.filter(
+            credits__isnull=False,
+        ).first()
+
+        prisoner_profile.monitoring_users.add(user)
+
+        for credit in Credit.objects.all():
+            if RULES['MONP'].triggered(credit):
+                RULES['MONP'].create_events(credit)
+
+        response = self.client.get(
+            reverse('event-list'), {'limit': 1000}, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreater(response.data['count'], 0)
+
+        self.assertEqual(
+            response.data['count'],
+            Event.objects.filter(user__isnull=True).count() +
+            Event.objects.filter(user=user).count()
+        )
+
+        for event in response.data['results']:
+            if event['rule'] == 'MONP':
+                self.assertEqual(Event.objects.get(id=event['id']).user, user)
+            else:
+                self.assertEqual(Event.objects.get(id=event['id']).user, None)
 
 
 class EmailPreferencesViewTestCase(AuthTestCaseMixin, APITestCase):

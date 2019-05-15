@@ -37,6 +37,15 @@ class SenderProfile(TimeStampedModel):
     def get_sorted_sender_names(self):
         return sorted(set(filter(lambda name: (name or '').strip() or _('(Unknown)'), self.get_sender_names())))
 
+    def get_monitoring_users(self):
+        details = self.debit_card_details.first()
+        if details:
+            return details.monitoring_users
+        details = self.bank_transfer_details.first()
+        if details:
+            return details.sender_bank_account.monitoring_users
+        return User.objects.none()
+
 
 class BankAccount(models.Model):
     sort_code = models.CharField(max_length=50, blank=True)
@@ -167,6 +176,12 @@ class RecipientProfile(TimeStampedModel):
     def __str__(self):
         return 'Recipient %s' % self.id
 
+    def get_monitoring_users(self):
+        details = self.bank_transfer_details.first()
+        if details:
+            return details.recipient_bank_account.monitoring_users
+        return User.objects.none()
+
 
 class BankTransferRecipientDetails(TimeStampedModel):
     recipient_bank_account = models.ForeignKey(
@@ -237,6 +252,9 @@ class PrisonerProfile(TimeStampedModel):
 
     def __str__(self):
         return self.prisoner_number
+
+    def get_monitoring_users(self):
+        return self.monitoring_users
 
 
 class PrisonerTotals(models.Model):

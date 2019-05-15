@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from django.db.models import Subquery, OuterRef, F
+from django.db.models import Subquery, OuterRef, F, Q
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, viewsets, views, status
@@ -86,6 +86,11 @@ class EventView(mixins.ListModelMixin, viewsets.GenericViewSet):
     filter_class = EventViewFilter
 
     permission_classes = (IsAuthenticated, ActionsBasedPermissions)
+
+    def get_queryset(self):
+        return self.queryset.filter(
+            Q(user=self.request.user) | Q(user__isnull=True)
+        )
 
 
 class RuleView(views.APIView):
