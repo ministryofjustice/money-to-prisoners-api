@@ -24,6 +24,8 @@ class Event(models.Model):
     triggered_at = models.DateTimeField(null=True, blank=True)
     user = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE)
 
+    seen_by = models.ManyToManyField(User, related_name='events_seen')
+
     class Meta:
         permissions = (
             ('view_event', 'Can view event'),

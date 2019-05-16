@@ -256,6 +256,57 @@ class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):
                 self.assertEqual(Event.objects.get(id=event['id']).user, None)
 
 
+class SeenEventsTestCase(AuthTestCaseMixin, APITestCase):
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
+
+    def setUp(self):
+        super().setUp()
+        test_users = make_test_users()
+        self.security_staff = test_users['security_staff']
+        load_random_prisoner_locations()
+
+    def test_set_event_as_seen(self):
+        generate_payments(payment_batch=100, days_of_history=5)
+        user = self.security_staff[0]
+
+        for credit in Credit.objects.all():
+            if RULES['HA'].triggered(credit):
+                RULES['HA'].create_event(credit)
+
+        # check events are not seen
+        response = self.client.get(
+            reverse('event-list'), format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreater(response.data['count'], 0)
+
+        for event in response.data['results']:
+            self.assertFalse(event['seen'])
+
+        # mark an event as seen
+        event_id = Event.objects.first().id
+        response = self.client.post(
+            reverse('event-seen', args=[event_id]), format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        # check event is now seen
+        response = self.client.get(
+            reverse('event-list'), format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreater(response.data['count'], 0)
+
+        for event in response.data['results']:
+            if event['id'] == event_id:
+                self.assertTrue(event['seen'])
+            else:
+                self.assertFalse(event['seen'])
+
+
 class EmailPreferencesViewTestCase(AuthTestCaseMixin, APITestCase):
     fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 

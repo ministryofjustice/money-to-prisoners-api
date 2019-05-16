@@ -1,14 +1,16 @@
 from collections import OrderedDict
 
-from django.db.models import Subquery, OuterRef, F, Q
+from django.db.models import Subquery, OuterRef, F, Q, Case, When, Value
+from django.db.models.fields import BooleanField
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import mixins, viewsets, views, status
+from rest_framework import mixins, viewsets, views, status, decorators
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from core.filters import IsoDateTimeFilter, SafeOrderingFilter, MultipleValueFilter
 from core.permissions import ActionsBasedPermissions
+from mtp_auth.permissions import NomsOpsClientIDPermissions
 from prison.models import Prison
 from .constants import EMAIL_FREQUENCY
 from .models import Event, EmailNotificationPreferences
@@ -87,7 +89,31 @@ class EventView(mixins.ListModelMixin, viewsets.GenericViewSet):
     filter_backends = (DjangoFilterBackend, SafeOrderingFilter,)
     filter_class = EventViewFilter
 
-    permission_classes = (IsAuthenticated, ActionsBasedPermissions)
+    permission_classes = (
+        IsAuthenticated, ActionsBasedPermissions, NomsOpsClientIDPermissions
+    )
+
+    @decorators.action(
+        methods=['post'], detail=True,
+        permission_classes=[IsAuthenticated, NomsOpsClientIDPermissions],
+        url_path='seen', url_name='seen'
+    )
+    def seen(self, request, pk=None):
+        self.get_object().seen_by.add(request.user)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        qs = qs.annotate(
+            seen=Case(
+                When(
+                    seen_by=self.request.user, then=Value(True)
+                ),
+                default=Value(False),
+                output_field=BooleanField()
+            )
+        )
+        return qs
 
     def get_queryset(self):
         return self.queryset.filter(

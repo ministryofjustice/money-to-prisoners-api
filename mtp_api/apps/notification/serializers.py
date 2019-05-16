@@ -21,6 +21,7 @@ class EventSerializer(serializers.ModelSerializer):
     prisoner_profile = PrisonerProfileSerializer(
         source='prisoner_profile_event.prisoner_profile'
     )
+    seen = serializers.SerializerMethodField()
 
     class Meta:
         model = Event
@@ -34,4 +35,10 @@ class EventSerializer(serializers.ModelSerializer):
             'triggered_at',
             'rule',
             'description',
+            'seen',
         )
+
+    def get_seen(self, obj):
+        # returns True where this is a nested serializer, because it's probably
+        # not worth the extra queries (unless it turns out it is)
+        return getattr(obj, 'seen', True)
