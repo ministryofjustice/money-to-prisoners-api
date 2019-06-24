@@ -22,7 +22,8 @@ class PaymentManager(models.Manager):
             credit__reconciled=False
         ).select_for_update()
 
-        if update_set.count() > 0:
+        # use `len` as `select` is needed to acquire lock
+        if len(update_set):
             from .models import Batch
             max_ref_code = Batch.objects.all().aggregate(models.Max('ref_code'))['ref_code__max']
             if max_ref_code:

@@ -25,6 +25,13 @@ from .serializers import (
 )
 
 
+class MonitoredProfileFilter(django_filters.BooleanFilter):
+    def filter(self, qs, value):
+        if value:
+            return qs.get_monitored_disbursements(self.parent.request.user)
+        return qs
+
+
 class DisbursementFilter(django_filters.FilterSet):
     logged_at__lt = annotate_filter(
         IsoDateTimeFilter(field_name='logged_at', lookup_expr='lt'),
@@ -68,6 +75,7 @@ class DisbursementFilter(django_filters.FilterSet):
     roll_number = django_filters.CharFilter(field_name='roll_number')
 
     invoice_number = django_filters.CharFilter(field_name='invoice_number', lookup_expr='iexact')
+    monitored = MonitoredProfileFilter()
 
     class Meta:
         model = Disbursement
@@ -91,9 +99,9 @@ class DisbursementViewMixin:
         return queryset
 
 
-class DisbursementView(
-    DisbursementViewMixin, mixins.CreateModelMixin, mixins.ListModelMixin,
-    mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet
+class GetDisbursementsView(
+    DisbursementViewMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet
 ):
     queryset = Disbursement.objects.all().order_by('-id')
     serializer_class = DisbursementSerializer
@@ -107,6 +115,11 @@ class DisbursementView(
             BANK_ADMIN_OAUTH_CLIENT_ID
         )
     )
+
+
+class DisbursementView(
+    mixins.CreateModelMixin, mixins.UpdateModelMixin, GetDisbursementsView
+):
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()

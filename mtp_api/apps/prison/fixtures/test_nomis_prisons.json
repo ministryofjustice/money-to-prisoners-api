@@ -3,7 +3,7 @@
     "model": "prison.prison",
     "pk": "ALI",
     "fields": {
-      "name": "HMP ALBANY",
+      "name": "HMP Albany",
       "general_ledger_code": "10200530",
       "created": "2015-12-09T12:00:00Z",
       "modified": "2015-12-09T12:00:00Z",
@@ -16,7 +16,7 @@
     "model": "prison.prison",
     "pk": "BXI",
     "fields": {
-      "name": "HMP BRIXTON",
+      "name": "HMP Brixton",
       "general_ledger_code": "10200080",
       "created": "2015-12-09T12:00:00Z",
       "modified": "2015-12-09T12:00:00Z",
@@ -29,7 +29,7 @@
     "model": "prison.prison",
     "pk": "ISI",
     "fields": {
-      "name": "HMP/YOI ISIS",
+      "name": "HMP/YOI Isis",
       "general_ledger_code": "10200520",
       "created": "2015-12-09T12:00:00Z",
       "modified": "2015-12-09T12:00:00Z",
@@ -42,7 +42,7 @@
     "model": "prison.prison",
     "pk": "LEI",
     "fields": {
-      "name": "HMP LEEDS",
+      "name": "HMP Leeds",
       "general_ledger_code": "10200590",
       "created": "2015-12-09T12:00:00Z",
       "modified": "2015-12-09T12:00:00Z",

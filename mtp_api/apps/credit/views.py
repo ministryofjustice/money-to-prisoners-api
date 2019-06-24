@@ -82,8 +82,8 @@ class CreditTextSearchFilter(django_filters.CharFilter):
                         return models.Q(**{'%s__startswith' % field: amount})
                 elif field == 'sender_name':
                     return (
-                        models.Q(**{'transaction__sender_name__icontains': word})
-                        | models.Q(**{'payment__cardholder_name__icontains': word})
+                        models.Q(**{'transaction__sender_name__icontains': word}) |
+                        models.Q(**{'payment__cardholder_name__icontains': word})
                     )
                 elif field == 'payment__uuid':
                     if len(word) == 8:
@@ -140,6 +140,13 @@ class PostcodeFilter(django_filters.CharFilter):
         return super().filter(qs, value)
 
 
+class MonitoredProfileFilter(django_filters.BooleanFilter):
+    def filter(self, qs, value):
+        if value:
+            return qs.get_monitored_credits(self.parent.request.user)
+        return qs
+
+
 class CreditListFilter(django_filters.FilterSet):
     status = StatusChoiceFilter(choices=CREDIT_STATUS.choices)
     user = django_filters.ModelChoiceFilter(field_name='owner', queryset=User.objects.all())
@@ -153,6 +160,11 @@ class CreditListFilter(django_filters.FilterSet):
     prison_population = MultipleValueFilter(field_name='prison__populations__name')
 
     search = CreditTextSearchFilter()
+
+    sender = MultipleFieldCharFilter(
+        field_name=('transaction__sender_name', 'payment__cardholder_name', 'payment__email'),
+        lookup_expr='icontains'
+    )
     sender_name = MultipleFieldCharFilter(
         field_name=('transaction__sender_name', 'payment__cardholder_name',),
         lookup_expr='icontains'
@@ -202,6 +214,7 @@ class CreditListFilter(django_filters.FilterSet):
         IsoDateTimeFilter(field_name='logged_at', lookup_expr='gte'),
         {'logged_at': TruncUtcDate('log__created')}
     )
+    monitored = MonitoredProfileFilter()
 
     class Meta:
         model = Credit

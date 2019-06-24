@@ -10,24 +10,6 @@ def populate_sender_prisons(apps, _):
         warnings.warn('Remember to run a manual update to populate sender profile prisons')
         return
 
-    from security.models import SenderProfile
-
-    credit_cls = apps.get_model('credit', 'Credit')
-    sender_cls = apps.get_model('security', 'SenderProfile')
-    sender_cls.credit_filters = SenderProfile.credit_filters
-    senders = sender_cls.objects.all()
-    count = senders.count()
-    print('Populating %d sender profile prisons' % count)
-    for index, sender in enumerate(senders):
-        if index % 100 == 0:
-            print('%0.0f%%' % (index / count * 100), sender.pk)
-        prisons = credit_cls.objects \
-            .filter(sender.credit_filters, prison__isnull=False) \
-            .order_by() \
-            .distinct('prison') \
-            .values_list('prison', flat=True)
-        sender.prisons.set(prisons, clear=True, bulk=True)
-
 
 class Migration(migrations.Migration):
     dependencies = [
