@@ -73,15 +73,11 @@ class EventViewFilter(django_filters.FilterSet):
 
 class EventView(mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = Event.objects.all().order_by('id').prefetch_related(
-        'credit_event__credit'
-    ).prefetch_related(
-        'disbursement_event__disbursement'
-    ).prefetch_related(
-        'sender_profile_event__sender_profile'
-    ).prefetch_related(
-        'recipient_profile_event__recipient_profile'
-    ).prefetch_related(
-        'prisoner_profile_event__prisoner_profile'
+        'credit_event__credit',
+        'disbursement_event__disbursement',
+        'sender_profile_event__sender_profile',
+        'recipient_profile_event__recipient_profile',
+        'prisoner_profile_event__prisoner_profile',
     )
     serializer_class = EventSerializer
     filter_backends = (DjangoFilterBackend, SafeOrderingFilter,)

@@ -53,9 +53,11 @@ class DebitCardSenderDetailsSerializer(serializers.ModelSerializer):
 class SenderProfileSerializer(serializers.ModelSerializer):
     bank_transfer_details = BankTransferSenderDetailsSerializer(many=True)
     debit_card_details = DebitCardSenderDetailsSerializer(many=True)
-    prisoner_count = serializers.IntegerField()
-    prison_count = serializers.IntegerField()
-    monitoring = serializers.SerializerMethodField()
+
+    # return None where this is a nested serializer
+    prisoner_count = serializers.IntegerField(required=False)
+    prison_count = serializers.IntegerField(required=False)
+    monitoring = serializers.BooleanField(required=False)
 
     class Meta:
         model = SenderProfile
@@ -72,11 +74,6 @@ class SenderProfileSerializer(serializers.ModelSerializer):
             'monitoring',
         )
 
-    def get_monitoring(self, obj):
-        # returns None where this is a nested serializer, because it's probably
-        # not worth the extra queries (unless it turns out it is)
-        return getattr(obj, 'monitoring', None)
-
 
 class PrisonSerializer(serializers.ModelSerializer):
     class Meta:
@@ -91,9 +88,11 @@ class PrisonerProfileSerializer(serializers.ModelSerializer):
     prisons = PrisonSerializer(many=True)
     current_prison = PrisonSerializer()
     provided_names = serializers.SerializerMethodField()
-    sender_count = serializers.IntegerField()
-    recipient_count = serializers.IntegerField()
-    monitoring = serializers.SerializerMethodField()
+
+    # return None where this is a nested serializer
+    sender_count = serializers.IntegerField(required=False)
+    recipient_count = serializers.IntegerField(required=False)
+    monitoring = serializers.BooleanField(required=False)
 
     class Meta:
         model = PrisonerProfile
@@ -113,11 +112,6 @@ class PrisonerProfileSerializer(serializers.ModelSerializer):
             'provided_names',
             'monitoring',
         )
-
-    def get_monitoring(self, obj):
-        # returns None where this is a nested serializer, because it's probably
-        # not worth the extra queries (unless it turns out it is)
-        return getattr(obj, 'monitoring', None)
 
     def get_provided_names(self, obj):
         return list(obj.provided_names.values_list('name', flat=True))
@@ -145,9 +139,11 @@ class BankTransferRecipientDetailsSerializer(serializers.ModelSerializer):
 
 class RecipientProfileSerializer(serializers.ModelSerializer):
     bank_transfer_details = BankTransferRecipientDetailsSerializer(many=True)
-    prisoner_count = serializers.IntegerField()
-    prison_count = serializers.IntegerField()
-    monitoring = serializers.SerializerMethodField()
+
+    # return None where this is a nested serializer
+    prisoner_count = serializers.IntegerField(required=False)
+    prison_count = serializers.IntegerField(required=False)
+    monitoring = serializers.BooleanField(required=False)
 
     class Meta:
         model = RecipientProfile
@@ -162,11 +158,6 @@ class RecipientProfileSerializer(serializers.ModelSerializer):
             'modified',
             'monitoring',
         )
-
-    def get_monitoring(self, obj):
-        # returns None where this is a nested serializer, because it's probably
-        # not worth the extra queries (unless it turns out it is)
-        return getattr(obj, 'monitoring', None)
 
 
 class SearchFilterSerializer(serializers.ModelSerializer):

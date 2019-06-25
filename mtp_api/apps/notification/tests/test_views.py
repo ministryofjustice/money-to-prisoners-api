@@ -162,10 +162,15 @@ class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):
         generate_payments(payment_batch=200, days_of_history=5)
         call_command('update_security_profiles')
         user = self.security_staff[0]
+        for i, prisoner_profile in enumerate(PrisonerProfile.objects.filter(credits__isnull=False)):
+            prisoner_profile.monitoring_users.add(self.security_staff[i % 2])
+        for credit in Credit.objects.all():
+            if RULES['MONP'].triggered(credit):
+                RULES['MONP'].create_events(credit)
 
         response = self.client.get(
             reverse('event-list'),
-            {'rule': 'CSFREQ', 'group_by': 'sender_profile', 'limit': 1000},
+            {'rule': 'MONP', 'group_by': 'prisoner_profile', 'limit': 1000},
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
@@ -173,15 +178,15 @@ class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertGreater(response.data['count'], 0)
 
         latest = {}
-        for event in Event.objects.filter(rule='CSFREQ'):
-            profile_id = event.sender_profile_event.sender_profile.id
+        for event in Event.objects.filter(rule='MONP', user=user):
+            profile_id = event.prisoner_profile_event.prisoner_profile.id
             if profile_id not in latest:
                 latest[profile_id] = event
             else:
                 if latest[profile_id].triggered_at < event.triggered_at:
                     latest[profile_id] = event
-
         latest_ids = [e.id for e in latest.values()]
+
         self.assertEqual(response.data['count'], len(latest_ids))
         for event in response.data['results']:
             if event['id'] not in latest_ids:
@@ -191,12 +196,17 @@ class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):
         generate_payments(payment_batch=200, days_of_history=5)
         call_command('update_security_profiles')
         user = self.security_staff[0]
+        for i, prisoner_profile in enumerate(PrisonerProfile.objects.filter(credits__isnull=False)):
+            prisoner_profile.monitoring_users.add(self.security_staff[i % 2])
+        for credit in Credit.objects.all():
+            if RULES['MONP'].triggered(credit):
+                RULES['MONP'].create_events(credit)
 
         lt = timezone.now() - timedelta(days=2)
         gte = lt - timedelta(days=3)
         response = self.client.get(
             reverse('event-list'),
-            {'rule': 'CSFREQ', 'group_by': 'sender_profile',
+            {'rule': 'MONP', 'group_by': 'prisoner_profile',
              'triggered_at__lt': lt, 'triggered_at__gte': gte, 'limit': 1000},
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
@@ -206,16 +216,17 @@ class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):
 
         latest = {}
         for event in Event.objects.filter(
-            rule='CSFREQ', triggered_at__gte=gte, triggered_at__lt=lt
+            rule='MONP', user=user,
+            triggered_at__gte=gte, triggered_at__lt=lt,
         ):
-            profile_id = event.sender_profile_event.sender_profile.id
+            profile_id = event.prisoner_profile_event.prisoner_profile.id
             if profile_id not in latest:
                 latest[profile_id] = event
             else:
                 if latest[profile_id].triggered_at < event.triggered_at:
                     latest[profile_id] = event
-
         latest_ids = [e.id for e in latest.values()]
+
         self.assertEqual(response.data['count'], len(latest_ids))
         for event in response.data['results']:
             if event['id'] not in latest_ids:

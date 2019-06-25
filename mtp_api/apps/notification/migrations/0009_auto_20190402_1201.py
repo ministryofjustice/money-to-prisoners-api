@@ -8,7 +8,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('credit', '0032_merge_20190218_1205'),
-        ('security', '0028_auto_20190328_1531'),
+        ('security', '0024_migrate_saved_searches'),
         ('disbursement', '0019_auto_20181106_1641'),
         ('notification', '0008_auto_20190221_1637'),
     ]

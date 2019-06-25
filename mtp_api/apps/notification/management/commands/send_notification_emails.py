@@ -83,37 +83,9 @@ def get_notification_count(user, period_start, period_end, memo_table=None):
             prison_filter,
             triggered_at__gte=period_start, triggered_at__lt=period_end
         )
-        transaction_amount_events = events.filter(
+        total_events = events.filter(
             rule__in=['NWN', 'HA']
         ).count()
-        frequency_events = (
-            events.filter(rule='CSFREQ').values(
-                'sender_profile_event__sender_profile'
-            ).distinct().count() +
-            events.filter(rule='DRFREQ').values(
-                'recipient_profile_event__recipient_profile'
-            ).distinct().count()
-        )
-        many_senders_receivers_events = (
-            events.filter(rule='CSNUM').values(
-                'prisoner_profile_event__prisoner_profile'
-            ).distinct().count() +
-            events.filter(rule='DRNUM').values(
-                'prisoner_profile_event__prisoner_profile'
-            ).distinct().count()
-        )
-        many_prisoners_events = (
-            events.filter(rule='CPNUM').values(
-                'sender_profile_event__sender_profile'
-            ).distinct().count() +
-            events.filter(rule='DPNUM').values(
-                'recipient_profile_event__recipient_profile'
-            ).distinct().count()
-        )
-        total_events = (
-            transaction_amount_events + frequency_events +
-            many_senders_receivers_events + many_prisoners_events
-        )
         if memo_table is not None:
             memo_table[key] = total_events
 

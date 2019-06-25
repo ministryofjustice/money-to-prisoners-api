@@ -4,15 +4,14 @@ from django.test import TestCase
 from core.tests.utils import make_test_users
 from credit.models import Credit
 from disbursement.models import Disbursement
-from disbursement.constants import DISBURSEMENT_RESOLUTION, DISBURSEMENT_METHOD
+from disbursement.constants import DISBURSEMENT_RESOLUTION
 from disbursement.tests.utils import generate_disbursements
 from notification.models import (
-    Event, SenderProfileEvent, RecipientProfileEvent, PrisonerProfileEvent
+    SenderProfileEvent, RecipientProfileEvent, PrisonerProfileEvent
 )
 from notification.rules import RULES
 from payment.tests.utils import generate_payments
 from prison.tests.utils import load_random_prisoner_locations
-from security.constants import TIME_PERIOD
 from security.models import (
     SenderProfile, RecipientProfile, PrisonerProfile
 )
@@ -43,7 +42,7 @@ class RuleTestCase(TestCase):
                 )
             else:
                 with self.assertRaises(SenderProfileEvent.DoesNotExist):
-                    event.sender_profile_event
+                    print(event.sender_profile_event)
 
             if profile_class == RecipientProfile:
                 self.assertEqual(
@@ -52,7 +51,7 @@ class RuleTestCase(TestCase):
                 )
             else:
                 with self.assertRaises(RecipientProfileEvent.DoesNotExist):
-                    event.recipient_profile_event
+                    print(event.recipient_profile_event)
 
             if profile_class == PrisonerProfile:
                 self.assertEqual(
@@ -61,7 +60,7 @@ class RuleTestCase(TestCase):
                 )
             else:
                 with self.assertRaises(PrisonerProfileEvent.DoesNotExist):
-                    event.prisoner_profile_event
+                    print(event.prisoner_profile_event)
 
     def test_create_events_for_nwn(self):
         credits = Credit.objects.exclude(
@@ -96,140 +95,6 @@ class RuleTestCase(TestCase):
         for disbursement in disbursements:
             self.assertFalse(RULES['NWN'].triggered(disbursement))
 
-    def test_create_events_for_csfreq(self):
-        call_command('update_security_profiles')
-
-        credits = Credit.objects.filter(sender_profile__in=Credit.objects.filter(
-            sender_profile__totals__time_period=TIME_PERIOD.LAST_4_WEEKS,
-            sender_profile__totals__credit_count__gte=4
-        ).values_list('sender_profile', flat=True).distinct())
-        for credit in credits:
-            self.assertTrue(RULES['CSFREQ'].triggered(credit))
-            events = RULES['CSFREQ'].create_events(credit)
-            self.assert_event_matches_record(events, credit, SenderProfile)
-
-        credits = Credit.objects.exclude(sender_profile__in=Credit.objects.filter(
-            sender_profile__totals__time_period=TIME_PERIOD.LAST_4_WEEKS,
-            sender_profile__totals__credit_count__gte=4
-        ).values_list('sender_profile', flat=True).distinct())
-        for credit in credits:
-            self.assertFalse(RULES['CSFREQ'].triggered(credit))
-
-    def test_create_events_for_drfreq(self):
-        call_command('update_security_profiles')
-
-        disbursements = Disbursement.objects.filter(
-            recipient_profile__in=Disbursement.objects.filter(
-                recipient_profile__totals__time_period=TIME_PERIOD.LAST_4_WEEKS,
-                recipient_profile__totals__disbursement_count__gte=4,
-                method=DISBURSEMENT_METHOD.BANK_TRANSFER
-            ).values_list('recipient_profile', flat=True).distinct()
-        )
-        for disbursement in disbursements:
-            self.assertTrue(RULES['DRFREQ'].triggered(disbursement))
-            events = RULES['DRFREQ'].create_events(disbursement)
-            self.assert_event_matches_record(events, disbursement, RecipientProfile)
-
-        disbursements = Disbursement.objects.exclude(
-            recipient_profile__in=Disbursement.objects.filter(
-                recipient_profile__totals__time_period=TIME_PERIOD.LAST_4_WEEKS,
-                recipient_profile__totals__disbursement_count__gte=4
-            ).values_list('recipient_profile', flat=True).distinct()
-        )
-        for disbursement in disbursements:
-            self.assertFalse(RULES['DRFREQ'].triggered(disbursement))
-
-    def test_cheque_recipient_does_not_trigger_drfreq(self):
-        call_command('update_security_profiles')
-        disbursements = Disbursement.objects.filter(method=DISBURSEMENT_METHOD.CHEQUE)
-        for disbursement in disbursements:
-            self.assertFalse(RULES['DRFREQ'].triggered(disbursement))
-
-    def test_create_events_for_csnum(self):
-        call_command('update_security_profiles')
-
-        credits = Credit.objects.filter(prisoner_profile__in=Credit.objects.filter(
-            prisoner_profile__totals__time_period=TIME_PERIOD.LAST_4_WEEKS,
-            prisoner_profile__totals__sender_count__gte=4
-        ).values_list('prisoner_profile', flat=True).distinct())
-        for credit in credits:
-            self.assertTrue(RULES['CSNUM'].triggered(credit))
-            events = RULES['CSNUM'].create_events(credit)
-            self.assert_event_matches_record(events, credit, PrisonerProfile)
-
-        credits = Credit.objects.exclude(prisoner_profile__in=Credit.objects.filter(
-            prisoner_profile__totals__time_period=TIME_PERIOD.LAST_4_WEEKS,
-            prisoner_profile__totals__sender_count__gte=4
-        ).values_list('prisoner_profile', flat=True).distinct())
-        for credit in credits:
-            self.assertFalse(RULES['CSNUM'].triggered(credit))
-
-    def test_create_events_for_drnum(self):
-        call_command('update_security_profiles')
-
-        disbursements = Disbursement.objects.filter(
-            prisoner_profile__in=Disbursement.objects.filter(
-                prisoner_profile__totals__time_period=TIME_PERIOD.LAST_4_WEEKS,
-                prisoner_profile__totals__recipient_count__gte=4
-            ).values_list('prisoner_profile', flat=True).distinct()
-        )
-        for disbursement in disbursements:
-            self.assertTrue(RULES['DRNUM'].triggered(disbursement))
-            events = RULES['DRNUM'].create_events(disbursement)
-            self.assert_event_matches_record(events, disbursement, PrisonerProfile)
-
-        disbursements = Disbursement.objects.exclude(
-            prisoner_profile__in=Disbursement.objects.filter(
-                prisoner_profile__totals__time_period=TIME_PERIOD.LAST_4_WEEKS,
-                prisoner_profile__totals__recipient_count__gte=4
-            ).values_list('prisoner_profile', flat=True).distinct()
-        )
-        for disbursement in disbursements:
-            self.assertFalse(RULES['DRNUM'].triggered(disbursement))
-
-    def test_create_events_for_cpnum(self):
-        call_command('update_security_profiles')
-
-        credits = Credit.objects.filter(sender_profile__in=Credit.objects.filter(
-            sender_profile__totals__time_period=TIME_PERIOD.LAST_4_WEEKS,
-            sender_profile__totals__prisoner_count__gte=4
-        ).values_list('sender_profile', flat=True).distinct())
-        for credit in credits:
-            self.assertTrue(RULES['CPNUM'].triggered(credit))
-            events = RULES['CPNUM'].create_events(credit)
-            self.assert_event_matches_record(events, credit, SenderProfile)
-
-        credits = Credit.objects.exclude(sender_profile__in=Credit.objects.filter(
-            sender_profile__totals__time_period=TIME_PERIOD.LAST_4_WEEKS,
-            sender_profile__totals__prisoner_count__gte=4
-        ).values_list('sender_profile', flat=True).distinct())
-        for credit in credits:
-            self.assertFalse(RULES['CPNUM'].triggered(credit))
-
-    def test_create_events_for_dpnum(self):
-        call_command('update_security_profiles')
-
-        disbursements = Disbursement.objects.filter(
-            recipient_profile__in=Disbursement.objects.filter(
-                recipient_profile__totals__time_period=TIME_PERIOD.LAST_4_WEEKS,
-                recipient_profile__totals__prisoner_count__gte=4,
-                method=DISBURSEMENT_METHOD.BANK_TRANSFER
-            ).values_list('recipient_profile', flat=True).distinct()
-        )
-        for disbursement in disbursements:
-            self.assertTrue(RULES['DPNUM'].triggered(disbursement))
-            events = RULES['DPNUM'].create_events(disbursement)
-            self.assert_event_matches_record(events, disbursement, RecipientProfile)
-
-        disbursements = Disbursement.objects.exclude(
-            recipient_profile__in=Disbursement.objects.filter(
-                recipient_profile__totals__time_period=TIME_PERIOD.LAST_4_WEEKS,
-                recipient_profile__totals__prisoner_count__gte=4
-            ).values_list('recipient_profile', flat=True).distinct()
-        )
-        for disbursement in disbursements:
-            self.assertFalse(RULES['DPNUM'].triggered(disbursement))
-
     def test_create_events_for_ha(self):
         credits = Credit.objects.filter(
             amount__gte=12000
@@ -259,16 +124,6 @@ class RuleTestCase(TestCase):
             self.assertFalse(RULES['HA'].triggered(credit))
         for disbursement in disbursements:
             self.assertFalse(RULES['HA'].triggered(disbursement))
-
-    def test_event_description_for_time_period_rule(self):
-        call_command('update_security_profiles')
-
-        for event in Event.objects.filter(rule='CSNUM'):
-            self.assertEqual(
-                'A prisoner getting money from more than 4 '
-                'debit cards or bank accounts in last 4 weeks',
-                event.description
-            )
 
     def test_create_events_for_monp(self):
         call_command('update_security_profiles')

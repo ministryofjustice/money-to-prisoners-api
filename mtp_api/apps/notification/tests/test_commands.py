@@ -1,5 +1,3 @@
-from collections import defaultdict
-
 from django.core import mail
 from django.core.management import call_command
 from django.test import TestCase, override_settings
@@ -48,29 +46,10 @@ class SendNotificationEmailsTestCase(TestCase):
         self.assertEqual(len(mail.outbox), 0)
 
     def _check_notification_count(self, total_notifications, events):
-        prisoner_profiles = defaultdict(set)
-        recipient_profiles = defaultdict(set)
-        sender_profiles = defaultdict(set)
-
         total_count = 0
         for event in events:
             if event.rule in ['NWN', 'HA']:
                 total_count += 1
-            elif event.rule in ['CSFREQ', 'CPNUM']:
-                profile_id = event.sender_profile_event.sender_profile.id
-                if profile_id not in sender_profiles[event.rule]:
-                    sender_profiles[event.rule].add(profile_id)
-                    total_count += 1
-            elif event.rule in ['DRFREQ', 'DPNUM']:
-                profile_id = event.recipient_profile_event.recipient_profile.id
-                if profile_id not in recipient_profiles[event.rule]:
-                    recipient_profiles[event.rule].add(profile_id)
-                    total_count += 1
-            elif event.rule in ['CSNUM', 'DRNUM']:
-                profile_id = event.prisoner_profile_event.prisoner_profile.id
-                if profile_id not in prisoner_profiles[event.rule]:
-                    prisoner_profiles[event.rule].add(profile_id)
-                    total_count += 1
 
         self.assertEqual(total_notifications, total_count)
 
