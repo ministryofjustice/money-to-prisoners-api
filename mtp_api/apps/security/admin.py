@@ -3,10 +3,11 @@ from django.utils.translation import gettext, gettext_lazy as _
 
 from core.admin import add_short_description
 from security.models import (
-    SenderProfile, PrisonerProfile, BankTransferSenderDetails,
-    DebitCardSenderDetails, SavedSearch, SearchFilter, RecipientProfile,
-    SenderTotals, RecipientTotals, PrisonerTotals
+    SenderProfile, BankTransferSenderDetails, DebitCardSenderDetails,
+    PrisonerProfile, RecipientProfile, BankTransferRecipientDetails,
+    SavedSearch, SearchFilter,
 )
+from transaction.utils import format_amount
 
 
 class BankTransferSenderDetailsAdminInline(admin.StackedInline):
@@ -24,19 +25,13 @@ class DebitCardSenderDetailsAdminInline(admin.StackedInline):
         return ', '.join(instance.cardholder_names.values_list('name', flat=True))
 
 
-class SenderTotalsAdminInline(admin.StackedInline):
-    model = SenderTotals
-    extra = 0
-
-
 @admin.register(SenderProfile)
 class SenderProfileAdmin(admin.ModelAdmin):
-    ordering = ('-pk',)
-    list_display = ('sender_names', 'sender_type',)
+    ordering = ('-credit_count',)
+    list_display = ('sender_names', 'sender_type', 'credit_count', 'formatted_credit_total')
     inlines = (
         BankTransferSenderDetailsAdminInline,
         DebitCardSenderDetailsAdminInline,
-        SenderTotalsAdminInline,
     )
     search_fields = (
         'bank_transfer_details__sender_bank_account__sender_name',
@@ -61,19 +56,20 @@ class SenderProfileAdmin(admin.ModelAdmin):
             sender_types.append(gettext('Debit card'))
         return ', '.join(sender_types)
 
+    @add_short_description(_('credit total'))
+    def formatted_credit_total(self, instance):
+        return format_amount(instance.credit_total)
 
-class RecipientTotalsAdminInline(admin.StackedInline):
-    model = RecipientTotals
+
+class BankTransferRecipientDetailsAdminInline(admin.StackedInline):
+    model = BankTransferRecipientDetails
     extra = 0
 
 
 @admin.register(RecipientProfile)
 class RecipientProfileAdmin(admin.ModelAdmin):
-    ordering = ('-pk',)
-    list_display = (
-        'sort_code',
-        'account_number',
-    )
+    ordering = ('-disbursement_count',)
+    list_display = ('sort_code', 'account_number', 'disbursement_count', 'formatted_disbursement_total')
     search_fields = (
         'bank_transfer_details__recipient_bank_account__sort_code',
         'bank_transfer_details__recipient_bank_account__account_number',
@@ -81,7 +77,11 @@ class RecipientProfileAdmin(admin.ModelAdmin):
         'disbursements__recipient_first_name',
         'disbursements__recipient_last_name',
     )
-    inlines = (RecipientTotalsAdminInline,)
+    inlines = (BankTransferRecipientDetailsAdminInline,)
+
+    @add_short_description(_('disbursement total'))
+    def formatted_disbursement_total(self, instance):
+        return format_amount(instance.disbursement_total)
 
     @add_short_description(_('sort code'))
     def sort_code(self, instance):
@@ -100,19 +100,24 @@ class RecipientProfileAdmin(admin.ModelAdmin):
         )
 
 
-class PrisonerTotalsAdminInline(admin.StackedInline):
-    model = PrisonerTotals
-    extra = 0
-
-
 @admin.register(PrisonerProfile)
 class PrisonerProfileAdmin(admin.ModelAdmin):
-    ordering = ('-pk',)
-    list_display = ('prisoner_number',)
+    ordering = ('-credit_count',)
+    list_display = (
+        'prisoner_number', 'credit_count', 'formatted_credit_total',
+        'disbursement_count', 'formatted_disbursement_total',
+    )
     search_fields = ('prisoner_name', 'prisoner_number', 'prisons__name', 'provided_name__name')
     readonly_fields = ('prisons', 'provided_names',)
     exclude = ('senders', 'recipients',)
-    inlines = (PrisonerTotalsAdminInline,)
+
+    @add_short_description(_('credit total'))
+    def formatted_credit_total(self, instance):
+        return format_amount(instance.credit_total)
+
+    @add_short_description(_('disbursement total'))
+    def formatted_disbursement_total(self, instance):
+        return format_amount(instance.disbursement_total)
 
     @add_short_description(_('names specified by senders'))
     def provided_names(self, instance):

@@ -1,6 +1,5 @@
-from django.db.models import Case, When, Value, Q
-from django.db.models.fields import IntegerField, BooleanField
-from django.db.models.functions import Cast
+from django.db.models import Count, Case, When, Value, Q
+from django.db.models.fields import BooleanField
 from django.shortcuts import get_object_or_404
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
@@ -9,9 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.settings import api_settings
 
-from core.filters import (
-    MultipleFieldCharFilter, MultipleValueFilter, annotate_filter
-)
+from core.filters import MultipleFieldCharFilter, MultipleValueFilter
 from core.permissions import ActionsBasedPermissions
 from credit.constants import CREDIT_SOURCE
 from credit.views import GetCredits
@@ -116,17 +113,11 @@ class SenderProfileListFilter(django_filters.FilterSet):
     prisoners = django_filters.ModelMultipleChoiceFilter(
         field_name='prisoners', queryset=PrisonerProfile.objects.all()
     )
-    prisoner_count__gte = annotate_filter(
-        django_filters.NumberFilter(
-            field_name='prisoner_count', lookup_expr='gte'
-        ),
-        {'prisoner_count': Cast('totals__prisoner_count', IntegerField())}
+    prisoner_count__gte = django_filters.NumberFilter(
+        field_name='prisoner_count', lookup_expr='gte'
     )
-    prisoner_count__lte = annotate_filter(
-        django_filters.NumberFilter(
-            field_name='prisoner_count', lookup_expr='lte'
-        ),
-        {'prisoner_count': Cast('totals__prisoner_count', IntegerField())}
+    prisoner_count__lte = django_filters.NumberFilter(
+        field_name='prisoner_count', lookup_expr='lte'
     )
 
     prison = django_filters.ModelMultipleChoiceFilter(
@@ -135,38 +126,21 @@ class SenderProfileListFilter(django_filters.FilterSet):
     prison_region = django_filters.CharFilter(field_name='prisons__region')
     prison_population = MultipleValueFilter(field_name='prisons__populations__name')
     prison_category = MultipleValueFilter(field_name='prisons__categories__name')
-    prison_count__gte = annotate_filter(
-        django_filters.NumberFilter(
-            field_name='prison_count', lookup_expr='gte'
-        ),
-        {'prison_count': Cast('totals__prison_count', IntegerField())}
+    prison_count__gte = django_filters.NumberFilter(
+        field_name='prison_count', lookup_expr='gte'
     )
-    prison_count__lte = annotate_filter(
-        django_filters.NumberFilter(
-            field_name='prison_count', lookup_expr='lte'
-        ),
-        {'prison_count': Cast('totals__prison_count', IntegerField())}
+    prison_count__lte = django_filters.NumberFilter(
+        field_name='prison_count', lookup_expr='lte'
     )
 
-    credit_count__gte = annotate_filter(
-        django_filters.NumberFilter(
-            field_name='credit_count', lookup_expr='gte'
-        ),
-        {'credit_count': Cast('totals__credit_count', IntegerField())}
-    )
-    credit_count__lte = annotate_filter(
-        django_filters.NumberFilter(
-            field_name='credit_count', lookup_expr='lte'
-        ),
-        {'credit_count': Cast('totals__credit_count', IntegerField())}
-    )
     monitoring = django_filters.BooleanFilter()
 
     class Meta:
         model = SenderProfile
         fields = {
+            'credit_count': ['lte', 'gte'],
+            'credit_total': ['lte', 'gte'],
             'modified': ['lt', 'gte'],
-            'totals__time_period': ['exact'],
         }
 
 
@@ -174,22 +148,20 @@ class SenderProfileView(
     mixins.ListModelMixin, mixins.RetrieveModelMixin, MonitorProfileMixin,
     viewsets.GenericViewSet
 ):
-    queryset = SenderProfile.objects.all().prefetch_related(
-        'bank_transfer_details'
+    queryset = SenderProfile.objects.all().annotate(
+        prisoner_count=Count('prisoners', distinct=True),
+        prison_count=Count('prisons', distinct=True),
     ).prefetch_related(
-        'debit_card_details'
-    ).prefetch_related(
-        'totals'
+        'bank_transfer_details', 'debit_card_details',
     )
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter,)
     filter_class = SenderProfileListFilter
     serializer_class = SenderProfileSerializer
     ordering_param = api_settings.ORDERING_PARAM
     ordering_fields = (
-        'totals__prisoner_count', 'totals__prison_count', 'totals__credit_count',
-        'totals__credit_total',
+        'prisoner_count', 'prison_count', 'credit_count', 'credit_total',
     )
-    default_ordering = ('-totals__prisoner_count',)
+    default_ordering = ('-prisoner_count',)
 
     permission_classes = (
         IsAuthenticated, SecurityProfilePermissions, NomsOpsClientIDPermissions
@@ -253,27 +225,25 @@ class PrisonerProfileListFilter(django_filters.FilterSet):
     senders = django_filters.ModelMultipleChoiceFilter(
         name='senders', queryset=SenderProfile.objects.all()
     )
-    sender_count__gte = annotate_filter(
-        django_filters.NumberFilter(
-            field_name='sender_count', lookup_expr='gte'
-        ),
-        {'sender_count': Cast('totals__sender_count', IntegerField())}
+    sender_count__gte = django_filters.NumberFilter(
+        name='sender_count', lookup_expr='gte'
     )
-    sender_count__lte = annotate_filter(
-        django_filters.NumberFilter(
-            field_name='sender_count', lookup_expr='lte'
-        ),
-        {'sender_count': Cast('totals__sender_count', IntegerField())}
+    sender_count__lte = django_filters.NumberFilter(
+        name='sender_count', lookup_expr='lte'
     )
+
     monitoring = django_filters.BooleanFilter()
 
     class Meta:
         model = PrisonerProfile
         fields = {
+            'credit_count': ['lte', 'gte'],
+            'credit_total': ['lte', 'gte'],
+            'disbursement_count': ['lte', 'gte'],
+            'disbursement_total': ['lte', 'gte'],
             'prisoner_number': ['exact'],
             'prisoner_dob': ['exact'],
             'modified': ['lt', 'gte'],
-            'totals__time_period': ['exact'],
         }
 
 
@@ -281,22 +251,21 @@ class PrisonerProfileView(
     mixins.ListModelMixin, mixins.RetrieveModelMixin, MonitorProfileMixin,
     viewsets.GenericViewSet
 ):
-    queryset = PrisonerProfile.objects.all().prefetch_related(
-        'prisons'
+    queryset = PrisonerProfile.objects.all().annotate(
+        sender_count=Count('senders', distinct=True),
+        recipient_count=Count('recipients', distinct=True),
     ).prefetch_related(
-        'provided_names'
-    ).prefetch_related(
-        'totals'
+        'prisons', 'provided_names'
     )
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter,)
     filter_class = PrisonerProfileListFilter
     serializer_class = PrisonerProfileSerializer
     ordering_fields = (
-        'totals__sender_count', 'totals__credit_count', 'totals__credit_total',
-        'totals__recipient_count', 'totals__disbursement_count', 'totals__disbursement_total',
+        'sender_count', 'credit_count', 'credit_total',
+        'recipient_count', 'disbursement_count', 'disbursement_total',
         'prisoner_name', 'prisoner_number',
     )
-    default_ordering = ('-totals__sender_count',)
+    default_ordering = ('-sender_count',)
 
     permission_classes = (
         IsAuthenticated, SecurityProfilePermissions, NomsOpsClientIDPermissions
@@ -366,17 +335,11 @@ class RecipientProfileListFilter(django_filters.FilterSet):
     prisoners = django_filters.ModelMultipleChoiceFilter(
         field_name='prisoners', queryset=PrisonerProfile.objects.all()
     )
-    prisoner_count__gte = annotate_filter(
-        django_filters.NumberFilter(
-            field_name='prisoner_count', lookup_expr='gte'
-        ),
-        {'prisoner_count': Cast('totals__prisoner_count', IntegerField())}
+    prisoner_count__gte = django_filters.NumberFilter(
+        field_name='prisoner_count', lookup_expr='gte'
     )
-    prisoner_count__lte = annotate_filter(
-        django_filters.NumberFilter(
-            field_name='prisoner_count', lookup_expr='lte'
-        ),
-        {'prisoner_count': Cast('totals__prisoner_count', IntegerField())}
+    prisoner_count__lte = django_filters.NumberFilter(
+        field_name='prisoner_count', lookup_expr='lte'
     )
 
     prison = django_filters.ModelMultipleChoiceFilter(
@@ -385,38 +348,21 @@ class RecipientProfileListFilter(django_filters.FilterSet):
     prison_region = django_filters.CharFilter(field_name='prisons__region')
     prison_population = MultipleValueFilter(field_name='prisons__populations__name')
     prison_category = MultipleValueFilter(field_name='prisons__categories__name')
-    prison_count__gte = annotate_filter(
-        django_filters.NumberFilter(
-            field_name='prison_count', lookup_expr='gte'
-        ),
-        {'prison_count': Cast('totals__prison_count', IntegerField())}
+    prison_count__gte = django_filters.NumberFilter(
+        field_name='prison_count', lookup_expr='gte'
     )
-    prison_count__lte = annotate_filter(
-        django_filters.NumberFilter(
-            field_name='prison_count', lookup_expr='lte'
-        ),
-        {'prison_count': Cast('totals__prison_count', IntegerField())}
+    prison_count__lte = django_filters.NumberFilter(
+        field_name='prison_count', lookup_expr='lte'
     )
 
-    credit_count__gte = annotate_filter(
-        django_filters.NumberFilter(
-            field_name='credit_count', lookup_expr='gte'
-        ),
-        {'credit_count': Cast('totals__credit_count', IntegerField())}
-    )
-    credit_count__lte = annotate_filter(
-        django_filters.NumberFilter(
-            field_name='credit_count', lookup_expr='lte'
-        ),
-        {'credit_count': Cast('totals__credit_count', IntegerField())}
-    )
     monitoring = django_filters.BooleanFilter()
 
     class Meta:
         model = RecipientProfile
         fields = {
+            'disbursement_count': ['lte', 'gte'],
+            'disbursement_total': ['lte', 'gte'],
             'modified': ['lt', 'gte'],
-            'totals__time_period': ['exact'],
         }
 
 
@@ -426,20 +372,20 @@ class RecipientProfileView(
 ):
     queryset = RecipientProfile.objects.exclude(
         bank_transfer_details__isnull=True
+    ).annotate(
+        prisoner_count=Count('prisoners', distinct=True),
+        prison_count=Count('prisons', distinct=True),
     ).prefetch_related(
         'bank_transfer_details'
-    ).prefetch_related(
-        'totals'
     )
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter,)
     filter_class = RecipientProfileListFilter
     serializer_class = RecipientProfileSerializer
     ordering_param = api_settings.ORDERING_PARAM
     ordering_fields = (
-        'totals__prisoner_count', 'totals__prison_count',
-        'totals__disbursement_count', 'totals__disbursement_total',
+        'prisoner_count', 'prison_count', 'disbursement_count', 'disbursement_total',
     )
-    default_ordering = ('-totals__prisoner_count',)
+    default_ordering = ('-prisoner_count',)
 
     permission_classes = (
         IsAuthenticated, SecurityProfilePermissions, NomsOpsClientIDPermissions

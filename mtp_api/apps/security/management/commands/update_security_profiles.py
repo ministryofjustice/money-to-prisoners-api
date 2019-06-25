@@ -12,9 +12,8 @@ from notification.rules import (
 from prison.models import PrisonerLocation
 from security.models import (
     SenderProfile, BankTransferSenderDetails, DebitCardSenderDetails,
-    CardholderName, SenderEmail, PrisonerProfile, ProvidedPrisonerName,
-    BankAccount, RecipientProfile, BankTransferRecipientDetails,
-    SenderTotals, PrisonerTotals, RecipientTotals
+    PrisonerProfile, RecipientProfile, BankTransferRecipientDetails,
+    CardholderName, SenderEmail, ProvidedPrisonerName, BankAccount,
 )
 
 logger = logging.getLogger('mtp')
@@ -31,12 +30,12 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         super().add_arguments(parser)
         parser.add_argument('--batch-size', type=int, default=200,
-                            help='Number of credits to process in one atomic transaction')
-        parser.add_argument('--totals-only', action='store_true', help='Recalculates the counts and totals only')
-        parser.add_argument('--recreate', action='store_true', help='Deletes existing sender and prisoner profiles')
+                            help='Number of objects to process in one atomic transaction')
+        parser.add_argument('--recalculate-totals', action='store_true', help='Recalculates the counts and totals only')
+        parser.add_argument('--recreate', action='store_true', help='Deletes existing profiles')
 
     def handle(self, **options):
-        if options['totals_only'] and options['recreate']:
+        if options['recalculate_totals'] and options['recreate']:
             raise CommandError('Cannot recalculate totals when deleting all profiles')
 
         self.verbose = options['verbosity'] > 1
@@ -45,8 +44,8 @@ class Command(BaseCommand):
         if batch_size < 1:
             raise CommandError('Batch size must be at least 1')
 
-        if options['totals_only']:
-            self.handle_totals()
+        if options['recalculate_totals']:
+            self.handle_totals(batch_size=batch_size)
         else:
             self.handle_update(batch_size=batch_size, recreate=options['recreate'])
 
@@ -55,13 +54,13 @@ class Command(BaseCommand):
             self.delete_profiles()
 
         try:
-            self.handle_credit_update(batch_size, recreate)
-            self.handle_disbursement_update(batch_size, recreate)
+            self.handle_credit_update(batch_size)
+            self.handle_disbursement_update(batch_size)
         finally:
             self.stdout.write('Updating prisoner profiles for current locations')
             PrisonerProfile.objects.update_current_prisons()
 
-    def handle_credit_update(self, batch_size, recreate):
+    def handle_credit_update(self, batch_size):
         new_credits = Credit.objects.filter(sender_profile__isnull=True).order_by('pk')
         new_credits_count = new_credits.count()
         if not new_credits_count:
@@ -90,7 +89,7 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS('Done'))
 
-    def handle_disbursement_update(self, batch_size, recreate):
+    def handle_disbursement_update(self, batch_size):
         new_disbursements = Disbursement.objects.filter(
             recipient_profile__isnull=True,
             resolution=DISBURSEMENT_RESOLUTION.SENT
@@ -129,16 +128,16 @@ class Command(BaseCommand):
         for credit in new_credits:
             self.create_or_update_profiles_for_credit(credit)
             if credit.sender_profile:
-                sender_profiles.append(credit.sender_profile)
+                sender_profiles.append(credit.sender_profile.pk)
             if credit.prisoner_profile:
-                prisoner_profiles.append(credit.prisoner_profile)
+                prisoner_profiles.append(credit.prisoner_profile.pk)
 
-        SenderTotals.objects.filter(
-            sender_profile__in=sender_profiles
-        ).update_all_totals()
-        PrisonerTotals.objects.filter(
-            prisoner_profile__in=prisoner_profiles
-        ).update_all_totals_for_credit()
+        SenderProfile.objects.filter(
+            pk__in=sender_profiles
+        ).recalculate_credit_totals()
+        PrisonerProfile.objects.filter(
+            pk__in=prisoner_profiles
+        ).recalculate_credit_totals()
 
         for credit in new_credits:
             create_credit_notifications(credit)
@@ -151,16 +150,16 @@ class Command(BaseCommand):
         for disbursement in new_disbursements:
             self.create_or_update_profiles_for_disbursement(disbursement)
             if disbursement.recipient_profile:
-                recipient_profiles.append(disbursement.recipient_profile)
+                recipient_profiles.append(disbursement.recipient_profile.pk)
             if disbursement.prisoner_profile:
-                prisoner_profiles.append(disbursement.prisoner_profile)
+                prisoner_profiles.append(disbursement.prisoner_profile.pk)
 
-        RecipientTotals.objects.filter(
-            recipient_profile__in=recipient_profiles
-        ).update_all_totals()
-        PrisonerTotals.objects.filter(
-            prisoner_profile__in=prisoner_profiles
-        ).update_all_totals_for_disbursement()
+        RecipientProfile.objects.filter(
+            pk__in=recipient_profiles
+        ).recalculate_disbursement_totals()
+        PrisonerProfile.objects.filter(
+            pk__in=prisoner_profiles
+        ).recalculate_disbursement_totals()
 
         for disbursement in new_disbursements:
             create_disbursement_notifications(disbursement)
@@ -370,11 +369,29 @@ class Command(BaseCommand):
         recipient_profile.save()
         return recipient_profile
 
-    def handle_totals(self):
-        self.stdout.write('Updating totals for security profiles')
-        SenderTotals.objects.update_all_totals()
-        RecipientTotals.objects.update_all_totals()
-        PrisonerTotals.objects.update_all_totals()
+    def handle_totals(self, batch_size):
+        profiles = (
+            (SenderProfile, 'sender'),
+            (PrisonerProfile, 'prisoner'),
+            (RecipientProfile, 'recipient'),
+        )
+        for model, name in profiles:
+            queryset = model.objects.order_by('pk').all()
+            count = queryset.count()
+            if not count:
+                self.stdout.write(self.style.SUCCESS('No %s profiles to update' % name))
+                return
+            else:
+                self.stdout.write('Updating %d %s profile totals' % (count, name))
+
+            processed_count = 0
+            for offset in range(0, count, batch_size):
+                batch = slice(offset, min(offset + batch_size, count))
+                queryset[batch].recalculate_totals()
+                processed_count += batch_size
+                if self.verbose:
+                    self.stdout.write('Processed up to %d %s profiles' % (processed_count, name))
+
         self.stdout.write(self.style.SUCCESS('Done'))
 
     @atomic()

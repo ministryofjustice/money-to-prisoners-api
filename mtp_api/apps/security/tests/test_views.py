@@ -16,7 +16,6 @@ from mtp_auth.tests.utils import AuthTestCaseMixin
 from mtp_auth.tests.mommy_recipes import create_security_staff_user
 from payment.tests.utils import generate_payments
 from prison.tests.utils import load_random_prisoner_locations
-from security.constants import TIME_PERIOD
 from security.models import (
     SenderProfile, PrisonerProfile, SavedSearch, SearchFilter, RecipientProfile
 )
@@ -51,8 +50,6 @@ class SecurityViewTestCase(APITestCase, AuthTestCaseMixin):
 
         if 'limit' not in filters:
             filters['limit'] = 1000
-        if 'totals__time_period' not in filters:
-            filters['totals__time_period'] = TIME_PERIOD.ALL_TIME
         response = self.client.get(
             url, filters, format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
@@ -121,38 +118,6 @@ class SenderProfileListTestCase(SecurityViewTestCase):
         for sender in sender_profiles:
             self.assertTrue(sender.id in [d['id'] for d in data])
 
-    def test_filter_by_last_week_credit_count(self):
-        generate_transactions(transaction_batch=300, days_of_history=30)
-        generate_payments(payment_batch=300, days_of_history=30)
-        call_command('update_security_profiles')
-
-        minimum_credit_count = 3
-
-        data = self._get_list(
-            self._get_authorised_user(),
-            totals__time_period=TIME_PERIOD.LAST_7_DAYS,
-            credit_count__gte=minimum_credit_count,
-        )
-
-        self.assertEqual(
-            SenderProfile.objects.filter(
-                totals__time_period=TIME_PERIOD.LAST_7_DAYS,
-                totals__credit_count__gte=minimum_credit_count
-            ).count(),
-            data['count']
-        )
-
-        pks = [item['id'] for item in data['results']]
-        for profile in SenderProfile.objects.filter(pk__in=pks):
-            for totals in profile.totals.all():
-                if totals.time_period == TIME_PERIOD.LAST_7_DAYS:
-                    self.assertGreaterEqual(totals.credit_count, minimum_credit_count)
-
-        for profile in SenderProfile.objects.exclude(pk__in=pks):
-            for totals in profile.totals.all():
-                if totals.time_period == TIME_PERIOD.LAST_7_DAYS:
-                    self.assertLess(totals.credit_count, minimum_credit_count)
-
     def test_filter_by_monitoring(self):
         user = self._get_authorised_user()
         profiles = SenderProfile.objects.filter(
@@ -200,7 +165,6 @@ class RecipientProfileListTestCase(SecurityViewTestCase):
         data = self._get_list(
             self._get_authorised_user(),
             prisoner_count__gte=3,
-            totals__time_period='all_time'
         )['results']
         prisoner_counts = Disbursement.objects.filter(
             method=DISBURSEMENT_METHOD.BANK_TRANSFER,

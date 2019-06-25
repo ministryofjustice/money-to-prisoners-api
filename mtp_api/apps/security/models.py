@@ -1,21 +1,19 @@
 from django.contrib.auth.models import User
 from django.db import models
-from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
 from model_utils.models import TimeStampedModel
 
 from core.models import ScheduledCommand
 from prison.models import Prison
-from .constants import TIME_PERIOD
-from .managers import (
-    PrisonerProfileManager, SenderTotalsQuerySet, RecipientTotalsQuerySet,
-    PrisonerTotalsQuerySet, SenderProfileManager, RecipientProfileManager
-)
+from .managers import PrisonerProfileManager, SenderProfileManager, RecipientProfileManager
 from .signals import prisoner_profile_current_prisons_need_updating
 
 
 class SenderProfile(TimeStampedModel):
+    credit_count = models.BigIntegerField(default=0)
+    credit_total = models.BigIntegerField(default=0)
+
     prisons = models.ManyToManyField(Prison, related_name='senders')
 
     objects = SenderProfileManager()
@@ -25,6 +23,10 @@ class SenderProfile(TimeStampedModel):
         permissions = (
             ('view_senderprofile', 'Can view sender profile'),
         )
+        indexes = [
+            models.Index(fields=['credit_count']),
+            models.Index(fields=['credit_total']),
+        ]
 
     def __str__(self):
         return 'Sender %s' % self.id
@@ -85,32 +87,6 @@ class BankTransferSenderDetails(TimeStampedModel):
         return self.sender_name
 
 
-class SenderTotals(models.Model):
-    credit_count = models.IntegerField(default=0)
-    credit_total = models.IntegerField(default=0)
-    prison_count = models.IntegerField(default=0)
-    prisoner_count = models.IntegerField(default=0)
-
-    time_period = models.CharField(max_length=50, choices=TIME_PERIOD)
-    sender_profile = models.ForeignKey(
-        SenderProfile, on_delete=models.CASCADE, related_name='totals'
-    )
-
-    objects = SenderTotalsQuerySet.as_manager()
-
-    class Meta:
-        unique_together = (
-            ('sender_profile', 'time_period',),
-        )
-        indexes = [
-            models.Index(fields=['credit_count']),
-            models.Index(fields=['credit_total']),
-            models.Index(fields=['prison_count']),
-            models.Index(fields=['prisoner_count']),
-            models.Index(fields=['time_period']),
-        ]
-
-
 class DebitCardSenderDetails(TimeStampedModel):
     card_number_last_digits = models.CharField(max_length=4, blank=True, null=True, db_index=True)
     card_expiry_date = models.CharField(max_length=5, blank=True, null=True)
@@ -163,6 +139,9 @@ class SenderEmail(models.Model):
 
 
 class RecipientProfile(TimeStampedModel):
+    disbursement_count = models.BigIntegerField(default=0)
+    disbursement_total = models.BigIntegerField(default=0)
+
     prisons = models.ManyToManyField(Prison, related_name='recipients')
 
     objects = RecipientProfileManager()
@@ -172,6 +151,10 @@ class RecipientProfile(TimeStampedModel):
         permissions = (
             ('view_recipientprofile', 'Can view recipient profile'),
         )
+        indexes = [
+            models.Index(fields=['disbursement_count']),
+            models.Index(fields=['disbursement_total']),
+        ]
 
     def __str__(self):
         return 'Recipient %s' % self.id
@@ -196,33 +179,12 @@ class BankTransferRecipientDetails(TimeStampedModel):
         verbose_name_plural = 'bank transfer recipient details'
 
 
-class RecipientTotals(models.Model):
-    disbursement_count = models.IntegerField(default=0)
-    disbursement_total = models.IntegerField(default=0)
-    prison_count = models.IntegerField(default=0)
-    prisoner_count = models.IntegerField(default=0)
-
-    time_period = models.CharField(max_length=50, choices=TIME_PERIOD)
-    recipient_profile = models.ForeignKey(
-        RecipientProfile, on_delete=models.CASCADE, related_name='totals'
-    )
-
-    objects = RecipientTotalsQuerySet.as_manager()
-
-    class Meta:
-        unique_together = (
-            ('recipient_profile', 'time_period',),
-        )
-        indexes = [
-            models.Index(fields=['disbursement_count']),
-            models.Index(fields=['disbursement_total']),
-            models.Index(fields=['prison_count']),
-            models.Index(fields=['prisoner_count']),
-            models.Index(fields=['time_period']),
-        ]
-
-
 class PrisonerProfile(TimeStampedModel):
+    credit_count = models.BigIntegerField(default=0)
+    credit_total = models.BigIntegerField(default=0)
+    disbursement_count = models.BigIntegerField(default=0)
+    disbursement_total = models.BigIntegerField(default=0)
+
     prisoner_name = models.CharField(max_length=250)
     prisoner_number = models.CharField(max_length=250, db_index=True)
     single_offender_id = models.UUIDField(blank=True, null=True)
@@ -249,42 +211,18 @@ class PrisonerProfile(TimeStampedModel):
         unique_together = (
             ('prisoner_number', 'prisoner_dob',),
         )
+        indexes = [
+            models.Index(fields=['credit_count']),
+            models.Index(fields=['credit_total']),
+            models.Index(fields=['disbursement_count']),
+            models.Index(fields=['disbursement_total']),
+        ]
 
     def __str__(self):
         return self.prisoner_number
 
     def get_monitoring_users(self):
         return self.monitoring_users
-
-
-class PrisonerTotals(models.Model):
-    credit_count = models.IntegerField(default=0)
-    credit_total = models.IntegerField(default=0)
-    disbursement_count = models.IntegerField(default=0)
-    disbursement_total = models.IntegerField(default=0)
-    sender_count = models.IntegerField(default=0)
-    recipient_count = models.IntegerField(default=0)
-
-    time_period = models.CharField(max_length=50, choices=TIME_PERIOD)
-    prisoner_profile = models.ForeignKey(
-        PrisonerProfile, on_delete=models.CASCADE, related_name='totals'
-    )
-
-    objects = PrisonerTotalsQuerySet.as_manager()
-
-    class Meta:
-        unique_together = (
-            ('prisoner_profile', 'time_period',),
-        )
-        indexes = [
-            models.Index(fields=['credit_count']),
-            models.Index(fields=['credit_total']),
-            models.Index(fields=['disbursement_count']),
-            models.Index(fields=['disbursement_total']),
-            models.Index(fields=['sender_count']),
-            models.Index(fields=['recipient_count']),
-            models.Index(fields=['time_period']),
-        ]
 
 
 class ProvidedPrisonerName(models.Model):
@@ -335,21 +273,3 @@ def update_current_prisons(*args, **kwargs):
         delete_after_next=True
     )
     job.save()
-
-
-@receiver(post_save, sender=SenderProfile, dispatch_uid='post_save_create_sender_totals')
-def post_save_create_sender_totals(sender, instance, created, *args, **kwargs):
-    if created:
-        SenderTotals.objects.create_totals_for_profile(instance)
-
-
-@receiver(post_save, sender=PrisonerProfile, dispatch_uid='post_save_create_prisoner_totals')
-def post_save_create_prisoner_totals(sender, instance, created, *args, **kwargs):
-    if created:
-        PrisonerTotals.objects.create_totals_for_profile(instance)
-
-
-@receiver(post_save, sender=RecipientProfile, dispatch_uid='post_save_create_recipient_totals')
-def post_save_create_recipient_totals(sender, instance, created, *args, **kwargs):
-    if created:
-        RecipientTotals.objects.create_totals_for_profile(instance)
