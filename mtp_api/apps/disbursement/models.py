@@ -3,10 +3,10 @@ from django.db import models
 from django.dispatch import receiver
 from model_utils.models import TimeStampedModel
 
-from . import InvalidDisbursementStateException
-from .constants import LOG_ACTIONS, DISBURSEMENT_RESOLUTION, DISBURSEMENT_METHOD
-from .managers import DisbursementManager, DisbursementQuerySet, LogManager
-from .signals import (
+from disbursement import InvalidDisbursementStateException
+from disbursement.constants import LOG_ACTIONS, DISBURSEMENT_RESOLUTION, DISBURSEMENT_METHOD
+from disbursement.managers import DisbursementManager, DisbursementQuerySet, LogManager
+from disbursement.signals import (
     disbursement_confirmed, disbursement_created, disbursement_rejected,
     disbursement_sent, disbursement_edited
 )
@@ -170,7 +170,7 @@ class Log(TimeStampedModel):
     class Meta:
         ordering = ('id',)
         indexes = [
-            models.Index(fields=['created'])
+            models.Index(fields=['created']),
         ]
 
     def __str__(self):

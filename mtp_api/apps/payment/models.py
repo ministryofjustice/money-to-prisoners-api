@@ -89,7 +89,7 @@ class Payment(TimeStampedModel):
             ('view_payment', 'Can view payment'),
         )
         indexes = [
-            models.Index(fields=['modified'])
+            models.Index(fields=['modified']),
         ]
 
     def __str__(self):

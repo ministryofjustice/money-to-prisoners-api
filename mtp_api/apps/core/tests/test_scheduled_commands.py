@@ -11,7 +11,6 @@ from core.management.commands import run_scheduled_commands
 
 
 class ScheduledCommandsTestCase(TestCase):
-
     def test_command_validation_fails(self):
         try:
             command = ScheduledCommand(

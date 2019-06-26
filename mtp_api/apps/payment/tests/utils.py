@@ -11,7 +11,7 @@ from credit.constants import CREDIT_RESOLUTION
 from credit.models import Credit
 from credit.tests.utils import (
     get_owner_and_status_chooser, create_credit_log, random_amount,
-    build_sender_prisoner_pairs
+    build_sender_prisoner_pairs,
 )
 from payment.constants import PAYMENT_STATUS
 from payment.models import Payment, BillingAddress
@@ -67,8 +67,7 @@ def get_sender_prisoner_pairs():
     return cycle(sender_prisoner_pairs)
 
 
-def generate_initial_payment_data(tot=50,
-                                  days_of_history=7):
+def generate_initial_payment_data(tot=50, days_of_history=7):
     data_list = []
     sender_prisoner_pairs = get_sender_prisoner_pairs()
     for _ in range(tot):
@@ -96,15 +95,11 @@ def generate_initial_payment_data(tot=50,
     return data_list
 
 
-def generate_payments(payment_batch=50,
-                      consistent_history=False,
-                      days_of_history=7):
-
+def generate_payments(payment_batch=50, consistent_history=False, days_of_history=7):
     data_list = generate_initial_payment_data(
         tot=payment_batch,
         days_of_history=days_of_history
     )
-
     return create_payments(data_list, consistent_history)
 
 
@@ -137,8 +132,7 @@ def create_payments(data_list, consistent_history=False):
     return payments
 
 
-def setup_payment(owner_status_chooser,
-                  end_date, payment_counter, data):
+def setup_payment(owner_status_chooser, end_date, payment_counter, data):
     complete = bool(payment_counter % 10)
     older_than_yesterday = (
         data['created'].date() < (end_date.date() - datetime.timedelta(days=1))

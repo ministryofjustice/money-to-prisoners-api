@@ -6,7 +6,7 @@ from core.tests.utils import make_test_users
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from prison.models import Prison
 from prison.tests.utils import load_random_prisoner_locations
-from .utils import latest_transaction_date
+from transaction.tests.utils import latest_transaction_date
 
 
 class BaseTransactionViewTestCase(AuthTestCaseMixin, APITestCase):
@@ -35,8 +35,7 @@ class BaseTransactionViewTestCase(AuthTestCaseMixin, APITestCase):
         return self.latest_transaction_date.date()
 
 
-class TransactionRejectsRequestsWithoutPermissionTestMixin(object):
-
+class TransactionRejectsRequestsWithoutPermissionTestMixin:
     """
     Mixin for permission checks on the endpoint.
 

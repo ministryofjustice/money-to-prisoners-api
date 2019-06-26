@@ -27,7 +27,6 @@ def create_disbursement_notifications(disbursement):
 
 
 class BaseRule:
-
     def __init__(self, code, description, **kwargs):
         self.code = code
         self._description = description
@@ -84,13 +83,11 @@ class BaseRule:
 
 
 class NotWholeNumberRule(BaseRule):
-
     def triggered(self, record):
         return record.amount % 100
 
 
 class HighAmountRule(BaseRule):
-
     def __init__(self, *args, limit=12000):
         super().__init__(*args, limit=limit)
         self.kwargs['display_limit'] = format_amount(limit, trim_empty_pence=True, pound_sign=True)
@@ -100,7 +97,6 @@ class HighAmountRule(BaseRule):
 
 
 class MonitoredRule(BaseRule):
-
     @atomic
     def create_events(self, record):
         profile = self.get_event_trigger(record)

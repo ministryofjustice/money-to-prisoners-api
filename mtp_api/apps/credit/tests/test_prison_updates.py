@@ -43,7 +43,6 @@ class BaseUpdatePrisonsTestCase(TestCase):
 
 
 class BaseUpdatePrisonsForTransactionsTestCase(BaseUpdatePrisonsTestCase):
-
     def setUp(self):
         super().setUp()
 
@@ -55,7 +54,6 @@ class BaseUpdatePrisonsForTransactionsTestCase(BaseUpdatePrisonsTestCase):
 
 
 class BaseUpdatePrisonsForPaymentsTestCase(BaseUpdatePrisonsTestCase):
-
     def setUp(self):
         super().setUp()
 
@@ -66,7 +64,6 @@ class BaseUpdatePrisonsForPaymentsTestCase(BaseUpdatePrisonsTestCase):
 
 
 class UpdatePrisonsOnAvailableCreditsTestMixin:
-
     def _get_credit_data(self):
         data = super()._get_credit_data()
         data.update({
@@ -130,8 +127,8 @@ class UpdatePrisonsOnAvailableCreditsTestMixin:
 
 
 class UpdatePrisonsOnAvailableTransactionsTestCase(
-        UpdatePrisonsOnAvailableCreditsTestMixin, BaseUpdatePrisonsForTransactionsTestCase):
-
+    UpdatePrisonsOnAvailableCreditsTestMixin, BaseUpdatePrisonsForTransactionsTestCase
+):
     def test_without_prisoner_locations_sets_prison_to_none(self):
         self.assertNotEqual(self.credit.prison, None)
 
@@ -163,8 +160,8 @@ class UpdatePrisonsOnAvailableTransactionsTestCase(
 
 
 class UpdatePrisonsOnAvailablePaymentsTestCase(
-        UpdatePrisonsOnAvailableCreditsTestMixin, BaseUpdatePrisonsForPaymentsTestCase):
-
+    UpdatePrisonsOnAvailableCreditsTestMixin, BaseUpdatePrisonsForPaymentsTestCase
+):
     def test_without_prisoner_locations_does_not_set_prison_to_none(self):
         self.assertNotEqual(self.credit.prison, None)
 
@@ -196,7 +193,6 @@ class UpdatePrisonsOnAvailablePaymentsTestCase(
 
 
 class UpdatePrisonsOnLockedCreditsTestCase(BaseUpdatePrisonsForPaymentsTestCase):
-
     def _get_credit_data(self):
         data = super()._get_credit_data()
         data.update({
@@ -231,7 +227,6 @@ class UpdatePrisonsOnLockedCreditsTestCase(BaseUpdatePrisonsForPaymentsTestCase)
 
 
 class UpdatePrisonsOnCreditedCreditsTestcase(BaseUpdatePrisonsForTransactionsTestCase):
-
     def _get_credit_data(self):
         data = super()._get_credit_data()
         data.update({
@@ -266,7 +261,6 @@ class UpdatePrisonsOnCreditedCreditsTestcase(BaseUpdatePrisonsForTransactionsTes
 
 
 class UpdatePrisonsOnRefundedCreditsTestcase(BaseUpdatePrisonsForTransactionsTestCase):
-
     def _get_credit_data(self):
         data = super()._get_credit_data()
         data.update({
@@ -301,7 +295,6 @@ class UpdatePrisonsOnRefundedCreditsTestcase(BaseUpdatePrisonsForTransactionsTes
 
 
 class UpdatePrisonsOnRefundPendingCreditsTestcase(BaseUpdatePrisonsForTransactionsTestCase):
-
     def _get_credit_data(self):
         data = super()._get_credit_data()
         data.update({
@@ -342,7 +335,6 @@ class UpdatePrisonsOnRefundPendingCreditsTestcase(BaseUpdatePrisonsForTransactio
 
 
 class UpdatePrisonsOnReconciledCreditsTestcase(BaseUpdatePrisonsForTransactionsTestCase):
-
     def _get_credit_data(self):
         data = super()._get_credit_data()
         data.update({

@@ -20,6 +20,15 @@ from core.filters import (
 )
 from core.models import TruncUtcDate
 from core.permissions import ActionsBasedPermissions
+from credit.constants import CREDIT_STATUS, CREDIT_SOURCE, LOG_ACTIONS
+from credit.models import Credit, Comment, ProcessingBatch, PrivateEstateBatch
+from credit.permissions import CreditPermissions, PrivateEstateBatchPermissions
+from credit.serializers import (
+    CreditSerializer, SecurityCreditSerializer, CreditedOnlyCreditSerializer,
+    IdsCreditSerializer, CommentSerializer, ProcessingBatchSerializer,
+    PrivateEstateBatchSerializer, PrivateEstateBatchCreditSerializer,
+    CreditsGroupedByCreditedSerializer,
+)
 from mtp_auth.models import PrisonUserMapping
 from mtp_auth.permissions import (
     CashbookClientIDPermissions, BankAdminClientIDPermissions, NomsOpsClientIDPermissions,
@@ -27,15 +36,6 @@ from mtp_auth.permissions import (
     get_client_permissions_class,
 )
 from prison.models import Prison
-from .constants import CREDIT_STATUS, CREDIT_SOURCE, LOG_ACTIONS
-from .models import Credit, Comment, ProcessingBatch, PrivateEstateBatch
-from .permissions import CreditPermissions, PrivateEstateBatchPermissions
-from .serializers import (
-    CreditSerializer, SecurityCreditSerializer, CreditedOnlyCreditSerializer,
-    IdsCreditSerializer, CommentSerializer, ProcessingBatchSerializer,
-    PrivateEstateBatchSerializer, PrivateEstateBatchCreditSerializer,
-    CreditsGroupedByCreditedSerializer,
-)
 
 User = get_user_model()
 
@@ -114,7 +114,6 @@ class ValidCreditFilter(django_filters.BooleanFilter):
 
 
 class CreditSourceFilter(django_filters.ChoiceFilter):
-
     def __init__(self, *args, **kwargs):
         kwargs['choices'] = CREDIT_SOURCE.choices
         super().__init__(*args, **kwargs)
@@ -223,12 +222,11 @@ class CreditListFilter(django_filters.FilterSet):
             'amount': ['exact', 'lte', 'gte'],
             'reviewed': ['exact'],
             'resolution': ['exact'],
-            'log__action': ['exact']
+            'log__action': ['exact'],
         }
 
 
-class CreditViewMixin(object):
-
+class CreditViewMixin:
     def get_queryset(self):
         queryset = Credit.objects.all()
         cashbook_client = self.request.auth.application.client_id == CASHBOOK_OAUTH_CLIENT_ID

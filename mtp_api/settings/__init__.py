@@ -1,1 +1,1 @@
-from .base import *  # noqa
+from mtp_api.settings.base import *  # noqa

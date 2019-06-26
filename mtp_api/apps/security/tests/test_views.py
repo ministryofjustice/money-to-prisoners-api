@@ -60,7 +60,6 @@ class SecurityViewTestCase(APITestCase, AuthTestCaseMixin):
 
 
 class SenderProfileListTestCase(SecurityViewTestCase):
-
     def _get_url(self, *args, **kwargs):
         return reverse('senderprofile-list')
 
@@ -138,7 +137,6 @@ class SenderProfileListTestCase(SecurityViewTestCase):
 
 
 class SenderCreditListTestCase(SecurityViewTestCase):
-
     def _get_url(self, *args, **kwargs):
         return reverse('sender-credits-list', args=args)
 
@@ -157,7 +155,6 @@ class SenderCreditListTestCase(SecurityViewTestCase):
 
 
 class RecipientProfileListTestCase(SecurityViewTestCase):
-
     def _get_url(self, *args, **kwargs):
         return reverse('recipientprofile-list')
 
@@ -226,7 +223,6 @@ class RecipientProfileListTestCase(SecurityViewTestCase):
 
 
 class RecipientDisbursementListTestCase(SecurityViewTestCase):
-
     def _get_url(self, *args, **kwargs):
         return reverse('recipient-disbursements-list', args=args)
 
@@ -245,7 +241,6 @@ class RecipientDisbursementListTestCase(SecurityViewTestCase):
 
 
 class PrisonerProfileListTestCase(SecurityViewTestCase):
-
     def _get_url(self, *args, **kwargs):
         return reverse('prisonerprofile-list')
 
@@ -311,7 +306,6 @@ class PrisonerProfileListTestCase(SecurityViewTestCase):
 
 
 class PrisonerCreditListTestCase(SecurityViewTestCase):
-
     def _get_url(self, *args, **kwargs):
         return reverse('prisoner-credits-list', args=args)
 
@@ -330,7 +324,6 @@ class PrisonerCreditListTestCase(SecurityViewTestCase):
 
 
 class PrisonerDisbursementListTestCase(SecurityViewTestCase):
-
     def _get_url(self, *args, **kwargs):
         return reverse('prisoner-disbursements-list', args=args)
 

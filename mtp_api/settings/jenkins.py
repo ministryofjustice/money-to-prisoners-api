@@ -1,5 +1,5 @@
-from .base import *  # noqa
-from .base import INSTALLED_APPS
+from mtp_api.settings.base import *  # noqa
+from mtp_api.settings.base import INSTALLED_APPS
 
 INSTALLED_APPS += (
     'django_jenkins',

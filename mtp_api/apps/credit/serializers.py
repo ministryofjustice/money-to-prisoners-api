@@ -2,10 +2,10 @@ from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
+from credit.models import Credit, Comment, ProcessingBatch, PrivateEstateBatch
 from payment.serializers import BillingAddressSerializer
 from prison.models import Prison, PrisonBankAccount
 from prison.serializers import PrisonBankAccountSerializer
-from .models import Credit, Comment, ProcessingBatch, PrivateEstateBatch
 
 User = get_user_model()
 

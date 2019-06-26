@@ -6,8 +6,8 @@ from model_utils.models import TimeStampedModel
 
 from core.models import ScheduledCommand
 from prison.models import Prison
-from .managers import PrisonerProfileManager, SenderProfileManager, RecipientProfileManager
-from .signals import prisoner_profile_current_prisons_need_updating
+from security.managers import PrisonerProfileManager, SenderProfileManager, RecipientProfileManager
+from security.signals import prisoner_profile_current_prisons_need_updating
 
 
 class SenderProfile(TimeStampedModel):

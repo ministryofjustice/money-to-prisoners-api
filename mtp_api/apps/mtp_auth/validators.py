@@ -5,7 +5,7 @@ from oauth2_provider.oauth2_validators import OAuth2Validator
 from oauthlib.oauth2 import OAuth2Error
 from rest_framework.validators import UniqueValidator
 
-from .models import ApplicationUserMapping, FailedLoginAttempt
+from mtp_auth.models import ApplicationUserMapping, FailedLoginAttempt
 
 logger = logging.getLogger('mtp')
 

@@ -31,7 +31,6 @@ from security.models import (
 class CashbookCreditRejectsRequestsWithoutPermissionTestMixin(
     CreditRejectsRequestsWithoutPermissionTestMixin
 ):
-
     def _get_unauthorised_application_users(self):
         return self.send_money_users
 
@@ -274,7 +273,6 @@ class CreditListTestCase(
 
 
 class CreditListWithDefaultsTestCase(CreditListTestCase):
-
     def test_returns_all_credits(self):
         """
         Returns all credits attached to all the prisons that
@@ -354,7 +352,6 @@ class CreditListWithDefaultsTestCase(CreditListTestCase):
 
 
 class CreditListWithDefaultPrisonAndUserTestCase(CreditListTestCase):
-
     def test_filter_by_status_credit_pending(self):
         """
         Returns available credits attached to all the prisons
@@ -375,7 +372,6 @@ class CreditListWithDefaultPrisonAndUserTestCase(CreditListTestCase):
 
 
 class CreditListWithDefaultUserTestCase(CreditListTestCase):
-
     def test_filter_by_status_credit_pending_and_prison(self):
         """
         Returns available credits attached to the passed-in prison.
@@ -396,7 +392,6 @@ class CreditListWithDefaultUserTestCase(CreditListTestCase):
 
 
 class CreditListWithDefaultPrisonTestCase(CreditListTestCase):
-
     def test_filter_by_status_credit_pending_and_user(self):
         """
         Returns available credits attached to all the prisons
@@ -418,7 +413,6 @@ class CreditListWithDefaultPrisonTestCase(CreditListTestCase):
 
 
 class CreditListWithoutDefaultsTestCase(CreditListTestCase):
-
     def test_filter_by_status_credit_pending_and_prison_and_user(self):
         """
         Returns available credits attached to the passed-in prison.
@@ -442,7 +436,6 @@ class CreditListWithoutDefaultsTestCase(CreditListTestCase):
 
 
 class CreditListWithDefaultStatusAndUserTestCase(CreditListTestCase):
-
     def test_filter_by_prison(self):
         """
         Returns all credits attached to the passed-in prison.
@@ -461,7 +454,6 @@ class CreditListWithDefaultStatusAndUserTestCase(CreditListTestCase):
 
 
 class CreditListWithDefaultStatusTestCase(CreditListTestCase):
-
     def test_filter_by_prison_and_user(self):
         """
         Returns all credits attached to the passed-in prison.
@@ -473,7 +465,6 @@ class CreditListWithDefaultStatusTestCase(CreditListTestCase):
 
 
 class CreditListWithDefaultStatusAndPrisonTestCase(CreditListTestCase):
-
     def test_filter_by_user(self):
         """
         Returns all credits managed by the passed-in user
@@ -484,7 +475,6 @@ class CreditListWithDefaultStatusAndPrisonTestCase(CreditListTestCase):
 
 
 class CreditListWithValidFilterTestCase(CreditListTestCase):
-
     def test_filter_by_invalidity(self):
         self._test_response_with_filters(filters={
             'valid': 'true'
@@ -625,7 +615,6 @@ class CreditListWithSearchTestCase(CreditListTestCase):
 
 
 class CreditListInvalidValuesTestCase(CreditListTestCase):
-
     def test_invalid_status_filter(self):
         logged_in_user = self.prison_clerks[0]
         url = self._get_url(status='invalid')
@@ -797,7 +786,6 @@ CreditListOrderingTestCase.add_test_methods()
 
 
 class SecurityCreditListTestCase(CreditListTestCase):
-
     def _get_authorised_user(self):
         return self.security_staff[0]
 
@@ -820,7 +808,6 @@ class SecurityCreditListTestCase(CreditListTestCase):
 
 
 class TransactionSenderDetailsCreditListTestCase(SecurityCreditListTestCase):
-
     def test_sort_code_filter(self):
         random_sort_code = (
             Credit.objects.filter(transaction__sender_sort_code__isnull=False)
@@ -912,7 +899,6 @@ class CreditListWithBlankStringFiltersTestCase(SecurityCreditListTestCase):
 
 
 class PrisonerNumberCreditListTestCase(SecurityCreditListTestCase):
-
     def test_prisoner_number_filter(self):
         random_prisoner_number = (
             Credit.objects.filter(prisoner_number__isnull=False)
@@ -925,7 +911,6 @@ class PrisonerNumberCreditListTestCase(SecurityCreditListTestCase):
 
 
 class AmountPatternCreditListTestCase(SecurityCreditListTestCase):
-
     def test_exclude_amount_pattern_filter_endswith_multiple(self):
         self._test_response_with_filters(filters={
             'exclude_amount__endswith': ['000', '500'],
@@ -971,7 +956,6 @@ class AmountPatternCreditListTestCase(SecurityCreditListTestCase):
 
 
 class NoPrisonCreditListTestCase(SecurityCreditListTestCase):
-
     def test_no_prison_filter(self):
         self._test_response_with_filters(filters={
             'prison__isnull': 'True'
@@ -979,7 +963,6 @@ class NoPrisonCreditListTestCase(SecurityCreditListTestCase):
 
 
 class MonitoredCreditListTestCase(SecurityCreditListTestCase):
-
     def test_list_credits_of_monitored_prisoner(self):
         call_command('update_security_profiles')
         user = self._get_authorised_user()

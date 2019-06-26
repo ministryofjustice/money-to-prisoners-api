@@ -9,11 +9,11 @@ from rest_framework.response import Response
 
 from core.filters import IsoDateTimeFilter, SafeOrderingFilter, MultipleValueFilter
 from core.permissions import ActionsBasedPermissions
+from notification.constants import EMAIL_FREQUENCY
+from notification.models import Event, EmailNotificationPreferences
+from notification.rules import RULES
+from notification.serializers import EventSerializer
 from prison.models import Prison
-from .constants import EMAIL_FREQUENCY
-from .models import Event, EmailNotificationPreferences
-from .rules import RULES
-from .serializers import EventSerializer
 
 
 class GroupByFilter(django_filters.CharFilter):

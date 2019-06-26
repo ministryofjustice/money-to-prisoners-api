@@ -1,15 +1,14 @@
-from rest_framework import mixins, viewsets
-from rest_framework.permissions import IsAuthenticated
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import mixins, viewsets
+from rest_framework.permissions import IsAuthenticated
 
+from account.models import Balance
+from account.serializers import BalanceSerializer
 from core.permissions import ActionsBasedPermissions
-from .models import Balance
-from .serializers import BalanceSerializer
 
 
 class BalanceListFilter(django_filters.FilterSet):
-
     class Meta:
         model = Balance
         fields = {'date': ['lt', 'gte']}
@@ -23,6 +22,4 @@ class BalanceView(
     filter_class = BalanceListFilter
     serializer_class = BalanceSerializer
 
-    permission_classes = (
-        IsAuthenticated, ActionsBasedPermissions
-    )
+    permission_classes = (IsAuthenticated, ActionsBasedPermissions)

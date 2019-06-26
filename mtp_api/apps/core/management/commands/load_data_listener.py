@@ -4,7 +4,7 @@ import threading
 from django.conf import settings
 from django.core.management import BaseCommand, call_command
 
-from . import synchronised
+from core.management.commands import synchronised
 
 
 class Command(BaseCommand):

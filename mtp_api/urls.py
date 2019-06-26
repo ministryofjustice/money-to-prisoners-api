@@ -37,8 +37,12 @@ urlpatterns = [
     url(r'^favicon.ico$', RedirectView.as_view(url=settings.STATIC_URL + 'images/favicon.ico', permanent=True)),
     url(r'^robots.txt$', lambda request: HttpResponse('User-agent: *\nDisallow: /', content_type='text/plain')),
 
-    url(r'^404.html$', lambda request: HttpResponse(_('Page not found'),
-                                                    content_type='text/plain', status=404)),
-    url(r'^500.html$', lambda request: HttpResponse(_('Sorry, something went wrong'),
-                                                    content_type='text/plain', status=500)),
+    url(r'^404.html$', lambda request: HttpResponse(
+        _('Page not found'),
+        content_type='text/plain', status=404,
+    )),
+    url(r'^500.html$', lambda request: HttpResponse(
+        _('Sorry, something went wrong'),
+        content_type='text/plain', status=500,
+    )),
 ]

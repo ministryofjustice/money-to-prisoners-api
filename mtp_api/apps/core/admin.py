@@ -147,7 +147,6 @@ class FormFilter(admin.FieldListFilter):
 
 
 class BaseDateFilter(FormFilter):
-
     def prepare_params(self, params):
         for field in self.expected_parameters():
             if field in params:
@@ -160,7 +159,6 @@ class BaseDateFilter(FormFilter):
 
 
 class DateRangeFilter(BaseDateFilter):
-
     def get_form_fields(self):
         return [
             ('%s__date__gte' % self.field_path, forms.DateField(
@@ -176,7 +174,6 @@ class DateRangeFilter(BaseDateFilter):
 
 
 class UtcDateRangeFilter(BaseDateFilter):
-
     def get_form_fields(self):
         return [
             ('%s__utcdate__gte' % self.field_path, forms.DateField(
@@ -184,7 +181,7 @@ class UtcDateRangeFilter(BaseDateFilter):
             )),
             ('%s__utcdate__lte' % self.field_path, forms.DateField(
                 widget=SidebarDateWidget(attrs={'placeholder': _('End UTC date')})
-            ))
+            )),
         ]
 
     def get_submit_label(self):
@@ -192,12 +189,11 @@ class UtcDateRangeFilter(BaseDateFilter):
 
 
 class DateFilter(BaseDateFilter):
-
     def get_form_fields(self):
         return [
             ('%s' % self.field_path, forms.DateField(
                 widget=SidebarDateWidget(attrs={'placeholder': _('Date')})
-            ))
+            )),
         ]
 
     def get_submit_label(self):
@@ -215,7 +211,6 @@ class SearchFilter(FormFilter):
 
 
 class RelatedAnyFieldListFilter(admin.RelatedFieldListFilter):
-
     def choices(self, cl):
         for c in super().choices(cl):
             # alter 'selected' test for empty option as default implementation

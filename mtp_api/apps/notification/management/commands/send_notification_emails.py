@@ -14,7 +14,6 @@ from notification.models import Event, EmailNotificationPreferences
 
 
 class Command(BaseCommand):
-
     def add_arguments(self, parser):
         parser.add_argument('--frequency', default=EMAIL_FREQUENCY.WEEKLY,
                             choices=EMAIL_FREQUENCY.values,
@@ -53,12 +52,11 @@ class Command(BaseCommand):
                     'notifications_url': notifications_period_url,
                     'settings_url': settings.NOMS_OPS_SETTINGS_URL,
                     'feedback_url': settings.NOMS_OPS_FEEDBACK_URL,
-                    'staff_email': True
+                    'staff_email': True,
                 }
                 send_email(
                     user.email, 'notification/periodic_email.txt',
-                    _('You have %s prisoner money intelligence tool notifications')
-                    % total_notifications,
+                    _('You have %s prisoner money intelligence tool notifications') % total_notifications,
                     context=email_context,
                     html_template='notification/periodic_email.html',
                     anymail_tags=['intelligence-notifications'],

@@ -295,7 +295,7 @@ class Log(TimeStampedModel):
     class Meta:
         ordering = ('id',)
         indexes = [
-            models.Index(fields=['created'])
+            models.Index(fields=['created']),
         ]
 
     def __str__(self):

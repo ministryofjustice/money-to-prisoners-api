@@ -4,11 +4,10 @@ from django.db import models
 from django.db.transaction import atomic
 
 from credit.models import Credit
-from .constants import TRANSACTION_STATUS
+from transaction.constants import TRANSACTION_STATUS
 
 
 class TransactionManager(models.Manager):
-
     @atomic
     def reconcile(self, start_date, end_date, user):
         with connection.cursor() as c:

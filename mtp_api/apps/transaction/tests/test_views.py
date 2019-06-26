@@ -13,11 +13,11 @@ from payment.models import Batch
 from transaction.models import Transaction
 from transaction.constants import TRANSACTION_CATEGORY, TRANSACTION_SOURCE
 from transaction.serializers import CreateTransactionSerializer
-from .utils import (
-    generate_initial_transactions_data, generate_transactions, filters_from_api_data
+from transaction.tests.utils import (
+    generate_initial_transactions_data, generate_transactions, filters_from_api_data,
 )
-from .test_base import (
-    BaseTransactionViewTestCase, TransactionRejectsRequestsWithoutPermissionTestMixin
+from transaction.tests.test_base import (
+    BaseTransactionViewTestCase, TransactionRejectsRequestsWithoutPermissionTestMixin,
 )
 
 
@@ -244,10 +244,8 @@ class CreateIncompleteTransactionsTestCase(
 
 
 class UpdateRefundTransactionsTestCase(
-    TransactionRejectsRequestsWithoutPermissionTestMixin,
-    BaseTransactionViewTestCase
+    TransactionRejectsRequestsWithoutPermissionTestMixin, BaseTransactionViewTestCase
 ):
-
     ENDPOINT_VERB = 'patch'
 
     def setUp(self):
@@ -415,7 +413,6 @@ class GetTransactionsBaseTestCase(
 
 
 class GetTransactionsAsBankAdminTestCase(GetTransactionsBaseTestCase):
-
     def _get_with_status(self, user, status):
         url = self._get_url()
 
@@ -493,7 +490,6 @@ class GetTransactionsAsBankAdminTestCase(GetTransactionsBaseTestCase):
 
 
 class GetTransactionsAsRefundBankAdminTestCase(GetTransactionsAsBankAdminTestCase):
-
     def _get_authorised_user(self):
         return self.refund_bank_admins[0]
 
@@ -509,7 +505,6 @@ class GetTransactionsAsRefundBankAdminTestCase(GetTransactionsAsBankAdminTestCas
 
 
 class GetTransactionsFilteredByDateTestCase(GetTransactionsBaseTestCase):
-
     def test_get_list_received_between_dates(self):
         url = self._get_url()
         user = self._get_authorised_user()
@@ -589,10 +584,8 @@ class GetTransactionsFilteredByDateTestCase(GetTransactionsBaseTestCase):
 
 
 class ReconcileTransactionsTestCase(
-    TransactionRejectsRequestsWithoutPermissionTestMixin,
-    BaseTransactionViewTestCase
+    TransactionRejectsRequestsWithoutPermissionTestMixin, BaseTransactionViewTestCase
 ):
-
     ENDPOINT_VERB = 'post'
 
     def setUp(self):

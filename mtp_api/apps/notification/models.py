@@ -6,14 +6,15 @@ from django.utils.translation import gettext_lazy as _
 
 from credit.models import Credit
 from disbursement.models import Disbursement
+from notification.constants import EMAIL_FREQUENCY
 from security.models import (
-    SenderProfile, RecipientProfile, PrisonerProfile
+    SenderProfile, RecipientProfile, PrisonerProfile,
 )
-from .constants import EMAIL_FREQUENCY
 
 
 def validate_rule_code(value):
-    from .rules import RULES
+    from notification.rules import RULES
+
     if value not in RULES:
         raise ValidationError(_('"%s" is not a recognised rule') % value)
 

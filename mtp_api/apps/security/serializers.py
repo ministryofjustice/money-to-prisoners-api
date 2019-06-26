@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from prison.models import Prison
-from .models import (
+from security.models import (
     SenderProfile, BankTransferSenderDetails, DebitCardSenderDetails,
     PrisonerProfile, RecipientProfile, BankTransferRecipientDetails,
     SavedSearch, SearchFilter,
@@ -80,7 +80,7 @@ class PrisonSerializer(serializers.ModelSerializer):
         model = Prison
         fields = (
             'nomis_id',
-            'name'
+            'name',
         )
 
 

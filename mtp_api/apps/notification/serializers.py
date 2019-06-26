@@ -2,11 +2,11 @@ from rest_framework import serializers
 
 from credit.serializers import SecurityCreditSerializer
 from disbursement.serializers import DisbursementSerializer
+from notification.models import Event
 from security.serializers import (
     PrisonerProfileSerializer, SenderProfileSerializer,
     RecipientProfileSerializer
 )
-from .models import Event
 
 
 class EventSerializer(serializers.ModelSerializer):

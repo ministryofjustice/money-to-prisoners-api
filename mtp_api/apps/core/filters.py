@@ -11,7 +11,6 @@ from rest_framework.filters import OrderingFilter
 
 
 class MultipleFieldCharFilter(django_filters.CharFilter):
-
     def __init__(self, *args, **kwargs):
         distinct = kwargs.get('distinct', True)
         kwargs['distinct'] = distinct
@@ -96,7 +95,6 @@ class IsoDateTimeFilter(django_filters.DateTimeFilter):
 
 
 class SafeOrderingFilter(OrderingFilter):
-
     def get_ordering(self, request, queryset, view):
         ordering = super().get_ordering(request, queryset, view)
         if ordering and 'id' not in ordering:
@@ -105,7 +103,6 @@ class SafeOrderingFilter(OrderingFilter):
 
 
 class MultipleValueField(forms.MultipleChoiceField):
-
     def valid_value(self, value):
         return True
 

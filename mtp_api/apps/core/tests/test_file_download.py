@@ -13,7 +13,6 @@ BANK_STATEMENT_LABEL = 'BANK_STATEMENT'
 
 
 class CreateFileDownloadTestCase(AuthTestCaseMixin, APITestCase):
-
     fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
     def setUp(self):
@@ -72,7 +71,6 @@ class CreateFileDownloadTestCase(AuthTestCaseMixin, APITestCase):
 
 
 class MissingFileDownloadTestCase(AuthTestCaseMixin, APITestCase):
-
     fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
     def setUp(self):

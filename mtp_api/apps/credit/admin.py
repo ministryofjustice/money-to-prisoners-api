@@ -11,11 +11,11 @@ from core.admin import (
     UtcDateRangeFilter, RelatedAnyFieldListFilter, SearchFilter,
     add_short_description
 )
+from credit.constants import CREDIT_SOURCE, CREDIT_STATUS, LOG_ACTIONS
+from credit.models import Credit, Log, Comment, ProcessingBatch, PrivateEstateBatch
 from payment.models import Payment
 from transaction.models import Transaction
 from transaction.utils import format_amount
-from .constants import CREDIT_SOURCE, CREDIT_STATUS, LOG_ACTIONS
-from .models import Credit, Log, Comment, ProcessingBatch, PrivateEstateBatch
 
 
 class LogAdminInline(admin.TabularInline):

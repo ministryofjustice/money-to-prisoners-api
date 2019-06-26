@@ -45,7 +45,6 @@ class PrisonUserMapping(TimeStampedModel):
 
 
 class ApplicationUserMapping(TimeStampedModel):
-
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     application = models.ForeignKey('oauth2_provider.Application', on_delete=models.CASCADE)
 
