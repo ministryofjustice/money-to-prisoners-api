@@ -11,7 +11,12 @@ The API app for the Money to Prisoners service. Currently, there are no APIs tha
 
 ## Developing locally
 
-Create a PostgreSQL database called `mtp_api`. It's recommended that you use a python virtual environment to isolate each application. Create a Django settings file for your local installation at `mtp_api/settings/local.py` and override the defaults as necessary.
+Create a PostgreSQL database called `mtp_api`.
+
+It's recommended that you use a python virtual environment to isolate each application.
+Please call this `venv` and make sure it's in the root folder of this application so that `mtp_common.test_utils.code_style.CodeStyleTestCase` and the build tasks can find it.
+
+Create a Django settings file for your local installation at `mtp_api/settings/local.py` and override the defaults as necessary.
 
 All build/development actions can be listed with `./run.py help`.
 
