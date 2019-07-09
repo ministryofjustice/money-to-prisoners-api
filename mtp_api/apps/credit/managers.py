@@ -39,7 +39,7 @@ class CreditManager(models.Manager):
     def update_prisons(self):
         with connection.cursor() as cursor:
             cursor.execute(
-                '''
+                """
                 UPDATE credit_credit
                 SET prison_id = pl.prison_id, prisoner_name = pl.prisoner_name,
                 single_offender_id = pl.single_offender_id
@@ -52,7 +52,7 @@ class CreditManager(models.Manager):
                 AND c.reconciled is False AND credit_credit.id = c.id
                 -- don't remove a match from a debit card payment
                 AND NOT (pl.prison_id IS NULL AND p.uuid IS NOT NULL)
-                ''',
+                """,
                 (CREDIT_RESOLUTION.PENDING,)
             )
 
@@ -158,7 +158,7 @@ class CreditingTimeManager(models.Manager):
         :return: the number of credits with calculated times
         """
         with connection.cursor() as cursor:
-            cursor.execute('''
+            cursor.execute("""
                 TRUNCATE credit_creditingtime;
                 WITH adjustments (day_of_week, adjustment) AS (
                     VALUES (1, INTERVAL '0'), (2, INTERVAL '0'), (3, INTERVAL '0'), (4, INTERVAL '0'),
@@ -173,7 +173,7 @@ class CreditingTimeManager(models.Manager):
                 FROM credited_log
                 JOIN credit_credit ON credit_credit.id = credited_log.credit_id
                 JOIN adjustments ON adjustments.day_of_week = EXTRACT(ISODOW FROM credit_credit.received_at);
-            ''', (LOG_ACTIONS.CREDITED,))
+            """, (LOG_ACTIONS.CREDITED,))
             return cursor.rowcount
 
 

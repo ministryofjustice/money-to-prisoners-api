@@ -14,11 +14,11 @@ class DigitalTakeupQueryset(models.QuerySet):
         Add a pre-calculated digital take-up field
         :return: DigitalTakeupQueryset
         """
-        return self.annotate(digital_takeup=RawSQL('''
+        return self.annotate(digital_takeup=RawSQL("""
             CASE WHEN credits_by_post + credits_by_mtp > 0
             THEN credits_by_mtp / (credits_by_post + credits_by_mtp)::real
             ELSE NULL END
-        ''', ()))
+        """, ()))
 
     def digital_takeup_per_day(self):
         """
@@ -42,7 +42,7 @@ class DigitalTakeupQueryset(models.QuerySet):
             today = datetime.date.today()
             since = max(DigitalTakeup.reports_start, today.replace(year=today.year - 2, month=1, day=1))
         with connection.cursor() as cursor:
-            cursor.execute('''
+            cursor.execute("""
                 WITH credit_count AS (
                   SELECT date_trunc('month', received_at) AS date,
                     COUNT(*) AS accurate_credits_by_mtp
@@ -60,7 +60,7 @@ class DigitalTakeupQueryset(models.QuerySet):
                 SELECT credit_count.date, accurate_credits_by_mtp, reported_credits_by_post, reported_credits_by_mtp
                 FROM credit_count FULL OUTER JOIN average_takeup ON credit_count.date = average_takeup.date
                 ORDER BY credit_count.date
-            ''', params={'since': since})
+            """, params={'since': since})
             return dictfetchall(cursor)
 
     def mean_digital_takeup(self):

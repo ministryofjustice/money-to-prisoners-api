@@ -722,11 +722,11 @@ class CreditListOrderingTestCase(CreditListTestCase):
         with connection.cursor() as cursor:
             # forces C collation to order names without ignoring spaces on RDS
             cursor.execute(
-                '''
+                """
                 ALTER TABLE %(table_name)s
                 ALTER COLUMN prisoner_name
                 SET DATA TYPE CHARACTER VARYING(%(prisoner_name_len)d) COLLATE "C";
-                ''' % {
+                """ % {
                     'table_name': Credit._meta.db_table,
                     'prisoner_name_len': Credit._meta.get_field('prisoner_name').max_length,
                 }
