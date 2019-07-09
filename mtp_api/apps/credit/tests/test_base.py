@@ -59,7 +59,7 @@ class BaseCreditViewTestCase(AuthTestCaseMixin, APITestCase):
         self.credits = transaction_credits + payment_credits
         self.prisons = Prison.objects.all()
 
-    def _get_queryset(self, user=None, prisons=[]):
+    def _get_queryset(self, user, prisons):
         qs = Credit.objects.filter(prison__in=prisons)
         if user and (user.applicationusermapping_set.first().application.client_id ==
                      CASHBOOK_OAUTH_CLIENT_ID):
@@ -70,12 +70,12 @@ class BaseCreditViewTestCase(AuthTestCaseMixin, APITestCase):
             )
         return qs
 
-    def _get_credit_pending_credits_qs(self, prisons, user=None):
+    def _get_credit_pending_credits_qs(self, prisons, user):
         return self._get_queryset(user, prisons).filter(
             blocked=False, resolution=CREDIT_RESOLUTION.PENDING
         )
 
-    def _get_credited_credits_qs(self, prisons, user=None):
+    def _get_credited_credits_qs(self, prisons, user):
         return self._get_queryset(user, prisons).filter(
             owner=user, resolution=CREDIT_RESOLUTION.CREDITED, prison__in=prisons
         )
@@ -149,7 +149,7 @@ class CreditRejectsRequestsWithoutPermissionTestMixin:
         )
 
         url = self._get_url()
-        for user, http_auth_header in users_data:
+        for _, http_auth_header in users_data:
             verb_callable = getattr(self.client, self.ENDPOINT_VERB)
             response = verb_callable(
                 url, format='json',
