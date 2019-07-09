@@ -52,7 +52,7 @@ class CreditListTestCase(
     def _get_invalid_credits(self):
         return [c for c in self.credits if c.prison is None]
 
-    def _test_response_with_filters(self, filters={}):
+    def _test_response_with_filters(self, filters):
         logged_in_user = self._get_authorised_user()
         credits = self._get_managed_prison_credits()
 
@@ -272,7 +272,7 @@ class CreditListWithDefaultsTestCase(CreditListTestCase):
         Returns all credits attached to all the prisons that
         the logged-in user can manage.
         """
-        self._test_response_with_filters(filters={})
+        self._test_response_with_filters({})
 
     def test_filter_by_sender_name(self):
         search = ''
@@ -280,7 +280,7 @@ class CreditListWithDefaultsTestCase(CreditListTestCase):
             credit = random.choice(self.credits)
             if credit.sender_name:
                 search = credit.sender_name[:-4].strip()
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'sender_name': search
         })
 
@@ -290,7 +290,7 @@ class CreditListWithDefaultsTestCase(CreditListTestCase):
             credit = random.choice(self.credits)
             if credit.prisoner_name:
                 search = credit.prisoner_name[:-4].strip()
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'prisoner_name': search
         })
 
@@ -300,7 +300,7 @@ class CreditListWithDefaultsTestCase(CreditListTestCase):
             credit = random.choice(self.credits)
             if credit.prison:
                 search = credit.prison.region
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'prison_region': search
         })
 
@@ -310,7 +310,7 @@ class CreditListWithDefaultsTestCase(CreditListTestCase):
             credit = random.choice(self.credits)
             if credit.prison:
                 search = credit.prison.populations.first().name
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'prison_population': search
         })
 
@@ -320,7 +320,7 @@ class CreditListWithDefaultsTestCase(CreditListTestCase):
             credit = random.choice(self.credits)
             if credit.prison:
                 search = credit.prison.categories.first().name
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'prison_category': search
         })
 
@@ -330,7 +330,7 @@ class CreditListWithDefaultsTestCase(CreditListTestCase):
             credit = random.choice(self.credits)
             if credit.prison and credit.prison.categories.first().name not in search:
                 search.append(credit.prison.categories.first().name)
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'prison_category': search
         })
 
@@ -340,7 +340,7 @@ class CreditListWithDefaultsTestCase(CreditListTestCase):
             credit = random.choice(self.credits)
             if credit.pk not in search:
                 search.append(credit.pk)
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'pk': search
         })
 
@@ -352,7 +352,7 @@ class CreditListWithDefaultPrisonAndUserTestCase(CreditListTestCase):
         Returns available credits attached to all the prisons
         that the logged-in user can manage.
         """
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'status': CREDIT_STATUS.CREDIT_PENDING
         })
 
@@ -361,7 +361,7 @@ class CreditListWithDefaultPrisonAndUserTestCase(CreditListTestCase):
         Returns credited credits attached to all the prisons
         that the logged-in user can manage.
         """
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'status': CREDIT_STATUS.CREDITED
         })
 
@@ -372,7 +372,7 @@ class CreditListWithDefaultUserTestCase(CreditListTestCase):
         """
         Returns available credits attached to the passed-in prison.
         """
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'status': CREDIT_STATUS.CREDIT_PENDING,
             'prison': self.prisons[0].pk
         })
@@ -381,7 +381,7 @@ class CreditListWithDefaultUserTestCase(CreditListTestCase):
         """
         Returns credited credits attached to the passed-in prison.
         """
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'status': CREDIT_STATUS.CREDITED,
             'prison': self.prisons[0].pk
         })
@@ -394,7 +394,7 @@ class CreditListWithDefaultPrisonTestCase(CreditListTestCase):
         Returns available credits attached to all the prisons
         that the passed-in user can manage.
         """
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'status': CREDIT_STATUS.CREDIT_PENDING,
             'user': self.prison_clerks[1].pk
         })
@@ -403,7 +403,7 @@ class CreditListWithDefaultPrisonTestCase(CreditListTestCase):
         """
         Returns credits credited by the passed-in user.
         """
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'status': CREDIT_STATUS.CREDITED,
             'user': self.prison_clerks[1].pk
         })
@@ -415,7 +415,7 @@ class CreditListWithoutDefaultsTestCase(CreditListTestCase):
         """
         Returns available credits attached to the passed-in prison.
         """
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'status': CREDIT_STATUS.CREDIT_PENDING,
             'prison': self.prisons[0].pk,
             'user': self.prison_clerks[1].pk
@@ -426,7 +426,7 @@ class CreditListWithoutDefaultsTestCase(CreditListTestCase):
         Returns credits credited by the passed-in user and
         attached to the passed-in prison.
         """
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'status': CREDIT_STATUS.CREDITED,
             'prison': self.prisons[0].pk,
             'user': self.prison_clerks[1].pk
@@ -439,7 +439,7 @@ class CreditListWithDefaultStatusAndUserTestCase(CreditListTestCase):
         """
         Returns all credits attached to the passed-in prison.
         """
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'prison': self.prisons[0].pk
         })
 
@@ -447,7 +447,7 @@ class CreditListWithDefaultStatusAndUserTestCase(CreditListTestCase):
         """
         Returns all credits attached to the passed-in prisons.
         """
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'prison[]': [p.pk for p in self.prisons]
         })
 
@@ -458,7 +458,7 @@ class CreditListWithDefaultStatusTestCase(CreditListTestCase):
         """
         Returns all credits attached to the passed-in prison.
         """
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'prison': self.prisons[0].pk,
             'user': self.prison_clerks[1].pk
         })
@@ -470,7 +470,7 @@ class CreditListWithDefaultStatusAndPrisonTestCase(CreditListTestCase):
         """
         Returns all credits managed by the passed-in user
         """
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'user': self.prison_clerks[1].pk
         })
 
@@ -478,12 +478,12 @@ class CreditListWithDefaultStatusAndPrisonTestCase(CreditListTestCase):
 class CreditListWithValidFilterTestCase(CreditListTestCase):
 
     def test_filter_by_invalidity(self):
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'valid': 'true'
         })
 
     def test_filter_by_validity(self):
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'valid': 'false'
         })
 
@@ -497,7 +497,7 @@ class CreditListWithReceivedAtFilterTestCase(CreditListTestCase):
         Returns all credits received yesterday
         """
         yesterday = self._get_latest_date()
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'received_at__gte': self._format_date(yesterday),
             'received_at__lt': self._format_date(yesterday + datetime.timedelta(days=1)),
         })
@@ -507,7 +507,7 @@ class CreditListWithReceivedAtFilterTestCase(CreditListTestCase):
         Returns all credits received since 5 days ago
         """
         five_days_ago = self._get_latest_date() - datetime.timedelta(days=5)
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'received_at__gte': self._format_date(five_days_ago),
         })
 
@@ -516,7 +516,7 @@ class CreditListWithReceivedAtFilterTestCase(CreditListTestCase):
         Returns all credits received until 5 days ago
         """
         five_days_ago = self._get_latest_date() - datetime.timedelta(days=4)
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'received_at__lt': self._format_date(five_days_ago),
         })
 
@@ -533,7 +533,7 @@ class CreditListWithReceivedAtFilterTestCase(CreditListTestCase):
             datetime.time(22, 0, tzinfo=timezone.utc)
         )
 
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'received_at__gte': start_date.isoformat(),
             'received_at__lt': end_date.isoformat(),
         })
@@ -549,7 +549,7 @@ class CreditListWithSearchTestCase(CreditListTestCase):
             credit = random.choice(self.credits)
             if credit.prisoner_number:
                 search_phrase = credit.prisoner_number
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'search': search_phrase
         })
 
@@ -562,7 +562,7 @@ class CreditListWithSearchTestCase(CreditListTestCase):
             credit = random.choice(self.credits)
             if credit.prisoner_name:
                 search_phrase = credit.prisoner_name.split()[0]
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'search': search_phrase
         })
 
@@ -575,7 +575,7 @@ class CreditListWithSearchTestCase(CreditListTestCase):
             credit = random.choice(self.credits)
             if credit.sender_name:
                 search_phrase = credit.sender_name[:2].strip()
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'search': search_phrase
         })
 
@@ -585,13 +585,13 @@ class CreditListWithSearchTestCase(CreditListTestCase):
         """
         credit = random.choice(self.credits)
         search_phrase = '£%0.2f' % (credit.amount / 100)
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'search': search_phrase
         })
 
     def test_filter_search_for_amount_prefix(self):
         search_phrase = '£5'
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'search': search_phrase
         })
 
@@ -599,7 +599,7 @@ class CreditListWithSearchTestCase(CreditListTestCase):
         """
         Empty search causes no errors
         """
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'search': ''
         })
 
@@ -607,7 +607,7 @@ class CreditListWithSearchTestCase(CreditListTestCase):
         """
         Search for a value that cannot exist in generated credits
         """
-        response = self._test_response_with_filters(filters={
+        response = self._test_response_with_filters({
             'search': get_random_string(
                 length=20,  # too long for generated sender names
                 allowed_chars='§±@£$#{}[];:<>',  # includes characters not used in generation
@@ -793,7 +793,7 @@ class SecurityCreditListTestCase(CreditListTestCase):
     def _get_authorised_user(self):
         return self.security_staff[0]
 
-    def _test_response_with_filters(self, filters={}):
+    def _test_response_with_filters(self, filters):
         response = super()._test_response_with_filters(filters)
         for response_credit in response.data['results']:
             db_credit = Credit.objects.get(pk=response_credit['id'])
@@ -819,7 +819,7 @@ class TransactionSenderDetailsCreditListTestCase(SecurityCreditListTestCase):
             .exclude(transaction__sender_sort_code='')
             .order_by('?').first().sender_sort_code
         )
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'sender_sort_code': random_sort_code
         })
 
@@ -829,7 +829,7 @@ class TransactionSenderDetailsCreditListTestCase(SecurityCreditListTestCase):
             .exclude(transaction__sender_account_number='')
             .order_by('?').first().sender_account_number
         )
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'sender_account_number': random_account_number
         })
 
@@ -839,7 +839,7 @@ class TransactionSenderDetailsCreditListTestCase(SecurityCreditListTestCase):
             .exclude(transaction__sender_roll_number='')
             .order_by('?').first().sender_roll_number
         )
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'sender_roll_number': random_roll_number
         })
 
@@ -911,7 +911,7 @@ class PrisonerNumberCreditListTestCase(SecurityCreditListTestCase):
             .exclude(prisoner_number='')
             .order_by('?').first().prisoner_number
         )
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'prisoner_number': random_prisoner_number
         })
 
@@ -919,45 +919,45 @@ class PrisonerNumberCreditListTestCase(SecurityCreditListTestCase):
 class AmountPatternCreditListTestCase(SecurityCreditListTestCase):
 
     def test_exclude_amount_pattern_filter_endswith_multiple(self):
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'exclude_amount__endswith': ['000', '500'],
         })
 
     def test_exclude_amount_pattern_filter_regex(self):
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'exclude_amount__regex': '^.*000$',
         })
 
     def test_amount_pattern_filter_endswith(self):
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'amount__endswith': '000',
         })
 
     def test_amount_pattern_filter_endswith_multiple(self):
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'amount__endswith': ['000', '500'],
         })
 
     def test_amount_pattern_filter_regex(self):
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'amount__regex': '^.*000$',
         })
 
     def test_amount_pattern_filter_less_than_regex(self):
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'amount__lte': 5000,
             'amount__regex': '^.*00$',
         })
 
     def test_amount_pattern_filter_range(self):
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'amount__gte': 5000,
             'amount__lte': 10000,
         })
 
     def test_amount_pattern_filter_exact(self):
         random_amount = random.choice(self.credits).amount
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'amount': random_amount,
         })
 
@@ -965,7 +965,7 @@ class AmountPatternCreditListTestCase(SecurityCreditListTestCase):
 class NoPrisonCreditListTestCase(SecurityCreditListTestCase):
 
     def test_no_prison_filter(self):
-        self._test_response_with_filters(filters={
+        self._test_response_with_filters({
             'prison__isnull': 'True'
         })
 
@@ -1166,7 +1166,7 @@ class CreditsGroupedByCreditedListTestCase(
     def _get_url(self):
         return reverse('credit-processed-list')
 
-    def _get_credits_grouped_by_credited_list(self, filters={}):
+    def _get_credits_grouped_by_credited_list(self, filters):
         logged_in_user = self._get_authorised_user()
 
         response = self.client.get(
@@ -1178,7 +1178,7 @@ class CreditsGroupedByCreditedListTestCase(
         return response
 
     def test_credits_grouped_by_credited_list(self):
-        response = self._get_credits_grouped_by_credited_list()
+        response = self._get_credits_grouped_by_credited_list({})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         credits = [
