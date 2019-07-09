@@ -98,7 +98,7 @@ class FormFilter(admin.FieldListFilter):
         query_active = False
         fields_to_render = self.get_form_fields()
 
-        for param, field in fields_to_render:
+        for param, __ in fields_to_render:
             if param in cl.params:
                 query_active = True
                 break
@@ -110,7 +110,7 @@ class FormFilter(admin.FieldListFilter):
                 )
 
         initial = {}
-        for name, field in fields_to_render:
+        for name, __ in fields_to_render:
             initial[name] = cl.params.get(name, '')
 
         form = AdminFilterForm(extra_fields=fields_to_render, initial=initial)

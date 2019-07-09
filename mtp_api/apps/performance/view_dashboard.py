@@ -179,7 +179,7 @@ class PerformanceDashboardView(AdminViewMixin, TemplateView):
         tz = timezone.get_current_timezone()
         start_month, start_month_year = get_next_month(month, year)
 
-        for count in range(12):
+        for _ in range(12):
             next_month, next_month_year = start_month, start_month_year
             start_month, start_month_year = get_previous_month(start_month, start_month_year)
             start_of_month = make_first_of_month(start_month, start_month_year, tz)

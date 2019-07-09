@@ -275,7 +275,7 @@ class UpdateRefundTransactionsTestCase(
         transactions = generate_transactions(transaction_batch=tot)
 
         data_list = []
-        for i, trans in enumerate(transactions):
+        for _, trans in enumerate(transactions):
             refund = False
             if trans.credit and trans.credit.refund_pending:
                 refund = True
