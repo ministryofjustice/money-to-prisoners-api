@@ -1,3 +1,6 @@
+from functools import reduce
+from operator import or_
+
 from django import forms
 from django.db.models import Q
 from django.utils import six
@@ -5,6 +8,7 @@ from django.utils.dateparse import parse_datetime
 from django.utils.formats import get_format
 from django.utils.functional import lazy
 import django_filters
+from django_filters.constants import EMPTY_VALUES
 import django_filters.fields
 import django_filters.utils
 from rest_framework.filters import OrderingFilter
@@ -56,6 +60,39 @@ class MultipleFieldCharFilter(django_filters.CharFilter):
     @label.setter
     def label(self, value):
         self._label = value
+
+
+class SplitTextInMultipleFieldsFilter(django_filters.CharFilter):
+    """
+    Filters using a text search.
+    Works by splitting the input into words and matches any object
+    that have *all* of these words in *any* of the fields in "field_names".
+    """
+    def __init__(self, *args, field_names=(), **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if not field_names:
+            raise ValueError('The field_names keyword argument must be specified')
+
+        self.field_names = field_names
+
+    def filter(self, qs, value):
+        if value in EMPTY_VALUES:
+            return qs
+
+        if self.distinct:
+            qs = qs.distinct()
+
+        filters = []
+        for word in value.split():
+            word_qs = [
+                Q(**{
+                    f'{field}__{self.lookup_expr}': word,
+                })
+                for field in self.field_names
+            ]
+            filters.append(reduce(or_, word_qs))
+        return self.get_method(qs)(*filters)
 
 
 class BlankStringFilter(django_filters.BooleanFilter):

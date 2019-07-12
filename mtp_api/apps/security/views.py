@@ -7,7 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.settings import api_settings
 
-from core.filters import MultipleFieldCharFilter, MultipleValueFilter
+from core.filters import MultipleFieldCharFilter, MultipleValueFilter, SplitTextInMultipleFieldsFilter
 from core.permissions import ActionsBasedPermissions
 from credit.constants import CREDIT_SOURCE
 from credit.views import GetCredits
@@ -40,6 +40,15 @@ class SenderCreditSourceFilter(django_filters.ChoiceFilter):
 
 
 class SenderProfileListFilter(django_filters.FilterSet):
+    search = SplitTextInMultipleFieldsFilter(
+        field_names=(
+            'bank_transfer_details__sender_name',
+            'debit_card_details__cardholder_name__name',
+            'debit_card_details__sender_email__email',
+        ),
+        lookup_expr='icontains',
+    )
+
     sender_name = MultipleFieldCharFilter(
         field_name=(
             'bank_transfer_details__sender_name',
