@@ -28,7 +28,7 @@ from prison.models import Prison
 class MonitoredProfileFilter(django_filters.BooleanFilter):
     def filter(self, qs, value):
         if value:
-            return qs.get_monitored_disbursements(self.parent.request.user)
+            return qs.monitored_by(self.parent.request.user)
         return qs
 
 

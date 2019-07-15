@@ -33,7 +33,7 @@ class CreditQuerySet(models.QuerySet):
             .order_by('received_at_date') \
             .annotate(amount_per_day=models.Sum('amount'))
 
-    def get_monitored_credits(self, user):
+    def monitored_by(self, user):
         return self.filter(
             Q(sender_profile__bank_transfer_details__sender_bank_account__monitoring_users=user) |
             Q(sender_profile__debit_card_details__monitoring_users=user) |

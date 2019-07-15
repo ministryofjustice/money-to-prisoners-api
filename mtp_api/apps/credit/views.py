@@ -142,7 +142,7 @@ class PostcodeFilter(django_filters.CharFilter):
 class MonitoredProfileFilter(django_filters.BooleanFilter):
     def filter(self, qs, value):
         if value:
-            return qs.get_monitored_credits(self.parent.request.user)
+            return qs.monitored_by(self.parent.request.user)
         return qs
 
 

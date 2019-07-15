@@ -33,7 +33,7 @@ class DisbursementQuerySet(models.QuerySet):
             .order_by('created_date') \
             .annotate(amount_per_day=models.Sum('amount'))
 
-    def get_monitored_disbursements(self, user):
+    def monitored_by(self, user):
         return self.filter(
             Q(recipient_profile__bank_transfer_details__recipient_bank_account__monitoring_users=user) |
             Q(prisoner_profile__monitoring_users=user)
