@@ -156,7 +156,7 @@ class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertGreater(response.data['count'], 0)
 
         for event in response.data['results']:
-            self.assertNotEqual(event['credit'], None)
+            self.assertIsNotNone(event['credit_id'])
 
     def test_get_events_grouped_by_profile(self):
         generate_payments(payment_batch=200, days_of_history=5)

@@ -1,17 +1,14 @@
 from rest_framework import serializers
 
-from credit.serializers import SecurityCreditSerializer
-from disbursement.serializers import DisbursementSerializer
 from notification.models import Event
 from security.serializers import (
-    PrisonerProfileSerializer, SenderProfileSerializer,
-    RecipientProfileSerializer
+    PrisonerProfileSerializer, SenderProfileSerializer, RecipientProfileSerializer,
 )
 
 
 class EventSerializer(serializers.ModelSerializer):
-    credit = SecurityCreditSerializer(source='credit_event.credit')
-    disbursement = DisbursementSerializer(source='disbursement_event.disbursement')
+    credit_id = serializers.IntegerField(source='credit_event.credit.id')
+    disbursement_id = serializers.IntegerField(source='disbursement_event.disbursement.id')
     sender_profile = SenderProfileSerializer(
         source='sender_profile_event.sender_profile'
     )
@@ -26,8 +23,8 @@ class EventSerializer(serializers.ModelSerializer):
         model = Event
         fields = (
             'id',
-            'credit',
-            'disbursement',
+            'credit_id',
+            'disbursement_id',
             'sender_profile',
             'recipient_profile',
             'prisoner_profile',
