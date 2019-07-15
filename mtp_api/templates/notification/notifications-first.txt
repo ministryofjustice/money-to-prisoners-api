@@ -1,0 +1,13 @@
+{% extends 'notification/notifications.txt' %}
+{% load i18n %}
+
+{% block preamble %}{% trans 'We’ve updated the prisoner money intelligence tool.' %}
+
+{% trans 'At the moment, you can monitor payment sources or prisoners in one or many prisons.' %}
+
+{% trans 'From today, we’ll notify you by daily email when any actions take place on a payment source or prisoner you’re monitoring.' %}
+
+{% trans 'When there is no new activity, we won’t email you.' %}
+---
+
+{% blocktrans trimmed with date=period_start|date:'d/m/Y' %}View your notifications for payment sources or prisoners you’re monitoring for {{ date }}.{% endblocktrans %}{% endblock %}

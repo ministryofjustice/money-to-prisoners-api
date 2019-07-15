@@ -1,0 +1,23 @@
+{% load i18n %}
+
+{% blocktrans trimmed with name=user.get_full_name %}Dear {{ name }},{% endblocktrans %}
+
+{% block preamble %}{% blocktrans trimmed with date=period_start|date:'d/m/Y' %}Here are your notifications for payment sources or prisoners you’re monitoring for {{ date }}.{% endblocktrans %}{% endblock %}
+
+{% blocktrans trimmed count count=event_group.transaction_count %}You have {{ count }} notification{% plural %}You have {{ count }} notifications{% endblocktrans %}
+{{ notifications_url }}
+
+{% if event_group.senders %}* {% trans 'Payment sources' %} *
+{% for profile in event_group.senders %}{{ profile.description }} – {% blocktrans trimmed count count=profile.transaction_count %}{{ count }} transaction{% plural %}{{ count }} transactions{% endblocktrans %}
+{% endfor %}{% endif %}
+{% if event_group.prisoners %}* {% trans 'Prisoners' %} *
+{% for profile in event_group.prisoners %}{{ profile.description }} – {% blocktrans trimmed count count=profile.transaction_count %}{{ count }} transaction{% plural %}{{ count }} transactions{% endblocktrans %}
+{% endfor %}{% endif %}
+{% trans 'You can turn off these email notifications from your settings screen in the intelligence tool.' %}
+{{ settings_url }}
+
+{% trans 'Any feedback you can give us helps improve the tool further.' %}
+{{ feedback_url }}
+
+{% trans 'Kind regards' %},
+{% trans 'Prisoner money team' %}
