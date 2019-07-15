@@ -40,4 +40,5 @@ urlpatterns = [
     url(r'^', include(sender_router.urls)),
     url(r'^', include(recipient_router.urls)),
     url(r'^', include(prisoner_router.urls)),
+    url(r'^monitored/$', views.MonitoredView.as_view(), name='monitored-list'),
 ]

@@ -3,7 +3,7 @@ from django.db.models.fields import BooleanField
 from django.shortcuts import get_object_or_404
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, mixins, viewsets, status, decorators
+from rest_framework import decorators, filters, mixins, status, views, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.settings import api_settings
@@ -17,6 +17,7 @@ from mtp_auth.permissions import NomsOpsClientIDPermissions
 from prison.models import Prison
 from security.models import (
     SenderProfile, PrisonerProfile, RecipientProfile, SavedSearch,
+    BankAccount, DebitCardSenderDetails,
 )
 from security.permissions import SecurityProfilePermissions
 from security.serializers import (
@@ -414,6 +415,20 @@ class RecipientProfileDisbursementsView(GetDisbursementsView):
 
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+
+
+class MonitoredView(views.APIView):
+    # this will return monitored profiles once needed by the security tool
+    permission_classes = (IsAuthenticated, NomsOpsClientIDPermissions)
+
+    def get(self, request):
+        return Response({
+            'count': (
+                BankAccount.objects.filter(monitoring_users=request.user).count() +
+                DebitCardSenderDetails.objects.filter(monitoring_users=request.user).count() +
+                PrisonerProfile.objects.filter(monitoring_users=request.user).count()
+            ),
+        })
 
 
 class SavedSearchView(
