@@ -1,4 +1,5 @@
 from datetime import timedelta
+import unittest
 
 from django.core.management import call_command
 from django.urls import reverse
@@ -8,7 +9,7 @@ from rest_framework.test import APITestCase
 
 from notification.constants import EMAIL_FREQUENCY
 from notification.models import Event, EmailNotificationPreferences
-from notification.rules import RULES
+from notification.rules import RULES, ENABLED_RULES
 from core.tests.utils import make_test_users
 from credit.models import Credit
 from disbursement.constants import DISBURSEMENT_RESOLUTION
@@ -37,7 +38,7 @@ class ListRuleViewTestCase(AuthTestCaseMixin, APITestCase):
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['count'], len(RULES))
+        self.assertEqual(response.data['count'], len(ENABLED_RULES))
 
 
 class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):
@@ -80,6 +81,7 @@ class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):
             triggering_credits.count() + triggering_disbursements.count()
         )
 
+    @unittest.skip('rules disabled')
     def test_get_events_filtered_by_rules(self):
         generate_transactions(transaction_batch=100, days_of_history=5)
         generate_payments(payment_batch=100, days_of_history=5)

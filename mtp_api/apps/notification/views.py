@@ -11,7 +11,7 @@ from core.filters import IsoDateTimeFilter, SafeOrderingFilter, MultipleValueFil
 from core.permissions import ActionsBasedPermissions
 from notification.constants import EMAIL_FREQUENCY
 from notification.models import Event, EmailNotificationPreferences
-from notification.rules import RULES
+from notification.rules import RULES, ENABLED_RULES
 from notification.serializers import EventSerializer
 from prison.models import Prison
 
@@ -98,6 +98,7 @@ class RuleView(views.APIView):
         rules = [
             {'code': rule, 'description': RULES[rule].description}
             for rule in RULES
+            if rule in ENABLED_RULES
         ]
         return Response({
             'count': len(rules),

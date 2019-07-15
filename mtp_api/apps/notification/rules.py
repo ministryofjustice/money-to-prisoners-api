@@ -4,26 +4,29 @@ from django.utils.translation import gettext_lazy as _
 from credit.models import Credit
 from disbursement.models import Disbursement
 from notification.models import (
-    Event, CreditEvent, DisbursementEvent, SenderProfileEvent,
-    RecipientProfileEvent, PrisonerProfileEvent
+    Event, CreditEvent, DisbursementEvent,
+    SenderProfileEvent, RecipientProfileEvent, PrisonerProfileEvent,
 )
 from security.models import SenderProfile, RecipientProfile, PrisonerProfile
 from transaction.utils import format_amount
 
-CREDIT_RULES = ['MONP', 'MONS', 'NWN', 'HA']
-DISBURSEMENT_RULES = ['MONP', 'MONR', 'NWN', 'HA']
+ENABLED_CREDIT_RULES = ['MONP', 'MONS']
+ENABLED_DISBURSEMENT_RULES = ['MONP']
+ENABLED_RULES = set(ENABLED_CREDIT_RULES) | set(ENABLED_DISBURSEMENT_RULES)
 
 
 def create_credit_notifications(credit):
-    for rule in CREDIT_RULES:
-        if RULES[rule].triggered(credit):
-            RULES[rule].create_events(credit)
+    for rule in ENABLED_CREDIT_RULES:
+        rule = RULES[rule]
+        if rule.triggered(credit):
+            rule.create_events(credit)
 
 
 def create_disbursement_notifications(disbursement):
-    for rule in DISBURSEMENT_RULES:
-        if RULES[rule].triggered(disbursement):
-            RULES[rule].create_events(disbursement)
+    for rule in ENABLED_DISBURSEMENT_RULES:
+        rule = RULES[rule]
+        if rule.triggered(disbursement):
+            rule.create_events(disbursement)
 
 
 class BaseRule:
@@ -126,6 +129,7 @@ RULES = {
         _('Credits for senders you are monitoring'),
         profile='sender_profile',
     ),
+    # disabled rules
     'MONR': MonitoredRule(
         'MONR',
         _('Disbursements for recipients you are monitoring'),
