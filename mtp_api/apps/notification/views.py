@@ -1,36 +1,44 @@
-from collections import OrderedDict
-
-from django.db.models import Subquery, OuterRef, F, Q
+from django.db.models import Q
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import mixins, viewsets, views, status
+from rest_framework import mixins, status, views, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from core.filters import IsoDateTimeFilter, SafeOrderingFilter, MultipleValueFilter
+from core.models import TruncLocalDate
 from core.permissions import ActionsBasedPermissions
+from mtp_auth.permissions import NomsOpsClientIDPermissions
 from notification.constants import EMAIL_FREQUENCY
 from notification.models import Event, EmailNotificationPreferences
 from notification.rules import RULES, ENABLED_RULES
 from notification.serializers import EventSerializer
-from prison.models import Prison
 
 
-class GroupByFilter(django_filters.CharFilter):
-    def filter(self, qs, value):
-        if value in [
-            'sender_profile', 'recipient_profile', 'prisoner_profile',
-            'credit', 'disbursement'
-        ]:
-            group_field = '%s_event__%s' % (value, value)
-            qs = qs.annotate(
-                latest=Subquery(
-                    qs.filter(
-                        **{group_field: OuterRef(group_field)}
-                    ).order_by('-triggered_at').values('id')[:1]
-                )
-            ).filter(id=F('latest'))
-        return qs
+class EventPagesView(views.APIView):
+    permission_classes = (IsAuthenticated, NomsOpsClientIDPermissions)
+
+    def get(self, request):
+        filters = Q(user=self.request.user) | Q(user__isnull=True)
+        rules = request.query_params.getlist('rule')
+        if rules:
+            filters &= Q(rule__in=rules)
+        offset = int(request.query_params.get('offset', 0))
+        limit = int(request.query_params.get('limit', 25))
+
+        queryset = Event.objects \
+            .annotate(triggered_at_date=TruncLocalDate('triggered_at')) \
+            .filter(filters) \
+            .values('triggered_at_date') \
+            .order_by('-triggered_at_date') \
+            .distinct()
+        count = queryset.count()
+        results = list(queryset[offset:offset + limit])
+        return Response({
+            'newest': results[0]['triggered_at_date'] if results else None,
+            'oldest': results[-1]['triggered_at_date'] if results else None,
+            'count': count,
+        })
 
 
 class EventViewFilter(django_filters.FilterSet):
@@ -40,30 +48,6 @@ class EventViewFilter(django_filters.FilterSet):
     triggered_at__gte = IsoDateTimeFilter(
         field_name='triggered_at', lookup_expr='gte'
     )
-    for_credit = django_filters.BooleanFilter(
-        field_name='credit_event', lookup_expr='isnull', exclude=True
-    )
-    for_disbursement = django_filters.BooleanFilter(
-        field_name='disbursement_event', lookup_expr='isnull', exclude=True
-    )
-    for_sender_profile = django_filters.BooleanFilter(
-        field_name='sender_profile_event', lookup_expr='isnull', exclude=True
-    )
-    for_recipient_profile = django_filters.BooleanFilter(
-        field_name='recipient_profile_event', lookup_expr='isnull', exclude=True
-    )
-    for_prisoner_profile = django_filters.BooleanFilter(
-        field_name='prisoner_profile_event', lookup_expr='isnull', exclude=True
-    )
-    group_by = GroupByFilter()
-    credit_prison = django_filters.ModelMultipleChoiceFilter(
-        field_name='credit_event__credit__prison',
-        queryset=Prison.objects.all()
-    )
-    disbursement_prison = django_filters.ModelMultipleChoiceFilter(
-        field_name='disbursement_event__disbursement__prison',
-        queryset=Prison.objects.all()
-    )
     rule = MultipleValueFilter()
 
     class Meta:
@@ -72,18 +56,16 @@ class EventViewFilter(django_filters.FilterSet):
 
 
 class EventView(mixins.ListModelMixin, viewsets.GenericViewSet):
-    queryset = Event.objects.all().order_by('id').prefetch_related(
-        'credit_event__credit',
-        'disbursement_event__disbursement',
+    queryset = Event.objects.all().order_by('-triggered_at', 'id').prefetch_related(
+        'prisoner_profile_event__prisoner_profile',
         'sender_profile_event__sender_profile',
         'recipient_profile_event__recipient_profile',
-        'prisoner_profile_event__prisoner_profile',
     )
     serializer_class = EventSerializer
     filter_backends = (DjangoFilterBackend, SafeOrderingFilter,)
     filter_class = EventViewFilter
 
-    permission_classes = (IsAuthenticated, ActionsBasedPermissions)
+    permission_classes = (IsAuthenticated, ActionsBasedPermissions, NomsOpsClientIDPermissions)
 
     def get_queryset(self):
         return self.queryset.filter(

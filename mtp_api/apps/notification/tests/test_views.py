@@ -18,7 +18,7 @@ from disbursement.tests.utils import generate_disbursements
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from payment.tests.utils import generate_payments
 from prison.tests.utils import load_random_prisoner_locations
-from security.models import PrisonerProfile
+from security.models import PrisonerProfile, SenderProfile
 from transaction.tests.utils import generate_transactions
 
 
@@ -135,106 +135,7 @@ class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):
             Event.objects.filter(triggered_at__gte=gte, triggered_at__lt=lt).count()
         )
 
-    def test_get_events_filtered_by_trigger(self):
-        generate_transactions(transaction_batch=100, days_of_history=5)
-        generate_payments(payment_batch=100, days_of_history=5)
-        generate_disbursements(disbursement_batch=100, days_of_history=5)
-        user = self.security_staff[0]
-
-        for credit in Credit.objects.all():
-            if RULES['HA'].triggered(credit):
-                RULES['HA'].create_events(credit)
-        for disbursement in Disbursement.objects.filter(resolution=DISBURSEMENT_RESOLUTION.SENT):
-            if RULES['HA'].triggered(disbursement):
-                RULES['HA'].create_events(disbursement)
-
-        response = self.client.get(
-            reverse('event-list'),
-            {'for_credit': True, 'limit': 1000},
-            format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertGreater(response.data['count'], 0)
-
-        for event in response.data['results']:
-            self.assertIsNotNone(event['credit_id'])
-
-    def test_get_events_grouped_by_profile(self):
-        generate_payments(payment_batch=200, days_of_history=5)
-        call_command('update_security_profiles')
-        user = self.security_staff[0]
-        for i, prisoner_profile in enumerate(PrisonerProfile.objects.filter(credits__isnull=False)):
-            prisoner_profile.monitoring_users.add(self.security_staff[i % 2])
-        for credit in Credit.objects.all():
-            if RULES['MONP'].triggered(credit):
-                RULES['MONP'].create_events(credit)
-
-        response = self.client.get(
-            reverse('event-list'),
-            {'rule': 'MONP', 'group_by': 'prisoner_profile', 'limit': 1000},
-            format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertGreater(response.data['count'], 0)
-
-        latest = {}
-        for event in Event.objects.filter(rule='MONP', user=user):
-            profile_id = event.prisoner_profile_event.prisoner_profile.id
-            if profile_id not in latest:
-                latest[profile_id] = event
-            else:
-                if latest[profile_id].triggered_at < event.triggered_at:
-                    latest[profile_id] = event
-        latest_ids = [e.id for e in latest.values()]
-
-        self.assertEqual(response.data['count'], len(latest_ids))
-        for event in response.data['results']:
-            if event['id'] not in latest_ids:
-                self.fail()
-
-    def test_get_events_grouped_by_profile_and_filtered(self):
-        generate_payments(payment_batch=200, days_of_history=5)
-        call_command('update_security_profiles')
-        user = self.security_staff[0]
-        for i, prisoner_profile in enumerate(PrisonerProfile.objects.filter(credits__isnull=False)):
-            prisoner_profile.monitoring_users.add(self.security_staff[i % 2])
-        for credit in Credit.objects.all():
-            if RULES['MONP'].triggered(credit):
-                RULES['MONP'].create_events(credit)
-
-        lt = timezone.now() - timedelta(days=2)
-        gte = lt - timedelta(days=3)
-        response = self.client.get(
-            reverse('event-list'),
-            {'rule': 'MONP', 'group_by': 'prisoner_profile',
-             'triggered_at__lt': lt, 'triggered_at__gte': gte, 'limit': 1000},
-            format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertGreater(response.data['count'], 0)
-
-        latest = {}
-        for event in Event.objects.filter(
-            rule='MONP', user=user,
-            triggered_at__gte=gte, triggered_at__lt=lt,
-        ):
-            profile_id = event.prisoner_profile_event.prisoner_profile.id
-            if profile_id not in latest:
-                latest[profile_id] = event
-            else:
-                if latest[profile_id].triggered_at < event.triggered_at:
-                    latest[profile_id] = event
-        latest_ids = [e.id for e in latest.values()]
-
-        self.assertEqual(response.data['count'], len(latest_ids))
-        for event in response.data['results']:
-            if event['id'] not in latest_ids:
-                self.fail()
-
-    def test_get_monitoring_events_for_user(self):
+    def test_get_prisoner_monitoring_events_for_user(self):
         generate_payments(payment_batch=200, days_of_history=5)
         call_command('update_security_profiles')
         user = self.security_staff[0]
@@ -242,7 +143,6 @@ class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):
         prisoner_profile = PrisonerProfile.objects.filter(
             credits__isnull=False,
         ).first()
-
         prisoner_profile.monitoring_users.add(user)
 
         for credit in Credit.objects.all():
@@ -264,6 +164,46 @@ class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):
 
         for event in response.data['results']:
             if event['rule'] == 'MONP':
+                self.assertEqual(Event.objects.get(id=event['id']).user, user)
+            else:
+                self.assertEqual(Event.objects.get(id=event['id']).user, None)
+
+    def test_get_sender_monitoring_events_for_user(self):
+        generate_payments(payment_batch=200, days_of_history=5)
+        call_command('update_security_profiles')
+        user = self.security_staff[0]
+
+        sender_profile = SenderProfile.objects.filter(
+            credits__isnull=False,
+        ).first()
+        debit_card = sender_profile.debit_card_details.first()
+        bank_transfer = sender_profile.bank_transfer_details.first()
+        if debit_card:
+            debit_card.monitoring_users.add(user)
+        elif bank_transfer:
+            bank_transfer.sender_bank_account.monitoring_users.add(user)
+        else:
+            self.fail('sender profile incomplete')
+
+        for credit in Credit.objects.all():
+            if RULES['MONS'].triggered(credit):
+                RULES['MONS'].create_events(credit)
+
+        response = self.client.get(
+            reverse('event-list'), {'limit': 1000}, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreater(response.data['count'], 0)
+
+        self.assertEqual(
+            response.data['count'],
+            Event.objects.filter(user__isnull=True).count() +
+            Event.objects.filter(user=user).count()
+        )
+
+        for event in response.data['results']:
+            if event['rule'] == 'MONS':
                 self.assertEqual(Event.objects.get(id=event['id']).user, user)
             else:
                 self.assertEqual(Event.objects.get(id=event['id']).user, None)

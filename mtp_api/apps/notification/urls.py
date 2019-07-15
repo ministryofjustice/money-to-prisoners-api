@@ -8,6 +8,7 @@ router.register(r'events', views.EventView)
 router.register(r'emailpreferences', views.EmailPreferencesView, basename='emailpreferences')
 
 urlpatterns = [
+    url(r'^events/pages/$', views.EventPagesView.as_view(), name='event-pages'),
     url(r'^', include(router.urls)),
     url(r'^rules/$', views.RuleView.as_view(), name='rule-list'),
 ]
