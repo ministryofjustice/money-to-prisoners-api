@@ -72,14 +72,28 @@ class TruncUtcDate(TruncBase):
     output_field = models.DateField()
 
     def as_sql(self, compiler, connection):
-        # Cast to date rather than truncate to date.
+        # Cast to UTC date rather than truncate to date.
         lhs, lhs_params = compiler.compile(self.lhs)
         tzname = 'utc' if settings.USE_TZ else None
         sql = connection.ops.datetime_cast_date_sql(lhs, tzname)
         return sql, lhs_params
 
 
+class TruncLocalDate(TruncBase):
+    kind = 'date'
+    lookup_name = 'localdate'
+    output_field = models.DateField()
+
+    def as_sql(self, compiler, connection):
+        # Cast to local date rather than truncate to date.
+        lhs, lhs_params = compiler.compile(self.lhs)
+        tzname = settings.TIME_ZONE if settings.USE_TZ else None
+        sql = connection.ops.datetime_cast_date_sql(lhs, tzname)
+        return sql, lhs_params
+
+
 models.DateTimeField.register_lookup(TruncUtcDate)
+models.DateTimeField.register_lookup(TruncLocalDate)
 
 
 class FileDownload(TimeStampedModel):
