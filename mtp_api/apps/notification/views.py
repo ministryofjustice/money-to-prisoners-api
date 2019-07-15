@@ -92,23 +92,19 @@ class EventView(mixins.ListModelMixin, viewsets.GenericViewSet):
 
 
 class RuleView(views.APIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, NomsOpsClientIDPermissions)
 
-    def get(self, request, *args, **kwargs):
-        rules = []
-        for rule in RULES:
-            rule_dict = {
-                'code': rule,
-                'description': RULES[rule].description
-            }
-            rules.append(rule_dict)
-
-        return Response(OrderedDict([
-            ('count', len(rules)),
-            ('next', None),
-            ('previous', None),
-            ('results', rules)
-        ]))
+    def get(self, _request):
+        rules = [
+            {'code': rule, 'description': RULES[rule].description}
+            for rule in RULES
+        ]
+        return Response({
+            'count': len(rules),
+            'next': None,
+            'previous': None,
+            'results': rules,
+        })
 
 
 class EmailPreferencesView(viewsets.ViewSet):
