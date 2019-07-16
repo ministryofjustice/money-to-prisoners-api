@@ -54,7 +54,9 @@ class ScheduledCommand(models.Model):
         return timezone.now() >= self.next_execution
 
     def update_next_execution(self):
-        self.next_execution = timezone.now() + timedelta(seconds=CronTab(self.cron_entry).next())
+        self.next_execution = timezone.now() + timedelta(
+            seconds=CronTab(self.cron_entry).next(),  # noqa B305
+        )
 
     def __str__(self):
         return '%s %s' % (self.name, self.arg_string)

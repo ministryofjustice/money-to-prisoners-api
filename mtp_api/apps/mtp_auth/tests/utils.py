@@ -42,4 +42,4 @@ class AuthTestCaseMixin:
         token = self._get_http_authorization_token_for_user(
             user, client_id=client_id
         )
-        return "Bearer {0}".format(token)
+        return 'Bearer {0}'.format(token)

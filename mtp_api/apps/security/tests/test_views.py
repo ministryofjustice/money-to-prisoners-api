@@ -45,7 +45,8 @@ class SecurityViewTestCase(APITestCase, AuthTestCaseMixin):
     def _get_authorised_user(self):
         return self.security_staff[0]
 
-    def _get_list(self, user, path_params=[], **filters):
+    def _get_list(self, user, path_params=None, **filters):
+        path_params = path_params or []
         url = self._get_url(*path_params)
 
         if 'limit' not in filters:

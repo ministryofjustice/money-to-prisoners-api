@@ -283,7 +283,7 @@ def get_credit_chart_data():
     max_value = 0
 
     since, until = monday_midnight, now
-    for i in range(week_count):
+    for __ in range(week_count):
         aggregates = credit_queryset.filter(received_at__range=(since, until)) \
             .aggregate(transactions=models.Count('transaction'), payments=models.Count('payment'))
         transaction_count = aggregates.get('transactions') or 0

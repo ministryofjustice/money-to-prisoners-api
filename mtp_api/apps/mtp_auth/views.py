@@ -565,7 +565,7 @@ class LoginStatsView(AdminViewMixin, TemplateView):
                 month_start = month_start.replace(month=month)
 
     def get_login_counts(self, application, current_month_progress, months):
-        login_count_query = '''
+        login_count_query = """
             WITH users AS (
               SELECT user_id, COUNT(*) AS login_count
               FROM mtp_auth_login
@@ -578,7 +578,7 @@ class LoginStatsView(AdminViewMixin, TemplateView):
             LEFT OUTER JOIN mtp_auth_prisonusermapping_prisons ON
               mtp_auth_prisonusermapping_prisons.prisonusermapping_id = mtp_auth_prisonusermapping.id
             GROUP BY prison_id
-        '''
+        """
         try:
             application = Application.objects.get(client_id=application)
         except Application.DoesNotExist:

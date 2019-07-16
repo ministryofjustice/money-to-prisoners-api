@@ -85,7 +85,7 @@ class TransactionRejectsRequestsWithoutPermissionTestMixin:
         )
 
         url = self._get_url()
-        for user, http_auth_header in users_data:
+        for _, http_auth_header in users_data:
             verb_callable = getattr(self.client, self.ENDPOINT_VERB)
             response = verb_callable(
                 url, format='json',

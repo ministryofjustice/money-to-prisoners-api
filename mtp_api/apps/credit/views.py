@@ -1,5 +1,4 @@
 from functools import reduce
-import logging
 import re
 
 from django.contrib.auth import get_user_model
@@ -38,8 +37,6 @@ from mtp_auth.permissions import (
 from prison.models import Prison
 
 User = get_user_model()
-
-logger = logging.getLogger('mtp')
 
 
 class CreditTextSearchFilter(django_filters.CharFilter):

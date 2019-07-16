@@ -120,7 +120,7 @@ class ReconcileTransactionsView(generics.GenericAPIView):
             parsed_start_date = parse_datetime(start_date)
             parsed_end_date = parse_datetime(end_date)
         except ValueError:
-            return Response(data={'errors': _("Invalid date format")},
+            return Response(data={'errors': _('Invalid date format')},
                             status=400)
 
         with atomic():
