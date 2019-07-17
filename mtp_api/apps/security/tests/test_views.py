@@ -4,6 +4,7 @@ from itertools import chain
 from django.core.management import call_command
 from django.db.models import Count, Q
 from django.urls import reverse
+from django.utils.crypto import get_random_string
 from rest_framework import status as http_status
 from rest_framework.test import APITestCase
 
@@ -34,13 +35,12 @@ class SecurityViewTestCase(APITestCase, AuthTestCaseMixin):
         return self.prison_clerks
 
     def _get_url(self, *args, **kwargs):
-        return reverse('senderprofile-list')
+        raise NotImplementedError
 
     def _get_authorised_user(self):
         return self.security_staff[0]
 
-    def _get_list(self, user, path_params=None, **filters):
-        path_params = path_params or []
+    def _get_list(self, user, path_params=(), **filters):
         url = self._get_url(*path_params)
 
         if 'limit' not in filters:
@@ -58,6 +58,79 @@ class SenderProfileListTestCase(SecurityViewTestCase):
 
     def _get_url(self, *args, **kwargs):
         return reverse('senderprofile-list')
+
+    def test_search_by_search_param(self):
+        """
+        Test for when the search param `search` is used.
+
+        Checks that the API returns the senders with the supplied search value in
+            the sender name of a transfer bank details object
+            OR
+            the cardholder name of a debit card details object
+            OR
+            the sender email of a debit card details object
+        """
+        # change the loaded data so that the test matches exactly 3 records
+        term_part1 = get_random_string(10)
+        term_part2 = get_random_string(10)
+        term = f'{term_part1} {term_part2}'
+
+        profiles_qs = SenderProfile.objects.annotate(
+            bank_transfer_count=Count('bank_transfer_details'),
+            debit_card_count=Count('debit_card_details'),
+        ).order_by('?')
+
+        bank_transfer_sender = profiles_qs.filter(
+            bank_transfer_count__gt=0,
+            debit_card_count=0,
+        ).first()
+        bank_transfer_details = bank_transfer_sender.bank_transfer_details.first()
+        bank_transfer_details.sender_name = f'{term}Junior'.upper()
+        bank_transfer_details.save()
+
+        debit_card_senders = list(
+            profiles_qs.filter(
+                bank_transfer_count=0,
+                debit_card_count__gt=0,
+            ).distinct()[:3]
+        )
+
+        debit_card_sender = debit_card_senders[0]
+        debit_card_details = debit_card_sender.debit_card_details.first()
+        cardholder = debit_card_details.cardholder_names.first()
+        cardholder.name = f'Mr{term_part1}an {term_part2}'
+        cardholder.save()
+
+        debit_card_sender = debit_card_senders[1]
+        debit_card_details = debit_card_sender.debit_card_details.first()
+        cardholder = debit_card_details.cardholder_names.first()
+        sender_email = debit_card_details.sender_emails.first()
+        cardholder.name = f'{term_part1}'
+        cardholder.save()
+        sender_email.email = f'{term_part2}@example.com'
+        sender_email.save()
+
+        # this should not be matched as only term_part1 is present
+        debit_card_sender = debit_card_senders[2]
+        debit_card_details = debit_card_sender.debit_card_details.first()
+        cardholder = debit_card_details.cardholder_names.first()
+        cardholder.name = f'Mr{term_part1}'
+        cardholder.save()
+
+        response_data = self._get_list(
+            self._get_authorised_user(),
+            search=term,
+        )['results']
+
+        self.assertEqual(len(response_data), 3)
+        self.assertEqual(
+            {item['id'] for item in response_data},
+            {
+                bank_transfer_sender.id,
+                debit_card_senders[0].id,
+                debit_card_senders[1].id,
+            },
+        )
 
     def test_filter_by_prisoner_count(self):
         data = self._get_list(self._get_authorised_user(), prisoner_count__gte=3)['results']
