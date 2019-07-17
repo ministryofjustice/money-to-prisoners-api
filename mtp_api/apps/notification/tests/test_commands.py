@@ -12,7 +12,10 @@ from credit.models import Credit
 from disbursement.models import Disbursement
 from disbursement.tests.utils import generate_disbursements
 from notification.constants import EMAIL_FREQUENCY
-from notification.management.commands.send_notification_emails import get_events, group_events, EMAILS_STARTED_FLAG
+from notification.management.commands.send_notification_emails import (
+    EMAILS_STARTED_FLAG,
+    get_events, group_events, summarise_group,
+)
 from notification.models import Event, EmailNotificationPreferences
 from payment.models import Payment
 from payment.tests.utils import generate_payments
@@ -159,7 +162,7 @@ class SendNotificationEmailsTestCase(TestCase):
         call_command('update_security_profiles')
 
         events = get_events(period_start, period_end)
-        event_group = group_events(events, user)
+        event_group = summarise_group(group_events(events, user))
         self.assertEqual(event_group['transaction_count'], 4)
         self.assertEqual(len(event_group['senders']), 2)
         self.assertEqual(len(event_group['prisoners']), 2)
