@@ -5,6 +5,7 @@ from django.utils.translation import gettext_lazy as _
 from extended_choices import Choices
 
 
+# NB: only DAILY is currently supported in noms-ops and email-sending management command
 EMAIL_FREQUENCY = Choices(
     ('NEVER', 'never', _('Never')),
     ('DAILY', 'daily', _('Daily')),
@@ -28,3 +29,6 @@ def get_notification_period(email_frequency):
     elif email_frequency == EMAIL_FREQUENCY.MONTHLY:
         first = today.replace(day=1)
         return (first - timedelta(days=1)).replace(day=1), first
+    elif email_frequency == EMAIL_FREQUENCY.NEVER:
+        return today, today - timedelta(days=1)
+    raise KeyError
