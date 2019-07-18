@@ -23,6 +23,8 @@ class Event(models.Model):
     rule = models.CharField(max_length=8, validators=[validate_rule_code])
     description = models.CharField(max_length=500, blank=True)
     triggered_at = models.DateTimeField(null=True, blank=True)
+    # if `user` is None, the event is visible to all users (who subscribe to the rule)
+    # if `user` is not None, the event is visible only to that user
     user = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE)
 
     class Meta:
