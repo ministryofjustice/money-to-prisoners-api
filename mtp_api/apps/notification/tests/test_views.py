@@ -9,7 +9,7 @@ from rest_framework.test import APITestCase
 
 from notification.constants import EMAIL_FREQUENCY
 from notification.models import Event, EmailNotificationPreferences
-from notification.rules import RULES, ENABLED_RULES
+from notification.rules import RULES, ENABLED_RULE_CODES
 from core.tests.utils import make_test_users
 from credit.models import Credit
 from disbursement.constants import DISBURSEMENT_RESOLUTION
@@ -38,7 +38,7 @@ class ListRuleViewTestCase(AuthTestCaseMixin, APITestCase):
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['count'], len(ENABLED_RULES))
+        self.assertEqual(response.data['count'], len(ENABLED_RULE_CODES))
 
 
 class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):

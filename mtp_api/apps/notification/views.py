@@ -11,7 +11,7 @@ from core.permissions import ActionsBasedPermissions
 from mtp_auth.permissions import NomsOpsClientIDPermissions
 from notification.constants import EMAIL_FREQUENCY
 from notification.models import Event, EmailNotificationPreferences
-from notification.rules import RULES, ENABLED_RULES
+from notification.rules import RULES, ENABLED_RULE_CODES
 from notification.serializers import EventSerializer
 
 
@@ -78,9 +78,9 @@ class RuleView(views.APIView):
 
     def get(self, _request):
         rules = [
-            {'code': rule, 'description': RULES[rule].description}
-            for rule in RULES
-            if rule in ENABLED_RULES
+            {'code': code, 'description': RULES[code].description}
+            for code in RULES
+            if code in ENABLED_RULE_CODES
         ]
         return Response({
             'count': len(rules),

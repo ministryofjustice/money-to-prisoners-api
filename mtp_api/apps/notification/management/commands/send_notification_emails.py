@@ -5,7 +5,7 @@ from mtp_common.tasks import send_email
 
 from notification.constants import EMAIL_FREQUENCY, get_notification_period
 from notification.models import Event, EmailNotificationPreferences
-from notification.rules import ENABLED_RULES
+from notification.rules import ENABLED_RULE_CODES
 from security.models import PrisonerProfile, BankAccount, DebitCardSenderDetails
 
 EMAILS_STARTED_FLAG = 'notifications-started'
@@ -56,7 +56,7 @@ class Command(BaseCommand):
 
 def get_events(period_start, period_end):
     return Event.objects.filter(
-        rule__in=ENABLED_RULES,
+        rule__in=ENABLED_RULE_CODES,
         triggered_at__gte=period_start, triggered_at__lt=period_end,
     )
 

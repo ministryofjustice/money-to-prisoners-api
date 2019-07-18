@@ -1,5 +1,4 @@
 from django.db.transaction import atomic
-from django.utils.translation import gettext_lazy as _
 
 from credit.models import Credit
 from disbursement.models import Disbursement
@@ -10,20 +9,20 @@ from notification.models import (
 from security.models import SenderProfile, RecipientProfile, PrisonerProfile
 from transaction.utils import format_amount
 
-ENABLED_CREDIT_RULES = ['MONP', 'MONS']
-ENABLED_DISBURSEMENT_RULES = ['MONP']
-ENABLED_RULES = set(ENABLED_CREDIT_RULES) | set(ENABLED_DISBURSEMENT_RULES)
+ENABLED_CREDIT_RULE_CODES = ['MONP', 'MONS']
+ENABLED_DISBURSEMENT_RULE_CODES = ['MONP']
+ENABLED_RULE_CODES = set(ENABLED_CREDIT_RULE_CODES) | set(ENABLED_DISBURSEMENT_RULE_CODES)
 
 
 def create_credit_notifications(credit):
-    for rule in ENABLED_CREDIT_RULES:
+    for rule in ENABLED_CREDIT_RULE_CODES:
         rule = RULES[rule]
         if rule.triggered(credit):
             rule.create_events(credit)
 
 
 def create_disbursement_notifications(disbursement):
-    for rule in ENABLED_DISBURSEMENT_RULES:
+    for rule in ENABLED_DISBURSEMENT_RULE_CODES:
         rule = RULES[rule]
         if rule.triggered(disbursement):
             rule.create_events(disbursement)
@@ -32,13 +31,8 @@ def create_disbursement_notifications(disbursement):
 class BaseRule:
     def __init__(self, code, description, **kwargs):
         self.code = code
-        self._description = description
+        self.description = description
         self.kwargs = kwargs
-
-    @property
-    def description(self):
-        display_kwargs = self.kwargs.copy()
-        return self._description.format(**display_kwargs)
 
     def triggered(self, record):
         raise NotImplementedError
@@ -46,7 +40,7 @@ class BaseRule:
     def get_event_trigger(self, record):
         return record
 
-    def create_event(self, record, user=None):
+    def _create_event(self, record, user=None):
         event_relations = []
         event = Event(rule=self.code, description=self.description, user=user)
         if isinstance(record, Credit):
@@ -82,7 +76,7 @@ class BaseRule:
 
     @atomic
     def create_events(self, record):
-        return [self.create_event(record)]
+        return [self._create_event(record)]
 
 
 class NotWholeNumberRule(BaseRule):
@@ -91,9 +85,12 @@ class NotWholeNumberRule(BaseRule):
 
 
 class HighAmountRule(BaseRule):
-    def __init__(self, *args, limit=12000):
-        super().__init__(*args, limit=limit)
-        self.kwargs['display_limit'] = format_amount(limit, trim_empty_pence=True, pound_sign=True)
+    def __init__(self, *args, limit=12000, **kwargs):
+        kwargs['limit'] = limit
+        super().__init__(*args, **kwargs)
+        self.description = self.description.format(
+            display_limit=format_amount(limit, trim_empty_pence=True, pound_sign=True)
+        )
 
     def triggered(self, record):
         return record.amount >= self.kwargs['limit']
@@ -104,7 +101,7 @@ class MonitoredRule(BaseRule):
     def create_events(self, record):
         profile = self.get_event_trigger(record)
         return [
-            self.create_event(record, user=user)
+            self._create_event(record, user=user)
             for user in profile.get_monitoring_users().all()
         ]
 
@@ -121,23 +118,23 @@ class MonitoredRule(BaseRule):
 RULES = {
     'MONP': MonitoredRule(
         'MONP',
-        _('Credits or disbursements for prisoners you are monitoring'),
+        'Credits or disbursements for prisoners you are monitoring',
         profile='prisoner_profile',
     ),
     'MONS': MonitoredRule(
         'MONS',
-        _('Credits for senders you are monitoring'),
+        'Credits for senders you are monitoring',
         profile='sender_profile',
     ),
     # disabled rules
     'MONR': MonitoredRule(
         'MONR',
-        _('Disbursements for recipients you are monitoring'),
+        'Disbursements for recipients you are monitoring',
         profile='recipient_profile',
     ),
     'NWN': NotWholeNumberRule(
         'NWN',
-        _('Credits or disbursements that are not a whole number'),
+        'Credits or disbursements that are not a whole number',
     ),
     'HA': HighAmountRule(
         'HA',
