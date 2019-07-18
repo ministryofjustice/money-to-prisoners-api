@@ -285,9 +285,10 @@ class MonitoredDisbursementListTestCase(AuthTestCaseMixin, APITestCase):
         generate_disbursements(200)
         call_command('update_security_profiles')
 
-    def _test_response(self, filters={}):
+    def _test_response(self, filters=None):
         params = {'monitored': True, 'limit': 1000}
-        params.update(filters)
+        if filters:
+            params.update(filters)
         response = self.client.get(
             reverse('disbursement-list'),
             params,

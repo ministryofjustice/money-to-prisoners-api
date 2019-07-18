@@ -9,6 +9,7 @@ def format_amount(
     :param amount_pence: int pence amount
     :param trim_empty_pence: if True, strip off .00
     :param truncate_after: if a number of pounds, will round into £1k, £15m format above this amount
+    :param pound_sign: whether to prefix with £
     :return: str
     """
     text_amount = ''
@@ -26,9 +27,9 @@ def format_amount(
         if trim_empty_pence and text_amount.endswith('.00'):
             text_amount = text_amount[:-3]
     if pound_sign:
-        text_amount = '£' + text_amount
+        text_amount = f'£{text_amount}'
     if amount_pence < 0:
-        text_amount = '-' + text_amount
+        text_amount = f'-{text_amount}'
     return text_amount
 
 

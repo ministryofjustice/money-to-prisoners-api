@@ -79,8 +79,8 @@ class CreditTextSearchFilter(django_filters.CharFilter):
                         return models.Q(**{'%s__startswith' % field: amount})
                 elif field == 'sender_name':
                     return (
-                        models.Q(**{'transaction__sender_name__icontains': word}) |
-                        models.Q(**{'payment__cardholder_name__icontains': word})
+                        models.Q(**{'transaction__sender_name__icontains': word})
+                        | models.Q(**{'payment__cardholder_name__icontains': word})
                     )
                 elif field == 'payment__uuid':
                     if len(word) == 8:

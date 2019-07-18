@@ -174,6 +174,7 @@ class SenderProfileView(
             return bank_details.sender_bank_account
         elif card_details:
             return card_details
+        return None
 
     def get_queryset(self):
         qs = super().get_queryset()
