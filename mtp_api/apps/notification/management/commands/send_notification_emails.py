@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.core.management import BaseCommand
 from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
 from mtp_common.tasks import send_email
 
 from notification.constants import EMAIL_FREQUENCY, get_notification_period
@@ -29,7 +30,8 @@ class Command(BaseCommand):
             'staff_email': True,
         }
 
-        preferences = EmailNotificationPreferences.objects.filter(frequency=frequency)
+        today = timezone.now().date()
+        preferences = EmailNotificationPreferences.objects.filter(frequency=frequency).exclude(last_sent_at=today)
         for preference in preferences:
             user = preference.user
             event_group = summarise_group(group_events(events, user))
@@ -43,15 +45,22 @@ class Command(BaseCommand):
 
             email_context['user'] = user
             email_context['event_group'] = event_group
+            email_sent = False
             if emails_started and has_notifications:
                 send_email_with_events(email_context)
+                email_sent = True
             elif not emails_started:
                 if has_notifications:
                     send_first_email_with_events(email_context)
                     user.flags.create(name=EMAILS_STARTED_FLAG)
+                    email_sent = True
                 elif not is_monitoring:
                     send_first_email_not_monitoring(email_context)
                     user.flags.create(name=EMAILS_STARTED_FLAG)
+                    email_sent = True
+            if email_sent:
+                preference.last_sent_at = today
+                preference.save()
 
 
 def get_events(period_start, period_end):

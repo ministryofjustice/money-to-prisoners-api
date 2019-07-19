@@ -1,4 +1,5 @@
 import datetime
+from unittest import mock
 
 from django.core import mail
 from django.core.management import call_command
@@ -44,6 +45,7 @@ class SendNotificationEmailsTestCase(TestCase):
 
         self.assertFalse(Event.objects.exists())
         self.assertEqual(len(mail.outbox), 0)
+        self.assertIsNone(EmailNotificationPreferences.objects.get(user=user).last_sent_at)
 
     @override_settings(ENVIRONMENT='prod')
     def test_does_not_send_email_notifications_for_no_monitoring(self):
@@ -55,6 +57,7 @@ class SendNotificationEmailsTestCase(TestCase):
 
         self.assertFalse(Event.objects.exists())
         self.assertEqual(len(mail.outbox), 0)
+        self.assertIsNone(EmailNotificationPreferences.objects.get(user=user).last_sent_at)
 
     @override_settings(ENVIRONMENT='prod')
     def test_sends_first_email_not_monitoring(self):
@@ -66,6 +69,7 @@ class SendNotificationEmailsTestCase(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[-1].subject, 'New helpful ways to get the best from the intelligence tool')
         self.assertTrue(user.flags.filter(name=EMAILS_STARTED_FLAG).exists())
+        self.assertIsNotNone(EmailNotificationPreferences.objects.get(user=user).last_sent_at)
 
     def create_profiles_but_unlink_objects(self):
         call_command('update_security_profiles')
@@ -90,6 +94,7 @@ class SendNotificationEmailsTestCase(TestCase):
         yesterday = yesterday.date()
         transaction_count = Event.objects.filter(triggered_at__date=yesterday, user=user).count()
         self.assertIn(f'You have {transaction_count} notification', mail.outbox[-1].body)
+        self.assertIsNotNone(EmailNotificationPreferences.objects.get(user=user).last_sent_at)
 
     @override_settings(ENVIRONMENT='prod')
     def test_sends_subsequent_email_with_events(self):
@@ -109,6 +114,7 @@ class SendNotificationEmailsTestCase(TestCase):
         yesterday = yesterday.date()
         transaction_count = Event.objects.filter(triggered_at__date=yesterday, user=user).count()
         self.assertIn(f'You have {transaction_count} notification', mail.outbox[-1].body)
+        self.assertIsNotNone(EmailNotificationPreferences.objects.get(user=user).last_sent_at)
 
     def test_profile_grouping(self):
         user = self.security_staff[0]
@@ -166,3 +172,39 @@ class SendNotificationEmailsTestCase(TestCase):
         self.assertEqual(event_group['transaction_count'], 4)
         self.assertEqual(len(event_group['senders']), 2)
         self.assertEqual(len(event_group['prisoners']), 2)
+
+    @override_settings(ENVIRONMENT='prod')
+    @mock.patch('notification.management.commands.send_notification_emails.timezone')
+    def test_does_not_send_email_if_already_sent_today(self, mock_timezone):
+        today_now = timezone.now()
+        today_date = today_now.date()
+        yesterday_now = today_now - datetime.timedelta(days=1)
+        yesterday_date = yesterday_now.date()
+
+        user = self.security_staff[0]
+        user.flags.create(name=EMAILS_STARTED_FLAG)
+        EmailNotificationPreferences(user=user, frequency=EMAIL_FREQUENCY.DAILY).save()
+        self.create_profiles_but_unlink_objects()
+        for profile in DebitCardSenderDetails.objects.all():
+            profile.monitoring_users.add(user)
+        call_command('update_security_profiles')
+        self.assertTrue(Event.objects.filter(triggered_at__date=yesterday_date).exists())
+        self.assertTrue(Event.objects.filter(triggered_at__date=today_date).exists())
+
+        # pretend it's yesterday
+        mock_timezone.now.return_value = yesterday_now
+        call_command('send_notification_emails')
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(EmailNotificationPreferences.objects.get(user=user).last_sent_at, yesterday_date)
+
+        call_command('send_notification_emails')
+        self.assertEqual(len(mail.outbox), 1)
+
+        # now check today
+        mock_timezone.now.return_value = today_now
+        call_command('send_notification_emails')
+        self.assertEqual(len(mail.outbox), 2)
+        self.assertEqual(EmailNotificationPreferences.objects.get(user=user).last_sent_at, today_date)
+
+        call_command('send_notification_emails')
+        self.assertEqual(len(mail.outbox), 2)
