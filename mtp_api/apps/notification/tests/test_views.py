@@ -413,9 +413,9 @@ class EmailPreferencesViewTestCase(AuthTestCaseMixin, APITestCase):
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.user)
         )
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(
-            EmailNotificationPreferences.objects.filter(user=self.user).count(), 0
-        )
+        preferences = EmailNotificationPreferences.objects.filter(user=self.user)
+        preferences = preferences.exclude(frequency=EMAIL_FREQUENCY.NEVER)
+        self.assertFalse(preferences.exists())
 
     def test_get_frequency(self):
         # check with no frequency set
@@ -436,3 +436,36 @@ class EmailPreferencesViewTestCase(AuthTestCaseMixin, APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, {'frequency': EMAIL_FREQUENCY.DAILY})
+
+    def test_last_sent_maintained_if_turned_on_and_off(self):
+        # turn on emails
+        response = self.client.post(
+            self.url, {'frequency': EMAIL_FREQUENCY.DAILY},
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        preference = EmailNotificationPreferences.objects.get(user=self.user)
+        self.assertIsNone(preference.last_sent_at)
+
+        # pretend email was sent
+        today = timezone.now().date()
+        preference.last_sent_at = today
+        preference.save()
+
+        # turn off emails and ensure last sent datetime was maintained
+        response = self.client.post(
+            self.url, {'frequency': EMAIL_FREQUENCY.NEVER},
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        preference = EmailNotificationPreferences.objects.get(user=self.user)
+        self.assertEqual(preference.last_sent_at, today)
+
+        # turn on emails and ensure last sent datetime was maintained
+        response = self.client.post(
+            self.url, {'frequency': EMAIL_FREQUENCY.DAILY},
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        preference = EmailNotificationPreferences.objects.get(user=self.user)
+        self.assertEqual(preference.last_sent_at, today)

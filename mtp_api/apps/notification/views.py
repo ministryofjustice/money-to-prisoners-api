@@ -112,10 +112,8 @@ class EmailPreferencesView(views.APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        user = request.user
-        EmailNotificationPreferences.objects.filter(user=user).delete()
-        if frequency != EMAIL_FREQUENCY.NEVER:
-            EmailNotificationPreferences.objects.create(
-                user=user, frequency=frequency
-            )
+        EmailNotificationPreferences.objects.update_or_create(
+            {'frequency': frequency},
+            user=request.user,
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)

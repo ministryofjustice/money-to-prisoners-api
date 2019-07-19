@@ -73,5 +73,6 @@ class PrisonerProfileEvent(models.Model):
 
 
 class EmailNotificationPreferences(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     frequency = models.CharField(max_length=50, choices=EMAIL_FREQUENCY)
+    last_sent_at = models.DateField(blank=True, null=True)
