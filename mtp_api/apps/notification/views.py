@@ -90,10 +90,10 @@ class RuleView(views.APIView):
         })
 
 
-class EmailPreferencesView(viewsets.ViewSet):
-    permission_classes = (IsAuthenticated,)
+class EmailPreferencesView(views.APIView):
+    permission_classes = (IsAuthenticated, NomsOpsClientIDPermissions)
 
-    def list(self, request, *args, **kwargs):
+    def get(self, request):
         try:
             frequency = EmailNotificationPreferences.objects.get(
                 user=request.user
@@ -104,7 +104,7 @@ class EmailPreferencesView(viewsets.ViewSet):
             {'frequency': frequency}
         )
 
-    def create(self, request, *args, **kwargs):
+    def post(self, request):
         frequency = request.data.get('frequency')
         if frequency not in EMAIL_FREQUENCY.values:
             return Response(

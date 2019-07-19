@@ -388,55 +388,51 @@ class EmailPreferencesViewTestCase(AuthTestCaseMixin, APITestCase):
 
     def setUp(self):
         super().setUp()
+        self.url = reverse('email-preferences')
         test_users = make_test_users()
-        self.security_staff = test_users['security_staff']
+        self.user = test_users['security_staff'][0]
 
-    def test_set_frequency(self):
-        user = self.security_staff[0]
-
+    def test_turn_on(self):
         response = self.client.post(
-            reverse('emailpreferences-list'), {'frequency': EMAIL_FREQUENCY.DAILY},
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+            self.url, {'frequency': EMAIL_FREQUENCY.DAILY},
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.user)
         )
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(
-            EmailNotificationPreferences.objects.get(user=user).frequency,
+            EmailNotificationPreferences.objects.get(user=self.user).frequency,
             EMAIL_FREQUENCY.DAILY
         )
 
-    def test_unset_frequency(self):
-        user = self.security_staff[0]
+    def test_turn_off(self):
         EmailNotificationPreferences.objects.create(
-            user=user, frequency=EMAIL_FREQUENCY.DAILY
+            user=self.user, frequency=EMAIL_FREQUENCY.DAILY
         )
 
         response = self.client.post(
-            reverse('emailpreferences-list'), {'frequency': EMAIL_FREQUENCY.NEVER},
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+            self.url, {'frequency': EMAIL_FREQUENCY.NEVER},
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.user)
         )
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(
-            EmailNotificationPreferences.objects.filter(user=user).count(), 0
+            EmailNotificationPreferences.objects.filter(user=self.user).count(), 0
         )
 
     def test_get_frequency(self):
-        user = self.security_staff[0]
-
         # check with no frequency set
         response = self.client.get(
-            reverse('emailpreferences-list'),
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+            self.url,
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.user)
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, {'frequency': EMAIL_FREQUENCY.NEVER})
 
         # check with daily frequency set
         EmailNotificationPreferences.objects.create(
-            user=user, frequency=EMAIL_FREQUENCY.DAILY
+            user=self.user, frequency=EMAIL_FREQUENCY.DAILY
         )
         response = self.client.get(
-            reverse('emailpreferences-list'),
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+            self.url,
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.user)
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, {'frequency': EMAIL_FREQUENCY.DAILY})

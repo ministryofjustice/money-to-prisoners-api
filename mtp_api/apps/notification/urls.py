@@ -5,10 +5,10 @@ from notification import views
 
 router = routers.DefaultRouter()
 router.register(r'events', views.EventView)
-router.register(r'emailpreferences', views.EmailPreferencesView, basename='emailpreferences')
 
 urlpatterns = [
+    url(r'^emailpreferences/$', views.EmailPreferencesView.as_view(), name='email-preferences'),
     url(r'^events/pages/$', views.EventPagesView.as_view(), name='event-pages'),
-    url(r'^', include(router.urls)),
     url(r'^rules/$', views.RuleView.as_view(), name='rule-list'),
+    url(r'^', include(router.urls)),
 ]
