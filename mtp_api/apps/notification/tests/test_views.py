@@ -38,7 +38,17 @@ class ListRuleViewTestCase(AuthTestCaseMixin, APITestCase):
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['count'], len(ENABLED_RULE_CODES))
+        rules = [
+            {'code': code, 'description': RULES[code].description}
+            for code in RULES
+            if code in ENABLED_RULE_CODES
+        ]
+        self.assertDictEqual(response.data, {
+            'count': len(ENABLED_RULE_CODES),
+            'results': rules,
+            'next': None,
+            'previous': None,
+        })
 
 
 class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):
