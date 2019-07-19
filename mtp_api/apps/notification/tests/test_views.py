@@ -1,9 +1,12 @@
+import itertools
 from datetime import timedelta
 import unittest
 
 from django.core.management import call_command
 from django.urls import reverse
 from django.utils import timezone
+from faker import Faker
+from model_mommy import mommy
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -20,6 +23,8 @@ from payment.tests.utils import generate_payments
 from prison.tests.utils import load_random_prisoner_locations
 from security.models import PrisonerProfile, SenderProfile
 from transaction.tests.utils import generate_transactions
+
+fake = Faker(locale='en_GB')
 
 
 class ListRuleViewTestCase(AuthTestCaseMixin, APITestCase):
@@ -48,6 +53,165 @@ class ListRuleViewTestCase(AuthTestCaseMixin, APITestCase):
             'results': rules,
             'next': None,
             'previous': None,
+        })
+
+
+class ListEventPagesTestCase(AuthTestCaseMixin, APITestCase):
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
+
+    def setUp(self):
+        super().setUp()
+        test_users = make_test_users()
+        self.user = test_users['security_staff'][0]
+
+    def assertApiResponse(self, data, expected_response):  # noqa: N802
+        response = self.client.get(
+            reverse('event-pages'), data, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.user)
+        )
+        self.assertDictEqual(response.data, expected_response)
+
+    def test_empty_page_list(self):
+        """
+        Empty response when no events
+        """
+        self.assertFalse(Event.objects.exists())
+
+        self.assertApiResponse({'limit': 25}, {'count': 0, 'newest': None, 'oldest': None})
+
+    def test_one_event_page_list(self):
+        """
+        One event returns one date
+        """
+        yesterday = timezone.now() - timedelta(days=1)
+        mommy.make(Event, user=self.user, triggered_at=yesterday)
+        self.assertEqual(Event.objects.count(), 1)
+        yesterday = yesterday.date()
+
+        self.assertApiResponse({'limit': 25}, {
+            'count': 1,
+            'newest': yesterday,
+            'oldest': yesterday,
+        })
+
+    def test_many_event_page_list(self):
+        """
+        Many events on one date returns one date
+        """
+        some_date = timezone.now() - timedelta(days=5)
+        some_date = some_date.replace(hour=12, minute=0, second=0)
+        for hour in range(0, 5):
+            mommy.make(Event, user=self.user, triggered_at=some_date + timedelta(hours=hour))
+        self.assertEqual(Event.objects.count(), 5)
+        some_date = some_date.date()
+
+        self.assertApiResponse({'limit': 25}, {
+            'count': 1,
+            'newest': some_date,
+            'oldest': some_date,
+        })
+
+    def test_many_date_page_list(self):
+        """
+        Events on various dates return the range
+        """
+        dates = set()
+        for _ in range(0, 25):
+            event = mommy.make(
+                Event, user=self.user,
+                triggered_at=timezone.make_aware(fake.date_time_between(start_date='-10w', end_date='-1d')),
+            )
+            dates.add(event.triggered_at.date())
+        self.assertEqual(Event.objects.count(), 25)
+        dates = sorted(dates)
+
+        self.assertApiResponse({'limit': 25}, {
+            'count': len(dates),
+            'newest': dates[-1],
+            'oldest': dates[0],
+        })
+
+    def test_long_date_page_list(self):
+        """
+        Events over a larger range of dates than requested, get the appropriate page
+        """
+        yesterday = timezone.now() - timedelta(days=1)
+        date = yesterday
+        for _ in range(0, 30):
+            mommy.make(Event, user=self.user, triggered_at=date)
+            date -= timedelta(days=1)
+        self.assertEqual(Event.objects.count(), 30)
+        yesterday = yesterday.date()
+
+        self.assertApiResponse({'limit': 25, 'offset': 0}, {
+            'count': 30,
+            'newest': yesterday,
+            'oldest': yesterday - timedelta(days=24),
+        })
+        self.assertApiResponse({'limit': 25, 'offset': 25}, {
+            'count': 30,
+            'newest': yesterday - timedelta(days=25),
+            'oldest': yesterday - timedelta(days=29),
+        })
+
+    def test_filtered_long_date_page_list(self):
+        """
+        Events over a larger range of dates than requested, get the appropriate page filtered by rule
+        """
+        yesterday = timezone.now() - timedelta(days=1)
+        date = yesterday
+        for rule in itertools.islice(itertools.cycle(['MONP', 'MONS']), 100):
+            mommy.make(Event, rule=rule, user=self.user, triggered_at=date)
+            date -= timedelta(days=1)
+        self.assertEqual(Event.objects.count(), 100)
+        self.assertEqual(Event.objects.filter(rule='MONP').count(), 50)
+        yesterday = yesterday.date()
+
+        # page 1 filtering by all rules
+        self.assertApiResponse({
+            'limit': 25, 'offset': 0,
+            'rule': ['MONS', 'MONP'],
+        }, {
+            'count': 100,
+            'newest': yesterday,
+            'oldest': yesterday - timedelta(days=24),
+        })
+        # page 1 filtering by one rule
+        self.assertApiResponse({
+            'limit': 25, 'offset': 0,
+            'rule': ['MONP'],
+        }, {
+            'count': 50,
+            'newest': yesterday,
+            'oldest': yesterday - timedelta(days=48),
+        })
+
+        # page 2 filtering by all rules
+        self.assertApiResponse({
+            'limit': 25, 'offset': 25,
+            'rule': ['MONS', 'MONP'],
+        }, {
+            'count': 100,
+            'newest': yesterday - timedelta(days=25),
+            'oldest': yesterday - timedelta(days=49),
+        })
+        # page 2 filtering by one rule
+        self.assertApiResponse({
+            'limit': 25, 'offset': 25,
+            'rule': 'MONP',
+        }, {
+            'count': 50,
+            'newest': yesterday - timedelta(days=50),
+            'oldest': yesterday - timedelta(days=98),
+        })
+        # page 2 filtering by another rule
+        self.assertApiResponse({
+            'limit': 25, 'offset': 25,
+            'rule': 'MONS',
+        }, {
+            'count': 50,
+            'newest': yesterday - timedelta(days=51),
+            'oldest': yesterday - timedelta(days=99),
         })
 
 
