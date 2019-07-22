@@ -64,9 +64,9 @@ class SenderProfileListTestCase(SecurityViewTestCase):
     def _get_url(self, *args, **kwargs):
         return reverse('senderprofile-list')
 
-    def test_search_by_search_param(self):
+    def test_search_by_simple_search_param(self):
         """
-        Test for when the search param `search` is used.
+        Test for when the search param `simple_search` is used.
 
         Checks that the API returns the senders with the supplied search value in
             the sender name of a transfer bank details object
@@ -124,7 +124,7 @@ class SenderProfileListTestCase(SecurityViewTestCase):
 
         response_data = self._get_list(
             self._get_authorised_user(),
-            search=term,
+            simple_search=term,
         )['results']
 
         self.assertEqual(len(response_data), 3)

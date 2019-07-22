@@ -70,7 +70,7 @@ class MonitorProfileMixin(viewsets.GenericViewSet):
 
 
 class SenderProfileListFilter(django_filters.FilterSet):
-    search = SplitTextInMultipleFieldsFilter(
+    simple_search = SplitTextInMultipleFieldsFilter(
         field_names=(
             'bank_transfer_details__sender_name',
             'debit_card_details__cardholder_name__name',
