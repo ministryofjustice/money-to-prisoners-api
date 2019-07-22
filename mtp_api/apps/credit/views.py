@@ -13,9 +13,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.filters import (
-    BlankStringFilter, StatusChoiceFilter, IsoDateTimeFilter,
-    MultipleFieldCharFilter, SafeOrderingFilter, MultipleValueFilter,
-    annotate_filter
+    annotate_filter,
+    BlankStringFilter,
+    IsoDateTimeFilter,
+    MultipleFieldCharFilter,
+    MultipleValueFilter,
+    SafeOrderingFilter,
+    SplitTextInMultipleFieldsFilter,
+    StatusChoiceFilter,
 )
 from core.models import TruncUtcDate
 from core.permissions import ActionsBasedPermissions
@@ -149,6 +154,15 @@ class CreditListFilter(django_filters.FilterSet):
     prison_category = MultipleValueFilter(field_name='prison__categories__name')
     prison_population = MultipleValueFilter(field_name='prison__populations__name')
 
+    simple_search = SplitTextInMultipleFieldsFilter(
+        field_names=(
+            'transaction__sender_name',
+            'payment__cardholder_name',
+            'payment__email',
+            'prisoner_number',
+        ),
+        lookup_expr='icontains',
+    )
     search = CreditTextSearchFilter()
     sender_name = MultipleFieldCharFilter(
         field_name=('transaction__sender_name', 'payment__cardholder_name',),
