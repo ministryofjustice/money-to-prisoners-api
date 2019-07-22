@@ -10,11 +10,14 @@ from notification.models import (
     SenderProfileEvent, RecipientProfileEvent, PrisonerProfileEvent
 )
 from notification.rules import RULES
+from payment.models import Payment
 from payment.tests.utils import generate_payments
 from prison.tests.utils import load_random_prisoner_locations
 from security.models import (
     SenderProfile, RecipientProfile, PrisonerProfile
 )
+from transaction.models import Transaction
+from transaction.tests.utils import generate_transactions
 
 
 class RuleTestCase(TestCase):
@@ -23,12 +26,14 @@ class RuleTestCase(TestCase):
     def setUp(self):
         super().setUp()
         test_users = make_test_users()
-        self.security_staff = test_users['security_staff']
+        self.user = test_users['security_staff'][0]
         load_random_prisoner_locations()
+        # generate random data which may or may not match amount rules
+        generate_transactions(transaction_batch=200, days_of_history=3)
         generate_payments(payment_batch=200, days_of_history=3)
         generate_disbursements(disbursement_batch=200, days_of_history=3)
 
-    def assert_event_matches_record(self, events, record, profile_class=None):
+    def assertEventMatchesRecord(self, events, record, profile_class=None):  # noqa: N802
         for event in events:
             if isinstance(record, Credit):
                 self.assertEqual(event.credit_event.credit, record)
@@ -75,11 +80,11 @@ class RuleTestCase(TestCase):
         for credit in credits:
             self.assertTrue(RULES['NWN'].triggered(credit))
             events = RULES['NWN'].create_events(credit)
-            self.assert_event_matches_record(events, credit)
+            self.assertEventMatchesRecord(events, credit)
         for disbursement in disbursements:
             self.assertTrue(RULES['NWN'].triggered(disbursement))
             events = RULES['NWN'].create_events(disbursement)
-            self.assert_event_matches_record(events, disbursement)
+            self.assertEventMatchesRecord(events, disbursement)
 
         credits = Credit.objects.filter(
             amount__endswith='00'
@@ -106,11 +111,11 @@ class RuleTestCase(TestCase):
         for credit in credits:
             self.assertTrue(RULES['HA'].triggered(credit))
             events = RULES['HA'].create_events(credit)
-            self.assert_event_matches_record(events, credit)
+            self.assertEventMatchesRecord(events, credit)
         for disbursement in disbursements:
             self.assertTrue(RULES['HA'].triggered(disbursement))
             events = RULES['HA'].create_events(disbursement)
-            self.assert_event_matches_record(events, disbursement)
+            self.assertEventMatchesRecord(events, disbursement)
 
         credits = Credit.objects.exclude(
             amount__gte=12000
@@ -133,7 +138,7 @@ class RuleTestCase(TestCase):
             disbursements__isnull=False
         ).first()
 
-        prisoner_profile.monitoring_users.add(self.security_staff[0])
+        prisoner_profile.monitoring_users.add(self.user)
 
         credits = Credit.objects.filter(
             prisoner_profile=prisoner_profile
@@ -147,11 +152,11 @@ class RuleTestCase(TestCase):
         for credit in credits:
             self.assertTrue(RULES['MONP'].triggered(credit))
             events = RULES['MONP'].create_events(credit)
-            self.assert_event_matches_record(events, credit, PrisonerProfile)
+            self.assertEventMatchesRecord(events, credit, PrisonerProfile)
         for disbursement in disbursements:
             self.assertTrue(RULES['MONP'].triggered(disbursement))
             events = RULES['MONP'].create_events(disbursement)
-            self.assert_event_matches_record(events, disbursement, PrisonerProfile)
+            self.assertEventMatchesRecord(events, disbursement, PrisonerProfile)
 
         credits = Credit.objects.exclude(
             prisoner_profile=prisoner_profile
@@ -176,7 +181,7 @@ class RuleTestCase(TestCase):
         ).first()
 
         sender_profile.debit_card_details.first().monitoring_users.add(
-            self.security_staff[0]
+            self.user
         )
 
         credits = Credit.objects.filter(
@@ -186,7 +191,35 @@ class RuleTestCase(TestCase):
         for credit in credits:
             self.assertTrue(RULES['MONS'].triggered(credit))
             events = RULES['MONS'].create_events(credit)
-            self.assert_event_matches_record(events, credit, SenderProfile)
+            self.assertEventMatchesRecord(events, credit, SenderProfile)
+
+        credits = Credit.objects.exclude(
+            sender_profile=sender_profile
+        )
+
+        for credit in credits:
+            self.assertFalse(RULES['MONS'].triggered(credit))
+
+    def test_create_events_for_mons_bank_account(self):
+        call_command('update_security_profiles')
+
+        sender_profile = SenderProfile.objects.filter(
+            credits__isnull=False,
+            bank_transfer_details__isnull=False
+        ).first()
+
+        sender_profile.bank_transfer_details.first().sender_bank_account.monitoring_users.add(
+            self.user
+        )
+
+        credits = Credit.objects.filter(
+            sender_profile=sender_profile
+        )
+
+        for credit in credits:
+            self.assertTrue(RULES['MONS'].triggered(credit))
+            events = RULES['MONS'].create_events(credit)
+            self.assertEventMatchesRecord(events, credit, SenderProfile)
 
         credits = Credit.objects.exclude(
             sender_profile=sender_profile
@@ -204,7 +237,7 @@ class RuleTestCase(TestCase):
         ).first()
 
         recipient_profile.bank_transfer_details.first().recipient_bank_account.monitoring_users.add(
-            self.security_staff[0]
+            self.user
         )
 
         disbursements = Disbursement.objects.filter(
@@ -216,7 +249,7 @@ class RuleTestCase(TestCase):
         for disbursement in disbursements:
             self.assertTrue(RULES['MONR'].triggered(disbursement))
             events = RULES['MONR'].create_events(disbursement)
-            self.assert_event_matches_record(events, disbursement, RecipientProfile)
+            self.assertEventMatchesRecord(events, disbursement, RecipientProfile)
 
         disbursements = Disbursement.objects.exclude(
             recipient_profile=recipient_profile
