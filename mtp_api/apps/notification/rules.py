@@ -81,7 +81,7 @@ class BaseRule:
 
 class NotWholeNumberRule(BaseRule):
     def triggered(self, record):
-        return record.amount % 100
+        return bool(record.amount % 100)
 
 
 class HighAmountRule(BaseRule):
