@@ -4,9 +4,10 @@ from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from mtp_common.tasks import send_email
 
-from notification.constants import EMAIL_FREQUENCY, get_notification_period
+from notification.constants import EMAIL_FREQUENCY
 from notification.models import Event, EmailNotificationPreferences
 from notification.rules import ENABLED_RULE_CODES
+from notification.utils import get_notification_period
 from security.models import PrisonerProfile, BankAccount, DebitCardSenderDetails
 
 EMAILS_STARTED_FLAG = 'notifications-started'
