@@ -16,6 +16,12 @@ from notification.serializers import EventSerializer
 
 
 class EventPagesView(views.APIView):
+    """
+    Used to retrieve the date range of notifications for pagination in noms-ops.
+
+    Currently, noms-ops shows X days worth of notifications per page so needs a
+    mechanism to determine what date range to filter by.
+    """
     permission_classes = (IsAuthenticated, NomsOpsClientIDPermissions)
 
     def get(self, request):
@@ -76,7 +82,7 @@ class EventView(mixins.ListModelMixin, viewsets.GenericViewSet):
 class RuleView(views.APIView):
     permission_classes = (IsAuthenticated, NomsOpsClientIDPermissions)
 
-    def get(self, _request):
+    def get(self, *args, **kwargs):
         rules = [
             {'code': code, 'description': RULES[code].description}
             for code in RULES
