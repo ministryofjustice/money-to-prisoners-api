@@ -20,6 +20,16 @@ def validate_rule_code(value):
 
 
 class Event(models.Model):
+    """
+    Represents a single notification and has one-to-one relations to:
+    - a single credit or disbursement
+    - a prisoner, sender or recipient profile if relevant to this notification
+      (currently this only happens when a user monitors those profiles)
+
+    NB: multiple events can be created for the same credit or disbursement,
+    e.g. a user monitoring both a sender and prisoner will get 2 notifications
+    for a single credit from the former to the latter
+    """
     rule = models.CharField(max_length=8, validators=[validate_rule_code])
     description = models.CharField(max_length=500, blank=True)
     triggered_at = models.DateTimeField(null=True, blank=True)
@@ -38,6 +48,9 @@ class Event(models.Model):
 
 
 class CreditEvent(models.Model):
+    """
+    Links a notification to a credit
+    """
     event = models.OneToOneField(
         Event, on_delete=models.CASCADE, related_name='credit_event'
     )
@@ -45,6 +58,9 @@ class CreditEvent(models.Model):
 
 
 class DisbursementEvent(models.Model):
+    """
+    Links a notification to a disbursement
+    """
     event = models.OneToOneField(
         Event, on_delete=models.CASCADE, related_name='disbursement_event'
     )
@@ -52,6 +68,9 @@ class DisbursementEvent(models.Model):
 
 
 class SenderProfileEvent(models.Model):
+    """
+    Links a notification to a sender profile
+    """
     event = models.OneToOneField(
         Event, on_delete=models.CASCADE, related_name='sender_profile_event'
     )
@@ -59,6 +78,9 @@ class SenderProfileEvent(models.Model):
 
 
 class RecipientProfileEvent(models.Model):
+    """
+    Links a notification to a recipient profile
+    """
     event = models.OneToOneField(
         Event, on_delete=models.CASCADE, related_name='recipient_profile_event'
     )
@@ -66,6 +88,9 @@ class RecipientProfileEvent(models.Model):
 
 
 class PrisonerProfileEvent(models.Model):
+    """
+    Links a notification to a prisoner profile
+    """
     event = models.OneToOneField(
         Event, on_delete=models.CASCADE, related_name='prisoner_profile_event'
     )
@@ -73,6 +98,10 @@ class PrisonerProfileEvent(models.Model):
 
 
 class EmailNotificationPreferences(models.Model):
+    """
+    Indicates that a user wishes to receive notifications by email
+    NB: only DAILY is currently supported in noms-ops and email-sending management command
+    """
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     frequency = models.CharField(max_length=50, choices=EMAIL_FREQUENCY)
     last_sent_at = models.DateField(blank=True, null=True)
