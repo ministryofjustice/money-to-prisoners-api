@@ -6,7 +6,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.filters import IsoDateTimeFilter, MultipleValueFilter, SafeOrderingFilter, annotate_filter
+from core.filters import (
+    annotate_filter,
+    IsoDateTimeFilter,
+    MultipleValueFilter,
+    SafeOrderingFilter,
+    SplitTextInMultipleFieldsFilter,
+)
 from core.models import TruncUtcDate
 from core.permissions import ActionsBasedViewPermissions
 from mtp_auth.models import PrisonUserMapping
@@ -47,6 +53,15 @@ class DisbursementFilter(django_filters.FilterSet):
     )
     amount__regex = django_filters.CharFilter(
         field_name='amount', lookup_expr='regex'
+    )
+
+    simple_search = SplitTextInMultipleFieldsFilter(
+        field_names=(
+            'recipient_first_name',
+            'recipient_last_name',
+            'prisoner_number',
+        ),
+        lookup_expr='icontains',
     )
 
     prisoner_number = django_filters.CharFilter(field_name='prisoner_number', lookup_expr='iexact')

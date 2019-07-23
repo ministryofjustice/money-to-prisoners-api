@@ -201,3 +201,4 @@ def fake_disbursement(**kwargs):
         list(map(create_disbursement_logs, disbursements))
     else:
         create_disbursement_logs(disbursements)
+    return disbursements

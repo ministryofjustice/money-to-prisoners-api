@@ -2,6 +2,7 @@ from datetime import date, timedelta
 import itertools
 
 from django.urls import reverse
+from django.utils.crypto import get_random_string
 from mtp_common.test_utils import silence_logger
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -209,6 +210,50 @@ class ListDisbursementsTestCase(AuthTestCaseMixin, APITestCase):
         response = self.api_request(recipient_name='smith')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count'], 10)
+
+    def test_simple_search(self):
+        """
+        Test for when the search param `simple_search` is used.
+        Checks that the API return the disbursements with the supplied search value in
+            the name of the recipient
+            OR
+            the prisoner number
+        """
+
+        # prepare the data to match exactly 2 records
+        term_part1 = get_random_string(10)
+        term_part2 = get_random_string(10)
+        term = f'{term_part1} {term_part2}'
+
+        disbursement1 = fake_disbursement(
+            prison=self.prison,
+            recipient_first_name=term_part1,
+            recipient_last_name=f'{term_part2}Junior'.upper(),
+        )
+        disbursement2 = fake_disbursement(
+            prison=self.prison,
+            prisoner_number=term_part1,
+            recipient_first_name=f'Mr{term_part2}',
+        )
+
+        # these should be non-matches
+        fake_disbursement(
+            _quantity=5,
+            prison=self.prison,
+        )
+
+        response = self.api_request(simple_search=term)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        response_data = response.data['results']
+        self.assertEqual(len(response_data), 2)
+        self.assertEqual(
+            {item['id'] for item in response_data},
+            {
+                disbursement1.id,
+                disbursement2.id,
+            },
+        )
 
     def test_ordering(self):
         fake_disbursement(_quantity=20, prison=self.prison)
