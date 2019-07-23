@@ -1,8 +1,6 @@
 import itertools
 from datetime import timedelta
-import unittest
 
-from django.core.management import call_command
 from django.urls import reverse
 from django.utils import timezone
 from faker import Faker
@@ -11,18 +9,11 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from notification.constants import EMAIL_FREQUENCY
-from notification.models import Event, EmailNotificationPreferences
+from notification.models import Event, EmailNotificationPreferences, PrisonerProfileEvent, SenderProfileEvent
 from notification.rules import RULES, ENABLED_RULE_CODES
 from core.tests.utils import make_test_users
-from credit.models import Credit
-from disbursement.constants import DISBURSEMENT_RESOLUTION
-from disbursement.models import Disbursement
-from disbursement.tests.utils import generate_disbursements
 from mtp_auth.tests.utils import AuthTestCaseMixin
-from payment.tests.utils import generate_payments
-from prison.tests.utils import load_random_prisoner_locations
-from security.models import PrisonerProfile, SenderProfile
-from transaction.tests.utils import generate_transactions
+from security.models import PrisonerProfile, SenderProfile, DebitCardSenderDetails
 
 fake = Faker(locale='en_GB')
 
@@ -222,46 +213,38 @@ class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):
         super().setUp()
         test_users = make_test_users()
         self.security_staff = test_users['security_staff']
-        load_random_prisoner_locations()
 
     def test_get_events(self):
-        generate_transactions(transaction_batch=100, days_of_history=5)
-        generate_payments(payment_batch=100, days_of_history=5)
-        generate_disbursements(disbursement_batch=100, days_of_history=5)
         user = self.security_staff[0]
 
-        for credit in Credit.objects.all():
-            if RULES['HA'].triggered(credit):
-                RULES['HA'].create_events(credit)
-        for disbursement in Disbursement.objects.filter(resolution=DISBURSEMENT_RESOLUTION.SENT):
-            if RULES['HA'].triggered(disbursement):
-                RULES['HA'].create_events(disbursement)
+        # visible events, not linked to user
+        mommy.make(Event, rule='HA')
+        mommy.make(Event, rule='NWN')
+
+        # visible events, linked to user
+        mommy.make(Event, user=user, rule='MONP')
+        mommy.make(Event, user=user, rule='MONS')
+
+        # this event is not seen as it's linked to a different user
+        mommy.make(Event, user=self.security_staff[1], rule='MONP')
 
         response = self.client.get(
             reverse('event-list'), {'limit': 1000}, format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertGreater(response.data['count'], 0)
+        self.assertEqual(response.data['count'], 4)
 
-        triggering_credits = Credit.objects.filter(
-            amount__gte=12000,
-        )
-        triggering_disbursements = Disbursement.objects.filter(
-            amount__gte=12000, resolution=DISBURSEMENT_RESOLUTION.SENT
-        )
-        self.assertEqual(
-            response.data['count'],
-            triggering_credits.count() + triggering_disbursements.count()
-        )
-
-    @unittest.skip('rules disabled')
     def test_get_events_filtered_by_rules(self):
-        generate_transactions(transaction_batch=100, days_of_history=5)
-        generate_payments(payment_batch=100, days_of_history=5)
-        generate_disbursements(disbursement_batch=100, days_of_history=5)
-        call_command('update_security_profiles')
         user = self.security_staff[0]
+
+        # visible events, not linked to user
+        mommy.make(Event, rule='HA')
+        mommy.make(Event, rule='NWN')
+
+        # visible events, linked to user
+        mommy.make(Event, user=user, rule='MONP')
+        mommy.make(Event, user=user, rule='MONS')
 
         response = self.client.get(
             reverse('event-list'),
@@ -270,117 +253,93 @@ class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertGreater(response.data['count'], 0)
-
-        self.assertEqual(
-            response.data['count'],
-            Event.objects.filter(rule='HA').count() +
-            Event.objects.filter(rule='NWN').count()
-        )
-        for event in response.data['results']:
-            self.assertIn(event['rule'], ('HA', 'NWN'))
+        self.assertEqual(response.data['count'], 2)
+        self.assertSetEqual(set(
+            event['rule']
+            for event in response.data['results']
+        ), {'HA', 'NWN'})
 
     def test_get_events_filtered_by_date(self):
-        generate_transactions(transaction_batch=100, days_of_history=5)
-        generate_payments(payment_batch=100, days_of_history=5)
-        generate_disbursements(disbursement_batch=100, days_of_history=5)
         user = self.security_staff[0]
 
-        for credit in Credit.objects.all():
-            if RULES['HA'].triggered(credit):
-                RULES['HA'].create_events(credit)
-        for disbursement in Disbursement.objects.filter(resolution=DISBURSEMENT_RESOLUTION.SENT):
-            if RULES['HA'].triggered(disbursement):
-                RULES['HA'].create_events(disbursement)
+        now = timezone.now()
+        for days_into_past in range(1, 3):
+            triggered_at = now - timedelta(days=days_into_past)
 
-        lt = timezone.now()
-        gte = lt - timedelta(days=2)
+            # visible events, not linked to user
+            mommy.make(Event, rule='HA', triggered_at=triggered_at)
+            mommy.make(Event, rule='NWN', triggered_at=triggered_at)
+
+            # visible events, linked to user
+            mommy.make(Event, user=user, rule='MONP', triggered_at=triggered_at)
+            mommy.make(Event, user=user, rule='MONS', triggered_at=triggered_at)
+
         response = self.client.get(
             reverse('event-list'),
-            {'triggered_at__lt': lt, 'triggered_at__gte': gte, 'limit': 1000},
+            {
+                'triggered_at__lt': now.isoformat(),
+                'triggered_at__gte': (now - timedelta(days=2)).isoformat(),
+            },
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertGreater(response.data['count'], 0)
+        self.assertEqual(response.data['count'], 2 * 4)
 
-        self.assertEqual(
-            response.data['count'],
-            Event.objects.filter(triggered_at__gte=gte, triggered_at__lt=lt).count()
+        response = self.client.get(
+            reverse('event-list'),
+            {
+                'triggered_at__lt': now.isoformat(),
+                'triggered_at__gte': (now - timedelta(days=2)).isoformat(),
+                'rule': ['MONP', 'MONS'],
+            },
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 2 * 2)
 
     def test_get_prisoner_monitoring_events_for_user(self):
-        generate_payments(payment_batch=200, days_of_history=5)
-        call_command('update_security_profiles')
         user = self.security_staff[0]
 
-        prisoner_profile = PrisonerProfile.objects.filter(
-            credits__isnull=False,
-        ).first()
+        prisoner_profile = mommy.make(PrisonerProfile, prisoner_number='A1409AE')
         prisoner_profile.monitoring_users.add(user)
 
-        for credit in Credit.objects.all():
-            if RULES['MONP'].triggered(credit):
-                RULES['MONP'].create_events(credit)
+        for _ in range(2):
+            event = mommy.make(Event, user=user, rule='MONP')
+            mommy.make(PrisonerProfileEvent, event=event, prisoner_profile=prisoner_profile)
 
         response = self.client.get(
             reverse('event-list'), {'limit': 1000}, format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertGreater(response.data['count'], 0)
-
-        self.assertEqual(
-            response.data['count'],
-            Event.objects.filter(user__isnull=True).count() +
-            Event.objects.filter(user=user).count()
-        )
-
-        for event in response.data['results']:
-            if event['rule'] == 'MONP':
-                self.assertEqual(Event.objects.get(id=event['id']).user, user)
-            else:
-                self.assertEqual(Event.objects.get(id=event['id']).user, None)
+        self.assertEqual(response.data['count'], 2)
+        self.assertTrue(all(
+            event['prisoner_profile']['prisoner_number'] == 'A1409AE'
+            for event in response.data['results']
+        ))
 
     def test_get_sender_monitoring_events_for_user(self):
-        generate_payments(payment_batch=200, days_of_history=5)
-        call_command('update_security_profiles')
         user = self.security_staff[0]
 
-        sender_profile = SenderProfile.objects.filter(
-            credits__isnull=False,
-        ).first()
-        debit_card = sender_profile.debit_card_details.first()
-        bank_transfer = sender_profile.bank_transfer_details.first()
-        if debit_card:
-            debit_card.monitoring_users.add(user)
-        elif bank_transfer:
-            bank_transfer.sender_bank_account.monitoring_users.add(user)
-        else:
-            self.fail('sender profile incomplete')
+        sender_profile = mommy.make(SenderProfile)
+        mommy.make(DebitCardSenderDetails, postcode='SW1H 9AJ', sender=sender_profile)
 
-        for credit in Credit.objects.all():
-            if RULES['MONS'].triggered(credit):
-                RULES['MONS'].create_events(credit)
+        for _ in range(2):
+            event = mommy.make(Event, user=user, rule='MONS')
+            mommy.make(SenderProfileEvent, event=event, sender_profile=sender_profile)
 
         response = self.client.get(
             reverse('event-list'), {'limit': 1000}, format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertGreater(response.data['count'], 0)
-
-        self.assertEqual(
-            response.data['count'],
-            Event.objects.filter(user__isnull=True).count() +
-            Event.objects.filter(user=user).count()
-        )
-
-        for event in response.data['results']:
-            if event['rule'] == 'MONS':
-                self.assertEqual(Event.objects.get(id=event['id']).user, user)
-            else:
-                self.assertEqual(Event.objects.get(id=event['id']).user, None)
+        self.assertEqual(response.data['count'], 2)
+        self.assertTrue(all(
+            event['sender_profile']['debit_card_details'][0]['postcode'] == 'SW1H 9AJ'
+            for event in response.data['results']
+        ))
 
 
 class EmailPreferencesViewTestCase(AuthTestCaseMixin, APITestCase):
