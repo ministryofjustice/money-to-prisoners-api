@@ -114,7 +114,7 @@ class EmailPreferencesView(views.APIView):
         frequency = request.data.get('frequency')
         if frequency not in EMAIL_FREQUENCY.values:
             return Response(
-                'Must provide a recognized "frequency" value',
+                {'frequency': ['Must provide a recognized "frequency" value']},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
