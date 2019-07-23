@@ -234,6 +234,10 @@ class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count'], 4)
+        self.assertSetEqual(
+            set(event['id'] for event in response.data['results']),
+            set(Event.objects.exclude(user=self.security_staff[1]).values_list('id', flat=True))
+        )
 
     def test_get_events_filtered_by_rules(self):
         user = self.security_staff[0]
@@ -372,9 +376,10 @@ class EmailPreferencesViewTestCase(AuthTestCaseMixin, APITestCase):
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.user)
         )
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        preferences = EmailNotificationPreferences.objects.filter(user=self.user)
-        preferences = preferences.exclude(frequency=EMAIL_FREQUENCY.NEVER)
-        self.assertFalse(preferences.exists())
+        self.assertEqual(
+            EmailNotificationPreferences.objects.get(user=self.user).frequency,
+            EMAIL_FREQUENCY.NEVER
+        )
 
     def test_get_frequency(self):
         # check with no frequency set
@@ -428,3 +433,16 @@ class EmailPreferencesViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         preference = EmailNotificationPreferences.objects.get(user=self.user)
         self.assertEqual(preference.last_sent_at, today)
+
+    def test_invalid_frequency(self):
+        response = self.client.post(
+            self.url, {'frequency': ''},
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        response = self.client.post(
+            self.url, {'frequency': 'yearly'},
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(EmailNotificationPreferences.objects.exists())
