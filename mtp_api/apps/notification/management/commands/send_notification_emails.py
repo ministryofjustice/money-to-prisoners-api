@@ -19,7 +19,7 @@ class Command(BaseCommand):
         period_start, period_end = get_notification_period(frequency)
         events = get_events(period_start, period_end)
 
-        email_context = {
+        base_email_context = {
             'period_start': period_start,
             'notifications_url': (
                 f'{settings.NOMS_OPS_URL}/security/notifications/#date-{period_start.date().isoformat()}'
@@ -44,8 +44,11 @@ class Command(BaseCommand):
             ))
             emails_started = user.flags.filter(name=EMAILS_STARTED_FLAG).exists()
 
-            email_context['user'] = user
-            email_context['event_group'] = event_group
+            email_context = dict(
+                base_email_context,
+                user=user,
+                event_group=event_group,
+            )
             email_sent = False
             if emails_started and has_notifications:
                 send_email_with_events(email_context)
