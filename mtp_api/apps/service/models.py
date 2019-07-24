@@ -10,7 +10,6 @@ SERVICES = Choices(
 
 
 class DowntimeManager(models.Manager):
-
     def active_downtime(self, service):
         now = timezone.now()
         return self.filter(

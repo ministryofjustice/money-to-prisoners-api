@@ -7,7 +7,6 @@ from mtp_auth.models import PrisonUserMapping
 
 
 class CreateProcessingBatchTestCase(BaseCreditViewTestCase):
-
     def test_create_processing_batch_succeeds(self):
         user = self.prison_clerks[0]
         user_prisons = PrisonUserMapping.objects.get_prison_set_for_user(user)

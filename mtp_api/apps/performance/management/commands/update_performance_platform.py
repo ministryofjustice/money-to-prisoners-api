@@ -7,7 +7,6 @@ from performance.updaters import registry
 
 
 class Command(BaseCommand):
-
     def add_arguments(self, parser):
         parser.add_argument('--resources', nargs='*', default=list(registry.keys()),
                             choices=list(registry.keys()),

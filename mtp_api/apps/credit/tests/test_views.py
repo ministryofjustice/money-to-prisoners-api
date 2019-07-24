@@ -4,6 +4,7 @@ import re
 import urllib.parse
 
 from django.conf import settings
+from django.core.management import call_command
 from django.db import connection
 from django.urls import reverse
 from django.utils import timezone
@@ -22,12 +23,14 @@ from credit.tests.test_base import (
 )
 from mtp_auth.models import PrisonUserMapping
 from prison.models import Prison
+from security.models import (
+    BankAccount, DebitCardSenderDetails, PrisonerProfile
+)
 
 
 class CashbookCreditRejectsRequestsWithoutPermissionTestMixin(
     CreditRejectsRequestsWithoutPermissionTestMixin
 ):
-
     def _get_unauthorised_application_users(self):
         return self.send_money_users
 
@@ -52,16 +55,20 @@ class CreditListTestCase(
     def _get_invalid_credits(self):
         return [c for c in self.credits if c.prison is None]
 
-    def _test_response_with_filters(self, filters):
+    def _test_response(self, filters):
         logged_in_user = self._get_authorised_user()
-        credits = self._get_managed_prison_credits()
-
         url = self._get_url(**filters)
         response = self.client.get(
             url, format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        return response
+
+    def _test_response_with_filters(self, filters):
+        credits = self._get_managed_prison_credits()
+        response = self._test_response(filters)
 
         # check expected result
         def noop_checker(c):
@@ -266,7 +273,6 @@ class CreditListTestCase(
 
 
 class CreditListWithDefaultsTestCase(CreditListTestCase):
-
     def test_returns_all_credits(self):
         """
         Returns all credits attached to all the prisons that
@@ -346,7 +352,6 @@ class CreditListWithDefaultsTestCase(CreditListTestCase):
 
 
 class CreditListWithDefaultPrisonAndUserTestCase(CreditListTestCase):
-
     def test_filter_by_status_credit_pending(self):
         """
         Returns available credits attached to all the prisons
@@ -367,7 +372,6 @@ class CreditListWithDefaultPrisonAndUserTestCase(CreditListTestCase):
 
 
 class CreditListWithDefaultUserTestCase(CreditListTestCase):
-
     def test_filter_by_status_credit_pending_and_prison(self):
         """
         Returns available credits attached to the passed-in prison.
@@ -388,7 +392,6 @@ class CreditListWithDefaultUserTestCase(CreditListTestCase):
 
 
 class CreditListWithDefaultPrisonTestCase(CreditListTestCase):
-
     def test_filter_by_status_credit_pending_and_user(self):
         """
         Returns available credits attached to all the prisons
@@ -410,7 +413,6 @@ class CreditListWithDefaultPrisonTestCase(CreditListTestCase):
 
 
 class CreditListWithoutDefaultsTestCase(CreditListTestCase):
-
     def test_filter_by_status_credit_pending_and_prison_and_user(self):
         """
         Returns available credits attached to the passed-in prison.
@@ -434,7 +436,6 @@ class CreditListWithoutDefaultsTestCase(CreditListTestCase):
 
 
 class CreditListWithDefaultStatusAndUserTestCase(CreditListTestCase):
-
     def test_filter_by_prison(self):
         """
         Returns all credits attached to the passed-in prison.
@@ -453,7 +454,6 @@ class CreditListWithDefaultStatusAndUserTestCase(CreditListTestCase):
 
 
 class CreditListWithDefaultStatusTestCase(CreditListTestCase):
-
     def test_filter_by_prison_and_user(self):
         """
         Returns all credits attached to the passed-in prison.
@@ -465,7 +465,6 @@ class CreditListWithDefaultStatusTestCase(CreditListTestCase):
 
 
 class CreditListWithDefaultStatusAndPrisonTestCase(CreditListTestCase):
-
     def test_filter_by_user(self):
         """
         Returns all credits managed by the passed-in user
@@ -476,7 +475,6 @@ class CreditListWithDefaultStatusAndPrisonTestCase(CreditListTestCase):
 
 
 class CreditListWithValidFilterTestCase(CreditListTestCase):
-
     def test_filter_by_invalidity(self):
         self._test_response_with_filters({
             'valid': 'true'
@@ -692,7 +690,6 @@ class CreditListWithSimpleSearchTestCase(CreditListTestCase):
 
 
 class CreditListInvalidValuesTestCase(CreditListTestCase):
-
     def test_invalid_status_filter(self):
         logged_in_user = self.prison_clerks[0]
         url = self._get_url(status='invalid')
@@ -864,7 +861,6 @@ CreditListOrderingTestCase.add_test_methods()
 
 
 class SecurityCreditListTestCase(CreditListTestCase):
-
     def _get_authorised_user(self):
         return self.security_staff[0]
 
@@ -887,7 +883,6 @@ class SecurityCreditListTestCase(CreditListTestCase):
 
 
 class TransactionSenderDetailsCreditListTestCase(SecurityCreditListTestCase):
-
     def test_sort_code_filter(self):
         random_sort_code = (
             Credit.objects.filter(transaction__sender_sort_code__isnull=False)
@@ -979,7 +974,6 @@ class CreditListWithBlankStringFiltersTestCase(SecurityCreditListTestCase):
 
 
 class PrisonerNumberCreditListTestCase(SecurityCreditListTestCase):
-
     def test_prisoner_number_filter(self):
         random_prisoner_number = (
             Credit.objects.filter(prisoner_number__isnull=False)
@@ -992,7 +986,6 @@ class PrisonerNumberCreditListTestCase(SecurityCreditListTestCase):
 
 
 class AmountPatternCreditListTestCase(SecurityCreditListTestCase):
-
     def test_exclude_amount_pattern_filter_endswith_multiple(self):
         self._test_response_with_filters({
             'exclude_amount__endswith': ['000', '500'],
@@ -1038,11 +1031,97 @@ class AmountPatternCreditListTestCase(SecurityCreditListTestCase):
 
 
 class NoPrisonCreditListTestCase(SecurityCreditListTestCase):
-
     def test_no_prison_filter(self):
         self._test_response_with_filters({
             'prison__isnull': 'True'
         })
+
+
+class MonitoredCreditListTestCase(SecurityCreditListTestCase):
+    def test_list_credits_of_monitored_prisoner(self):
+        call_command('update_security_profiles')
+        user = self._get_authorised_user()
+        prisoner_profile = PrisonerProfile.objects.first()
+        prisoner_profile.monitoring_users.add(user)
+
+        response = self._test_response({'monitored': True})
+
+        self.assertEqual(
+            sorted(c['id'] for c in response.data['results']),
+            sorted(prisoner_profile.credits.values_list('id', flat=True))
+        )
+
+    def test_list_credits_of_monitored_bank_account(self):
+        call_command('update_security_profiles')
+        user = self._get_authorised_user()
+        bank_account = BankAccount.objects.first()
+        bank_account.monitoring_users.add(user)
+
+        response = self._test_response({'monitored': True})
+
+        self.assertEqual(
+            sorted(c['id'] for c in response.data['results']),
+            sorted(
+                bank_account.senders.first().sender.credits.values_list(
+                    'id', flat=True
+                )
+            )
+        )
+
+    def test_list_credits_of_monitored_debit_card(self):
+        call_command('update_security_profiles')
+        user = self._get_authorised_user()
+        debit_card = DebitCardSenderDetails.objects.first()
+        debit_card.monitoring_users.add(user)
+
+        response = self._test_response({'monitored': True})
+
+        self.assertEqual(
+            sorted(c['id'] for c in response.data['results']),
+            sorted(
+                debit_card.sender.credits.values_list(
+                    'id', flat=True
+                )
+            )
+        )
+
+    def test_list_credits_of_monitored_debit_card_and_prisoner(self):
+        call_command('update_security_profiles')
+        user = self._get_authorised_user()
+        debit_card = DebitCardSenderDetails.objects.first()
+        debit_card.monitoring_users.add(user)
+        prisoner_profile = PrisonerProfile.objects.first()
+        prisoner_profile.monitoring_users.add(user)
+
+        response = self._test_response({'monitored': True})
+
+        self.assertEqual(
+            sorted(c['id'] for c in response.data['results']),
+            sorted(
+                prisoner_profile.credits.all().union(
+                    debit_card.sender.credits.all()
+                ).values_list(
+                    'id', flat=True
+                )
+            )
+        )
+
+    def test_list_ordered_monitored_credits(self):
+        call_command('update_security_profiles')
+        user = self._get_authorised_user()
+        debit_card = DebitCardSenderDetails.objects.first()
+        debit_card.monitoring_users.add(user)
+        prisoner_profile = PrisonerProfile.objects.first()
+        prisoner_profile.monitoring_users.add(user)
+
+        response = self._test_response({'monitored': True, 'ordering': 'received_at'})
+
+        self.assertEqual(
+            [c['id'] for c in response.data['results']],
+            [c.id for c in prisoner_profile.credits.all().union(
+                debit_card.sender.credits.all()
+            ).order_by('received_at', 'id')]
+        )
 
 
 class CreditCreditsTestCase(

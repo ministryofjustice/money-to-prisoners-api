@@ -2,18 +2,16 @@ from django.db import transaction
 from django.utils.translation import gettext as _
 from rest_framework import serializers
 
-from .models import PrisonerLocation, Prison, Category, Population, PrisonBankAccount
+from prison.models import PrisonerLocation, Prison, Category, Population, PrisonBankAccount
 
 
 class PopulationSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Population
         fields = ('name', 'description')
 
 
 class CategorySerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Category
         fields = ('name', 'description')
@@ -41,7 +39,6 @@ class PrisonSerializer(serializers.ModelSerializer):
 
 
 class PrisonerLocationListSerializer(serializers.ListSerializer):
-
     @transaction.atomic
     def create(self, validated_data):
         locations = [
@@ -52,7 +49,6 @@ class PrisonerLocationListSerializer(serializers.ListSerializer):
 
 
 class PrisonerLocationSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = PrisonerLocation
         list_serializer_class = PrisonerLocationListSerializer

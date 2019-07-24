@@ -4,17 +4,20 @@ from django.db.transaction import atomic
 
 from credit.constants import CREDIT_RESOLUTION
 from credit.models import Credit
-from .constants import PAYMENT_STATUS
+from payment.constants import PAYMENT_STATUS
 
 
 class PaymentManager(models.Manager):
-
     def abandoned(self, created_before):
-        return self.get_queryset().filter(created__lt=created_before, status=PAYMENT_STATUS.FAILED,
-                                          credit__resolution=CREDIT_RESOLUTION.INITIAL)
+        return self.get_queryset().filter(
+            created__lt=created_before, status=PAYMENT_STATUS.FAILED,
+            credit__resolution=CREDIT_RESOLUTION.INITIAL,
+        )
 
     @atomic
     def reconcile(self, start_date, end_date, user):
+        from payment.models import Batch
+
         update_set = self.get_queryset().filter(
             status=PAYMENT_STATUS.TAKEN,
             credit__received_at__gte=start_date,
@@ -22,8 +25,8 @@ class PaymentManager(models.Manager):
             credit__reconciled=False
         ).select_for_update()
 
-        if update_set.count() > 0:
-            from .models import Batch
+        # use `len` as `select` is needed to acquire lock
+        if len(update_set):
             max_ref_code = Batch.objects.all().aggregate(models.Max('ref_code'))['ref_code__max']
             if max_ref_code:
                 ref_code = int(max_ref_code) + 1

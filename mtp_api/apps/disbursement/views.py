@@ -15,20 +15,27 @@ from core.filters import (
 )
 from core.models import TruncUtcDate
 from core.permissions import ActionsBasedViewPermissions
+from disbursement import InvalidDisbursementStateException
+from disbursement.constants import DISBURSEMENT_RESOLUTION
+from disbursement.models import Disbursement, Comment
+from disbursement.serializers import (
+    DisbursementSerializer, DisbursementIdsSerializer,
+    DisbursementConfirmationSerializer, CommentSerializer,
+)
 from mtp_auth.models import PrisonUserMapping
 from mtp_auth.permissions import (
     CashbookClientIDPermissions, BankAdminClientIDPermissions,
     CASHBOOK_OAUTH_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID,
-    BANK_ADMIN_OAUTH_CLIENT_ID, get_client_permissions_class
+    BANK_ADMIN_OAUTH_CLIENT_ID, get_client_permissions_class,
 )
 from prison.models import Prison
-from . import InvalidDisbursementStateException
-from .constants import DISBURSEMENT_RESOLUTION
-from .models import Disbursement, Comment
-from .serializers import (
-    DisbursementSerializer, DisbursementIdsSerializer,
-    DisbursementConfirmationSerializer, CommentSerializer
-)
+
+
+class MonitoredProfileFilter(django_filters.BooleanFilter):
+    def filter(self, qs, value):
+        if value:
+            return qs.monitored_by(self.parent.request.user)
+        return qs
 
 
 class DisbursementFilter(django_filters.FilterSet):
@@ -83,6 +90,7 @@ class DisbursementFilter(django_filters.FilterSet):
     roll_number = django_filters.CharFilter(field_name='roll_number')
 
     invoice_number = django_filters.CharFilter(field_name='invoice_number', lookup_expr='iexact')
+    monitored = MonitoredProfileFilter()
 
     class Meta:
         model = Disbursement
@@ -106,9 +114,9 @@ class DisbursementViewMixin:
         return queryset
 
 
-class DisbursementView(
-    DisbursementViewMixin, mixins.CreateModelMixin, mixins.ListModelMixin,
-    mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet
+class GetDisbursementsView(
+    DisbursementViewMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet
 ):
     queryset = Disbursement.objects.all().order_by('-id')
     serializer_class = DisbursementSerializer
@@ -123,6 +131,10 @@ class DisbursementView(
         )
     )
 
+
+class DisbursementView(
+    mixins.CreateModelMixin, mixins.UpdateModelMixin, GetDisbursementsView
+):
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         if instance.resolution == DISBURSEMENT_RESOLUTION.PENDING:

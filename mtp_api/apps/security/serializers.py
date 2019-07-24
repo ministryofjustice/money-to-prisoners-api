@@ -1,9 +1,10 @@
 from rest_framework import serializers
 
 from prison.models import Prison
-from .models import (
+from security.models import (
     SenderProfile, BankTransferSenderDetails, DebitCardSenderDetails,
-    PrisonerProfile, SavedSearch, SearchFilter
+    PrisonerProfile, RecipientProfile, BankTransferRecipientDetails,
+    SavedSearch, SearchFilter,
 )
 
 
@@ -52,8 +53,11 @@ class DebitCardSenderDetailsSerializer(serializers.ModelSerializer):
 class SenderProfileSerializer(serializers.ModelSerializer):
     bank_transfer_details = BankTransferSenderDetailsSerializer(many=True)
     debit_card_details = DebitCardSenderDetailsSerializer(many=True)
-    prisoner_count = serializers.IntegerField()
-    prison_count = serializers.IntegerField()
+
+    # return None where this is a nested serializer
+    prisoner_count = serializers.IntegerField(required=False)
+    prison_count = serializers.IntegerField(required=False)
+    monitoring = serializers.BooleanField(required=False)
 
     class Meta:
         model = SenderProfile
@@ -67,24 +71,28 @@ class SenderProfileSerializer(serializers.ModelSerializer):
             'debit_card_details',
             'created',
             'modified',
+            'monitoring',
         )
 
 
 class PrisonSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Prison
         fields = (
             'nomis_id',
-            'name'
+            'name',
         )
 
 
 class PrisonerProfileSerializer(serializers.ModelSerializer):
-    sender_count = serializers.IntegerField()
     prisons = PrisonSerializer(many=True)
     current_prison = PrisonSerializer()
     provided_names = serializers.SerializerMethodField()
+
+    # return None where this is a nested serializer
+    sender_count = serializers.IntegerField(required=False)
+    recipient_count = serializers.IntegerField(required=False)
+    monitoring = serializers.BooleanField(required=False)
 
     class Meta:
         model = PrisonerProfile
@@ -93,6 +101,7 @@ class PrisonerProfileSerializer(serializers.ModelSerializer):
             'credit_count',
             'credit_total',
             'sender_count',
+            'recipient_count',
             'prisoner_name',
             'prisoner_number',
             'prisoner_dob',
@@ -101,14 +110,57 @@ class PrisonerProfileSerializer(serializers.ModelSerializer):
             'prisons',
             'current_prison',
             'provided_names',
+            'monitoring',
         )
 
     def get_provided_names(self, obj):
         return list(obj.provided_names.values_list('name', flat=True))
 
 
-class SearchFilterSerializer(serializers.ModelSerializer):
+class BankTransferRecipientDetailsSerializer(serializers.ModelSerializer):
+    recipient_sort_code = serializers.CharField(
+        source='recipient_bank_account.sort_code'
+    )
+    recipient_account_number = serializers.CharField(
+        source='recipient_bank_account.account_number'
+    )
+    recipient_roll_number = serializers.CharField(
+        source='recipient_bank_account.roll_number'
+    )
 
+    class Meta:
+        model = BankTransferRecipientDetails
+        fields = (
+            'recipient_sort_code',
+            'recipient_account_number',
+            'recipient_roll_number',
+        )
+
+
+class RecipientProfileSerializer(serializers.ModelSerializer):
+    bank_transfer_details = BankTransferRecipientDetailsSerializer(many=True)
+
+    # return None where this is a nested serializer
+    prisoner_count = serializers.IntegerField(required=False)
+    prison_count = serializers.IntegerField(required=False)
+    monitoring = serializers.BooleanField(required=False)
+
+    class Meta:
+        model = RecipientProfile
+        fields = (
+            'id',
+            'disbursement_count',
+            'disbursement_total',
+            'prisoner_count',
+            'prison_count',
+            'bank_transfer_details',
+            'created',
+            'modified',
+            'monitoring',
+        )
+
+
+class SearchFilterSerializer(serializers.ModelSerializer):
     class Meta:
         model = SearchFilter
         fields = ('field', 'value',)

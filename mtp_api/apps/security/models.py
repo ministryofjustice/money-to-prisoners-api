@@ -1,6 +1,3 @@
-from functools import reduce
-from itertools import chain
-
 from django.contrib.auth.models import User
 from django.db import models
 from django.dispatch import receiver
@@ -8,11 +5,9 @@ from django.utils.translation import gettext_lazy as _
 from model_utils.models import TimeStampedModel
 
 from core.models import ScheduledCommand
-from credit.models import Credit
-from disbursement.models import Disbursement
 from prison.models import Prison
-from .managers import PrisonProfileManager
-from .signals import prisoner_profile_current_prisons_need_updating
+from security.managers import PrisonerProfileManager, SenderProfileManager, RecipientProfileManager
+from security.signals import prisoner_profile_current_prisons_need_updating
 
 
 class SenderProfile(TimeStampedModel):
@@ -21,49 +16,20 @@ class SenderProfile(TimeStampedModel):
 
     prisons = models.ManyToManyField(Prison, related_name='senders')
 
+    objects = SenderProfileManager()
+
     class Meta:
         ordering = ('created',)
         permissions = (
             ('view_senderprofile', 'Can view sender profile'),
         )
+        indexes = [
+            models.Index(fields=['credit_count']),
+            models.Index(fields=['credit_total']),
+        ]
 
     def __str__(self):
         return 'Sender %s' % self.id
-
-    @property
-    def credit_filters(self):
-        try:
-            return reduce(
-                models.Q.__or__,
-                chain(
-                    (
-                        models.Q(
-                            transaction__sender_name=d.sender_name,
-                            transaction__sender_sort_code=d.sender_bank_account.sort_code,
-                            transaction__sender_account_number=d.sender_bank_account.account_number,
-                            transaction__sender_roll_number=d.sender_bank_account.roll_number
-                        )
-                        for d in self.bank_transfer_details.all()
-                    ),
-                    (
-                        models.Q(
-                            payment__card_number_last_digits=d.card_number_last_digits,
-                            payment__card_expiry_date=d.card_expiry_date
-                        )
-                        for d in self.debit_card_details.all()
-                    )
-                )
-            )
-        except TypeError:
-            return models.Q(pk=None)
-
-    def update_totals(self):
-        queryset = Credit.objects.filter(self.credit_filters)
-        totals = queryset.aggregate(credit_count=models.Count('pk'),
-                                    credit_total=models.Sum('amount'))
-        self.credit_count = totals.get('credit_count') or 0
-        self.credit_total = totals.get('credit_total') or 0
-        self.save()
 
     def get_sender_names(self):
         yield from (details.sender_name for details in self.bank_transfer_details.all())
@@ -73,11 +39,24 @@ class SenderProfile(TimeStampedModel):
     def get_sorted_sender_names(self):
         return sorted(set(filter(lambda name: (name or '').strip() or _('(Unknown)'), self.get_sender_names())))
 
+    def get_monitoring_users(self):
+        details = self.debit_card_details.first()
+        if details:
+            return details.monitoring_users
+        details = self.bank_transfer_details.first()
+        if details:
+            return details.sender_bank_account.monitoring_users
+        return User.objects.none()
+
 
 class BankAccount(models.Model):
     sort_code = models.CharField(max_length=50, blank=True)
     account_number = models.CharField(max_length=50, blank=True)
     roll_number = models.CharField(max_length=50, blank=True)
+
+    monitoring_users = models.ManyToManyField(
+        User, related_name='monitored_bank_accounts'
+    )
 
     class Meta:
         unique_together = (
@@ -114,6 +93,10 @@ class DebitCardSenderDetails(TimeStampedModel):
     postcode = models.CharField(max_length=250, blank=True, null=True, db_index=True)
     sender = models.ForeignKey(
         SenderProfile, on_delete=models.CASCADE, related_name='debit_card_details'
+    )
+
+    monitoring_users = models.ManyToManyField(
+        User, related_name='monitored_debit_cards'
     )
 
     class Meta:
@@ -161,41 +144,26 @@ class RecipientProfile(TimeStampedModel):
 
     prisons = models.ManyToManyField(Prison, related_name='recipients')
 
+    objects = RecipientProfileManager()
+
     class Meta:
         ordering = ('created',)
         permissions = (
             ('view_recipientprofile', 'Can view recipient profile'),
         )
+        indexes = [
+            models.Index(fields=['disbursement_count']),
+            models.Index(fields=['disbursement_total']),
+        ]
 
     def __str__(self):
         return 'Recipient %s' % self.id
 
-    @property
-    def disbursement_filters(self):
-        try:
-            return reduce(
-                models.Q.__or__,
-                chain(
-                    (
-                        models.Q(
-                            sort_code=d.recipient_bank_account.sort_code,
-                            account_number=d.recipient_bank_account.account_number,
-                            roll_number=d.recipient_bank_account.roll_number or None
-                        )
-                        for d in self.bank_transfer_details.all()
-                    )
-                )
-            )
-        except TypeError:
-            return models.Q(pk=None)
-
-    def update_totals(self):
-        queryset = Disbursement.objects.filter(self.disbursement_filters)
-        totals = queryset.aggregate(disbursement_count=models.Count('pk'),
-                                    disbursement_total=models.Sum('amount'))
-        self.disbursement_count = totals.get('disbursement_count') or 0
-        self.disbursement_total = totals.get('disbursement_total') or 0
-        self.save()
+    def get_monitoring_users(self):
+        details = self.bank_transfer_details.first()
+        if details:
+            return details.recipient_bank_account.monitoring_users
+        return User.objects.none()
 
 
 class BankTransferRecipientDetails(TimeStampedModel):
@@ -212,14 +180,15 @@ class BankTransferRecipientDetails(TimeStampedModel):
 
 
 class PrisonerProfile(TimeStampedModel):
+    credit_count = models.BigIntegerField(default=0)
+    credit_total = models.BigIntegerField(default=0)
+    disbursement_count = models.BigIntegerField(default=0)
+    disbursement_total = models.BigIntegerField(default=0)
+
     prisoner_name = models.CharField(max_length=250)
     prisoner_number = models.CharField(max_length=250, db_index=True)
     single_offender_id = models.UUIDField(blank=True, null=True)
     prisoner_dob = models.DateField(blank=True, null=True)
-    credit_count = models.BigIntegerField(default=0)
-    credit_total = models.BigIntegerField(default=0)
-    disbursement_count = models.IntegerField(default=0)
-    disbursement_total = models.IntegerField(default=0)
     current_prison = models.ForeignKey(
         Prison, on_delete=models.SET_NULL, null=True, related_name='current_prisoners'
     )
@@ -228,7 +197,11 @@ class PrisonerProfile(TimeStampedModel):
     senders = models.ManyToManyField(SenderProfile, related_name='prisoners')
     recipients = models.ManyToManyField(RecipientProfile, related_name='prisoners')
 
-    objects = PrisonProfileManager()
+    monitoring_users = models.ManyToManyField(
+        User, related_name='monitored_prisoners'
+    )
+
+    objects = PrisonerProfileManager()
 
     class Meta:
         ordering = ('created',)
@@ -238,25 +211,18 @@ class PrisonerProfile(TimeStampedModel):
         unique_together = (
             ('prisoner_number', 'prisoner_dob',),
         )
+        indexes = [
+            models.Index(fields=['credit_count']),
+            models.Index(fields=['credit_total']),
+            models.Index(fields=['disbursement_count']),
+            models.Index(fields=['disbursement_total']),
+        ]
 
     def __str__(self):
         return self.prisoner_number
 
-    @property
-    def credit_filters(self):
-        return models.Q(prisoner_number=self.prisoner_number, prisoner_dob=self.prisoner_dob)
-
-    @property
-    def disbursement_filters(self):
-        return models.Q(prisoner_number=self.prisoner_number)
-
-    def update_totals(self):
-        queryset = Credit.objects.filter(self.credit_filters)
-        totals = queryset.aggregate(credit_count=models.Count('pk'),
-                                    credit_total=models.Sum('amount'))
-        self.credit_count = totals.get('credit_count') or 0
-        self.credit_total = totals.get('credit_total') or 0
-        self.save()
+    def get_monitoring_users(self):
+        return self.monitoring_users
 
 
 class ProvidedPrisonerName(models.Model):

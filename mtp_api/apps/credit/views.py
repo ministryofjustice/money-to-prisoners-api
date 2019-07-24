@@ -24,6 +24,15 @@ from core.filters import (
 )
 from core.models import TruncUtcDate
 from core.permissions import ActionsBasedPermissions
+from credit.constants import CREDIT_STATUS, CREDIT_SOURCE, LOG_ACTIONS
+from credit.models import Credit, Comment, ProcessingBatch, PrivateEstateBatch
+from credit.permissions import CreditPermissions, PrivateEstateBatchPermissions
+from credit.serializers import (
+    CreditSerializer, SecurityCreditSerializer, CreditedOnlyCreditSerializer,
+    IdsCreditSerializer, CommentSerializer, ProcessingBatchSerializer,
+    PrivateEstateBatchSerializer, PrivateEstateBatchCreditSerializer,
+    CreditsGroupedByCreditedSerializer,
+)
 from mtp_auth.models import PrisonUserMapping
 from mtp_auth.permissions import (
     CashbookClientIDPermissions, BankAdminClientIDPermissions, NomsOpsClientIDPermissions,
@@ -31,15 +40,6 @@ from mtp_auth.permissions import (
     get_client_permissions_class,
 )
 from prison.models import Prison
-from .constants import CREDIT_STATUS, CREDIT_SOURCE, LOG_ACTIONS
-from .models import Credit, Comment, ProcessingBatch, PrivateEstateBatch
-from .permissions import CreditPermissions, PrivateEstateBatchPermissions
-from .serializers import (
-    CreditSerializer, SecurityCreditSerializer, CreditedOnlyCreditSerializer,
-    IdsCreditSerializer, CommentSerializer, ProcessingBatchSerializer,
-    PrivateEstateBatchSerializer, PrivateEstateBatchCreditSerializer,
-    CreditsGroupedByCreditedSerializer,
-)
 
 User = get_user_model()
 
@@ -116,7 +116,6 @@ class ValidCreditFilter(django_filters.BooleanFilter):
 
 
 class CreditSourceFilter(django_filters.ChoiceFilter):
-
     def __init__(self, *args, **kwargs):
         kwargs['choices'] = CREDIT_SOURCE.choices
         super().__init__(*args, **kwargs)
@@ -142,6 +141,13 @@ class PostcodeFilter(django_filters.CharFilter):
         return super().filter(qs, value)
 
 
+class MonitoredProfileFilter(django_filters.BooleanFilter):
+    def filter(self, qs, value):
+        if value:
+            return qs.monitored_by(self.parent.request.user)
+        return qs
+
+
 class CreditListFilter(django_filters.FilterSet):
     status = StatusChoiceFilter(choices=CREDIT_STATUS.choices)
     user = django_filters.ModelChoiceFilter(field_name='owner', queryset=User.objects.all())
@@ -164,6 +170,7 @@ class CreditListFilter(django_filters.FilterSet):
         lookup_expr='icontains',
     )
     search = CreditTextSearchFilter()
+
     sender_name = MultipleFieldCharFilter(
         field_name=('transaction__sender_name', 'payment__cardholder_name',),
         lookup_expr='icontains'
@@ -213,6 +220,7 @@ class CreditListFilter(django_filters.FilterSet):
         IsoDateTimeFilter(field_name='logged_at', lookup_expr='gte'),
         {'logged_at': TruncUtcDate('log__created')}
     )
+    monitored = MonitoredProfileFilter()
 
     class Meta:
         model = Credit
@@ -221,12 +229,11 @@ class CreditListFilter(django_filters.FilterSet):
             'amount': ['exact', 'lte', 'gte'],
             'reviewed': ['exact'],
             'resolution': ['exact'],
-            'log__action': ['exact']
+            'log__action': ['exact'],
         }
 
 
-class CreditViewMixin(object):
-
+class CreditViewMixin:
     def get_queryset(self):
         queryset = Credit.objects.all()
         cashbook_client = self.request.auth.application.client_id == CASHBOOK_OAUTH_CLIENT_ID

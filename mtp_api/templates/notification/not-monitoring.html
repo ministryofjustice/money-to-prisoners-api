@@ -1,0 +1,51 @@
+{% extends 'mtp_common/email_base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans 'Prisoner money intelligence' %}{% endblock %}
+
+{% block inner_content %}
+  <p>
+    {% blocktrans trimmed with name=user.get_full_name %}
+      Dear {{ name }},
+    {% endblocktrans %}
+  </p>
+
+  <p>
+    {% trans 'We hope you already find the intelligence tool useful.' %}
+  </p>
+
+  <p>
+    {% trans 'At the moment, you’re not using the tool to ‘monitor’ payment sources or prisoners across prisons which can be useful in tracking potentially suspicious financial activity.' %}
+  </p>
+
+  <p>
+    {% trans 'You can start monitoring prisoners or payments sources from inside the tool anytime you like.' %}
+  </p>
+
+  <p>
+    {% trans 'And once you’ve started to monitor payment sources and/or prisoners, we’ll notify you by daily email when any actions take place.' %}
+    {% trans 'When there is no new activity on what you’re monitoring, we won’t email you.' %}
+  </p>
+
+  <p>
+    {% blocktrans trimmed %}
+      You can turn off these email notifications from your <a href="{{ settings_url }}">settings screen</a> in the intelligence tool.
+    {% endblocktrans %}
+  </p>
+
+  <p>
+    {% blocktrans trimmed %}
+      Any <a href="{{ feedback_url }}">feedback</a> you can give us helps improve the tool further.
+    {% endblocktrans %}
+  </p>
+
+  <p>
+    {% trans 'We hope you find this helpful.' %}
+  </p>
+
+  <p>
+    {% trans 'Kind regards' %},
+    <br />
+    {% trans 'Prisoner money team' %}
+  </p>
+{% endblock %}

@@ -8,7 +8,6 @@ from service.models import Downtime, SERVICES
 
 
 class DowntimeTestCase(TestCase):
-
     def _downtime_is_active(self, service, start, end):
         downtime = Downtime(service=service, start=start, end=end)
         downtime.save()
@@ -69,7 +68,6 @@ class DowntimeTestCase(TestCase):
 
 
 class DowntimeHealthcheckTestCase(TestCase):
-
     def _get_healthcheck_data(self):
         response = self.client.get('/service-availability/')
         return json.loads(str(response.content, 'utf-8'))

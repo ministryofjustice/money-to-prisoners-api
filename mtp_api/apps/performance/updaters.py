@@ -8,9 +8,9 @@ from django.db import models
 from django.utils import timezone
 import requests
 
+from performance.models import DigitalTakeup
 from transaction.constants import TRANSACTION_CATEGORY, TRANSACTION_SOURCE, TRANSACTION_STATUS
 from transaction.models import Transaction
-from .models import DigitalTakeup
 
 logger = logging.getLogger('mtp')
 

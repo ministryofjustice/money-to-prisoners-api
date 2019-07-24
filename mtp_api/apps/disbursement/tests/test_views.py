@@ -1,6 +1,7 @@
 from datetime import date, timedelta
 import itertools
 
+from django.core.management import call_command
 from django.urls import reverse
 from django.utils.crypto import get_random_string
 from mtp_common.test_utils import silence_logger
@@ -12,11 +13,12 @@ from disbursement.constants import (
     DISBURSEMENT_RESOLUTION, DISBURSEMENT_METHOD, LOG_ACTIONS
 )
 from disbursement.models import Disbursement, Log
-from disbursement.tests.utils import fake_disbursement
+from disbursement.tests.utils import fake_disbursement, generate_disbursements
 from mtp_auth.models import PrisonUserMapping
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from prison.models import Prison, PrisonerLocation
 from prison.tests.utils import load_random_prisoner_locations
+from security.models import BankAccount, PrisonerProfile
 
 
 class CreateDisbursementTestCase(AuthTestCaseMixin, APITestCase):
@@ -315,6 +317,91 @@ class ListDisbursementsTestCase(AuthTestCaseMixin, APITestCase):
             for log in disbursement.log_set.all():
                 if log.action == 'created':
                     self.assertLess(log.created.date(), minimum_created_date)
+
+
+class MonitoredDisbursementListTestCase(AuthTestCaseMixin, APITestCase):
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
+
+    def setUp(self):
+        super().setUp()
+        test_users = make_test_users()
+        self.user = test_users['security_staff'][0]
+        load_random_prisoner_locations()
+        generate_disbursements(200)
+        call_command('update_security_profiles')
+
+    def _test_response(self, filters=None):
+        params = {'monitored': True, 'limit': 1000}
+        if filters:
+            params.update(filters)
+        response = self.client.get(
+            reverse('disbursement-list'),
+            params,
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        return response
+
+    def test_list_disbursements_of_monitored_prisoner(self):
+        prisoner_profile = PrisonerProfile.objects.first()
+        prisoner_profile.monitoring_users.add(self.user)
+
+        response = self._test_response()
+
+        self.assertEqual(
+            sorted(d['id'] for d in response.data['results']),
+            sorted(prisoner_profile.disbursements.values_list('id', flat=True))
+        )
+
+    def test_list_disbursements_of_monitored_bank_account(self):
+        bank_account = BankAccount.objects.first()
+        bank_account.monitoring_users.add(self.user)
+
+        response = self._test_response()
+
+        self.assertEqual(
+            sorted(d['id'] for d in response.data['results']),
+            sorted(
+                bank_account.recipients.first().recipient.disbursements.values_list(
+                    'id', flat=True
+                )
+            )
+        )
+
+    def test_list_disbursements_of_monitored_bank_account_and_prisoner(self):
+        bank_account = BankAccount.objects.first()
+        bank_account.monitoring_users.add(self.user)
+        prisoner_profile = PrisonerProfile.objects.first()
+        prisoner_profile.monitoring_users.add(self.user)
+
+        response = self._test_response()
+
+        self.assertEqual(
+            sorted(d['id'] for d in response.data['results']),
+            sorted(
+                prisoner_profile.disbursements.all().union(
+                    bank_account.recipients.first().recipient.disbursements.all()
+                ).values_list(
+                    'id', flat=True
+                )
+            )
+        )
+
+    def test_list_ordered_monitored_disbursements(self):
+        bank_account = BankAccount.objects.first()
+        bank_account.monitoring_users.add(self.user)
+        prisoner_profile = PrisonerProfile.objects.first()
+        prisoner_profile.monitoring_users.add(self.user)
+
+        response = self._test_response(filters={'ordering': 'created'})
+
+        self.assertEqual(
+            [d['id'] for d in response.data['results']],
+            [d.id for d in prisoner_profile.disbursements.all().union(
+                bank_account.recipients.first().recipient.disbursements.all()
+            ).order_by('created', 'id')]
+        )
 
 
 class UpdateDisbursementsTestCase(AuthTestCaseMixin, APITestCase):

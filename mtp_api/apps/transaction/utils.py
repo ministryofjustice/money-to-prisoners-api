@@ -1,27 +1,35 @@
 import math
 
 
-def format_amount(amount_pence, trim_empty_pence=False, truncate_after=None):
+def format_amount(
+    amount_pence, trim_empty_pence=False, truncate_after=None, pound_sign=True
+):
     """
     Format an amount in pence as pounds
     :param amount_pence: int pence amount
     :param trim_empty_pence: if True, strip off .00
     :param truncate_after: if a number of pounds, will round into £1k, £15m format above this amount
+    :param pound_sign: whether to prefix with £
     :return: str
     """
+    text_amount = ''
     if not isinstance(amount_pence, int):
-        return ''
+        return text_amount
+
     pounds = math.fabs(amount_pence / 100)
     if truncate_after is not None and pounds >= truncate_after:
         if pounds >= 1000000:
-            return '£{:0,.1f}m'.format(pounds / 1000000)
+            text_amount = '{:0,.1f}m'.format(pounds / 1000000)
         if pounds >= 1000:
-            return '£{:0,.1f}k'.format(pounds / 1000)
-    text_amount = '£{:0,.2f}'.format(pounds)
-    if trim_empty_pence and text_amount.endswith('.00'):
-        text_amount = text_amount[:-3]
+            text_amount = '{:0,.1f}k'.format(pounds / 1000)
+    else:
+        text_amount = '{:0,.2f}'.format(pounds)
+        if trim_empty_pence and text_amount.endswith('.00'):
+            text_amount = text_amount[:-3]
+    if pound_sign:
+        text_amount = f'£{text_amount}'
     if amount_pence < 0:
-        return '-' + text_amount
+        text_amount = f'-{text_amount}'
     return text_amount
 
 

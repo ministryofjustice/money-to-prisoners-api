@@ -13,7 +13,6 @@ logger = logging.getLogger('mtp')
 
 
 class Command(BaseCommand):
-
     def handle(self, *args, **kwargs):
         auth = (
             '%s/token' % settings.ZENDESK_API_USERNAME,

@@ -2,7 +2,7 @@ from django.conf.urls import url, include
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework_nested import routers
 
-from . import views
+from credit import views
 
 router = routers.DefaultRouter()
 router.register(r'comments', views.CommentView)

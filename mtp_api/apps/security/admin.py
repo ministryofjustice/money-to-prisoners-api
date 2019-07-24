@@ -3,8 +3,9 @@ from django.utils.translation import gettext, gettext_lazy as _
 
 from core.admin import add_short_description
 from security.models import (
-    SenderProfile, PrisonerProfile, BankTransferSenderDetails,
-    DebitCardSenderDetails, SavedSearch, SearchFilter,
+    SenderProfile, BankTransferSenderDetails, DebitCardSenderDetails,
+    PrisonerProfile, RecipientProfile, BankTransferRecipientDetails,
+    SavedSearch, SearchFilter,
 )
 from transaction.utils import format_amount
 
@@ -28,12 +29,15 @@ class DebitCardSenderDetailsAdminInline(admin.StackedInline):
 class SenderProfileAdmin(admin.ModelAdmin):
     ordering = ('-credit_count',)
     list_display = ('sender_names', 'sender_type', 'credit_count', 'formatted_credit_total')
-    inlines = (BankTransferSenderDetailsAdminInline, DebitCardSenderDetailsAdminInline)
+    inlines = (
+        BankTransferSenderDetailsAdminInline,
+        DebitCardSenderDetailsAdminInline,
+    )
     search_fields = (
         'bank_transfer_details__sender_bank_account__sender_name',
-        'bank_transfer_details__sender_bank_account__sender_sort_code',
-        'bank_transfer_details__sender_bank_account__sender_account_number',
-        'bank_transfer_details__sender_bank_account__sender_roll_number',
+        'bank_transfer_details__sender_bank_account__sort_code',
+        'bank_transfer_details__sender_bank_account__account_number',
+        'bank_transfer_details__sender_bank_account__roll_number',
         'debit_card_details__card_number_last_digits',
         'debit_card_details__card_expiry_date',
         'debit_card_details__cardholder_name__name',
@@ -57,17 +61,63 @@ class SenderProfileAdmin(admin.ModelAdmin):
         return format_amount(instance.credit_total)
 
 
+class BankTransferRecipientDetailsAdminInline(admin.StackedInline):
+    model = BankTransferRecipientDetails
+    extra = 0
+
+
+@admin.register(RecipientProfile)
+class RecipientProfileAdmin(admin.ModelAdmin):
+    ordering = ('-disbursement_count',)
+    list_display = ('sort_code', 'account_number', 'disbursement_count', 'formatted_disbursement_total')
+    search_fields = (
+        'bank_transfer_details__recipient_bank_account__sort_code',
+        'bank_transfer_details__recipient_bank_account__account_number',
+        'bank_transfer_details__recipient_bank_account__roll_number',
+        'disbursements__recipient_first_name',
+        'disbursements__recipient_last_name',
+    )
+    inlines = (BankTransferRecipientDetailsAdminInline,)
+
+    @add_short_description(_('disbursement total'))
+    def formatted_disbursement_total(self, instance):
+        return format_amount(instance.disbursement_total)
+
+    @add_short_description(_('sort code'))
+    def sort_code(self, instance):
+        return (
+            instance.bank_transfer_details.first().recipient_bank_account.sort_code
+            if instance.bank_transfer_details.first()
+            else 'Cheque'
+        )
+
+    @add_short_description(_('account number'))
+    def account_number(self, instance):
+        return (
+            instance.bank_transfer_details.first().recipient_bank_account.account_number
+            if instance.bank_transfer_details.first()
+            else 'Cheque'
+        )
+
+
 @admin.register(PrisonerProfile)
 class PrisonerProfileAdmin(admin.ModelAdmin):
     ordering = ('-credit_count',)
-    list_display = ('prisoner_number', 'credit_count', 'formatted_credit_total')
+    list_display = (
+        'prisoner_number', 'credit_count', 'formatted_credit_total',
+        'disbursement_count', 'formatted_disbursement_total',
+    )
     search_fields = ('prisoner_name', 'prisoner_number', 'prisons__name', 'provided_name__name')
-    readonly_fields = ('prisons', 'provided_names')
-    exclude = ('senders',)
+    readonly_fields = ('prisons', 'provided_names',)
+    exclude = ('senders', 'recipients',)
 
     @add_short_description(_('credit total'))
     def formatted_credit_total(self, instance):
         return format_amount(instance.credit_total)
+
+    @add_short_description(_('disbursement total'))
+    def formatted_disbursement_total(self, instance):
+        return format_amount(instance.disbursement_total)
 
     @add_short_description(_('names specified by senders'))
     def provided_names(self, instance):

@@ -9,7 +9,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from core.tests.utils import make_test_users
-from credit.constants import CREDIT_RESOLUTION
+from credit.constants import CREDIT_RESOLUTION, CREDIT_STATUS
 from credit.models import Credit, PrivateEstateBatch
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from payment.tests.utils import generate_payments
@@ -47,6 +47,12 @@ class PrivateEstateBatchTestCase(AuthTestCaseMixin, APITestCase):
         self.credits = transaction_credits + payment_credits
         self.prisons = Prison.objects.all()
 
+        creditable = Credit.STATUS_LOOKUP[CREDIT_STATUS.CREDITED] | Credit.STATUS_LOOKUP[CREDIT_STATUS.CREDIT_PENDING]
+        private_estate_credit_set = Credit.objects.filter(prison__private_estate=True).filter(creditable)
+        if not private_estate_credit_set.exists():
+            public_estate_credits = Credit.objects.filter(prison__private_estate=False).filter(creditable)
+            public_estate_credits[public_estate_credits.count() // 2:].update(prison=self.private_prison)
+
         self.latest_date = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
         date = Credit.objects.earliest().received_at.replace(hour=0, minute=0, second=0, microsecond=0)
         while date < self.latest_date:
@@ -74,6 +80,18 @@ class PrivateEstateBatchTestCase(AuthTestCaseMixin, APITestCase):
         self.assertFalse(any(
             map(lambda credit: credit.prison and credit.prison.private_estate, credits_not_in_batches)
         ))
+
+    def test_batches_only_contain_private_estate_credits(self):
+        creditable = Credit.STATUS_LOOKUP[CREDIT_STATUS.CREDITED] | Credit.STATUS_LOOKUP[CREDIT_STATUS.CREDIT_PENDING]
+        private_estate_credit_ids = set(
+            Credit.objects.filter(
+                prison__private_estate=True, received_at__lt=self.latest_date,
+            ).filter(creditable).values_list('pk', flat=True)
+        )
+        for batch in PrivateEstateBatch.objects.all():
+            for credit_id in batch.credit_set.values_list('pk', flat=True):
+                private_estate_credit_ids.remove(credit_id)
+        self.assertEqual(len(private_estate_credit_ids), 0)
 
     def test_bank_admin_can_get_batches(self):
         date_with_batch = Credit.objects.credited().filter(prison__private_estate=True).earliest().received_at.date()

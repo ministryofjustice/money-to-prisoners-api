@@ -13,7 +13,6 @@ class TestClientIDPermissions(ClientIDPermissions):
 
 
 class ClientIDPermissionsTestCase(TestCase):
-
     def setUp(self):
         super().setUp()
         self.permissions = TestClientIDPermissions()

@@ -1,0 +1,82 @@
+{% extends 'mtp_common/email_base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans 'Prisoner money intelligence' %}{% endblock %}
+
+{% block inner_content %}
+  <p>
+    {% blocktrans trimmed with name=user.get_full_name %}
+      Dear {{ name }},
+    {% endblocktrans %}
+  </p>
+
+  {% block preamble %}
+    <p>
+      {% blocktrans trimmed with date=period_start|date:'d/m/Y' %}
+        Here are your notifications for payment sources or prisoners you’re monitoring for {{ date }}.
+      {% endblocktrans %}
+    </p>
+  {% endblock %}
+
+  <h2 style="padding:0;font-size:24px;line-height:35px;font-weight:bold">
+    <a href="{{ notifications_url }}" style="color:#005ea5">
+      {% blocktrans trimmed count count=event_group.transaction_count %}
+        You have {{ count }} notification
+      {% plural %}
+        You have {{ count }} notifications
+      {% endblocktrans %}
+    </a>
+  </h2>
+
+  {% if event_group.senders %}
+    <h3 style="padding:0;font-size:19px;line-height:25px;font-weight:bold">{% trans 'Payment sources' %}</h3>
+
+    {% for profile in event_group.senders %}
+      <a href="{{ sender_url }}{{ profile.id }}/" style="color:#005ea5">
+        {{ profile.description }}
+        –
+        {% blocktrans trimmed count count=profile.transaction_count %}
+          {{ count }} transaction
+        {% plural %}
+          {{ count }} transactions
+        {% endblocktrans %}
+      </a>
+      <br />
+    {% endfor %}
+  {% endif %}
+
+  {% if event_group.prisoners %}
+    <h3 style="padding:0;font-size:19px;line-height:25px;font-weight:bold">{% trans 'Prisoners' %}</h3>
+
+    {% for profile in event_group.prisoners %}
+      <a href="{{ prisoner_url }}{{ profile.id }}/{% if profile.disbursements_only %}disbursements/{% endif %}" style="color:#005ea5">
+        {{ profile.description }}
+        –
+        {% blocktrans trimmed count count=profile.transaction_count %}
+          {{ count }} transaction
+        {% plural %}
+          {{ count }} transactions
+        {% endblocktrans %}
+      </a>
+      <br />
+    {% endfor %}
+  {% endif %}
+
+  <p>
+    {% blocktrans trimmed %}
+      You can turn off these email notifications from your <a href="{{ settings_url }}">settings screen</a> in the intelligence tool.
+    {% endblocktrans %}
+  </p>
+
+  <p>
+    {% blocktrans trimmed %}
+      Any <a href="{{ feedback_url }}">feedback</a> you can give us helps improve the tool further.
+    {% endblocktrans %}
+  </p>
+
+  <p>
+    {% trans 'Kind regards' %},
+    <br />
+    {% trans 'Prisoner money team' %}
+  </p>
+{% endblock %}

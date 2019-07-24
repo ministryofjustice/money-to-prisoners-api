@@ -87,9 +87,15 @@ class Credit(TimeStampedModel):
             ('review_credit', 'Can review credit'),
             ('credit_credit', 'Can credit credit'),
         )
-        index_together = (
-            ('prisoner_number', 'prisoner_dob'),
-        )
+        indexes = [
+            models.Index(fields=['prisoner_number', 'prisoner_dob']),
+            models.Index(fields=['received_at', 'id']),
+            models.Index(fields=['-received_at', 'id']),
+            models.Index(fields=['amount', 'id']),
+            models.Index(fields=['-amount', 'id']),
+            models.Index(fields=['prisoner_number', 'id']),
+            models.Index(fields=['-prisoner_number', 'id']),
+        ]
 
     def __str__(self):
         return 'Credit {id}, {amount} {sender_name} > {prisoner_name}, {status}'.format(
@@ -289,7 +295,7 @@ class Log(TimeStampedModel):
     class Meta:
         ordering = ('id',)
         indexes = [
-            models.Index(fields=['created'])
+            models.Index(fields=['created']),
         ]
 
     def __str__(self):

@@ -18,7 +18,6 @@ factory = APIRequestFactory()
 
 
 class GroupSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Group
         fields = ('name',)
@@ -45,7 +44,6 @@ def basic_auth_header(username, password):
 
 
 class BaseActionsBasedPermissionsTests(TestCase):
-
     def setUp(self):
         User.objects.create_user('disallowed', 'disallowed@outside.local', 'password')
         user = User.objects.create_user('permitted', 'permitted@mtp.local', 'password')
@@ -67,7 +65,6 @@ class BaseActionsBasedPermissionsTests(TestCase):
 
 
 class CreateActionsBasedPermissionsTests(BaseActionsBasedPermissionsTests):
-
     def _get_test_view(self):
         return TestViewSet.as_view({
             'post': 'create',
@@ -93,7 +90,6 @@ class CreateActionsBasedPermissionsTests(BaseActionsBasedPermissionsTests):
 
 
 class ListActionsBasedPermissionsTests(BaseActionsBasedPermissionsTests):
-
     def _get_test_view(self):
         return TestViewSet.as_view({
             'get': 'list',
@@ -110,7 +106,6 @@ class ListActionsBasedPermissionsTests(BaseActionsBasedPermissionsTests):
 
 
 class RetrieveActionsBasedPermissionsTests(BaseActionsBasedPermissionsTests):
-
     def _get_test_view(self):
         return TestViewSet.as_view({
             'get': 'retrieve',
@@ -136,7 +131,6 @@ class RetrieveActionsBasedPermissionsTests(BaseActionsBasedPermissionsTests):
 
 
 class UpdateActionsBasedPermissionsTests(BaseActionsBasedPermissionsTests):
-
     def _get_test_view(self):
         return TestViewSet.as_view({
             'put': 'update',
@@ -162,7 +156,6 @@ class UpdateActionsBasedPermissionsTests(BaseActionsBasedPermissionsTests):
 
 
 class DestroyActionsBasedPermissionsTests(BaseActionsBasedPermissionsTests):
-
     def _get_test_view(self):
         return TestViewSet.as_view({
             'delete': 'destroy'
@@ -188,7 +181,6 @@ class DestroyActionsBasedPermissionsTests(BaseActionsBasedPermissionsTests):
 
 
 class ActionsBasedPermissionsOnViewSetsOnlyTests(BaseActionsBasedPermissionsTests):
-
     def _get_test_view(self):
         class TestView(
             mixins.CreateModelMixin,

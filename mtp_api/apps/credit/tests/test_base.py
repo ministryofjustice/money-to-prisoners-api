@@ -99,7 +99,6 @@ class BaseCreditViewTestCase(AuthTestCaseMixin, APITestCase):
 
 
 class CreditRejectsRequestsWithoutPermissionTestMixin:
-
     """
     Mixin for permission checks on the endpoint.
 

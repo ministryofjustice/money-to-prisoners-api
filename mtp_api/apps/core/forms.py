@@ -28,7 +28,6 @@ class RecreateTestDataForm(forms.Form):
 
 
 class AdminFilterForm(forms.Form):
-
     def __init__(self, *args, **kwargs):
         extra_fields = kwargs.pop('extra_fields', [])
         super().__init__(*args, **kwargs)

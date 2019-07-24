@@ -1,12 +1,12 @@
 from django.db import connection, models
+from django.db.models import Q
 from django.db.transaction import atomic
 
-from . import InvalidCreditStateException
-from .constants import LOG_ACTIONS, CREDIT_STATUS, CREDIT_RESOLUTION
+from credit import InvalidCreditStateException
+from credit.constants import LOG_ACTIONS, CREDIT_STATUS, CREDIT_RESOLUTION
 
 
 class CreditQuerySet(models.QuerySet):
-
     def credit_pending(self):
         return self.filter(self.model.STATUS_LOOKUP[CREDIT_STATUS.CREDIT_PENDING])
 
@@ -33,9 +33,15 @@ class CreditQuerySet(models.QuerySet):
             .order_by('received_at_date') \
             .annotate(amount_per_day=models.Sum('amount'))
 
+    def monitored_by(self, user):
+        return self.filter(
+            Q(sender_profile__bank_transfer_details__sender_bank_account__monitoring_users=user) |
+            Q(sender_profile__debit_card_details__monitoring_users=user) |
+            Q(prisoner_profile__monitoring_users=user)
+        )
+
 
 class CreditManager(models.Manager):
-
     def update_prisons(self):
         with connection.cursor() as cursor:
             cursor.execute(
@@ -58,69 +64,66 @@ class CreditManager(models.Manager):
 
     @atomic
     def reconcile(self, start_date, end_date, user, **kwargs):
+        from credit.models import Log
+
         update_set = self.get_queryset().filter(
             received_at__gte=start_date,
             received_at__lt=end_date,
             reconciled=False,
             **kwargs
         ).select_for_update()
-
-        from .models import Log
         Log.objects.credits_reconciled(update_set, user)
         update_set.update(reconciled=True)
 
     @atomic
     def set_manual(self, queryset, credit_ids, user):
+        from credit.models import Log
+
         to_update = queryset.filter(
             resolution=CREDIT_RESOLUTION.PENDING,
             pk__in=credit_ids
         ).select_for_update()
-
         ids_to_update = [c.id for c in to_update]
         conflict_ids = set(credit_ids) - set(ids_to_update)
 
-        from .models import Log
         Log.objects.credits_set_manual(to_update, user)
         to_update.update(resolution=CREDIT_RESOLUTION.MANUAL, owner=user)
         return sorted(conflict_ids)
 
     @atomic
     def refund(self, transaction_ids, user):
-        from .models import Credit
+        from credit.models import Credit, Log
+
         update_set = self.get_queryset().filter(
             Credit.STATUS_LOOKUP['refund_pending'],
             transaction__pk__in=transaction_ids).select_for_update()
         conflict_ids = set(transaction_ids) - {c.transaction.id for c in update_set}
-
         if conflict_ids:
             raise InvalidCreditStateException(sorted(conflict_ids))
 
-        from .models import Log
         Log.objects.credits_refunded(update_set, user)
         update_set.update(resolution=CREDIT_RESOLUTION.REFUNDED)
 
     @atomic
     def review(self, credit_ids, user):
+        from credit.models import Log
+
         to_update = self.get_queryset().filter(
             pk__in=credit_ids
         ).select_for_update()
-
-        from .models import Log
         Log.objects.credits_reviewed(to_update, user)
         to_update.update(reviewed=True)
 
 
 class CompletedCreditManager(CreditManager):
-
     def get_queryset(self):
         return super().get_queryset().exclude(resolution=CREDIT_RESOLUTION.INITIAL)
 
 
 class LogManager(models.Manager):
-
     def _log_action(self, action, credits, by_user=None):
         logs = []
-        from .models import Log
+        from credit.models import Log
         for credit in credits:
             logs.append(Log(
                 credit=credit,

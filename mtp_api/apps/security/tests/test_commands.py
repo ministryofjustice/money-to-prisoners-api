@@ -3,9 +3,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from core.tests.utils import make_test_users
-from credit.models import Credit
-from disbursement.constants import DISBURSEMENT_METHOD
-from disbursement.models import Disbursement
+from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION
 from disbursement.tests.utils import (
     generate_disbursements, generate_initial_disbursement_data,
     create_disbursements
@@ -39,40 +37,48 @@ class UpdateSecurityProfilesTestCase(TestCase):
         call_command('update_security_profiles', verbosity=0)
 
         for sender_profile in SenderProfile.objects.all():
-            credits = Credit.objects.filter(sender_profile.credit_filters)
             self.assertEqual(
-                sum([credit.amount for credit in credits]),
+                len(sender_profile.credits.all()),
+                sender_profile.credit_count
+            )
+            self.assertEqual(
+                sum([credit.amount for credit in sender_profile.credits.all()]),
                 sender_profile.credit_total
             )
-            self.assertEqual(len(credits), sender_profile.credit_count)
 
         for recipient_profile in RecipientProfile.objects.filter(
             bank_transfer_details__isnull=False
         ):
-            disbursements = Disbursement.objects.filter(recipient_profile.disbursement_filters)
             self.assertEqual(
-                sum([disbursement.amount for disbursement in disbursements]),
+                sum([disbursement.amount for disbursement in recipient_profile.disbursements.all()]),
                 recipient_profile.disbursement_total
             )
-            self.assertEqual(len(disbursements), recipient_profile.disbursement_count)
+            self.assertEqual(
+                len(recipient_profile.disbursements.all()),
+                recipient_profile.disbursement_count
+            )
 
         for prisoner_profile in PrisonerProfile.objects.all():
             if prisoner_profile.credits.count():
                 self.assertTrue(prisoner_profile.single_offender_id)
 
-            credits = Credit.objects.filter(prisoner_profile.credit_filters)
             self.assertEqual(
-                sum([credit.amount for credit in credits]),
+                sum([credit.amount for credit in prisoner_profile.credits.all()]),
                 prisoner_profile.credit_total
             )
-            self.assertEqual(len(credits), prisoner_profile.credit_count)
-
-            disbursements = Disbursement.objects.filter(prisoner_profile.disbursement_filters)
             self.assertEqual(
-                sum([disbursement.amount for disbursement in disbursements]),
+                len(prisoner_profile.credits.all()),
+                prisoner_profile.credit_count
+            )
+
+            self.assertEqual(
+                sum([disbursement.amount for disbursement in prisoner_profile.disbursements.all()]),
                 prisoner_profile.disbursement_total
             )
-            self.assertEqual(len(disbursements), prisoner_profile.disbursement_count)
+            self.assertEqual(
+                len(prisoner_profile.disbursements.all()),
+                prisoner_profile.disbursement_count
+            )
 
     def test_update_security_profiles_subsequent_bank_transfer(self):
         generate_transactions(transaction_batch=100, days_of_history=5)
@@ -112,7 +118,8 @@ class UpdateSecurityProfilesTestCase(TestCase):
 
         sender_to_update.refresh_from_db()
         self.assertEqual(
-            sender_to_update.credit_count, initial_sender_credit_count + 1
+            sender_to_update.credit_count,
+            initial_sender_credit_count + 1
         )
         self.assertEqual(
             sender_to_update.credit_total,
@@ -121,7 +128,8 @@ class UpdateSecurityProfilesTestCase(TestCase):
 
         prisoner_to_update.refresh_from_db()
         self.assertEqual(
-            prisoner_to_update.credit_count, initial_prisoner_credit_count + 1
+            prisoner_to_update.credit_count,
+            initial_prisoner_credit_count + 1
         )
         self.assertEqual(
             prisoner_to_update.credit_total,
@@ -165,7 +173,8 @@ class UpdateSecurityProfilesTestCase(TestCase):
 
         sender_to_update.refresh_from_db()
         self.assertEqual(
-            sender_to_update.credit_count, initial_sender_credit_count + 1
+            sender_to_update.credit_count,
+            initial_sender_credit_count + 1
         )
         self.assertEqual(
             sender_to_update.credit_total,
@@ -183,7 +192,8 @@ class UpdateSecurityProfilesTestCase(TestCase):
 
         prisoner_to_update.refresh_from_db()
         self.assertEqual(
-            prisoner_to_update.credit_count, initial_prisoner_credit_count + 1
+            prisoner_to_update.credit_count,
+            initial_prisoner_credit_count + 1
         )
         self.assertEqual(
             prisoner_to_update.credit_total,
@@ -219,6 +229,7 @@ class UpdateSecurityProfilesTestCase(TestCase):
 
         new_disbursements[0]['prisoner_number'] = prisoner_to_update.prisoner_number
         new_disbursements[0]['prisoner_name'] = prisoner_to_update.prisoner_name
+        new_disbursements[0]['resolution'] = DISBURSEMENT_RESOLUTION.SENT
 
         create_disbursements(new_disbursements)
         call_command('update_security_profiles', verbosity=0)

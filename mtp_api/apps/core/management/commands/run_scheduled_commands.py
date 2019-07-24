@@ -9,7 +9,6 @@ logger = logging.getLogger('mtp')
 
 
 class Command(BaseCommand):
-
     def handle(self, *args, **options):
         commands = ScheduledCommand.objects.all()
         for command in commands:

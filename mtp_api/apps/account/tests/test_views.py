@@ -10,7 +10,6 @@ from mtp_auth.tests.utils import AuthTestCaseMixin
 
 
 class CreateBalanceTestCase(AuthTestCaseMixin, APITestCase):
-
     fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
     def setUp(self):
@@ -85,7 +84,6 @@ class CreateBalanceTestCase(AuthTestCaseMixin, APITestCase):
 
 
 class ListBalanceViewTestCase(AuthTestCaseMixin, APITestCase):
-
     fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
     def setUp(self):

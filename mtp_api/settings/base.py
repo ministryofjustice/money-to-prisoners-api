@@ -26,6 +26,7 @@ ALLOWED_HOSTS = []
 
 START_PAGE_URL = os.environ.get('START_PAGE_URL', 'https://www.gov.uk/send-prisoner-money')
 SITE_URL = os.environ.get('SITE_URL', 'http://localhost:8000')
+NOMS_OPS_URL = os.environ.get('NOMS_OPS_URL', 'http://localhost:8003')
 
 # Application definition
 INSTALLED_APPS = (
@@ -54,6 +55,7 @@ INSTALLED_APPS = (
     'service',
     'security',
     'disbursement',
+    'notification',
 
     # django admin
     'django.contrib.admin',

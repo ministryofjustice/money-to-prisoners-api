@@ -10,8 +10,8 @@ from django.core.management import call_command
 from django.core.management.commands.testserver import Command as TestServerCommand
 from django.db import connection
 
+from core.management.commands import synchronised
 from core.tests.utils import give_superusers_full_access
-from . import synchronised
 
 User = get_user_model()
 
