@@ -100,6 +100,8 @@ class PrisonerProfileSerializer(serializers.ModelSerializer):
             'id',
             'credit_count',
             'credit_total',
+            'disbursement_count',
+            'disbursement_total',
             'sender_count',
             'recipient_count',
             'prisoner_name',
