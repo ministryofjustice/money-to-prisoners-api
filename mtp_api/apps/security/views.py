@@ -209,6 +209,14 @@ class SenderProfileCreditsView(GetCredits):
 
 
 class PrisonerProfileListFilter(django_filters.FilterSet):
+    simple_search = SplitTextInMultipleFieldsFilter(
+        field_names=(
+            'prisoner_name',
+            'prisoner_number',
+        ),
+        lookup_expr='icontains',
+    )
+
     prisoner_name = django_filters.CharFilter(
         name='prisoner_name', lookup_expr='icontains'
     )
@@ -259,9 +267,14 @@ class PrisonerProfileView(
     filter_class = PrisonerProfileListFilter
     serializer_class = PrisonerProfileSerializer
     ordering_fields = (
-        'sender_count', 'credit_count', 'credit_total',
-        'recipient_count', 'disbursement_count', 'disbursement_total',
-        'prisoner_name', 'prisoner_number',
+        'sender_count',
+        'credit_count',
+        'credit_total',
+        'recipient_count',
+        'disbursement_count',
+        'disbursement_total',
+        'prisoner_name',
+        'prisoner_number',
     )
     default_ordering = ('-sender_count',)
 

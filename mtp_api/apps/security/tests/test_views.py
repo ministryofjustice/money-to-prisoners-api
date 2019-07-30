@@ -110,7 +110,7 @@ class SenderProfileListTestCase(SecurityViewTestCase):
         debit_card_details = debit_card_sender.debit_card_details.first()
         cardholder = debit_card_details.cardholder_names.first()
         sender_email = debit_card_details.sender_emails.first()
-        cardholder.name = f'{term_part1}'
+        cardholder.name = term_part1
         cardholder.save()
         sender_email.email = f'{term_part2}@example.com'
         sender_email.save()
@@ -317,6 +317,47 @@ class RecipientDisbursementListTestCase(SecurityViewTestCase):
 class PrisonerProfileListTestCase(SecurityViewTestCase):
     def _get_url(self, *args, **kwargs):
         return reverse('prisonerprofile-list')
+
+    def test_search_by_simple_search_param(self):
+        """
+        Test for when the search param `simple_search` is used.
+
+        Checks that the API returns the prisoners with the supplied search value in
+            prisoner name
+            OR
+            prisoner number
+        """
+        # change the loaded data so that the test matches exactly 2 records
+        term_part1 = get_random_string(10)
+        term_part2 = get_random_string(10)
+        term = f'{term_part1} {term_part2}'
+
+        prisoners = list(PrisonerProfile.objects.all()[:3])
+
+        prisoners[0].prisoner_name = f'{term}Junior'.upper()
+        prisoners[0].save()
+
+        prisoners[1].prisoner_name = term_part1
+        prisoners[1].prisoner_number = term_part2
+        prisoners[1].save()
+
+        # this should not be matched as only term_part1 is present
+        prisoners[2].prisoner_name = term_part1
+        prisoners[2].save()
+
+        response_data = self._get_list(
+            self._get_authorised_user(),
+            simple_search=term,
+        )['results']
+
+        self.assertEqual(len(response_data), 2)
+        self.assertEqual(
+            {item['id'] for item in response_data},
+            {
+                prisoners[0].id,
+                prisoners[1].id,
+            },
+        )
 
     def test_filter_by_sender_count(self):
         data = self._get_list(self._get_authorised_user(), sender_count__gte=3)['results']
