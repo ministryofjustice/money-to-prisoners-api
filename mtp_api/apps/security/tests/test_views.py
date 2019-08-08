@@ -229,6 +229,18 @@ class SenderProfileListTestCase(SecurityViewTestCase):
         returned_ids = set(d['id'] for d in data)
         self.assertSetEqual(returned_ids, expected_sender_ids)
 
+        # ensure object detail view is accessible
+        profile = debit_card_profiles.first()
+        profile.debit_card_details.first().monitoring_users.add(self.security_staff[1])
+        detail_url = reverse('senderprofile-detail', kwargs={'pk': profile.pk})
+        response = self.client.get(
+            detail_url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+        self.assertEqual(response.data['id'], profile.pk)
+        self.assertTrue(response.data['monitoring'])
+
 
 class SenderCreditListTestCase(SecurityViewTestCase):
     def _get_url(self, *args, **kwargs):
@@ -325,6 +337,18 @@ class RecipientProfileListTestCase(SecurityViewTestCase):
         self.assertEqual(len(data), 2)
         returned_ids = set(d['id'] for d in data)
         self.assertSetEqual(returned_ids, expected_recipient_ids)
+
+        # ensure object detail view is accessible
+        recipient = profiles.first()
+        recipient.bank_transfer_details.first().recipient_bank_account.monitoring_users.add(self.security_staff[1])
+        detail_url = reverse('recipientprofile-detail', kwargs={'pk': recipient.pk})
+        response = self.client.get(
+            detail_url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+        self.assertEqual(response.data['id'], recipient.pk)
+        self.assertTrue(response.data['monitoring'])
 
 
 class RecipientProfileDisbursementListTestCase(SecurityViewTestCase):
@@ -461,6 +485,18 @@ class PrisonerProfileListTestCase(SecurityViewTestCase):
         self.assertEqual(len(data), 2)
         returned_ids = set(d['id'] for d in data)
         self.assertSetEqual(returned_ids, expected_prisoner_ids)
+
+        # ensure object detail view is accessible
+        profile = profiles.first()
+        profile.monitoring_users.add(self.security_staff[1])
+        detail_url = reverse('prisonerprofile-detail', kwargs={'pk': profile.pk})
+        response = self.client.get(
+            detail_url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+        self.assertEqual(response.data['id'], profile.pk)
+        self.assertTrue(response.data['monitoring'])
 
 
 class PrisonerCreditListTestCase(SecurityViewTestCase):
