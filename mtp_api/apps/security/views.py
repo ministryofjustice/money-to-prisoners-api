@@ -1,5 +1,4 @@
-from django.db.models import Count, Case, When, Value, Q
-from django.db.models.fields import BooleanField
+from django.db.models import Count, Exists, OuterRef, Q
 from django.shortcuts import get_object_or_404
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
@@ -180,14 +179,13 @@ class SenderProfileView(
     def get_queryset(self):
         qs = super().get_queryset()
         qs = qs.annotate(
-            monitoring=Case(
-                When(
+            monitoring=Exists(
+                SenderProfile.objects.filter(
+                    pk=OuterRef('pk')
+                ).filter(
                     Q(bank_transfer_details__sender_bank_account__monitoring_users=self.request.user) |
                     Q(debit_card_details__monitoring_users=self.request.user),
-                    then=Value(True)
-                ),
-                default=Value(False),
-                output_field=BooleanField()
+                ).values('pk').order_by()
             )
         )
         return qs
@@ -285,12 +283,12 @@ class PrisonerProfileView(
     def get_queryset(self):
         qs = super().get_queryset()
         qs = qs.annotate(
-            monitoring=Case(
-                When(
-                    monitoring_users=self.request.user, then=Value(True)
-                ),
-                default=Value(False),
-                output_field=BooleanField()
+            monitoring=Exists(
+                PrisonerProfile.objects.filter(
+                    pk=OuterRef('pk')
+                ).filter(
+                    monitoring_users=self.request.user
+                ).values('pk').order_by()
             )
         )
         return qs
@@ -405,13 +403,12 @@ class RecipientProfileView(
     def get_queryset(self):
         qs = super().get_queryset()
         qs = qs.annotate(
-            monitoring=Case(
-                When(
-                    bank_transfer_details__recipient_bank_account__monitoring_users=self.request.user,
-                    then=Value(True)
-                ),
-                default=Value(False),
-                output_field=BooleanField()
+            monitoring=Exists(
+                RecipientProfile.objects.filter(
+                    pk=OuterRef('pk')
+                ).filter(
+                    bank_transfer_details__recipient_bank_account__monitoring_users=self.request.user
+                ).values('pk').order_by()
             )
         )
         return qs
