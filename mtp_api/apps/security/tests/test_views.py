@@ -194,29 +194,32 @@ class SenderProfileListTestCase(SecurityViewTestCase):
     def test_filter_by_monitoring(self):
         user = self._get_authorised_user()
 
+        # the complete set that could be returned
+        returned_profiles = SenderProfile.objects.all()
+
         # make user monitor 2 debit cards and 2 bank accounts
-        bank_transfer_profiles = SenderProfile.objects.filter(
+        bank_transfer_profiles = returned_profiles.filter(
             bank_transfer_details__isnull=False
-        )[:2]
+        ).order_by('?')[:2]
         for profile in bank_transfer_profiles:
             profile.bank_transfer_details.first().sender_bank_account.monitoring_users.add(user)
-        debit_card_profiles = SenderProfile.objects.filter(
+        debit_card_profiles = returned_profiles.filter(
             debit_card_details__isnull=False
-        )[:2]
+        ).order_by('?')[:2]
         for profile in debit_card_profiles:
             profile.debit_card_details.first().monitoring_users.add(user)
 
-        expected_bank_transfer_ids = set(SenderProfile.objects.filter(
+        expected_bank_transfer_ids = set(returned_profiles.filter(
             bank_transfer_details__sender_bank_account__monitoring_users=user
         ).values_list('pk', flat=True))
-        expected_debit_card_ids = set(SenderProfile.objects.filter(
+        expected_debit_card_ids = set(returned_profiles.filter(
             debit_card_details__monitoring_users=user
         ).values_list('pk', flat=True))
         expected_sender_ids = expected_bank_transfer_ids | expected_debit_card_ids
 
         # can list all unmonitored senders
         data = self._get_list(user, monitoring=False)['results']
-        self.assertEqual(len(data), SenderProfile.objects.count() - 4)
+        self.assertEqual(len(data), returned_profiles.count() - 4)
         returned_ids = set(d['id'] for d in data)
         self.assertTrue(returned_ids.isdisjoint(expected_sender_ids))
 
@@ -296,21 +299,32 @@ class RecipientProfileListTestCase(SecurityViewTestCase):
 
     def test_filter_by_monitoring(self):
         user = self._get_authorised_user()
-        profiles = RecipientProfile.objects.filter(
-            bank_transfer_details__isnull=False
-        )[:2]
 
+        # the complete set that could be returned
+        returned_profiles = RecipientProfile.objects.filter(
+            bank_transfer_details__isnull=False
+        )
+
+        # make user monitor 2 bank accounts
+        profiles = returned_profiles.order_by('?')[:2]
         for profile in profiles:
             profile.bank_transfer_details.first().recipient_bank_account.monitoring_users.add(user)
 
-        recipient_profiles = RecipientProfile.objects.filter(
+        expected_recipient_ids = set(returned_profiles.filter(
             bank_transfer_details__recipient_bank_account__monitoring_users=user
-        )
-        data = self._get_list(user, monitoring=True)['results']
+        ).values_list('pk', flat=True))
 
-        self.assertEqual(len(data), recipient_profiles.count())
-        for recipient in recipient_profiles:
-            self.assertTrue(recipient.id in [d['id'] for d in data])
+        # can list all unmonitored recipients
+        data = self._get_list(user, monitoring=False)['results']
+        self.assertEqual(len(data), returned_profiles.count() - 2)
+        returned_ids = set(d['id'] for d in data)
+        self.assertTrue(returned_ids.isdisjoint(expected_recipient_ids))
+
+        # can list monitored recipients
+        data = self._get_list(user, monitoring=True)['results']
+        self.assertEqual(len(data), 2)
+        returned_ids = set(d['id'] for d in data)
+        self.assertSetEqual(returned_ids, expected_recipient_ids)
 
 
 class RecipientProfileDisbursementListTestCase(SecurityViewTestCase):
@@ -423,18 +437,30 @@ class PrisonerProfileListTestCase(SecurityViewTestCase):
 
     def test_filter_by_monitoring(self):
         user = self._get_authorised_user()
-        profiles = PrisonerProfile.objects.all()[:2]
+
+        # the complete set that could be returned
+        returned_profiles = PrisonerProfile.objects.all()
+
+        # make user monitor 2 prisoners
+        profiles = returned_profiles.order_by('?')[:2]
         for profile in profiles:
             profile.monitoring_users.add(user)
 
-        prisoner_profiles = PrisonerProfile.objects.filter(
+        expected_prisoner_ids = set(returned_profiles.filter(
             monitoring_users=user
-        )
-        data = self._get_list(user, monitoring=True)['results']
+        ).values_list('pk', flat=True))
 
-        self.assertEqual(len(data), prisoner_profiles.count())
-        for prisoner in prisoner_profiles:
-            self.assertTrue(prisoner.id in [d['id'] for d in data])
+        # can list all unmonitored recipients
+        data = self._get_list(user, monitoring=False)['results']
+        self.assertEqual(len(data), returned_profiles.count() - 2)
+        returned_ids = set(d['id'] for d in data)
+        self.assertTrue(returned_ids.isdisjoint(expected_prisoner_ids))
+
+        # can list monitored recipients
+        data = self._get_list(user, monitoring=True)['results']
+        self.assertEqual(len(data), 2)
+        returned_ids = set(d['id'] for d in data)
+        self.assertSetEqual(returned_ids, expected_prisoner_ids)
 
 
 class PrisonerCreditListTestCase(SecurityViewTestCase):
