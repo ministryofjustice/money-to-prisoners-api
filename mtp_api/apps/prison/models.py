@@ -80,6 +80,12 @@ class PrisonBankAccount(models.Model):
     def __str__(self):
         return self.prison.name
 
+    @property
+    def address(self):
+        return ', '.join(
+            filter(None, (self.address_line1, self.address_line2, self.city, self.postcode))
+        )
+
 
 class RemittanceEmail(models.Model):
     prison = models.ForeignKey(Prison, on_delete=models.CASCADE)
