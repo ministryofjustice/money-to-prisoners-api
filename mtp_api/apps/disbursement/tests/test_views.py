@@ -202,16 +202,45 @@ class ListDisbursementsTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(data['results'][0]['recipient_first_name'], 'Sam')
 
     def test_searching(self):
-        fake_disbursement(_quantity=20, prison=self.prison,
-                          recipient_last_name=itertools.cycle(['Smith', 'Willis']))
+        fake_disbursement(  # non-matches
+            _quantity=20,
+            prison=self.prison,
+            recipient_last_name='Some last name',
+            postcode='WC1B 3DG',
+            amount=itertools.cycle([900, 1100]),
+        )
+        expected_disbursement = fake_disbursement(
+            prison=self.prison,
+            recipient_last_name='Smith',
+            postcode='SW1A 1AA',
+            amount=1001,
+        )
 
-        response = self.api_request(amount__lte=1000)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['count'], Disbursement.objects.filter(amount__lte=1000).count())
+        scenarios = (
+            {'amount': 1001},
+            {'exclude_amount__endswith': '00'},
+            {'exclude_amount__regex': '(900|1100)$'},
+            {'amount__endswith': '01'},
+            {'amount__regex': '.01$'},
+            {
+                'amount__lte': 1002,
+                'amount__gte': 1001,
+            },
 
-        response = self.api_request(recipient_name='smith')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['count'], 10)
+            {'recipient_name': 'smith'},
+
+            {'postcode': 'SW1A1aa'},
+            {'postcode': 'SW1A 1aa'},
+            {'postcode': 'SW1A'},
+        )
+        for scenario in scenarios:
+            response = self.api_request(**scenario)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(response.data['count'], 1)
+            self.assertEqual(
+                response.data['results'][0]['id'],
+                expected_disbursement.pk,
+            )
 
     def test_simple_search(self):
         """

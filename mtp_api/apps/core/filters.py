@@ -1,3 +1,4 @@
+import re
 from functools import reduce
 from operator import or_
 
@@ -156,3 +157,23 @@ def annotate_filter(filter_, annotations):
 
     filter_.filter = annotated_filter
     return filter_
+
+
+class PostcodeFilter(django_filters.CharFilter):
+    """
+    Filters by postcode. It supports whitespaces, lower/uppercases etc.
+    """
+    def __init__(self, **kwargs):
+        if 'lookup_expr' in kwargs:
+            raise ValueError('You cannot override the default lookup_expr.')
+
+        kwargs['lookup_expr'] = 'iregex'
+        super().__init__(**kwargs)
+
+    def filter(self, qs, value):
+        if value in EMPTY_VALUES:
+            return qs
+
+        value = re.sub(r'[^0-9A-Za-z]+', '', value)
+        value = r'\s*'.join(value)
+        return super().filter(qs, value)

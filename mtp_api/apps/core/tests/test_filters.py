@@ -5,7 +5,7 @@ from django.test import SimpleTestCase
 
 from django_filters.constants import EMPTY_VALUES
 
-from core.filters import SplitTextInMultipleFieldsFilter
+from core.filters import PostcodeFilter, SplitTextInMultipleFieldsFilter
 
 
 class SplitTextInMultipleFieldsFilterTestCase(SimpleTestCase):
@@ -84,3 +84,55 @@ class SplitTextInMultipleFieldsFilterTestCase(SimpleTestCase):
             Q(field1__icontains='term2') | Q(field2__icontains='term2'),
         )
         self.assertNotEqual(qs, result)
+
+
+class PostcodeFilterTestcase(SimpleTestCase):
+    """
+    Tests for the PostcodeFilter.
+    """
+
+    def test_overriding_lookup_expr_raises_exception(self):
+        """
+        Test that an exception is raised if lookup_expr is passed in.
+        """
+        with self.assertRaises(ValueError):
+            PostcodeFilter(field_name='field', lookup_expr='iexact')
+
+    def test_filtering(self):
+        """
+        Test that the filtering logic generates the expected call to .filter().
+        """
+        qs = mock.Mock(spec=['filter'])
+        f = PostcodeFilter(field_name='field')
+
+        result = f.filter(qs, 'sw1a 1aa')
+        qs.filter.assert_called_once_with(
+            field__iregex='s\\s*w\\s*1\\s*a\\s*1\\s*a\\s*a',
+        )
+        self.assertNotEqual(qs, result)
+
+    def test_filtering_exclude(self):
+        """
+        Test that the filtering logic generates the expected call to .exclude()
+        if the exclude=True argument is passed in.
+        """
+        qs = mock.Mock(spec=['exclude'])
+        f = PostcodeFilter(field_name='field', exclude=True)
+
+        result = f.filter(qs, 'sw1a 1aa')
+        qs.exclude.assert_called_once_with(
+            field__iregex='s\\s*w\\s*1\\s*a\\s*1\\s*a\\s*a',
+        )
+        self.assertNotEqual(qs, result)
+
+    def test_filtering_skipped_with_blank_value(self):
+        """
+        Test that no change to the qs is made if the value is empty.
+        """
+        for value in EMPTY_VALUES:
+            qs = mock.Mock()
+            f = PostcodeFilter(field_name='field')
+
+            result = f.filter(qs, value)
+            self.assertListEqual(qs.method_calls, [])
+            self.assertEqual(qs, result)

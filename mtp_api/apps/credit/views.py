@@ -18,6 +18,7 @@ from core.filters import (
     IsoDateTimeFilter,
     MultipleFieldCharFilter,
     MultipleValueFilter,
+    PostcodeFilter,
     SafeOrderingFilter,
     SplitTextInMultipleFieldsFilter,
     StatusChoiceFilter,
@@ -128,17 +129,6 @@ class CreditSourceFilter(django_filters.ChoiceFilter):
         elif value == CREDIT_SOURCE.UNKNOWN:
             qs = qs.filter(payment__isnull=True, transaction__isnull=True)
         return qs
-
-
-class PostcodeFilter(django_filters.CharFilter):
-    def __init__(self, **kwargs):
-        kwargs['lookup_expr'] = 'iregex'
-        super().__init__(**kwargs)
-
-    def filter(self, qs, value):
-        value = re.sub(r'[^0-9A-Za-z]+', '', value)
-        value = r'\s*'.join(value)
-        return super().filter(qs, value)
 
 
 class MonitoredProfileFilter(django_filters.BooleanFilter):

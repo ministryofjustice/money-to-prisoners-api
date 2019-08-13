@@ -10,6 +10,7 @@ from core.filters import (
     annotate_filter,
     IsoDateTimeFilter,
     MultipleValueFilter,
+    PostcodeFilter,
     SafeOrderingFilter,
     SplitTextInMultipleFieldsFilter,
 )
@@ -83,7 +84,7 @@ class DisbursementFilter(django_filters.FilterSet):
     recipient_email = django_filters.CharFilter(field_name='recipient_email', lookup_expr='icontains')
 
     city = django_filters.CharFilter(field_name='city', lookup_expr='iexact')
-    postcode = django_filters.CharFilter(field_name='postcode', lookup_expr='icontains')
+    postcode = PostcodeFilter(field_name='postcode')
 
     sort_code = django_filters.CharFilter(field_name='sort_code')
     account_number = django_filters.CharFilter(field_name='account_number')
