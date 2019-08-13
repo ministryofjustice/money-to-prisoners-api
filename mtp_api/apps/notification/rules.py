@@ -9,30 +9,28 @@ from notification.models import (
 from security.models import SenderProfile, RecipientProfile, PrisonerProfile
 from transaction.utils import format_amount
 
-ENABLED_CREDIT_RULE_CODES = ['MONP', 'MONS']
-ENABLED_DISBURSEMENT_RULE_CODES = ['MONP']
-ENABLED_RULE_CODES = set(ENABLED_CREDIT_RULE_CODES) | set(ENABLED_DISBURSEMENT_RULE_CODES)
+ENABLED_RULE_CODES = {'MONP', 'MONS'}
 
 
-def create_credit_notifications(credit):
-    for rule in ENABLED_CREDIT_RULE_CODES:
-        rule = RULES[rule]
-        if rule.triggered(credit):
-            rule.create_events(credit)
-
-
-def create_disbursement_notifications(disbursement):
-    for rule in ENABLED_DISBURSEMENT_RULE_CODES:
-        rule = RULES[rule]
-        if rule.triggered(disbursement):
-            rule.create_events(disbursement)
+def create_notification_events(record):
+    for code in ENABLED_RULE_CODES:
+        rule = RULES[code]
+        if rule.applies_to(record) and rule.triggered(record):
+            rule.create_events(record)
 
 
 class BaseRule:
-    def __init__(self, code, description, **kwargs):
+    applies_to_models = (Credit, Disbursement)
+
+    def __init__(self, code, description, applies_to_models=None, **kwargs):
         self.code = code
         self.description = description
         self.kwargs = kwargs
+        if applies_to_models:
+            self.applies_to_models = applies_to_models
+
+    def applies_to(self, record):
+        return isinstance(record, self.applies_to_models)
 
     def triggered(self, record):
         raise NotImplementedError
@@ -124,12 +122,14 @@ RULES = {
     'MONS': MonitoredRule(
         'MONS',
         'Credits for senders you are monitoring',
+        applies_to_models=(Credit,),
         profile='sender_profile',
     ),
     # disabled rules
     'MONR': MonitoredRule(
         'MONR',
         'Disbursements for recipients you are monitoring',
+        applies_to_models=(Disbursement,),
         profile='recipient_profile',
     ),
     'NWN': NotWholeNumberRule(
