@@ -1,5 +1,7 @@
 import datetime
+import io
 from unittest import mock
+import zipfile
 
 from django.core import mail
 from django.core.management import call_command
@@ -208,3 +210,62 @@ class SendNotificationEmailsTestCase(TestCase):
 
         call_command('send_notification_emails')
         self.assertEqual(len(mail.outbox), 2)
+
+
+@override_settings(ENVIRONMENT='prod')
+class SendNotificationReportTestCase(TestCase):
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
+
+    def test_empty_report(self):
+        call_command('send_notification_report', 'admin@mtp.local')
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_reports_generated(self):
+        make_test_users()
+        load_random_prisoner_locations()
+
+        # generate some usable models
+        generate_payments(payment_batch=10, days_of_history=2)
+        generate_disbursements(disbursement_batch=10, days_of_history=2)
+
+        # move 1 credit and 1 disbursement to a past date and make them appear in report (HA and NWN)
+        credit = Credit.objects.credited().order_by('?').first()
+        credit.received_at -= datetime.timedelta(days=7)
+        credit.amount = 12501
+        credit.save()
+        disbursement = Disbursement.objects.sent().order_by('?').first()
+        disbursement.created = credit.received_at
+        disbursement.amount = 13602
+        disbursement.save()
+
+        call_command('update_security_profiles')
+
+        # generate reports
+        report_date = credit.received_at.date()
+        since = report_date.strftime('%Y-%m-%d')
+        until = (report_date + datetime.timedelta(days=1)).strftime('%Y-%m-%d')
+        call_command('send_notification_report', 'admin@mtp.local', since=since, until=until)
+
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        self.assertIn(report_date.strftime('%d %b %Y'), email.body)
+        self.assertEqual(len(email.attachments), 1)
+        _, contents, *_ = email.attachments[0]
+        contents = zipfile.ZipFile(io.BytesIO(contents))
+
+        credit_files = {'credits-HA.csv', 'credits-NWN.csv'}
+        disbursement_files = {'disbursements-HA.csv', 'disbursements-NWN.csv'}
+        self.assertSetEqual(
+            set(contents.namelist()),
+            credit_files | disbursement_files
+        )
+        for file in credit_files:
+            file = contents.read(file).decode()
+            self.assertEqual(len(file.splitlines()), 2)
+            self.assertIn('£125.01', file)
+            self.assertIn(credit.prisoner_name, file)
+        for file in disbursement_files:
+            file = contents.read(file).decode()
+            self.assertEqual(len(file.splitlines()), 2)
+            self.assertIn('£136.02', file)
+            self.assertIn(disbursement.recipient_address, file)
