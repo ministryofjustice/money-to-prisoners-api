@@ -319,3 +319,46 @@ class SendNotificationReportTestCase(NotificationBaseTestCase):
             self.assertEqual(len(file.splitlines()), 2)
             self.assertIn('£136.02', file)
             self.assertIn(disbursement.recipient_address, file)
+
+    def test_reports_generated_for_monitored_prisoners(self):
+        security_staff = self.make_2days_of_random_models()
+        self.create_profiles_but_unlink_objects()
+
+        # set up scenario such that every prisoner is monitored by 1 person
+        # except for one prisoner that has 2 monitors
+        for profile in PrisonerProfile.objects.all():
+            profile.monitoring_users.add(security_staff[0])
+        profile = PrisonerProfile.objects.order_by('?').first()
+        profile.monitoring_users.add(security_staff[1])
+        prisoner_number_with_2_monitors = profile.prisoner_number
+
+        call_command('update_security_profiles')
+
+        # generate reports for whole range
+        report_date = Credit.objects.order_by('received_at').first().received_at.date()
+        since = report_date.strftime('%Y-%m-%d')
+        call_command('send_notification_report', 'admin@mtp.local', since=since)
+
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        self.assertEqual(len(email.attachments), 1)
+        _, contents, *_ = email.attachments[0]
+        contents = zipfile.ZipFile(io.BytesIO(contents))
+
+        expected_files = {'credits-MONP.csv', 'disbursements-MONP.csv'}
+        self.assertTrue(expected_files.issubset(set(contents.namelist())))
+
+        serialisers = [
+            ('credits-MONP.csv', CreditSerialiser),
+            ('disbursements-MONP.csv', DisbursementSerialiser),
+        ]
+        for file, serialiser_cls in serialisers:
+            serialiser = serialiser_cls(RULES['MONP'])
+            file = contents.read(file).decode()
+            rows = csv.DictReader(io.StringIO(file), serialiser.get_headers())
+            next(rows)
+            for row in rows:
+                if row['Prisoner number'] == prisoner_number_with_2_monitors:
+                    self.assertEqual(row['Monitored by'], '2')
+                else:
+                    self.assertEqual(row['Monitored by'], '1')

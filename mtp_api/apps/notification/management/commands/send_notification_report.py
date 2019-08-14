@@ -137,8 +137,8 @@ def report_period(period_start, period_end):
 
 def generate_report(report_path, rule, record_set, serialiser):
     with report_path.open('w') as f:
-        writer = csv.writer(f)
-        writer.writerow(serialiser.get_headers())
+        writer = csv.DictWriter(f, serialiser.get_headers())
+        writer.writeheader()
         count = 0
         for record in record_set:
             if rule.applies_to(record) and rule.triggered(record):
@@ -194,12 +194,12 @@ class Serialiser:
         return headers
 
     def serialise(self, record):
-        row = [
-            self.rule.description.replace('you are monitoring', 'someone monitors'),
-            self.get_internal_id(record),
-        ]
+        row = {
+            'Notification rule': self.rule.description.replace('you are monitoring', 'someone monitors'),
+            'Internal ID': self.get_internal_id(record),
+        }
         if self.is_monitored_rule:
-            row.insert(1, self.rule.get_event_trigger(record).get_monitoring_users().count())
+            row['Monitored by'] = self.rule.get_event_trigger(record).get_monitoring_users().count()
         return row
 
     def get_internal_id(self, record):
@@ -215,21 +215,25 @@ class CreditSerialiser(Serialiser):
             'Sender name', 'Payment method',
             'Bank transfer sort code', 'Bank transfer account', 'Bank transfer roll number',
             'Debit card number', 'Debit card expiry', 'Debit card billing address',
-            'Email', 'IP address',
+            'Sender email', 'Sender IP address',
             'Status',
             'NOMIS transaction',
         ]
 
     def serialise(self, record: Credit):
-        credited_at = find_log_date(record, CREDIT_LOG_ACTIONS.CREDITED)
-        return super().serialise(record) + [
-            format_csv_datetime(record.received_at), format_csv_datetime(credited_at),
-            format_amount(record.amount),
-            record.prisoner_number, record.prisoner_name, record.prison.short_name,
-        ] + self.serialise_sender(record) + [
-            CREDIT_STATUS.for_value(record.status).display,
-            record.nomis_transaction_id,
-        ]
+        row = super().serialise(record)
+        row.update({
+            'Date received': format_csv_datetime(record.received_at),
+            'Date credited': format_csv_datetime(find_log_date(record, CREDIT_LOG_ACTIONS.CREDITED)),
+            'Amount': format_amount(record.amount),
+            'Prisoner number': record.prisoner_number,
+            'Prisoner name': record.prisoner_name,
+            'Prison': record.prison.short_name,
+            'Status': CREDIT_STATUS.for_value(record.status).display,
+            'NOMIS transaction': record.nomis_transaction_id,
+        })
+        row.update(self.serialise_sender(record))
+        return row
 
     def get_internal_id(self, record):
         return f'Credit {record.id}'
@@ -237,23 +241,30 @@ class CreditSerialiser(Serialiser):
     def serialise_sender(self, record: Credit):
         if hasattr(record, 'transaction'):
             transaction = record.transaction
-            return [
-                transaction.sender_name, 'Bank transfer',
-                transaction.sender_sort_code, transaction.sender_account_number, transaction.sender_roll_number,
-                '', '', '',
-                '', '',
-            ]
+            return {
+                'Payment method': 'Bank transfer',
+                'Sender name': transaction.sender_name,
+                'Bank transfer sort code': transaction.sender_sort_code,
+                'Bank transfer account': transaction.sender_account_number,
+                'Bank transfer roll number': transaction.sender_roll_number,
+            }
 
         if hasattr(record, 'payment'):
             payment = record.payment
-            return [
-                payment.cardholder_name, 'Debit card',
-                '', '', '',
-                payment.card_number_last_digits, payment.card_expiry_date, str(payment.billing_address),
-                payment.email, payment.ip_address,
-            ]
+            return {
+                'Payment method': 'Debit card',
+                'Sender name': payment.cardholder_name,
+                'Debit card number': payment.card_number_last_digits,
+                'Debit card expiry': payment.card_expiry_date,
+                'Debit card billing address': str(payment.billing_address),
+                'Sender email': payment.email,
+                'Sender IP address': payment.ip_address,
+            }
 
-        return ['(Unknown sender)', 'Unknown', '', '', '', '', '', '', '', '']
+        return {
+            'Payment method': 'Unknown',
+            'Sender name': '(Unknown sender)',
+        }
 
 
 class DisbursementSerialiser(Serialiser):
@@ -270,18 +281,27 @@ class DisbursementSerialiser(Serialiser):
         ]
 
     def serialise(self, record: Disbursement):
-        confirmed_at = find_log_date(record, DISBURSEMENT_LOG_ACTIONS.CONFIRMED)
-        sent_at = find_log_date(record, DISBURSEMENT_LOG_ACTIONS.SENT)
-        return super().serialise(record) + [
-            format_csv_datetime(record.created), format_csv_datetime(confirmed_at), format_csv_datetime(sent_at),
-            format_amount(record.amount),
-            record.prisoner_number, record.prisoner_name, record.prison.short_name,
-            record.recipient_name, DISBURSEMENT_METHOD.for_value(record.method).display,
-            record.sort_code, record.account_number, record.roll_number,
-            record.recipient_address, record.recipient_email,
-            DISBURSEMENT_RESOLUTION.for_value(record.resolution).display,
-            record.nomis_transaction_id, record.invoice_number,
-        ]
+        row = super().serialise(record)
+        row.update({
+            'Date entered': format_csv_datetime(record.created),
+            'Date confirmed': format_csv_datetime(find_log_date(record, DISBURSEMENT_LOG_ACTIONS.CONFIRMED)),
+            'Date sent': format_csv_datetime(find_log_date(record, DISBURSEMENT_LOG_ACTIONS.SENT)),
+            'Amount': format_amount(record.amount),
+            'Prisoner number': record.prisoner_number,
+            'Prisoner name': record.prisoner_name,
+            'Prison': record.prison.short_name,
+            'Recipient name': record.recipient_name,
+            'Payment method': DISBURSEMENT_METHOD.for_value(record.method).display,
+            'Bank transfer sort code': record.sort_code,
+            'Bank transfer account': record.account_number,
+            'Bank transfer roll number': record.roll_number,
+            'Recipient address': record.recipient_address,
+            'Recipient email': record.recipient_email,
+            'Status': DISBURSEMENT_RESOLUTION.for_value(record.resolution).display,
+            'NOMIS transaction': record.nomis_transaction_id,
+            'SOP invoice number': record.invoice_number,
+        })
+        return row
 
     def get_internal_id(self, record):
         return f'Disbursement {record.id}'
