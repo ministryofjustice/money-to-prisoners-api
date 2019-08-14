@@ -105,7 +105,7 @@ class MonitoredRule(BaseRule):
 
     def triggered(self, record):
         profile = self.get_event_trigger(record)
-        if profile and profile.get_monitoring_users().count():
+        if profile and profile.get_monitoring_users().exists():
             return True
         return False
 
@@ -114,6 +114,7 @@ class MonitoredRule(BaseRule):
 
 
 RULES = {
+    # rules used for generating notification events for users of noms-ops
     'MONP': MonitoredRule(
         'MONP',
         'Credits or disbursements for prisoners you are monitoring',
@@ -125,7 +126,8 @@ RULES = {
         applies_to_models=(Credit,),
         profile='sender_profile',
     ),
-    # disabled rules
+
+    # rules used only in specially-generated notification reports
     'MONR': MonitoredRule(
         'MONR',
         'Disbursements for recipients you are monitoring',

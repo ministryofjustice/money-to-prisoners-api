@@ -1,10 +1,11 @@
+import csv
 import datetime
 import io
 from unittest import mock
 import zipfile
 
 from django.core import mail
-from django.core.management import call_command
+from django.core.management import CommandError, call_command
 from django.test import TestCase, override_settings
 from django.utils import timezone
 from model_mommy import mommy
@@ -19,7 +20,11 @@ from notification.management.commands.send_notification_emails import (
     EMAILS_STARTED_FLAG,
     get_events, group_events, summarise_group,
 )
+from notification.management.commands.send_notification_report import (
+    Command as ReportCommand, CreditSerialiser, DisbursementSerialiser,
+)
 from notification.models import Event, EmailNotificationPreferences
+from notification.rules import RULES
 from payment.models import Payment
 from payment.tests.utils import generate_payments
 from prison.models import PrisonerLocation
@@ -27,9 +32,17 @@ from prison.tests.utils import load_random_prisoner_locations
 from security.models import PrisonerProfile, SenderProfile, DebitCardSenderDetails
 
 
-class SendNotificationEmailsTestCase(TestCase):
+class NotificationBaseTestCase(TestCase):
     fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
+    def create_profiles_but_unlink_objects(self):
+        call_command('update_security_profiles')
+        Credit.objects.update(sender_profile=None, prisoner_profile=None)
+        Disbursement.objects.update(recipient_profile=None, prisoner_profile=None)
+        # NB: profiles will have incorrect counts and totals
+
+
+class SendNotificationEmailsTestCase(NotificationBaseTestCase):
     def setUp(self):
         super().setUp()
         test_users = make_test_users()
@@ -72,12 +85,6 @@ class SendNotificationEmailsTestCase(TestCase):
         self.assertEqual(mail.outbox[-1].subject, 'New helpful ways to get the best from the intelligence tool')
         self.assertTrue(user.flags.filter(name=EMAILS_STARTED_FLAG).exists())
         self.assertIsNotNone(EmailNotificationPreferences.objects.get(user=user).last_sent_at)
-
-    def create_profiles_but_unlink_objects(self):
-        call_command('update_security_profiles')
-        Credit.objects.update(sender_profile=None, prisoner_profile=None)
-        Disbursement.objects.update(recipient_profile=None, prisoner_profile=None)
-        # NB: profiles will have incorrect counts and totals
 
     @override_settings(ENVIRONMENT='prod')
     def test_sends_first_email_with_events(self):
@@ -213,23 +220,66 @@ class SendNotificationEmailsTestCase(TestCase):
 
 
 @override_settings(ENVIRONMENT='prod')
-class SendNotificationReportTestCase(TestCase):
-    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
+class SendNotificationReportTestCase(NotificationBaseTestCase):
+    def make_2days_of_random_models(self):
+        test_users = make_test_users()
+        load_random_prisoner_locations()
+        generate_payments(payment_batch=20, days_of_history=2)
+        generate_disbursements(disbursement_batch=20, days_of_history=2)
+        return test_users['security_staff']
+
+    def test_invalid_parameters(self):
+        with self.assertRaises(CommandError, msg='Email address should be invalid'):
+            call_command('send_notification_report', 'admin')
+        with self.assertRaises(CommandError, msg='Email address should be invalid'):
+            call_command('send_notification_report', 'admin@mtp.local', 'admin')
+        with self.assertRaises(CommandError, msg='Date should be invalid'):
+            call_command('send_notification_report', 'admin@mtp.local', since='yesterday')
+        with self.assertRaises(CommandError, msg='Dates should be invalid'):
+            call_command('send_notification_report', 'admin@mtp.local', since='2019-08-01', until='2019-08-01')
+        with self.assertRaises(CommandError, msg='Dates should be invalid'):
+            call_command('send_notification_report', 'admin@mtp.local', since='2019-08-02', until='2019-08-01')
+        with self.assertRaises(CommandError, msg='Date span should be invalid'):
+            call_command('send_notification_report', 'admin@mtp.local', since='2019-07-01', until='2019-08-01')
+        with self.assertRaises((CommandError, KeyError), msg='Rules should be invalid'):
+            call_command('send_notification_report', 'admin@mtp.local', rules=['abc'])
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_date_ranges(self):
+        command = ReportCommand()
+        command.generate_reports = mock.MagicMock()
+
+        call_command(command, 'admin@mtp.local', since='2019-08-01', until='2019-08-02')
+        period_start, period_end, _rules, _emails = command.generate_reports.call_args[0]
+        self.assertEqual(period_start.date(), datetime.date(2019, 8, 1))
+        self.assertEqual(period_end.date(), datetime.date(2019, 8, 2))
+
+        today = timezone.localtime(timezone.now()).date()
+        yesterday = today - datetime.timedelta(days=1)
+
+        call_command(command, 'admin@mtp.local', since=yesterday.isoformat())
+        period_start, period_end, _rules, _emails = command.generate_reports.call_args[0]
+        self.assertEqual(period_start.date(), yesterday)
+        self.assertEqual(period_end.date(), today)
+
+        call_command(command, 'admin@mtp.local', until=yesterday.isoformat())
+        period_start, period_end, _rules, _emails = command.generate_reports.call_args[0]
+        self.assertEqual(period_start.date(), yesterday - datetime.timedelta(days=1))
+        self.assertEqual(period_end.date(), yesterday)
+
+        call_command(command, 'admin@mtp.local')
+        period_start, period_end, _rules, _emails = command.generate_reports.call_args[0]
+        self.assertEqual(period_end.date() - datetime.timedelta(days=7), period_start.date())
 
     def test_empty_report(self):
         call_command('send_notification_report', 'admin@mtp.local')
         self.assertEqual(len(mail.outbox), 0)
 
     def test_reports_generated(self):
-        make_test_users()
-        load_random_prisoner_locations()
-
-        # generate some usable models
-        generate_payments(payment_batch=10, days_of_history=2)
-        generate_disbursements(disbursement_batch=10, days_of_history=2)
+        self.make_2days_of_random_models()
 
         # move 1 credit and 1 disbursement to a past date and make them appear in report (HA and NWN)
-        credit = Credit.objects.credited().order_by('?').first()
+        credit = Credit.objects.all().order_by('?').first()
         credit.received_at -= datetime.timedelta(days=7)
         credit.amount = 12501
         credit.save()

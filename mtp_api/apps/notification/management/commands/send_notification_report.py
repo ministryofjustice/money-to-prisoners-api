@@ -36,11 +36,15 @@ class Command(BaseCommand):
             try:
                 validate_email(email)
             except ValidationError:
-                self.stderr.write(f'"{email}" is not valid email address')
-                return
+                raise CommandError(f'"{email}" is not valid email address')
+
+        codes = options['rules'] or RULES.keys()
+        rules = [RULES[code] for code in codes]
 
         period_start, period_end = report_period(options['since'], options['until'])
+        self.generate_reports(period_start, period_end, rules, emails)
 
+    def generate_reports(self, period_start, period_end, rules, emails):
         period_end_inclusize = period_end - datetime.timedelta(days=1)
         if period_start == period_end_inclusize:
             period_filename = period_start.date().isoformat()
@@ -68,8 +72,6 @@ class Command(BaseCommand):
         bundle_path = pathlib.Path(tempfile.mkdtemp()).absolute() / period_filename
         bundle_path.mkdir(parents=True)
 
-        codes = options['rules'] or RULES.keys()
-        rules = [RULES[code] for code in codes]
         try:
             for rule in rules:
                 if Credit in rule.applies_to_models:
@@ -162,13 +164,13 @@ def create_zip(period_filename, bundle_path):
 def send_zip(period_description, zip_file, emails):
     email = AnymailMessage(
         subject=f'Prisoner money notifications for {period_description}',
-        body=f'''
+        body=f"""
 OFFICIAL SENSITIVE
 
 Please find attached, the prisoner money notifications reports for {period_description}.
 
 If you have any queries, contact {settings.TEAM_EMAIL}.
-        '''.strip(),
+        """.strip(),
         from_email=default_from_address(),
         to=emails,
         tags=['notifications-report'],
@@ -180,27 +182,27 @@ If you have any queries, contact {settings.TEAM_EMAIL}.
 class Serialiser:
     def __init__(self, rule):
         self.rule = rule
-        self.monitored_rule = isinstance(rule, MonitoredRule)
+        self.is_monitored_rule = isinstance(rule, MonitoredRule)
 
     def get_headers(self):
         headers = [
             'Notification rule',
             'Internal ID',
         ]
-        if self.monitored_rule:
+        if self.is_monitored_rule:
             headers.insert(1, 'Monitored by')
         return headers
 
     def serialise(self, record):
         row = [
             self.rule.description.replace('you are monitoring', 'someone monitors'),
-            self.internal_id(record),
+            self.get_internal_id(record),
         ]
-        if self.monitored_rule:
+        if self.is_monitored_rule:
             row.insert(1, self.rule.get_event_trigger(record).get_monitoring_users().count())
         return row
 
-    def internal_id(self, record):
+    def get_internal_id(self, record):
         raise NotImplementedError
 
 
@@ -229,7 +231,7 @@ class CreditSerialiser(Serialiser):
             record.nomis_transaction_id,
         ]
 
-    def internal_id(self, record):
+    def get_internal_id(self, record):
         return f'Credit {record.id}'
 
     def serialise_sender(self, record: Credit):
@@ -281,7 +283,7 @@ class DisbursementSerialiser(Serialiser):
             record.nomis_transaction_id, record.invoice_number,
         ]
 
-    def internal_id(self, record):
+    def get_internal_id(self, record):
         return f'Disbursement {record.id}'
 
 
