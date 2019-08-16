@@ -223,14 +223,19 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
 
     def serialise(self, record: Credit):
         row = super().serialise(record)
+        status = record.status
+        if status:
+            status = str(CREDIT_STATUS.for_value(status).display)
+        else:
+            status = 'Anonymous'
         row.update({
             'Date received': local_datetime_for_xlsx(record.received_at),
             'Date credited': local_datetime_for_xlsx(find_log_date(record, CREDIT_LOG_ACTIONS.CREDITED)),
             'Amount': format_amount(record.amount),
-            'Prisoner number': record.prisoner_number,
-            'Prisoner name': record.prisoner_name,
-            'Prison': record.prison.short_name,
-            'Status': str(CREDIT_STATUS.for_value(record.status).display),
+            'Prisoner number': record.prisoner_number or 'Unknown',
+            'Prisoner name': record.prisoner_name or 'Unknown',
+            'Prison': record.prison.short_name if record.prison else 'Unknown',
+            'Status': status,
             'NOMIS transaction': record.nomis_transaction_id,
         })
         row.update(self.serialise_sender(record))
