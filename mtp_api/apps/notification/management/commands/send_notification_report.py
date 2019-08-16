@@ -1,9 +1,6 @@
-import csv
 import datetime
 import pathlib
-import shutil
 import tempfile
-import zipfile
 
 from anymail.message import AnymailMessage
 from django.conf import settings
@@ -13,6 +10,9 @@ from django.core.validators import validate_email
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from mtp_common.tasks import default_from_address
+import openpyxl
+from openpyxl.cell import WriteOnlyCell
+from openpyxl.utils import get_column_letter
 
 from credit.constants import CREDIT_STATUS
 from credit.models import Credit, LOG_ACTIONS as CREDIT_LOG_ACTIONS
@@ -42,9 +42,6 @@ class Command(BaseCommand):
         rules = [RULES[code] for code in codes]
 
         period_start, period_end = report_period(options['since'], options['until'])
-        self.generate_reports(period_start, period_end, rules, emails)
-
-    def generate_reports(self, period_start, period_end, rules, emails):
         period_end_inclusize = period_end - datetime.timedelta(days=1)
         if period_start == period_end_inclusize:
             period_filename = period_start.date().isoformat()
@@ -53,50 +50,15 @@ class Command(BaseCommand):
             period_filename = f'{period_start.date().isoformat()}-{period_end_inclusize.date().isoformat()}'
             period_description = f"{period_start.strftime('%d %b %Y')} to {period_end_inclusize.strftime('%d %b %Y')}"
 
-        candidate_credits = Credit.objects.filter(
-            prisoner_profile__isnull=False,
-            sender_profile__isnull=False,
-        ).filter(
-            received_at__gte=period_start,
-            received_at__lt=period_end,
-        ).order_by('pk')
-        candidate_disbursements = Disbursement.objects.filter(
-            prisoner_profile__isnull=False,
-            recipient_profile__isnull=False,
-            resolution=DISBURSEMENT_RESOLUTION.SENT,
-        ).filter(
-            created__gte=period_start,
-            created__lt=period_end,
-        ).order_by('pk')
+        with tempfile.TemporaryDirectory() as temp_path:
+            temp_path = pathlib.Path(temp_path)
+            report_path = temp_path / f'{period_filename}.xlsx'
+            workbook = openpyxl.Workbook(write_only=True)
+            generate_report(workbook, period_start, period_end, rules)
+            workbook.save(report_path)
+            send_report(period_description, report_path, emails)
 
-        bundle_path = pathlib.Path(tempfile.mkdtemp()).absolute() / period_filename
-        bundle_path.mkdir(parents=True)
-
-        try:
-            for rule in rules:
-                if Credit in rule.applies_to_models:
-                    serialiser = CreditSerialiser(rule)
-                    report_path = bundle_path / f'credits-{rule.code}.csv'
-                    count = generate_report(report_path, rule, candidate_credits, serialiser)
-                    if count == 0:
-                        report_path.unlink()
-
-                if Disbursement in rule.applies_to_models:
-                    serialiser = DisbursementSerialiser(rule)
-                    report_path = bundle_path / f'disbursements-{rule.code}.csv'
-                    count = generate_report(report_path, rule, candidate_disbursements, serialiser)
-                    if count == 0:
-                        report_path.unlink()
-
-            zip_path = create_zip(period_filename, bundle_path)
-            if zip_path:
-                send_zip(period_description, zip_path, emails)
-                self.stdout.write('Emailed reports')
-            else:
-                self.stdout.write('No reports generated')
-        finally:
-            if bundle_path.exists():
-                shutil.rmtree(str(bundle_path))
+        self.stdout.write('Emailed report')
 
 
 def make_local_datetime(date):
@@ -135,54 +97,93 @@ def report_period(period_start, period_end):
     return period_start, period_end
 
 
-def generate_report(report_path, rule, record_set, serialiser):
-    with report_path.open('w') as f:
-        writer = csv.DictWriter(f, serialiser.get_headers())
-        writer.writeheader()
-        count = 0
-        for record in record_set:
-            if rule.applies_to(record) and rule.triggered(record):
-                writer.writerow(serialiser.serialise(record))
-                count += 1
-        return count
+def generate_report(workbook, period_start, period_end, rules):
+    candidate_credits = Credit.objects.filter(
+        prisoner_profile__isnull=False,
+        sender_profile__isnull=False,
+    ).filter(
+        received_at__gte=period_start,
+        received_at__lt=period_end,
+    ).order_by('pk')
+    candidate_disbursements = Disbursement.objects.filter(
+        prisoner_profile__isnull=False,
+        recipient_profile__isnull=False,
+        resolution=DISBURSEMENT_RESOLUTION.SENT,
+    ).filter(
+        created__gte=period_start,
+        created__lt=period_end,
+    ).order_by('pk')
+    records = {
+        Credit: candidate_credits,
+        Disbursement: candidate_disbursements,
+    }
+
+    for rule in rules:
+        for serialised_model, serialiser_cls in Serialiser.serialisers.items():
+            if serialised_model not in rule.applies_to_models:
+                continue
+            serialiser = serialiser_cls(rule)
+            worksheet = workbook.create_sheet(
+                title=f'{serialised_model._meta.verbose_name[:4]}-{rule.abbr_description}'
+            )
+            generate_sheet(worksheet, serialiser, rule, records[serialised_model])
 
 
-def create_zip(period_filename, bundle_path):
-    report_paths = bundle_path.glob('*.csv')
-    report_paths = filter(lambda p: p.stat().st_size > 0, report_paths)
-    report_paths = sorted(report_paths)
-    if not report_paths:
-        return None
+def generate_sheet(worksheet, serialiser, rule, record_set):
+    headers = serialiser.get_headers()
+    worksheet.append(headers)
+    count = 0
+    for record in record_set:
+        if rule.applies_to(record) and rule.triggered(record):
+            row = serialiser.serialise(record)
+            worksheet.append([
+                row.get(field, None)
+                for field in headers
+            ])
+            count += 1
+    if count:
+        worksheet.auto_filter.ref = f'A1:{get_column_letter(len(headers))}{count + 1}'
+    else:
+        note = WriteOnlyCell(worksheet, 'No notifications')
+        note.style = 'Good'
+        worksheet.append([serialiser.rule_description, note])
 
-    zip_path = bundle_path / f'{period_filename}.zip'
-    with zipfile.ZipFile(zip_path, 'w') as z:
-        for path in report_paths:
-            z.write(path, path.name)
-    return zip_path
 
-
-def send_zip(period_description, zip_file, emails):
+def send_report(period_description, report_path, emails):
     email = AnymailMessage(
         subject=f'Prisoner money notifications for {period_description}',
         body=f"""
 OFFICIAL SENSITIVE
 
-Please find attached, the prisoner money notifications reports for {period_description}.
+Please find attached, the prisoner money notifications report for {period_description}.
 
-If you have any queries, contact {settings.TEAM_EMAIL}.
+There is a separate sheet for each notification rule for credits and disbursements.
+The ‘Monitored by’ column that appears in some sheets is the number of users
+who are monitoring that prisoner or payment source.
+
+If you have any queries, contact the team at {settings.TEAM_EMAIL}.
         """.strip(),
         from_email=default_from_address(),
         to=emails,
         tags=['notifications-report'],
     )
-    email.attach_file(str(zip_file), mimetype='application/zip')
+    email.attach_file(str(report_path), mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     email.send()
 
 
 class Serialiser:
+    serialisers = {}
+
+    def __init_subclass__(cls, serialised_model):
+        cls.serialisers[serialised_model] = cls
+
     def __init__(self, rule):
         self.rule = rule
         self.is_monitored_rule = isinstance(rule, MonitoredRule)
+
+    @property
+    def rule_description(self):
+        return self.rule.description.replace('you are monitoring', 'someone monitors')
 
     def get_headers(self):
         headers = [
@@ -195,7 +196,7 @@ class Serialiser:
 
     def serialise(self, record):
         row = {
-            'Notification rule': self.rule.description.replace('you are monitoring', 'someone monitors'),
+            'Notification rule': self.rule_description,
             'Internal ID': self.get_internal_id(record),
         }
         if self.is_monitored_rule:
@@ -206,7 +207,7 @@ class Serialiser:
         raise NotImplementedError
 
 
-class CreditSerialiser(Serialiser):
+class CreditSerialiser(Serialiser, serialised_model=Credit):
     def get_headers(self):
         return super().get_headers() + [
             'Date received', 'Date credited',
@@ -223,13 +224,13 @@ class CreditSerialiser(Serialiser):
     def serialise(self, record: Credit):
         row = super().serialise(record)
         row.update({
-            'Date received': format_csv_datetime(record.received_at),
-            'Date credited': format_csv_datetime(find_log_date(record, CREDIT_LOG_ACTIONS.CREDITED)),
+            'Date received': local_datetime_for_xlsx(record.received_at),
+            'Date credited': local_datetime_for_xlsx(find_log_date(record, CREDIT_LOG_ACTIONS.CREDITED)),
             'Amount': format_amount(record.amount),
             'Prisoner number': record.prisoner_number,
             'Prisoner name': record.prisoner_name,
             'Prison': record.prison.short_name,
-            'Status': CREDIT_STATUS.for_value(record.status).display,
+            'Status': str(CREDIT_STATUS.for_value(record.status).display),
             'NOMIS transaction': record.nomis_transaction_id,
         })
         row.update(self.serialise_sender(record))
@@ -267,7 +268,7 @@ class CreditSerialiser(Serialiser):
         }
 
 
-class DisbursementSerialiser(Serialiser):
+class DisbursementSerialiser(Serialiser, serialised_model=Disbursement):
     def get_headers(self):
         return super().get_headers() + [
             'Date entered', 'Date confirmed', 'Date sent',
@@ -283,21 +284,21 @@ class DisbursementSerialiser(Serialiser):
     def serialise(self, record: Disbursement):
         row = super().serialise(record)
         row.update({
-            'Date entered': format_csv_datetime(record.created),
-            'Date confirmed': format_csv_datetime(find_log_date(record, DISBURSEMENT_LOG_ACTIONS.CONFIRMED)),
-            'Date sent': format_csv_datetime(find_log_date(record, DISBURSEMENT_LOG_ACTIONS.SENT)),
+            'Date entered': local_datetime_for_xlsx(record.created),
+            'Date confirmed': local_datetime_for_xlsx(find_log_date(record, DISBURSEMENT_LOG_ACTIONS.CONFIRMED)),
+            'Date sent': local_datetime_for_xlsx(find_log_date(record, DISBURSEMENT_LOG_ACTIONS.SENT)),
             'Amount': format_amount(record.amount),
             'Prisoner number': record.prisoner_number,
             'Prisoner name': record.prisoner_name,
             'Prison': record.prison.short_name,
             'Recipient name': record.recipient_name,
-            'Payment method': DISBURSEMENT_METHOD.for_value(record.method).display,
+            'Payment method': str(DISBURSEMENT_METHOD.for_value(record.method).display),
             'Bank transfer sort code': record.sort_code,
             'Bank transfer account': record.account_number,
             'Bank transfer roll number': record.roll_number,
             'Recipient address': record.recipient_address,
             'Recipient email': record.recipient_email,
-            'Status': DISBURSEMENT_RESOLUTION.for_value(record.resolution).display,
+            'Status': str(DISBURSEMENT_RESOLUTION.for_value(record.resolution).display),
             'NOMIS transaction': record.nomis_transaction_id,
             'SOP invoice number': record.invoice_number,
         })
@@ -307,11 +308,10 @@ class DisbursementSerialiser(Serialiser):
         return f'Disbursement {record.id}'
 
 
-def format_csv_datetime(value):
+def local_datetime_for_xlsx(value):
     if not value:
-        return ''
-    value = timezone.localtime(value)
-    return value.strftime('%Y-%m-%d %H:%M:%S')
+        return None
+    return timezone.make_naive(value)
 
 
 def find_log_date(record, action):

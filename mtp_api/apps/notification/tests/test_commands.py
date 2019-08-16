@@ -1,14 +1,14 @@
-import csv
 import datetime
 import io
 from unittest import mock
-import zipfile
 
 from django.core import mail
 from django.core.management import CommandError, call_command
 from django.test import TestCase, override_settings
 from django.utils import timezone
 from model_mommy import mommy
+import openpyxl
+from openpyxl.utils import coordinate_to_tuple
 
 from core.tests.utils import make_test_users
 from credit.constants import CREDIT_RESOLUTION
@@ -19,9 +19,6 @@ from notification.constants import EMAIL_FREQUENCY
 from notification.management.commands.send_notification_emails import (
     EMAILS_STARTED_FLAG,
     get_events, group_events, summarise_group,
-)
-from notification.management.commands.send_notification_report import (
-    Command as ReportCommand, CreditSerialiser, DisbursementSerialiser,
 )
 from notification.models import Event, EmailNotificationPreferences
 from notification.rules import RULES
@@ -225,7 +222,8 @@ class SendNotificationReportTestCase(NotificationBaseTestCase):
         test_users = make_test_users()
         load_random_prisoner_locations()
         generate_payments(payment_batch=20, days_of_history=2)
-        generate_disbursements(disbursement_batch=20, days_of_history=2)
+        while not Disbursement.objects.sent().exists():
+            generate_disbursements(disbursement_batch=20, days_of_history=2)
         return test_users['security_staff']
 
     def test_invalid_parameters(self):
@@ -245,40 +243,58 @@ class SendNotificationReportTestCase(NotificationBaseTestCase):
             call_command('send_notification_report', 'admin@mtp.local', rules=['abc'])
         self.assertEqual(len(mail.outbox), 0)
 
-    def test_date_ranges(self):
-        command = ReportCommand()
-        command.generate_reports = mock.MagicMock()
-
-        call_command(command, 'admin@mtp.local', since='2019-08-01', until='2019-08-02')
-        period_start, period_end, _rules, _emails = command.generate_reports.call_args[0]
+    @mock.patch('notification.management.commands.send_notification_report.send_report')
+    @mock.patch('notification.management.commands.send_notification_report.generate_report')
+    def test_date_ranges(self, mock_generate_report, _mock_send_report):
+        call_command('send_notification_report', 'admin@mtp.local', since='2019-08-01', until='2019-08-02')
+        _workbook, period_start, period_end, _rules = mock_generate_report.call_args[0]
         self.assertEqual(period_start.date(), datetime.date(2019, 8, 1))
         self.assertEqual(period_end.date(), datetime.date(2019, 8, 2))
 
         today = timezone.localtime(timezone.now()).date()
         yesterday = today - datetime.timedelta(days=1)
 
-        call_command(command, 'admin@mtp.local', since=yesterday.isoformat())
-        period_start, period_end, _rules, _emails = command.generate_reports.call_args[0]
+        call_command('send_notification_report', 'admin@mtp.local', since=yesterday.isoformat())
+        _workbook, period_start, period_end, _rules = mock_generate_report.call_args[0]
         self.assertEqual(period_start.date(), yesterday)
         self.assertEqual(period_end.date(), today)
 
-        call_command(command, 'admin@mtp.local', until=yesterday.isoformat())
-        period_start, period_end, _rules, _emails = command.generate_reports.call_args[0]
+        call_command('send_notification_report', 'admin@mtp.local', until=yesterday.isoformat())
+        _workbook, period_start, period_end, _rules = mock_generate_report.call_args[0]
         self.assertEqual(period_start.date(), yesterday - datetime.timedelta(days=1))
         self.assertEqual(period_end.date(), yesterday)
 
-        call_command(command, 'admin@mtp.local')
-        period_start, period_end, _rules, _emails = command.generate_reports.call_args[0]
+        call_command('send_notification_report', 'admin@mtp.local')
+        _workbook, period_start, period_end, _rules = mock_generate_report.call_args[0]
         self.assertEqual(period_end.date() - datetime.timedelta(days=7), period_start.date())
 
+    def assertHasExcelAttachment(self):  # noqa: N802
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        self.assertEqual(len(email.attachments), 1)
+        _, contents, *_ = email.attachments[0]
+        workbook = openpyxl.load_workbook(io.BytesIO(contents), read_only=True)
+        return email, workbook
+
     def test_empty_report(self):
-        call_command('send_notification_report', 'admin@mtp.local')
-        self.assertEqual(len(mail.outbox), 0)
+        call_command('send_notification_report', 'admin@mtp.local', since='2019-08-01', until='2019-08-02')
+        email, workbook = self.assertHasExcelAttachment()
+        self.assertIn('01 Aug 2019', email.body)
+        self.assertEqual(
+            len(workbook.sheetnames),
+            sum(
+                len(rule.applies_to_models)
+                for rule in RULES.values()
+            )
+        )
+        for worksheet in workbook.sheetnames:
+            worksheet = workbook[worksheet]
+            self.assertEqual(worksheet['B2'].value, 'No notifications')
 
     def test_reports_generated(self):
         self.make_2days_of_random_models()
 
-        # move 1 credit and 1 disbursement to a past date and make them appear in report (HA and NWN)
+        # move 1 credit and 1 disbursement to a past date and make them appear in HA and NWN sheets
         credit = Credit.objects.all().order_by('?').first()
         credit.received_at -= datetime.timedelta(days=7)
         credit.amount = 12501
@@ -290,35 +306,34 @@ class SendNotificationReportTestCase(NotificationBaseTestCase):
 
         call_command('update_security_profiles')
 
-        # generate reports
+        # generate report
         report_date = credit.received_at.date()
         since = report_date.strftime('%Y-%m-%d')
         until = (report_date + datetime.timedelta(days=1)).strftime('%Y-%m-%d')
         call_command('send_notification_report', 'admin@mtp.local', since=since, until=until)
 
-        self.assertEqual(len(mail.outbox), 1)
-        email = mail.outbox[0]
+        email, workbook = self.assertHasExcelAttachment()
         self.assertIn(report_date.strftime('%d %b %Y'), email.body)
-        self.assertEqual(len(email.attachments), 1)
-        _, contents, *_ = email.attachments[0]
-        contents = zipfile.ZipFile(io.BytesIO(contents))
 
-        credit_files = {'credits-HA.csv', 'credits-NWN.csv'}
-        disbursement_files = {'disbursements-HA.csv', 'disbursements-NWN.csv'}
-        self.assertSetEqual(
-            set(contents.namelist()),
-            credit_files | disbursement_files
-        )
-        for file in credit_files:
-            file = contents.read(file).decode()
-            self.assertEqual(len(file.splitlines()), 2)
-            self.assertIn('£125.01', file)
-            self.assertIn(credit.prisoner_name, file)
-        for file in disbursement_files:
-            file = contents.read(file).decode()
-            self.assertEqual(len(file.splitlines()), 2)
-            self.assertIn('£136.02', file)
-            self.assertIn(disbursement.recipient_address, file)
+        credit_sheets = {'cred-high amount', 'cred-not whole'}
+        disbursement_sheets = {'disb-high amount', 'disb-not whole'}
+        expected_sheets = credit_sheets | disbursement_sheets
+        self.assertTrue(expected_sheets.issubset(set(workbook.sheetnames)))
+
+        for worksheet in credit_sheets:
+            worksheet = workbook[worksheet]
+            dimensions = worksheet.calculate_dimension(force=True)
+            rows, _columns = coordinate_to_tuple(dimensions.split(':')[1])
+            self.assertEqual(rows, 2)
+            self.assertEqual(worksheet['E2'].value, '£125.01')
+            self.assertEqual(worksheet['G2'].value, credit.prisoner_name)
+        for worksheet in disbursement_sheets:
+            worksheet = workbook[worksheet]
+            dimensions = worksheet.calculate_dimension(force=True)
+            rows, _columns = coordinate_to_tuple(dimensions.split(':')[1])
+            self.assertEqual(rows, 2)
+            self.assertEqual(worksheet['F2'].value, '£136.02')
+            self.assertEqual(worksheet['O2'].value, disbursement.recipient_address)
 
     def test_reports_generated_for_monitored_prisoners(self):
         security_staff = self.make_2days_of_random_models()
@@ -339,26 +354,24 @@ class SendNotificationReportTestCase(NotificationBaseTestCase):
         since = report_date.strftime('%Y-%m-%d')
         call_command('send_notification_report', 'admin@mtp.local', since=since)
 
-        self.assertEqual(len(mail.outbox), 1)
-        email = mail.outbox[0]
-        self.assertEqual(len(email.attachments), 1)
-        _, contents, *_ = email.attachments[0]
-        contents = zipfile.ZipFile(io.BytesIO(contents))
+        email, workbook = self.assertHasExcelAttachment()
+        self.assertIn(report_date.strftime('%d %b %Y'), email.body)
 
-        expected_files = {'credits-MONP.csv', 'disbursements-MONP.csv'}
-        self.assertTrue(expected_files.issubset(set(contents.namelist())))
+        expected_sheets = {'cred-mon. prisoners', 'disb-mon. prisoners'}
+        self.assertTrue(expected_sheets.issubset(set(workbook.sheetnames)))
 
-        serialisers = [
-            ('credits-MONP.csv', CreditSerialiser),
-            ('disbursements-MONP.csv', DisbursementSerialiser),
+        prisoner_number_cols = [
+            ('cred-mon. prisoners', 6),
+            ('disb-mon. prisoners', 7),
         ]
-        for file, serialiser_cls in serialisers:
-            serialiser = serialiser_cls(RULES['MONP'])
-            file = contents.read(file).decode()
-            rows = csv.DictReader(io.StringIO(file), serialiser.get_headers())
+        for worksheet, prisoner_number_col in prisoner_number_cols:
+            worksheet = workbook[worksheet]
+            rows = iter(worksheet.rows)
             next(rows)
             for row in rows:
-                if row['Prisoner number'] == prisoner_number_with_2_monitors:
-                    self.assertEqual(row['Monitored by'], '2')
+                prisoner_number = row[prisoner_number_col].value
+                monitored_by = row[1].value
+                if prisoner_number == prisoner_number_with_2_monitors:
+                    self.assertEqual(monitored_by, 2)
                 else:
-                    self.assertEqual(row['Monitored by'], '1')
+                    self.assertEqual(monitored_by, 1)
