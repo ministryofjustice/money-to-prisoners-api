@@ -6,9 +6,7 @@ from django.core.management import BaseCommand, CommandError
 from credit.models import Credit
 from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION
 from disbursement.models import Disbursement
-from notification.rules import (
-    create_credit_notifications, create_disbursement_notifications
-)
+from notification.rules import create_notification_events
 from prison.models import PrisonerLocation
 from security.models import (
     SenderProfile, BankTransferSenderDetails, DebitCardSenderDetails,
@@ -140,7 +138,7 @@ class Command(BaseCommand):
         ).recalculate_credit_totals()
 
         for credit in new_credits:
-            create_credit_notifications(credit)
+            create_notification_events(credit)
         return len(new_credits)
 
     @atomic()
@@ -162,7 +160,7 @@ class Command(BaseCommand):
         ).recalculate_disbursement_totals()
 
         for disbursement in new_disbursements:
-            create_disbursement_notifications(disbursement)
+            create_notification_events(disbursement)
         return len(new_disbursements)
 
     def create_or_update_profiles_for_credit(self, credit):

@@ -9,30 +9,29 @@ from notification.models import (
 from security.models import SenderProfile, RecipientProfile, PrisonerProfile
 from transaction.utils import format_amount
 
-ENABLED_CREDIT_RULE_CODES = ['MONP', 'MONS']
-ENABLED_DISBURSEMENT_RULE_CODES = ['MONP']
-ENABLED_RULE_CODES = set(ENABLED_CREDIT_RULE_CODES) | set(ENABLED_DISBURSEMENT_RULE_CODES)
+ENABLED_RULE_CODES = {'MONP', 'MONS'}
 
 
-def create_credit_notifications(credit):
-    for rule in ENABLED_CREDIT_RULE_CODES:
-        rule = RULES[rule]
-        if rule.triggered(credit):
-            rule.create_events(credit)
-
-
-def create_disbursement_notifications(disbursement):
-    for rule in ENABLED_DISBURSEMENT_RULE_CODES:
-        rule = RULES[rule]
-        if rule.triggered(disbursement):
-            rule.create_events(disbursement)
+def create_notification_events(record):
+    for code in ENABLED_RULE_CODES:
+        rule = RULES[code]
+        if rule.applies_to(record) and rule.triggered(record):
+            rule.create_events(record)
 
 
 class BaseRule:
-    def __init__(self, code, description, **kwargs):
+    applies_to_models = (Credit, Disbursement)
+
+    def __init__(self, code, description, abbr_description, applies_to_models=None, **kwargs):
         self.code = code
         self.description = description
+        self.abbr_description = abbr_description
         self.kwargs = kwargs
+        if applies_to_models:
+            self.applies_to_models = applies_to_models
+
+    def applies_to(self, record):
+        return isinstance(record, self.applies_to_models)
 
     def triggered(self, record):
         raise NotImplementedError
@@ -85,7 +84,7 @@ class NotWholeNumberRule(BaseRule):
 
 
 class HighAmountRule(BaseRule):
-    def __init__(self, *args, limit=12000, **kwargs):
+    def __init__(self, *args, limit, **kwargs):
         kwargs['limit'] = limit
         super().__init__(*args, **kwargs)
         self.description = self.description.format(
@@ -107,7 +106,7 @@ class MonitoredRule(BaseRule):
 
     def triggered(self, record):
         profile = self.get_event_trigger(record)
-        if profile and profile.get_monitoring_users().count():
+        if profile and profile.get_monitoring_users().exists():
             return True
         return False
 
@@ -116,28 +115,38 @@ class MonitoredRule(BaseRule):
 
 
 RULES = {
+    # rules used for generating notification events for users of noms-ops
     'MONP': MonitoredRule(
         'MONP',
-        'Credits or disbursements for prisoners you are monitoring',
+        description='Credits or disbursements for prisoners you are monitoring',
+        abbr_description='mon. prisoners',
         profile='prisoner_profile',
     ),
     'MONS': MonitoredRule(
         'MONS',
-        'Credits for senders you are monitoring',
+        description='Credits for payment sources you are monitoring',
+        abbr_description='mon. sources',
+        applies_to_models=(Credit,),
         profile='sender_profile',
     ),
-    # disabled rules
+
+    # rules used only in specially-generated notification reports
     'MONR': MonitoredRule(
         'MONR',
-        'Disbursements for recipients you are monitoring',
+        description='Disbursements for recipients you are monitoring',
+        abbr_description='mon. recipients',
+        applies_to_models=(Disbursement,),
         profile='recipient_profile',
     ),
     'NWN': NotWholeNumberRule(
         'NWN',
-        'Credits or disbursements that are not a whole number',
+        description='Credits or disbursements that are not a whole number',
+        abbr_description='not whole',
     ),
     'HA': HighAmountRule(
         'HA',
-        'Credits or disbursements over {display_limit}',
+        description='Credits or disbursements over {display_limit}',
+        abbr_description='high amount',
+        limit=12000,
     ),
 }

@@ -104,6 +104,12 @@ class Disbursement(TimeStampedModel):
     def recipient_name(self, _):
         pass
 
+    @property
+    def recipient_address(self):
+        return ', '.join(
+            filter(None, (self.address_line1, self.address_line2, self.city, self.postcode, self.country))
+        )
+
     def reject(self, by_user):
         if self.resolution == DISBURSEMENT_RESOLUTION.REJECTED:
             return

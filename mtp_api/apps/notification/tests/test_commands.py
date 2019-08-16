@@ -1,11 +1,14 @@
 import datetime
+import io
 from unittest import mock
 
 from django.core import mail
-from django.core.management import call_command
+from django.core.management import CommandError, call_command
 from django.test import TestCase, override_settings
 from django.utils import timezone
 from model_mommy import mommy
+import openpyxl
+from openpyxl.utils import coordinate_to_tuple
 
 from core.tests.utils import make_test_users
 from credit.constants import CREDIT_RESOLUTION
@@ -18,6 +21,7 @@ from notification.management.commands.send_notification_emails import (
     get_events, group_events, summarise_group,
 )
 from notification.models import Event, EmailNotificationPreferences
+from notification.rules import RULES
 from payment.models import Payment
 from payment.tests.utils import generate_payments
 from prison.models import PrisonerLocation
@@ -25,9 +29,17 @@ from prison.tests.utils import load_random_prisoner_locations
 from security.models import PrisonerProfile, SenderProfile, DebitCardSenderDetails
 
 
-class SendNotificationEmailsTestCase(TestCase):
+class NotificationBaseTestCase(TestCase):
     fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
+    def create_profiles_but_unlink_objects(self):
+        call_command('update_security_profiles')
+        Credit.objects.update(sender_profile=None, prisoner_profile=None)
+        Disbursement.objects.update(recipient_profile=None, prisoner_profile=None)
+        # NB: profiles will have incorrect counts and totals
+
+
+class SendNotificationEmailsTestCase(NotificationBaseTestCase):
     def setUp(self):
         super().setUp()
         test_users = make_test_users()
@@ -70,12 +82,6 @@ class SendNotificationEmailsTestCase(TestCase):
         self.assertEqual(mail.outbox[-1].subject, 'New helpful ways to get the best from the intelligence tool')
         self.assertTrue(user.flags.filter(name=EMAILS_STARTED_FLAG).exists())
         self.assertIsNotNone(EmailNotificationPreferences.objects.get(user=user).last_sent_at)
-
-    def create_profiles_but_unlink_objects(self):
-        call_command('update_security_profiles')
-        Credit.objects.update(sender_profile=None, prisoner_profile=None)
-        Disbursement.objects.update(recipient_profile=None, prisoner_profile=None)
-        # NB: profiles will have incorrect counts and totals
 
     @override_settings(ENVIRONMENT='prod')
     def test_sends_first_email_with_events(self):
@@ -208,3 +214,164 @@ class SendNotificationEmailsTestCase(TestCase):
 
         call_command('send_notification_emails')
         self.assertEqual(len(mail.outbox), 2)
+
+
+@override_settings(ENVIRONMENT='prod')
+class SendNotificationReportTestCase(NotificationBaseTestCase):
+    def make_2days_of_random_models(self):
+        test_users = make_test_users()
+        load_random_prisoner_locations()
+        generate_payments(payment_batch=20, days_of_history=2)
+        while not Disbursement.objects.sent().exists():
+            generate_disbursements(disbursement_batch=20, days_of_history=2)
+        return test_users['security_staff']
+
+    def test_invalid_parameters(self):
+        with self.assertRaises(CommandError, msg='Email address should be invalid'):
+            call_command('send_notification_report', 'admin')
+        with self.assertRaises(CommandError, msg='Email address should be invalid'):
+            call_command('send_notification_report', 'admin@mtp.local', 'admin')
+        with self.assertRaises(CommandError, msg='Date should be invalid'):
+            call_command('send_notification_report', 'admin@mtp.local', since='yesterday')
+        with self.assertRaises(CommandError, msg='Dates should be invalid'):
+            call_command('send_notification_report', 'admin@mtp.local', since='2019-08-01', until='2019-08-01')
+        with self.assertRaises(CommandError, msg='Dates should be invalid'):
+            call_command('send_notification_report', 'admin@mtp.local', since='2019-08-02', until='2019-08-01')
+        with self.assertRaises(CommandError, msg='Date span should be invalid'):
+            call_command('send_notification_report', 'admin@mtp.local', since='2019-07-01', until='2019-08-01')
+        with self.assertRaises((CommandError, KeyError), msg='Rules should be invalid'):
+            call_command('send_notification_report', 'admin@mtp.local', rules=['abc'])
+        self.assertEqual(len(mail.outbox), 0)
+
+    @mock.patch('notification.management.commands.send_notification_report.send_report')
+    @mock.patch('notification.management.commands.send_notification_report.generate_report')
+    def test_date_ranges(self, mock_generate_report, _mock_send_report):
+        call_command('send_notification_report', 'admin@mtp.local', since='2019-08-01', until='2019-08-02')
+        _workbook, period_start, period_end, _rules = mock_generate_report.call_args[0]
+        self.assertEqual(period_start.date(), datetime.date(2019, 8, 1))
+        self.assertEqual(period_end.date(), datetime.date(2019, 8, 2))
+
+        today = timezone.localtime(timezone.now()).date()
+        yesterday = today - datetime.timedelta(days=1)
+
+        call_command('send_notification_report', 'admin@mtp.local', since=yesterday.isoformat())
+        _workbook, period_start, period_end, _rules = mock_generate_report.call_args[0]
+        self.assertEqual(period_start.date(), yesterday)
+        self.assertEqual(period_end.date(), today)
+
+        call_command('send_notification_report', 'admin@mtp.local', until=yesterday.isoformat())
+        _workbook, period_start, period_end, _rules = mock_generate_report.call_args[0]
+        self.assertEqual(period_start.date(), yesterday - datetime.timedelta(days=1))
+        self.assertEqual(period_end.date(), yesterday)
+
+        call_command('send_notification_report', 'admin@mtp.local')
+        _workbook, period_start, period_end, _rules = mock_generate_report.call_args[0]
+        self.assertEqual(period_end.date() - datetime.timedelta(days=7), period_start.date())
+
+    def assertHasExcelAttachment(self):  # noqa: N802
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        self.assertEqual(len(email.attachments), 1)
+        _, contents, *_ = email.attachments[0]
+        workbook = openpyxl.load_workbook(io.BytesIO(contents), read_only=True)
+        return email, workbook
+
+    def test_empty_report(self):
+        call_command('send_notification_report', 'admin@mtp.local', since='2019-08-01', until='2019-08-02')
+        email, workbook = self.assertHasExcelAttachment()
+        self.assertIn('01 Aug 2019', email.body)
+        self.assertEqual(
+            len(workbook.sheetnames),
+            sum(
+                len(rule.applies_to_models)
+                for rule in RULES.values()
+            )
+        )
+        for worksheet in workbook.sheetnames:
+            worksheet = workbook[worksheet]
+            self.assertEqual(worksheet['B2'].value, 'No notifications')
+
+    def test_reports_generated(self):
+        self.make_2days_of_random_models()
+
+        # move 1 credit and 1 disbursement to a past date and make them appear in HA and NWN sheets
+        credit = Credit.objects.all().order_by('?').first()
+        credit.received_at -= datetime.timedelta(days=7)
+        credit.amount = 12501
+        credit.save()
+        disbursement = Disbursement.objects.sent().order_by('?').first()
+        disbursement.created = credit.received_at
+        disbursement.amount = 13602
+        disbursement.save()
+
+        call_command('update_security_profiles')
+
+        # generate report
+        report_date = credit.received_at.date()
+        since = report_date.strftime('%Y-%m-%d')
+        until = (report_date + datetime.timedelta(days=1)).strftime('%Y-%m-%d')
+        call_command('send_notification_report', 'admin@mtp.local', since=since, until=until)
+
+        email, workbook = self.assertHasExcelAttachment()
+        self.assertIn(report_date.strftime('%d %b %Y'), email.body)
+
+        credit_sheets = {'cred-high amount', 'cred-not whole'}
+        disbursement_sheets = {'disb-high amount', 'disb-not whole'}
+        expected_sheets = credit_sheets | disbursement_sheets
+        self.assertTrue(expected_sheets.issubset(set(workbook.sheetnames)))
+
+        for worksheet in credit_sheets:
+            worksheet = workbook[worksheet]
+            dimensions = worksheet.calculate_dimension(force=True)
+            rows, _columns = coordinate_to_tuple(dimensions.split(':')[1])
+            self.assertEqual(rows, 2)
+            self.assertEqual(worksheet['E2'].value, '£125.01')
+            self.assertEqual(worksheet['G2'].value, credit.prisoner_name)
+        for worksheet in disbursement_sheets:
+            worksheet = workbook[worksheet]
+            dimensions = worksheet.calculate_dimension(force=True)
+            rows, _columns = coordinate_to_tuple(dimensions.split(':')[1])
+            self.assertEqual(rows, 2)
+            self.assertEqual(worksheet['F2'].value, '£136.02')
+            self.assertEqual(worksheet['O2'].value, disbursement.recipient_address)
+
+    def test_reports_generated_for_monitored_prisoners(self):
+        security_staff = self.make_2days_of_random_models()
+        self.create_profiles_but_unlink_objects()
+
+        # set up scenario such that every prisoner is monitored by 1 person
+        # except for one prisoner that has 2 monitors
+        for profile in PrisonerProfile.objects.all():
+            profile.monitoring_users.add(security_staff[0])
+        profile = PrisonerProfile.objects.order_by('?').first()
+        profile.monitoring_users.add(security_staff[1])
+        prisoner_number_with_2_monitors = profile.prisoner_number
+
+        call_command('update_security_profiles')
+
+        # generate reports for whole range
+        report_date = Credit.objects.order_by('received_at').first().received_at.date()
+        since = report_date.strftime('%Y-%m-%d')
+        call_command('send_notification_report', 'admin@mtp.local', since=since)
+
+        email, workbook = self.assertHasExcelAttachment()
+        self.assertIn(report_date.strftime('%d %b %Y'), email.body)
+
+        expected_sheets = {'cred-mon. prisoners', 'disb-mon. prisoners'}
+        self.assertTrue(expected_sheets.issubset(set(workbook.sheetnames)))
+
+        prisoner_number_cols = [
+            ('cred-mon. prisoners', 6),
+            ('disb-mon. prisoners', 7),
+        ]
+        for worksheet, prisoner_number_col in prisoner_number_cols:
+            worksheet = workbook[worksheet]
+            rows = iter(worksheet.rows)
+            next(rows)
+            for row in rows:
+                prisoner_number = row[prisoner_number_col].value
+                monitored_by = row[1].value
+                if prisoner_number == prisoner_number_with_2_monitors:
+                    self.assertEqual(monitored_by, 2)
+                else:
+                    self.assertEqual(monitored_by, 1)

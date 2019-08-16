@@ -21,3 +21,4 @@ xlrd>=1.0.0,<2
 reportlab>=3.4,<4
 numpy>=1.14
 scipy>=1.1
+openpyxl>=2.6,<2.7
