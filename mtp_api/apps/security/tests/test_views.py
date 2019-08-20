@@ -459,6 +459,56 @@ class PrisonerProfileListTestCase(SecurityViewTestCase):
             greater_than_3_count, len(data)
         )
 
+    def test_filter_by_current_prison(self):
+        """
+        Test filtering prisoners by current prison as single value.
+        """
+        prison_id = 'IXB'
+        response = self._get_list(
+            self._get_authorised_user(),
+            current_prison=prison_id,
+        )
+        actual_results = response['results']
+
+        actual_prisoner_profiles = PrisonerProfile.objects.filter(
+            current_prison__nomis_id=prison_id,
+        ).distinct()
+
+        self.assertTrue(actual_results)
+        self.assertEqual(
+            len(actual_results),
+            actual_prisoner_profiles.count(),
+        )
+        self.assertCountEqual(
+            actual_prisoner_profiles.values_list('id', flat=True),
+            [profile['id'] for profile in actual_results],
+        )
+
+    def test_filter_by_list_of_current_prisons(self):
+        """
+        Test filtering prisoners by current prison as multi value.
+        """
+        prison_ids = ['IXB', 'INP']
+        response = self._get_list(
+            self._get_authorised_user(),
+            current_prison=prison_ids,
+        )
+        actual_results = response['results']
+
+        actual_prisoner_profiles = PrisonerProfile.objects.filter(
+            current_prison__nomis_id__in=prison_ids,
+        ).distinct()
+
+        self.assertTrue(actual_results)
+        self.assertEqual(
+            len(actual_results),
+            actual_prisoner_profiles.count(),
+        )
+        self.assertCountEqual(
+            actual_prisoner_profiles.values_list('id', flat=True),
+            [profile['id'] for profile in actual_results],
+        )
+
     def test_filter_by_monitoring(self):
         user = self._get_authorised_user()
 
