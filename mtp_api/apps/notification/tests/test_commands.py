@@ -273,7 +273,7 @@ class SendNotificationReportTestCase(NotificationBaseTestCase):
         email = mail.outbox[0]
         self.assertEqual(len(email.attachments), 1)
         _, contents, *_ = email.attachments[0]
-        workbook = openpyxl.load_workbook(io.BytesIO(contents), read_only=True)
+        workbook = openpyxl.load_workbook(io.BytesIO(contents))
         return email, workbook
 
     def test_empty_report(self):
@@ -322,18 +322,20 @@ class SendNotificationReportTestCase(NotificationBaseTestCase):
 
         for worksheet in credit_sheets:
             worksheet = workbook[worksheet]
-            dimensions = worksheet.calculate_dimension(force=True)
+            dimensions = worksheet.calculate_dimension()
             rows, _columns = coordinate_to_tuple(dimensions.split(':')[1])
             self.assertEqual(rows, 2)
             self.assertEqual(worksheet['E2'].value, '£125.01')
             self.assertEqual(worksheet['G2'].value, credit.prisoner_name)
+            self.assertIn(f'/credits/{credit.id}/', worksheet['B2'].hyperlink.target)
         for worksheet in disbursement_sheets:
             worksheet = workbook[worksheet]
-            dimensions = worksheet.calculate_dimension(force=True)
+            dimensions = worksheet.calculate_dimension()
             rows, _columns = coordinate_to_tuple(dimensions.split(':')[1])
             self.assertEqual(rows, 2)
             self.assertEqual(worksheet['F2'].value, '£136.02')
             self.assertEqual(worksheet['O2'].value, disbursement.recipient_address)
+            self.assertIn(f'/disbursements/{disbursement.id}/', worksheet['B2'].hyperlink.target)
 
     def test_reports_generated_for_monitored_prisoners(self):
         security_staff = self.make_2days_of_random_models()

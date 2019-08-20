@@ -135,7 +135,7 @@ def generate_sheet(worksheet, serialiser, rule, record_set):
     count = 0
     for record in record_set:
         if rule.applies_to(record) and rule.triggered(record):
-            row = serialiser.serialise(record)
+            row = serialiser.serialise(worksheet, record)
             worksheet.append([
                 row.get(field, None)
                 for field in headers
@@ -194,16 +194,22 @@ class Serialiser:
             headers.insert(1, 'Monitored by')
         return headers
 
-    def serialise(self, record):
+    def serialise(self, worksheet, record):
+        linked_cell = WriteOnlyCell(worksheet, self.get_internal_id(record))
+        linked_cell.hyperlink = self.get_noms_ops_url(record)
+        linked_cell.style = 'Hyperlink'
         row = {
             'Notification rule': self.rule_description,
-            'Internal ID': self.get_internal_id(record),
+            'Internal ID': linked_cell,
         }
         if self.is_monitored_rule:
             row['Monitored by'] = self.rule.get_event_trigger(record).get_monitoring_users().count()
         return row
 
     def get_internal_id(self, record):
+        raise NotImplementedError
+
+    def get_noms_ops_url(self, record):
         raise NotImplementedError
 
 
@@ -221,16 +227,21 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
             'NOMIS transaction',
         ]
 
-    def serialise(self, record: Credit):
-        row = super().serialise(record)
+    def serialise(self, worksheet, record: Credit):
+        row = super().serialise(worksheet, record)
+        status = record.status
+        if status:
+            status = str(CREDIT_STATUS.for_value(status).display)
+        else:
+            status = 'Anonymous'
         row.update({
             'Date received': local_datetime_for_xlsx(record.received_at),
             'Date credited': local_datetime_for_xlsx(find_log_date(record, CREDIT_LOG_ACTIONS.CREDITED)),
             'Amount': format_amount(record.amount),
-            'Prisoner number': record.prisoner_number,
-            'Prisoner name': record.prisoner_name,
-            'Prison': record.prison.short_name,
-            'Status': str(CREDIT_STATUS.for_value(record.status).display),
+            'Prisoner number': record.prisoner_number or 'Unknown',
+            'Prisoner name': record.prisoner_name or 'Unknown',
+            'Prison': record.prison.short_name if record.prison else 'Unknown',
+            'Status': status,
             'NOMIS transaction': record.nomis_transaction_id,
         })
         row.update(self.serialise_sender(record))
@@ -238,6 +249,9 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
 
     def get_internal_id(self, record):
         return f'Credit {record.id}'
+
+    def get_noms_ops_url(self, record):
+        return f'{settings.NOMS_OPS_URL}/security/credits/{record.id}/'
 
     def serialise_sender(self, record: Credit):
         if hasattr(record, 'transaction'):
@@ -281,8 +295,8 @@ class DisbursementSerialiser(Serialiser, serialised_model=Disbursement):
             'NOMIS transaction', 'SOP invoice number',
         ]
 
-    def serialise(self, record: Disbursement):
-        row = super().serialise(record)
+    def serialise(self, worksheet, record: Disbursement):
+        row = super().serialise(worksheet, record)
         row.update({
             'Date entered': local_datetime_for_xlsx(record.created),
             'Date confirmed': local_datetime_for_xlsx(find_log_date(record, DISBURSEMENT_LOG_ACTIONS.CONFIRMED)),
@@ -306,6 +320,9 @@ class DisbursementSerialiser(Serialiser, serialised_model=Disbursement):
 
     def get_internal_id(self, record):
         return f'Disbursement {record.id}'
+
+    def get_noms_ops_url(self, record):
+        return f'{settings.NOMS_OPS_URL}/security/disbursements/{record.id}/'
 
 
 def local_datetime_for_xlsx(value):
