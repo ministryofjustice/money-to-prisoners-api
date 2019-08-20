@@ -1,10 +1,16 @@
+import datetime
 import random
 
 from django.core.management import call_command
 from django.test import TestCase
+from django.utils import timezone
+from django.utils.crypto import get_random_string
+from faker import Faker
+from model_mommy import mommy
 
 from core.tests.utils import make_test_users
-from credit.models import Credit
+from credit.models import Credit, CREDIT_RESOLUTION
+from disbursement.constants import DISBURSEMENT_RESOLUTION
 from disbursement.models import Disbursement
 from disbursement.tests.utils import generate_disbursements
 from notification.models import (
@@ -13,12 +19,18 @@ from notification.models import (
 from notification.rules import Event, RULES
 from payment.models import Payment
 from payment.tests.utils import generate_payments
-from prison.tests.utils import load_random_prisoner_locations
+from prison.models import Prison
+from prison.tests.utils import (
+    load_random_prisoner_locations, random_prisoner_name, random_prisoner_number, random_prisoner_dob,
+)
 from security.models import (
-    SenderProfile, RecipientProfile, PrisonerProfile
+    SenderProfile, RecipientProfile, PrisonerProfile,
+    DebitCardSenderDetails, BankAccount, BankTransferRecipientDetails,
 )
 from transaction.models import Transaction
 from transaction.tests.utils import generate_transactions
+
+fake = Faker(locale='en_GB')
 
 
 class RuleTestCase(TestCase):
@@ -34,7 +46,7 @@ class RuleTestCase(TestCase):
         generate_payments(payment_batch=200, days_of_history=3)
         generate_disbursements(disbursement_batch=200, days_of_history=3)
 
-        # £1 does not match NWN or HA rules and no monitoring exists, i.e. no rules can trigger
+        # £1 does not match NWN or HA rules and no monitoring exists, i.e. no non-counting rules can trigger
         Payment.objects.update(amount=100)
         Transaction.objects.update(amount=100)
         Credit.objects.update(amount=100)
@@ -236,3 +248,342 @@ class RuleTestCase(TestCase):
             self.assertFalse(RULES['MONR'].triggered(disbursement))
 
         self.assertEqual(Event.objects.count(), recipient_profile.disbursements.count())
+
+
+class CountingRuleTestCase(TestCase):
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
+
+    def setUp(self):
+        super().setUp()
+        self.today = timezone.now()
+
+        # ensure shared catch-all profiles exist
+        self.anonymous_sender = SenderProfile.objects.create()
+        self.cheque_recipient = RecipientProfile.objects.create()
+        for rule in RULES.values():
+            if 'shared_profile' in rule.__dict__:
+                del rule.__dict__['shared_profile']
+
+    def make_sender(self):
+        sender = SenderProfile.objects.create()
+        mommy.make(
+            DebitCardSenderDetails,
+            sender=sender,
+            card_number_last_digits=fake.credit_card_number()[-4:],
+            card_expiry_date=fake.credit_card_expire(),
+            postcode=fake.postcode(),
+        )
+        return sender
+
+    def make_recipient(self):
+        recipient = RecipientProfile.objects.create()
+        bank_account = mommy.make(
+            BankAccount,
+            sort_code=get_random_string(6, '1234567890'),
+            account_number=get_random_string(8, '1234567890'),
+        )
+        mommy.make(BankTransferRecipientDetails, recipient=recipient, recipient_bank_account=bank_account)
+        return recipient
+
+    def make_prisoner(self):
+        return mommy.make(
+            PrisonerProfile,
+            prisoner_name=random_prisoner_name(),
+            prisoner_number=random_prisoner_number(),
+            prisoner_dob=random_prisoner_dob(),
+            current_prison=Prison.objects.order_by('?').first(),
+        )
+
+    def make_csfreq_credits(self, sender, count):
+        debit_card = sender.debit_card_details.first()
+        credit_list = []
+        for day in range(count):
+            credit = mommy.make(
+                Credit,
+                sender_profile=sender,
+                received_at=self.today - datetime.timedelta(day),
+                resolution=CREDIT_RESOLUTION.CREDITED, reconciled=True, private_estate_batch=None,
+            )
+            if debit_card:
+                payment = mommy.make(
+                    Payment,
+                    card_number_last_digits=debit_card.card_number_last_digits,
+                    card_expiry_date=debit_card.card_expiry_date,
+                )
+                payment.credit = credit
+                payment.save()
+            credit_list.append(credit)
+        return credit_list
+
+    def test_csfreq_rule(self):
+        """
+        One sender sends many credits
+        """
+        rule = RULES['CSFREQ']
+
+        # make just enough credits to trigger rule
+        credit_list = self.make_csfreq_credits(self.make_sender(), rule.kwargs['limit'] + 1)
+
+        # latest credit triggers rule, but all older ones don't
+        latest_credit = credit_list[0]
+        self.assertTrue(rule.applies_to(latest_credit))
+        self.assertTrue(rule.triggered(latest_credit))
+        for older_credit in credit_list[1:]:
+            self.assertTrue(rule.applies_to(older_credit))
+            self.assertFalse(rule.triggered(older_credit))
+
+        # latest credit stops triggering rule when oldest is too old
+        oldest_credit = credit_list[-1]
+        oldest_credit.received_at -= datetime.timedelta(days=30)
+        oldest_credit.save()
+        self.assertFalse(rule.triggered(latest_credit))
+
+    def make_drfreq_disbursements(self, recipient, count):
+        disbursement_list = []
+        for day in range(count):
+            disbursement = mommy.make(
+                Disbursement,
+                recipient_profile=recipient,
+                created=self.today - datetime.timedelta(day),
+                resolution=DISBURSEMENT_RESOLUTION.SENT,
+            )
+            disbursement_list.append(disbursement)
+        return disbursement_list
+
+    def test_drfreq_rule(self):
+        """
+        One recipient receives many disbursements
+        """
+        rule = RULES['DRFREQ']
+
+        # make just enough disbursements to trigger rule
+        disbursement_list = self.make_drfreq_disbursements(self.make_recipient(), rule.kwargs['limit'] + 1)
+
+        # latest disbursement triggers rule, but all older ones don't
+        latest_disbursement = disbursement_list[0]
+        self.assertTrue(rule.applies_to(latest_disbursement))
+        self.assertTrue(rule.triggered(latest_disbursement))
+        for older_disbursement in disbursement_list[1:]:
+            self.assertTrue(rule.applies_to(older_disbursement))
+            self.assertFalse(rule.triggered(older_disbursement))
+
+        # latest disbursement stops triggering rule when oldest is too old
+        oldest_disbursement = disbursement_list[-1]
+        oldest_disbursement.created -= datetime.timedelta(days=30)
+        oldest_disbursement.save()
+        self.assertFalse(rule.triggered(latest_disbursement))
+
+    def make_csnum_credits(self, prisoner, count, sender_profile=None):
+        credit_list = []
+        for day in range(count):
+            sender = sender_profile or self.make_sender()
+            debit_card = sender.debit_card_details.first()
+            credit = mommy.make(
+                Credit,
+                sender_profile=sender,
+                prisoner_profile=prisoner,
+                received_at=self.today - datetime.timedelta(day),
+                resolution=CREDIT_RESOLUTION.CREDITED, reconciled=True, private_estate_batch=None,
+            )
+            if debit_card:
+                payment = mommy.make(
+                    Payment,
+                    card_number_last_digits=debit_card.card_number_last_digits,
+                    card_expiry_date=debit_card.card_expiry_date,
+                )
+                payment.credit = credit
+                payment.save()
+            credit_list.append(credit)
+        return credit_list
+
+    def test_csnum_rule(self):
+        """
+        One prisoner receives credits from many senders
+        """
+        rule = RULES['CSNUM']
+
+        # make just enough credits to trigger rule
+        credit_list = self.make_csnum_credits(self.make_prisoner(), rule.kwargs['limit'] + 1)
+
+        # latest credit triggers rule, but all older ones don't
+        latest_credit = credit_list[0]
+        self.assertTrue(rule.applies_to(latest_credit))
+        self.assertTrue(rule.triggered(latest_credit))
+        for older_credit in credit_list[1:]:
+            self.assertTrue(rule.applies_to(older_credit))
+            self.assertFalse(rule.triggered(older_credit))
+
+        # latest credit stops triggering rule when oldest is too old
+        oldest_credit = credit_list[-1]
+        oldest_credit.received_at -= datetime.timedelta(days=30)
+        oldest_credit.save()
+        self.assertFalse(rule.triggered(latest_credit))
+
+        # make extra credits attached to another profile
+        self.make_csnum_credits(self.make_prisoner(), 2, sender_profile=latest_credit.sender_profile)
+        # latest credit should still not trigger
+        self.assertFalse(rule.triggered(latest_credit))
+
+    def make_drnum_disbursements(self, prisoner, count, recipient_profile=None):
+        disbursement_list = []
+        for day in range(count):
+            recipient = recipient_profile or self.make_recipient()
+            disbursement = mommy.make(
+                Disbursement,
+                recipient_profile=recipient,
+                prisoner_profile=prisoner,
+                created=self.today - datetime.timedelta(day),
+                resolution=DISBURSEMENT_RESOLUTION.SENT,
+            )
+            disbursement_list.append(disbursement)
+        return disbursement_list
+
+    def test_drnum_rule(self):
+        """
+        One prisoner sends disbursements to many recipients
+        """
+        rule = RULES['DRNUM']
+
+        # make just enough disbursements to trigger rule
+        disbursement_list = self.make_drnum_disbursements(self.make_prisoner(), rule.kwargs['limit'] + 1)
+
+        # latest disbursement triggers rule, but all older ones don't
+        latest_disbursement = disbursement_list[0]
+        self.assertTrue(rule.applies_to(latest_disbursement))
+        self.assertTrue(rule.triggered(latest_disbursement))
+        for older_disbursement in disbursement_list[1:]:
+            self.assertTrue(rule.applies_to(older_disbursement))
+            self.assertFalse(rule.triggered(older_disbursement))
+
+        # latest disbursement stops triggering rule when oldest is too old
+        oldest_disbursement = disbursement_list[-1]
+        oldest_disbursement.created -= datetime.timedelta(days=30)
+        oldest_disbursement.save()
+        self.assertFalse(rule.triggered(latest_disbursement))
+
+        # make extra disbursements attached to another profile
+        self.make_drnum_disbursements(self.make_prisoner(), 2, recipient_profile=latest_disbursement.recipient_profile)
+        # latest disbursement should still not trigger
+        self.assertFalse(rule.triggered(latest_disbursement))
+
+    def make_cpnum_credits(self, sender, count, prisoner_profile=None):
+        debit_card = sender.debit_card_details.first()
+        credit_list = []
+        for day in range(count):
+            prisoner = prisoner_profile or self.make_prisoner()
+            credit = mommy.make(
+                Credit,
+                sender_profile=sender,
+                prisoner_profile=prisoner,
+                received_at=self.today - datetime.timedelta(day),
+                resolution=CREDIT_RESOLUTION.CREDITED, reconciled=True, private_estate_batch=None,
+            )
+            if debit_card:
+                payment = mommy.make(
+                    Payment,
+                    card_number_last_digits=debit_card.card_number_last_digits,
+                    card_expiry_date=debit_card.card_expiry_date,
+                )
+                payment.credit = credit
+                payment.save()
+            credit_list.append(credit)
+        return credit_list
+
+    def test_cpnum_rule(self):
+        """
+        One sender sending credits to many prisoners
+        """
+        rule = RULES['CPNUM']
+
+        # make just enough credits to trigger rule
+        credit_list = self.make_cpnum_credits(self.make_sender(), rule.kwargs['limit'] + 1)
+
+        # latest credit triggers rule, but all older ones don't
+        latest_credit = credit_list[0]
+        self.assertTrue(rule.applies_to(latest_credit))
+        self.assertTrue(rule.triggered(latest_credit))
+        for older_credit in credit_list[1:]:
+            self.assertTrue(rule.applies_to(older_credit))
+            self.assertFalse(rule.triggered(older_credit))
+
+        # latest credit stops triggering rule when oldest is too old
+        oldest_credit = credit_list[-1]
+        oldest_credit.received_at -= datetime.timedelta(days=30)
+        oldest_credit.save()
+        self.assertFalse(rule.triggered(latest_credit))
+
+        # make extra credits attached to another profile
+        self.make_cpnum_credits(self.make_sender(), 2, prisoner_profile=latest_credit.prisoner_profile)
+        # latest credit should still not trigger
+        self.assertFalse(rule.triggered(latest_credit))
+
+    def make_dpnum_disbursements(self, recipient, count, prisoner_profile=None):
+        disbursement_list = []
+        for day in range(count):
+            prisoner = prisoner_profile or self.make_prisoner()
+            disbursement = mommy.make(
+                Disbursement,
+                recipient_profile=recipient,
+                prisoner_profile=prisoner,
+                created=self.today - datetime.timedelta(day),
+                resolution=DISBURSEMENT_RESOLUTION.SENT,
+            )
+            disbursement_list.append(disbursement)
+        return disbursement_list
+
+    def test_dpnum_rule(self):
+        """
+        One recipient receiving disbursements from many prisoners
+        """
+        rule = RULES['DPNUM']
+
+        # make just enough disbursements to trigger rule
+        disbursement_list = self.make_dpnum_disbursements(self.make_recipient(), rule.kwargs['limit'] + 1)
+
+        # latest disbursement triggers rule, but all older ones don't
+        latest_disbursement = disbursement_list[0]
+        self.assertTrue(rule.applies_to(latest_disbursement))
+        self.assertTrue(rule.triggered(latest_disbursement))
+        for older_disbursement in disbursement_list[1:]:
+            self.assertTrue(rule.applies_to(older_disbursement))
+            self.assertFalse(rule.triggered(older_disbursement))
+
+        # latest disbursement stops triggering rule when oldest is too old
+        oldest_disbursement = disbursement_list[-1]
+        oldest_disbursement.created -= datetime.timedelta(days=30)
+        oldest_disbursement.save()
+        self.assertFalse(rule.triggered(latest_disbursement))
+
+        # make extra disbursements attached to another profile
+        self.make_dpnum_disbursements(self.make_recipient(), 2, prisoner_profile=latest_disbursement.prisoner_profile)
+        # latest disbursement should still not trigger
+        self.assertFalse(rule.triggered(latest_disbursement))
+
+    def test_not_triggered_on_shared_profiles(self):
+        """
+        Anonymous senders and cheque recipients should not trigger counting rules
+        c.f. `update_security_profiles` command
+        """
+        rule = RULES['CSFREQ']
+        # make just enough credits that would normally trigger rule, but should not
+        credit_list = self.make_csfreq_credits(self.anonymous_sender, rule.kwargs['limit'] + 1)
+        latest_credit = credit_list[0]
+        self.assertFalse(rule.triggered(latest_credit))
+
+        rule = RULES['CPNUM']
+        # make just enough credits that would normally trigger rule, but should not
+        credit_list = self.make_cpnum_credits(self.anonymous_sender, rule.kwargs['limit'] + 1)
+        latest_credit = credit_list[0]
+        self.assertFalse(rule.triggered(latest_credit))
+
+        rule = RULES['DRFREQ']
+        # make just enough disbursements that would normally trigger rule, but should not
+        disbursement_list = self.make_drfreq_disbursements(self.cheque_recipient, rule.kwargs['limit'] + 1)
+        latest_disbursement = disbursement_list[0]
+        self.assertFalse(rule.triggered(latest_disbursement))
+
+        rule = RULES['DPNUM']
+        # make just enough disbursements that would normally trigger rule, but should not
+        disbursement_list = self.make_dpnum_disbursements(self.cheque_recipient, rule.kwargs['limit'] + 1)
+        latest_disbursement = disbursement_list[0]
+        self.assertFalse(rule.triggered(latest_disbursement))
