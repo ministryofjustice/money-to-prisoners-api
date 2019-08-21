@@ -219,6 +219,9 @@ class PrisonerProfileListFilter(django_filters.FilterSet):
         name='prisoner_name', lookup_expr='icontains'
     )
 
+    current_prison = django_filters.ModelMultipleChoiceFilter(
+        queryset=Prison.objects.all(),
+    )
     prison = django_filters.ModelMultipleChoiceFilter(
         name='prisons', queryset=Prison.objects.all()
     )

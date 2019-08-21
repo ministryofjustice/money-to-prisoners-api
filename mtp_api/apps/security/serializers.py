@@ -50,7 +50,22 @@ class DebitCardSenderDetailsSerializer(serializers.ModelSerializer):
         return list(obj.sender_emails.values_list('email', flat=True))
 
 
+class PrisonSerializer(serializers.ModelSerializer):
+    """
+    Serializer for nested prison fields.
+    """
+
+    class Meta:
+        model = Prison
+        fields = (
+            'nomis_id',
+            'name',
+        )
+
+
 class SenderProfileSerializer(serializers.ModelSerializer):
+    prisons = PrisonSerializer(many=True)
+
     bank_transfer_details = BankTransferSenderDetailsSerializer(many=True)
     debit_card_details = DebitCardSenderDetailsSerializer(many=True)
 
@@ -65,6 +80,7 @@ class SenderProfileSerializer(serializers.ModelSerializer):
             'id',
             'credit_count',
             'credit_total',
+            'prisons',
             'prisoner_count',
             'prison_count',
             'bank_transfer_details',
@@ -72,15 +88,6 @@ class SenderProfileSerializer(serializers.ModelSerializer):
             'created',
             'modified',
             'monitoring',
-        )
-
-
-class PrisonSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Prison
-        fields = (
-            'nomis_id',
-            'name',
         )
 
 
