@@ -23,6 +23,20 @@ def create_notification_events(record):
             rule.create_events(record)
 
 
+class Triggered:
+    """
+    'Truthy' type to indicate whether a notification rule is triggered by a record
+    allowing the rule to add additional attributes to describe the trigger
+    """
+
+    def __init__(self, triggered, **kwargs):
+        self.triggered = bool(triggered)
+        self.kwargs = kwargs
+
+    def __bool__(self):
+        return self.triggered
+
+
 class BaseRule:
     applies_to_models = (Credit, Disbursement)
 
@@ -34,10 +48,10 @@ class BaseRule:
         if applies_to_models:
             self.applies_to_models = applies_to_models
 
-    def applies_to(self, record):
+    def applies_to(self, record) -> bool:
         return isinstance(record, self.applies_to_models)
 
-    def triggered(self, record):
+    def triggered(self, record) -> Triggered:
         raise NotImplementedError
 
     def get_event_trigger(self, record):
@@ -83,8 +97,8 @@ class BaseRule:
 
 
 class NotWholeNumberRule(BaseRule):
-    def triggered(self, record):
-        return bool(record.amount % 100)
+    def triggered(self, record) -> Triggered:
+        return Triggered(record.amount % 100, amount=record.amount)
 
 
 class HighAmountRule(BaseRule):
@@ -95,8 +109,8 @@ class HighAmountRule(BaseRule):
             display_limit=format_amount(limit, trim_empty_pence=True, pound_sign=True)
         )
 
-    def triggered(self, record):
-        return record.amount >= self.kwargs['limit']
+    def triggered(self, record) -> Triggered:
+        return Triggered(record.amount >= self.kwargs['limit'], amount=record.amount)
 
 
 class MonitoredRule(BaseRule):
@@ -108,11 +122,12 @@ class MonitoredRule(BaseRule):
             for user in profile.get_monitoring_users().all()
         ]
 
-    def triggered(self, record):
+    def triggered(self, record) -> Triggered:
         profile = self.get_event_trigger(record)
-        if profile and profile.get_monitoring_users().exists():
-            return True
-        return False
+        if profile:
+            monitoring_user_count = profile.get_monitoring_users().count()
+            return Triggered(monitoring_user_count, monitoring_user_count=monitoring_user_count)
+        return Triggered(False, monitoring_user_count=0)
 
     def get_event_trigger(self, record):
         return getattr(record, self.kwargs['profile'])
@@ -144,15 +159,15 @@ class CountingRule(BaseRule):
                 pass
         return None
 
-    def triggered(self, record):
+    def triggered(self, record) -> Triggered:
         profile = self.get_event_trigger(record)
         if not profile or profile == self.shared_profile:
-            return False
+            return Triggered(False)
 
         records_of_same_type = self.get_profile_records_of_same_type(profile, record)
         field_to_count = self.kwargs['count']
         count = records_of_same_type.values(field_to_count).distinct().count()
-        return count > self.kwargs['limit']
+        return Triggered(count > self.kwargs['limit'], count=count)
 
     def get_event_trigger(self, record):
         return getattr(record, self.kwargs['profile'])

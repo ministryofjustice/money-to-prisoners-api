@@ -18,7 +18,7 @@ from credit.constants import CREDIT_STATUS
 from credit.models import Credit, LOG_ACTIONS as CREDIT_LOG_ACTIONS
 from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION
 from disbursement.models import Disbursement, LOG_ACTIONS as DISBURSEMENT_LOG_ACTIONS
-from notification.rules import RULES, MonitoredRule
+from notification.rules import RULES, MonitoredRule, Triggered
 from transaction.utils import format_amount
 
 
@@ -134,13 +134,17 @@ def generate_sheet(worksheet, serialiser, rule, record_set):
     worksheet.append(headers)
     count = 0
     for record in record_set:
-        if rule.applies_to(record) and rule.triggered(record):
-            row = serialiser.serialise(worksheet, record)
-            worksheet.append([
-                row.get(field, None)
-                for field in headers
-            ])
-            count += 1
+        if not rule.applies_to(record):
+            continue
+        triggered = rule.triggered(record)
+        if not triggered:
+            continue
+        row = serialiser.serialise(worksheet, record, triggered)
+        worksheet.append([
+            row.get(field, None)
+            for field in headers
+        ])
+        count += 1
     if count:
         worksheet.auto_filter.ref = f'A1:{get_column_letter(len(headers))}{count + 1}'
     else:
@@ -194,7 +198,7 @@ class Serialiser:
             headers.insert(1, 'Monitored by')
         return headers
 
-    def serialise(self, worksheet, record):
+    def serialise(self, worksheet, record, triggered: Triggered):
         linked_cell = WriteOnlyCell(worksheet, self.get_internal_id(record))
         linked_cell.hyperlink = self.get_noms_ops_url(record)
         linked_cell.style = 'Hyperlink'
@@ -203,7 +207,7 @@ class Serialiser:
             'Internal ID': linked_cell,
         }
         if self.is_monitored_rule:
-            row['Monitored by'] = self.rule.get_event_trigger(record).get_monitoring_users().count()
+            row['Monitored by'] = triggered.kwargs['monitoring_user_count']
         return row
 
     def get_internal_id(self, record):
@@ -227,8 +231,8 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
             'NOMIS transaction',
         ]
 
-    def serialise(self, worksheet, record: Credit):
-        row = super().serialise(worksheet, record)
+    def serialise(self, worksheet, record: Credit, triggered: Triggered):
+        row = super().serialise(worksheet, record, triggered)
         status = record.status
         if status:
             status = str(CREDIT_STATUS.for_value(status).display)
@@ -295,8 +299,8 @@ class DisbursementSerialiser(Serialiser, serialised_model=Disbursement):
             'NOMIS transaction', 'SOP invoice number',
         ]
 
-    def serialise(self, worksheet, record: Disbursement):
-        row = super().serialise(worksheet, record)
+    def serialise(self, worksheet, record: Disbursement, triggered: Triggered):
+        row = super().serialise(worksheet, record, triggered)
         row.update({
             'Date entered': local_datetime_for_xlsx(record.created),
             'Date confirmed': local_datetime_for_xlsx(find_log_date(record, DISBURSEMENT_LOG_ACTIONS.CONFIRMED)),

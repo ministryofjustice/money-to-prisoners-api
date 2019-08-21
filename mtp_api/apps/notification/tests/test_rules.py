@@ -97,12 +97,16 @@ class RuleTestCase(TestCase):
             disbursement.save()
 
         for credit in credits:
-            self.assertTrue(RULES['NWN'].triggered(credit))
+            triggered = RULES['NWN'].triggered(credit)
+            self.assertTrue(triggered)
+            self.assertEqual(triggered.kwargs['amount'], credit.amount)
             events = RULES['NWN'].create_events(credit)
             self.assertEventMatchesRecord(events, credit)
         self.assertEqual(Event.objects.count(), 10)
         for disbursement in disbursements:
-            self.assertTrue(RULES['NWN'].triggered(disbursement))
+            triggered = RULES['NWN'].triggered(disbursement)
+            self.assertTrue(triggered)
+            self.assertEqual(triggered.kwargs['amount'], disbursement.amount)
             events = RULES['NWN'].create_events(disbursement)
             self.assertEventMatchesRecord(events, disbursement)
         self.assertEqual(Event.objects.count(), 20)
@@ -110,9 +114,13 @@ class RuleTestCase(TestCase):
         credits = Credit.objects.filter(amount__endswith='00')
         disbursements = Disbursement.objects.filter(amount__endswith='00')
         for credit in credits:
-            self.assertFalse(RULES['NWN'].triggered(credit))
+            triggered = RULES['NWN'].triggered(credit)
+            self.assertFalse(triggered)
+            self.assertEqual(triggered.kwargs['amount'], credit.amount)
         for disbursement in disbursements:
-            self.assertFalse(RULES['NWN'].triggered(disbursement))
+            triggered = RULES['NWN'].triggered(disbursement)
+            self.assertFalse(triggered)
+            self.assertEqual(triggered.kwargs['amount'], disbursement.amount)
         self.assertEqual(Event.objects.count(), 20)
 
     def test_create_events_for_ha(self):
@@ -126,12 +134,16 @@ class RuleTestCase(TestCase):
             disbursement.save()
 
         for credit in credits:
-            self.assertTrue(RULES['HA'].triggered(credit))
+            triggered = RULES['HA'].triggered(credit)
+            self.assertTrue(triggered)
+            self.assertEqual(triggered.kwargs['amount'], credit.amount)
             events = RULES['HA'].create_events(credit)
             self.assertEventMatchesRecord(events, credit)
         self.assertEqual(Event.objects.count(), 10)
         for disbursement in disbursements:
-            self.assertTrue(RULES['HA'].triggered(disbursement))
+            triggered = RULES['HA'].triggered(disbursement)
+            self.assertTrue(triggered)
+            self.assertEqual(triggered.kwargs['amount'], disbursement.amount)
             events = RULES['HA'].create_events(disbursement)
             self.assertEventMatchesRecord(events, disbursement)
         self.assertEqual(Event.objects.count(), 20)
@@ -139,9 +151,13 @@ class RuleTestCase(TestCase):
         credits = Credit.objects.exclude(amount__gte=12000)
         disbursements = Disbursement.objects.exclude(amount__gte=12000)
         for credit in credits:
-            self.assertFalse(RULES['HA'].triggered(credit))
+            triggered = RULES['HA'].triggered(credit)
+            self.assertFalse(triggered)
+            self.assertEqual(triggered.kwargs['amount'], credit.amount)
         for disbursement in disbursements:
-            self.assertFalse(RULES['HA'].triggered(disbursement))
+            triggered = RULES['HA'].triggered(disbursement)
+            self.assertFalse(triggered)
+            self.assertEqual(triggered.kwargs['amount'], disbursement.amount)
         self.assertEqual(Event.objects.count(), 20)
 
     def test_create_events_for_monp_credit(self):
@@ -152,13 +168,17 @@ class RuleTestCase(TestCase):
 
         credits = Credit.objects.filter(prisoner_profile=prisoner_profile)
         for credit in credits:
-            self.assertTrue(RULES['MONP'].triggered(credit))
+            triggered = RULES['MONP'].triggered(credit)
+            self.assertTrue(triggered)
+            self.assertEqual(triggered.kwargs['monitoring_user_count'], 1)
             events = RULES['MONP'].create_events(credit)
             self.assertEventMatchesRecord(events, credit, PrisonerProfile)
 
         credits = Credit.objects.exclude(prisoner_profile=prisoner_profile)
         for credit in credits:
-            self.assertFalse(RULES['MONP'].triggered(credit))
+            triggered = RULES['MONP'].triggered(credit)
+            self.assertFalse(triggered)
+            self.assertEqual(triggered.kwargs['monitoring_user_count'], 0)
 
         self.assertEqual(Event.objects.count(), prisoner_profile.credits.count())
 
@@ -170,13 +190,17 @@ class RuleTestCase(TestCase):
 
         disbursements = Disbursement.objects.filter(prisoner_profile=prisoner_profile)
         for disbursement in disbursements:
-            self.assertTrue(RULES['MONP'].triggered(disbursement))
+            triggered = RULES['MONP'].triggered(disbursement)
+            self.assertTrue(triggered)
+            self.assertEqual(triggered.kwargs['monitoring_user_count'], 1)
             events = RULES['MONP'].create_events(disbursement)
             self.assertEventMatchesRecord(events, disbursement, PrisonerProfile)
 
         disbursements = Disbursement.objects.exclude(prisoner_profile=prisoner_profile)
         for disbursement in disbursements:
-            self.assertFalse(RULES['MONP'].triggered(disbursement))
+            triggered = RULES['MONP'].triggered(disbursement)
+            self.assertFalse(triggered)
+            self.assertEqual(triggered.kwargs['monitoring_user_count'], 0)
 
         self.assertEqual(Event.objects.count(), prisoner_profile.disbursements.count())
 
@@ -193,13 +217,17 @@ class RuleTestCase(TestCase):
 
         credits = Credit.objects.filter(sender_profile=sender_profile)
         for credit in credits:
-            self.assertTrue(RULES['MONS'].triggered(credit))
+            triggered = RULES['MONS'].triggered(credit)
+            self.assertTrue(triggered)
+            self.assertEqual(triggered.kwargs['monitoring_user_count'], 1)
             events = RULES['MONS'].create_events(credit)
             self.assertEventMatchesRecord(events, credit, SenderProfile)
 
         credits = Credit.objects.exclude(sender_profile=sender_profile)
         for credit in credits:
-            self.assertFalse(RULES['MONS'].triggered(credit))
+            triggered = RULES['MONS'].triggered(credit)
+            self.assertFalse(triggered)
+            self.assertEqual(triggered.kwargs['monitoring_user_count'], 0)
 
         self.assertEqual(Event.objects.count(), sender_profile.credits.count())
 
@@ -216,13 +244,17 @@ class RuleTestCase(TestCase):
 
         credits = Credit.objects.filter(sender_profile=sender_profile)
         for credit in credits:
-            self.assertTrue(RULES['MONS'].triggered(credit))
+            triggered = RULES['MONS'].triggered(credit)
+            self.assertTrue(triggered)
+            self.assertEqual(triggered.kwargs['monitoring_user_count'], 1)
             events = RULES['MONS'].create_events(credit)
             self.assertEventMatchesRecord(events, credit, SenderProfile)
 
         credits = Credit.objects.exclude(sender_profile=sender_profile)
         for credit in credits:
-            self.assertFalse(RULES['MONS'].triggered(credit))
+            triggered = RULES['MONS'].triggered(credit)
+            self.assertFalse(triggered)
+            self.assertEqual(triggered.kwargs['monitoring_user_count'], 0)
 
         self.assertEqual(Event.objects.count(), sender_profile.credits.count())
 
@@ -239,13 +271,17 @@ class RuleTestCase(TestCase):
 
         disbursements = Disbursement.objects.filter(recipient_profile=recipient_profile)
         for disbursement in disbursements:
-            self.assertTrue(RULES['MONR'].triggered(disbursement))
+            triggered = RULES['MONR'].triggered(disbursement)
+            self.assertTrue(triggered)
+            self.assertEqual(triggered.kwargs['monitoring_user_count'], 1)
             events = RULES['MONR'].create_events(disbursement)
             self.assertEventMatchesRecord(events, disbursement, RecipientProfile)
 
         disbursements = Disbursement.objects.exclude(recipient_profile=recipient_profile)
         for disbursement in disbursements:
-            self.assertFalse(RULES['MONR'].triggered(disbursement))
+            triggered = RULES['MONR'].triggered(disbursement)
+            self.assertFalse(triggered)
+            self.assertEqual(triggered.kwargs['monitoring_user_count'], 0)
 
         self.assertEqual(Event.objects.count(), recipient_profile.disbursements.count())
 
@@ -322,12 +358,15 @@ class CountingRuleTestCase(TestCase):
         rule = RULES['CSFREQ']
 
         # make just enough credits to trigger rule
-        credit_list = self.make_csfreq_credits(self.make_sender(), rule.kwargs['limit'] + 1)
+        count = rule.kwargs['limit'] + 1
+        credit_list = self.make_csfreq_credits(self.make_sender(), count)
 
         # latest credit triggers rule, but all older ones don't
         latest_credit = credit_list[0]
         self.assertTrue(rule.applies_to(latest_credit))
-        self.assertTrue(rule.triggered(latest_credit))
+        triggered = rule.triggered(latest_credit)
+        self.assertTrue(triggered)
+        self.assertEqual(triggered.kwargs['count'], count)
         for older_credit in credit_list[1:]:
             self.assertTrue(rule.applies_to(older_credit))
             self.assertFalse(rule.triggered(older_credit))
@@ -336,7 +375,9 @@ class CountingRuleTestCase(TestCase):
         oldest_credit = credit_list[-1]
         oldest_credit.received_at -= datetime.timedelta(days=30)
         oldest_credit.save()
-        self.assertFalse(rule.triggered(latest_credit))
+        triggered = rule.triggered(latest_credit)
+        self.assertFalse(triggered)
+        self.assertEqual(triggered.kwargs['count'], count - 1)
 
     def make_drfreq_disbursements(self, recipient, count):
         disbursement_list = []
@@ -357,12 +398,15 @@ class CountingRuleTestCase(TestCase):
         rule = RULES['DRFREQ']
 
         # make just enough disbursements to trigger rule
-        disbursement_list = self.make_drfreq_disbursements(self.make_recipient(), rule.kwargs['limit'] + 1)
+        count = rule.kwargs['limit'] + 1
+        disbursement_list = self.make_drfreq_disbursements(self.make_recipient(), count)
 
         # latest disbursement triggers rule, but all older ones don't
         latest_disbursement = disbursement_list[0]
         self.assertTrue(rule.applies_to(latest_disbursement))
-        self.assertTrue(rule.triggered(latest_disbursement))
+        triggered = rule.triggered(latest_disbursement)
+        self.assertTrue(triggered)
+        self.assertEqual(triggered.kwargs['count'], count)
         for older_disbursement in disbursement_list[1:]:
             self.assertTrue(rule.applies_to(older_disbursement))
             self.assertFalse(rule.triggered(older_disbursement))
@@ -371,7 +415,9 @@ class CountingRuleTestCase(TestCase):
         oldest_disbursement = disbursement_list[-1]
         oldest_disbursement.created -= datetime.timedelta(days=30)
         oldest_disbursement.save()
-        self.assertFalse(rule.triggered(latest_disbursement))
+        triggered = rule.triggered(latest_disbursement)
+        self.assertFalse(triggered)
+        self.assertEqual(triggered.kwargs['count'], count - 1)
 
     def make_csnum_credits(self, prisoner, count, sender_profile=None):
         credit_list = []
@@ -403,12 +449,15 @@ class CountingRuleTestCase(TestCase):
         rule = RULES['CSNUM']
 
         # make just enough credits to trigger rule
-        credit_list = self.make_csnum_credits(self.make_prisoner(), rule.kwargs['limit'] + 1)
+        count = rule.kwargs['limit'] + 1
+        credit_list = self.make_csnum_credits(self.make_prisoner(), count)
 
         # latest credit triggers rule, but all older ones don't
         latest_credit = credit_list[0]
         self.assertTrue(rule.applies_to(latest_credit))
-        self.assertTrue(rule.triggered(latest_credit))
+        triggered = rule.triggered(latest_credit)
+        self.assertTrue(triggered)
+        self.assertEqual(triggered.kwargs['count'], count)
         for older_credit in credit_list[1:]:
             self.assertTrue(rule.applies_to(older_credit))
             self.assertFalse(rule.triggered(older_credit))
@@ -417,7 +466,9 @@ class CountingRuleTestCase(TestCase):
         oldest_credit = credit_list[-1]
         oldest_credit.received_at -= datetime.timedelta(days=30)
         oldest_credit.save()
-        self.assertFalse(rule.triggered(latest_credit))
+        triggered = rule.triggered(latest_credit)
+        self.assertFalse(triggered)
+        self.assertEqual(triggered.kwargs['count'], count - 1)
 
         # make extra credits attached to another profile
         self.make_csnum_credits(self.make_prisoner(), 2, sender_profile=latest_credit.sender_profile)
@@ -445,12 +496,15 @@ class CountingRuleTestCase(TestCase):
         rule = RULES['DRNUM']
 
         # make just enough disbursements to trigger rule
-        disbursement_list = self.make_drnum_disbursements(self.make_prisoner(), rule.kwargs['limit'] + 1)
+        count = rule.kwargs['limit'] + 1
+        disbursement_list = self.make_drnum_disbursements(self.make_prisoner(), count)
 
         # latest disbursement triggers rule, but all older ones don't
         latest_disbursement = disbursement_list[0]
         self.assertTrue(rule.applies_to(latest_disbursement))
-        self.assertTrue(rule.triggered(latest_disbursement))
+        triggered = rule.triggered(latest_disbursement)
+        self.assertTrue(triggered)
+        self.assertEqual(triggered.kwargs['count'], count)
         for older_disbursement in disbursement_list[1:]:
             self.assertTrue(rule.applies_to(older_disbursement))
             self.assertFalse(rule.triggered(older_disbursement))
@@ -459,7 +513,9 @@ class CountingRuleTestCase(TestCase):
         oldest_disbursement = disbursement_list[-1]
         oldest_disbursement.created -= datetime.timedelta(days=30)
         oldest_disbursement.save()
-        self.assertFalse(rule.triggered(latest_disbursement))
+        triggered = rule.triggered(latest_disbursement)
+        self.assertFalse(triggered)
+        self.assertEqual(triggered.kwargs['count'], count - 1)
 
         # make extra disbursements attached to another profile
         self.make_drnum_disbursements(self.make_prisoner(), 2, recipient_profile=latest_disbursement.recipient_profile)
@@ -496,12 +552,15 @@ class CountingRuleTestCase(TestCase):
         rule = RULES['CPNUM']
 
         # make just enough credits to trigger rule
-        credit_list = self.make_cpnum_credits(self.make_sender(), rule.kwargs['limit'] + 1)
+        count = rule.kwargs['limit'] + 1
+        credit_list = self.make_cpnum_credits(self.make_sender(), count)
 
         # latest credit triggers rule, but all older ones don't
         latest_credit = credit_list[0]
         self.assertTrue(rule.applies_to(latest_credit))
-        self.assertTrue(rule.triggered(latest_credit))
+        triggered = rule.triggered(latest_credit)
+        self.assertTrue(triggered)
+        self.assertEqual(triggered.kwargs['count'], count)
         for older_credit in credit_list[1:]:
             self.assertTrue(rule.applies_to(older_credit))
             self.assertFalse(rule.triggered(older_credit))
@@ -510,7 +569,9 @@ class CountingRuleTestCase(TestCase):
         oldest_credit = credit_list[-1]
         oldest_credit.received_at -= datetime.timedelta(days=30)
         oldest_credit.save()
-        self.assertFalse(rule.triggered(latest_credit))
+        triggered = rule.triggered(latest_credit)
+        self.assertFalse(triggered)
+        self.assertEqual(triggered.kwargs['count'], count - 1)
 
         # make extra credits attached to another profile
         self.make_cpnum_credits(self.make_sender(), 2, prisoner_profile=latest_credit.prisoner_profile)
@@ -538,12 +599,15 @@ class CountingRuleTestCase(TestCase):
         rule = RULES['DPNUM']
 
         # make just enough disbursements to trigger rule
-        disbursement_list = self.make_dpnum_disbursements(self.make_recipient(), rule.kwargs['limit'] + 1)
+        count = rule.kwargs['limit'] + 1
+        disbursement_list = self.make_dpnum_disbursements(self.make_recipient(), count)
 
         # latest disbursement triggers rule, but all older ones don't
         latest_disbursement = disbursement_list[0]
         self.assertTrue(rule.applies_to(latest_disbursement))
-        self.assertTrue(rule.triggered(latest_disbursement))
+        triggered = rule.triggered(latest_disbursement)
+        self.assertTrue(triggered)
+        self.assertEqual(triggered.kwargs['count'], count)
         for older_disbursement in disbursement_list[1:]:
             self.assertTrue(rule.applies_to(older_disbursement))
             self.assertFalse(rule.triggered(older_disbursement))
@@ -552,7 +616,9 @@ class CountingRuleTestCase(TestCase):
         oldest_disbursement = disbursement_list[-1]
         oldest_disbursement.created -= datetime.timedelta(days=30)
         oldest_disbursement.save()
-        self.assertFalse(rule.triggered(latest_disbursement))
+        triggered = rule.triggered(latest_disbursement)
+        self.assertFalse(triggered)
+        self.assertEqual(triggered.kwargs['count'], count - 1)
 
         # make extra disbursements attached to another profile
         self.make_dpnum_disbursements(self.make_recipient(), 2, prisoner_profile=latest_disbursement.prisoner_profile)
