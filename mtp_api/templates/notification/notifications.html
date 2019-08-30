@@ -19,7 +19,7 @@
   {% endblock %}
 
   <h2 style="padding:0;font-size:24px;line-height:35px;font-weight:bold">
-    <a href="{{ notifications_url }}" style="color:#005ea5">
+    <a href="{{ notifications_url }}?{{ campaign_qs }}" style="color:#005ea5">
       {% blocktrans trimmed count count=event_group.transaction_count %}
         You have {{ count }} notification
       {% plural %}
@@ -32,7 +32,7 @@
     <h3 style="padding:0;font-size:19px;line-height:25px;font-weight:bold">{% trans 'Payment sources' %}</h3>
 
     {% for profile in event_group.senders %}
-      <a href="{{ sender_url }}{{ profile.id }}/" style="color:#005ea5">
+      <a href="{{ sender_url }}{{ profile.id }}/?{{ campaign_qs }}" style="color:#005ea5">
         {{ profile.description }}
         –
         {% blocktrans trimmed count count=profile.transaction_count %}
@@ -49,7 +49,7 @@
     <h3 style="padding:0;font-size:19px;line-height:25px;font-weight:bold">{% trans 'Prisoners' %}</h3>
 
     {% for profile in event_group.prisoners %}
-      <a href="{{ prisoner_url }}{{ profile.id }}/{% if profile.disbursements_only %}disbursements/{% endif %}" style="color:#005ea5">
+      <a href="{{ prisoner_url }}{{ profile.id }}/{% if profile.disbursements_only %}disbursements/{% endif %}?{{ campaign_qs }}" style="color:#005ea5">
         {{ profile.description }}
         –
         {% blocktrans trimmed count count=profile.transaction_count %}
@@ -64,13 +64,13 @@
 
   <p>
     {% blocktrans trimmed %}
-      You can turn off these email notifications from your <a href="{{ settings_url }}">settings screen</a> in the intelligence tool.
+      You can turn off these email notifications from your <a href="{{ settings_url }}?{{ campaign_qs }}">settings screen</a> in the intelligence tool.
     {% endblocktrans %}
   </p>
 
   <p>
     {% blocktrans trimmed %}
-      Any <a href="{{ feedback_url }}">feedback</a> you can give us helps improve the tool further.
+      Any <a href="{{ feedback_url }}?{{ campaign_qs }}">feedback</a> you can give us helps improve the tool further.
     {% endblocktrans %}
   </p>
 

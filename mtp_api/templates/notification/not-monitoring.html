@@ -29,13 +29,13 @@
 
   <p>
     {% blocktrans trimmed %}
-      You can turn off these email notifications from your <a href="{{ settings_url }}">settings screen</a> in the intelligence tool.
+      You can turn off these email notifications from your <a href="{{ settings_url }}?{{ campaign_qs }}">settings screen</a> in the intelligence tool.
     {% endblocktrans %}
   </p>
 
   <p>
     {% blocktrans trimmed %}
-      Any <a href="{{ feedback_url }}">feedback</a> you can give us helps improve the tool further.
+      Any <a href="{{ feedback_url }}?{{ campaign_qs }}">feedback</a> you can give us helps improve the tool further.
     {% endblocktrans %}
   </p>
 
