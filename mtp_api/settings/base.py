@@ -56,6 +56,7 @@ INSTALLED_APPS = (
     'security',
     'disbursement',
     'notification',
+    'user_event_log',
 
     # django admin
     'django.contrib.admin',
