@@ -16,6 +16,7 @@ from core.filters import (
     annotate_filter,
     BlankStringFilter,
     IsoDateTimeFilter,
+    LogNomsOpsSearchDjangoFilterBackend,
     MultipleFieldCharFilter,
     MultipleValueFilter,
     PostcodeFilter,
@@ -243,7 +244,7 @@ class CreditViewMixin:
 
 
 class GetCredits(CreditViewMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
-    filter_backends = (DjangoFilterBackend, SafeOrderingFilter)
+    filter_backends = (LogNomsOpsSearchDjangoFilterBackend, SafeOrderingFilter)
     filter_class = CreditListFilter
     ordering_fields = ('created', 'received_at', 'amount',
                        'prisoner_number', 'prisoner_name')

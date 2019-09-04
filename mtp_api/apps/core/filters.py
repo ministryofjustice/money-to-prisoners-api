@@ -8,11 +8,17 @@ from django.utils import six
 from django.utils.dateparse import parse_datetime
 from django.utils.formats import get_format
 from django.utils.functional import lazy
-import django_filters
 from django_filters.constants import EMPTY_VALUES
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import OrderingFilter
+import django_filters
 import django_filters.fields
 import django_filters.utils
-from rest_framework.filters import OrderingFilter
+
+from mtp_auth.permissions import NomsOpsClientIDPermissions
+
+from user_event_log.utils import record_user_event
+from user_event_log.constants import USER_EVENT_KINDS
 
 
 class MultipleFieldCharFilter(django_filters.CharFilter):
@@ -177,3 +183,62 @@ class PostcodeFilter(django_filters.CharFilter):
         value = re.sub(r'[^0-9A-Za-z]+', '', value)
         value = r'\s*'.join(value)
         return super().filter(qs, value)
+
+
+class LogNomsOpsSearchDjangoFilterBackend(DjangoFilterBackend):
+    """
+    DjangoFilterBackend which logs calls to `list` endpoint.
+
+    The logged data is available in a UserEvent record with the filters used
+    and the total number of results returned by the queryset.
+
+    Note:
+        - only calls via the NOMS OPS client are logged
+        - only non-empty filter values are logged
+        - OrderingFilter values are ignored as not part of the DjangoFilterBackend
+        - only calls that pass the form validation are logged
+        - the values logged are the ones cleaned via the underlying form
+            to make sure the input data is not malicious
+    """
+    def _should_log(self, request, view, filterset):
+        if not NomsOpsClientIDPermissions().has_permission(request, view):
+            return False
+
+        if view.action != 'list':
+            return False
+
+        return filterset.is_bound and filterset.form.is_valid()
+
+    def _log(self, request, qs, filterset):
+        filters_used = {
+            name: value
+            for name, value in filterset.form.cleaned_data.items()
+            if value
+        }
+        # only log filters used and only log when pk is not a filter used
+        #   (the credits GET object endpoint is currently implemented as list with a pk filter)
+        if not filters_used or 'pk' in filters_used:
+            return
+
+        data = {
+            'filters': filters_used,
+            'results': qs.count(),
+        }
+        record_user_event(request, USER_EVENT_KINDS.NOMS_OPS_SEARCH, data)
+
+    def filter_queryset(self, request, queryset, view):
+        """
+        Same as the parent `filter_queryset` but it also logs some calls.
+        """
+        filter_class = self.get_filter_class(view, queryset)
+
+        if filter_class:
+            filterset = filter_class(request.query_params, queryset=queryset, request=request)
+            qs = filterset.qs
+
+            if self._should_log(request, view, filterset):
+                self._log(request, qs, filterset)
+
+            return qs
+
+        return queryset
