@@ -7,7 +7,12 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.settings import api_settings
 
-from core.filters import MultipleFieldCharFilter, MultipleValueFilter, SplitTextInMultipleFieldsFilter
+from core.filters import (
+    LogNomsOpsSearchDjangoFilterBackend,
+    MultipleFieldCharFilter,
+    MultipleValueFilter,
+    SplitTextInMultipleFieldsFilter,
+)
 from core.permissions import ActionsBasedPermissions
 from credit.constants import CREDIT_SOURCE
 from credit.views import GetCredits
@@ -153,7 +158,7 @@ class SenderProfileView(
     ).prefetch_related(
         'bank_transfer_details', 'debit_card_details',
     )
-    filter_backends = (DjangoFilterBackend, filters.OrderingFilter,)
+    filter_backends = (LogNomsOpsSearchDjangoFilterBackend, filters.OrderingFilter,)
     filter_class = SenderProfileListFilter
     serializer_class = SenderProfileSerializer
     ordering_param = api_settings.ORDERING_PARAM
@@ -264,7 +269,7 @@ class PrisonerProfileView(
     ).prefetch_related(
         'prisons', 'provided_names'
     )
-    filter_backends = (DjangoFilterBackend, filters.OrderingFilter,)
+    filter_backends = (LogNomsOpsSearchDjangoFilterBackend, filters.OrderingFilter,)
     filter_class = PrisonerProfileListFilter
     serializer_class = PrisonerProfileSerializer
     ordering_fields = (
