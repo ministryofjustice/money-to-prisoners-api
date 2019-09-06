@@ -1,3 +1,5 @@
+from urllib.parse import urlencode
+
 from django.conf import settings
 from django.core.management import BaseCommand
 from django.utils.translation import gettext_lazy as _
@@ -19,7 +21,13 @@ class Command(BaseCommand):
         period_start, period_end = get_notification_period(frequency)
         events = get_events(period_start, period_end)
 
+        campaign_qs = urlencode({
+            'utm_source': 'notifications',
+            'utm_medium': 'email',
+            'utm_campaign': 'notifications',
+        })
         base_email_context = {
+            'campaign_qs': campaign_qs,
             'period_start': period_start,
             'notifications_url': (
                 f'{settings.NOMS_OPS_URL}/security/notifications/#date-{period_start.date().isoformat()}'

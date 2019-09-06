@@ -12,10 +12,10 @@
 {% trans 'When there is no new activity on what you’re monitoring, we won’t email you.' %}
 
 {% trans 'You can turn off these email notifications from your settings screen in the intelligence tool.' %}
-{{ settings_url }}
+{{ settings_url }}?{{ campaign_qs }}
 
 {% trans 'Any feedback you can give us helps improve the tool further.' %}
-{{ feedback_url }}
+{{ feedback_url }}?{{ campaign_qs }}
 
 {% trans 'We hope you find this helpful.' %}
 
