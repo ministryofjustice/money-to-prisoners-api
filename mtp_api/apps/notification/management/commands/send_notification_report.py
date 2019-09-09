@@ -18,7 +18,7 @@ from credit.constants import CREDIT_STATUS
 from credit.models import Credit, LOG_ACTIONS as CREDIT_LOG_ACTIONS
 from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION
 from disbursement.models import Disbursement, LOG_ACTIONS as DISBURSEMENT_LOG_ACTIONS
-from notification.rules import RULES, MonitoredRule
+from notification.rules import RULES, CountingRule, MonitoredRule, Triggered
 from transaction.utils import format_amount
 
 
@@ -134,13 +134,17 @@ def generate_sheet(worksheet, serialiser, rule, record_set):
     worksheet.append(headers)
     count = 0
     for record in record_set:
-        if rule.applies_to(record) and rule.triggered(record):
-            row = serialiser.serialise(worksheet, record)
-            worksheet.append([
-                row.get(field, None)
-                for field in headers
-            ])
-            count += 1
+        if not rule.applies_to(record):
+            continue
+        triggered = rule.triggered(record)
+        if not triggered:
+            continue
+        row = serialiser.serialise(worksheet, record, triggered)
+        worksheet.append([
+            row.get(field, None)
+            for field in headers
+        ])
+        count += 1
     if count:
         worksheet.auto_filter.ref = f'A1:{get_column_letter(len(headers))}{count + 1}'
     else:
@@ -158,8 +162,15 @@ OFFICIAL SENSITIVE
 Please find attached, the prisoner money notifications report for {period_description}.
 
 There is a separate sheet for each notification rule for credits and disbursements.
+
 The ‘Monitored by’ column that appears in some sheets is the number of users
 who are monitoring that prisoner or payment source.
+
+The ‘How many?’ column that appears in some sheets is the number that triggered
+the rule in column A. For example, if the ‘How many?’ column says 6 for the rule
+‘More than 4 credits from the same debit card or bank account to any prisoner in 4 weeks’,
+then this means that a specific debit card or bank account got 6 credits in 4 weeks
+up to when that credit was sent.
 
 If you have any queries, contact the team at {settings.TEAM_EMAIL}.
         """.strip(),
@@ -173,13 +184,16 @@ If you have any queries, contact the team at {settings.TEAM_EMAIL}.
 
 class Serialiser:
     serialisers = {}
+    additional_headers = {
+        MonitoredRule: {'header': 'Monitored by', 'triggered_kwarg': 'monitoring_user_count'},
+        CountingRule: {'header': 'How many?', 'triggered_kwarg': 'count'},
+    }
 
     def __init_subclass__(cls, serialised_model):
         cls.serialisers[serialised_model] = cls
 
     def __init__(self, rule):
         self.rule = rule
-        self.is_monitored_rule = isinstance(rule, MonitoredRule)
 
     @property
     def rule_description(self):
@@ -190,11 +204,12 @@ class Serialiser:
             'Notification rule',
             'Internal ID',
         ]
-        if self.is_monitored_rule:
-            headers.insert(1, 'Monitored by')
+        additional_header = self.additional_headers.get(type(self.rule), None)
+        if additional_header:
+            headers.insert(1, additional_header['header'])
         return headers
 
-    def serialise(self, worksheet, record):
+    def serialise(self, worksheet, record, triggered: Triggered):
         linked_cell = WriteOnlyCell(worksheet, self.get_internal_id(record))
         linked_cell.hyperlink = self.get_noms_ops_url(record)
         linked_cell.style = 'Hyperlink'
@@ -202,8 +217,9 @@ class Serialiser:
             'Notification rule': self.rule_description,
             'Internal ID': linked_cell,
         }
-        if self.is_monitored_rule:
-            row['Monitored by'] = self.rule.get_event_trigger(record).get_monitoring_users().count()
+        additional_header = self.additional_headers.get(type(self.rule), None)
+        if additional_header:
+            row[additional_header['header']] = triggered.kwargs[additional_header['triggered_kwarg']]
         return row
 
     def get_internal_id(self, record):
@@ -227,8 +243,8 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
             'NOMIS transaction',
         ]
 
-    def serialise(self, worksheet, record: Credit):
-        row = super().serialise(worksheet, record)
+    def serialise(self, worksheet, record: Credit, triggered: Triggered):
+        row = super().serialise(worksheet, record, triggered)
         status = record.status
         if status:
             status = str(CREDIT_STATUS.for_value(status).display)
@@ -295,8 +311,8 @@ class DisbursementSerialiser(Serialiser, serialised_model=Disbursement):
             'NOMIS transaction', 'SOP invoice number',
         ]
 
-    def serialise(self, worksheet, record: Disbursement):
-        row = super().serialise(worksheet, record)
+    def serialise(self, worksheet, record: Disbursement, triggered: Triggered):
+        row = super().serialise(worksheet, record, triggered)
         row.update({
             'Date entered': local_datetime_for_xlsx(record.created),
             'Date confirmed': local_datetime_for_xlsx(find_log_date(record, DISBURSEMENT_LOG_ACTIONS.CONFIRMED)),

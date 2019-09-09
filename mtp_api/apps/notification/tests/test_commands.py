@@ -22,6 +22,7 @@ from notification.management.commands.send_notification_emails import (
 )
 from notification.models import Event, EmailNotificationPreferences
 from notification.rules import RULES
+from notification.tests.utils import make_sender, make_prisoner, make_csfreq_credits
 from payment.models import Payment
 from payment.tests.utils import generate_payments
 from prison.models import PrisonerLocation
@@ -377,3 +378,30 @@ class SendNotificationReportTestCase(NotificationBaseTestCase):
                     self.assertEqual(monitored_by, 2)
                 else:
                     self.assertEqual(monitored_by, 1)
+
+    def test_reports_generated_for_counting_rules(self):
+        # make just enough credits to trigger CSFREQ rule with latest credit
+        rule = RULES['CSFREQ']
+        count = rule.kwargs['limit'] + 1
+        sender = make_sender()
+        prisoner = make_prisoner()
+        credit_list = make_csfreq_credits(timezone.now(), sender, count)
+        for credit in credit_list:
+            credit.prisoner_profile = prisoner
+            credit.save()
+
+        # generate reports for whole range
+        since = credit_list[-1].received_at.date()
+        until = credit_list[0].received_at.date() + datetime.timedelta(days=1)
+        call_command(
+            'send_notification_report', 'admin@mtp.local',
+            since=since.strftime('%Y-%m-%d'), until=until.strftime('%Y-%m-%d'),
+            rules=['CSFREQ'],
+        )
+        _email, workbook = self.assertHasExcelAttachment()
+
+        worksheet = workbook['cred-freq. source']
+        dimensions = worksheet.calculate_dimension()
+        rows, _columns = coordinate_to_tuple(dimensions.split(':')[1])
+        self.assertEqual(rows, 2)
+        self.assertEqual(worksheet['B2'].value, count)
