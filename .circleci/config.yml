@@ -48,8 +48,8 @@ jobs:
               ${tag} \
               /bin/bash -c 'mkdir /app/reports && /app/venv/bin/pip install -r requirements/jenkins.txt && /app/venv/bin/python manage.py test --verbosity=2'
             docker cp ${app}:/app/reports /tmp/reports
-            mkdir /tmp/reports/${app} && mv /tmp/reports/junit.xml /tmp/reports/${app}
             docker rm ${app}
+            mkdir /tmp/reports/${app} && mv /tmp/reports/junit.xml /tmp/reports/${app}
             docker stop postgres
             docker rm postgres
       - store_artifacts:

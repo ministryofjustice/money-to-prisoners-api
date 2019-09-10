@@ -1,0 +1,8 @@
+name: Clean ECR
+description: Delete branch images from ECR when PR is merged
+branding:
+  icon: trash
+  color: orange
+runs:
+  using: docker
+  image: ./Dockerfile
