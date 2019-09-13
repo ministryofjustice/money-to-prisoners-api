@@ -76,7 +76,7 @@ class Command(BaseCommand):
                 'Internal ID': record.id,
                 'URL': f'{settings.NOMS_OPS_URL}/security/credits/{record.id}/',
                 'Date received': record.received_at,
-                'Date credited': find_log_date(record, CREDIT_LOG_ACTIONS.CREDITED),
+                'Date credited': record.log_set.get_action_date(CREDIT_LOG_ACTIONS.CREDITED),
                 'Amount': format_amount(record.amount),
                 'Prisoner number': record.prisoner_number or 'Unknown',
                 'Prisoner name': record.prisoner_name or 'Unknown',
@@ -144,8 +144,8 @@ class Command(BaseCommand):
                 'Internal ID': record.id,
                 'URL': f'{settings.NOMS_OPS_URL}/security/disbursements/{record.id}/',
                 'Date entered': record.created,
-                'Date confirmed': find_log_date(record, DISBURSEMENT_LOG_ACTIONS.CONFIRMED),
-                'Date sent': find_log_date(record, DISBURSEMENT_LOG_ACTIONS.SENT),
+                'Date confirmed': record.log_set.get_action_date(DISBURSEMENT_LOG_ACTIONS.CONFIRMED),
+                'Date sent': record.log_set.get_action_date(DISBURSEMENT_LOG_ACTIONS.SENT),
                 'Amount': format_amount(record.amount),
                 'Prisoner number': record.prisoner_number,
                 'Prisoner name': record.prisoner_name,
@@ -170,8 +170,3 @@ def date_argument(argument):
     if not date:
         raise CommandError('Cannot parse date')
     return timezone.make_aware(datetime.datetime.combine(date, datetime.time.min))
-
-
-def find_log_date(record, action):
-    log = record.log_set.filter(action=action).order_by('created').first()
-    return log and log.created
