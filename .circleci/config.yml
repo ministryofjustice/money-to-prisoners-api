@@ -71,6 +71,21 @@ jobs:
             fi
             docker logout ${ECR_ENDPOINT}
       - run:
+          name: Deploy
+          command: |
+            if [[ "${CIRCLE_BRANCH}" == "master" ]]; then
+              source /tmp/mtp-env.sh
+              echo "Deploying to Test"
+
+              echo -n ${K8S_CLUSTER_CERT} | base64 -d > ./ca.crt
+              kubectl config set-cluster ${K8S_CLUSTER_NAME} --certificate-authority=./ca.crt --server=https://api.${K8S_CLUSTER_NAME}
+              kubectl config set-credentials circleci --token=${K8S_TOKEN}
+              kubectl config set-context ${K8S_CLUSTER_NAME} --cluster=${K8S_CLUSTER_NAME} --user=circleci --namespace=${K8S_NAMESPACE}
+              kubectl config use-context ${K8S_CLUSTER_NAME}
+              IMAGE=${ECR_ENDPOINT}/prisoner-money/money-to-prisoners:${tag}
+              kubectl patch deployment ${app} --patch "{\"metadata\": {\"annotations\": {\"kubernetes.io/change-cause\": \"${CIRCLE_BRANCH}.${CIRCLE_SHA1:0:7}\"}}, \"spec\": {\"template\": {\"spec\": {\"containers\": [{\"name\": \"app\", \"image\": \"${IMAGE}\"}], \"initContainers\": [{\"name\": \"init\", \"image\": \"${IMAGE}\"},{\"name\": \"copy-static\", \"image\": \"${IMAGE}\"}]}}}}"
+            fi
+      - run:
           name: Clean up ECR
           command: |
             source /tmp/mtp-env.sh
