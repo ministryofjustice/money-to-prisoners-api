@@ -23,36 +23,51 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         super().add_arguments(parser)
-        parser.add_argument('--since', help='Since date (inclusive)')
-        parser.add_argument('--until', help='Until date (exclusive)')
+        parser.add_argument('--after', help='Modified after date (inclusive)')
+        parser.add_argument('--before', help='Modified before date (exclusive)')
         parser.add_argument('type', choices=list(Serialiser.serialisers), help='Type of object to dump')
         parser.add_argument('path', type=argparse.FileType('wt'), help='Path to dump data to')
 
     def handle(self, *args, **options):
-        since = date_argument(options['since'])
-        until = date_argument(options['until'])
-        if since and until and until <= since:
-            raise CommandError('"--until" must be after "--since"')
+        after = date_argument(options['after'])
+        before = date_argument(options['before'])
+        if after and before and before <= after:
+            raise CommandError('"--before" must be after "--after"')
 
         record_type = options['type']
         serialiser: Serialiser = Serialiser.serialisers[record_type]()
         writer = csv.DictWriter(options['path'], serialiser.headers)
         writer.writeheader()
-        records = serialiser.get_records(since, until)
+        records = serialiser.get_modified_records(after, before)
         for record in records:
             writer.writerow(serialiser.serialise(record))
 
 
 class Serialiser:
     serialisers = {}
+    serialised_model = None
     headers = []
 
     def __init_subclass__(cls, serialised_model):
         record_type = str(serialised_model._meta.verbose_name_plural)
         cls.serialisers[record_type] = cls
+        cls.serialised_model = serialised_model
 
-    def get_records(self, since, until):
-        raise NotImplementedError
+    def get_modified_records(self, after, before):
+        try:
+            if not after:
+                after = self.serialised_model.objects.order_by('modified').first().modified
+            if not before:
+                before = self.serialised_model.objects.order_by('modified').last().modified
+                before += datetime.timedelta(days=1)
+                before.replace(hour=0, minute=0, second=0, microsecond=0)
+        except AttributeError:
+            # no records exist
+            return []
+        return self.serialised_model.objects.filter(
+            modified__gte=after,
+            modified__lt=before,
+        ).order_by('pk').iterator(chunk_size=1000)
 
     def serialise(self, record):
         raise NotImplementedError
@@ -71,17 +86,6 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
         'Status',
         'NOMIS transaction',
     ]
-
-    def get_records(self, since, until):
-        if not since:
-            since = Credit.objects.earliest().received_at
-        if not until:
-            until = Credit.objects.latest().received_at + datetime.timedelta(days=1)
-            until.replace(hour=0, minute=0, second=0, microsecond=0)
-        return Credit.objects.filter(
-            received_at__gte=since,
-            received_at__lt=until,
-        ).order_by('pk').iterator(chunk_size=1000)
 
     def serialise(self, record: Credit):
         status = record.status
@@ -145,18 +149,6 @@ class DisbursementSerialiser(Serialiser, serialised_model=Disbursement):
         'Status',
         'NOMIS transaction', 'SOP invoice number',
     ]
-
-    def get_records(self, since, until):
-        if not since:
-            since = Disbursement.objects.earliest().created
-        if not until:
-            until = Disbursement.objects.latest().created + datetime.timedelta(days=1)
-            until.replace(hour=0, minute=0, second=0, microsecond=0)
-
-        return Disbursement.objects.filter(
-            created__gte=since,
-            created__lt=until,
-        ).order_by('pk').iterator(chunk_size=1000)
 
     def serialise(self, record: Disbursement):
         return {
