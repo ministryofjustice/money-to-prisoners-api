@@ -110,3 +110,7 @@ class LogManager(models.Manager):
 
     def disbursements_sent(self, disbursements, by_user):
         self._log_action(LOG_ACTIONS.SENT, disbursements, by_user)
+
+    def get_action_date(self, action):
+        log = self.filter(action=action).order_by('-created').first()
+        return log and log.created

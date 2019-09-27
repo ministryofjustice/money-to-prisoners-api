@@ -252,15 +252,15 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
             status = 'Anonymous'
         row.update({
             'Date received': local_datetime_for_xlsx(record.received_at),
-            'Date credited': local_datetime_for_xlsx(find_log_date(record, CREDIT_LOG_ACTIONS.CREDITED)),
+            'Date credited': local_datetime_for_xlsx(record.log_set.get_action_date(CREDIT_LOG_ACTIONS.CREDITED)),
             'Amount': format_amount(record.amount),
             'Prisoner number': record.prisoner_number or 'Unknown',
             'Prisoner name': record.prisoner_name or 'Unknown',
             'Prison': record.prison.short_name if record.prison else 'Unknown',
             'Status': status,
             'NOMIS transaction': record.nomis_transaction_id,
+            **self.serialise_sender(record)
         })
-        row.update(self.serialise_sender(record))
         return row
 
     def get_internal_id(self, record):
@@ -315,8 +315,10 @@ class DisbursementSerialiser(Serialiser, serialised_model=Disbursement):
         row = super().serialise(worksheet, record, triggered)
         row.update({
             'Date entered': local_datetime_for_xlsx(record.created),
-            'Date confirmed': local_datetime_for_xlsx(find_log_date(record, DISBURSEMENT_LOG_ACTIONS.CONFIRMED)),
-            'Date sent': local_datetime_for_xlsx(find_log_date(record, DISBURSEMENT_LOG_ACTIONS.SENT)),
+            'Date confirmed': local_datetime_for_xlsx(
+                record.log_set.get_action_date(DISBURSEMENT_LOG_ACTIONS.CONFIRMED)
+            ),
+            'Date sent': local_datetime_for_xlsx(record.log_set.get_action_date(DISBURSEMENT_LOG_ACTIONS.SENT)),
             'Amount': format_amount(record.amount),
             'Prisoner number': record.prisoner_number,
             'Prisoner name': record.prisoner_name,
@@ -345,8 +347,3 @@ def local_datetime_for_xlsx(value):
     if not value:
         return None
     return timezone.make_naive(value)
-
-
-def find_log_date(record, action):
-    log = record.log_set.filter(action=action).order_by('created').first()
-    return log and log.created

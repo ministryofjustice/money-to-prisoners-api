@@ -1,6 +1,5 @@
 from datetime import timedelta
 import logging
-import warnings
 
 from django.conf import settings
 from django.db import models
@@ -238,41 +237,23 @@ class Credit(TimeStampedModel):
     def credited_at(self):
         if not self.resolution == CREDIT_RESOLUTION.CREDITED:
             return None
-        log_action = self.log_set.filter(
-            action=LOG_ACTIONS.CREDITED).order_by('-created').first()
-        if not log_action:
-            warnings.warn('Credit model %s is missing a credited log' % self.pk)
-            return None
-        return log_action.created
+        return self.log_set.get_action_date(LOG_ACTIONS.CREDITED)
 
     @property
     def refunded_at(self):
         if not self.resolution == CREDIT_RESOLUTION.REFUNDED:
             return None
-        log_action = self.log_set.filter(
-            action=LOG_ACTIONS.REFUNDED).order_by('-created').first()
-        if not log_action:
-            warnings.warn('Credit model %s is missing a refunded log' % self.pk)
-            return None
-        return log_action.created
+        return self.log_set.get_action_date(LOG_ACTIONS.REFUNDED)
 
     @property
     def set_manual_at(self):
-        log_action = self.log_set.filter(
-            action=LOG_ACTIONS.MANUAL).order_by('-created').first()
-        if log_action:
-            return log_action.created
+        return self.log_set.get_action_date(LOG_ACTIONS.MANUAL)
 
     @property
     def reconciled_at(self):
         if not self.reconciled:
             return None
-        log_action = self.log_set.filter(action=LOG_ACTIONS.RECONCILED) \
-            .order_by('-created').first()
-        if not log_action:
-            warnings.warn('Credit model %s is missing a reconciled log' % self.pk)
-            return None
-        return log_action.created
+        return self.log_set.get_action_date(LOG_ACTIONS.RECONCILED)
 
     @property
     def crediting_time(self):
