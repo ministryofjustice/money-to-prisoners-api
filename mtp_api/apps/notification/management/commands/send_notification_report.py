@@ -259,8 +259,8 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
             'Prison': record.prison.short_name if record.prison else 'Unknown',
             'Status': status,
             'NOMIS transaction': record.nomis_transaction_id,
+            **self.serialise_sender(record)
         })
-        row.update(self.serialise_sender(record))
         return row
 
     def get_internal_id(self, record):

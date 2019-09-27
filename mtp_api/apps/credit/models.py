@@ -1,6 +1,5 @@
 from datetime import timedelta
 import logging
-import warnings
 
 from django.conf import settings
 from django.db import models

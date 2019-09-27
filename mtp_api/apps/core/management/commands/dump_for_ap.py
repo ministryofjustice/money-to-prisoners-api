@@ -54,20 +54,12 @@ class Serialiser:
         cls.serialised_model = serialised_model
 
     def get_modified_records(self, after, before):
-        try:
-            if not after:
-                after = self.serialised_model.objects.order_by('modified').first().modified
-            if not before:
-                before = self.serialised_model.objects.order_by('modified').last().modified
-                before += datetime.timedelta(days=1)
-                before.replace(hour=0, minute=0, second=0, microsecond=0)
-        except AttributeError:
-            # no records exist
-            return []
-        return self.serialised_model.objects.filter(
-            modified__gte=after,
-            modified__lt=before,
-        ).order_by('pk').iterator(chunk_size=1000)
+        filters = {}
+        if after:
+            filters['modified__gte'] = after
+        if before:
+            filters['modified__lt'] = before
+        return self.serialised_model.objects.filter(**filters).order_by('pk').iterator(chunk_size=1000)
 
     def serialise(self, record):
         raise NotImplementedError
@@ -104,8 +96,8 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
             'Prison': record.prison.short_name if record.prison else 'Unknown',
             'Status': status,
             'NOMIS transaction': record.nomis_transaction_id,
+            **self.serialise_sender(record)
         }
-        row.update(self.serialise_sender(record))
         return row
 
     def serialise_sender(self, record: Credit):
