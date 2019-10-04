@@ -35,7 +35,10 @@ class Downtime(models.Model):
 
 
 NOTIFICATION_TARGETS = Choices(
+    ('BANKADMIN_LOGIN', 'bankadmin_login', 'Bank admin: before login'),
+    ('BANKADMIN_DASHBOARD', 'bankadmin_dashboard', 'Bank admin: dashboard'),
     ('CASHBOOK_LOGIN', 'cashbook_login', 'Cashbook: before login'),
+    ('CASHBOOK_DASHBOARD', 'cashbook_dashboard', 'Cashbook: dashboard'),
     ('CASHBOOK_ALL', 'cashbook_all', 'Cashbook: all apps'),
     ('CASHBOOK_CASHBOOK', 'cashbook_cashbook', 'Cashbook: cashbook app'),
     ('CASHBOOK_DISBURSEMENTS', 'cashbook_disbursements', 'Cashbook: disbursements app'),
