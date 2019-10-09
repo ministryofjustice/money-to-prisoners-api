@@ -44,6 +44,7 @@ NOTIFICATION_TARGETS = Choices(
     ('CASHBOOK_DISBURSEMENTS', 'cashbook_disbursements', 'Cashbook: disbursements app'),
     ('NOMS_OPS_LOGIN', 'noms_ops_login', 'Noms Ops: before login'),
     ('NOMS_OPS_SECURITY_DASHBOARD', 'noms_ops_security_dashboard', 'Noms Ops: security dashboard'),
+    ('SEND_MONEY_LANDING', 'send_money_landing', 'Send Money: landing page'),
 )
 
 
