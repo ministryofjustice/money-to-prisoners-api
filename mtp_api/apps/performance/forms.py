@@ -110,6 +110,9 @@ class DigitalTakeupUploadForm(forms.Form):
                 credit_type = sheet.cell_value(row, 2).upper()
                 count = sheet.cell_value(row, 3)
                 amount = sheet.cell_value(row, 5)
+            if credit_type == 'CHEQ':
+                row += 1
+                continue
             if credit_type not in self.credit_types:
                 raise ValueError('Cannot parse credit type %s in row %d' % (credit_type, row))
             credits_key, amount_key = self.credit_types[credit_type]
