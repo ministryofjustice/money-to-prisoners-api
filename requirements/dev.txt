@@ -1,4 +1,4 @@
 # Place development dependencies here
 -r base.txt
 
-money-to-prisoners-common[testing]>=9.12.3,<9.13
+money-to-prisoners-common[testing]>=9.14,<9.15
