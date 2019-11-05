@@ -120,6 +120,8 @@ class Command(BaseCommand):
         print_message('Making test user admins')
         make_test_user_admins()
         print_message('Making token retrieval user')
+
+        # TODO: Remove once all apps move to NOMIS Elite2
         make_token_retrieval_user()
 
         if 'nomis' in prisoners:

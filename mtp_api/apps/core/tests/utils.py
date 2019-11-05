@@ -202,6 +202,7 @@ def make_test_user_admins():
     }
 
 
+# TODO: Remove once all apps move to NOMIS Elite2
 def make_token_retrieval_user():
     user = create_basic_user('_token_retrieval')
     user.user_permissions.add(

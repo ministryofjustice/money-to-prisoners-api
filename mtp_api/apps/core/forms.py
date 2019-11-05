@@ -163,6 +163,7 @@ class DigitalTakeupReportForm(forms.Form):
                 yield date
 
 
+# TODO: Remove once all apps move to NOMIS Elite2
 class UpdateNOMISTokenForm(forms.Form):
     token = forms.FileField(label=_('Client token file'))
 

@@ -96,6 +96,7 @@ class ActionsBasedViewPermissions(ActionsBasedPermissions):
     })
 
 
+# TODO: Remove once all apps move to NOMIS Elite2
 class TokenPermissions(ActionsBasedPermissions):
     actions_perms_map = ActionsBasedPermissions.actions_perms_map.copy()
     actions_perms_map.update({

@@ -29,8 +29,11 @@ class AdminSite(admin.AdminSite):
         return [
             url(r'^dashboard/$', DashboardView.as_view(), name='dashboard'),
             url(r'^dashboard/(?P<slug>[^/]+)/$', DashboardView.as_view(fullscreen=True), name='dashboard_fullscreen'),
+
+            # TODO: Remove once all apps move to NOMIS Elite2
             url(r'^core/token/nomis/public-key/$', DownloadPublicKeyView.as_view(), name='download_public_key'),
             url(r'^core/token/nomis/change/$', UpdateNOMISTokenView.as_view(), name='update_nomis_token'),
+
             url(r'^payment/payment/search/$', PaymentSearchView.as_view(), name='payment_search'),
             url(r'^performance/digitaltakeup/upload/$', DigitalTakeupUploadView.as_view(),
                 name='digital_takeup_upload'),
@@ -238,6 +241,7 @@ class RelatedAnyFieldListFilter(admin.RelatedFieldListFilter):
             yield c
 
 
+# TODO: Remove once all apps move to NOMIS Elite2
 class TokenAdmin(admin.ModelAdmin):
     list_display = ('name', 'expires')
     formfield_overrides = {
