@@ -9,6 +9,7 @@ class FileDownloadSerializer(serializers.ModelSerializer):
         fields = ('label', 'date',)
 
 
+# TODO: Remove once all apps move to NOMIS Elite2
 class TokenSerializer(serializers.ModelSerializer):
     class Meta:
         model = Token

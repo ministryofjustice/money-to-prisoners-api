@@ -7,13 +7,9 @@ import os
 import unittest
 from unittest import mock
 
-from django.conf import settings
 from django.core import mail
 from django.core.management import call_command
-from django.test import override_settings
-from mtp_common.auth import urljoin
 from faker import Faker
-import responses
 
 from credit.constants import LOG_ACTIONS as CREDIT_ACTIONS
 from credit.models import Credit, Log as CreditLog
@@ -33,18 +29,6 @@ sample_location = {
         {'type': 'Cell', 'value': '002'}
     ],
 }
-
-override_nomis_settings = override_settings(
-    NOMIS_API_BASE_URL='https://nomis.local/',
-    NOMIS_API_CLIENT_TOKEN='hello',
-    NOMIS_API_PRIVATE_KEY=(
-        '-----BEGIN EC PRIVATE KEY-----\n'
-        'MHcCAQEEIOhhs3RXk8dU/YQE3j2s6u97mNxAM9s+13S+cF9YVgluoAoGCCqGSM49\n'
-        'AwEHoUQDQgAE6l49nl7NN6k6lJBfGPf4QMeHNuER/o+fLlt8mCR5P7LXBfMG6Uj6\n'
-        'TUeoge9H2N/cCafyhCKdFRdQF9lYB2jB+A==\n'
-        '-----END EC PRIVATE KEY-----\n'
-    ),  # this key is just for tests, doesn't do anything
-)
 
 credit_cls = collections.namedtuple('Credit', ('amount', 'sender_name'))
 disbursement_cls = collections.namedtuple('Disbursement', 'amount method recipient_first_name recipient_last_name')
@@ -227,27 +211,27 @@ class CreatePrisonerNoticesTestCase(NoticesCommandTestCase):
         self.latest_credit = self.latest_log.credit
         # leave only 1 credit as credited and no sent disbursements
 
-    @override_nomis_settings
+    @mock.patch(
+        'credit.management.commands.create_prisoner_credit_notices.can_access_nomis',
+        mock.Mock(return_value=True),
+    )
     @mock.patch('credit.management.commands.create_prisoner_credit_notices.PrisonerCreditNoticeBundle')
-    def call_command(self, housing_response, expected_location, bundle_class):
+    @mock.patch('credit.management.commands.create_prisoner_credit_notices.nomis_get_location')
+    def call_command(self, housing_response, expected_location, mock_get_location, bundle_class):
         credited_date = self.latest_credit.modified.date()
-        with responses.RequestsMock() as rsps:
-            location_response = {
-                'establishment': {'code': self.latest_credit.prison.nomis_id, 'desc': self.latest_credit.prison.name},
-            }
-            location_response.update(housing_response)
-            rsps.add(
-                responses.GET,
-                urljoin(settings.NOMIS_API_BASE_URL, '/offenders/%s/location' % self.latest_credit.prisoner_number),
-                json=location_response,
-            )
-            call_command(
-                'create_prisoner_credit_notices',
-                '/tmp/fake-path',
-                self.latest_credit.prison.nomis_id,
-                verbosity=0,
-                date=credited_date.strftime('%Y-%m-%d')
-            )
+        location_response = {
+            'nomis_id': self.latest_credit.prison.nomis_id,
+            'name': self.latest_credit.prison.name,
+        }
+        location_response.update(housing_response)
+        mock_get_location.return_value = location_response
+        call_command(
+            'create_prisoner_credit_notices',
+            '/tmp/fake-path',
+            self.latest_credit.prison.nomis_id,
+            verbosity=0,
+            date=credited_date.strftime('%Y-%m-%d')
+        )
         bundle_class.assert_called_once_with(
             self.latest_credit.prison.name,
             [(
@@ -310,7 +294,6 @@ class CreatePrisonerNoticesTestCase(NoticesCommandTestCase):
         )
 
 
-@override_nomis_settings
 class SendPrisonerCreditNoticeTestCase(NoticesCommandTestCase):
     @mock.patch('credit.management.commands.create_prisoner_credit_notices.nomis_get_location')
     def test_no_emails_sent_if_prisons_have_addresses(self, nomis_get_location):

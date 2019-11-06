@@ -282,6 +282,7 @@ class MissingFileDownloadView(generics.GenericAPIView):
         return Response(data={'missing_dates': []}, status=200)
 
 
+# TODO: Remove once all apps move to NOMIS Elite2
 class UpdateNOMISTokenView(AdminViewMixin, FormView):
     title = _('Update NOMIS API client token')
     template_name = 'core/nomis-token.html'
@@ -311,6 +312,7 @@ class UpdateNOMISTokenView(AdminViewMixin, FormView):
         return super().form_valid(form)
 
 
+# TODO: Remove once all apps move to NOMIS Elite2
 class DownloadPublicKeyView(AdminViewMixin, View):
     superuser_required = True
 
@@ -320,6 +322,7 @@ class DownloadPublicKeyView(AdminViewMixin, View):
         return response
 
 
+# TODO: Remove once all apps move to NOMIS Elite2
 class TokenView(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     queryset = Token.objects.all()
     serializer_class = TokenSerializer

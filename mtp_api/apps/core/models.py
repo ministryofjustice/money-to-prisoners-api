@@ -106,6 +106,7 @@ class FileDownload(TimeStampedModel):
         unique_together = ('label', 'date')
 
 
+# TODO: Remove once all apps move to NOMIS Elite2
 class Token(TimeStampedModel):
     name = models.CharField(primary_key=True, max_length=20)
     token = models.TextField()

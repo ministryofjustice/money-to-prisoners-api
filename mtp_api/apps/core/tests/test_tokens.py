@@ -60,6 +60,7 @@ class TokenTestCase(TestCase):
         self.assertContains(response, sentinel)
 
 
+# TODO: Remove once all apps move to NOMIS Elite2
 @override_settings(NOMIS_API_PUBLIC_KEY='\n-----BEGIN PUBLIC KEY-----\n???\n-----END PUBLIC KEY-----')
 class DownloadPublicKeyTestCase(TokenTestCase):
     def test_download(self):
@@ -67,6 +68,7 @@ class DownloadPublicKeyTestCase(TokenTestCase):
         self.assertAccessiblyOnlyBySuperuser(url, 'BEGIN PUBLIC KEY')
 
 
+# TODO: Remove once all apps move to NOMIS Elite2
 class UpdateNOMISToken(TokenTestCase):
     def test_access(self):
         url = reverse('admin:update_nomis_token')
@@ -117,6 +119,7 @@ class UpdateNOMISToken(TokenTestCase):
         self.assertContains(response, '^some-url$')
 
 
+# TODO: Remove once all apps move to NOMIS Elite2
 class TokenRetrievalTestCase(APITestCase, AuthTestCaseMixin, TokenTestCase):
     fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
     allowed_clients = (CASHBOOK_OAUTH_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID)
