@@ -11,4 +11,9 @@ class Migration(migrations.Migration):
             name='card_number_first_digits',
             field=models.CharField(blank=True, max_length=6, null=True),
         ),
+        migrations.AddField(
+            model_name='payment',
+            name='worldpay_id',
+            field=models.CharField(blank=True, db_index=True, max_length=250, null=True),
+        ),
     ]

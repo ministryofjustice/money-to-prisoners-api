@@ -35,6 +35,7 @@ class PaymentSerializer(serializers.ModelSerializer):
             'uuid',
             'status',
             'processor_id',
+            'worldpay_id',
             'amount',
             'service_charge',
             'recipient_name',
