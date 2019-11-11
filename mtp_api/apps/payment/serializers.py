@@ -43,6 +43,7 @@ class PaymentSerializer(serializers.ModelSerializer):
             'prisoner_number',
             'received_at',
             'cardholder_name',
+            'card_number_first_digits',
             'card_number_last_digits',
             'card_expiry_date',
             'card_brand',

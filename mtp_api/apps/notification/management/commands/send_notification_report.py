@@ -285,7 +285,7 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
             return {
                 'Payment method': 'Debit card',
                 'Sender name': payment.cardholder_name,
-                'Debit card number': payment.card_number_last_digits,
+                'Debit card number': f'{payment.card_number_first_digits}******{payment.card_number_last_digits}',
                 'Debit card expiry': payment.card_expiry_date,
                 'Debit card billing address': str(payment.billing_address),
                 'Sender email': payment.email,
