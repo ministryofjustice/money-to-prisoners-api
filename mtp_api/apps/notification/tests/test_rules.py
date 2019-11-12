@@ -1,6 +1,7 @@
 import datetime
 import random
 
+from django.contrib.auth.models import Group
 from django.core.management import call_command
 from django.test import TestCase
 from django.utils import timezone
@@ -278,6 +279,42 @@ class RuleTestCase(TestCase):
             self.assertEqual(triggered.kwargs['monitoring_user_count'], 0)
 
         self.assertEqual(Event.objects.count(), recipient_profile.disbursements.count())
+
+    def test_fiu_rules(self):
+        call_command('update_security_profiles')
+
+        security_group = Group.objects.get(name='Security')
+        fiu_group = Group.objects.get(name='FIU')
+        for security_user in security_group.user_set.all():
+            security_user.groups.add(fiu_group)
+
+        prisoner_profile = PrisonerProfile.objects.filter(credits__isnull=False).first()
+        prisoner_profile.monitoring_users.add(self.user)
+
+        credits = Credit.objects.filter(prisoner_profile=prisoner_profile)
+        for credit in credits:
+            triggered = RULES['FIUMONP'].triggered(credit)
+            self.assertTrue(triggered)
+            self.assertEqual(triggered.kwargs['monitoring_user_count'], 1)
+            events = RULES['FIUMONP'].create_events(credit)
+            self.assertEventMatchesRecord(events, credit, PrisonerProfile)
+
+        # ensures that monitoring_user_count is properly counted
+        security_user_count = security_group.user_set.count()
+        for security_user in security_group.user_set.all():
+            prisoner_profile.monitoring_users.add(security_user)
+        for credit in credits:
+            triggered = RULES['FIUMONP'].triggered(credit)
+            self.assertTrue(triggered)
+            self.assertEqual(triggered.kwargs['monitoring_user_count'], security_user_count)
+
+        credits = Credit.objects.exclude(prisoner_profile=prisoner_profile)
+        for credit in credits:
+            triggered = RULES['FIUMONP'].triggered(credit)
+            self.assertFalse(triggered)
+            self.assertEqual(triggered.kwargs['monitoring_user_count'], 0)
+
+        self.assertEqual(Event.objects.count(), prisoner_profile.credits.count())
 
 
 class CountingRuleTestCase(TestCase):
