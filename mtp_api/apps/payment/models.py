@@ -60,6 +60,7 @@ class Payment(TimeStampedModel):
     uuid = models.UUIDField(default=uuid.uuid4, primary_key=True, editable=False)
     status = models.CharField(max_length=50, choices=PAYMENT_STATUS, default=PAYMENT_STATUS.PENDING, db_index=True)
     processor_id = models.CharField(max_length=250, null=True, blank=True, db_index=True)
+    worldpay_id = models.CharField(max_length=250, null=True, blank=True, db_index=True)
     amount = models.PositiveIntegerField()
     service_charge = models.PositiveIntegerField(default=0)
     recipient_name = models.CharField(max_length=250, null=True, blank=True,
@@ -70,6 +71,7 @@ class Payment(TimeStampedModel):
     batch = models.ForeignKey(Batch, on_delete=models.SET_NULL, null=True, blank=True)
 
     cardholder_name = models.CharField(max_length=250, blank=True, null=True)
+    card_number_first_digits = models.CharField(max_length=6, blank=True, null=True)
     card_number_last_digits = models.CharField(max_length=4, blank=True, null=True)
     card_expiry_date = models.CharField(max_length=5, blank=True, null=True)
     card_brand = models.CharField(max_length=250, blank=True, null=True)
