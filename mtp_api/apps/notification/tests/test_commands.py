@@ -326,8 +326,8 @@ class SendNotificationReportTestCase(NotificationBaseTestCase):
             dimensions = worksheet.calculate_dimension()
             rows, _columns = coordinate_to_tuple(dimensions.split(':')[1])
             self.assertEqual(rows, 2)
-            self.assertEqual(worksheet['E2'].value, '£125.01')
-            self.assertEqual(worksheet['G2'].value, credit.prisoner_name)
+            self.assertEqual(worksheet['F2'].value, '£125.01')
+            self.assertEqual(worksheet['H2'].value, credit.prisoner_name)
             self.assertIn(f'/credits/{credit.id}/', worksheet['B2'].hyperlink.target)
         for worksheet in disbursement_sheets:
             worksheet = workbook[worksheet]
@@ -364,7 +364,7 @@ class SendNotificationReportTestCase(NotificationBaseTestCase):
         self.assertTrue(expected_sheets.issubset(set(workbook.sheetnames)))
 
         prisoner_number_cols = [
-            ('cred-mon. prisoners', 6),
+            ('cred-mon. prisoners', 7),
             ('disb-mon. prisoners', 7),
         ]
         for worksheet, prisoner_number_col in prisoner_number_cols:

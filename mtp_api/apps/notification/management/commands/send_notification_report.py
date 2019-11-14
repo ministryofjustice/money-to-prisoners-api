@@ -232,7 +232,7 @@ class Serialiser:
 class CreditSerialiser(Serialiser, serialised_model=Credit):
     def get_headers(self):
         return super().get_headers() + [
-            'Date received', 'Date credited',
+            'Date started', 'Date received', 'Date credited',
             'Amount',
             'Prisoner number', 'Prisoner name', 'Prison',
             'Sender name', 'Payment method',
@@ -283,6 +283,7 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
         if hasattr(record, 'payment'):
             payment = record.payment
             return {
+                'Date started': local_datetime_for_xlsx(payment.created),
                 'Payment method': 'Debit card',
                 'Sender name': payment.cardholder_name,
                 'Debit card number': f'{payment.card_number_first_digits}******{payment.card_number_last_digits}',
