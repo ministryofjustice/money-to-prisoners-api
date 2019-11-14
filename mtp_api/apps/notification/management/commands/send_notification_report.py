@@ -241,6 +241,7 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
             'Sender email', 'Sender IP address',
             'Status',
             'NOMIS transaction',
+            'WorldPay order code',
         ]
 
     def serialise(self, worksheet, record: Credit, triggered: Triggered):
@@ -293,6 +294,7 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
                 'Debit card billing address': str(payment.billing_address),
                 'Sender email': payment.email,
                 'Sender IP address': payment.ip_address,
+                'WorldPay order code': payment.worldpay_id,
             }
 
         return {
