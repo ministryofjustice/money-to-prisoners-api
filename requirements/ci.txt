@@ -1,0 +1,4 @@
+# Place CI-only dependencies here
+-r dev.txt
+
+unittest-xml-reporting>=2.5,<3
