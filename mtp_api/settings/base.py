@@ -25,8 +25,32 @@ SECRET_KEY = 'CHANGE_ME'
 ALLOWED_HOSTS = []
 
 START_PAGE_URL = os.environ.get('START_PAGE_URL', 'https://www.gov.uk/send-prisoner-money')
-SITE_URL = os.environ.get('SITE_URL', 'http://localhost:8000')
-NOMS_OPS_URL = os.environ.get('NOMS_OPS_URL', 'http://localhost:8003')
+API_URL = (
+    f'https://{os.environ["PUBLIC_API_HOST"]}'
+    if os.environ.get('PUBLIC_API_HOST')
+    else 'http://localhost:8000'
+)
+CASHBOOK_URL = (
+    f'https://{os.environ["PUBLIC_CASHBOOK_HOST"]}'
+    if os.environ.get('PUBLIC_CASHBOOK_HOST')
+    else 'http://localhost:8001'
+)
+BANK_ADMIN_URL = (
+    f'https://{os.environ["PUBLIC_BANK_ADMIN_HOST"]}'
+    if os.environ.get('PUBLIC_BANK_ADMIN_HOST')
+    else 'http://localhost:8002'
+)
+NOMS_OPS_URL = (
+    f'https://{os.environ["PUBLIC_NOMS_OPS_HOST"]}'
+    if os.environ.get('PUBLIC_NOMS_OPS_HOST')
+    else 'http://localhost:8003'
+)
+SEND_MONEY_URL = (
+    f'https://{os.environ["PUBLIC_SEND_MONEY_HOST"]}'
+    if os.environ.get('PUBLIC_SEND_MONEY_HOST')
+    else 'http://localhost:8004'
+)
+SITE_URL = API_URL
 
 # Application definition
 INSTALLED_APPS = (
@@ -126,10 +150,7 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'assets'),
     os.path.join(BASE_DIR, 'assets-static'),
 ]
-
-PUBLIC_STATIC_URL = os.environ.get(
-    'PUBLIC_STATIC_URL', urljoin(SITE_URL, STATIC_URL)
-)
+PUBLIC_STATIC_URL = urljoin(SEND_MONEY_URL, STATIC_URL)
 
 TEMPLATES = [
     {
