@@ -60,7 +60,7 @@ class SynchroniseGroupsTestCase(TestCase):
         mock_input.return_value = 'y'
         self.assertFalse(Group.objects.exists())
         call_command('sync_group_permissions', stdout=self.devnull, stderr=self.devnull)
-        self.assertEqual(Group.objects.count(), 8)
+        self.assertEqual(Group.objects.count(), 9)
 
     @mock.patch('mtp_auth.management.commands.sync_group_permissions.input')
     def test_no_effect_if_cancelled(self, mock_input):
@@ -75,7 +75,7 @@ class SynchroniseGroupsTestCase(TestCase):
         Group.objects.create(name='PrisonClerk')
         Group.objects.create(name='Security')
         call_command('sync_group_permissions', stdout=self.devnull, stderr=self.devnull)
-        self.assertEqual(Group.objects.count(), 8)
+        self.assertEqual(Group.objects.count(), 9)
 
     @mock.patch('mtp_auth.management.commands.sync_group_permissions.input')
     def test_adds_missing_permissions(self, mock_input):

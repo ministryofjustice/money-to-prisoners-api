@@ -117,5 +117,13 @@
       ["patch_processed_transaction", "transaction", "transaction"]
     ]
   }
+},
+{
+  "model": "auth.group",
+  "pk": 9,
+  "fields": {
+    "name": "FIU",
+    "permissions": []
+  }
 }
 ]

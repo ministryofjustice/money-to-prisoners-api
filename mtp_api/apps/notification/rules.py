@@ -114,18 +114,24 @@ class HighAmountRule(BaseRule):
 
 
 class MonitoredRule(BaseRule):
+    def __init__(self, *args, user_filters=None, **kwargs):
+        kwargs['user_filters'] = user_filters or {}
+        super().__init__(*args, **kwargs)
+
     @atomic
     def create_events(self, record):
         profile = self.get_event_trigger(record)
+        user_filters = self.kwargs['user_filters']
         return [
             self._create_event(record, user=user)
-            for user in profile.get_monitoring_users().all()
+            for user in profile.get_monitoring_users().filter(**user_filters)
         ]
 
     def triggered(self, record) -> Triggered:
         profile = self.get_event_trigger(record)
         if profile:
-            monitoring_user_count = profile.get_monitoring_users().count()
+            user_filters = self.kwargs['user_filters']
+            monitoring_user_count = profile.get_monitoring_users().filter(**user_filters).count()
             return Triggered(monitoring_user_count, monitoring_user_count=monitoring_user_count)
         return Triggered(False, monitoring_user_count=0)
 
@@ -213,6 +219,29 @@ RULES = {
         abbr_description='mon. recipients',
         applies_to_models=(Disbursement,),
         profile='recipient_profile',
+    ),
+    'FIUMONP': MonitoredRule(
+        'MONP',
+        description='Credits or disbursements for FIU prisoners',
+        abbr_description='fiu prisoners',
+        profile='prisoner_profile',
+        user_filters={'groups__name': 'FIU'},
+    ),
+    'FIUMONS': MonitoredRule(
+        'MONS',
+        description='Credits for FIU payment sources',
+        abbr_description='fiu sources',
+        applies_to_models=(Credit,),
+        profile='sender_profile',
+        user_filters={'groups__name': 'FIU'},
+    ),
+    'FIUMONR': MonitoredRule(
+        'MONR',
+        description='Disbursements for FIU recipients',
+        abbr_description='fiu recipients',
+        applies_to_models=(Disbursement,),
+        profile='recipient_profile',
+        user_filters={'groups__name': 'FIU'},
     ),
     'NWN': NotWholeNumberRule(
         'NWN',
