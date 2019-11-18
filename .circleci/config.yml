@@ -11,8 +11,10 @@ jobs:
       - run:
           name: Inspect tags
           command: |
+            export tag=${app}.${CIRCLE_BRANCH}.${CIRCLE_SHA1:0:7}
+            echo "Building ${tag}"
             echo export registry=${ECR_ENDPOINT}/prisoner-money/money-to-prisoners > /tmp/mtp-env.sh
-            echo export tag=${app}.${CIRCLE_BRANCH}.${CIRCLE_SHA1:0:7} >> /tmp/mtp-env.sh
+            echo export tag=${tag} >> /tmp/mtp-env.sh
             echo export version=${CIRCLE_BRANCH}.${CIRCLE_SHA1:0:7} >> /tmp/mtp-env.sh
       - setup_remote_docker:
           docker_layer_caching: true
@@ -42,16 +44,15 @@ jobs:
             sleep 10
             docker run \
               --name ${app} \
-              -e DJANGO_SETTINGS_MODULE=mtp_api.settings.jenkins \
+              -e DJANGO_SETTINGS_MODULE=mtp_api.settings.ci \
               -e DB_PASSWORD=postgres \
               -e DB_USERNAME=postgres \
               -e DB_HOST=postgres \
               --link postgres \
               ${tag} \
-              /bin/bash -c 'mkdir /app/reports && /app/venv/bin/pip install -r requirements/jenkins.txt && /app/venv/bin/python manage.py test --verbosity=2'
+              /bin/bash -c 'mkdir /app/reports && /app/venv/bin/pip install -r requirements/ci.txt && /app/venv/bin/python manage.py test --verbosity=2'
             docker cp ${app}:/app/reports /tmp/reports
             docker rm ${app}
-            mkdir /tmp/reports/${app} && mv /tmp/reports/junit.xml /tmp/reports/${app}
             docker stop postgres
             docker rm postgres
       - store_artifacts:
@@ -73,7 +74,7 @@ jobs:
             fi
             docker logout ${ECR_ENDPOINT}
       - run:
-          name: Deploy
+          name: Deploy to test
           command: |
             if [[ "${CIRCLE_BRANCH}" == "master" ]]; then
               source /tmp/mtp-env.sh
@@ -86,7 +87,7 @@ jobs:
               kubectl config use-context ${K8S_CLUSTER_NAME}
               IMAGE=${registry}:${tag}
               kubectl patch configmap app-versions --patch "{\"data\": {\"${app}\": \"${version}\"}}"
-              kubectl patch deployment ${app} --patch "{\"metadata\": {\"annotations\": {\"kubernetes.io/change-cause\": \"${version}\"}}, \"spec\": {\"template\": {\"spec\": {\"containers\": [{\"name\": \"app\", \"image\": \"${IMAGE}\"}], \"initContainers\": [{\"name\": \"init\", \"image\": \"${IMAGE}\"},{\"name\": \"copy-static\", \"image\": \"${IMAGE}\"}]}}}}"
+              kubectl patch deployment ${app} --type strategic --patch "{\"metadata\": {\"annotations\": {\"kubernetes.io/change-cause\": \"${version}\"}}, \"spec\": {\"template\": {\"spec\": {\"containers\": [{\"name\": \"app\", \"image\": \"${IMAGE}\"}], \"initContainers\": [{\"name\": \"init\", \"image\": \"${IMAGE}\"},{\"name\": \"copy-static\", \"image\": \"${IMAGE}\"}]}}}}"
             fi
       - run:
           name: Clean up ECR

@@ -21,6 +21,7 @@ static/
 media/
 spooler/
 
-# selenium
+# testing
+/reports/
 geckodriver.log
 ghostdriver.log

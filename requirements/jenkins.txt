@@ -1,4 +1,0 @@
-# Place jenkins-only dependencies here
--r dev.txt
-
-django-jenkins>=0.110,<1
