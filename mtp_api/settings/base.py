@@ -81,6 +81,7 @@ INSTALLED_APPS = (
 
     # common
     'mtp_common',
+    'mtp_common.metrics',
 )
 
 
@@ -100,6 +101,9 @@ MIDDLEWARE = (
 
 HEALTHCHECKS = ['moj_irat.healthchecks.database_healthcheck']
 AUTODISCOVER_HEALTHCHECKS = True
+
+METRICS_USER = os.environ.get('METRICS_USER', 'prom')
+METRICS_PASS = os.environ.get('METRICS_PASS', 'prom')
 
 # security tightening
 # some overridden in prod/docker settings where SSL is ensured
