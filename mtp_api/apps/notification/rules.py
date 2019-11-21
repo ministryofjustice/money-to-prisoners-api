@@ -221,14 +221,14 @@ RULES = {
         profile='recipient_profile',
     ),
     'FIUMONP': MonitoredRule(
-        'MONP',
+        'FIUMONP',
         description='Credits or disbursements for FIU prisoners',
         abbr_description='fiu prisoners',
         profile='prisoner_profile',
         user_filters={'groups__name': 'FIU'},
     ),
     'FIUMONS': MonitoredRule(
-        'MONS',
+        'FIUMONS',
         description='Credits for FIU payment sources',
         abbr_description='fiu sources',
         applies_to_models=(Credit,),
@@ -236,7 +236,7 @@ RULES = {
         user_filters={'groups__name': 'FIU'},
     ),
     'FIUMONR': MonitoredRule(
-        'MONR',
+        'FIUMONR',
         description='Disbursements for FIU recipients',
         abbr_description='fiu recipients',
         applies_to_models=(Disbursement,),
