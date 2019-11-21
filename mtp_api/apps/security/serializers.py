@@ -1,10 +1,17 @@
 from rest_framework import serializers
 
+from credit.serializers import SecurityCreditSerializer
 from prison.models import Prison
 from security.models import (
-    SenderProfile, BankTransferSenderDetails, DebitCardSenderDetails,
-    PrisonerProfile, RecipientProfile, BankTransferRecipientDetails,
-    SavedSearch, SearchFilter,
+    BankTransferRecipientDetails,
+    BankTransferSenderDetails,
+    Check,
+    DebitCardSenderDetails,
+    PrisonerProfile,
+    RecipientProfile,
+    SavedSearch,
+    SearchFilter,
+    SenderProfile,
 )
 
 
@@ -206,3 +213,19 @@ class SavedSearchSerializer(serializers.ModelSerializer):
         for searchfilter in filters:
             SearchFilter.objects.create(saved_search=instance, **searchfilter)
         return super().update(instance, validated_data)
+
+
+class CheckSerializer(serializers.ModelSerializer):
+    credit = SecurityCreditSerializer()
+
+    class Meta:
+        model = Check
+        fields = (
+            'id',
+            'credit',
+            'status',
+            'description',
+            'rules',
+            'actioned_at',
+            'actioned_by',
+        )

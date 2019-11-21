@@ -3,9 +3,15 @@ from django.utils.translation import gettext, gettext_lazy as _
 
 from core.admin import add_short_description
 from security.models import (
-    SenderProfile, BankTransferSenderDetails, DebitCardSenderDetails,
-    PrisonerProfile, RecipientProfile, BankTransferRecipientDetails,
-    SavedSearch, SearchFilter,
+    BankTransferRecipientDetails,
+    BankTransferSenderDetails,
+    Check,
+    DebitCardSenderDetails,
+    PrisonerProfile,
+    RecipientProfile,
+    SavedSearch,
+    SearchFilter,
+    SenderProfile,
 )
 from transaction.utils import format_amount
 
@@ -142,3 +148,34 @@ class SavedSearchAdmin(admin.ModelAdmin):
         if len(filters) == 0:
             return ''
         return ', '.join([str(searchfilter) for searchfilter in filters])
+
+
+@admin.register(Check)
+class CheckAdmin(admin.ModelAdmin):
+    ordering = ('-created',)
+    list_select_related = ('credit',)
+    search_fields = (
+        'credit__prisoner_name',
+        'credit__prisoner_number',
+    )
+    raw_id_fields = (
+        'credit',
+    )
+
+    list_display = (
+        'created',
+        'prisoner_name',
+        'prisoner_number',
+        'status',
+        'rules',
+        'description',
+    )
+    list_filter = (
+        'status',
+    )
+
+    def prisoner_name(self, obj):
+        return obj.credit.prisoner_name
+
+    def prisoner_number(self, obj):
+        return obj.credit.prisoner_number

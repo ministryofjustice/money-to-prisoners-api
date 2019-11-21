@@ -1,15 +1,18 @@
 from collections import defaultdict
-from itertools import chain
+from itertools import chain, cycle
 
 from django.core.management import call_command
 from django.db.models import Count, Q
 from django.urls import reverse
 from django.utils.crypto import get_random_string
+from django.utils.timezone import now
+from model_mommy import mommy
 from rest_framework import status as http_status
 from rest_framework.test import APITestCase
 
-from core.tests.utils import make_test_users
+from core.tests.utils import format_date_or_datetime, make_test_users
 from credit.models import Credit
+from credit.constants import CREDIT_RESOLUTION
 from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION
 from disbursement.models import Disbursement
 from disbursement.tests.utils import generate_disbursements
@@ -17,8 +20,14 @@ from mtp_auth.tests.utils import AuthTestCaseMixin
 from mtp_auth.tests.mommy_recipes import create_security_staff_user
 from payment.tests.utils import generate_payments
 from prison.tests.utils import load_random_prisoner_locations
+from security.constants import CHECK_STATUS
 from security.models import (
-    SenderProfile, PrisonerProfile, SavedSearch, SearchFilter, RecipientProfile
+    Check,
+    PrisonerProfile,
+    RecipientProfile,
+    SavedSearch,
+    SearchFilter,
+    SenderProfile,
 )
 from transaction.tests.utils import generate_transactions
 
@@ -768,3 +777,163 @@ class DeleteSavedSearchTestCase(APITestCase, AuthTestCaseMixin):
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user2)
         )
         self.assertEqual(response.status_code, http_status.HTTP_404_NOT_FOUND)
+
+
+class CheckTestCase(APITestCase, AuthTestCaseMixin):
+    """
+    Tests related to the security check endpoint.
+    """
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
+
+    def setUp(self):
+        super().setUp()
+        test_users = make_test_users()
+        self.prison_clerks = test_users['prison_clerks']
+        self.security_fiu_users = test_users['security_fiu_users']
+        load_random_prisoner_locations()
+        generate_payments(payment_batch=100, days_of_history=5)
+        self.generate_checks()
+
+    def generate_checks(self):
+        # create a pending check for each credit in initial state
+        for credit in Credit.objects_all.filter(resolution=CREDIT_RESOLUTION.INITIAL):
+            mommy.make(
+                Check,
+                credit=credit,
+                status=CHECK_STATUS.PENDING,
+                rules=['ABC', 'DEF'],
+                description='Failed rules',
+            )
+
+        # create an accepted or rejected check for each credit in other state
+        for credit in Credit.objects.all():
+            mommy.make(
+                Check,
+                credit=credit,
+                status=cycle((CHECK_STATUS.ACCEPTED, CHECK_STATUS.REJECTED)),
+                rules=['ABC', 'DEF'],
+                description='Failed rules',
+                actioned_at=now(),
+                actioned_by=self.security_fiu_users[0],
+            )
+
+    def _get_unauthorised_application_user(self):
+        return self.prison_clerks[0]
+
+    def _get_authorised_user(self):
+        return self.security_fiu_users[0]
+
+    def test_unauthorised_user_gets_403(self):
+        """
+        Test that if the logged-in user doesn't have permissions, the view returns 403.
+        """
+        auth = self.get_http_authorization_for_user(self._get_unauthorised_application_user())
+        response = self.client.get(
+            reverse('security-check-list'),
+            {},
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+
+        self.assertEqual(response.status_code, http_status.HTTP_403_FORBIDDEN)
+
+    def test_get_all_checks(self):
+        """
+        Test that the endpoint returns all checks paginated if no filter is passed in.
+        """
+        filters = {}
+
+        auth = self.get_http_authorization_for_user(self._get_authorised_user())
+        response = self.client.get(
+            reverse('security-check-list'),
+            filters,
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+        response_data = response.json()
+        self.assertEqual(response_data['count'], Credit.objects_all.count())
+
+        actual_data_item = response_data['results'][0]
+        check = Check.objects.get(pk=actual_data_item['id'])
+
+        expected_data_item = {
+            'id': check.pk,
+            'description': check.description,
+            'rules': check.rules,
+            'status': check.status,
+            'credit': {
+                'id': check.credit.id,
+                'amount': check.credit.amount,
+                'anonymous': actual_data_item['credit']['anonymous'],
+                'billing_address': {
+                    'id': check.credit.billing_address.pk,
+                    'city': check.credit.billing_address.city,
+                    'country': check.credit.billing_address.country,
+                    'debit_card_sender_details': check.credit.billing_address.debit_card_sender_details,
+                    'line1': check.credit.billing_address.line1,
+                    'line2': check.credit.billing_address.line2,
+                    'postcode': check.credit.billing_address.postcode,
+                } if check.credit.billing_address else None,
+                'card_expiry_date': check.credit.card_expiry_date,
+                'card_number_first_digits': check.credit.card_number_first_digits,
+                'card_number_last_digits': check.credit.card_number_last_digits,
+                'comments': [],
+                'credited_at': format_date_or_datetime(check.credit.credited_at),
+                'intended_recipient': check.credit.intended_recipient,
+                'ip_address': check.credit.ip_address,
+                'nomis_transaction_id': check.credit.nomis_transaction_id,
+                'owner': check.credit.owner.pk if check.credit.owner else None,
+                'owner_name': check.credit.owner_name,
+                'prison': check.credit.prison.nomis_id,
+                'prison_name': check.credit.prison.name,
+                'prisoner_name': check.credit.prisoner_name,
+                'prisoner_number': check.credit.prisoner_number,
+                'prisoner_profile': None,
+                'received_at': format_date_or_datetime(check.credit.received_at),
+                'reconciliation_code': check.credit.reconciliation_code,
+                'refunded_at': None,
+                'resolution': check.credit.resolution,
+                'reviewed': False,
+                'sender_account_number': None,
+                'sender_email': check.credit.sender_email,
+                'sender_name': check.credit.sender_name,
+                'sender_profile': None,
+                'sender_roll_number': None,
+                'sender_sort_code': None,
+                'set_manual_at': None,
+                'short_payment_ref': actual_data_item['credit']['short_payment_ref'],
+                'source': check.credit.source,
+                'started_at': format_date_or_datetime(check.credit.payment.created),
+            },
+            'actioned_at': format_date_or_datetime(check.actioned_at),
+            'actioned_by': check.actioned_by.pk if check.actioned_by else None,
+        }
+        self.assertDictEqual(actual_data_item, expected_data_item)
+
+    def test_get_checks_in_pending(self):
+        """
+        Test that the endpoint only returns the checks in pending if a filter is passed in.
+        """
+        filters = {
+            'status': CHECK_STATUS.PENDING,
+        }
+
+        auth = self.get_http_authorization_for_user(self._get_authorised_user())
+        response = self.client.get(
+            reverse('security-check-list'),
+            filters,
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+
+        response_data = response.json()
+        self.assertEqual(
+            response_data['count'],
+            Check.objects.filter(status=CHECK_STATUS.PENDING).count(),
+        )
+        for item in response_data['results']:
+            self.assertEqual(item['status'], CHECK_STATUS.PENDING)

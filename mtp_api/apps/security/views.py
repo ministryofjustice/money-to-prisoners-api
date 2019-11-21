@@ -20,13 +20,21 @@ from disbursement.views import GetDisbursementsView
 from mtp_auth.permissions import NomsOpsClientIDPermissions
 from prison.models import Prison
 from security.models import (
-    SenderProfile, PrisonerProfile, RecipientProfile, SavedSearch,
-    BankAccount, DebitCardSenderDetails,
+    BankAccount,
+    Check,
+    DebitCardSenderDetails,
+    PrisonerProfile,
+    RecipientProfile,
+    SavedSearch,
+    SenderProfile,
 )
 from security.permissions import SecurityProfilePermissions
 from security.serializers import (
-    SenderProfileSerializer, PrisonerProfileSerializer, SavedSearchSerializer,
+    CheckSerializer,
+    PrisonerProfileSerializer,
     RecipientProfileSerializer,
+    SavedSearchSerializer,
+    SenderProfileSerializer,
 )
 
 
@@ -464,3 +472,17 @@ class SavedSearchView(
 
     def get_queryset(self):
         return self.queryset.filter(user=self.request.user)
+
+
+class CheckView(mixins.ListModelMixin, viewsets.GenericViewSet):
+    queryset = Check.objects.all()
+    filter_backends = (DjangoFilterBackend,)
+    filter_fields = ('status',)
+    serializer_class = CheckSerializer
+    default_ordering = ('-created',)
+
+    permission_classes = (
+        IsAuthenticated,
+        SecurityProfilePermissions,
+        NomsOpsClientIDPermissions,
+    )

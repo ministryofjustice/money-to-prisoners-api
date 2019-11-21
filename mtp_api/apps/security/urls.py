@@ -35,6 +35,9 @@ prisoner_router.register(
 
 router.register(r'searches', views.SavedSearchView)
 
+router.register(r'security/checks', views.CheckView, basename='security-check')
+
+
 urlpatterns = [
     url(r'^', include(router.urls)),
     url(r'^', include(sender_router.urls)),
