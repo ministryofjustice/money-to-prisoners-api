@@ -12,8 +12,6 @@ DEBUG = os.environ.get('DEBUG') == 'True'
 
 ALLOWED_HOSTS = [
     'localhost',
-    '.dsd.io',
-    '.service.gov.uk',
     '.service.justice.gov.uk',
     '.svc.cluster.local',
 ]
