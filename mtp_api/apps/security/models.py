@@ -1,4 +1,6 @@
+from django.conf import settings
 from django.contrib.auth.models import User
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
@@ -6,6 +8,7 @@ from model_utils.models import TimeStampedModel
 
 from core.models import ScheduledCommand
 from prison.models import Prison
+from security.constants import CHECK_STATUS
 from security.managers import PrisonerProfileManager, SenderProfileManager, RecipientProfileManager
 from security.signals import prisoner_profile_current_prisons_need_updating
 
@@ -262,6 +265,40 @@ class SearchFilter(models.Model):
 
     def __str__(self):
         return '{field}={value}'.format(field=self.field, value=self.value)
+
+
+class Check(TimeStampedModel):
+    credit = models.OneToOneField(
+        'credit.Credit',
+        on_delete=models.CASCADE,
+        related_name='security_check',
+    )
+    status = models.CharField(
+        max_length=50,
+        choices=CHECK_STATUS,
+        db_index=True,
+    )
+    description = models.CharField(max_length=500, blank=True)
+    rules = ArrayField(
+        models.CharField(max_length=50),
+        null=True,
+        blank=True,
+    )
+    actioned_at = models.DateTimeField(null=True, blank=True)
+    actioned_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        permissions = (
+            ('view_check', 'Can view check'),
+        )
+
+    def __str__(self):
+        return f'Check {self.status} for {self.credit}'
 
 
 @receiver(prisoner_profile_current_prisons_need_updating)

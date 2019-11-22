@@ -1,8 +1,10 @@
+from datetime import datetime
 from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group, Permission
 from oauth2_provider.models import Application
+from rest_framework.fields import DateField, DateTimeField
 
 from mtp_auth.constants import (
     CASHBOOK_OAUTH_CLIENT_ID, BANK_ADMIN_OAUTH_CLIENT_ID,
@@ -10,12 +12,16 @@ from mtp_auth.constants import (
 )
 from mtp_auth.models import Role, ApplicationUserMapping, PrisonUserMapping
 from mtp_auth.tests.mommy_recipes import (
+    create_bank_admin,
     create_basic_user,
-    create_user_admin,
+    create_disbursement_bank_admin,
     create_prison_clerk,
-    create_prisoner_location_admin, create_security_staff_user,
-    create_bank_admin, create_refund_bank_admin, create_disbursement_bank_admin,
+    create_prisoner_location_admin,
+    create_refund_bank_admin,
+    create_security_fiu_user,
+    create_security_staff_user,
     create_send_money_shared_user,
+    create_user_admin,
 )
 from prison.models import Prison
 
@@ -111,9 +117,11 @@ def make_test_users(clerks_per_prison=2):
 
     # noms-ops users
     prisoner_location_admins = [create_prisoner_location_admin()]
+    security_fiu_users = [create_security_fiu_user()]
     security_users = [
         create_security_staff_user(),
         create_security_staff_user(name_and_password='prison-security', prisons=[Prison.objects.first()]),
+        *security_fiu_users,
     ]
 
     # bank admin
@@ -149,7 +157,8 @@ def make_test_users(clerks_per_prison=2):
         'refund_bank_admins': refund_bank_admins,
         'disbursement_bank_admins': disbursement_bank_admins,
         'send_money_users': send_money_users,
-        'security_staff': security_users
+        'security_staff': security_users,
+        'security_fiu_users': security_fiu_users,
     }
 
 
@@ -214,3 +223,17 @@ def make_token_retrieval_user():
             application=application,
         )
     return user
+
+
+def format_date_or_datetime(value):
+    """
+    Formats a date or datetime using DRF fields.
+
+    This is for use in tests when comparing dates and datetimes with JSON-formatted values.
+    """
+    if not value:
+        return value
+
+    if isinstance(value, datetime):
+        return DateTimeField().to_representation(value)
+    return DateField().to_representation(value)
