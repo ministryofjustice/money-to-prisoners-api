@@ -19,11 +19,18 @@ jobs:
       - setup_remote_docker:
           docker_layer_caching: true
       - run:
+          name: Log into ECR
+          command: |
+            source /tmp/mtp-env.sh
+            $(aws ecr get-login --region ${AWS_DEFAULT_REGION} --no-include-email)
+      - run:
           name: Build docker image
           command: |
             source /tmp/mtp-env.sh
+            docker pull ${registry}:base-web
+            docker tag ${registry}:base-web base-web
             docker build \
-              --pull --force-rm \
+              --force-rm \
               --build-arg APP_GIT_COMMIT=${CIRCLE_SHA1} \
               --build-arg APP_GIT_BRANCH=${CIRCLE_BRANCH} \
               --build-arg APP_BUILD_TAG=${tag} \
@@ -63,7 +70,6 @@ jobs:
           name: Push docker image
           command: |
             source /tmp/mtp-env.sh
-            $(aws ecr get-login --region ${AWS_DEFAULT_REGION} --no-include-email)
             echo "Pushing ${tag} to ECR"
             docker tag ${tag} ${registry}:${tag}
             docker push ${registry}:${tag}
@@ -72,6 +78,10 @@ jobs:
               docker tag ${tag} ${registry}:${app}
               docker push ${registry}:${app}
             fi
+      - run:
+          name: Log out of ECR
+          command: |
+            source /tmp/mtp-env.sh
             docker logout ${ECR_ENDPOINT}
       - run:
           name: Deploy to test
