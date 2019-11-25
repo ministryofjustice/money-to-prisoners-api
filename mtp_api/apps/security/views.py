@@ -474,7 +474,11 @@ class SavedSearchView(
         return self.queryset.filter(user=self.request.user)
 
 
-class CheckView(mixins.ListModelMixin, viewsets.GenericViewSet):
+class CheckView(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet,
+):
     queryset = Check.objects.all()
     filter_backends = (DjangoFilterBackend,)
     filter_fields = ('status',)
