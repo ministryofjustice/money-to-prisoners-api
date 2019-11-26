@@ -8,6 +8,7 @@ sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
 APP = 'api'
 ENVIRONMENT = os.environ.get('ENV', 'local')
 APP_BUILD_DATE = os.environ.get('APP_BUILD_DATE')
+APP_BUILD_TAG = os.environ.get('APP_BUILD_TAG')
 APP_GIT_COMMIT = os.environ.get('APP_GIT_COMMIT')
 
 TEAM_EMAIL = os.environ.get('TEAM_EMAIL', 'mtp@localhost')
