@@ -1,4 +1,6 @@
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from credit.serializers import SecurityCreditSerializer
 from prison.models import Prison
@@ -229,3 +231,17 @@ class CheckSerializer(serializers.ModelSerializer):
             'actioned_at',
             'actioned_by',
         )
+
+
+class AcceptCheckSerializer(CheckSerializer):
+    class Meta:
+        model = Check
+        fields = ()
+
+    def accept(self, by):
+        try:
+            self.instance.accept(by)
+        except DjangoValidationError as e:
+            raise ValidationError(
+                detail=e.message_dict,
+            )

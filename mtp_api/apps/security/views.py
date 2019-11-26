@@ -28,8 +28,9 @@ from security.models import (
     SavedSearch,
     SenderProfile,
 )
-from security.permissions import SecurityProfilePermissions
+from security.permissions import SecurityCheckPermissions, SecurityProfilePermissions
 from security.serializers import (
+    AcceptCheckSerializer,
     CheckSerializer,
     PrisonerProfileSerializer,
     RecipientProfileSerializer,
@@ -487,6 +488,24 @@ class CheckView(
 
     permission_classes = (
         IsAuthenticated,
-        SecurityProfilePermissions,
+        SecurityCheckPermissions,
         NomsOpsClientIDPermissions,
     )
+
+    @decorators.action(
+        detail=True,
+        methods=['post'],
+    )
+    def accept(self, request, pk=None):
+        """
+        Accepts a check.
+        """
+        check = self.get_object()
+        serializer = AcceptCheckSerializer(
+            check,
+            data=request.data,
+            context=self.get_serializer_context(),
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.accept(by=request.user)
+        return Response(status=status.HTTP_204_NO_CONTENT)
