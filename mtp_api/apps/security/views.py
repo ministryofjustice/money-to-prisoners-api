@@ -28,11 +28,13 @@ from security.models import (
     SavedSearch,
     SenderProfile,
 )
-from security.permissions import SecurityProfilePermissions
+from security.permissions import SecurityCheckPermissions, SecurityProfilePermissions
 from security.serializers import (
+    AcceptCheckSerializer,
     CheckSerializer,
     PrisonerProfileSerializer,
     RecipientProfileSerializer,
+    RejectCheckSerializer,
     SavedSearchSerializer,
     SenderProfileSerializer,
 )
@@ -474,7 +476,11 @@ class SavedSearchView(
         return self.queryset.filter(user=self.request.user)
 
 
-class CheckView(mixins.ListModelMixin, viewsets.GenericViewSet):
+class CheckView(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet,
+):
     queryset = Check.objects.all()
     filter_backends = (DjangoFilterBackend,)
     filter_fields = ('status',)
@@ -483,6 +489,42 @@ class CheckView(mixins.ListModelMixin, viewsets.GenericViewSet):
 
     permission_classes = (
         IsAuthenticated,
-        SecurityProfilePermissions,
+        SecurityCheckPermissions,
         NomsOpsClientIDPermissions,
     )
+
+    @decorators.action(
+        detail=True,
+        methods=['post'],
+    )
+    def accept(self, request, pk):
+        """
+        Accepts a check.
+        """
+        check = self.get_object()
+        serializer = AcceptCheckSerializer(
+            check,
+            data=request.data,
+            context=self.get_serializer_context(),
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.accept(by=request.user)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @decorators.action(
+        detail=True,
+        methods=['post'],
+    )
+    def reject(self, request, pk):
+        """
+        Rejects a check.
+        """
+        check = self.get_object()
+        serializer = RejectCheckSerializer(
+            check,
+            data=request.data,
+            context=self.get_serializer_context(),
+        )
+        serializer.is_valid(raise_exception=True)
+        check = serializer.reject(by=request.user)
+        return Response(status=status.HTTP_204_NO_CONTENT)

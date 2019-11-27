@@ -1,8 +1,10 @@
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.postgres.fields import ArrayField
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.dispatch import receiver
+from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 from model_utils.models import TimeStampedModel
 
@@ -291,6 +293,51 @@ class Check(TimeStampedModel):
         null=True,
         blank=True,
     )
+    rejection_reason = models.TextField(blank=True)
+
+    def accept(self, by):
+        """
+        Accepts a check.
+
+        :raise: django.core.exceptions.ValidationError if the check is in status 'rejected'.
+        """
+        if self.status == CHECK_STATUS.ACCEPTED:
+            return
+
+        if self.status == CHECK_STATUS.REJECTED:
+            raise ValidationError({
+                'status': ValidationError(_('Cannot accept a rejected check.'), 'conflict'),
+            })
+
+        self.status = CHECK_STATUS.ACCEPTED
+        self.actioned_by = by
+        self.actioned_at = now()
+        self.save()
+
+    def reject(self, by, reason):
+        """
+        Rejects a check.
+
+        :raise: django.core.exceptions.ValidationError if the check is in status 'accepted'.
+        """
+        if self.status == CHECK_STATUS.REJECTED:
+            return
+
+        if self.status == CHECK_STATUS.ACCEPTED:
+            raise ValidationError({
+                'status': ValidationError(_('Cannot reject an accepted check.'), 'conflict'),
+            })
+
+        if not reason:
+            raise ValidationError({
+                'reason': ValidationError(_('This field cannot be blank.'), 'required'),
+            })
+
+        self.status = CHECK_STATUS.REJECTED
+        self.actioned_by = by
+        self.actioned_at = now()
+        self.rejection_reason = reason
+        self.save()
 
     class Meta:
         permissions = (

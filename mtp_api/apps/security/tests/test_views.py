@@ -1,11 +1,13 @@
+import datetime
 from collections import defaultdict
 from itertools import chain, cycle
+from unittest import mock
 
 from django.core.management import call_command
 from django.db.models import Count, Q
 from django.urls import reverse
 from django.utils.crypto import get_random_string
-from django.utils.timezone import now
+from django.utils.timezone import make_aware, now
 from model_mommy import mommy
 from rest_framework import status as http_status
 from rest_framework.test import APITestCase
@@ -779,9 +781,9 @@ class DeleteSavedSearchTestCase(APITestCase, AuthTestCaseMixin):
         self.assertEqual(response.status_code, http_status.HTTP_404_NOT_FOUND)
 
 
-class CheckTestCase(APITestCase, AuthTestCaseMixin):
+class BaseCheckTestCase(APITestCase, AuthTestCaseMixin):
     """
-    Tests related to the security check endpoint.
+    Base TestCase for security check endpoints.
     """
     fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
@@ -806,15 +808,17 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
             )
 
         # create an accepted or rejected check for each credit in other state
+        status = cycle((CHECK_STATUS.ACCEPTED, CHECK_STATUS.REJECTED))
         for credit in Credit.objects.all():
             mommy.make(
                 Check,
                 credit=credit,
-                status=cycle((CHECK_STATUS.ACCEPTED, CHECK_STATUS.REJECTED)),
+                status=status,
                 rules=['ABC', 'DEF'],
                 description='Failed rules',
                 actioned_at=now(),
                 actioned_by=self.security_fiu_users[0],
+                rejection_reason='because...' if status == CHECK_STATUS.REJECTED else '',
             )
 
     def _get_unauthorised_application_user(self):
@@ -822,6 +826,67 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
 
     def _get_authorised_user(self):
         return self.security_fiu_users[0]
+
+    def assertCheckEqual(self, expected_check, actual_check_data):  # noqa: N802
+        expected_data_item = {
+            'id': expected_check.pk,
+            'description': expected_check.description,
+            'rules': expected_check.rules,
+            'status': expected_check.status,
+            'credit': {
+                'id': expected_check.credit.id,
+                'amount': expected_check.credit.amount,
+                'anonymous': actual_check_data['credit']['anonymous'],
+                'billing_address': {
+                    'id': expected_check.credit.billing_address.pk,
+                    'city': expected_check.credit.billing_address.city,
+                    'country': expected_check.credit.billing_address.country,
+                    'debit_card_sender_details': expected_check.credit.billing_address.debit_card_sender_details,
+                    'line1': expected_check.credit.billing_address.line1,
+                    'line2': expected_check.credit.billing_address.line2,
+                    'postcode': expected_check.credit.billing_address.postcode,
+                } if expected_check.credit.billing_address else None,
+                'card_expiry_date': expected_check.credit.card_expiry_date,
+                'card_number_first_digits': expected_check.credit.card_number_first_digits,
+                'card_number_last_digits': expected_check.credit.card_number_last_digits,
+                'comments': [],
+                'credited_at': format_date_or_datetime(expected_check.credit.credited_at),
+                'intended_recipient': expected_check.credit.intended_recipient,
+                'ip_address': expected_check.credit.ip_address,
+                'nomis_transaction_id': expected_check.credit.nomis_transaction_id,
+                'owner': expected_check.credit.owner.pk if expected_check.credit.owner else None,
+                'owner_name': expected_check.credit.owner_name,
+                'prison': expected_check.credit.prison.nomis_id,
+                'prison_name': expected_check.credit.prison.name,
+                'prisoner_name': expected_check.credit.prisoner_name,
+                'prisoner_number': expected_check.credit.prisoner_number,
+                'prisoner_profile': None,
+                'received_at': format_date_or_datetime(expected_check.credit.received_at),
+                'reconciliation_code': expected_check.credit.reconciliation_code,
+                'refunded_at': None,
+                'resolution': expected_check.credit.resolution,
+                'reviewed': False,
+                'sender_account_number': None,
+                'sender_email': expected_check.credit.sender_email,
+                'sender_name': expected_check.credit.sender_name,
+                'sender_profile': None,
+                'sender_roll_number': None,
+                'sender_sort_code': None,
+                'set_manual_at': None,
+                'short_payment_ref': actual_check_data['credit']['short_payment_ref'],
+                'source': expected_check.credit.source,
+                'started_at': format_date_or_datetime(expected_check.credit.payment.created),
+            },
+            'actioned_at': format_date_or_datetime(expected_check.actioned_at),
+            'actioned_by': expected_check.actioned_by.pk if expected_check.actioned_by else None,
+        }
+        self.assertDictEqual(actual_check_data, expected_data_item)
+
+
+class CheckListTestCase(BaseCheckTestCase):
+    """
+    Tests related to getting security checks.
+    """
 
     def test_unauthorised_user_gets_403(self):
         """
@@ -839,7 +904,7 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
 
     def test_get_all_checks(self):
         """
-        Test that the endpoint returns all checks paginated if no filter is passed in.
+        Test that the list endpoint returns all checks paginated if no filter is passed in.
         """
         filters = {}
 
@@ -858,63 +923,11 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
         actual_data_item = response_data['results'][0]
         check = Check.objects.get(pk=actual_data_item['id'])
 
-        expected_data_item = {
-            'id': check.pk,
-            'description': check.description,
-            'rules': check.rules,
-            'status': check.status,
-            'credit': {
-                'id': check.credit.id,
-                'amount': check.credit.amount,
-                'anonymous': actual_data_item['credit']['anonymous'],
-                'billing_address': {
-                    'id': check.credit.billing_address.pk,
-                    'city': check.credit.billing_address.city,
-                    'country': check.credit.billing_address.country,
-                    'debit_card_sender_details': check.credit.billing_address.debit_card_sender_details,
-                    'line1': check.credit.billing_address.line1,
-                    'line2': check.credit.billing_address.line2,
-                    'postcode': check.credit.billing_address.postcode,
-                } if check.credit.billing_address else None,
-                'card_expiry_date': check.credit.card_expiry_date,
-                'card_number_first_digits': check.credit.card_number_first_digits,
-                'card_number_last_digits': check.credit.card_number_last_digits,
-                'comments': [],
-                'credited_at': format_date_or_datetime(check.credit.credited_at),
-                'intended_recipient': check.credit.intended_recipient,
-                'ip_address': check.credit.ip_address,
-                'nomis_transaction_id': check.credit.nomis_transaction_id,
-                'owner': check.credit.owner.pk if check.credit.owner else None,
-                'owner_name': check.credit.owner_name,
-                'prison': check.credit.prison.nomis_id,
-                'prison_name': check.credit.prison.name,
-                'prisoner_name': check.credit.prisoner_name,
-                'prisoner_number': check.credit.prisoner_number,
-                'prisoner_profile': None,
-                'received_at': format_date_or_datetime(check.credit.received_at),
-                'reconciliation_code': check.credit.reconciliation_code,
-                'refunded_at': None,
-                'resolution': check.credit.resolution,
-                'reviewed': False,
-                'sender_account_number': None,
-                'sender_email': check.credit.sender_email,
-                'sender_name': check.credit.sender_name,
-                'sender_profile': None,
-                'sender_roll_number': None,
-                'sender_sort_code': None,
-                'set_manual_at': None,
-                'short_payment_ref': actual_data_item['credit']['short_payment_ref'],
-                'source': check.credit.source,
-                'started_at': format_date_or_datetime(check.credit.payment.created),
-            },
-            'actioned_at': format_date_or_datetime(check.actioned_at),
-            'actioned_by': check.actioned_by.pk if check.actioned_by else None,
-        }
-        self.assertDictEqual(actual_data_item, expected_data_item)
+        self.assertCheckEqual(check, actual_data_item)
 
     def test_get_checks_in_pending(self):
         """
-        Test that the endpoint only returns the checks in pending if a filter is passed in.
+        Test that the list endpoint only returns the checks in pending if a filter is passed in.
         """
         filters = {
             'status': CHECK_STATUS.PENDING,
@@ -937,3 +950,297 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
         )
         for item in response_data['results']:
             self.assertEqual(item['status'], CHECK_STATUS.PENDING)
+
+
+class GetCheckTestCase(BaseCheckTestCase):
+    """
+    Tests related to getting a single security check.
+    """
+
+    def test_get(self):
+        """
+        Test that the get object endpoint returns check details.
+        """
+        check = Check.objects.first()
+
+        auth = self.get_http_authorization_for_user(self._get_authorised_user())
+        response = self.client.get(
+            reverse(
+                'security-check-detail',
+                kwargs={'pk': check.pk},
+            ),
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+
+        actual_check_data = response.json()
+        self.assertCheckEqual(check, actual_check_data)
+
+
+class AcceptCheckTestCase(BaseCheckTestCase):
+    """
+    Tests related to accepting a check.
+    """
+
+    def test_unauthorised_user_gets_403(self):
+        """
+        Test that if the logged-in user doesn't have permissions, the view returns 403.
+        """
+        check = Check.objects.filter(status=CHECK_STATUS.PENDING).first()
+
+        auth = self.get_http_authorization_for_user(self._get_unauthorised_application_user())
+        response = self.client.post(
+            reverse(
+                'security-check-accept',
+                kwargs={'pk': check.pk},
+            ),
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+
+        self.assertEqual(response.status_code, http_status.HTTP_403_FORBIDDEN)
+
+    @mock.patch('security.models.now')
+    def test_can_accept_a_pending_check(self, mocked_now):
+        """
+        Test that a pending check can be accepted.
+        """
+        mocked_now.return_value = make_aware(datetime.datetime(2019, 4, 1))
+
+        check = Check.objects.filter(status=CHECK_STATUS.PENDING).first()
+
+        authorised_user = self._get_authorised_user()
+        auth = self.get_http_authorization_for_user(authorised_user)
+        response = self.client.post(
+            reverse(
+                'security-check-accept',
+                kwargs={'pk': check.pk},
+            ),
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+
+        self.assertEqual(response.status_code, http_status.HTTP_204_NO_CONTENT)
+
+        check.refresh_from_db()
+
+        self.assertEqual(check.status, CHECK_STATUS.ACCEPTED)
+        self.assertEqual(check.actioned_by, authorised_user)
+        self.assertEqual(check.actioned_at, mocked_now())
+
+    @mock.patch('security.models.now')
+    def test_can_accept_an_accepted_check(self, mocked_now):
+        """
+        Test that accepting an already accepted check doesn't do anything.
+        """
+        mocked_now.return_value = make_aware(datetime.datetime(2019, 1, 1))
+
+        check = Check.objects.filter(status=CHECK_STATUS.ACCEPTED).first()
+
+        authorised_user = self._get_authorised_user()
+        auth = self.get_http_authorization_for_user(authorised_user)
+        response = self.client.post(
+            reverse(
+                'security-check-accept',
+                kwargs={'pk': check.pk},
+            ),
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+
+        self.assertEqual(response.status_code, http_status.HTTP_204_NO_CONTENT)
+
+        check.refresh_from_db()
+
+        self.assertEqual(check.status, CHECK_STATUS.ACCEPTED)
+        self.assertNotEqual(check.actioned_at, mocked_now())
+
+    def test_cannot_accept_a_rejected_check(self):
+        """
+        Test that accepting a rejected check returns status code 400.
+        """
+        check = Check.objects.filter(status=CHECK_STATUS.REJECTED).first()
+
+        authorised_user = self._get_authorised_user()
+        auth = self.get_http_authorization_for_user(authorised_user)
+
+        response = self.client.post(
+            reverse(
+                'security-check-accept',
+                kwargs={'pk': check.pk},
+            ),
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+
+        self.assertEqual(response.status_code, http_status.HTTP_400_BAD_REQUEST)
+        self.assertDictEqual(
+            response.json(),
+            {
+                'status': ['Cannot accept a rejected check.'],
+            }
+        )
+
+        check.refresh_from_db()
+
+        self.assertEqual(check.status, CHECK_STATUS.REJECTED)
+
+
+class RejectCheckTestCase(BaseCheckTestCase):
+    """
+    Tests related to rejecting a check.
+    """
+
+    def test_unauthorised_user_gets_403(self):
+        """
+        Test that if the logged-in user doesn't have permissions, the view returns 403.
+        """
+        check = Check.objects.filter(status=CHECK_STATUS.PENDING).first()
+
+        auth = self.get_http_authorization_for_user(self._get_unauthorised_application_user())
+        response = self.client.post(
+            reverse(
+                'security-check-reject',
+                kwargs={'pk': check.pk},
+            ),
+            data={
+                'rejection_reason': 'Some reason',
+            },
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+
+        self.assertEqual(response.status_code, http_status.HTTP_403_FORBIDDEN)
+
+    @mock.patch('security.models.now')
+    def test_can_reject_a_pending_check(self, mocked_now):
+        """
+        Test that a pending check can be rejected.
+        """
+        mocked_now.return_value = make_aware(datetime.datetime(2019, 4, 1))
+
+        check = Check.objects.filter(status=CHECK_STATUS.PENDING).first()
+
+        authorised_user = self._get_authorised_user()
+        auth = self.get_http_authorization_for_user(authorised_user)
+        reason = 'Some reason'
+        response = self.client.post(
+            reverse(
+                'security-check-reject',
+                kwargs={'pk': check.pk},
+            ),
+            data={
+                'rejection_reason': reason,
+            },
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+
+        self.assertEqual(response.status_code, http_status.HTTP_204_NO_CONTENT)
+
+        check.refresh_from_db()
+
+        self.assertEqual(check.status, CHECK_STATUS.REJECTED)
+        self.assertEqual(check.actioned_by, authorised_user)
+        self.assertEqual(check.actioned_at, mocked_now())
+        self.assertEqual(check.rejection_reason, reason)
+
+    @mock.patch('security.models.now')
+    def test_can_reject_a_rejected_check(self, mocked_now):
+        """
+        Test that rejected an already rejected check doesn't do anything.
+        """
+        mocked_now.return_value = make_aware(datetime.datetime(2019, 1, 1))
+
+        check = Check.objects.filter(status=CHECK_STATUS.REJECTED).first()
+
+        authorised_user = self._get_authorised_user()
+        auth = self.get_http_authorization_for_user(authorised_user)
+        reason = 'some reason'
+        response = self.client.post(
+            reverse(
+                'security-check-reject',
+                kwargs={'pk': check.pk},
+            ),
+            data={
+                'rejection_reason': reason,
+            },
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+
+        self.assertEqual(response.status_code, http_status.HTTP_204_NO_CONTENT)
+
+        check.refresh_from_db()
+
+        self.assertEqual(check.status, CHECK_STATUS.REJECTED)
+        self.assertNotEqual(check.actioned_at, mocked_now())
+        self.assertNotEqual(check.rejection_reason, reason)
+
+    def test_empty_reason_raises_error(self):
+        """
+        Test that rejecting a check without reason returns status code 400.
+        """
+        check = Check.objects.filter(status=CHECK_STATUS.PENDING).first()
+
+        authorised_user = self._get_authorised_user()
+        auth = self.get_http_authorization_for_user(authorised_user)
+
+        response = self.client.post(
+            reverse(
+                'security-check-reject',
+                kwargs={'pk': check.pk},
+            ),
+            {
+                'rejection_reason': '',
+            },
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+
+        self.assertEqual(response.status_code, http_status.HTTP_400_BAD_REQUEST)
+        self.assertDictEqual(
+            response.json(),
+            {
+                'rejection_reason': ['This field may not be blank.'],
+            }
+        )
+
+        check.refresh_from_db()
+
+        self.assertEqual(check.status, CHECK_STATUS.PENDING)
+
+    def test_cannot_reject_an_accepted_check(self):
+        """
+        Test that rejecting a pending check returns status code 400.
+        """
+        check = Check.objects.filter(status=CHECK_STATUS.ACCEPTED).first()
+
+        authorised_user = self._get_authorised_user()
+        auth = self.get_http_authorization_for_user(authorised_user)
+
+        response = self.client.post(
+            reverse(
+                'security-check-reject',
+                kwargs={'pk': check.pk},
+            ),
+            {
+                'rejection_reason': 'some reason',
+            },
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+
+        self.assertEqual(response.status_code, http_status.HTTP_400_BAD_REQUEST)
+        self.assertDictEqual(
+            response.json(),
+            {
+                'status': ['Cannot reject an accepted check.'],
+            }
+        )
+
+        check.refresh_from_db()
+
+        self.assertEqual(check.status, CHECK_STATUS.ACCEPTED)
