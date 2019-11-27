@@ -16,13 +16,6 @@ from transaction.utils import format_amount
 ENABLED_RULE_CODES = {'MONP', 'MONS'}
 
 
-def create_notification_events(record):
-    for code in ENABLED_RULE_CODES:
-        rule = RULES[code]
-        if rule.applies_to(record) and rule.triggered(record):
-            rule.create_events(record)
-
-
 class Triggered:
     """
     'Truthy' type to indicate whether a notification rule is triggered by a record
