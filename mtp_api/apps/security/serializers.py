@@ -245,3 +245,22 @@ class AcceptCheckSerializer(CheckSerializer):
             raise ValidationError(
                 detail=e.message_dict,
             )
+
+
+class RejectCheckSerializer(CheckSerializer):
+    rejection_reason = serializers.CharField(required=True)
+
+    class Meta:
+        model = Check
+        fields = ('rejection_reason',)
+
+    def reject(self, by):
+        try:
+            self.instance.reject(
+                by,
+                self.validated_data['rejection_reason'],
+            )
+        except DjangoValidationError as e:
+            raise ValidationError(
+                detail=e.message_dict,
+            )

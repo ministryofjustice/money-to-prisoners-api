@@ -293,6 +293,7 @@ class Check(TimeStampedModel):
         null=True,
         blank=True,
     )
+    rejection_reason = models.TextField(blank=True)
 
     def accept(self, by):
         """
@@ -311,6 +312,31 @@ class Check(TimeStampedModel):
         self.status = CHECK_STATUS.ACCEPTED
         self.actioned_by = by
         self.actioned_at = now()
+        self.save()
+
+    def reject(self, by, reason):
+        """
+        Rejects a check.
+
+        :raise: django.core.exceptions.ValidationError if the check is in status 'accepted'.
+        """
+        if self.status == CHECK_STATUS.REJECTED:
+            return
+
+        if self.status == CHECK_STATUS.ACCEPTED:
+            raise ValidationError({
+                'status': ValidationError(_('Cannot reject an accepted check.'), 'conflict'),
+            })
+
+        if not reason:
+            raise ValidationError({
+                'reason': ValidationError(_('This field cannot be blank.'), 'required'),
+            })
+
+        self.status = CHECK_STATUS.REJECTED
+        self.actioned_by = by
+        self.actioned_at = now()
+        self.rejection_reason = reason
         self.save()
 
     class Meta:

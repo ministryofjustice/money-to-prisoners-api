@@ -818,6 +818,7 @@ class BaseCheckTestCase(APITestCase, AuthTestCaseMixin):
                 description='Failed rules',
                 actioned_at=now(),
                 actioned_by=self.security_fiu_users[0],
+                rejection_reason='because...' if status == CHECK_STATUS.REJECTED else '',
             )
 
     def _get_unauthorised_application_user(self):
@@ -1085,3 +1086,161 @@ class AcceptCheckTestCase(BaseCheckTestCase):
         check.refresh_from_db()
 
         self.assertEqual(check.status, CHECK_STATUS.REJECTED)
+
+
+class RejectCheckTestCase(BaseCheckTestCase):
+    """
+    Tests related to rejecting a check.
+    """
+
+    def test_unauthorised_user_gets_403(self):
+        """
+        Test that if the logged-in user doesn't have permissions, the view returns 403.
+        """
+        check = Check.objects.filter(status=CHECK_STATUS.PENDING).first()
+
+        auth = self.get_http_authorization_for_user(self._get_unauthorised_application_user())
+        response = self.client.post(
+            reverse(
+                'security-check-reject',
+                kwargs={'pk': check.pk},
+            ),
+            data={
+                'rejection_reason': 'Some reason',
+            },
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+
+        self.assertEqual(response.status_code, http_status.HTTP_403_FORBIDDEN)
+
+    @mock.patch('security.models.now')
+    def test_can_reject_a_pending_check(self, mocked_now):
+        """
+        Test that a pending check can be rejected.
+        """
+        mocked_now.return_value = make_aware(datetime.datetime(2019, 4, 1))
+
+        check = Check.objects.filter(status=CHECK_STATUS.PENDING).first()
+
+        authorised_user = self._get_authorised_user()
+        auth = self.get_http_authorization_for_user(authorised_user)
+        reason = 'Some reason'
+        response = self.client.post(
+            reverse(
+                'security-check-reject',
+                kwargs={'pk': check.pk},
+            ),
+            data={
+                'rejection_reason': reason,
+            },
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+
+        self.assertEqual(response.status_code, http_status.HTTP_204_NO_CONTENT)
+
+        check.refresh_from_db()
+
+        self.assertEqual(check.status, CHECK_STATUS.REJECTED)
+        self.assertEqual(check.actioned_by, authorised_user)
+        self.assertEqual(check.actioned_at, mocked_now())
+        self.assertEqual(check.rejection_reason, reason)
+
+    @mock.patch('security.models.now')
+    def test_can_reject_a_rejected_check(self, mocked_now):
+        """
+        Test that rejected an already rejected check doesn't do anything.
+        """
+        mocked_now.return_value = make_aware(datetime.datetime(2019, 1, 1))
+
+        check = Check.objects.filter(status=CHECK_STATUS.REJECTED).first()
+
+        authorised_user = self._get_authorised_user()
+        auth = self.get_http_authorization_for_user(authorised_user)
+        reason = 'some reason'
+        response = self.client.post(
+            reverse(
+                'security-check-reject',
+                kwargs={'pk': check.pk},
+            ),
+            data={
+                'rejection_reason': reason,
+            },
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+
+        self.assertEqual(response.status_code, http_status.HTTP_204_NO_CONTENT)
+
+        check.refresh_from_db()
+
+        self.assertEqual(check.status, CHECK_STATUS.REJECTED)
+        self.assertNotEqual(check.actioned_at, mocked_now())
+        self.assertNotEqual(check.rejection_reason, reason)
+
+    def test_empty_reason_raises_error(self):
+        """
+        Test that rejecting a check without reason returns status code 400.
+        """
+        check = Check.objects.filter(status=CHECK_STATUS.PENDING).first()
+
+        authorised_user = self._get_authorised_user()
+        auth = self.get_http_authorization_for_user(authorised_user)
+
+        response = self.client.post(
+            reverse(
+                'security-check-reject',
+                kwargs={'pk': check.pk},
+            ),
+            {
+                'rejection_reason': '',
+            },
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+
+        self.assertEqual(response.status_code, http_status.HTTP_400_BAD_REQUEST)
+        self.assertDictEqual(
+            response.json(),
+            {
+                'rejection_reason': ['This field may not be blank.'],
+            }
+        )
+
+        check.refresh_from_db()
+
+        self.assertEqual(check.status, CHECK_STATUS.PENDING)
+
+    def test_cannot_reject_an_accepted_check(self):
+        """
+        Test that rejecting a pending check returns status code 400.
+        """
+        check = Check.objects.filter(status=CHECK_STATUS.ACCEPTED).first()
+
+        authorised_user = self._get_authorised_user()
+        auth = self.get_http_authorization_for_user(authorised_user)
+
+        response = self.client.post(
+            reverse(
+                'security-check-reject',
+                kwargs={'pk': check.pk},
+            ),
+            {
+                'rejection_reason': 'some reason',
+            },
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+
+        self.assertEqual(response.status_code, http_status.HTTP_400_BAD_REQUEST)
+        self.assertDictEqual(
+            response.json(),
+            {
+                'status': ['Cannot reject an accepted check.'],
+            }
+        )
+
+        check.refresh_from_db()
+
+        self.assertEqual(check.status, CHECK_STATUS.ACCEPTED)

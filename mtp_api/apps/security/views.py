@@ -34,6 +34,7 @@ from security.serializers import (
     CheckSerializer,
     PrisonerProfileSerializer,
     RecipientProfileSerializer,
+    RejectCheckSerializer,
     SavedSearchSerializer,
     SenderProfileSerializer,
 )
@@ -496,7 +497,7 @@ class CheckView(
         detail=True,
         methods=['post'],
     )
-    def accept(self, request, pk=None):
+    def accept(self, request, pk):
         """
         Accepts a check.
         """
@@ -508,4 +509,22 @@ class CheckView(
         )
         serializer.is_valid(raise_exception=True)
         serializer.accept(by=request.user)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @decorators.action(
+        detail=True,
+        methods=['post'],
+    )
+    def reject(self, request, pk):
+        """
+        Rejects a check.
+        """
+        check = self.get_object()
+        serializer = RejectCheckSerializer(
+            check,
+            data=request.data,
+            context=self.get_serializer_context(),
+        )
+        serializer.is_valid(raise_exception=True)
+        check = serializer.reject(by=request.user)
         return Response(status=status.HTTP_204_NO_CONTENT)
