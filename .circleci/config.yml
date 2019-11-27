@@ -24,11 +24,15 @@ jobs:
             source /tmp/mtp-env.sh
             $(aws ecr get-login --region ${AWS_DEFAULT_REGION} --no-include-email)
       - run:
-          name: Build docker image
+          name: Pull base image
           command: |
             source /tmp/mtp-env.sh
             docker pull ${registry}:base-web
             docker tag ${registry}:base-web base-web
+      - run:
+          name: Build docker image
+          command: |
+            source /tmp/mtp-env.sh
             docker build \
               --force-rm \
               --build-arg APP_GIT_COMMIT=${CIRCLE_SHA1} \
@@ -47,7 +51,7 @@ jobs:
               -e POSTGRES_USER=postgres \
               -e POSTGRES_PASSWORD=postgres \
               -e POSTGRES_DB=mtp_api \
-              circleci/postgres:10.6-alpine
+              circleci/postgres:10.10-alpine
             sleep 10
             docker run \
               --name ${app} \
@@ -57,7 +61,12 @@ jobs:
               -e DB_HOST=postgres \
               --link postgres \
               ${tag} \
-              /bin/bash -c 'mkdir /app/reports && /app/venv/bin/pip install -r requirements/ci.txt && /app/venv/bin/python manage.py test --verbosity=2'
+              /bin/bash -c '/app/venv/bin/pip install -r requirements/ci.txt && /app/venv/bin/python manage.py test --verbosity=2'
+      - run:
+          name: Extract test reports
+          when: always
+          command: |
+            source /tmp/mtp-env.sh
             docker cp ${app}:/app/reports /tmp/reports
             docker rm ${app}
             docker stop postgres
@@ -83,7 +92,7 @@ jobs:
           command: |
             source /tmp/mtp-env.sh
             docker logout ${ECR_ENDPOINT}
-      - run:
+      - deploy:
           name: Deploy to test
           command: |
             if [[ "${CIRCLE_BRANCH}" == "master" ]]; then
