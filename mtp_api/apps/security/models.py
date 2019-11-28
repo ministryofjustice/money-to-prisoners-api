@@ -349,7 +349,7 @@ class Check(TimeStampedModel):
 
 
 @receiver(prisoner_profile_current_prisons_need_updating)
-def update_current_prisons(*args, **kwargs):
+def update_current_prisons(**kwargs):
     job = ScheduledCommand(
         name='update_current_prisons',
         arg_string='',

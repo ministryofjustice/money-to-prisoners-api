@@ -123,7 +123,7 @@ class Payment(TimeStampedModel):
 
 
 @receiver(pre_save, sender=Payment, dispatch_uid='update_credit_for_payment')
-def update_credit_for_payment(sender, instance, **kwargs):
+def update_credit_for_payment(instance, **kwargs):
     if (instance.status == PAYMENT_STATUS.TAKEN and
             instance.credit.resolution == CREDIT_RESOLUTION.INITIAL):
         if instance.credit.received_at is None:

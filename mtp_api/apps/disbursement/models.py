@@ -209,25 +209,25 @@ class Comment(TimeStampedModel):
 
 
 @receiver(disbursement_created)
-def disbursement_created_receiver(sender, disbursement, by_user, **kwargs):
+def disbursement_created_receiver(disbursement, by_user, **kwargs):
     Log.objects.disbursements_created([disbursement], by_user)
 
 
 @receiver(disbursement_edited)
-def disbursement_edited_receiver(sender, disbursement, by_user, **kwargs):
+def disbursement_edited_receiver(disbursement, by_user, **kwargs):
     Log.objects.disbursements_edited([disbursement], by_user)
 
 
 @receiver(disbursement_rejected)
-def disbursement_rejected_receiver(sender, disbursement, by_user, **kwargs):
+def disbursement_rejected_receiver(disbursement, by_user, **kwargs):
     Log.objects.disbursements_rejected([disbursement], by_user)
 
 
 @receiver(disbursement_confirmed)
-def disbursement_confirmed_receiver(sender, disbursement, by_user, **kwargs):
+def disbursement_confirmed_receiver(disbursement, by_user, **kwargs):
     Log.objects.disbursements_confirmed([disbursement], by_user)
 
 
 @receiver(disbursement_sent)
-def disbursement_sent_receiver(sender, disbursement, by_user, **kwargs):
+def disbursement_sent_receiver(disbursement, by_user, **kwargs):
     Log.objects.disbursements_sent([disbursement], by_user)

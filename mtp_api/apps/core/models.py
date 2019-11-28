@@ -63,7 +63,7 @@ class ScheduledCommand(models.Model):
 
 
 @receiver(models.signals.pre_save, sender=ScheduledCommand)
-def set_next_execution(sender, instance, **kwargs):
+def set_next_execution(instance, **kwargs):
     if instance.next_execution is None:
         instance.update_next_execution()
 
