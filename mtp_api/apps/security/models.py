@@ -11,7 +11,10 @@ from model_utils.models import TimeStampedModel
 from core.models import ScheduledCommand
 from prison.models import Prison
 from security.constants import CHECK_STATUS
-from security.managers import PrisonerProfileManager, SenderProfileManager, RecipientProfileManager
+from security.managers import (
+    PrisonerProfileManager, SenderProfileManager, RecipientProfileManager,
+    CheckManager,
+)
 from security.signals import prisoner_profile_current_prisons_need_updating
 
 
@@ -295,6 +298,13 @@ class Check(TimeStampedModel):
     )
     rejection_reason = models.TextField(blank=True)
 
+    objects = CheckManager()
+
+    class Meta:
+        permissions = (
+            ('view_check', 'Can view check'),
+        )
+
     def accept(self, by):
         """
         Accepts a check.
@@ -338,11 +348,6 @@ class Check(TimeStampedModel):
         self.actioned_at = now()
         self.rejection_reason = reason
         self.save()
-
-    class Meta:
-        permissions = (
-            ('view_check', 'Can view check'),
-        )
 
     def __str__(self):
         return f'Check {self.status} for {self.credit}'

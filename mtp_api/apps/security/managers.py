@@ -341,3 +341,89 @@ class RecipientProfileQuerySet(models.QuerySet):
                 ).values('calculated')[:1]
             ), 0),
         )
+
+
+class CheckManager(models.Manager):
+    ENABLED_RULE_CODES = ('FIUMONP', 'FIUMONS')
+
+    def should_check_credit(self, credit):
+        from credit.constants import CREDIT_RESOLUTION
+        from payment.constants import PAYMENT_STATUS
+
+        if credit.resolution != CREDIT_RESOLUTION.INITIAL:
+            # it's too late once credits reach any other resolution
+            return False
+        if not hasattr(credit, 'payment'):
+            # checks only apply to debit card payments
+            return False
+        if credit.payment.status != PAYMENT_STATUS.PENDING:
+            # payment must be pending for checks to apply
+            return False
+
+        return self._credit_has_enough_detail(credit)
+
+    def _credit_has_enough_detail(self, credit):
+        if credit.sender_profile and credit.prisoner_profile:
+            # NB: currently, profiles cannot yet be attached to credits that are "initial"
+            return True
+
+        payment = credit.payment
+        return all(
+            getattr(payment, field)
+            for field in (
+                'email', 'cardholder_name',
+                'card_number_first_digits', 'card_number_last_digits', 'card_expiry_date',
+                'billing_address',
+            )
+        )
+
+    def create_for_credit(self, credit):
+        from security.constants import CHECK_STATUS
+
+        temporary_profiles = self._attach_profiles(credit)
+        matched_rule_codes = self._get_matching_rules(credit)
+        for field in temporary_profiles:
+            setattr(credit, field, None)
+
+        if matched_rule_codes:
+            # TODO: description will need update when more rules added
+            description = 'Credit matched FIU monitoring rules'
+            status = CHECK_STATUS.PENDING
+        else:
+            description = 'Credit matched no rules and was automatically accepted'
+            status = CHECK_STATUS.ACCEPTED
+
+        return self.create(
+            credit=credit,
+            status=status,
+            description=description,
+            rules=matched_rule_codes,
+        )
+
+    def _attach_profiles(self, credit):
+        from security.models import PrisonerProfile, SenderProfile
+
+        temporary_profiles = []
+        if not credit.prisoner_profile:
+            try:
+                credit.prisoner_profile = PrisonerProfile.objects.get_for_credit(credit)
+                temporary_profiles.append('prisoner_profile')
+            except PrisonerProfile.DoesNotExist:
+                pass
+        if not credit.sender_profile:
+            try:
+                credit.sender_profile = SenderProfile.objects.get_for_credit(credit)
+                temporary_profiles.append('sender_profile')
+            except SenderProfile.DoesNotExist:
+                pass
+        return temporary_profiles
+
+    def _get_matching_rules(self, credit):
+        from notification.rules import RULES
+
+        matched_rule_codes = []
+        for rule_code in self.ENABLED_RULE_CODES:
+            rule = RULES[rule_code]
+            if rule.applies_to(credit) and rule.triggered(credit):
+                matched_rule_codes.append(rule_code)
+        return matched_rule_codes
