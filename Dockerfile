@@ -6,7 +6,8 @@ RUN set -ex; mkdir -p \
   mtp_api/assets-static \
   static \
   media \
-  spooler
+  spooler \
+  reports
 
 # cache python packages, unless requirements change
 COPY ./requirements requirements
