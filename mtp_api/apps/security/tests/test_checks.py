@@ -1,17 +1,21 @@
 import datetime
 from unittest import mock
 
+from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
 from django.core.management import call_command
 from django.test import TestCase
+from django.urls import reverse
 from django.utils.timezone import make_aware
 from model_mommy import mommy
+from rest_framework.test import APITestCase
 
 from core.tests.utils import make_test_users
 from credit.models import Credit, CREDIT_RESOLUTION, LOG_ACTIONS as CREDIT_LOG_ACTIONS
 from mtp_auth.tests.mommy_recipes import basic_user
-from payment.models import PAYMENT_STATUS
+from mtp_auth.tests.utils import AuthTestCaseMixin
+from payment.models import Payment, PAYMENT_STATUS
 from payment.tests.utils import generate_payments
 from prison.tests.utils import load_random_prisoner_locations
 from security.models import (
@@ -19,6 +23,8 @@ from security.models import (
     PrisonerProfile, SenderProfile,
 )
 from transaction.tests.utils import generate_transactions
+
+User = get_user_model()
 
 
 class CheckTestCase(TestCase):
@@ -297,3 +303,58 @@ class CreditCheckTestCase(TestCase):
         self.assertEqual(check.status, CHECK_STATUS.PENDING)
         self.assertIn('matched FIU monitoring rules', check.description)
         self.assertListEqual(sorted(check.rules), ['FIUMONP', 'FIUMONS'])
+
+
+class AutomaticCreditCheckTestCase(APITestCase, AuthTestCaseMixin):
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
+
+    def setUp(self):
+        super().setUp()
+        make_test_users(clerks_per_prison=1)
+        load_random_prisoner_locations(number_of_prisoners=1)
+        self.send_money_user = Group.objects.get(name='SendMoney').user_set.first()
+
+    def test_check_created_automatically(self):
+        """
+        Ensures that a payment created and updated by send-money will automatically create a check
+        """
+        auth_header = self.get_http_authorization_for_user(self.send_money_user)
+        new_payment = {
+            'amount': 1255,
+            'service_charge': 0,
+            'recipient_name': 'James Halls',
+            'prisoner_number': 'A1409AE',
+            'prisoner_dob': '1989-01-21',
+            'ip_address': '127.0.0.1',
+        }
+        response = self.client.post(
+            reverse('payment-list'), data=new_payment,
+            format='json', HTTP_AUTHORIZATION=auth_header,
+        )
+        payment = response.json()
+
+        payment_update = {
+            'email': 'sender@outside.local',
+            'worldpay_id': '12345',
+            'cardholder_name': 'Mary Halls',
+            'card_number_first_digits': '111122',
+            'card_number_last_digits': '8888',
+            'card_expiry_date': '10/20',
+            'card_brand': 'Visa',
+            'billing_address': {
+                'line1': '62 Petty France',
+                'line2': '',
+                'city': 'London',
+                'country': 'UK',
+                'postcode': 'SW1H 9EU'
+            },
+        }
+        response = self.client.patch(
+            reverse('payment-detail', args=[payment['uuid']]), data=payment_update,
+            format='json', HTTP_AUTHORIZATION=auth_header,
+        )
+        payment = response.json()
+        payment = Payment.objects.get(uuid=payment['uuid'])
+        self.assertEqual(payment.status, PAYMENT_STATUS.PENDING)
+        self.assertEqual(payment.credit.resolution, CREDIT_RESOLUTION.INITIAL)
+        self.assertTrue(hasattr(payment.credit, 'security_check'))
