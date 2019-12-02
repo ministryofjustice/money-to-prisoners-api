@@ -2,7 +2,7 @@ import re
 import uuid
 
 from django.db import models
-from django.db.models.signals import pre_save
+from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -12,6 +12,7 @@ from credit.constants import CREDIT_RESOLUTION
 from credit.models import Credit
 from payment.constants import PAYMENT_STATUS
 from payment.managers import PaymentManager
+from security.models import Check
 
 
 class Batch(TimeStampedModel):
@@ -123,10 +124,21 @@ class Payment(TimeStampedModel):
 
 
 @receiver(pre_save, sender=Payment, dispatch_uid='update_credit_for_payment')
-def update_credit_for_payment(sender, instance, **kwargs):
+def update_credit_for_payment(instance, **kwargs):
     if (instance.status == PAYMENT_STATUS.TAKEN and
             instance.credit.resolution == CREDIT_RESOLUTION.INITIAL):
         if instance.credit.received_at is None:
             instance.credit.received_at = timezone.now()
         instance.credit.resolution = CREDIT_RESOLUTION.PENDING
         instance.credit.save()
+
+
+@receiver(post_save, sender=Payment, dispatch_uid='create_check_if_needed')
+def create_security_check_if_needed(instance: Payment, **kwargs):
+    credit = instance.credit
+    if hasattr(credit, 'security_check'):
+        # security check already exists
+        return
+    if not Check.objects.should_check_credit(credit):
+        return
+    Check.objects.create_for_credit(credit)

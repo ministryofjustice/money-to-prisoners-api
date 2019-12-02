@@ -53,7 +53,7 @@ def get_sender_prisoner_pairs():
         senders.append(
             {
                 'cardholder_name': full_name,
-                'card_number_first_digits': get_random_string(6, '0123456789') if random.random() > 0.2 else None,
+                'card_number_first_digits': get_random_string(6, '0123456789'),
                 'card_number_last_digits': get_random_string(4, '0123456789'),
                 'card_expiry_date': expiry_date.strftime('%m/%y'),
                 'ip_address': fake.ipv4(),
@@ -157,6 +157,7 @@ def setup_payment(owner_status_chooser, end_date, payment_counter, data):
     else:
         data['status'] = PAYMENT_STATUS.PENDING
         del data['cardholder_name']
+        del data['card_number_first_digits']
         del data['card_number_last_digits']
         del data['card_expiry_date']
         del data['card_brand']

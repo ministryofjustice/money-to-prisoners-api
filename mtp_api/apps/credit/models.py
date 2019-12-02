@@ -366,7 +366,7 @@ class PrivateEstateBatch(TimeStampedModel):
 
 
 @receiver(post_save, sender=Credit, dispatch_uid='update_prison_for_credit')
-def update_prison_for_credit(sender, instance, created, *args, **kwargs):
+def update_prison_for_credit(instance, created, **kwargs):
     if (created and
             instance.reconciled is False and
             (instance.resolution is CREDIT_RESOLUTION.INITIAL or
@@ -391,35 +391,35 @@ def update_prison_for_credit(sender, instance, created, *args, **kwargs):
 
 
 @receiver(credit_created)
-def credit_created_receiver(sender, credit, by_user, **kwargs):
+def credit_created_receiver(credit, by_user, **kwargs):
     Log.objects.credits_created([credit], by_user)
 
 
 @receiver(credit_credited)
-def credit_credited_receiver(sender, credit, by_user, credited=True, **kwargs):
+def credit_credited_receiver(credit, by_user, credited=True, **kwargs):
     Log.objects.credits_credited([credit], by_user, credited=credited)
 
 
 @receiver(credit_refunded)
-def credit_refunded_receiver(sender, credit, by_user, **kwargs):
+def credit_refunded_receiver(credit, by_user, **kwargs):
     Log.objects.credits_refunded([credit], by_user)
 
 
 @receiver(credit_reconciled)
-def credit_reconciled_receiver(sender, credit, by_user, **kwargs):
+def credit_reconciled_receiver(credit, by_user, **kwargs):
     Log.objects.credits_reconciled([credit], by_user)
 
 
 @receiver(credit_reviewed)
-def credit_reviewed_receiver(sender, credit, by_user, **kwargs):
+def credit_reviewed_receiver(credit, by_user, **kwargs):
     Log.objects.credits_reviewed([credit], by_user)
 
 
 @receiver(credit_set_manual)
-def credit_set_manual_receiver(sender, credit, by_user, **kwargs):
+def credit_set_manual_receiver(credit, by_user, **kwargs):
     Log.objects.credits_set_manual([credit], by_user)
 
 
 @receiver(credit_prisons_need_updating)
-def update_credit_prisons(*args, **kwargs):
+def update_credit_prisons(**kwargs):
     Credit.objects.update_prisons()
