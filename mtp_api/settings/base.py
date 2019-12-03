@@ -91,7 +91,6 @@ ROOT_URLCONF = 'mtp_api.urls'
 MIDDLEWARE = (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.locale.LocaleMiddleware',
-    'mtp_common.cp_migration.middleware.CloudPlatformMigrationMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
