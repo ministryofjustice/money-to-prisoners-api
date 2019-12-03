@@ -1,4 +1,8 @@
 from django.contrib import admin
+from django.urls import reverse
+from django.utils import timezone
+from django.utils.dateformat import format as format_date
+from django.utils.html import format_html
 from django.utils.translation import gettext, gettext_lazy as _
 
 from core.admin import add_short_description
@@ -158,10 +162,9 @@ class CheckAdmin(admin.ModelAdmin):
         'credit__prisoner_name',
         'credit__prisoner_number',
     )
-    raw_id_fields = (
-        'credit',
-    )
 
+    exclude = ('credit',)
+    readonly_fields = ('credit_link',)
     list_display = (
         'created',
         'prisoner_name',
@@ -173,6 +176,17 @@ class CheckAdmin(admin.ModelAdmin):
     list_filter = (
         'status',
     )
+
+    @add_short_description(_('credit'))
+    def credit_link(self, instance):
+        credit = instance.credit
+        link = reverse('admin:credit_credit_change', args=(credit.pk,))
+        description = '%(amount)s %(status)s, %(date)s' % {
+            'amount': format_amount(credit.amount),
+            'status': credit.resolution,
+            'date': format_date(timezone.localtime(credit.created), 'd/m/Y'),
+        }
+        return format_html('<a href="{}">{}</a>', link, description)
 
     def prisoner_name(self, obj):
         return obj.credit.prisoner_name
