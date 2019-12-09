@@ -15,6 +15,7 @@ from payment.models import Batch, BillingAddress, Payment
 from payment.constants import PAYMENT_STATUS
 from payment.tests.utils import generate_payments
 from prison.tests.utils import load_random_prisoner_locations
+from security.models import CHECK_STATUS
 
 User = get_user_model()
 
@@ -361,39 +362,102 @@ class GetPaymentViewTestCase(AuthTestCaseMixin, APITestCase):
     def setUp(self):
         super().setUp()
         test_users = make_test_users()
-        self.prison_clerks = test_users['prison_clerks']
-        self.send_money_users = test_users['send_money_users']
+        self.security_fiu_user = test_users['security_fiu_users'][0]
+        self.send_money_user = test_users['send_money_users'][0]
         load_random_prisoner_locations(2)
 
-    def test_get_payment(self):
-        user = self.send_money_users[0]
-
+    def _start_new_payment(self):
+        # this starts a new payment; the sender has not yet provided their card details
         new_payment = {
             'prisoner_number': 'A1409AE',
             'prisoner_dob': date(1989, 1, 21),
             'recipient_name': 'James Halls',
             'amount': 1000,
             'service_charge': 24,
-            'email': 'sender@outside.local',
-            'ip_address': '151.101.16.144',
         }
         response = self.client.post(
             reverse('payment-list'), data=new_payment, format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.send_money_user)
         )
-        payment_uuid = response.data['uuid']
+        new_payment['uuid'] = response.data['uuid']
+        return new_payment
 
+    def test_get_details_of_new_payment(self):
+        new_payment = self._start_new_payment()
         response = self.client.get(
-            reverse('payment-detail', kwargs={'pk': payment_uuid}), format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+            reverse('payment-detail', kwargs={'pk': new_payment['uuid']}), format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.send_money_user)
         )
         retrieved_payment = response.data
-        self.assertEqual(payment_uuid, retrieved_payment['uuid'])
-        self.assertEqual(new_payment['prisoner_number'],
-                         retrieved_payment['prisoner_number'])
-        self.assertEqual(new_payment['prisoner_dob'].isoformat(),
-                         retrieved_payment['prisoner_dob'])
-        self.assertEqual(new_payment['ip_address'], retrieved_payment['ip_address'])
+        self.assertEqual(new_payment['uuid'], retrieved_payment['uuid'])
+        self.assertEqual(new_payment['prisoner_number'], retrieved_payment['prisoner_number'])
+        self.assertEqual(new_payment['prisoner_dob'].isoformat(), retrieved_payment['prisoner_dob'])
+        self.assertIsNone(retrieved_payment['security_check'])
+
+    def _complete_new_payment(self, payment_uuid):
+        # this completes the payment from the sender's side; the payment is not yet captured
+        payment_update = {
+            'email': 'sender@outside.local',
+            'ip_address': '151.101.16.144',
+            'worldpay_id': '12345678',
+            'cardholder_name': 'Mary Halls',
+            'card_number_first_digits': '111111',
+            'card_number_last_digits': '2222',
+            'card_expiry_date': '01/20',
+            'card_brand': 'Brand',
+            'billing_address': {
+                'line1': '62 Petty France',
+                'city': 'London',
+                'postcode': 'SW1H 9EU',
+                'country': 'UK',
+            },
+        }
+        response = self.client.patch(
+            reverse('payment-detail', kwargs={'pk': payment_uuid}), data=payment_update, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.send_money_user)
+        )
+        retrieved_payment = response.data
+        self.assertEqual(payment_update['email'], retrieved_payment['email'])
+        self.assertEqual(payment_update['ip_address'], retrieved_payment['ip_address'])
+
+    def test_get_security_check_details_of_completed_payment(self):
+        new_payment = self._start_new_payment()
+        payment = Payment.objects.get(pk=new_payment['uuid'])
+        self._complete_new_payment(new_payment['uuid'])
+        response = self.client.get(
+            reverse('payment-detail', kwargs={'pk': new_payment['uuid']}), format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.send_money_user)
+        )
+        retrieved_payment = response.data
+        security_check = retrieved_payment['security_check']
+        self.assertEqual(security_check['status'], CHECK_STATUS.ACCEPTED)
+        self.assertEqual(security_check['user_actioned'], False)
+
+        # reset check to pending
+        check = payment.credit.security_check
+        check.status = CHECK_STATUS.PENDING
+        check.description = 'Credit matched FIU monitoring rules'
+        check.rules = ['FIUMONP']
+        check.save()
+        response = self.client.get(
+            reverse('payment-detail', kwargs={'pk': new_payment['uuid']}), format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.send_money_user)
+        )
+        retrieved_payment = response.data
+        security_check = retrieved_payment['security_check']
+        self.assertEqual(security_check['status'], CHECK_STATUS.PENDING)
+        self.assertEqual(security_check['user_actioned'], False)
+
+        # mock rejected check
+        check.reject(self.security_fiu_user, 'Cap exceeded')
+        response = self.client.get(
+            reverse('payment-detail', kwargs={'pk': new_payment['uuid']}), format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.send_money_user)
+        )
+        retrieved_payment = response.data
+        security_check = retrieved_payment['security_check']
+        self.assertEqual(security_check['status'], CHECK_STATUS.REJECTED)
+        self.assertEqual(security_check['user_actioned'], True)
 
 
 class ListPaymentViewTestCase(AuthTestCaseMixin, APITestCase):
