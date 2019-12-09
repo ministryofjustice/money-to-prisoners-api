@@ -6,6 +6,7 @@ from credit.models import Credit
 from payment.models import Batch, BillingAddress, Payment
 from payment.constants import PAYMENT_STATUS
 from payment.exceptions import InvalidStateForUpdateException
+from security.models import Check
 
 
 class BatchSerializer(serializers.ModelSerializer):
@@ -22,15 +23,30 @@ class BillingAddressSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class SimpleCheckSerializer(serializers.ModelSerializer):
+    user_actioned = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Check
+        fields = (
+            'status',
+            'user_actioned',
+        )
+
+    def get_user_actioned(self, obj):
+        return obj.actioned_by is not None
+
+
 class PaymentSerializer(serializers.ModelSerializer):
     prisoner_dob = serializers.DateField()
     prisoner_number = serializers.CharField()
     received_at = serializers.DateTimeField(required=False)
     billing_address = BillingAddressSerializer(required=False)
+    security_check = SimpleCheckSerializer(required=False, source='credit.security_check')
 
     class Meta:
         model = Payment
-        read_only = ('uuid', 'prisoner_dob', 'prisoner_number')
+        read_only = ('uuid', 'prisoner_dob', 'prisoner_number', 'security_check')
         fields = (
             'uuid',
             'status',
@@ -51,6 +67,7 @@ class PaymentSerializer(serializers.ModelSerializer):
             'ip_address',
             'billing_address',
             'modified',
+            'security_check',
         )
 
     @atomic
