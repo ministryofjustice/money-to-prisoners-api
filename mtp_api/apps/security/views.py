@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.settings import api_settings
 
 from core.filters import (
+    IsoDateTimeFilter,
     LogNomsOpsSearchDjangoFilterBackend,
     MultipleFieldCharFilter,
     MultipleValueFilter,
@@ -476,6 +477,31 @@ class SavedSearchView(
         return self.queryset.filter(user=self.request.user)
 
 
+class CheckListFilter(django_filters.FilterSet):
+    rules = django_filters.CharFilter(lookup_expr='icontains')
+    started_at__lt = IsoDateTimeFilter(
+        field_name='credit__payment__created', lookup_expr='lt',
+    )
+    started_at__gte = IsoDateTimeFilter(
+        field_name='credit__payment__created', lookup_expr='gte',
+    )
+    sender_name = django_filters.CharFilter(
+        field_name='credit__payment__cardholder_name', lookup_expr='icontains',
+    )
+    prisoner_name = django_filters.CharFilter(
+        field_name='credit__prisoner_name', lookup_expr='icontains',
+    )
+    prisoner_number = django_filters.CharFilter(
+        field_name='credit__prisoner_number', lookup_expr='exact',
+    )
+
+    class Meta:
+        model = Check
+        fields = {
+            'status': ['exact'],
+        }
+
+
 class CheckView(
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
@@ -483,7 +509,7 @@ class CheckView(
 ):
     queryset = Check.objects.all()
     filter_backends = (DjangoFilterBackend,)
-    filter_fields = ('status',)
+    filter_class = CheckListFilter
     serializer_class = CheckSerializer
     default_ordering = ('-created',)
 
