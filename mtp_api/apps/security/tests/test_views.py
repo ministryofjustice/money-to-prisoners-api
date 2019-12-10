@@ -951,6 +951,97 @@ class CheckListTestCase(BaseCheckTestCase):
         for item in response_data['results']:
             self.assertEqual(item['status'], CHECK_STATUS.PENDING)
 
+    def test_get_checks_for_specific_rule(self):
+        """
+        Test that the list endpoint only returns the checks in pending if a filter is passed in.
+        """
+        filters = {
+            'rules': 'ABC',
+        }
+
+        auth = self.get_http_authorization_for_user(self._get_authorised_user())
+        response = self.client.get(
+            reverse('security-check-list'),
+            filters,
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+
+        response_data = response.json()
+        self.assertEqual(
+            response_data['count'],
+            Check.objects.all().count(),
+        )
+        for item in response_data['results']:
+            self.assertIn('ABC', item['rules'])
+
+        filters = {
+            'rules': 'XYZ',
+        }
+
+        response = self.client.get(
+            reverse('security-check-list'),
+            filters,
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+
+        response_data = response.json()
+        self.assertEqual(
+            response_data['count'],
+            0,
+        )
+
+    def test_check_filtering_by_started_at(self):
+        """
+        Test that the list endpoint can filter by payment creation date.
+        """
+        credits_started_at = list(Check.objects.all().order_by('credit__payment__created').values_list(
+            'credit__payment__created', flat=True
+        ))
+        check_count = len(credits_started_at)
+        earliest_check = credits_started_at[0]
+        latest_check = credits_started_at[-1]
+
+        auth = self.get_http_authorization_for_user(self._get_authorised_user())
+
+        def assertCheckCount(filters, expected_count):  # noqa: N802
+            response = self.client.get(
+                reverse('security-check-list'),
+                filters,
+                format='json',
+                HTTP_AUTHORIZATION=auth,
+            )
+            self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+            response_data = response.json()
+            self.assertEqual(
+                response_data['count'],
+                expected_count,
+            )
+
+        assertCheckCount(
+            {
+                'started_at__lt': earliest_check.strftime('%Y-%m-%d %H:%M:%S'),
+            },
+            0
+        )
+        assertCheckCount(
+            {
+                'started_at__gte': earliest_check.strftime('%Y-%m-%d %H:%M:%S'),
+            },
+            check_count
+        )
+        assertCheckCount(
+            {
+                'started_at__lt': latest_check.strftime('%Y-%m-%d %H:%M:%S'),
+            },
+            check_count - 1
+        )
+
 
 class GetCheckTestCase(BaseCheckTestCase):
     """
