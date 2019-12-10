@@ -6,7 +6,8 @@ CREDIT_RESOLUTION = Choices(
     ('PENDING', 'pending', _('Pending')),
     ('MANUAL', 'manual', _('Requires manual processing')),
     ('CREDITED', 'credited', _('Credited')),
-    ('REFUNDED', 'refunded', _('Refunded'))
+    ('REFUNDED', 'refunded', _('Refunded')),
+    ('FAILED', 'failed', _('Failed')),
 )
 
 CREDIT_STATUS = Choices(
@@ -14,6 +15,7 @@ CREDIT_STATUS = Choices(
     ('CREDITED', 'credited', _('Credited')),
     ('REFUNDED', 'refunded', _('Refunded')),
     ('REFUND_PENDING', 'refund_pending', _('Refund pending')),
+    ('FAILED', 'failed', _('Failed')),
 )
 
 CREDIT_SOURCE = Choices(

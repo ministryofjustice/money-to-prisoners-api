@@ -19,6 +19,9 @@ class CreditQuerySet(models.QuerySet):
     def refund_pending(self):
         return self.filter(self.model.STATUS_LOOKUP[CREDIT_STATUS.REFUND_PENDING])
 
+    def failed(self):
+        return self.filter(self.model.STATUS_LOOKUP[CREDIT_STATUS.FAILED])
+
     def counts_per_day(self):
         return self.exclude(received_at__isnull=True) \
             .extra({'received_at_date': 'credit_credit.received_at::date'}) \
@@ -117,7 +120,12 @@ class CreditManager(models.Manager):
 
 class CompletedCreditManager(CreditManager):
     def get_queryset(self):
-        return super().get_queryset().exclude(resolution=CREDIT_RESOLUTION.INITIAL)
+        return super().get_queryset().exclude(
+            resolution__in=(
+                CREDIT_RESOLUTION.INITIAL,
+                CREDIT_RESOLUTION.FAILED,
+            )
+        )
 
 
 class LogManager(models.Manager):

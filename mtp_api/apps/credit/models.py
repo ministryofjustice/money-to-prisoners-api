@@ -75,6 +75,9 @@ class Credit(TimeStampedModel):
                 Q(transaction__incomplete_sender_info=False)
             )
         ),
+        CREDIT_STATUS.FAILED: (
+            Q(resolution=CREDIT_RESOLUTION.FAILED)
+        ),
     }
 
     class Meta:
@@ -159,6 +162,10 @@ class Credit(TimeStampedModel):
         return self.resolution == CREDIT_RESOLUTION.REFUNDED
 
     @property
+    def failed(self):
+        return self.resolution == CREDIT_RESOLUTION.FAILED
+
+    @property
     def refund_pending(self):
         return (
             (self.prison is None or self.blocked) and
@@ -179,6 +186,8 @@ class Credit(TimeStampedModel):
             return CREDIT_STATUS.REFUND_PENDING
         elif self.refunded:
             return CREDIT_STATUS.REFUNDED
+        elif self.failed:
+            return CREDIT_STATUS.FAILED
 
     @property
     def owner_name(self):
