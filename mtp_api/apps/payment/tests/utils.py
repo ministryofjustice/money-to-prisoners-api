@@ -138,7 +138,20 @@ def setup_payment(owner_status_chooser, end_date, payment_counter, data):
     older_than_yesterday = (
         data['created'].date() < (end_date.date() - datetime.timedelta(days=1))
     )
-    if bool(payment_counter % 10):  # if taken
+    if not bool(payment_counter % 11):  # 1 in 11 is expired
+        data['status'] = PAYMENT_STATUS.EXPIRED
+    elif not bool(payment_counter % 10):  # 1 in 10 is rejected
+        data['status'] = PAYMENT_STATUS.REJECTED
+    elif not bool(payment_counter % 4):  # 1 in 4ish is pending
+        data['status'] = PAYMENT_STATUS.PENDING
+
+        del data['cardholder_name']
+        del data['card_number_first_digits']
+        del data['card_number_last_digits']
+        del data['card_expiry_date']
+        del data['card_brand']
+        del data['billing_address']
+    else:  # otherwise it's taken
         owner, status = owner_status_chooser(data['prison'])
         data['processor_id'] = str(uuid.uuid1())
         data['status'] = PAYMENT_STATUS.TAKEN
@@ -152,17 +165,6 @@ def setup_payment(owner_status_chooser, end_date, payment_counter, data):
                 'owner': None,
                 'credited': False
             })
-    elif bool(payment_counter % 5):  # if rejected
-        data['status'] = PAYMENT_STATUS.REJECTED
-    else:
-        data['status'] = PAYMENT_STATUS.PENDING
-
-        del data['cardholder_name']
-        del data['card_number_first_digits']
-        del data['card_number_last_digits']
-        del data['card_expiry_date']
-        del data['card_brand']
-        del data['billing_address']
 
     with MockModelTimestamps(data['created'], data['modified']):
         new_payment = save_payment(data)
@@ -177,11 +179,10 @@ def save_payment(data):
             resolution = CREDIT_RESOLUTION.CREDITED
         else:
             resolution = CREDIT_RESOLUTION.PENDING
+    elif data['status'] in (PAYMENT_STATUS.REJECTED, PAYMENT_STATUS.EXPIRED):
+        resolution = CREDIT_RESOLUTION.FAILED
     else:
-        if data['status'] == PAYMENT_STATUS.REJECTED:
-            resolution = CREDIT_RESOLUTION.FAILED
-        else:
-            resolution = CREDIT_RESOLUTION.INITIAL
+        resolution = CREDIT_RESOLUTION.INITIAL
 
     prisoner_dob = data.pop('prisoner_dob', None)
     prisoner_number = data.pop('prisoner_number', None)

@@ -59,6 +59,7 @@ class Serialiser:
             filters['modified__gte'] = after
         if before:
             filters['modified__lt'] = before
+        # TODO should we include rejected and expired credits as well?
         return self.serialised_model.objects.filter(**filters).order_by('pk').iterator(chunk_size=1000)
 
     def serialise(self, record):

@@ -234,6 +234,28 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         log = Log.objects.first()
         self.assertEqual(log.action, LOG_ACTIONS.FAILED)
 
+    def test_update_status_to_expired_succeeds(self):
+        response = self._test_update_payment(status=PAYMENT_STATUS.EXPIRED)
+
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+        self.assertTrue(response.data['uuid'] is not None)
+
+        # check changes in db
+        self.assertEqual(Payment.objects.count(), 1)
+
+        payment = Payment.objects.first()
+        credit = payment.credit
+
+        self.assertEqual(payment.status, PAYMENT_STATUS.EXPIRED)
+        self.assertEqual(credit.resolution, CREDIT_RESOLUTION.FAILED)
+        self.assertIsNotNone(credit.prison)
+        self.assertIsNotNone(credit.prisoner_name)
+        self.assertIsNone(credit.received_at)
+
+        self.assertEqual(Log.objects.count(), 1)
+        log = Log.objects.first()
+        self.assertEqual(log.action, LOG_ACTIONS.FAILED)
+
     def test_update_received_at_succeeds(self):
         received_at = datetime(2016, 9, 22, 23, 12, tzinfo=timezone.utc)
         response = self._test_update_payment(

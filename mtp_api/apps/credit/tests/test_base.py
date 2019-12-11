@@ -89,11 +89,15 @@ class BaseCreditViewTestCase(AuthTestCaseMixin, APITestCase):
         if logged_in_user.has_perm('credit.view_any_credit'):
             return credits
         else:
-            if (logged_in_user.applicationusermapping_set.first().application.client_id ==
-                    CASHBOOK_OAUTH_CLIENT_ID):
-                credits = [c for c in credits if c.received_at < datetime.combine(
-                    timezone.now().date(), time.min
-                ).replace(tzinfo=timezone.utc)]
+            if (
+                logged_in_user.applicationusermapping_set.first().application.client_id == CASHBOOK_OAUTH_CLIENT_ID
+            ):
+                credits = [
+                    c
+                    for c in credits
+                    if c.received_at
+                    and c.received_at < datetime.combine(timezone.now().date(), time.min).replace(tzinfo=timezone.utc)
+                ]
             managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
             return [c for c in credits if c.prison in managing_prisons]
 

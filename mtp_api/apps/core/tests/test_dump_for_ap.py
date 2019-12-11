@@ -62,7 +62,13 @@ class DumpForAPTestCase(TestCase):
         stdout.seek(0)
         csv_reader = csv.DictReader(stdout)
         credit_ids = sorted(int(record['Internal ID']) for record in csv_reader)
-        completed_payments = Payment.objects.exclude(status=PAYMENT_STATUS.PENDING)
+        completed_payments = Payment.objects.exclude(
+            status__in=(
+                PAYMENT_STATUS.PENDING,
+                PAYMENT_STATUS.REJECTED,
+                PAYMENT_STATUS.EXPIRED,
+            )
+        )
         expected_credit_ids = sorted(payment.credit_id for payment in completed_payments)
         self.assertListEqual(credit_ids, expected_credit_ids)
 

@@ -136,7 +136,7 @@ def update_credit_for_payment(instance, **kwargs):
         instance.credit.save()
 
     if (
-        instance.status == PAYMENT_STATUS.REJECTED and
+        instance.status in (PAYMENT_STATUS.REJECTED, PAYMENT_STATUS.EXPIRED) and
         instance.credit.resolution == CREDIT_RESOLUTION.INITIAL
     ):
         instance.credit.resolution = CREDIT_RESOLUTION.FAILED
