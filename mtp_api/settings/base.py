@@ -198,6 +198,7 @@ EMAIL_BACKEND = 'anymail.backends.mailgun.EmailBackend'
 ANYMAIL = {
     'MAILGUN_API_KEY': os.environ.get('MAILGUN_ACCESS_KEY', ''),
     'MAILGUN_SENDER_DOMAIN': os.environ.get('MAILGUN_SERVER_NAME', ''),
+    'MAILGUN_API_URL': os.environ.get('MAILGUN_API_URL', 'https://api.mailgun.net/v3'),
     'SEND_DEFAULTS': {
         'tags': [APP, ENVIRONMENT],
     },
