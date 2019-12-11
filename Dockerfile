@@ -13,13 +13,13 @@ RUN set -ex; mkdir -p \
 COPY ./requirements requirements
 RUN venv/bin/pip install -r requirements/docker.txt
 
-# add app, build it and switch to www-data
+# add app and build it
 COPY . /app
 RUN set -ex; \
   venv/bin/python run.py --requirements-file requirements/docker.txt build \
   && \
-  chown -R www-data:www-data /app
-USER 33
+  chown -R mtp:mtp /app
+USER 1000
 
 ARG APP_GIT_COMMIT
 ARG APP_GIT_BRANCH
