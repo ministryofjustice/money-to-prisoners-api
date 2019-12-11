@@ -159,6 +159,9 @@ class LogManager(models.Manager):
     def credits_set_manual(self, credits, by_user):
         self._log_action(LOG_ACTIONS.MANUAL, credits, by_user)
 
+    def credits_failed(self, credits):
+        self._log_action(LOG_ACTIONS.FAILED, credits)
+
     def get_action_date(self, action):
         log = self.filter(action=action).order_by('-created').first()
         return log and log.created

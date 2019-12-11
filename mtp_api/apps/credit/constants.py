@@ -36,4 +36,5 @@ LOG_ACTIONS = Choices(
     ('RECONCILED', 'reconciled', _('Reconciled')),
     ('REVIEWED', 'reviewed', _('Reviewed')),
     ('MANUAL', 'manual', _('Marked for manual processing')),
+    ('FAILED', 'failed', _('Failed')),
 )

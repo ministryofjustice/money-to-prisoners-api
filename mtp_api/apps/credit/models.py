@@ -11,12 +11,22 @@ from model_utils.models import TimeStampedModel
 
 from credit.constants import LOG_ACTIONS, CREDIT_RESOLUTION, CREDIT_STATUS, CREDIT_SOURCE
 from credit.managers import (
-    CreditManager, CompletedCreditManager, CreditQuerySet, LogManager, CreditingTimeManager,
+    CompletedCreditManager,
+    CreditingTimeManager,
+    CreditManager,
+    CreditQuerySet,
+    LogManager,
     PrivateEstateBatchManager,
 )
 from credit.signals import (
-    credit_created, credit_credited, credit_refunded, credit_reconciled,
-    credit_prisons_need_updating, credit_reviewed, credit_set_manual
+    credit_created,
+    credit_credited,
+    credit_failed,
+    credit_prisons_need_updating,
+    credit_reconciled,
+    credit_refunded,
+    credit_reviewed,
+    credit_set_manual,
 )
 from prison.models import Prison, PrisonerLocation
 from transaction.utils import format_amount
@@ -427,6 +437,11 @@ def credit_reviewed_receiver(credit, by_user, **kwargs):
 @receiver(credit_set_manual)
 def credit_set_manual_receiver(credit, by_user, **kwargs):
     Log.objects.credits_set_manual([credit], by_user)
+
+
+@receiver(credit_failed)
+def credit_failed_receiver(credit, **kwargs):
+    Log.objects.credits_failed([credit])
 
 
 @receiver(credit_prisons_need_updating)

@@ -8,8 +8,8 @@ from rest_framework import status as http_status
 from rest_framework.test import APITestCase
 
 from core.tests.utils import make_test_users
-from credit.constants import CREDIT_RESOLUTION
-from credit.models import Credit
+from credit.constants import CREDIT_RESOLUTION, LOG_ACTIONS
+from credit.models import Credit, Log
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from payment.models import Batch, BillingAddress, Payment
 from payment.constants import PAYMENT_STATUS
@@ -229,6 +229,10 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertIsNotNone(credit.prison)
         self.assertIsNotNone(credit.prisoner_name)
         self.assertIsNone(credit.received_at)
+
+        self.assertEqual(Log.objects.count(), 1)
+        log = Log.objects.first()
+        self.assertEqual(log.action, LOG_ACTIONS.FAILED)
 
     def test_update_received_at_succeeds(self):
         received_at = datetime(2016, 9, 22, 23, 12, tzinfo=timezone.utc)
