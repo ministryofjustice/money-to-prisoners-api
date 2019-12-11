@@ -125,11 +125,20 @@ class Payment(TimeStampedModel):
 
 @receiver(pre_save, sender=Payment, dispatch_uid='update_credit_for_payment')
 def update_credit_for_payment(instance, **kwargs):
-    if (instance.status == PAYMENT_STATUS.TAKEN and
-            instance.credit.resolution == CREDIT_RESOLUTION.INITIAL):
+    if (
+        instance.status == PAYMENT_STATUS.TAKEN and
+        instance.credit.resolution == CREDIT_RESOLUTION.INITIAL
+    ):
         if instance.credit.received_at is None:
             instance.credit.received_at = timezone.now()
         instance.credit.resolution = CREDIT_RESOLUTION.PENDING
+        instance.credit.save()
+
+    if (
+        instance.status == PAYMENT_STATUS.REJECTED and
+        instance.credit.resolution == CREDIT_RESOLUTION.INITIAL
+    ):
+        instance.credit.resolution = CREDIT_RESOLUTION.FAILED
         instance.credit.save()
 
 

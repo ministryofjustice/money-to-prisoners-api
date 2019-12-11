@@ -135,11 +135,10 @@ def create_payments(data_list, consistent_history=False):
 
 
 def setup_payment(owner_status_chooser, end_date, payment_counter, data):
-    complete = bool(payment_counter % 10)
     older_than_yesterday = (
         data['created'].date() < (end_date.date() - datetime.timedelta(days=1))
     )
-    if complete:
+    if bool(payment_counter % 10):  # if taken
         owner, status = owner_status_chooser(data['prison'])
         data['processor_id'] = str(uuid.uuid1())
         data['status'] = PAYMENT_STATUS.TAKEN
@@ -153,21 +152,17 @@ def setup_payment(owner_status_chooser, end_date, payment_counter, data):
                 'owner': None,
                 'credited': False
             })
-
+    elif bool(payment_counter % 5):  # if rejected
+        data['status'] = PAYMENT_STATUS.REJECTED
     else:
         data['status'] = PAYMENT_STATUS.PENDING
 
-        failed = bool(payment_counter % 5)
-
-        if failed:
-            data['failed'] = True
-        else:
-            del data['cardholder_name']
-            del data['card_number_first_digits']
-            del data['card_number_last_digits']
-            del data['card_expiry_date']
-            del data['card_brand']
-            del data['billing_address']
+        del data['cardholder_name']
+        del data['card_number_first_digits']
+        del data['card_number_last_digits']
+        del data['card_expiry_date']
+        del data['card_brand']
+        del data['billing_address']
 
     with MockModelTimestamps(data['created'], data['modified']):
         new_payment = save_payment(data)
@@ -183,7 +178,7 @@ def save_payment(data):
         else:
             resolution = CREDIT_RESOLUTION.PENDING
     else:
-        if data.pop('failed', None):
+        if data['status'] == PAYMENT_STATUS.REJECTED:
             resolution = CREDIT_RESOLUTION.FAILED
         else:
             resolution = CREDIT_RESOLUTION.INITIAL
