@@ -186,7 +186,7 @@ class CreditReport(DashboardModule):
 
     def get_received_queryset(self):
         # NB: includes only non-administrative bank transfers and debit card payments that are in progress or completed
-        return self.credit_queryset.exclude(resolution=CREDIT_RESOLUTION.INITIAL)
+        return self.credit_queryset.exclude(resolution__in=(CREDIT_RESOLUTION.INITIAL, CREDIT_RESOLUTION.FAILED))
 
     def get_received_transaction_queryset(self):
         return self.get_received_queryset().filter(transaction__isnull=False)

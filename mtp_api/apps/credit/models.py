@@ -11,12 +11,22 @@ from model_utils.models import TimeStampedModel
 
 from credit.constants import LOG_ACTIONS, CREDIT_RESOLUTION, CREDIT_STATUS, CREDIT_SOURCE
 from credit.managers import (
-    CreditManager, CompletedCreditManager, CreditQuerySet, LogManager, CreditingTimeManager,
+    CompletedCreditManager,
+    CreditingTimeManager,
+    CreditManager,
+    CreditQuerySet,
+    LogManager,
     PrivateEstateBatchManager,
 )
 from credit.signals import (
-    credit_created, credit_credited, credit_refunded, credit_reconciled,
-    credit_prisons_need_updating, credit_reviewed, credit_set_manual
+    credit_created,
+    credit_credited,
+    credit_failed,
+    credit_prisons_need_updating,
+    credit_reconciled,
+    credit_refunded,
+    credit_reviewed,
+    credit_set_manual,
 )
 from prison.models import Prison, PrisonerLocation
 from transaction.utils import format_amount
@@ -74,6 +84,9 @@ class Credit(TimeStampedModel):
                 Q(transaction__isnull=True) |
                 Q(transaction__incomplete_sender_info=False)
             )
+        ),
+        CREDIT_STATUS.FAILED: (
+            Q(resolution=CREDIT_RESOLUTION.FAILED)
         ),
     }
 
@@ -159,6 +172,10 @@ class Credit(TimeStampedModel):
         return self.resolution == CREDIT_RESOLUTION.REFUNDED
 
     @property
+    def failed(self):
+        return self.resolution == CREDIT_RESOLUTION.FAILED
+
+    @property
     def refund_pending(self):
         return (
             (self.prison is None or self.blocked) and
@@ -179,6 +196,8 @@ class Credit(TimeStampedModel):
             return CREDIT_STATUS.REFUND_PENDING
         elif self.refunded:
             return CREDIT_STATUS.REFUNDED
+        elif self.failed:
+            return CREDIT_STATUS.FAILED
 
     @property
     def owner_name(self):
@@ -418,6 +437,11 @@ def credit_reviewed_receiver(credit, by_user, **kwargs):
 @receiver(credit_set_manual)
 def credit_set_manual_receiver(credit, by_user, **kwargs):
     Log.objects.credits_set_manual([credit], by_user)
+
+
+@receiver(credit_failed)
+def credit_failed_receiver(credit, **kwargs):
+    Log.objects.credits_failed([credit])
 
 
 @receiver(credit_prisons_need_updating)

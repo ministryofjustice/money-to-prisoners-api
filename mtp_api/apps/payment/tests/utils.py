@@ -135,11 +135,10 @@ def create_payments(data_list, consistent_history=False):
 
 
 def setup_payment(owner_status_chooser, end_date, payment_counter, data):
-    complete = bool(payment_counter % 10)
     older_than_yesterday = (
         data['created'].date() < (end_date.date() - datetime.timedelta(days=1))
     )
-    if complete:
+    if bool(payment_counter % 10):  # if taken
         owner, status = owner_status_chooser(data['prison'])
         data['processor_id'] = str(uuid.uuid1())
         data['status'] = PAYMENT_STATUS.TAKEN
@@ -153,9 +152,11 @@ def setup_payment(owner_status_chooser, end_date, payment_counter, data):
                 'owner': None,
                 'credited': False
             })
-
+    elif bool(payment_counter % 5):  # if rejected
+        data['status'] = PAYMENT_STATUS.REJECTED
     else:
         data['status'] = PAYMENT_STATUS.PENDING
+
         del data['cardholder_name']
         del data['card_number_first_digits']
         del data['card_number_last_digits']
@@ -170,13 +171,17 @@ def setup_payment(owner_status_chooser, end_date, payment_counter, data):
 
 
 def save_payment(data):
-    if data['status'] == PAYMENT_STATUS.TAKEN:
+    is_taken = data['status'] == PAYMENT_STATUS.TAKEN
+    if is_taken:
         if data.pop('credited', False):
             resolution = CREDIT_RESOLUTION.CREDITED
         else:
             resolution = CREDIT_RESOLUTION.PENDING
     else:
-        resolution = CREDIT_RESOLUTION.INITIAL
+        if data['status'] == PAYMENT_STATUS.REJECTED:
+            resolution = CREDIT_RESOLUTION.FAILED
+        else:
+            resolution = CREDIT_RESOLUTION.INITIAL
 
     prisoner_dob = data.pop('prisoner_dob', None)
     prisoner_number = data.pop('prisoner_number', None)
@@ -198,10 +203,10 @@ def save_payment(data):
         single_offender_id=single_offender_id,
         prisoner_name=prisoner_name,
         prison=prison,
-        reconciled=reconciled,
+        reconciled=False if not is_taken else reconciled,
         owner=owner,
-        received_at=data['created'],
-        resolution=resolution
+        received_at=None if not is_taken else data['created'],
+        resolution=resolution,
     )
     credit.save()
     data['credit'] = credit

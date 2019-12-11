@@ -10,6 +10,7 @@ from model_utils.models import TimeStampedModel
 
 from credit.constants import CREDIT_RESOLUTION
 from credit.models import Credit
+from credit.signals import credit_failed
 from payment.constants import PAYMENT_STATUS
 from payment.managers import PaymentManager
 from security.models import Check
@@ -125,12 +126,26 @@ class Payment(TimeStampedModel):
 
 @receiver(pre_save, sender=Payment, dispatch_uid='update_credit_for_payment')
 def update_credit_for_payment(instance, **kwargs):
-    if (instance.status == PAYMENT_STATUS.TAKEN and
-            instance.credit.resolution == CREDIT_RESOLUTION.INITIAL):
+    if (
+        instance.status == PAYMENT_STATUS.TAKEN and
+        instance.credit.resolution == CREDIT_RESOLUTION.INITIAL
+    ):
         if instance.credit.received_at is None:
             instance.credit.received_at = timezone.now()
         instance.credit.resolution = CREDIT_RESOLUTION.PENDING
         instance.credit.save()
+
+    if (
+        instance.status == PAYMENT_STATUS.REJECTED and
+        instance.credit.resolution == CREDIT_RESOLUTION.INITIAL
+    ):
+        instance.credit.resolution = CREDIT_RESOLUTION.FAILED
+        instance.credit.save()
+
+        credit_failed.send(
+            sender=Credit,
+            credit=instance.credit,
+        )
 
 
 @receiver(post_save, sender=Payment, dispatch_uid='create_check_if_needed')
