@@ -124,7 +124,10 @@ class CreditListTestCase(
         expected_ids = [
             c.pk
             for c in credits
-            if c.resolution != 'initial' and
+            if c.resolution not in (
+                CREDIT_RESOLUTION.INITIAL,
+                CREDIT_RESOLUTION.FAILED,
+            ) and
             status_checker(c) and
             prison_checker(c) and
             user_checker(c) and

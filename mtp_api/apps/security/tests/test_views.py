@@ -1,6 +1,6 @@
 import datetime
 from collections import defaultdict
-from itertools import chain, cycle
+from itertools import chain
 from unittest import mock
 
 from django.core.management import call_command
@@ -807,18 +807,27 @@ class BaseCheckTestCase(APITestCase, AuthTestCaseMixin):
                 description='Failed rules',
             )
 
-        # create an accepted or rejected check for each credit in other state
-        status = cycle((CHECK_STATUS.ACCEPTED, CHECK_STATUS.REJECTED))
-        for credit in Credit.objects.all():
+        for credit in Credit.objects_all.filter(resolution=CREDIT_RESOLUTION.FAILED):
             mommy.make(
                 Check,
                 credit=credit,
-                status=status,
+                status=CHECK_STATUS.REJECTED,
                 rules=['ABC', 'DEF'],
                 description='Failed rules',
                 actioned_at=now(),
                 actioned_by=self.security_fiu_users[0],
-                rejection_reason='because...' if status == CHECK_STATUS.REJECTED else '',
+                rejection_reason='because...',
+            )
+
+        for credit in Credit.objects.all():
+            mommy.make(
+                Check,
+                credit=credit,
+                status=CHECK_STATUS.ACCEPTED,
+                rules=['ABC', 'DEF'],
+                description='Failed rules',
+                actioned_at=now(),
+                actioned_by=self.security_fiu_users[0],
             )
 
     def _get_unauthorised_application_user(self):
