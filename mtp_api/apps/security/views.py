@@ -176,7 +176,7 @@ class SenderProfileView(
     ordering_fields = (
         'prisoner_count', 'prison_count', 'credit_count', 'credit_total',
     )
-    default_ordering = ('-prisoner_count',)
+    ordering = ('-prisoner_count',)
 
     permission_classes = (
         IsAuthenticated, SecurityProfilePermissions, NomsOpsClientIDPermissions
@@ -293,7 +293,7 @@ class PrisonerProfileView(
         'prisoner_name',
         'prisoner_number',
     )
-    default_ordering = ('-sender_count',)
+    ordering = ('-sender_count',)
 
     permission_classes = (
         IsAuthenticated, SecurityProfilePermissions, NomsOpsClientIDPermissions
@@ -407,7 +407,7 @@ class RecipientProfileView(
     ordering_fields = (
         'prisoner_count', 'prison_count', 'disbursement_count', 'disbursement_total',
     )
-    default_ordering = ('-prisoner_count',)
+    ordering = ('-prisoner_count',)
 
     permission_classes = (
         IsAuthenticated, SecurityProfilePermissions, NomsOpsClientIDPermissions
@@ -508,10 +508,11 @@ class CheckView(
     viewsets.GenericViewSet,
 ):
     queryset = Check.objects.all()
-    filter_backends = (DjangoFilterBackend,)
+    filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
     filter_class = CheckListFilter
     serializer_class = CheckSerializer
-    default_ordering = ('-created',)
+    ordering_fields = ('created',)
+    ordering = ('created',)
 
     permission_classes = (
         IsAuthenticated,
