@@ -494,6 +494,9 @@ class CheckListFilter(django_filters.FilterSet):
     prisoner_number = django_filters.CharFilter(
         field_name='credit__prisoner_number', lookup_expr='exact',
     )
+    credit_resolution = django_filters.CharFilter(
+        field_name='credit__resolution', lookup_expr='exact',
+    )
 
     class Meta:
         model = Check

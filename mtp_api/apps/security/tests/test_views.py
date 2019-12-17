@@ -1051,6 +1051,31 @@ class CheckListTestCase(BaseCheckTestCase):
             check_count - 1
         )
 
+    def test_check_filtering_by_credit_resolution(self):
+        """
+        Test that the list endpoint can filter by credit resolution.
+        """
+        # change one check.credit to test that it shouldn't get included in the response
+        check = Check.objects.filter(status=CHECK_STATUS.PENDING).first()
+        check.credit.resolution = CREDIT_RESOLUTION.FAILED
+        check.credit.save()
+
+        auth = self.get_http_authorization_for_user(self._get_authorised_user())
+        response = self.client.get(
+            reverse('security-check-list'),
+            {
+                'credit_resolution': CREDIT_RESOLUTION.INITIAL,
+            },
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+        self.assertEqual(
+            response.json()['count'],
+            Check.objects.filter(status=CHECK_STATUS.PENDING).count() - 1,
+        )
+
 
 class GetCheckTestCase(BaseCheckTestCase):
     """
