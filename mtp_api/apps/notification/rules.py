@@ -1,9 +1,11 @@
 import datetime
+import unicodedata
 
 from django.db.transaction import atomic
 from django.utils import timezone
 from django.utils.functional import cached_property
 
+from core import getattr_path
 from credit.models import Credit
 from disbursement.models import Disbursement
 from notification.models import (
@@ -104,6 +106,32 @@ class HighAmountRule(BaseRule):
 
     def triggered(self, record) -> Triggered:
         return Triggered(record.amount >= self.kwargs['limit'], amount=record.amount)
+
+
+class ContainsSymbols(BaseRule):
+    CATEGORIES = {
+        'Sc', 'Sk', 'Sm', 'So',
+        'Cn', 'Co', 'Cs',
+    }
+
+    def __init__(self, *args, record_attr_path, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.record_attr_path = record_attr_path
+
+    def triggered(self, record) -> Triggered:
+        value = getattr_path(record, self.record_attr_path, None)
+        if not value:
+            contains_symbols = False
+        else:
+            contains_symbols = self.contains_symbols(value)
+        return Triggered(contains_symbols)
+
+    def contains_symbols(self, text):
+        for char in text:
+            category = unicodedata.category(char)
+            if category in self.CATEGORIES:
+                return True
+        return False
 
 
 class MonitoredRule(BaseRule):
@@ -246,6 +274,13 @@ RULES = {
         description='Credits or disbursements over {display_limit}',
         abbr_description='high amount',
         limit=12000,
+    ),
+    'CSYM': ContainsSymbols(
+        'CSYM',
+        description='Credits from debit cards or bank accounts with symbols in their name',
+        abbr_description='symbols',
+        applies_to_models=(Credit,),
+        record_attr_path='sender_name',
     ),
     'CSFREQ': CountingRule(
         'CSFREQ',
