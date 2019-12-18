@@ -66,6 +66,7 @@ class PaymentSerializer(serializers.ModelSerializer):
             'card_brand',
             'ip_address',
             'billing_address',
+            'created',
             'modified',
             'security_check',
         )
