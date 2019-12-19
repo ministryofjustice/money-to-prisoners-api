@@ -555,3 +555,43 @@ class CountingRuleTestCase(TestCase):
         disbursement_list = make_dpnum_disbursements(self.today, self.cheque_recipient, rule.kwargs['limit'] + 1)
         latest_disbursement = disbursement_list[0]
         self.assertFalse(rule.triggered(latest_disbursement))
+
+
+class ContainsSymbolsTestCase(TestCase):
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
+
+    def setUp(self):
+        super().setUp()
+        make_test_users(clerks_per_prison=1)
+        load_random_prisoner_locations(number_of_prisoners=1)
+        generate_transactions(transaction_batch=1)
+        generate_payments(payment_batch=1)
+
+    def test_credits_with_symbols(self):
+        rule = RULES['CSYM']
+
+        name_with_symbols = 'James ❤️ Halls'
+        for transaction in Transaction.objects.all():
+            transaction.sender_name = name_with_symbols
+            transaction.save()
+        for payment in Payment.objects.all():
+            payment.cardholder_name = name_with_symbols
+            payment.save()
+        for credit in Credit.objects.all():
+            self.assertTrue(
+                rule.triggered(credit),
+                msg=f'Credit from {credit.sender_name} should trigger',
+            )
+
+        name_without_symbols = 'James-Halls'  # simple punctation is allowed
+        for transaction in Transaction.objects.all():
+            transaction.sender_name = name_without_symbols
+            transaction.save()
+        for payment in Payment.objects.all():
+            payment.cardholder_name = name_without_symbols
+            payment.save()
+        for credit in Credit.objects.all():
+            self.assertFalse(
+                rule.triggered(credit),
+                msg=f'Credit from {credit.sender_name} should not trigger',
+            )
