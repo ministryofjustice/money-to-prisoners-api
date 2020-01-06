@@ -9,7 +9,7 @@ from core.admin import add_short_description
 from security.models import (
     BankTransferRecipientDetails,
     BankTransferSenderDetails,
-    Check,
+    Check, CHECK_STATUS,
     DebitCardSenderDetails,
     PrisonerProfile,
     RecipientProfile,
@@ -157,14 +157,6 @@ class SavedSearchAdmin(admin.ModelAdmin):
 @admin.register(Check)
 class CheckAdmin(admin.ModelAdmin):
     ordering = ('-created',)
-    list_select_related = ('credit',)
-    search_fields = (
-        'credit__prisoner_name',
-        'credit__prisoner_number',
-    )
-
-    exclude = ('credit',)
-    readonly_fields = ('credit_link',)
     list_display = (
         'created',
         'prisoner_name',
@@ -176,6 +168,15 @@ class CheckAdmin(admin.ModelAdmin):
     list_filter = (
         'status',
     )
+    search_fields = (
+        'credit__prisoner_name',
+        'credit__prisoner_number',
+    )
+    date_hierarchy = 'created'
+    list_select_related = ('credit',)
+    exclude = ('credit',)
+    readonly_fields = ('credit_link',)
+    actions = ['display_stats']
 
     @add_short_description(_('credit'))
     def credit_link(self, instance):
@@ -193,3 +194,14 @@ class CheckAdmin(admin.ModelAdmin):
 
     def prisoner_number(self, obj):
         return obj.credit.prisoner_number
+
+    @add_short_description(_('Display stats'))
+    def display_stats(self, request, queryset):
+        self.message_user(request, gettext(
+            'FIU have accepted %(accepted_count)s and rejected %(rejected_count)s credits, '
+            'with %(pending_count)s still pending.'
+        ) % {
+            'accepted_count': queryset.filter(status=CHECK_STATUS.ACCEPTED, actioned_by__isnull=False).count(),
+            'rejected_count': queryset.filter(status=CHECK_STATUS.REJECTED).count(),
+            'pending_count': queryset.filter(status=CHECK_STATUS.PENDING).count(),
+        })
