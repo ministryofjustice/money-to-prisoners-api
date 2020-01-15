@@ -161,12 +161,12 @@ class MonitoredRule(BaseRule):
 
 
 class CountingRule(BaseRule):
-    def __init__(self, *args, profile, count, limit, **kwargs):
+    def __init__(self, *args, profile, count, limit, days, **kwargs):
         """
-        Counts a field (`count`) on records of the same type on related `profile` over the past 4 weeks.
+        Counts a field (`count`) on records of the same type on related `profile` over the past n days.
         If count exceeds `limit`, rule is triggered.
         """
-        super().__init__(*args, profile=profile, count=count, limit=limit, **kwargs)
+        super().__init__(*args, profile=profile, count=count, limit=limit, days=days, **kwargs)
         self.description = self.description.format(limit=limit)
 
     @cached_property
@@ -209,7 +209,7 @@ class CountingRule(BaseRule):
         # make 4 week period include whole days at the boundaries in local time
         period_end = timezone.localtime(period_end) + datetime.timedelta(days=1)
         period_end = period_end.replace(hour=0, minute=0, second=0, microsecond=0)
-        period_start = period_end - datetime.timedelta(days=29)
+        period_start = period_end - datetime.timedelta(days=self.kwargs['days'])
 
         if isinstance(record, Credit):
             return profile.credits.filter(received_at__gte=period_start, received_at__lt=period_end)
@@ -284,12 +284,13 @@ RULES = {
     ),
     'CSFREQ': CountingRule(
         'CSFREQ',
-        description='More than {limit} credits from the same debit card or bank account to any prisoner in 4 weeks',
+        description='More than {limit} credits from the same debit card or bank account to any prisoner in a week',
         abbr_description='freq. source',
         applies_to_models=(Credit,),
         profile='sender_profile',
         count='pk',
-        limit=4,
+        limit=3,
+        days=8,
     ),
     'DRFREQ': CountingRule(
         'DRFREQ',
@@ -299,15 +300,17 @@ RULES = {
         profile='recipient_profile',
         count='pk',
         limit=4,
+        days=29,
     ),
     'CSNUM': CountingRule(
         'CSNUM',
-        description='A prisoner getting money from more than {limit} debit cards or bank accounts in 4 weeks',
+        description='A prisoner getting money from more than {limit} debit cards or bank accounts in a week',
         abbr_description='many senders',
         applies_to_models=(Credit,),
         profile='prisoner_profile',
         count='sender_profile',
-        limit=4,
+        limit=3,
+        days=8,
     ),
     'DRNUM': CountingRule(
         'DRNUM',
@@ -317,15 +320,17 @@ RULES = {
         profile='prisoner_profile',
         count='recipient_profile',
         limit=4,
+        days=29,
     ),
     'CPNUM': CountingRule(
         'CPNUM',
-        description='A debit card or bank account sending money to more than {limit} prisoners in 4 weeks',
+        description='A debit card or bank account sending money to more than {limit} prisoners in a week',
         abbr_description='many prisoners',
         applies_to_models=(Credit,),
         profile='sender_profile',
         count='prisoner_profile',
-        limit=4,
+        limit=3,
+        days=8,
     ),
     'DPNUM': CountingRule(
         'DPNUM',
@@ -335,5 +340,6 @@ RULES = {
         profile='recipient_profile',
         count='prisoner_profile',
         limit=4,
+        days=29,
     ),
 }

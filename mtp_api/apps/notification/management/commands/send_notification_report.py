@@ -167,9 +167,9 @@ The ‘Monitored by’ column that appears in some sheets is the number of users
 who are monitoring that prisoner or payment source.
 
 The ‘How many?’ column that appears in some sheets is the number that triggered
-the rule in column A. For example, if the ‘How many?’ column says 6 for the rule
-‘More than 4 credits from the same debit card or bank account to any prisoner in 4 weeks’,
-then this means that a specific debit card or bank account got 6 credits in 4 weeks
+the rule in column A. For example, if the ‘How many?’ column says 4 for the rule
+‘More than 2 credits from the same debit card or bank account to any prisoner in a week’,
+then this means that a specific debit card or bank account sent 4 credits in a week
 up to when that credit was sent.
 
 If you have any queries, contact the team at {settings.TEAM_EMAIL}.
