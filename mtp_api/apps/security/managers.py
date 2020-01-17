@@ -344,7 +344,7 @@ class RecipientProfileQuerySet(models.QuerySet):
 
 
 class CheckManager(models.Manager):
-    ENABLED_RULE_CODES = ('FIUMONP', 'FIUMONS')
+    ENABLED_RULE_CODES = ('FIUMONP', 'FIUMONS', 'CSFREQ', 'CSNUM', 'CPNUM')
 
     def should_check_credit(self, credit):
         from credit.constants import CREDIT_RESOLUTION
@@ -378,6 +378,7 @@ class CheckManager(models.Manager):
         )
 
     def create_for_credit(self, credit):
+        from notification.rules import RULES
         from security.constants import CHECK_STATUS
 
         temporary_profiles = self._attach_profiles(credit)
@@ -386,8 +387,10 @@ class CheckManager(models.Manager):
             setattr(credit, field, None)
 
         if matched_rule_codes:
-            # TODO: description will need update when more rules added
-            description = 'Credit matched FIU monitoring rules'
+            description = (
+                'Credit matched: ' +
+                '. '.join(RULES[rule_code].description for rule_code in matched_rule_codes)
+            )
             status = CHECK_STATUS.PENDING
         else:
             description = 'Credit matched no rules and was automatically accepted'
