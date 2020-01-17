@@ -7,7 +7,7 @@ from django.core.exceptions import ValidationError
 from django.core.management import call_command
 from django.test import TestCase
 from django.urls import reverse
-from django.utils.timezone import make_aware
+from django.utils import timezone
 from model_mommy import mommy
 from rest_framework.test import APITestCase
 
@@ -15,6 +15,11 @@ from core.tests.utils import make_test_users
 from credit.models import Credit, CREDIT_RESOLUTION, LOG_ACTIONS as CREDIT_LOG_ACTIONS
 from mtp_auth.tests.mommy_recipes import basic_user
 from mtp_auth.tests.utils import AuthTestCaseMixin
+from notification.rules import RULES
+from notification.tests.utils import (
+    make_sender, make_prisoner,
+    make_csfreq_credits, make_csnum_credits, make_cpnum_credits,
+)
 from payment.models import Payment, PAYMENT_STATUS
 from payment.tests.utils import generate_payments
 from prison.tests.utils import load_random_prisoner_locations
@@ -37,7 +42,7 @@ class CheckTestCase(TestCase):
         """
         Test that a pending check can be accepted.
         """
-        mocked_now.return_value = make_aware(datetime.datetime(2019, 1, 1))
+        mocked_now.return_value = timezone.make_aware(datetime.datetime(2019, 1, 1))
 
         user = basic_user.make()
         check = mommy.make(
@@ -59,7 +64,7 @@ class CheckTestCase(TestCase):
         """
         Test that accepting an already accepted check doesn't do anything.
         """
-        mocked_now.return_value = make_aware(datetime.datetime(2019, 1, 1))
+        mocked_now.return_value = timezone.make_aware(datetime.datetime(2019, 1, 1))
 
         existing_check_user, user = basic_user.make(_quantity=2)
         check = mommy.make(
@@ -81,7 +86,7 @@ class CheckTestCase(TestCase):
         """
         Test that accepting a rejected check raises ValidationError.
         """
-        mocked_now.return_value = make_aware(datetime.datetime(2019, 1, 1))
+        mocked_now.return_value = timezone.make_aware(datetime.datetime(2019, 1, 1))
 
         existing_check_user, user = basic_user.make(_quantity=2)
         check = mommy.make(
@@ -105,7 +110,7 @@ class CheckTestCase(TestCase):
         """
         Test that a pending check can be rejected.
         """
-        mocked_now.return_value = make_aware(datetime.datetime(2019, 1, 1))
+        mocked_now.return_value = timezone.make_aware(datetime.datetime(2019, 1, 1))
 
         user = basic_user.make()
         check = mommy.make(
@@ -129,7 +134,7 @@ class CheckTestCase(TestCase):
         """
         Test that rejected an already rejected check doesn't do anything.
         """
-        mocked_now.return_value = make_aware(datetime.datetime(2019, 1, 1))
+        mocked_now.return_value = timezone.make_aware(datetime.datetime(2019, 1, 1))
 
         existing_check_user, user = basic_user.make(_quantity=2)
         check = mommy.make(
@@ -174,7 +179,7 @@ class CheckTestCase(TestCase):
         """
         Test that rejecting an accepted check raises ValidationError.
         """
-        mocked_now.return_value = make_aware(datetime.datetime(2019, 1, 1))
+        mocked_now.return_value = timezone.make_aware(datetime.datetime(2019, 1, 1))
 
         existing_check_user, user = basic_user.make(_quantity=2)
         check = mommy.make(
@@ -285,7 +290,8 @@ class CreditCheckTestCase(TestCase):
         self.assertTrue(Check.objects.should_check_credit(credit))
         check = Check.objects.create_for_credit(credit)
         self.assertEqual(check.status, CHECK_STATUS.PENDING)
-        self.assertIn('matched FIU monitoring rules', check.description)
+        self.assertIn('FIU prisoners', check.description)
+        self.assertIn('FIU payment sources', check.description)
         self.assertListEqual(sorted(check.rules), ['FIUMONP', 'FIUMONS'])
 
     def test_credit_with_profiles_checked_with_matched_rules(self):
@@ -301,8 +307,34 @@ class CreditCheckTestCase(TestCase):
         self.assertTrue(Check.objects.should_check_credit(credit))
         check = Check.objects.create_for_credit(credit)
         self.assertEqual(check.status, CHECK_STATUS.PENDING)
-        self.assertIn('matched FIU monitoring rules', check.description)
+        self.assertIn('FIU prisoners', check.description)
+        self.assertIn('FIU payment sources', check.description)
         self.assertListEqual(sorted(check.rules), ['FIUMONP', 'FIUMONS'])
+
+    def test_credit_with_matched_csfreq_rule(self):
+        rule = RULES['CSFREQ']
+        count = rule.kwargs['limit'] + 1
+        credit_list = make_csfreq_credits(timezone.now(), make_sender(), count)
+        credit = credit_list[0]
+        check = Check.objects.create_for_credit(credit)
+        self.assertListEqual(check.rules, ['CSFREQ'])
+
+    def test_credit_with_matched_csnum_rule(self):
+        rule = RULES['CSNUM']
+        count = rule.kwargs['limit'] + 1
+        credit_list = make_csnum_credits(timezone.now(), make_prisoner(), count)
+        credit = credit_list[0]
+        check = Check.objects.create_for_credit(credit)
+        self.assertListEqual(check.rules, ['CSNUM'])
+
+    def test_credit_with_matched_cpnum_rule(self):
+        rule = RULES['CPNUM']
+        count = rule.kwargs['limit'] + 1
+        credit_list = make_cpnum_credits(timezone.now(), make_sender(), count)
+        credit = credit_list[0]
+        check = Check.objects.create_for_credit(credit)
+        # credits matching CPNUM will always CSFREQ currently
+        self.assertListEqual(sorted(check.rules), ['CPNUM', 'CSFREQ'])
 
 
 class AutomaticCreditCheckTestCase(APITestCase, AuthTestCaseMixin):
