@@ -68,6 +68,7 @@ class Serialiser:
 
 class CreditSerialiser(Serialiser, serialised_model=Credit):
     headers = Serialiser.headers + [
+        'Exported at',
         'Internal ID',
         'URL',
         'Date started',
@@ -96,7 +97,12 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
         'Status',
         'NOMIS transaction',
         'WorldPay order code',
+        'Security check status',
+        'Security check codes',
     ]
+
+    def __init__(self):
+        self.exported_at_local_time = timezone.now()
 
     def serialise(self, record: Credit):
         status = record.status
@@ -104,7 +110,9 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
             status = CREDIT_STATUS.for_value(status).display
         else:
             status = 'Anonymous'
+
         row = {
+            'Exported at': self.exported_at_local_time,
             'Internal ID': record.id,
             'URL': f'{settings.NOMS_OPS_URL}/security/credits/{record.id}/',
             'Date received': record.received_at,
@@ -117,6 +125,8 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
             'Blocked': record.blocked,
             'Status': status,
             'NOMIS transaction': record.nomis_transaction_id,
+            'Security check status': security_check_status,
+            'Security check codes': security_check_rules,
             **self.serialise_sender(record)
         }
         return row
@@ -160,6 +170,7 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
 
 class DisbursementSerialiser(Serialiser, serialised_model=Disbursement):
     headers = Serialiser.headers + [
+        'Exported at',
         'Internal ID',
         'URL',
         'Date entered',
@@ -186,8 +197,12 @@ class DisbursementSerialiser(Serialiser, serialised_model=Disbursement):
         'SOP invoice number',
     ]
 
+    def __init__(self):
+        self.exported_at_local_time = timezone.now()
+
     def serialise(self, record: Disbursement):
         return {
+            'Exported at': self.exported_at_local_time,
             'Internal ID': record.id,
             'URL': f'{settings.NOMS_OPS_URL}/security/disbursements/{record.id}/',
             'Date entered': record.created,
