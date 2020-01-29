@@ -85,7 +85,8 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
         'Bank transfer sort code',
         'Bank transfer account',
         'Bank transfer roll number',
-        'Debit card number',
+        'Debit card first six digits',
+        'Debit card last four digits',
         'Debit card expiry',
         'Debit card billing address line 1',
         'Debit card billing address line 2',
@@ -148,9 +149,8 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
                 'Date started': payment.created,
                 'Payment method': 'Debit card',
                 'Sender name': payment.cardholder_name,
-                'Debit card number': (
-                    f'{payment.card_number_first_digits or "******"}******{payment.card_number_last_digits}'
-                ),
+                'Debit card first six digits': payment.card_number_first_digits or 'Unknown',
+                'Debit card last four digits': payment.card_number_last_digits,
                 'Debit card expiry': payment.card_expiry_date,
                 'Debit card billing address line 1': payment.billing_address.line1,
                 'Debit card billing address line 2': payment.billing_address.line2,
