@@ -34,6 +34,8 @@ class Command(BaseCommand):
         if after and before and before <= after:
             raise CommandError('"--before" must be after "--after"')
 
+        exported_at_local_time = timezone.now()
+
         record_type = options['type']
         serialiser: Serialiser = Serialiser.serialisers[record_type]()
         writer = csv.DictWriter(options['path'], serialiser.headers)
@@ -96,7 +98,10 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
         'Status',
         'NOMIS transaction',
         'WorldPay order code',
+        'Exported at',
     ]
+
+    exported_at_local_time = timezone.now()
 
     def serialise(self, record: Credit):
         status = record.status
@@ -104,6 +109,7 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
             status = CREDIT_STATUS.for_value(status).display
         else:
             status = 'Anonymous'
+
         row = {
             'Internal ID': record.id,
             'URL': f'{settings.NOMS_OPS_URL}/security/credits/{record.id}/',
@@ -117,6 +123,7 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
             'Blocked': record.blocked,
             'Status': status,
             'NOMIS transaction': record.nomis_transaction_id,
+            'Exported at': self.exported_at_local_time,
             **self.serialise_sender(record)
         }
         return row
@@ -184,7 +191,9 @@ class DisbursementSerialiser(Serialiser, serialised_model=Disbursement):
         'Status',
         'NOMIS transaction',
         'SOP invoice number',
+        'Exported at',
     ]
+    exported_at_local_time = timezone.now()
 
     def serialise(self, record: Disbursement):
         return {
@@ -212,6 +221,7 @@ class DisbursementSerialiser(Serialiser, serialised_model=Disbursement):
             'Status': DISBURSEMENT_RESOLUTION.for_value(record.resolution).display,
             'NOMIS transaction': record.nomis_transaction_id,
             'SOP invoice number': record.invoice_number,
+            'Exported at': self.exported_at_local_time,
         }
 
 
