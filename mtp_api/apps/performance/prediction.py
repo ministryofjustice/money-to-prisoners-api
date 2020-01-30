@@ -24,7 +24,7 @@ class Curve:
         path = os.path.join(os.path.dirname(__file__), 'predicted-curves', key + '.pickle')
         if os.path.exists(path):
             with open(path, 'rb') as f:
-                self.params = np.load(f)
+                self.params = np.load(f, allow_pickle=True)
         else:
             self.params = default_params
 
