@@ -70,11 +70,11 @@ class Logarithmic(Curve):
 known_curves = {
     'accurate_credits_by_mtp': {
         'curve': Logarithmic,
-        'defaults': np.array([13172.569034617629, 7.367266511948048, 6.162053008237821], dtype='float64')
+        'defaults': np.array([109004.08604805294, 0.022066612129535555, 1.4388566286122846], dtype='float64')
     },
     'extrapolated_credits_by_post': {
         'curve': Hyperbolic,
-        'defaults': np.array([638691.206324438, 10.794945675794787], dtype='float64'),
+        'defaults': np.array([643780.2110964314, 10.94346160603355], dtype='float64'),
     },
 }
 
