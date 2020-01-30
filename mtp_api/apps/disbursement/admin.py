@@ -40,6 +40,7 @@ class DisbursementAdmin(admin.ModelAdmin):
         'prison',
         'recipient_is_company',
     )
+    ordering = ('-created',)
     search_fields = ('prisoner_name', 'prisoner_number', 'recipient_first_name', 'recipient_last_name')
     inlines = (LogAdminInline, CommentAdminInline,)
     date_hierarchy = 'created'
