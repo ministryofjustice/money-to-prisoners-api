@@ -13,6 +13,7 @@ from credit.models import Credit, LOG_ACTIONS as CREDIT_LOG_ACTIONS
 from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION
 from disbursement.models import Disbursement, LOG_ACTIONS as DISBURSEMENT_LOG_ACTIONS
 from transaction.utils import format_amount
+from security.models import Check
 
 
 class Command(BaseCommand):
@@ -99,6 +100,8 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
         'Status',
         'NOMIS transaction',
         'WorldPay order code',
+        'Security check status',
+        'Security check codes',
         'Exported at',
     ]
 
@@ -110,6 +113,16 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
             status = CREDIT_STATUS.for_value(status).display
         else:
             status = 'Anonymous'
+
+        if hasattr(record, 'security_check') :
+            security_check_status = record.security_check.status
+            if len(record.security_check.rules) > 0:
+                security_check_rules = record.security_check.rules
+            else:
+              security_check_rules = None
+        else:
+            security_check_status = None
+            security_check_rules = None
 
         row = {
             'Internal ID': record.id,
@@ -124,6 +137,8 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
             'Blocked': record.blocked,
             'Status': status,
             'NOMIS transaction': record.nomis_transaction_id,
+            'Security check status': security_check_status,
+            'Security check codes': security_check_rules,
             'Exported at': self.exported_at_local_time,
             **self.serialise_sender(record)
         }
