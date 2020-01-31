@@ -112,6 +112,16 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
         else:
             status = 'Anonymous'
 
+        if hasattr(record, 'security_check'):
+            security_check_status = record.security_check.status
+            if len(record.security_check.rules) > 0:
+                security_check_rules = record.security_check.rules
+            else:
+                security_check_rules = None
+        else:
+            security_check_status = None
+            security_check_rules = None
+
         row = {
             'Exported at': self.exported_at_local_time,
             'Internal ID': record.id,
