@@ -1,6 +1,6 @@
-import csv
 import datetime
 import textwrap
+import json
 
 from django.conf import settings
 from django.core.management import BaseCommand, CommandError
@@ -36,18 +36,17 @@ class Command(BaseCommand):
         record_type = options['type']
         serialiser: Serialiser = Serialiser.serialisers[record_type]()
 
-        with open(options['path'], 'wt') as csv_file:
-            writer = csv.DictWriter(csv_file, serialiser.headers)
-            writer.writeheader()
+        with open(options['path'], 'wt') as jsonl_file:
             records = serialiser.get_modified_records(after, before)
+
             for record in records:
-                writer.writerow(serialiser.serialise(record))
+                jsonl_file.write(json.dumps(serialiser.serialise(record), default=str, ensure_ascii=False))
+                jsonl_file.write('\n')
 
 
 class Serialiser:
     serialisers = {}
     serialised_model = None
-    headers = []
 
     def __init_subclass__(cls, serialised_model):
         record_type = str(serialised_model._meta.verbose_name_plural)
@@ -68,40 +67,6 @@ class Serialiser:
 
 
 class CreditSerialiser(Serialiser, serialised_model=Credit):
-    headers = Serialiser.headers + [
-        'Exported at',
-        'Internal ID',
-        'URL',
-        'Date started',
-        'Date received',
-        'Date credited',
-        'Amount',
-        'Prisoner number',
-        'Prisoner name',
-        'Prison',
-        'Owner username',
-        'Blocked',
-        'Sender name',
-        'Payment method',
-        'Bank transfer sort code',
-        'Bank transfer account',
-        'Bank transfer roll number',
-        'Debit card first six digits',
-        'Debit card last four digits',
-        'Debit card expiry',
-        'Debit card billing address line 1',
-        'Debit card billing address line 2',
-        'Debit card billing address city',
-        'Debit card billing address postcode',
-        'Debit card billing address country',
-        'Sender email',
-        'Sender IP address',
-        'Status',
-        'NOMIS transaction',
-        'WorldPay order code',
-        'Security check status',
-        'Security check codes',
-    ]
 
     def __init__(self):
         self.exported_at_local_time = timezone.now()
@@ -180,33 +145,6 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
 
 
 class DisbursementSerialiser(Serialiser, serialised_model=Disbursement):
-    headers = Serialiser.headers + [
-        'Exported at',
-        'Internal ID',
-        'URL',
-        'Date entered',
-        'Date confirmed',
-        'Date sent',
-        'Amount',
-        'Prisoner number',
-        'Prisoner name',
-        'Prison',
-        'Recipient first name',
-        'Recipient last name',
-        'Payment method',
-        'Bank transfer sort code',
-        'Bank transfer account',
-        'Bank transfer roll number',
-        'Recipient address line 1',
-        'Recipient address line 2',
-        'Recipient address city',
-        'Recipient address postcode',
-        'Recipient address country',
-        'Recipient email',
-        'Status',
-        'NOMIS transaction',
-        'SOP invoice number',
-    ]
 
     def __init__(self):
         self.exported_at_local_time = timezone.now()
