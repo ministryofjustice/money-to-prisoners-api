@@ -31,12 +31,13 @@ from mtp_auth.forms import LoginStatsForm
 from mtp_auth.models import (
     ApplicationUserMapping, PrisonUserMapping, Role, Flag,
     FailedLoginAttempt, PasswordChangeRequest, AccountRequest,
+    JobInformation
 )
 from mtp_auth.permissions import UserPermissions, AnyAdminClientIDPermissions, AccountRequestPremissions
 from mtp_auth.serializers import (
     RoleSerializer, UserSerializer, FlagSerializer, AccountRequestSerializer,
     ChangePasswordSerializer, ResetPasswordSerializer, ChangePasswordWithCodeSerializer,
-    generate_new_password,
+    generate_new_password, JobInformationSerializer
 )
 from prison.models import Prison
 
@@ -86,6 +87,11 @@ def get_managed_user_queryset(user):
         queryset = queryset.filter(prisonusermapping__isnull=True)
 
     return queryset
+
+
+class JobInformationViewSet(viewsets.ModelViewSet):
+    queryset = JobInformation.objects.all()
+    serializer_class = JobInformationSerializer
 
 
 class UserViewSet(viewsets.ModelViewSet):

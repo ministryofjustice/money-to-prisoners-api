@@ -9,6 +9,7 @@ user_router = routers.NestedSimpleRouter(router, r'users', lookup='user')
 user_router.register(r'flags', views.UserFlagViewSet, base_name='user-flags')
 router.register(r'roles', views.RoleViewSet)
 router.register(r'requests', views.AccountRequestViewSet)
+router.register(r'job_information', views.JobInformationViewSet, base_name='job-information')
 
 urlpatterns = [
     url(r'^', include(router.urls)),

@@ -13,7 +13,7 @@ from oauth2_provider.models import Grant, AccessToken, RefreshToken, get_applica
 
 from core.admin import add_short_description
 from mtp_auth.forms import RestrictedUserCreationForm, RestrictedUserChangeForm
-from mtp_auth.models import Role, ApplicationUserMapping, FailedLoginAttempt, PrisonUserMapping, AccountRequest, Flag
+from mtp_auth.models import Role, ApplicationUserMapping, FailedLoginAttempt, PrisonUserMapping, AccountRequest, Flag, JobInformation
 
 User = get_user_model()
 Application = get_application_model()
@@ -24,6 +24,7 @@ admin.site.register(Application, ApplicationAdmin)
 admin.site.register(Grant, GrantAdmin)
 admin.site.register(AccessToken, AccessTokenAdmin)
 admin.site.register(RefreshToken, RefreshTokenAdmin)
+admin.site.register(JobInformation)
 
 
 @admin.register(Role)

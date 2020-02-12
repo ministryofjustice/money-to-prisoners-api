@@ -35,6 +35,12 @@ class PrisonUserMappingManager(models.Manager):
             return Prison.objects.none()
 
 
+class JobInformation(models.Model):
+    job_title = models.CharField(max_length=50)
+    prison_location = models.CharField(max_length=50)
+    job_tasks = models.CharField(max_length=50)
+
+
 class PrisonUserMapping(TimeStampedModel):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     prisons = models.ManyToManyField('prison.Prison')
