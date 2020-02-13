@@ -30,13 +30,13 @@ from core.views import AdminViewMixin
 from mtp_auth.forms import LoginStatsForm
 from mtp_auth.models import (
     ApplicationUserMapping, PrisonUserMapping, Role, Flag,
-    FailedLoginAttempt, PasswordChangeRequest, AccountRequest,
+    FailedLoginAttempt, PasswordChangeRequest, AccountRequest
 )
 from mtp_auth.permissions import UserPermissions, AnyAdminClientIDPermissions, AccountRequestPremissions
 from mtp_auth.serializers import (
     RoleSerializer, UserSerializer, FlagSerializer, AccountRequestSerializer,
     ChangePasswordSerializer, ResetPasswordSerializer, ChangePasswordWithCodeSerializer,
-    generate_new_password,
+    generate_new_password, JobInformationSerializer
 )
 from prison.models import Prison
 
@@ -57,6 +57,10 @@ class RoleViewSet(viewsets.mixins.ListModelMixin, viewsets.GenericViewSet):
             managed_roles = Role.objects.get_roles_for_user(user)
             queryset = queryset.filter(pk__in=set(role.pk for role in managed_roles))
         return queryset
+
+
+class JobInformationViewSet(viewsets.mixins.CreateModelMixin, viewsets.GenericViewSet):
+    serializer_class = JobInformationSerializer
 
 
 def get_managed_user_queryset(user):
