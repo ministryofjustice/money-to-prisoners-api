@@ -29,6 +29,7 @@ from mtp_auth.models import (
     PrisonUserMapping, Role, Flag,
     Login, FailedLoginAttempt,
     PasswordChangeRequest, AccountRequest,
+    JobInformation,
 )
 from mtp_auth.tests.mommy_recipes import basic_user, create_prison_clerk
 from mtp_auth.views import ResetPasswordView
@@ -50,6 +51,64 @@ def prison_set(user):
         user.prisonusermapping.prisons.values_list('pk', flat=True)
         if hasattr(user, 'prisonusermapping') else []
     )
+
+
+class JobInformationTestCase(APITestCase, AuthTestCaseMixin):
+    fixtures = [
+        'initial_groups.json',
+        'initial_types.json',
+        'test_prisons.json',
+    ]
+
+    url = reverse_lazy('job-information-list')
+
+    payload = {
+        'title': 'Warden',
+        'prison_estate': 'Private',
+        'tasks': 'Run the show',
+    }
+
+    def setUp(self):
+        super().setUp()
+        test_users = make_test_users()
+        self.security_staff = test_users['security_staff'][0]
+
+    def test_authorization_required_to_create_job_information(self):
+        response = self.client.post(self.url, data=self.payload)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_can_create_a_job_information_entry(self):
+        response = self.client.post(
+            self.url,
+            data=self.payload,
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.security_staff)
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data, self.payload)
+
+    def test_will_not_create_with_missing_params(self):
+        payload = {
+            'title': 'Warden',
+            'prison_estate': '',
+            'tasks': 'Run the show',
+        }
+        response = self.client.post(
+            self.url,
+            data=payload,
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.security_staff)
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_user_id_added_to_job_information_record(self):
+        self.client.post(
+            self.url,
+            data=self.payload,
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.security_staff)
+        )
+        records = JobInformation.objects.all()
+
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0].user_id, self.security_staff.id)
 
 
 class AuthBaseTestCase(APITestCase, AuthTestCaseMixin):

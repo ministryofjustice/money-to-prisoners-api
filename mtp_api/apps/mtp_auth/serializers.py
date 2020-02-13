@@ -11,7 +11,7 @@ from rest_framework.validators import UniqueValidator
 
 from mtp_auth.models import (
     ApplicationUserMapping, PrisonUserMapping, Role, Flag,
-    FailedLoginAttempt, AccountRequest,
+    FailedLoginAttempt, AccountRequest, JobInformation
 )
 from mtp_auth.validators import CaseInsensitiveUniqueValidator
 from prison.models import Prison
@@ -31,6 +31,20 @@ def generate_new_password():
         except ValidationError:
             continue
         return password
+
+
+class JobInformationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = JobInformation
+        fields = ('title',
+                  'prison_estate',
+                  'tasks',
+                  )
+
+    def create(self, validated_data):
+        user = self.context['request'].user
+        validated_data['user'] = user
+        return super().create(validated_data)
 
 
 class RoleSerializer(serializers.ModelSerializer):
