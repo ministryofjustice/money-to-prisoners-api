@@ -13,7 +13,10 @@ from oauth2_provider.models import Grant, AccessToken, RefreshToken, get_applica
 
 from core.admin import add_short_description
 from mtp_auth.forms import RestrictedUserCreationForm, RestrictedUserChangeForm
-from mtp_auth.models import Role, ApplicationUserMapping, FailedLoginAttempt, PrisonUserMapping, AccountRequest, Flag
+from mtp_auth.models import (
+    Role, ApplicationUserMapping, FailedLoginAttempt,
+    PrisonUserMapping, AccountRequest, Flag, JobInformation
+)
 
 User = get_user_model()
 Application = get_application_model()
@@ -33,6 +36,22 @@ class RoleAdmin(ModelAdmin):
 
     def all_groups(self, instance):
         return ', '.join(sorted(group.name for group in instance.groups))
+
+
+@admin.register(JobInformation)
+class JobInformationAdmin(ModelAdmin):
+    ordering = ('-modified',)
+    list_display = ('title', 'prison_estate', 'tasks', 'fullname', 'email', 'username', 'modified')
+    list_filter = ('title', 'prison_estate')
+
+    def fullname(self, obj):
+        return f'{obj.user.first_name} {obj.user.last_name}'
+
+    def email(self, obj):
+        return obj.user.email
+
+    def username(self, obj):
+        return obj.user.username
 
 
 @admin.register(ApplicationUserMapping)
