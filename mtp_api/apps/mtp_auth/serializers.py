@@ -43,6 +43,7 @@ class JobInformationSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         user = self.context['request'].user
+        user.flags.create(name='provided-job-information')
         validated_data['user'] = user
         return super().create(validated_data)
 

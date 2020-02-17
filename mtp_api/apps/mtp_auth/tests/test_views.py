@@ -110,6 +110,16 @@ class JobInformationTestCase(APITestCase, AuthTestCaseMixin):
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0].user_id, self.security_staff.id)
 
+    def test_flag_created_when_job_info_saved(self):
+        self.client.post(
+            self.url,
+            data=self.payload,
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.security_staff)
+        )
+
+        flag_exists = Flag.objects.filter(user_id=self.security_staff.id, name='provided-job-information').exists()
+        self.assertTrue(flag_exists)
+
 
 class AuthBaseTestCase(APITestCase, AuthTestCaseMixin):
     fixtures = [
