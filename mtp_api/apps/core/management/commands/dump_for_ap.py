@@ -68,18 +68,42 @@ class Serialiser:
 
 class CreditSerialiser(Serialiser, serialised_model=Credit):
     headers = Serialiser.headers + [
-        'Internal ID', 'URL',
-        'Date started', 'Date received', 'Date credited',
+        'Exported at',
+        'Internal ID',
+        'URL',
+        'Date started',
+        'Date received',
+        'Date credited',
         'Amount',
-        'Prisoner number', 'Prisoner name', 'Prison',
-        'Sender name', 'Payment method',
-        'Bank transfer sort code', 'Bank transfer account', 'Bank transfer roll number',
-        'Debit card number', 'Debit card expiry', 'Debit card billing address',
-        'Sender email', 'Sender IP address',
+        'Prisoner number',
+        'Prisoner name',
+        'Prison',
+        'Owner username',
+        'Blocked',
+        'Sender name',
+        'Payment method',
+        'Bank transfer sort code',
+        'Bank transfer account',
+        'Bank transfer roll number',
+        'Debit card first six digits',
+        'Debit card last four digits',
+        'Debit card expiry',
+        'Debit card billing address line 1',
+        'Debit card billing address line 2',
+        'Debit card billing address city',
+        'Debit card billing address postcode',
+        'Debit card billing address country',
+        'Sender email',
+        'Sender IP address',
         'Status',
         'NOMIS transaction',
         'WorldPay order code',
+        'Security check status',
+        'Security check codes',
     ]
+
+    def __init__(self):
+        self.exported_at_local_time = timezone.now()
 
     def serialise(self, record: Credit):
         status = record.status
@@ -87,7 +111,19 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
             status = CREDIT_STATUS.for_value(status).display
         else:
             status = 'Anonymous'
+
+        if hasattr(record, 'security_check'):
+            security_check_status = record.security_check.status
+            if len(record.security_check.rules) > 0:
+                security_check_rules = record.security_check.rules
+            else:
+                security_check_rules = None
+        else:
+            security_check_status = None
+            security_check_rules = None
+
         row = {
+            'Exported at': self.exported_at_local_time,
             'Internal ID': record.id,
             'URL': f'{settings.NOMS_OPS_URL}/security/credits/{record.id}/',
             'Date received': record.received_at,
@@ -96,8 +132,12 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
             'Prisoner number': record.prisoner_number or 'Unknown',
             'Prisoner name': record.prisoner_name or 'Unknown',
             'Prison': record.prison.short_name if record.prison else 'Unknown',
+            'Owner username': record.owner.username if record.owner else 'Unknown',
+            'Blocked': record.blocked,
             'Status': status,
             'NOMIS transaction': record.nomis_transaction_id,
+            'Security check status': security_check_status,
+            'Security check codes': security_check_rules,
             **self.serialise_sender(record)
         }
         return row
@@ -119,11 +159,14 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
                 'Date started': payment.created,
                 'Payment method': 'Debit card',
                 'Sender name': payment.cardholder_name,
-                'Debit card number': (
-                    f'{payment.card_number_first_digits or "******"}******{payment.card_number_last_digits}'
-                ),
+                'Debit card first six digits': payment.card_number_first_digits or 'Unknown',
+                'Debit card last four digits': payment.card_number_last_digits,
                 'Debit card expiry': payment.card_expiry_date,
-                'Debit card billing address': str(payment.billing_address),
+                'Debit card billing address line 1': payment.billing_address.line1,
+                'Debit card billing address line 2': payment.billing_address.line2,
+                'Debit card billing address city': payment.billing_address.city,
+                'Debit card billing address postcode': payment.billing_address.postcode,
+                'Debit card billing address country': payment.billing_address.country,
                 'Sender email': payment.email,
                 'Sender IP address': payment.ip_address,
                 'WorldPay order code': payment.worldpay_id,
@@ -137,19 +180,39 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
 
 class DisbursementSerialiser(Serialiser, serialised_model=Disbursement):
     headers = Serialiser.headers + [
-        'Internal ID', 'URL',
-        'Date entered', 'Date confirmed', 'Date sent',
+        'Exported at',
+        'Internal ID',
+        'URL',
+        'Date entered',
+        'Date confirmed',
+        'Date sent',
         'Amount',
-        'Prisoner number', 'Prisoner name', 'Prison',
-        'Recipient name', 'Payment method',
-        'Bank transfer sort code', 'Bank transfer account', 'Bank transfer roll number',
-        'Recipient address', 'Recipient email',
+        'Prisoner number',
+        'Prisoner name',
+        'Prison',
+        'Recipient first name',
+        'Recipient last name',
+        'Payment method',
+        'Bank transfer sort code',
+        'Bank transfer account',
+        'Bank transfer roll number',
+        'Recipient address line 1',
+        'Recipient address line 2',
+        'Recipient address city',
+        'Recipient address postcode',
+        'Recipient address country',
+        'Recipient email',
         'Status',
-        'NOMIS transaction', 'SOP invoice number',
+        'NOMIS transaction',
+        'SOP invoice number',
     ]
+
+    def __init__(self):
+        self.exported_at_local_time = timezone.now()
 
     def serialise(self, record: Disbursement):
         return {
+            'Exported at': self.exported_at_local_time,
             'Internal ID': record.id,
             'URL': f'{settings.NOMS_OPS_URL}/security/disbursements/{record.id}/',
             'Date entered': record.created,
@@ -159,12 +222,17 @@ class DisbursementSerialiser(Serialiser, serialised_model=Disbursement):
             'Prisoner number': record.prisoner_number,
             'Prisoner name': record.prisoner_name,
             'Prison': record.prison.short_name,
-            'Recipient name': record.recipient_name,
+            'Recipient first name': record.recipient_first_name,
+            'Recipient last name': record.recipient_last_name,
             'Payment method': DISBURSEMENT_METHOD.for_value(record.method).display,
             'Bank transfer sort code': record.sort_code,
             'Bank transfer account': record.account_number,
             'Bank transfer roll number': record.roll_number,
-            'Recipient address': record.recipient_address,
+            'Recipient address line 1': record.address_line1,
+            'Recipient address line 2': record.address_line2,
+            'Recipient address city': record.city,
+            'Recipient address postcode': record.postcode,
+            'Recipient address country': record.country,
             'Recipient email': record.recipient_email,
             'Status': DISBURSEMENT_RESOLUTION.for_value(record.resolution).display,
             'NOMIS transaction': record.nomis_transaction_id,
