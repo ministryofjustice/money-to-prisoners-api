@@ -1,4 +1,3 @@
-import argparse
 import csv
 import datetime
 import textwrap
@@ -26,7 +25,7 @@ class Command(BaseCommand):
         parser.add_argument('--after', help='Modified after date (inclusive)')
         parser.add_argument('--before', help='Modified before date (exclusive)')
         parser.add_argument('type', choices=list(Serialiser.serialisers), help='Type of object to dump')
-        parser.add_argument('path', type=argparse.FileType('wt'), help='Path to dump data to')
+        parser.add_argument('path', help='Path to dump data to')
 
     def handle(self, *args, **options):
         after = date_argument(options['after'])
@@ -36,11 +35,13 @@ class Command(BaseCommand):
 
         record_type = options['type']
         serialiser: Serialiser = Serialiser.serialisers[record_type]()
-        writer = csv.DictWriter(options['path'], serialiser.headers)
-        writer.writeheader()
-        records = serialiser.get_modified_records(after, before)
-        for record in records:
-            writer.writerow(serialiser.serialise(record))
+
+        with open(options['path'], 'wt') as csv_file:
+            writer = csv.DictWriter(csv_file, serialiser.headers)
+            writer.writeheader()
+            records = serialiser.get_modified_records(after, before)
+            for record in records:
+                writer.writerow(serialiser.serialise(record))
 
 
 class Serialiser:
