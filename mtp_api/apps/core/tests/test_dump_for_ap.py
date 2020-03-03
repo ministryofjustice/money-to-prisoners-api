@@ -1,5 +1,5 @@
-import csv
 import datetime
+import json
 import tempfile
 from unittest import mock
 
@@ -14,6 +14,7 @@ from payment.constants import PAYMENT_STATUS
 from payment.models import Payment
 from payment.tests.utils import generate_payments
 from prison.tests.utils import load_random_prisoner_locations
+from transaction.tests.utils import generate_transactions
 
 
 class DumpForAPTestCase(TestCase):
@@ -49,22 +50,24 @@ class DumpForAPTestCase(TestCase):
         self.assertEqual(before.date(), datetime.date(2019, 9, 1))
 
     def test_empty_results(self):
-        with tempfile.NamedTemporaryFile() as csv_file:
-            call_command('dump_for_ap', 'credits', csv_file.name)
-            lines = open(csv_file.name).read().splitlines()
-        self.assertEqual(len(lines), 1)
+        with tempfile.NamedTemporaryFile() as export_file:
+            call_command('dump_for_ap', 'credits', export_file.name)
+            jsonlines = open(export_file.name).read().splitlines()
+
+        self.assertEqual(len(jsonlines), 0)
 
     def test_credits_dump_for_ap(self):
         self.basic_setup()
         generate_payments(payment_batch=20, days_of_history=2)
 
-        with tempfile.NamedTemporaryFile(mode='rt') as export_file:
+        with tempfile.NamedTemporaryFile() as export_file:
             call_command('dump_for_ap', 'credits', export_file.name)
+            jsonlines = open(export_file.name).read().splitlines()
 
-            csv_reader = csv.DictReader(export_file)
             credit_ids = []
-            for record in csv_reader:
-                credit_ids.append(int(record['Internal ID']))
+            for record in jsonlines:
+                parsedjson = json.loads(record)
+                credit_ids.append(parsedjson['Internal ID'])
 
         completed_payments = Payment.objects.exclude(
             status__in=(
@@ -80,13 +83,26 @@ class DumpForAPTestCase(TestCase):
         self.basic_setup()
         generate_disbursements(disbursement_batch=20, days_of_history=2)
 
-        with tempfile.NamedTemporaryFile(mode='rt') as export_file:
+        with tempfile.NamedTemporaryFile() as export_file:
             call_command('dump_for_ap', 'disbursements', export_file.name)
+            jsonlines = open(export_file.name).read().splitlines()
 
-            csv_reader = csv.DictReader(export_file)
             disbursement_ids = []
-            for record in csv_reader:
-                disbursement_ids.append(int(record['Internal ID']))
+            for record in jsonlines:
+                parsedjson = json.loads(record)
+                disbursement_ids.append(parsedjson['Internal ID'])
 
         expected_disbursement_ids = sorted(Disbursement.objects.values_list('pk', flat=True))
         self.assertListEqual(disbursement_ids, expected_disbursement_ids)
+
+    def test_debit_card_and_bank_transfer_data_included_in_export(self):
+        self.basic_setup()
+        generate_transactions(transaction_batch=1)
+        generate_payments(payment_batch=1)
+
+        with tempfile.NamedTemporaryFile() as export_file:
+            call_command('dump_for_ap', 'credits', export_file.name)
+            jsonlines = open(export_file.name).read()
+
+        self.assertIn('"Payment method": "Bank transfer"', jsonlines)
+        self.assertIn('"Payment method": "Debit card"', jsonlines)
