@@ -888,6 +888,8 @@ class BaseCheckTestCase(APITestCase, AuthTestCaseMixin):
             },
             'actioned_at': format_date_or_datetime(expected_check.actioned_at),
             'actioned_by': expected_check.actioned_by.pk if expected_check.actioned_by else None,
+            'actioned_by_name': actual_check_data['actioned_by_name'],
+            'decision_reason': expected_check.decision_reason if expected_check.decision_reason else '',
         }
         self.assertDictEqual(actual_check_data, expected_data_item)
 
@@ -1076,6 +1078,34 @@ class CheckListTestCase(BaseCheckTestCase):
             Check.objects.filter(status=CHECK_STATUS.PENDING).count() - 1,
         )
 
+    def test_check_filtering_by_actioned_by(self):
+        """
+        Test that the list endpoint only returns the checks with an actioned_by id.
+        """
+        filters = {
+            'actioned_by': True,
+        }
+
+        auth = self.get_http_authorization_for_user(self._get_authorised_user())
+        response = self.client.get(
+            reverse('security-check-list'),
+            filters,
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+
+        response_data = response.json()
+
+        self.assertEqual(
+            response_data['count'],
+            Check.objects.filter(actioned_by__isnull=False).count(),
+        )
+
+        for item in response_data['results']:
+            self.assertIsNotNone(item['actioned_by'])
+
 
 class GetCheckTestCase(BaseCheckTestCase):
     """
@@ -1097,7 +1127,6 @@ class GetCheckTestCase(BaseCheckTestCase):
             format='json',
             HTTP_AUTHORIZATION=auth,
         )
-
         self.assertEqual(response.status_code, http_status.HTTP_200_OK)
 
         actual_check_data = response.json()
