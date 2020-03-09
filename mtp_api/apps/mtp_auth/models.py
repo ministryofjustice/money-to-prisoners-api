@@ -88,6 +88,13 @@ class Role(models.Model):
             user.groups.add(group)
 
 
+class JobInformation(TimeStampedModel):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    title = models.CharField(max_length=255)
+    prison_estate = models.CharField(max_length=255)
+    tasks = models.TextField()
+
+
 class Login(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
