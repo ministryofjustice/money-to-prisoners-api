@@ -248,17 +248,17 @@ class AcceptCheckSerializer(CheckSerializer):
 
 
 class RejectCheckSerializer(CheckSerializer):
-    rejection_reason = serializers.CharField(required=True)
+    decision_reason = serializers.CharField(required=True)
 
     class Meta:
         model = Check
-        fields = ('rejection_reason',)
+        fields = ('decision_reason',)
 
     def reject(self, by):
         try:
             self.instance.reject(
                 by,
-                self.validated_data['rejection_reason'],
+                self.validated_data['decision_reason'],
             )
         except DjangoValidationError as e:
             raise ValidationError(

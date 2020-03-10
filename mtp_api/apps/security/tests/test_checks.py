@@ -127,7 +127,7 @@ class CheckTestCase(TestCase):
         self.assertEqual(check.status, CHECK_STATUS.REJECTED)
         self.assertEqual(check.actioned_at, mocked_now())
         self.assertEqual(check.actioned_by, user)
-        self.assertEqual(check.rejection_reason, reason)
+        self.assertEqual(check.decision_reason, reason)
 
     @mock.patch('security.models.now')
     def test_can_reject_a_rejected_check(self, mocked_now):
@@ -142,7 +142,7 @@ class CheckTestCase(TestCase):
             status=CHECK_STATUS.REJECTED,
             actioned_at=mocked_now() - datetime.timedelta(days=1),
             actioned_by=existing_check_user,
-            rejection_reason='Some old reason',
+            decision_reason='Some old reason',
         )
         reason = 'Some reason'
 
@@ -152,7 +152,7 @@ class CheckTestCase(TestCase):
         self.assertEqual(check.status, CHECK_STATUS.REJECTED)
         self.assertEqual(check.actioned_by, existing_check_user)
         self.assertNotEqual(check.actioned_at, mocked_now())
-        self.assertNotEqual(check.rejection_reason, reason)
+        self.assertNotEqual(check.decision_reason, reason)
 
     def test_empty_reason_raises_error(self):
         """

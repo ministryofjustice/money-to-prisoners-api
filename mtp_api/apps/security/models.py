@@ -296,7 +296,7 @@ class Check(TimeStampedModel):
         null=True,
         blank=True,
     )
-    rejection_reason = models.TextField(blank=True)
+    decision_reason = models.TextField(blank=True)
 
     objects = CheckManager()
 
@@ -346,7 +346,7 @@ class Check(TimeStampedModel):
         self.status = CHECK_STATUS.REJECTED
         self.actioned_by = by
         self.actioned_at = now()
-        self.rejection_reason = reason
+        self.decision_reason = reason
         self.save()
 
     def __str__(self):
