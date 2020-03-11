@@ -234,13 +234,18 @@ class CheckSerializer(serializers.ModelSerializer):
 
 
 class AcceptCheckSerializer(CheckSerializer):
+    decision_reason = serializers.CharField(allow_blank=True)
+
     class Meta:
         model = Check
-        fields = ()
+        fields = ('decision_reason',)
 
     def accept(self, by):
         try:
-            self.instance.accept(by)
+            self.instance.accept(
+                by,
+                self.validated_data['decision_reason'],
+            )
         except DjangoValidationError as e:
             raise ValidationError(
                 detail=e.message_dict,

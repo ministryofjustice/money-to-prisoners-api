@@ -60,6 +60,28 @@ class CheckTestCase(TestCase):
         self.assertEqual(check.actioned_by, user)
 
     @mock.patch('security.models.now')
+    def test_can_accept_a_pending_check_with_reason(self, mocked_now):
+        """
+        Test that a pending check can be accepted.
+        """
+        mocked_now.return_value = timezone.make_aware(datetime.datetime(2019, 1, 1))
+
+        user = basic_user.make()
+        check = mommy.make(
+            Check,
+            status=CHECK_STATUS.PENDING,
+            actioned_at=None,
+            actioned_by=None,
+        )
+        reason = 'A good reason'
+
+        check.accept(by=user, reason=reason)
+        check.refresh_from_db()
+
+        self.assertEqual(check.status, CHECK_STATUS.ACCEPTED)
+        self.assertEqual(check.decision_reason, reason)
+
+    @mock.patch('security.models.now')
     def test_can_accept_an_accepted_check(self, mocked_now):
         """
         Test that accepting an already accepted check doesn't do anything.

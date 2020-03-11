@@ -1122,6 +1122,9 @@ class AcceptCheckTestCase(BaseCheckTestCase):
                 kwargs={'pk': check.pk},
             ),
             format='json',
+            data={
+                'decision_reason': '',
+            },
             HTTP_AUTHORIZATION=auth,
         )
 
@@ -1144,6 +1147,9 @@ class AcceptCheckTestCase(BaseCheckTestCase):
                 kwargs={'pk': check.pk},
             ),
             format='json',
+            data={
+                'decision_reason': '',
+            },
             HTTP_AUTHORIZATION=auth,
         )
 
@@ -1172,6 +1178,9 @@ class AcceptCheckTestCase(BaseCheckTestCase):
                 kwargs={'pk': check.pk},
             ),
             format='json',
+            data={
+                'decision_reason': '',
+            },
             HTTP_AUTHORIZATION=auth,
         )
 
@@ -1197,6 +1206,9 @@ class AcceptCheckTestCase(BaseCheckTestCase):
                 kwargs={'pk': check.pk},
             ),
             format='json',
+            data={
+                'decision_reason': '',
+            },
             HTTP_AUTHORIZATION=auth,
         )
 
