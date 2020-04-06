@@ -49,7 +49,7 @@ class CreditSerializer(serializers.ModelSerializer):
     sender_name = serializers.CharField(read_only=True)
     sender_email = serializers.CharField(read_only=True)
     owner_name = serializers.CharField(read_only=True)
-    started_at = serializers.SerializerMethodField()
+    started_at = serializers.DateTimeField(read_only=True, source='payment.created')
     credited_at = serializers.DateTimeField(read_only=True)
     refunded_at = serializers.DateTimeField(read_only=True)
     set_manual_at = serializers.DateTimeField(read_only=True)
@@ -87,12 +87,6 @@ class CreditSerializer(serializers.ModelSerializer):
             'short_payment_ref',
             'nomis_transaction_id',
         )
-
-    def get_started_at(self, obj):
-        try:
-            return obj.payment.created
-        except AttributeError:
-            return None
 
     def get_anonymous(self, obj):
         try:
