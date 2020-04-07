@@ -5,7 +5,6 @@ from unittest import mock
 
 from django.core.management import CommandError, call_command
 from django.test import TestCase
-from django.test.utils import captured_stdout
 
 from core.tests.utils import make_test_users
 from disbursement.models import Disbursement
@@ -38,13 +37,13 @@ class DumpForAPTestCase(TestCase):
 
     @mock.patch('core.management.commands.dump_for_ap.Serialiser.get_modified_records')
     def test_valid_arguments(self, mocked_get_modified_records):
-        with captured_stdout():
-            call_command('dump_for_ap', 'credits', '-', after='2019-09-26')
+        with tempfile.NamedTemporaryFile() as export_file:
+            call_command('dump_for_ap', 'credits', export_file.name, after='2019-09-26')
         after, *_ = mocked_get_modified_records.call_args[0]
         self.assertEqual(after.date(), datetime.date(2019, 9, 26))
 
-        with captured_stdout():
-            call_command('dump_for_ap', 'disbursements', '-', before='2019-09-01', after='2019-08-01')
+        with tempfile.NamedTemporaryFile() as export_file:
+            call_command('dump_for_ap', 'disbursements', export_file.name, before='2019-09-01', after='2019-08-01')
         after, before, *_ = mocked_get_modified_records.call_args[0]
         self.assertEqual(after.date(), datetime.date(2019, 8, 1))
         self.assertEqual(before.date(), datetime.date(2019, 9, 1))
