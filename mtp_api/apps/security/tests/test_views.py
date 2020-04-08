@@ -1013,8 +1013,8 @@ class CheckListTestCase(BaseCheckTestCase):
             'credit__payment__created', flat=True
         ))
         check_count = len(credits_started_at)
-        earliest_check = credits_started_at[0]
-        latest_check = credits_started_at[-1]
+        earliest_check = credits_started_at[0].isoformat()
+        latest_check = credits_started_at[-1].isoformat()
 
         auth = self.get_http_authorization_for_user(self._get_authorised_user())
 
@@ -1034,19 +1034,19 @@ class CheckListTestCase(BaseCheckTestCase):
 
         assertCheckCount(
             {
-                'started_at__lt': earliest_check.strftime('%Y-%m-%d %H:%M:%S'),
+                'started_at__lt': earliest_check,
             },
             0
         )
         assertCheckCount(
             {
-                'started_at__gte': earliest_check.strftime('%Y-%m-%d %H:%M:%S'),
+                'started_at__gte': earliest_check,
             },
             check_count
         )
         assertCheckCount(
             {
-                'started_at__lt': latest_check.strftime('%Y-%m-%d %H:%M:%S'),
+                'started_at__lt': latest_check,
             },
             check_count - 1
         )
