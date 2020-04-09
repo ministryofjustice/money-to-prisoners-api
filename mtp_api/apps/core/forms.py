@@ -44,7 +44,7 @@ class SidebarDateWidget(widgets.AdminDateWidget):
         js = ('javascripts/vendor/calendar-overrides.js',)
 
 
-class PrisonPerformaceForm(forms.Form):
+class PrisonDigitalTakeupForm(forms.Form):
     days = forms.ChoiceField(label=_('Period'), choices=(
         ('7', _('Last 7 days')),
         ('30', _('Last 30 days')),

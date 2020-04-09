@@ -24,7 +24,7 @@ class AdminSite(admin.AdminSite):
         from mtp_auth.views import LoginStatsView
         from payment.views import PaymentSearchView
         from performance.view_dashboard import PerformanceDashboardView
-        from performance.views import DigitalTakeupUploadView, DigitalTakeupReport, PrisonPerformanceView
+        from performance.views import DigitalTakeupUploadView, DigitalTakeupReport, PrisonDigitalTakeupView
         from prison.views import LoadOffendersView
 
         return [
@@ -35,14 +35,14 @@ class AdminSite(admin.AdminSite):
             # performance dashboard and reports
             url(r'^performance/dashboard/$', PerformanceDashboardView.as_view(),
                 name='performance_dashboard'),
-            url(r'^performance/prisons/$', PrisonPerformanceView.as_view(),
-                name='prison-performance'),
             url(r'^performance/login-stats/$', LoginStatsView.as_view(),
                 name='login-stats'),
             url(r'^performance/digitaltakeup/upload/$', DigitalTakeupUploadView.as_view(),
                 name='digital_takeup_upload'),
             url(r'^performance/digitaltakeup/report/$', DigitalTakeupReport.as_view(),
                 name='digital_takeup_report'),
+            url(r'^performance/digitaltakeup/prisons/$', PrisonDigitalTakeupView.as_view(),
+                name='digital_takeup_prisons'),
 
             # additional admin views
             url(r'^payment/payment/search/$', PaymentSearchView.as_view(), name='payment_search'),

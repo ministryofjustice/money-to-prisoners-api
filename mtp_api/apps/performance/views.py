@@ -10,7 +10,7 @@ from django.utils.formats import date_format
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import FormView, TemplateView
 
-from core.forms import DigitalTakeupReportForm, PrisonPerformaceForm
+from core.forms import DigitalTakeupReportForm, PrisonDigitalTakeupForm
 from core.views import AdminViewMixin
 from disbursement.models import Disbursement, DISBURSEMENT_RESOLUTION
 from performance.forms import DigitalTakeupUploadForm
@@ -90,21 +90,17 @@ class DigitalTakeupUploadView(AdminViewMixin, FormView):
                              '\n' + ', '.join(common_prison_credit_differences))
 
 
-class PrisonPerformanceView(AdminViewMixin, TemplateView):
-    title = _('Prison performance')
+class PrisonDigitalTakeupView(AdminViewMixin, TemplateView):
+    title = _('Digital take-up per prison')
     template_name = 'admin/performance/prison_performance.html'
-    ordering_fields = (
-        'nomis_id', 'credit_post_count', 'credit_mtp_count', 'credit_uptake',
-        'disbursement_count'
-    )
     required_permissions = ['transaction.view_dashboard']
     excluded_nomis_ids = {'ZCH'}
 
     def get_context_data(self, **kwargs):
         context_data = super().get_context_data(**kwargs)
-        form = PrisonPerformaceForm(data=self.request.GET.dict())
+        form = PrisonDigitalTakeupForm(data=self.request.GET.dict())
         if not form.is_valid():
-            form = PrisonPerformaceForm(data={})
+            form = PrisonDigitalTakeupForm(data={})
             assert form.is_valid(), 'Empty form should be valid'
 
         since_date = date.today() - timedelta(days=int(form.cleaned_data['days']))
