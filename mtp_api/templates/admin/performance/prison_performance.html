@@ -37,13 +37,6 @@
             </a>
           </div>
         </th>
-        <th class="{% if form.cleaned_data.order_by == 'disbursement_count' %}sorted{% else %}sortable{% endif %}">
-          <div class="text">
-            <a href="?{{ days_query }}&amp;order_by=disbursement_count{% if not form.cleaned_data.desc %}&amp;desc=1{% endif %}">
-              {% trans 'Disbursements' %}
-            </a>
-          </div>
-        </th>
         <th class="{% if form.cleaned_data.order_by == 'credit_post_count' %}sorted{% else %}sortable{% endif %}">
           <div class="text">
             <a href="?{{ days_query }}&amp;order_by=credit_post_count{% if not form.cleaned_data.desc %}&amp;desc=1{% endif %}">
@@ -71,7 +64,6 @@
       {% for prison in prisons %}
         <tr>
           <td>{{ prison.name }}</td>
-          <td>{{ prison.disbursement_count|format_number }}</td>
           <td>{{ prison.credit_post_count|format_number }}</td>
           <td>{{ prison.credit_mtp_count|format_number }}</td>
           <td>{{ prison.credit_uptake|format_percentage }}</td>

@@ -12,7 +12,6 @@ from django.views.generic import FormView, TemplateView
 
 from core.forms import DigitalTakeupReportForm, PrisonDigitalTakeupForm
 from core.views import AdminViewMixin
-from disbursement.models import Disbursement, DISBURSEMENT_RESOLUTION
 from performance.forms import DigitalTakeupUploadForm
 from performance.models import DigitalTakeup
 from prison.models import Prison
@@ -114,7 +113,6 @@ class PrisonDigitalTakeupView(AdminViewMixin, TemplateView):
             nomis_id: {
                 'name': prison,
                 'nomis_id': nomis_id,
-                'disbursement_count': 0,
                 'credit_post_count': None,
                 'credit_mtp_count': None,
                 'credit_uptake': None,
@@ -122,14 +120,6 @@ class PrisonDigitalTakeupView(AdminViewMixin, TemplateView):
             for nomis_id, prison in prisons
         }
         included_prison_set = set(prisons.keys())
-
-        disbursements = Disbursement.objects.filter(
-            prison__in=included_prison_set,
-        ).filter(
-            resolution=DISBURSEMENT_RESOLUTION.SENT, created__date__gte=since_date,
-        ).values('prison').order_by('prison').annotate(count=models.Count('*'))
-        for row in disbursements:
-            prisons[row['prison']]['disbursement_count'] = row['count']
 
         takeup = DigitalTakeup.objects.filter(
             prison__in=included_prison_set,
