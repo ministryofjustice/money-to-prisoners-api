@@ -7,6 +7,7 @@
 
 {% block extrastyle %}
   {{ block.super }}
+
   <link rel="stylesheet" type="text/css" href="{% static 'admin/css/changelists.css' %}" />
   <style>
     #takeup-chart {
@@ -14,70 +15,76 @@
       height: 400px;
       margin: 10px 8px;
     }
+    #takeup-report-notes {
+      margin-top: 2em;
+      border: 2px solid #79aec8;
+    }
   </style>
 {% endblock %}
+
 {% block extrahead %}
   {{ block.super }}
+
   <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
   <script>
-  google.charts.load('current', {packages: ['corechart']});
-  google.charts.setOnLoadCallback(function () {
-    var chartData = new google.visualization.DataTable({
-      cols: [
-        {type: 'string', label: '{% trans 'Periods' %}'},
-        {type: 'number', label: '{% trans 'Reported digital credits' %}'},
-        {type: 'number', label: '{% trans 'Reported postal credits' %}'},
-        {type: 'number', label: '{% trans 'Digital credits' %}'},
-        {type: 'boolean', role: 'certainty'},
-        {type: 'number', label: '{% trans 'Scaled postal credits' %}'},
-        {type: 'boolean', role: 'certainty'}
-      ],
-      rows: {{ chart_rows_json|safe }}
-    });
-    {% if not show_reported %}
-      chartData = new google.visualization.DataView(chartData);
-      chartData.hideColumns([1, 2]);
-    {% endif %}
-    var chart = document.getElementById('takeup-chart');
-    if (!chart) {
-      return;
-    }
-    chart = new google.visualization.LineChart(chart);
-    chart.draw(chartData, {
-      fontName: 'Roboto, "Lucida Grande", Verdana, Arial, sans-serif',
-      colors: [
-        {% if show_reported %}
-          '#d5e8f3', '#f9d6d6',
-        {% endif %}
-        '#2b8cc4', '#df3034'
-      ],
-      hAxis: {
-        baselineColor: '#333',
-        textStyle: {color: '#333'}
-      },
-      vAxis: {
-        minValue: 0,
-        format: 'short',
-        baselineColor: '#333',
-        textStyle: {color: '#333'},
-        textPosition: 'in'
-      },
-      chartArea: {
-        top: 30,
-        right: 0,
-        bottom: 50,
-        left: 0
-      },
-      legend: {
-        position: 'top',
-        alignment: 'end',
-        maxLines: 1,
-        textStyle: {
-          color: '#333'
-        }
+    google.charts.load('current', {packages: ['corechart']});
+    google.charts.setOnLoadCallback(function () {
+      var chartData = new google.visualization.DataTable({
+        cols: [
+          {type: 'string', label: '{% trans 'Periods' %}'},
+          {type: 'number', label: '{% trans 'Reported digital credits' %}'},
+          {type: 'number', label: '{% trans 'Reported postal credits' %}'},
+          {type: 'number', label: '{% trans 'Digital credits' %}'},
+          {type: 'boolean', role: 'certainty'},
+          {type: 'number', label: '{% trans 'Scaled postal credits' %}'},
+          {type: 'boolean', role: 'certainty'}
+        ],
+        rows: {{ chart_rows_json|safe }}
+      });
+      {% if not show_reported %}
+        chartData = new google.visualization.DataView(chartData);
+        chartData.hideColumns([1, 2]);
+      {% endif %}
+      var chart = document.getElementById('takeup-chart');
+      if (!chart) {
+        return;
       }
+      chart = new google.visualization.LineChart(chart);
+      chart.draw(chartData, {
+        fontName: 'Roboto, "Lucida Grande", Verdana, Arial, sans-serif',
+        colors: [
+          {% if show_reported %}
+            '#d5e8f3', '#f9d6d6',
+          {% endif %}
+          '#2b8cc4', '#df3034'
+        ],
+        hAxis: {
+          baselineColor: '#333',
+          textStyle: {color: '#333'}
+        },
+        vAxis: {
+          minValue: 0,
+          format: 'short',
+          baselineColor: '#333',
+          textStyle: {color: '#333'},
+          textPosition: 'in'
+        },
+        chartArea: {
+          top: 30,
+          right: 0,
+          bottom: 50,
+          left: 0
+        },
+        legend: {
+          position: 'top',
+          alignment: 'end',
+          maxLines: 1,
+          textStyle: {
+            color: '#333'
+          }
+        }
+      });
     });
-  });
   </script>
 {% endblock %}
 
@@ -93,6 +100,12 @@
 {% endblock %}
 
 {% block content %}
+  <p>
+    <a href="#takeup-report-notes">
+      {% trans 'See important notes below' %}…
+    </a>
+  </p>
+
   <div id="content-main">
     <div id="changelist" class="module filtered">
       <div id="changelist-filter">
@@ -106,20 +119,6 @@
 
         <h3>{{ form.show_predictions.label }} ‡</h3>
         {% admin_choice_list form form.show_predictions %}
-
-        <h3>{% trans 'Costs per transaction' %} †</h3>
-        <ul>
-          <li>
-            {% blocktrans trimmed with cost=form.cleaned_data.postal_cost|format_amount %}
-              Non-digital cost is {{ cost }}
-            {% endblocktrans %}
-          </li>
-          <li>
-            {% blocktrans trimmed with cost=form.cleaned_data.digital_cost|format_amount %}
-              Digital cost is {{ cost }}
-            {% endblocktrans %}
-          </li>
-        </ul>
       </div>
 
       <div class="results">
@@ -174,21 +173,32 @@
           </p>
         {% endif %}
 
-        <br/>
-        <p>
-          *
-          {% trans 'Digital take-up is based on reports from NOMIS.' %}
-          {% trans 'These reports do not accurately show the number of credits received by post nor digitally.' %}
-          {% trans 'Assuming that digital take-up is correct (i.e. the proportion of each), the postal credits are scaled from the known number of digital credits which we track.' %}
-        </p>
-        <p>
-          †
-          {% trans 'Gross savings are calculated as the difference between the actual cost and the cost had all transactions been non-digital.' %}
-        </p>
-        <p>
-          ‡
-          {% trans 'Digital credits and scaled postal credits are predicted based on historic data.' %}
-        </p>
+        <section id="takeup-report-notes">
+          <h2>{% trans 'Notes on this report' %}</h2>
+          <p>
+            *
+            {% trans 'Digital take-up is based on reports from NOMIS.' %}
+            {% trans 'These reports do not accurately show the number of credits received by post nor digitally.' %}
+            {% trans 'Assuming that digital take-up is correct (i.e. the proportion of each), the postal credits are scaled from the known accurate number of digital credits.' %}
+          </p>
+          <p>
+            †
+            {% trans 'Gross savings are calculated as the difference between the actual cost and the cost had all transactions been non-digital.' %}
+            {% trans 'The costs per transaction are' %}:
+            <br />
+            {% blocktrans trimmed with cost=form.cleaned_data.postal_cost|format_amount %}
+              {{ cost }} for non-digital
+            {% endblocktrans %}
+            <br />
+            {% blocktrans trimmed with cost=form.cleaned_data.digital_cost|format_amount %}
+              {{ cost }} for digital
+            {% endblocktrans %}
+          </p>
+          <p>
+            ‡
+            {% trans 'Digital credits and scaled postal credits are predicted based on historic data.' %}
+          </p>
+        </section>
       </div>
     </div>
   </div>
