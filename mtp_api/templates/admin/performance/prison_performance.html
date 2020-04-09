@@ -37,23 +37,23 @@
             </a>
           </div>
         </th>
-        <th class="{% if form.cleaned_data.order_by == 'credit_post_count' %}sorted{% else %}sortable{% endif %}">
+        <th class="{% if form.cleaned_data.order_by == 'credits_by_post' %}sorted{% else %}sortable{% endif %}">
           <div class="text">
-            <a href="?{{ days_query }}&amp;order_by=credit_post_count{% if not form.cleaned_data.desc %}&amp;desc=1{% endif %}">
+            <a href="?{{ days_query }}&amp;order_by=credits_by_post{% if not form.cleaned_data.desc %}&amp;desc=1{% endif %}">
               {% trans 'Credits by post' %}
             </a>
           </div>
         </th>
-        <th class="{% if form.cleaned_data.order_by == 'credit_mtp_count' %}sorted{% else %}sortable{% endif %}">
+        <th class="{% if form.cleaned_data.order_by == 'credits_by_mtp' %}sorted{% else %}sortable{% endif %}">
           <div class="text">
-            <a href="?{{ days_query }}&amp;order_by=credit_mtp_count{% if not form.cleaned_data.desc %}&amp;desc=1{% endif %}">
+            <a href="?{{ days_query }}&amp;order_by=credits_by_mtp{% if not form.cleaned_data.desc %}&amp;desc=1{% endif %}">
               {% trans 'Credits by digital service' %}
             </a>
           </div>
         </th>
-        <th class="{% if form.cleaned_data.order_by == 'credit_uptake' %}sorted{% else %}sortable{% endif %}">
+        <th class="{% if form.cleaned_data.order_by == 'digital_takeup' %}sorted{% else %}sortable{% endif %}">
           <div class="text">
-            <a href="?{{ days_query }}&amp;order_by=credit_uptake{% if not form.cleaned_data.desc %}&amp;desc=1{% endif %}">
+            <a href="?{{ days_query }}&amp;order_by=digital_takeup{% if not form.cleaned_data.desc %}&amp;desc=1{% endif %}">
               {% trans 'Digital takeup' %}
             </a>
           </div>
@@ -64,9 +64,9 @@
       {% for prison in prisons %}
         <tr>
           <td>{{ prison.name }}</td>
-          <td>{{ prison.credit_post_count|format_number }}</td>
-          <td>{{ prison.credit_mtp_count|format_number }}</td>
-          <td>{{ prison.credit_uptake|format_percentage }}</td>
+          <td>{{ prison.credits_by_post|format_number }}</td>
+          <td>{{ prison.credits_by_mtp|format_number }}</td>
+          <td>{{ prison.digital_takeup|format_percentage }}</td>
         </tr>
       {% endfor %}
     </tbody>

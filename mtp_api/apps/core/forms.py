@@ -53,9 +53,9 @@ class PrisonDigitalTakeupForm(forms.Form):
     ), initial='30')
     order_by = forms.ChoiceField(choices=(
         ('nomis_id', _('Prison')),
-        ('credit_post_count', _('Credits by post')),
-        ('credit_mtp_count', _('Credits by digital service')),
-        ('credit_uptake', _('Digital take-up')),
+        ('credits_by_post', _('Credits by post')),
+        ('credits_by_mtp', _('Credits by digital service')),
+        ('digital_takeup', _('Digital take-up')),
     ), initial='nomis_id')
     desc = forms.ChoiceField(choices=(
         ('', _('Ascending')),

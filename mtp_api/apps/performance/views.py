@@ -113,9 +113,9 @@ class PrisonDigitalTakeupView(AdminViewMixin, TemplateView):
             nomis_id: {
                 'name': prison,
                 'nomis_id': nomis_id,
-                'credit_post_count': None,
-                'credit_mtp_count': None,
-                'credit_uptake': None,
+                'credits_by_post': 0,
+                'credits_by_mtp': 0,
+                'digital_takeup': None,
             }
             for nomis_id, prison in prisons
         }
@@ -126,20 +126,20 @@ class PrisonDigitalTakeupView(AdminViewMixin, TemplateView):
         ).filter(
             date__gte=since_date
         ).values('prison').order_by('prison').annotate(
-            credit_post_count=models.Sum('credits_by_post'),
-            credit_mtp_count=models.Sum('credits_by_mtp')
+            credits_by_post=models.Sum('credits_by_post'),
+            credits_by_mtp=models.Sum('credits_by_mtp'),
         )
 
         for row in takeup:
-            credit_post_count, credit_mtp_count = row['credit_post_count'], row['credit_mtp_count']
-            if credit_post_count or credit_mtp_count:
-                credit_uptake = credit_mtp_count / (credit_post_count + credit_mtp_count)
+            credits_by_post, credits_by_mtp = row['credits_by_post'], row['credits_by_mtp']
+            if credits_by_post or credits_by_mtp:
+                digital_takeup = credits_by_mtp / (credits_by_post + credits_by_mtp)
             else:
-                credit_uptake = None
+                digital_takeup = None
             prisons[row['prison']].update(
-                credit_post_count=credit_post_count,
-                credit_mtp_count=credit_mtp_count,
-                credit_uptake=credit_uptake,
+                credits_by_post=credits_by_post,
+                credits_by_mtp=credits_by_mtp,
+                digital_takeup=digital_takeup,
             )
 
         prisons = prisons.values()
