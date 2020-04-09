@@ -281,8 +281,13 @@ class DigitalTakeupReport(AdminViewMixin, TemplateView):
         scale_factor = form.prediction_scale
         cost_difference = form.cleaned_data['postal_cost'] - form.cleaned_data['digital_cost']
 
-        predicted_credits_by_post = load_curve('extrapolated_credits_by_post')
-        predicted_credits_by_mtp = load_curve('accurate_credits_by_mtp')
+        if self.exclude_private_estate:
+            key_suffix = 'without_private_estate'
+        else:
+            key_suffix = 'with_private_estate'
+        predicted_credits_by_post = load_curve(f'extrapolated_credits_by_post_{key_suffix}')
+        predicted_credits_by_mtp = load_curve(f'accurate_credits_by_mtp_{key_suffix}')
+
         last_date = rows[-1]['date']
         for period in form.get_periods_to_predict(last_date):
             x = date_to_curve_point(period)

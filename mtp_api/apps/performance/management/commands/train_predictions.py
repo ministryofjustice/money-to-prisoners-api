@@ -12,4 +12,5 @@ class Command(BaseCommand):
     help = textwrap.dedent(__doc__).strip()
 
     def handle(self, *args, **options):
-        train_digital_takeup()
+        train_digital_takeup(exclude_private_estate=True)
+        train_digital_takeup(exclude_private_estate=False)
