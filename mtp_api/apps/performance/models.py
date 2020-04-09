@@ -8,35 +8,10 @@ from django.utils.translation import gettext_lazy as _
 from core import dictfetchall, mean
 
 
-class DigitalTakeupQueryset(models.QuerySet):
-    def digital_takeup(self):
-        """
-        Add a pre-calculated digital take-up field
-        :return: DigitalTakeupQueryset
-        """
-        return self.annotate(digital_takeup=RawSQL("""
-            CASE WHEN credits_by_post + credits_by_mtp > 0
-            THEN credits_by_mtp / (credits_by_post + credits_by_mtp)::real
-            ELSE NULL END
-        """, ()))
-
-    def digital_takeup_per_day(self):
-        """
-        Per-day digital take-up averages
-        :return: generator
-        """
-        values = self.digital_takeup().exclude(digital_takeup__isnull=True) \
-            .values('date', 'digital_takeup').order_by('date')
-        for date, group in itertools.groupby(values, key=lambda value: value['date']):
-            yield {
-                'date': date,
-                'digital_takeup_per_day': mean(value['digital_takeup'] for value in group),
-            }
-
+class DigitalTakeupManager(models.Manager):
     def digital_takeup_per_month(self, since=None):
         """
         Per-month digital take-up averages
-        :return:  generator
         """
         if since is None:
             today = datetime.date.today()
@@ -63,6 +38,32 @@ class DigitalTakeupQueryset(models.QuerySet):
             """, params={'since': since})
             return dictfetchall(cursor)
 
+
+class DigitalTakeupQueryset(models.QuerySet):
+    def digital_takeup(self):
+        """
+        Add a pre-calculated digital take-up field
+        :return: DigitalTakeupQueryset
+        """
+        return self.annotate(digital_takeup=RawSQL("""
+            CASE WHEN credits_by_post + credits_by_mtp > 0
+            THEN credits_by_mtp / (credits_by_post + credits_by_mtp)::real
+            ELSE NULL END
+        """, ()))
+
+    def digital_takeup_per_day(self):
+        """
+        Per-day digital take-up averages
+        :return: generator
+        """
+        values = self.digital_takeup().exclude(digital_takeup__isnull=True) \
+            .values('date', 'digital_takeup').order_by('date')
+        for date, group in itertools.groupby(values, key=lambda value: value['date']):
+            yield {
+                'date': date,
+                'digital_takeup_per_day': mean(value['digital_takeup'] for value in group),
+            }
+
     def mean_digital_takeup(self):
         """
         Get averaged digital take-up
@@ -87,7 +88,7 @@ class DigitalTakeup(models.Model):
     amount_by_post = models.IntegerField(verbose_name=_('Amount by post'), null=True)
     amount_by_mtp = models.IntegerField(verbose_name=_('Amount sent digitally'), null=True)
 
-    objects = DigitalTakeupQueryset.as_manager()
+    objects = DigitalTakeupManager.from_queryset(DigitalTakeupQueryset)()
 
     reports_start = datetime.date(2017, 1, 1)
 
