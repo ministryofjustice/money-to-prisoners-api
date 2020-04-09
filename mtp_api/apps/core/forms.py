@@ -44,7 +44,16 @@ class SidebarDateWidget(widgets.AdminDateWidget):
         js = ('javascripts/vendor/calendar-overrides.js',)
 
 
-class PrisonDigitalTakeupForm(forms.Form):
+class AdminReportForm(forms.Form):
+    def __init__(self, **kwargs):
+        data = kwargs.pop('data', {})
+        for field_name, field in self.base_fields.items():
+            if field_name not in data:
+                data[field_name] = field.initial
+        super().__init__(data=data, **kwargs)
+
+
+class PrisonDigitalTakeupForm(AdminReportForm):
     days = forms.ChoiceField(label=_('Period'), choices=(
         ('7', _('Last 7 days')),
         ('30', _('Last 30 days')),
@@ -62,15 +71,8 @@ class PrisonDigitalTakeupForm(forms.Form):
         ('1', _('Descending')),
     ), required=False)
 
-    def __init__(self, **kwargs):
-        data = kwargs.pop('data', {})
-        for field_name, field in self.base_fields.items():
-            if field_name not in data:
-                data[field_name] = field.initial
-        super().__init__(data=data, **kwargs)
 
-
-class DigitalTakeupReportForm(forms.Form):
+class DigitalTakeupReportForm(AdminReportForm):
     period = forms.ChoiceField(label=_('Report type'), choices=(
         ('monthly', _('Monthly')),
         ('quarterly', _('Quarterly')),
@@ -94,13 +96,6 @@ class DigitalTakeupReportForm(forms.Form):
     ), initial='hide')
     postal_cost = forms.IntegerField(label=_('Cost per postal transaction'), min_value=0, initial=573)
     digital_cost = forms.IntegerField(label=_('Cost per digital transaction'), min_value=0, initial=222)
-
-    def __init__(self, **kwargs):
-        data = kwargs.pop('data', {})
-        for field_name, field in self.base_fields.items():
-            if field_name not in data:
-                data[field_name] = field.initial
-        super().__init__(data=data, **kwargs)
 
     @property
     def current_period(self):
