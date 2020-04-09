@@ -12,208 +12,210 @@
     var creditData = [
       ['Month', 'Debit', 'Bank transfer', 'Post'],
       {% for d in data_six_months reversed %}
-        ['{{d.start_of_month|date:"M Y"}}', {{d.credit_debit_card_count}}, {{d.credit_bank_transfer_count}}, {{d.post_count}}],
+        ['{{ d.start_of_month|date:'M Y' }}', {{ d.credit_debit_card_count }}, {{ d.credit_bank_transfer_count }}, {{ d.post_count }}],
       {% endfor %}
     ];
     var digitalTakeupData = [
       {% for d in data reversed %}
-        [new Date('{{d.start_of_month|date:"M Y"}}'), {{d.all_credits}}, {{d.post_count}}],
+        [new Date('{{ d.start_of_month|date:'M Y' }}'), {{ d.all_credits }}, {{ d.post_count }}],
       {% endfor %}
     ];
     var disbursementData = [
       ['Month', 'Cheque', 'Bank Transfer'],
       {% for d in data_six_months reversed %}
-        ['{{d.start_of_month|date:"M Y"}}', {{d.disbursement_cheque_count}}, {{d.disbursement_bank_transfer_count}}],
+        ['{{ d.start_of_month|date:'M Y' }}', {{ d.disbursement_cheque_count }}, {{ d.disbursement_bank_transfer_count }}],
       {% endfor %}
     ];
   </script>
   <script type="text/javascript" src="{% static 'javascripts/performance-dashboard.js' %}"></script>
 </head>
-  <body>
-     <div id="disbursements_page" class="size-of-page" style="display:none">
-      <div class="main-title">
-        <h1><strong>Disbursements</strong> (Money sent by prisoners)</h1>
-      </div>
-
-      <table class="main-table">
-        <tr>
-          <td>
-            <h2>Number of monthly disbursements</h2>
-          </td>
-          <td class="width-of-right-sub-title">
-            <h2>Digital disbursements</h2>
-          </td>
-        </tr>
-        <tr>
-          <td>
-            <div class="legend">
-              <span class="blue">
-                Cheque
-              </span>
-              <span class="pink">
-                Bank transfer
-              </span>
-            </div>
-          </td>
-          <td>
-            <h4 class="annotation-under-right-sub-title">
-              Cheque + bank transfer
-            </h4>
-          </td>
-        </tr>
-        <tr>
-          <td>
-            <div class="charts-container" id="disbursements_count_chart"></div>
-          </td>
-          <td>
-            <table class="table-overview">
-              <tr>
-                <th>Last week</th>
-                <th>This week</th>
-              </tr>
-              <tr>
-                <td>{{last_week.disbursement_count|format_number:1}} payments</td>
-                <td>{{this_week.disbursement_count|format_number:1}} payments</td>
-              </tr>
-              <tr class="table-spacing">
-                <td>{{last_week.disbursement_amount|format_amount:100}}</td>
-                <td>{{this_week.disbursement_amount|format_amount:100}}</td>
-              </tr>
-
-              <tr>
-                <th>Last month</th>
-                <th>This month</th>
-              </tr>
-              <tr>
-                <td>{{last_month.disbursement_count|format_number:1}} payments</td>
-                <td>{{this_month.disbursement_count|format_number:1}} payments</td>
-              </tr>
-              <tr class="table-spacing">
-                <td>{{last_month.disbursement_amount|format_amount:100}}</td>
-                <td>{{this_month.disbursement_amount|format_amount:100}}</td>
-              </tr>
-
-              <tr>
-                <th>Last year</th>
-                <th>This year</th>
-              </tr>
-              <tr>
-                <td>{{last_year.disbursement_count|format_number:1}} payments</td>
-                <td>{{this_year.disbursement_count|format_number:1}} payments</td>
-              </tr>
-              <tr class="table-spacing">
-                <td>{{last_year.disbursement_amount|format_amount:100}}</td>
-                <td>{{this_year.disbursement_amount|format_amount:100}}</td>
-              </tr>
-            </table>
-           </tr>
-          </td>
-        </tr>
-      </table>
+<body>
+  <div id="disbursements_page" class="size-of-page" style="display:none">
+    <div class="main-title">
+      <h1><strong>Disbursements</strong> (Money sent by prisoners)</h1>
     </div>
 
-    <div id="credits_page" class="size-of-page" style="display:none">
-      <div class="main-title">
-        <h1><strong>Credits</strong> (Money to prisoners)</h1>
-      </div>
+    <table class="main-table">
+      <tr>
+        <td>
+          <h2>Number of monthly disbursements</h2>
+        </td>
+        <td class="width-of-right-sub-title">
+          <h2>Digital disbursements</h2>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <div class="legend">
+            <span class="blue">
+              Cheque
+            </span>
+            <span class="pink">
+              Bank transfer
+            </span>
+          </div>
+        </td>
+        <td>
+          <h4 class="annotation-under-right-sub-title">
+            Cheque + bank transfer
+          </h4>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <div class="charts-container" id="disbursements_count_chart"></div>
+        </td>
+        <td>
+          <table class="table-overview">
+            <tr>
+              <th>Last week</th>
+              <th>This week</th>
+            </tr>
+            <tr>
+              <td>{{ last_week.disbursement_count|format_number:1 }} payments</td>
+              <td>{{ this_week.disbursement_count|format_number:1 }} payments</td>
+            </tr>
+            <tr class="table-spacing">
+              <td>{{ last_week.disbursement_amount|format_amount:100 }}</td>
+              <td>{{ this_week.disbursement_amount|format_amount:100 }}</td>
+            </tr>
 
-      <table class="main-table">
-        <tr>
-          <td>
-            <h2 id="credit_bar_chart_title" style="display:block">Number of monthly credits</h2>
-            <h2 id="digital_take_up_title" style="display:none">Digital take-up</h2>
-          </td>
-          <td class="width-of-right-sub-title">
-            <h2>Digital credits</h2>
-          </td>
-        </tr>
-        <tr>
-          <td>
-            <div id="credits_legend" class="legend">
-              <span class="yellow">
-                Debit card
-              </span>
-              <span class="pink">
-                Bank transfer
-              </span>
-              <span class="purple">
-                Post
-              </span>
-            </div>
-            <div id="digital_takeup_legend" class="legend" style="display:none">
-              <span class="green">
-                Debit card + Bank transfer
-              </span>
-              <span class="blue">
-                Post
-              </span>
-            </div>
-          </td>
-          <td>
-            <h4 class="annotation-under-right-sub-title">
-              Debit card + bank transfer
-            </h4>
-          </td>
-        </tr>
-        <tr>
-          <td>
-            <div class="charts-container" id="credit_bar_chart" style="display:block"></div>
-            <div class="charts-container" id="digital_take_up_chart" style="display:none"></div>
-          </td>
-          <td>
-            <table class="table-overview">
-              <tr>
-                <th>Last week</th>
-                <th>This week</th>
-              </tr>
-              <tr>
-                <td>{{last_week.credit_count|format_number:1}} credits</td>
-                <td>{{this_week.credit_count|format_number:1}} credits</td>
-              </tr>
-              <tr class="table-spacing">
-                <td>{{last_week.credit_amount|format_amount:100}}</td>
-                <td>{{this_week.credit_amount|format_amount:100}}</td>
-              </tr>
+            <tr>
+              <th>Last month</th>
+              <th>This month</th>
+            </tr>
+            <tr>
+              <td>{{ last_month.disbursement_count|format_number:1 }} payments</td>
+              <td>{{ this_month.disbursement_count|format_number:1 }} payments</td>
+            </tr>
+            <tr class="table-spacing">
+              <td>{{ last_month.disbursement_amount|format_amount:100 }}</td>
+              <td>{{ this_month.disbursement_amount|format_amount:100 }}</td>
+            </tr>
 
-              <tr>
-                <th>Last month</th>
-                <th>This month</th>
-              </tr>
-              <tr>
-                <td>{{last_month.credit_count|format_number:1}} credits</td>
-                <td>{{this_month.credit_count|format_number:1}} credits</td>
-              </tr>
-              <tr class="table-spacing">
-                <td>{{last_month.credit_amount|format_amount:100}}</td>
-                <td>{{this_month.credit_amount|format_amount:100}}</td>
-              </tr>
+            <tr>
+              <th>Last year</th>
+              <th>This year</th>
+            </tr>
+            <tr>
+              <td>{{ last_year.disbursement_count|format_number:1 }} payments</td>
+              <td>{{ this_year.disbursement_count|format_number:1 }} payments</td>
+            </tr>
+            <tr class="table-spacing">
+              <td>{{ last_year.disbursement_amount|format_amount:100 }}</td>
+              <td>{{ this_year.disbursement_amount|format_amount:100 }}</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </div>
 
-              <tr>
-                <th>Last year</th>
-                <th>This year</th>
-              </tr>
-              <tr>
-                <td>{{last_year.credit_count|format_number:1}} credits</td>
-                <td>{{this_year.credit_count|format_number:1}} credits</td>
-              </tr>
-              <tr class="table-spacing">
-                <td>{{last_year.credit_amount|format_amount:100}}</td>
-                <td>{{this_year.credit_amount|format_amount:100}}</td>
-              </tr>
-            </table>
-            <div class="satisfaction-box">
-              <h2>User satisfaction</h2>
-              <h3>{{user_satisfaction}}%</h3>
-            </div>
-            <div class="money-saved-box">
-              <h2>Gov savings enabled</h2>
-              <h3>{{savings|format_amount}}</h3>
-              <h4>(in current financial year)</h4>
-            </div>
-          </td>
-        </tr>
-      </table>
+  <div id="credits_page" class="size-of-page" style="display:none">
+    <div class="main-title">
+      <h1><strong>Credits</strong> (Money to prisoners)</h1>
     </div>
-    <a class="pause-button" id="play_control" href="#">Pause</a>
-  </body>
+
+    <table class="main-table">
+      <tr>
+        <td>
+          <h2 id="credit_bar_chart_title" style="display:block">Number of monthly credits</h2>
+          <h2 id="digital_take_up_title" style="display:none">Digital take-up</h2>
+        </td>
+        <td class="width-of-right-sub-title">
+          <h2>Digital credits</h2>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <div id="credits_legend" class="legend">
+            <span class="yellow">
+              Debit card
+            </span>
+            <span class="pink">
+              Bank transfer
+            </span>
+            <span class="purple">
+              Post
+            </span>
+          </div>
+          <div id="digital_takeup_legend" class="legend" style="display:none">
+            <span class="green">
+              Debit card + Bank transfer
+            </span>
+            <span class="blue">
+              Post
+            </span>
+          </div>
+        </td>
+        <td>
+          <h4 class="annotation-under-right-sub-title">
+            Debit card + bank transfer
+          </h4>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <div class="charts-container" id="credit_bar_chart" style="display:block"></div>
+          <div class="charts-container" id="digital_take_up_chart" style="display:none"></div>
+        </td>
+        <td>
+          <table class="table-overview">
+            <tr>
+              <th>Last week</th>
+              <th>This week</th>
+            </tr>
+            <tr>
+              <td>{{ last_week.credit_count|format_number:1 }} credits</td>
+              <td>{{ this_week.credit_count|format_number:1 }} credits</td>
+            </tr>
+            <tr class="table-spacing">
+              <td>{{ last_week.credit_amount|format_amount:100 }}</td>
+              <td>{{ this_week.credit_amount|format_amount:100 }}</td>
+            </tr>
+
+            <tr>
+              <th>Last month</th>
+              <th>This month</th>
+            </tr>
+            <tr>
+              <td>{{ last_month.credit_count|format_number:1 }} credits</td>
+              <td>{{ this_month.credit_count|format_number:1 }} credits</td>
+            </tr>
+            <tr class="table-spacing">
+              <td>{{ last_month.credit_amount|format_amount:100 }}</td>
+              <td>{{ this_month.credit_amount|format_amount:100 }}</td>
+            </tr>
+
+            <tr>
+              <th>Last year</th>
+              <th>This year</th>
+            </tr>
+            <tr>
+              <td>{{ last_year.credit_count|format_number:1 }} credits</td>
+              <td>{{ this_year.credit_count|format_number:1 }} credits</td>
+            </tr>
+            <tr class="table-spacing">
+              <td>{{ last_year.credit_amount|format_amount:100 }}</td>
+              <td>{{ this_year.credit_amount|format_amount:100 }}</td>
+            </tr>
+          </table>
+
+          <div class="satisfaction-box">
+            <h2>User satisfaction</h2>
+            <h3>{{ user_satisfaction }}%</h3>
+          </div>
+
+          <div class="money-saved-box">
+            <h2>GOV savings enabled</h2>
+            <h3>{{ savings|format_amount }}</h3>
+            <h4>(in current financial year)</h4>
+          </div>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <a class="pause-button" id="play_control" href="#">Pause</a>
+</body>
 </html>
