@@ -80,7 +80,7 @@ class DigitalTakeupReportForm(forms.Form):
         ('exclude', _('Exclude')),
         ('include', _('Include')),
     ), initial='exclude')
-    show_reported = forms.ChoiceField(label=_('Reported data'), choices=(
+    show_reported = forms.ChoiceField(label=_('Data from NOMIS'), choices=(
         ('hide', _('Hide')),
         ('show', _('Show')),
     ), initial='hide')

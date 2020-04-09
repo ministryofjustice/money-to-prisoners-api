@@ -32,8 +32,8 @@
       var chartData = new google.visualization.DataTable({
         cols: [
           {type: 'string', label: '{% trans 'Periods' %}'},
-          {type: 'number', label: '{% trans 'Reported digital credits' %}'},
-          {type: 'number', label: '{% trans 'Reported postal credits' %}'},
+          {type: 'number', label: '{% trans 'NOMIS digital credits' %}'},
+          {type: 'number', label: '{% trans 'NOMIS postal credits' %}'},
           {type: 'number', label: '{% trans 'Digital credits' %}'},
           {type: 'boolean', role: 'certainty'},
           {type: 'number', label: '{% trans 'Scaled postal credits' %}'},
@@ -72,11 +72,12 @@
         chartArea: {
           top: 30,
           right: 0,
-          bottom: 50,
+          bottom: 80,
           left: 0
         },
+        title: '{% trans 'Digital take-up' %} ({% if exclude_private_estate %}{% trans 'excluding private estate' %}{% else %}{% trans 'including private estate' %}{% endif %})',
         legend: {
-          position: 'top',
+          position: 'bottom',
           alignment: 'end',
           maxLines: 1,
           textStyle: {
@@ -101,6 +102,13 @@
 
 {% block content %}
   <p>
+    <strong>{% trans 'Warning' %}:</strong>
+    {% if exclude_private_estate %}
+      {% trans 'Digital credits and scaled postal orders exclude private estate!' %}
+    {% else %}
+      {% trans 'Assuming digital take-up is the same in private prisons as in the public estate.' %}
+    {% endif %}
+    <br />
     <a href="#takeup-report-notes">
       {% trans 'See important notes below' %}…
     </a>
@@ -135,8 +143,8 @@
               <tr>
                 <th></th>
                 {% if show_reported %}
-                  <th><div class="text quiet"><span>{% trans 'Reported digital credits' %} *</span></div></th>
-                  <th><div class="text quiet"><span>{% trans 'Reported postal credits' %} *</span></div></th>
+                  <th><div class="text quiet"><span>{% trans 'NOMIS digital credits' %} *</span></div></th>
+                  <th><div class="text quiet"><span>{% trans 'NOMIS postal credits' %} *</span></div></th>
                 {% endif %}
                 <th><div class="text"><span>{% trans 'Average digital take-up' %}</span></div></th>
                 <th><div class="text"><span>{% trans 'Digital credits' %}</span></div></th>
@@ -185,29 +193,39 @@
 
         <section id="takeup-report-notes">
           <h2>{% trans 'Notes on this report' %}</h2>
-          <p>
-            *
-            {% trans 'Digital take-up is based on reports from NOMIS.' %}
-            {% trans 'These reports do not accurately show the number of credits received by post nor digitally.' %}
-            {% trans 'Assuming that digital take-up is correct (i.e. the proportion of each), the postal credits are scaled from the known accurate number of digital credits.' %}
-          </p>
-          <p>
-            †
+          <dl>
+            <dt>* {% trans 'Digital take-up' %}</dt>
+            <dd>
+              {% trans 'Digital take-up is the proportion of credits received through the digital service.' %}
+              {% trans 'This is based on reports from NOMIS.' %}
+              {% trans 'NOMIS reports do not always show the accurate number of credits received neither by post nor digitally across the public estate.' %}
+              {% trans 'They do not include the private estate at all.' %}
+              {% trans 'By assuming that digital take-up is correct (i.e. the proportion of each), the postal credits are extrapolated from the known accurate number of digital credits.' %}
+            </dd>
+
+            <dt>† {% trans 'Gross savings enabled' %}</dt>
+            <dd>
               {% trans 'Gross savings are calculated as the difference between the actual cost and the cost had all transactions been non-digital.' %}
               {% trans 'The costs per transaction are' %}:
-            <br />
+              <ul>
+                <li>
                   {% blocktrans trimmed with cost=form.cleaned_data.postal_cost|format_amount %}
                     {{ cost }} for non-digital
                   {% endblocktrans %}
-            <br />
+                </li>
+                <li>
                   {% blocktrans trimmed with cost=form.cleaned_data.digital_cost|format_amount %}
                     {{ cost }} for digital
                   {% endblocktrans %}
-          </p>
-          <p>
-            ‡
+                </li>
+              </ul>
+            </dd>
+
+            <dt>‡ {% trans 'Predictions' %}</dt>
+            <dd>
               {% trans 'Digital credits and scaled postal credits are predicted based on historic data.' %}
-          </p>
+            </dd>
+          </dl>
         </section>
       </div>
     </div>
