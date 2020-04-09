@@ -42,34 +42,10 @@
     <table>
     <thead>
       <tr>
-        <th class="{% if form.cleaned_data.order_by == 'nomis_id' %}sorted{% else %}sortable{% endif %}">
-          <div class="text">
-            <a href="?{{ days_query }}&amp;order_by=nomis_id{% if not form.cleaned_data.desc %}&amp;desc=1{% endif %}">
-              {% trans 'Prison' %}
-            </a>
-          </div>
-        </th>
-        <th class="{% if form.cleaned_data.order_by == 'credits_by_post' %}sorted{% else %}sortable{% endif %}">
-          <div class="text">
-            <a href="?{{ days_query }}&amp;order_by=credits_by_post{% if not form.cleaned_data.desc %}&amp;desc=1{% endif %}">
-              {% trans 'NOMIS postal credits' %}
-            </a>
-          </div>
-        </th>
-        <th class="{% if form.cleaned_data.order_by == 'credits_by_mtp' %}sorted{% else %}sortable{% endif %}">
-          <div class="text">
-            <a href="?{{ days_query }}&amp;order_by=credits_by_mtp{% if not form.cleaned_data.desc %}&amp;desc=1{% endif %}">
-              {% trans 'NOMIS digital credits' %}
-            </a>
-          </div>
-        </th>
-        <th class="{% if form.cleaned_data.order_by == 'digital_takeup' %}sorted{% else %}sortable{% endif %}">
-          <div class="text">
-            <a href="?{{ days_query }}&amp;order_by=digital_takeup{% if not form.cleaned_data.desc %}&amp;desc=1{% endif %}">
-              {% trans 'Average digital take-up' %}
-            </a>
-          </div>
-        </th>
+        {% sortable_table_header form 'nomis_id' _('Prison') %}
+        {% sortable_table_header form 'credits_by_post' _('NOMIS postal credits') %}
+        {% sortable_table_header form 'credits_by_mtp' _('NOMIS digital credits') %}
+        {% sortable_table_header form 'digital_takeup' _('Average digital take-up') %}
       </tr>
     </thead>
     <tbody>

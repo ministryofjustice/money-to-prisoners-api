@@ -1,10 +1,12 @@
 import datetime
 import math
+from urllib.parse import urlencode
 
 import pytz
 from django import forms
 from django.contrib.admin import widgets
 from django.core.exceptions import ValidationError
+from django.utils.functional import cached_property
 from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 import jwt
@@ -52,6 +54,33 @@ class AdminReportForm(forms.Form):
                 data[field_name] = field.initial
         super().__init__(data=data, **kwargs)
 
+        if 'ordering' in self.fields:
+            ordering_field = self.fields['ordering']
+            reversed_choices = [
+                (f'-{value}', label)
+                for value, label in ordering_field.choices
+            ]
+            ordering_field.choices.extend(reversed_choices)
+
+    @cached_property
+    def query_string_without_ordering(self):
+        query = (
+            (field.name, self.cleaned_data.get(field.name))
+            for field in self
+            if field.name not in {'ordering'}
+        )
+        query = filter(lambda q: q[1] not in (None, '', []), query)
+        query = dict(query)
+        return urlencode(query, doseq=True)
+
+    def get_ordering(self):
+        if 'ordering' not in self.fields:
+            return None, None
+        ordering = self.cleaned_data['ordering']
+        if ordering.startswith('-'):
+            return ordering[1:], True
+        return ordering, False
+
 
 class PrisonDigitalTakeupForm(AdminReportForm):
     days = forms.ChoiceField(label=_('Period'), choices=(
@@ -60,16 +89,12 @@ class PrisonDigitalTakeupForm(AdminReportForm):
         ('60', _('Last 60 days')),
         ('120', _('Last 120 days')),
     ), initial='30')
-    order_by = forms.ChoiceField(choices=(
+    ordering = forms.ChoiceField(choices=(
         ('nomis_id', _('Prison')),
         ('credits_by_post', _('Credits by post')),
         ('credits_by_mtp', _('Credits by digital service')),
         ('digital_takeup', _('Digital take-up')),
     ), initial='nomis_id')
-    desc = forms.ChoiceField(choices=(
-        ('', _('Ascending')),
-        ('1', _('Descending')),
-    ), required=False)
 
 
 class DigitalTakeupReportForm(AdminReportForm):

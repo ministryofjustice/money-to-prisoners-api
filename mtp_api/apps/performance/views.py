@@ -144,19 +144,14 @@ class PrisonDigitalTakeupView(AdminViewMixin, TemplateView):
             )
 
         prisons = prisons.values()
+        ordering, reversed_order = form.get_ordering()
         prisons = sorted(
-            prisons, key=lambda p: p[form.cleaned_data['order_by']] or 0,
-            reverse=bool(form.cleaned_data['desc'])
+            prisons, key=lambda p: p[ordering] or 0,
+            reverse=reversed_order
         )
 
-        days_query = '&'.join(
-            '%s=%s' % (name, value)
-            for name, value in form.cleaned_data.items()
-            if name not in {'order_by', 'desc'}
-        )
         context_data['opts'] = DigitalTakeup._meta
         context_data['form'] = form
-        context_data['days_query'] = days_query
         context_data['prisons'] = prisons
         return context_data
 
