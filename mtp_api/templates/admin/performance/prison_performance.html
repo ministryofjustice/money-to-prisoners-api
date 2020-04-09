@@ -9,6 +9,7 @@
 {% block extrastyle %}
   {{ block.super }}
   <link rel="stylesheet" type="text/css" href="{% static 'admin/css/changelists.css' %}" />
+  <link rel="stylesheet" type="text/css" href="{% static 'stylesheets/digital-takeup-reports.css' %}"/>
 {% endblock %}
 
 {% block bodyclass %}{{ block.super }} change-list{% endblock %}
@@ -24,8 +25,9 @@
 
 {% block content %}
 <p>
-  <strong>{% trans 'Note' %}:</strong>
-  {% trans 'Digital take-up is only known in public prisons so private prisons are not listed.' %}
+  <a href="#takeup-report-notes">
+    {% trans 'See important notes below' %}…
+  </a>
 </p>
 
 <div id="content-main">
@@ -50,21 +52,21 @@
         <th class="{% if form.cleaned_data.order_by == 'credits_by_post' %}sorted{% else %}sortable{% endif %}">
           <div class="text">
             <a href="?{{ days_query }}&amp;order_by=credits_by_post{% if not form.cleaned_data.desc %}&amp;desc=1{% endif %}">
-              {% trans 'Credits by post' %}
+              {% trans 'NOMIS postal credits' %}
             </a>
           </div>
         </th>
         <th class="{% if form.cleaned_data.order_by == 'credits_by_mtp' %}sorted{% else %}sortable{% endif %}">
           <div class="text">
             <a href="?{{ days_query }}&amp;order_by=credits_by_mtp{% if not form.cleaned_data.desc %}&amp;desc=1{% endif %}">
-              {% trans 'Credits by digital service' %}
+              {% trans 'NOMIS digital credits' %}
             </a>
           </div>
         </th>
         <th class="{% if form.cleaned_data.order_by == 'digital_takeup' %}sorted{% else %}sortable{% endif %}">
           <div class="text">
             <a href="?{{ days_query }}&amp;order_by=digital_takeup{% if not form.cleaned_data.desc %}&amp;desc=1{% endif %}">
-              {% trans 'Digital takeup' %}
+              {% trans 'Average digital take-up' %}
             </a>
           </div>
         </th>
@@ -72,7 +74,7 @@
     </thead>
     <tbody>
       {% for prison in prisons %}
-        <tr>
+        <tr class="{% cycle 'row1' 'row2' %}">
           <td>{{ prison.name }}</td>
           <td>{{ prison.credits_by_post|format_number }}</td>
           <td>{{ prison.credits_by_mtp|format_number }}</td>
@@ -81,6 +83,19 @@
       {% endfor %}
     </tbody>
     </table>
+
+    <section id="takeup-report-notes">
+      <h2>{% trans 'Notes on this report' %}</h2>
+      <dl>
+        <dt>{% trans 'Digital take-up' %}</dt>
+        <dd>
+          {% trans 'Digital take-up is the proportion of credits received through the digital service.' %}
+          {% trans 'This is based on reports from NOMIS.' %}
+          {% trans 'NOMIS reports do not always show the accurate number of credits received neither by post nor digitally across the public estate.' %}
+          {% trans 'They do not include the private estate at all.' %}
+        </dd>
+      </dl>
+    </section>
   </div>
 </div>
 </div>
