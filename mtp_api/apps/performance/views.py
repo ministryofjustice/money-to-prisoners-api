@@ -153,6 +153,7 @@ class PrisonDigitalTakeupView(AdminViewMixin, TemplateView):
             for name, value in form.cleaned_data.items()
             if name not in {'order_by', 'desc'}
         )
+        context_data['opts'] = DigitalTakeup._meta
         context_data['form'] = form
         context_data['days_query'] = days_query
         context_data['prisons'] = prisons
