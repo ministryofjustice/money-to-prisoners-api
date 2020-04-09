@@ -80,6 +80,10 @@ class DigitalTakeupReportForm(forms.Form):
         ('hide', _('Hide')),
         ('show', _('Show')),
     ), initial='hide')
+    show_savings = forms.ChoiceField(label=_('Gross savings enabled'), choices=(
+        ('hide', _('Hide')),
+        ('show', _('Show')),
+    ), initial='hide')
     show_predictions = forms.ChoiceField(label=_('Predictions'), choices=(
         ('hide', _('Hide')),
         ('show', _('Show')),

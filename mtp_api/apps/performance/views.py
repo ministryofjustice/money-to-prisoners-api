@@ -168,7 +168,7 @@ class DigitalTakeupReport(AdminViewMixin, TemplateView):
                   = digital transactions * cost difference
     Uses trained curves for predicting future digital and postal credits and hence digital take-up and savings.
     """
-    title = _('Digital take-up & savings report')
+    title = _('Digital take-up report')
     template_name = 'performance/digital-takeup-report.html'
     required_permissions = ['transaction.view_dashboard']
 
@@ -189,6 +189,7 @@ class DigitalTakeupReport(AdminViewMixin, TemplateView):
         context_data['opts'] = DigitalTakeup._meta
         context_data['form'] = form
         context_data['show_reported'] = form.cleaned_data['show_reported'] == 'show'
+        context_data['show_savings'] = form.cleaned_data['show_savings'] == 'show'
         context_data['rows'] = list(self.process_rows(rows, form))
 
         context_data['show_predictions'] = form.cleaned_data['show_predictions'] == 'show'

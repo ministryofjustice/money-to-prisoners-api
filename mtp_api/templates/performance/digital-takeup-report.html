@@ -117,6 +117,9 @@
         <h3>{{ form.show_reported.label }} *</h3>
         {% admin_choice_list form form.show_reported %}
 
+        <h3>{{ form.show_savings.label }} †</h3>
+        {% admin_choice_list form form.show_savings %}
+
         <h3>{{ form.show_predictions.label }} ‡</h3>
         {% admin_choice_list form form.show_predictions %}
       </div>
@@ -135,7 +138,9 @@
                 <th><div class="text"><span>{% trans 'Average digital take-up' %}</span></div></th>
                 <th><div class="text"><span>{% trans 'Digital credits' %}</span></div></th>
                 <th><div class="text"><span>{% trans 'Scaled postal credits' %} *</span></div></th>
-                <th><div class="text"><span>{% trans 'Gross savings enabled' %} †</span></div></th>
+                {% if show_savings %}
+                  <th><div class="text"><span>{% trans 'Gross savings enabled' %} †</span></div></th>
+                {% endif %}
               </tr>
             </thead>
             <tbody>
@@ -143,7 +148,7 @@
               {% for rows in grouped_rows %}
                 {% if rows.grouper %}
                   <tr class="{% cycle 'row1' 'row2' as row_styles %}">
-                    <td colspan="{% if show_reported %}7{% else %}5{% endif %}" style="text-align:center">
+                    <td colspan="{% if show_reported and show_savings %}7{% elif show_reported %}6{% elif show_savings %}5{% else %}4{% endif %}" style="text-align:center">
                       {% trans 'Predictions begin' %}
                     </td>
                   </tr>
@@ -158,7 +163,9 @@
                     <td>{{ row.digital_takeup|format_percentage }}</td>
                     <td>{{ row.accurate_credits_by_mtp|format_number }}</td>
                     <td>{{ row.extrapolated_credits_by_post|format_number }}</td>
-                    <td>{{ row.savings|format_amount }}</td>
+                    {% if show_savings %}
+                      <td>{{ row.savings|format_amount }}</td>
+                    {% endif %}
                   </tr>
                 {% endfor %}
               {% endfor %}
