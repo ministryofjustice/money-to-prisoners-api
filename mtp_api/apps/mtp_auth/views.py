@@ -519,7 +519,7 @@ class AccountRequestViewSet(viewsets.ModelViewSet):
 
 
 class LoginStatsView(AdminViewMixin, TemplateView):
-    title = _('Login stats')
+    title = _('Staff logins per prison')
     template_name = 'admin/mtp_auth/login-stats.html'
     required_permissions = ['transaction.view_dashboard']
     excluded_nomis_ids = {'ZCH'}
