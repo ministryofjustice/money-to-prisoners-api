@@ -3,6 +3,7 @@ import datetime
 import logging
 from urllib.parse import urlsplit, urlunsplit, urlencode, parse_qs
 
+from django.contrib import messages
 from django.contrib.admin.models import LogEntry, CHANGE as CHANGE_LOG_ENTRY, DELETION as DELETION_LOG_ENTRY
 from django.contrib.admin.options import get_content_type_for_model
 from django.contrib.auth import password_validation, get_user_model
@@ -528,6 +529,7 @@ class LoginStatsView(AdminViewMixin, TemplateView):
         context_data = super().get_context_data(**kwargs)
         form = LoginStatsForm(data=self.request.GET.dict())
         if not form.is_valid():
+            messages.error(self.request, 'Invalid form, using default filters')
             form = LoginStatsForm(data={})
             assert form.is_valid(), 'Empty form should be valid'
 

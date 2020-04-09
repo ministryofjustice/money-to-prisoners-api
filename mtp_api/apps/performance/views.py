@@ -99,6 +99,7 @@ class PrisonDigitalTakeupView(AdminViewMixin, TemplateView):
         context_data = super().get_context_data(**kwargs)
         form = PrisonDigitalTakeupForm(data=self.request.GET.dict())
         if not form.is_valid():
+            messages.error(self.request, 'Invalid form, using default filters')
             form = PrisonDigitalTakeupForm(data={})
             assert form.is_valid(), 'Empty form should be valid'
 
@@ -180,6 +181,7 @@ class DigitalTakeupReport(AdminViewMixin, TemplateView):
         context_data = super().get_context_data(**kwargs)
         form = DigitalTakeupReportForm(data=self.request.GET.dict())
         if not form.is_valid():
+            messages.error(self.request, 'Invalid form, using default filters')
             form = DigitalTakeupReportForm(data={})
             assert form.is_valid(), 'Empty form should be valid'
 
