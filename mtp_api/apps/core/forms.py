@@ -76,6 +76,10 @@ class DigitalTakeupReportForm(forms.Form):
         ('quarterly', _('Quarterly')),
         ('financial', _('Financial years')),
     ), initial='monthly')
+    private_estate = forms.ChoiceField(label=_('Private estate'), choices=(
+        ('exclude', _('Exclude')),
+        ('include', _('Include')),
+    ), initial='exclude')
     show_reported = forms.ChoiceField(label=_('Reported data'), choices=(
         ('hide', _('Hide')),
         ('show', _('Show')),

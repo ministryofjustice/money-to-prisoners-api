@@ -172,12 +172,18 @@ class DigitalTakeupReport(AdminViewMixin, TemplateView):
     template_name = 'performance/digital-takeup-report.html'
     required_permissions = ['transaction.view_dashboard']
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.exclude_private_estate = True
+
     def get_context_data(self, **kwargs):
         context_data = super().get_context_data(**kwargs)
         form = DigitalTakeupReportForm(data=self.request.GET.dict())
         if not form.is_valid():
             form = DigitalTakeupReportForm(data={})
             assert form.is_valid(), 'Empty form should be valid'
+
+        self.exclude_private_estate = form.cleaned_data['private_estate'] == 'exclude'
 
         if form.cleaned_data['period'] == 'quarterly':
             rows = self.get_quarterly_rows()
@@ -188,6 +194,7 @@ class DigitalTakeupReport(AdminViewMixin, TemplateView):
 
         context_data['opts'] = DigitalTakeup._meta
         context_data['form'] = form
+        context_data['exclude_private_estate'] = self.exclude_private_estate
         context_data['show_reported'] = form.cleaned_data['show_reported'] == 'show'
         context_data['show_savings'] = form.cleaned_data['show_savings'] == 'show'
         context_data['rows'] = list(self.process_rows(rows, form))
@@ -200,7 +207,9 @@ class DigitalTakeupReport(AdminViewMixin, TemplateView):
         return context_data
 
     def get_monthly_rows(self):
-        yield from DigitalTakeup.objects.digital_takeup_per_month()
+        yield from DigitalTakeup.objects.digital_takeup_per_month(
+            exclude_private_estate=self.exclude_private_estate
+        )
 
     def get_quarterly_rows(self):
         quarter_end_months = {3, 6, 9, 12}

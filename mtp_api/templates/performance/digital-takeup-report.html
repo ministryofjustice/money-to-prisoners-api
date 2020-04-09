@@ -114,6 +114,9 @@
         <h3>{{ form.period.label }}</h3>
         {% admin_choice_list form form.period %}
 
+        <h3>{{ form.private_estate.label }} *</h3>
+        {% admin_choice_list form form.private_estate %}
+
         <h3>{{ form.show_reported.label }} *</h3>
         {% admin_choice_list form form.show_reported %}
 
@@ -190,20 +193,20 @@
           </p>
           <p>
             †
-            {% trans 'Gross savings are calculated as the difference between the actual cost and the cost had all transactions been non-digital.' %}
-            {% trans 'The costs per transaction are' %}:
+              {% trans 'Gross savings are calculated as the difference between the actual cost and the cost had all transactions been non-digital.' %}
+              {% trans 'The costs per transaction are' %}:
             <br />
-            {% blocktrans trimmed with cost=form.cleaned_data.postal_cost|format_amount %}
-              {{ cost }} for non-digital
-            {% endblocktrans %}
+                  {% blocktrans trimmed with cost=form.cleaned_data.postal_cost|format_amount %}
+                    {{ cost }} for non-digital
+                  {% endblocktrans %}
             <br />
-            {% blocktrans trimmed with cost=form.cleaned_data.digital_cost|format_amount %}
-              {{ cost }} for digital
-            {% endblocktrans %}
+                  {% blocktrans trimmed with cost=form.cleaned_data.digital_cost|format_amount %}
+                    {{ cost }} for digital
+                  {% endblocktrans %}
           </p>
           <p>
             ‡
-            {% trans 'Digital credits and scaled postal credits are predicted based on historic data.' %}
+              {% trans 'Digital credits and scaled postal credits are predicted based on historic data.' %}
           </p>
         </section>
       </div>
