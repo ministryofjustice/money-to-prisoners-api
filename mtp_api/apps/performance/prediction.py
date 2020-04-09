@@ -1,11 +1,14 @@
 import datetime
-import os
+import logging
+import pathlib
 
 from django.utils.timezone import now
 import numpy as np
 from scipy import optimize
 
 from performance.models import DigitalTakeup
+
+logger = logging.getLogger('mtp')
 
 
 def date_to_curve_point(d):
@@ -20,20 +23,26 @@ def curve_point_to_date(x):
 
 
 class Curve:
+    predictions_path = pathlib.Path(__file__).parent / 'predicted-curves'
+
+    @classmethod
+    def path_for_key(cls, key):
+        path = cls.predictions_path / key
+        return path.with_suffix('.npy')
+
     def __init__(self, key, default_params):
-        path = os.path.join(os.path.dirname(__file__), 'predicted-curves', key + '.pickle')
-        if os.path.exists(path):
-            with open(path, 'rb') as f:
-                self.params = np.load(f, allow_pickle=True)
+        path = self.path_for_key(key)
+        if path.exists():
+            self.params = np.load(path)
         else:
             self.params = default_params
 
+    def __repr__(self):
+        return f'<{self.__class__.__name__} params=[{", ".join(map(str, self.params))}]>'
+
     def save_params(self, key):
-        path = os.path.join(os.path.dirname(__file__), 'predicted-curves')
-        os.makedirs(path, exist_ok=True)
-        path = os.path.join(path, key + '.pickle')
-        with open(path, 'wb') as f:
-            self.params.dump(f)
+        self.predictions_path.mkdir(exist_ok=True)
+        np.save(self.path_for_key(key), self.params)
 
     def get_value(self, x):
         raise NotImplementedError
@@ -52,7 +61,7 @@ class Curve:
 
 
 class Hyperbolic(Curve):
-    # tends towards 0
+    # decreases towards 0
     # ∝ 1/x
 
     def get_value(self, x):
@@ -70,23 +79,29 @@ class Logarithmic(Curve):
 known_curves = {
     'accurate_credits_by_mtp': {
         'curve': Logarithmic,
-        'defaults': np.array([83089128.91457231, 1.6418543562686948e-05, 1.000494203778578], dtype='float64')
+        'default_params': np.array([83089128.91457231, 1.6418543562686948e-05, 1.000494203778578], dtype='float64')
     },
     'extrapolated_credits_by_post': {
         'curve': Hyperbolic,
-        'defaults': np.array([645195.4941409506, 10.977321495885535], dtype='float64'),
+        'default_params': np.array([645195.4941409506, 10.977321495885535], dtype='float64'),
     },
 }
 
 
 def load_curve(key):
-    default_params = known_curves[key]['defaults']
-    return known_curves[key]['curve'](key, default_params)
+    known_curve = known_curves[key]
+    default_params = known_curve['default_params']
+    return known_curve['curve'](key, default_params)
 
 
 def train_curve(key, x, y):
     curve = load_curve(key)
+    old_params = curve.params.copy()
     curve.optimise(curve.params, x, y)
+    if np.array_equal(old_params, curve.params):
+        logger.info(f'Curve {key} already optimised')
+    else:
+        logger.info(f'Optimised {key} curve: {curve}')
     curve.save_params(key)
     return curve
 
@@ -105,6 +120,7 @@ def train_digital_takeup():
     ]
     rows = np.array(rows, dtype='int64')
     x = rows[..., 0]
+
     accurate_credits_by_mtp = rows[..., 1]
     train_curve('accurate_credits_by_mtp', x, accurate_credits_by_mtp)
 
