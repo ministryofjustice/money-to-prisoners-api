@@ -2,15 +2,12 @@ from django.conf import settings
 from django.conf.urls import include, url
 from django.contrib import admin
 from django.http import HttpResponse
-from django.views.generic import RedirectView
 from django.utils.translation import gettext_lazy as _
+from django.views.generic import RedirectView
 from moj_irat.views import HealthcheckView, PingJsonView
 from mtp_common.metrics.views import metrics_view
 
-from performance.view_dashboard import PerformanceDashboardView
-
 urlpatterns = [
-    url(r'^$', lambda request: HttpResponse(content_type='text/plain', status=204)),
     url(r'^', include('prison.urls')),
     url(r'^', include('mtp_auth.urls')),
     url(r'^', include('transaction.urls')),
@@ -22,7 +19,6 @@ urlpatterns = [
     url(r'^', include('disbursement.urls')),
     url(r'^', include('core.urls')),
     url(r'^', include('notification.urls')),
-    url(r'^performance-dashboard/$', PerformanceDashboardView.as_view(), name='performance_dashboard'),
 
     url(r'^oauth2/', include(('oauth2_provider.urls', 'oauth2_provider'), namespace='oauth2_provider')),
     url(r'^admin/', admin.site.urls),
@@ -47,4 +43,6 @@ urlpatterns = [
         _('Sorry, something went wrong'),
         content_type='text/plain', status=500,
     )),
+
+    url(r'^$', lambda request: HttpResponse(content_type='text/plain', status=204)),
 ]

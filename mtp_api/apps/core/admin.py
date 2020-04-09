@@ -23,26 +23,37 @@ class AdminSite(admin.AdminSite):
         from core.views import DashboardView, DownloadPublicKeyView, RecreateTestDataView, UpdateNOMISTokenView
         from mtp_auth.views import LoginStatsView
         from payment.views import PaymentSearchView
+        from performance.view_dashboard import PerformanceDashboardView
         from performance.views import DigitalTakeupUploadView, DigitalTakeupReport, PrisonPerformanceView
         from prison.views import LoadOffendersView
 
         return [
+            # older dashboards
             url(r'^dashboard/$', DashboardView.as_view(), name='dashboard'),
             url(r'^dashboard/(?P<slug>[^/]+)/$', DashboardView.as_view(fullscreen=True), name='dashboard_fullscreen'),
 
-            # TODO: Remove once all apps move to NOMIS Elite2
-            url(r'^core/token/nomis/public-key/$', DownloadPublicKeyView.as_view(), name='download_public_key'),
-            url(r'^core/token/nomis/change/$', UpdateNOMISTokenView.as_view(), name='update_nomis_token'),
-
-            url(r'^payment/payment/search/$', PaymentSearchView.as_view(), name='payment_search'),
+            # performance dashboard and reports
+            url(r'^performance/dashboard/$', PerformanceDashboardView.as_view(),
+                name='performance_dashboard'),
+            url(r'^performance/prisons/$', PrisonPerformanceView.as_view(),
+                name='prison-performance'),
+            url(r'^performance/login-stats/$', LoginStatsView.as_view(),
+                name='login-stats'),
             url(r'^performance/digitaltakeup/upload/$', DigitalTakeupUploadView.as_view(),
                 name='digital_takeup_upload'),
             url(r'^performance/digitaltakeup/report/$', DigitalTakeupReport.as_view(),
                 name='digital_takeup_report'),
+
+            # additional admin views
+            url(r'^payment/payment/search/$', PaymentSearchView.as_view(), name='payment_search'),
             url(r'^prison/prisonerlocation/load-offenders/$', LoadOffendersView.as_view(), name='load_offenders'),
-            url(r'^recreate-test-data/$', RecreateTestDataView.as_view(), name='recreate_test_data'),
-            url(r'^prison-performance/$', PrisonPerformanceView.as_view(), name='prison-performance'),
-            url(r'^login-stats/$', LoginStatsView.as_view(), name='login-stats'),
+
+            # testing views
+            url(r'^testing/recreate-data/$', RecreateTestDataView.as_view(), name='recreate_test_data'),
+
+            # TODO: Remove once all apps move to NOMIS Elite2
+            url(r'^core/token/nomis/public-key/$', DownloadPublicKeyView.as_view(), name='download_public_key'),
+            url(r'^core/token/nomis/change/$', UpdateNOMISTokenView.as_view(), name='update_nomis_token'),
         ] + super().get_urls()
 
     def index(self, request, extra_context=None):
