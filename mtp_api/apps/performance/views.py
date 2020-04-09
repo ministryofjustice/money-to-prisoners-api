@@ -107,8 +107,9 @@ class PrisonDigitalTakeupView(AdminViewMixin, TemplateView):
 
         prisons = Prison.objects.exclude(
             nomis_id__in=self.excluded_nomis_ids
+        ).exclude(
+            private_estate=True,
         ).values_list('nomis_id', 'name')
-
         prisons = {
             nomis_id: {
                 'name': prison,
@@ -120,17 +121,18 @@ class PrisonDigitalTakeupView(AdminViewMixin, TemplateView):
             }
             for nomis_id, prison in prisons
         }
+        included_prison_set = set(prisons.keys())
 
-        disbursements = Disbursement.objects.exclude(
-            prison__in=self.excluded_nomis_ids,
+        disbursements = Disbursement.objects.filter(
+            prison__in=included_prison_set,
         ).filter(
             resolution=DISBURSEMENT_RESOLUTION.SENT, created__date__gte=since_date,
         ).values('prison').order_by('prison').annotate(count=models.Count('*'))
         for row in disbursements:
             prisons[row['prison']]['disbursement_count'] = row['count']
 
-        takeup = DigitalTakeup.objects.exclude(
-            prison__in=self.excluded_nomis_ids,
+        takeup = DigitalTakeup.objects.filter(
+            prison__in=included_prison_set,
         ).filter(
             date__gte=since_date
         ).values('prison').order_by('prison').annotate(

@@ -1,4 +1,4 @@
-{% extends "admin/base_site.html" %}
+{% extends 'admin/base_site.html' %}
 {% load i18n %}
 {% load static %}
 {% load credit %}
@@ -7,17 +7,17 @@
 
 {% block extrastyle %}
   {{ block.super }}
-  <link rel="stylesheet" type="text/css" href="{% static "admin/css/changelists.css" %}" />
-  <style>
-    .linktable * {
-      border: none;
-    }
-  </style>
+  <link rel="stylesheet" type="text/css" href="{% static 'admin/css/changelists.css' %}" />
 {% endblock %}
 
 {% block bodyclass %}{{ block.super }} change-list{% endblock %}
 
 {% block content %}
+<p>
+  <strong>{% trans 'Note' %}:</strong>
+  {% trans 'Digital take-up is only known in public prisons so private prisons are not listed.' %}
+</p>
+
 <div id="content-main">
 <div id="changelist" class="module filtered">
   <div id="changelist-filter">
@@ -68,15 +68,15 @@
       </tr>
     </thead>
     <tbody>
-    {% for prison in prisons %}
-      <tr>
-        <td>{{ prison.name }}</td>
-        <td>{{ prison.disbursement_count|format_number }}</td>
-        <td>{{ prison.credit_post_count|format_number }}</td>
-        <td>{{ prison.credit_mtp_count|format_number }}</td>
-        <td>{{ prison.credit_uptake|format_percentage }}</td>
-      </tr>
-    {% endfor %}
+      {% for prison in prisons %}
+        <tr>
+          <td>{{ prison.name }}</td>
+          <td>{{ prison.disbursement_count|format_number }}</td>
+          <td>{{ prison.credit_post_count|format_number }}</td>
+          <td>{{ prison.credit_mtp_count|format_number }}</td>
+          <td>{{ prison.credit_uptake|format_percentage }}</td>
+        </tr>
+      {% endfor %}
     </tbody>
     </table>
   </div>
