@@ -3,6 +3,7 @@ from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.utils.dateformat import format as date_format
 from django.utils.timezone import make_aware
 from model_mommy import mommy
 from oauth2_provider.models import Application
@@ -20,7 +21,7 @@ class LoginCountTestCase(TestCase):
         with mock.patch('django.db.models.fields.timezone.now', return_value=now):
             Login.objects.create(
                 user=user,
-                application=application
+                application=application,
             )
 
     def test_login_counts(self):
@@ -52,15 +53,18 @@ class LoginCountTestCase(TestCase):
 
         now = make_aware(datetime.datetime(2018, 4, 15, 12))
         with mock.patch('mtp_auth.views.now', return_value=now):
-            months = list(view.get_months())
-        current_month_progress = months.pop(0)
-        self.assertEqual(current_month_progress, 0.5)  # "today" is half way through April
+            current_month_progress, months = view.get_months()
+        # "today" midday is roughly half way through April
+        self.assertAlmostEqual(current_month_progress, 0.5, delta=0.02)
+
         this_month, last_month, *_ = months
+        this_month = date_format(this_month, 'Y-m')
+        last_month = date_format(last_month, 'Y-m')
 
         login_counts = view.get_login_counts(
             application.client_id,
             current_month_progress,
-            months
+            months,
         )
 
         # expect there to be double by the end of the month

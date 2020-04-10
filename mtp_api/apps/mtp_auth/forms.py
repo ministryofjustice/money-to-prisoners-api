@@ -2,6 +2,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from django.core.exceptions import ValidationError
+from django.utils.dateformat import format as date_format
 from django.utils.translation import gettext_lazy as _
 
 from core.forms import AdminReportForm
@@ -72,3 +73,13 @@ class LoginStatsForm(AdminReportForm):
         (CASHBOOK_OAUTH_CLIENT_ID, _('Digital cashbook')),
         (NOMS_OPS_OAUTH_CLIENT_ID, _('Prisoner money intelligence')),
     ), initial=CASHBOOK_OAUTH_CLIENT_ID)
+    ordering = forms.ChoiceField(choices=(
+        ('nomis_id', _('Prison')),
+    ), initial='nomis_id')
+
+    def __init__(self, months, **kwargs):
+        self.base_fields['ordering'].choices.extend((
+            (date_format(month, 'Y-m'), date_format(month, 'F'))
+            for month in months
+        ))
+        super().__init__(**kwargs)

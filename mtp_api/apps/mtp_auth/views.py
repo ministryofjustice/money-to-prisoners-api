@@ -1,5 +1,4 @@
 import collections
-import datetime
 import logging
 from urllib.parse import urlsplit, urlunsplit, urlencode, parse_qs
 
@@ -13,6 +12,7 @@ from django.db import connection
 from django.db.transaction import atomic
 from django.forms import ValidationError
 from django.http import Http404
+from django.utils.dateformat import format as date_format
 from django.utils.decorators import method_decorator
 from django.utils.text import capfirst
 from django.utils.timezone import now
@@ -527,49 +527,79 @@ class LoginStatsView(AdminViewMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context_data = super().get_context_data(**kwargs)
-        form = LoginStatsForm(data=self.request.GET.dict())
+
+        current_month_progress, months = self.get_months()
+
+        form = LoginStatsForm(months, data=self.request.GET.dict())
         if not form.is_valid():
             messages.error(self.request, 'Invalid form, using default filters')
-            form = LoginStatsForm(data={})
+            form = LoginStatsForm(months, data={})
             assert form.is_valid(), 'Empty form should be valid'
 
-        context_data['form'] = form
-        context_data['prisons'] = self.get_prisons()
-        months = list(self.get_months())
-        current_month_progress = months.pop(0)
-        context_data['months'] = months
-        context_data['login_counts'] = self.get_login_counts(
+        prisons = self.get_prisons()
+        login_counts = self.get_login_counts(
             form.cleaned_data['application'],
             current_month_progress,
             months,
         )
+
+        login_stats = []
+        for nomis_id, prison_name in prisons:
+            login_stat = {
+                'nomis_id': nomis_id,
+                'prison_name': prison_name,
+            }
+            monthly_counts = []
+            for month in months:
+                month_key = date_format(month, 'Y-m')
+                month_count = login_counts[(nomis_id, month_key)]
+                login_stat[month_key] = month_count
+                monthly_counts.append(month_count)
+            login_stat['monthly_counts'] = monthly_counts
+            login_stats.append(login_stat)
+
+        ordering, reversed_order = form.get_ordering()
+        login_stats = sorted(
+            login_stats, key=lambda s: s[ordering],
+            reverse=reversed_order
+        )
+
+        context_data['form'] = form
+        context_data['months'] = months
+        context_data['login_stats'] = login_stats
         return context_data
 
     def get_prisons(self):
         prisons = list(Prison.objects.exclude(
             nomis_id__in=self.excluded_nomis_ids
         ).order_by('nomis_id').values_list('nomis_id', 'name'))
-        prisons.append((None, _('Prison not specified')))
+        prisons.append(('', _('Prison not specified')))
         return prisons
 
     def get_months(self):
         today = now()
         month_start = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        month = month_start.month + 1
-        if month > 12:
+
+        next_month = month_start.month + 1
+        if next_month > 12:
             next_month = month_start.replace(year=month_start.year + 1, month=1)
         else:
-            next_month = month_start.replace(month=month)
-        month_end = next_month - datetime.timedelta(days=1)
-        yield today.day / month_end.day
+            next_month = month_start.replace(month=next_month)
 
-        for _ in range(4):  # noqa: F402
-            yield month_start
+        current_month_progress = (
+            (today.timestamp() - month_start.timestamp()) / (next_month.timestamp() - month_start.timestamp())
+        )
+
+        months = []
+        while len(months) < 4:
+            months.append(month_start)
             month = month_start.month - 1
             if month < 1:
                 month_start = month_start.replace(year=month_start.year - 1, month=12)
             else:
                 month_start = month_start.replace(month=month)
+
+        return current_month_progress, months
 
     def get_login_counts(self, application, current_month_progress, months):
         login_count_query = """
@@ -586,18 +616,23 @@ class LoginStatsView(AdminViewMixin, TemplateView):
               mtp_auth_prisonusermapping_prisons.prisonusermapping_id = mtp_auth_prisonusermapping.id
             GROUP BY prison_id
         """
+        login_counts = collections.defaultdict(int)
         try:
             application = Application.objects.get(client_id=application)
         except Application.DoesNotExist:
-            return
-        login_counts = collections.defaultdict(int)
+            return login_counts
         for i, month in enumerate(months):
-            scale = current_month_progress if i == 0 else 1
+            if i == 0:
+                def scale_func(count):
+                    return int(round(count / current_month_progress))
+            else:
+                def scale_func(count):
+                    return count
             with connection.cursor() as cursor:
                 cursor.execute(login_count_query, {
                     'application_id': application.id,
                     'month': month.date(),
                 })
-                for prison_id, login_count in cursor.fetchall():
-                    login_counts[(prison_id, month)] = round(login_count / scale)
+                for nomis_id, login_count in cursor.fetchall():
+                    login_counts[(nomis_id, date_format(month, 'Y-m'))] = scale_func(login_count)
         return login_counts
