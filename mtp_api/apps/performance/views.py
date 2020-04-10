@@ -1,5 +1,4 @@
 import collections
-from datetime import date, timedelta
 import json
 
 from django.contrib import messages
@@ -103,8 +102,6 @@ class PrisonDigitalTakeupView(AdminViewMixin, TemplateView):
             form = PrisonDigitalTakeupForm(data={})
             assert form.is_valid(), 'Empty form should be valid'
 
-        since_date = date.today() - timedelta(days=int(form.cleaned_data['days']))
-
         prisons = Prison.objects.exclude(
             nomis_id__in=self.excluded_nomis_ids
         ).exclude(
@@ -122,10 +119,14 @@ class PrisonDigitalTakeupView(AdminViewMixin, TemplateView):
         }
         included_prison_set = set(prisons.keys())
 
+        since_date, until_date = form.period_date_range
+        period_filters = {'date__gte': since_date}
+        if until_date:
+            period_filters['date__lt'] = until_date
+
         takeup = DigitalTakeup.objects.filter(
             prison__in=included_prison_set,
-        ).filter(
-            date__gte=since_date
+            **period_filters
         ).values('prison').order_by('prison').annotate(
             credits_by_post=models.Sum('credits_by_post'),
             credits_by_mtp=models.Sum('credits_by_mtp'),

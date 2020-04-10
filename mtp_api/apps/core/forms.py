@@ -83,11 +83,13 @@ class AdminReportForm(forms.Form):
 
 
 class PrisonDigitalTakeupForm(AdminReportForm):
-    days = forms.ChoiceField(label=_('Period'), choices=(
+    period = forms.ChoiceField(label=_('Period'), choices=(
         ('7', _('Last 7 days')),
         ('30', _('Last 30 days')),
-        ('60', _('Last 60 days')),
-        ('120', _('Last 120 days')),
+        ('this_month', _('This month')),
+        ('last_month', _('Last month')),
+        ('this_quarter', _('This quarter')),
+        ('last_quarter', _('Last quarter')),
     ), initial='30')
     ordering = forms.ChoiceField(choices=(
         ('nomis_id', _('Prison')),
@@ -95,6 +97,49 @@ class PrisonDigitalTakeupForm(AdminReportForm):
         ('credits_by_mtp', _('Credits by digital service')),
         ('digital_takeup', _('Digital take-up')),
     ), initial='nomis_id')
+
+    @property
+    def period_date_range(self):
+        period = self.cleaned_data['period']
+        today = now()
+
+        try:
+            days = int(period)
+        except ValueError:
+            pass
+        else:
+            since_date = today.date() - datetime.timedelta(days=days)
+            return since_date, None
+
+        first_of_month = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        if period == 'this_month':
+            return first_of_month.date(), None
+        if period == 'last_month':
+            last_month = first_of_month.month - 1
+            if last_month < 1:
+                first_of_last_month = first_of_month.replace(
+                    year=first_of_month.year - 1,
+                    month=12,
+                )
+            else:
+                first_of_last_month = first_of_month.replace(month=last_month)
+            return first_of_last_month.date(), first_of_month.date()
+
+        first_of_quarter = first_of_month.replace(month=math.ceil(first_of_month.month / 3) * 3 - 2)
+        if period == 'this_quarter':
+            return first_of_quarter.date(), None
+        if period == 'last_quarter':
+            last_quarter_month = first_of_quarter.month - 4
+            if last_quarter_month < 1:
+                first_of_last_quarter = first_of_quarter.replace(
+                    year=first_of_month.year - 1,
+                    month=10,
+                )
+            else:
+                first_of_last_quarter = first_of_quarter.replace(month=last_quarter_month)
+            return first_of_last_quarter.date(), first_of_quarter.date()
+
+        raise NotImplementedError
 
 
 class DigitalTakeupReportForm(AdminReportForm):
