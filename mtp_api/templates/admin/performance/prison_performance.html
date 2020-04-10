@@ -9,7 +9,7 @@
 {% block extrastyle %}
   {{ block.super }}
   <link rel="stylesheet" type="text/css" href="{% static 'admin/css/changelists.css' %}" />
-  <link rel="stylesheet" type="text/css" href="{% static 'stylesheets/digital-takeup-reports.css' %}"/>
+  <link rel="stylesheet" type="text/css" href="{% static 'stylesheets/admin-reports.css' %}"/>
 {% endblock %}
 
 {% block bodyclass %}{{ block.super }} change-list{% endblock %}
@@ -25,7 +25,7 @@
 
 {% block content %}
 <p>
-  <a href="#takeup-report-notes">
+  <a href="#admin-report-notes">
     {% trans 'See important notes below' %}…
   </a>
 </p>
@@ -60,7 +60,7 @@
     </tbody>
     </table>
 
-    <section id="takeup-report-notes">
+    <section id="admin-report-notes">
       <h2>{% trans 'Notes on this report' %}</h2>
       <dl>
         <dt>{% trans 'Digital take-up' %}</dt>

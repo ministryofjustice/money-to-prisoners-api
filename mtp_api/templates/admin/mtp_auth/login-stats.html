@@ -7,6 +7,7 @@
 {% block extrastyle %}
   {{ block.super }}
   <link rel="stylesheet" type="text/css" href="{% static 'admin/css/changelists.css' %}" />
+  <link rel="stylesheet" type="text/css" href="{% static 'stylesheets/admin-reports.css' %}"/>
 {% endblock %}
 
 {% block bodyclass %}{{ block.super }} change-list{% endblock %}
@@ -19,6 +20,12 @@
 {% endblock %}
 
 {% block content %}
+  <p>
+    <a href="#admin-report-notes">
+      {% trans 'See important notes below' %}…
+    </a>
+  </p>
+
   <div id="content-main">
     <div id="changelist" class="module filtered">
       <div id="changelist-filter">
@@ -43,7 +50,7 @@
           </thead>
           <tbody>
             {% for login_stat in login_stats %}
-              <tr>
+              <tr class="{% cycle 'row1' 'row2' %}">
                 <td>{{ login_stat.prison_name }}</td>
                 {% for login_count in login_stat.monthly_counts %}
                   <td>{{ login_count|format_number }}</td>
@@ -52,12 +59,17 @@
             {% endfor %}
           </tbody>
         </table>
-        <br/>
-        <p>
-          *
-          {% trans 'The number of logins this month assumes the same constant rate of logins as seen so far.' %}
-          {% trans 'This will be inaccurate at the beginning of the month.' %}
-        </p>
+
+        <section id="admin-report-notes">
+          <h2>{% trans 'Notes on this report' %}</h2>
+          <dl>
+            <dt>* {% trans 'Expected this month' %}</dt>
+            <dd>
+              {% trans 'The number of logins this month assumes the same constant rate of logins as seen so far.' %}
+              {% trans 'This will be inaccurate at the beginning of the month.' %}
+            </dd>
+          </dl>
+        </section>
       </div>
     </div>
   </div>
