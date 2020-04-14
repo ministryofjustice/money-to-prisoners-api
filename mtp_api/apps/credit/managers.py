@@ -1,9 +1,14 @@
+import logging
+
 from django.db import connection, models
 from django.db.models import Q
 from django.db.transaction import atomic
 
 from credit import InvalidCreditStateException
 from credit.constants import LOG_ACTIONS, CREDIT_STATUS, CREDIT_RESOLUTION
+
+
+logger = logging.getLogger(__name__)
 
 
 class CreditQuerySet(models.QuerySet):
@@ -64,6 +69,12 @@ class CreditManager(models.Manager):
                 """,
                 (CREDIT_RESOLUTION.PENDING,)
             )
+
+    def create(self, *args, **kwargs):
+        credit_instance = super(CreditManager, self).create(*args, **kwargs)
+        #We intentionally disregard the return in this invocation of the fn
+        _  = credit_instance.attach_profiles()
+        return credit_instance
 
     @atomic
     def reconcile(self, start_date, end_date, user, **kwargs):

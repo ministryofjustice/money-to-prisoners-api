@@ -29,7 +29,7 @@ class BaseUpdatePrisonsTestCase(TestCase):
             'amount': 1000,
             'prisoner_number': random_prisoner_number(),
             'prisoner_dob': random_prisoner_dob(),
-            'prison': None,
+            'prison': Prison.objects.first(),
             'received_at': timezone.now().replace(microsecond=0),
         }
 

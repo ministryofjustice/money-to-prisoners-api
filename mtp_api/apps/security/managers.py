@@ -381,7 +381,9 @@ class CheckManager(models.Manager):
         from notification.rules import RULES
         from security.constants import CHECK_STATUS
 
-        temporary_profiles = self._attach_profiles(credit)
+        #This call should be redundant now, as the profiles are created and associated within the CreditManager.create method but lets leave it in for now
+        # for cautions sake. e.g. could a Payment remain in the INITIAL resolution state after an update?
+        temporary_profiles = credit.attach_profiles()
         matched_rule_codes = self._get_matching_rules(credit)
         for field in temporary_profiles:
             setattr(credit, field, None)
@@ -402,24 +404,6 @@ class CheckManager(models.Manager):
             description=description,
             rules=matched_rule_codes,
         )
-
-    def _attach_profiles(self, credit):
-        from security.models import PrisonerProfile, SenderProfile
-
-        temporary_profiles = []
-        if not credit.prisoner_profile:
-            try:
-                credit.prisoner_profile = PrisonerProfile.objects.get_for_credit(credit)
-                temporary_profiles.append('prisoner_profile')
-            except PrisonerProfile.DoesNotExist:
-                pass
-        if not credit.sender_profile:
-            try:
-                credit.sender_profile = SenderProfile.objects.get_for_credit(credit)
-                temporary_profiles.append('sender_profile')
-            except SenderProfile.DoesNotExist:
-                pass
-        return temporary_profiles
 
     def _get_matching_rules(self, credit):
         from notification.rules import RULES

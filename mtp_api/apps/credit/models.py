@@ -140,6 +140,39 @@ class Credit(TimeStampedModel):
             by_user=by_user
         )
 
+    def attach_profiles(self):
+        from security.models import PrisonerProfile, SenderProfile
+
+        profiles = []
+        if not self.prisoner_profile:
+            try:
+                self.prisoner_profile = PrisonerProfile.objects.get_for_credit(self)
+            except PrisonerProfile.DoesNotExist:
+                logger.warning('Could not find PrisonerProfile to attach to credit %s', self)
+                if self.prison and self.prisoner_name:
+                    self.prisoner_profile = PrisonerProfile.objects.create_or_update_for_credit(self)
+                else:
+                    logger.warning(
+                        'Could not create PrisonerProfile for credit %s because Credit lacked either  a prison or prisoner name', self
+                    )
+            profiles.append('prisoner_profile')
+        if not self.sender_profile:
+            try:
+                self.sender_profile = SenderProfile.objects.get_for_credit(self)
+            except SenderProfile.DoesNotExist:
+                logger.warning('Could not find SenderProfile to attach to credit %s', self)
+                self.sender_profile = SenderProfile.objects.create_or_update_for_credit(self)
+                if self.prisoner_profile:
+                    self.prisoner_profile.senders.add(self.sender_profile)
+                else:
+                    logger.warning(
+                        'Associated a sender with credit %s, but could not create PrisonerProfile '
+                        'because credit lacked either a prison or prisoner name',
+                        self
+                    )
+            profiles.append('sender_profile')
+        return profiles
+
     @property
     def source(self):
         if hasattr(self, 'transaction'):
