@@ -45,7 +45,11 @@ class PrisonPermittedValidator():
 
 
 class UserSerializer(serializers.ModelSerializer):
+    # TODO Deduplicate this and mtp_auth.serializers.UserSerializer
+    # so drf-yasg stops complaining about serializer namespace collisions
+    # without custom ref name
     class Meta:
+        ref_name = 'Dispersement User'
         model = User
         fields = (
             'username',
@@ -70,6 +74,7 @@ class CommentSerializer(serializers.ModelSerializer):
     user_full_name = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
+        ref_name = 'Disbursement Comment'
         model = Comment
         read_only = ('user',)
         fields = ('disbursement', 'user', 'user_full_name', 'comment', 'category')

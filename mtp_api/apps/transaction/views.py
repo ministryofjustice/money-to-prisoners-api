@@ -6,6 +6,7 @@ from django.utils.translation import gettext_lazy as _
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, viewsets, status, generics
+from rest_framework.exceptions import APIException
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -85,6 +86,15 @@ class TransactionView(
         return Transaction()
 
     def get_serializer_class(self):
+        # Having different serializers for different RESTful operations isn't
+        # quite django-rest-framework best practise, so we run into problems here
+        # when parsing the class with drf-yasg's OpenAPI introspection
+
+        # For now we raise rest_framework.exceptions.APIException on this code path
+        # so the introspector knows not to introspect the fields for a particular
+        # given HTTP verb for this view
+        if not self.request:
+            raise APIException('Request not bound to view. This should only occur on introspection')
         if self.request.method == 'POST':
             return CreateTransactionSerializer
         elif self.request.method == 'PATCH':
@@ -101,6 +111,7 @@ class ReconcileTransactionsView(generics.GenericAPIView):
     queryset = Transaction.objects.all()
     action = 'patch_processed'
     serializer_class = TransactionSerializer
+    actions = {'post': 'patch_processed'}
 
     permission_classes = (
         IsAuthenticated, BankAdminClientIDPermissions,

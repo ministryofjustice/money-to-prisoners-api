@@ -336,6 +336,7 @@ class CreditsGroupedByCreditedList(CreditViewMixin, generics.ListAPIView):
 class CreditCredits(CreditViewMixin, APIView):
     serializer_class = CreditedOnlyCreditSerializer
     action = 'credit'
+    actions = {'post': 'credit'}
 
     permission_classes = (
         IsAuthenticated, CashbookClientIDPermissions,
@@ -387,6 +388,7 @@ class CreditCredits(CreditViewMixin, APIView):
 class SetManualCredits(CreditViewMixin, APIView):
     serializer_class = IdsCreditSerializer
     action = 'credit'
+    actions = {'post': 'credit'}
 
     permission_classes = (
         IsAuthenticated, CashbookClientIDPermissions,
@@ -432,6 +434,7 @@ class SetManualCredits(CreditViewMixin, APIView):
 class ReviewCredits(CreditViewMixin, APIView):
     serializer_class = IdsCreditSerializer
     action = 'review'
+    actions = {'post': 'review'}
 
     permission_classes = (
         IsAuthenticated, NomsOpsClientIDPermissions,
@@ -483,6 +486,8 @@ class ProcessingBatchView(
     )
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return self.queryset.all().order_by('-id')
         return self.queryset.filter(user=self.request.user).order_by('-id')
 
 

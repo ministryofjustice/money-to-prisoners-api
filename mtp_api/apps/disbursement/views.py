@@ -108,6 +108,8 @@ class DisbursementFilter(django_filters.FilterSet):
 class DisbursementViewMixin:
     def get_queryset(self):
         queryset = Disbursement.objects.all()
+        if getattr(self, 'swagger_fake_view', False):
+            return queryset
         if self.request.auth.application.client_id == CASHBOOK_OAUTH_CLIENT_ID:
             return queryset.filter(
                 prison__in=PrisonUserMapping.objects.get_prison_set_for_user(self.request.user)

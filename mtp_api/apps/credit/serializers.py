@@ -32,6 +32,7 @@ class CommentSerializer(serializers.ModelSerializer):
     user_full_name = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
+        ref_name = 'Credit Comment'
         model = Comment
         read_only = ('user',)
         fields = ('credit', 'user', 'user_full_name', 'comment',)

@@ -3,6 +3,7 @@
 Django>=2.0,<2.1
 psycopg2-binary>=2.8.4,<2.9
 djangorestframework==3.9.0
+drf-yasg==1.17.1
 django-model-utils==2.4
 django-filter==1.1
 oauthlib>=2.1,<3
