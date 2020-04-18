@@ -524,6 +524,32 @@ class LoginStatsView(AdminReportView):
     required_permissions = ['transaction.view_dashboard']
     excluded_nomis_ids = {'ZCH'}
 
+    @classmethod
+    def get_months(cls):
+        today = now()
+        month_start = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+        next_month = month_start.month + 1
+        if next_month > 12:
+            next_month = month_start.replace(year=month_start.year + 1, month=1)
+        else:
+            next_month = month_start.replace(month=next_month)
+
+        current_month_progress = (
+            (today.timestamp() - month_start.timestamp()) / (next_month.timestamp() - month_start.timestamp())
+        )
+
+        months = []
+        while len(months) < 4:
+            months.append(month_start)
+            month = month_start.month - 1
+            if month < 1:
+                month_start = month_start.replace(year=month_start.year - 1, month=12)
+            else:
+                month_start = month_start.replace(month=month)
+
+        return current_month_progress, months
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         current_month_progress, months = self.get_months()
@@ -573,32 +599,6 @@ class LoginStatsView(AdminReportView):
         ).order_by('nomis_id').values_list('nomis_id', 'name'))
         prisons.append(('', _('Prison not specified')))
         return prisons
-
-    @classmethod
-    def get_months(cls):
-        today = now()
-        month_start = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-
-        next_month = month_start.month + 1
-        if next_month > 12:
-            next_month = month_start.replace(year=month_start.year + 1, month=1)
-        else:
-            next_month = month_start.replace(month=next_month)
-
-        current_month_progress = (
-            (today.timestamp() - month_start.timestamp()) / (next_month.timestamp() - month_start.timestamp())
-        )
-
-        months = []
-        while len(months) < 4:
-            months.append(month_start)
-            month = month_start.month - 1
-            if month < 1:
-                month_start = month_start.replace(year=month_start.year - 1, month=12)
-            else:
-                month_start = month_start.replace(month=month)
-
-        return current_month_progress, months
 
     def get_login_counts(self, application):
         login_count_query = """
