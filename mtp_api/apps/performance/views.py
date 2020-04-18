@@ -1,4 +1,3 @@
-import collections
 import json
 
 from django.contrib import messages
@@ -183,12 +182,7 @@ class DigitalTakeupReport(AdminViewMixin, TemplateView):
 
         self.exclude_private_estate = form.cleaned_data['private_estate'] == 'exclude'
 
-        if form.cleaned_data['period'] == 'quarterly':
-            rows = self.get_quarterly_rows()
-        elif form.cleaned_data['period'] == 'financial':
-            rows = self.get_financial_year_rows()
-        else:
-            rows = self.get_monthly_rows()
+        rows = form.group_months_into_periods(self.get_monthly_rows())
 
         context_data['opts'] = DigitalTakeup._meta
         context_data['form'] = form
@@ -208,41 +202,6 @@ class DigitalTakeupReport(AdminViewMixin, TemplateView):
         yield from DigitalTakeup.objects.digital_takeup_per_month(
             exclude_private_estate=self.exclude_private_estate
         )
-
-    def get_quarterly_rows(self):
-        quarter_end_months = {3, 6, 9, 12}
-        collected = collections.defaultdict(int)
-        for row in self.get_monthly_rows():
-            row_date = row.pop('date')
-            if 'date' not in collected:
-                collected['date'] = row_date
-            for key, value in row.items():
-                if value is None:
-                    collected[key] = None
-                else:
-                    collected[key] += value
-            if row_date.month in quarter_end_months:
-                yield collected
-                collected = collections.defaultdict(int)
-        if 'date' in collected:
-            yield collected
-
-    def get_financial_year_rows(self):
-        collected = collections.defaultdict(int)
-        for row in self.get_monthly_rows():
-            row_date = row.pop('date')
-            if 'date' not in collected:
-                collected['date'] = row_date
-            for key, value in row.items():
-                if value is None:
-                    collected[key] = None
-                else:
-                    collected[key] += value
-            if row_date.month == 3:
-                yield collected
-                collected = collections.defaultdict(int)
-        if 'date' in collected:
-            yield collected
 
     def process_rows(self, rows, form):
         current_period = form.current_period

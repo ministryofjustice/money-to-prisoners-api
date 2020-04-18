@@ -1,3 +1,4 @@
+import collections
 import datetime
 import math
 from urllib.parse import urlencode
@@ -142,30 +143,12 @@ class PrisonDigitalTakeupForm(AdminReportForm):
         raise NotImplementedError
 
 
-class DigitalTakeupReportForm(AdminReportForm):
+class BasePeriodAdminReportForm(AdminReportForm):
     period = forms.ChoiceField(label=_('Report type'), choices=(
         ('monthly', _('Monthly')),
         ('quarterly', _('Quarterly')),
         ('financial', _('Financial years')),
     ), initial='monthly')
-    private_estate = forms.ChoiceField(label=_('Private estate'), choices=(
-        ('exclude', _('Exclude')),
-        ('include', _('Include')),
-    ), initial='exclude')
-    show_reported = forms.ChoiceField(label=_('Data from NOMIS'), choices=(
-        ('hide', _('Hide')),
-        ('show', _('Show')),
-    ), initial='hide')
-    show_savings = forms.ChoiceField(label=_('Gross savings enabled'), choices=(
-        ('hide', _('Hide')),
-        ('show', _('Show')),
-    ), initial='hide')
-    show_predictions = forms.ChoiceField(label=_('Predictions'), choices=(
-        ('hide', _('Hide')),
-        ('show', _('Show')),
-    ), initial='hide')
-    postal_cost = forms.IntegerField(label=_('Cost per postal transaction'), min_value=0, initial=573)
-    digital_cost = forms.IntegerField(label=_('Cost per digital transaction'), min_value=0, initial=222)
 
     @property
     def current_period(self):
@@ -199,6 +182,70 @@ class DigitalTakeupReportForm(AdminReportForm):
 
             return format_date
         return lambda d: d.strftime('%b %Y')
+
+    def group_months_into_periods(self, monthly_rows):
+        if self.cleaned_data['period'] == 'quarterly':
+            yield from self.group_months_into_quarters(monthly_rows)
+        elif self.cleaned_data['period'] == 'financial':
+            yield from self.group_months_into_financial_years(monthly_rows)
+        else:
+            yield from monthly_rows
+
+    def group_months_into_quarters(self, monthly_rows):
+        quarter_end_months = {3, 6, 9, 12}
+        collected = collections.defaultdict(int)
+        for row in monthly_rows:
+            row_date = row.pop('date')
+            if 'date' not in collected:
+                collected['date'] = row_date
+            for key, value in row.items():
+                if value is None:
+                    collected[key] = None
+                else:
+                    collected[key] += value
+            if row_date.month in quarter_end_months:
+                yield collected
+                collected = collections.defaultdict(int)
+        if 'date' in collected:
+            yield collected
+
+    def group_months_into_financial_years(self, monthly_rows):
+        collected = collections.defaultdict(int)
+        for row in monthly_rows:
+            row_date = row.pop('date')
+            if 'date' not in collected:
+                collected['date'] = row_date
+            for key, value in row.items():
+                if value is None:
+                    collected[key] = None
+                else:
+                    collected[key] += value
+            if row_date.month == 3:
+                yield collected
+                collected = collections.defaultdict(int)
+        if 'date' in collected:
+            yield collected
+
+
+class DigitalTakeupReportForm(BasePeriodAdminReportForm):
+    private_estate = forms.ChoiceField(label=_('Private estate'), choices=(
+        ('exclude', _('Exclude')),
+        ('include', _('Include')),
+    ), initial='exclude')
+    show_reported = forms.ChoiceField(label=_('Data from NOMIS'), choices=(
+        ('hide', _('Hide')),
+        ('show', _('Show')),
+    ), initial='hide')
+    show_savings = forms.ChoiceField(label=_('Gross savings enabled'), choices=(
+        ('hide', _('Hide')),
+        ('show', _('Show')),
+    ), initial='hide')
+    show_predictions = forms.ChoiceField(label=_('Predictions'), choices=(
+        ('hide', _('Hide')),
+        ('show', _('Show')),
+    ), initial='hide')
+    postal_cost = forms.IntegerField(label=_('Cost per postal transaction'), min_value=0, initial=573)
+    digital_cost = forms.IntegerField(label=_('Cost per digital transaction'), min_value=0, initial=222)
 
     @property
     def prediction_scale(self):
