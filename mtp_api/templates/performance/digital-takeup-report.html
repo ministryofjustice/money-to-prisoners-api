@@ -1,4 +1,4 @@
-{% extends 'admin/base_site.html' %}
+{% extends 'core/report.html' %}
 {% load admin_urls %}
 {% load i18n %}
 {% load static %}
@@ -8,8 +8,6 @@
 {% block extrastyle %}
   {{ block.super }}
 
-  <link rel="stylesheet" type="text/css" href="{% static 'admin/css/changelists.css' %}" />
-  <link rel="stylesheet" type="text/css" href="{% static 'stylesheets/admin-reports.css' %}"/>
   <style>
     #takeup-chart {
       width: 800px;
@@ -85,8 +83,6 @@
     });
   </script>
 {% endblock %}
-
-{% block bodyclass %}{{ block.super }} change-list{% endblock %}
 
 {% block breadcrumbs %}
   <div class="breadcrumbs">

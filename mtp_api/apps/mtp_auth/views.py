@@ -2,7 +2,6 @@ import collections
 import logging
 from urllib.parse import urlsplit, urlunsplit, urlencode, parse_qs
 
-from django.contrib import messages
 from django.contrib.admin.models import LogEntry, CHANGE as CHANGE_LOG_ENTRY, DELETION as DELETION_LOG_ENTRY
 from django.contrib.admin.options import get_content_type_for_model
 from django.contrib.auth import password_validation, get_user_model
@@ -18,7 +17,6 @@ from django.utils.text import capfirst
 from django.utils.timezone import now
 from django.utils.translation import gettext, gettext_lazy as _
 from django.views.decorators.debug import sensitive_post_parameters, sensitive_variables
-from django.views.generic import TemplateView
 from mtp_common.tasks import send_email
 from oauth2_provider.models import Application
 from rest_framework import viewsets, generics, status
@@ -27,7 +25,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.settings import api_settings
 
-from core.views import AdminViewMixin
+from core.views import AdminReportView
 from mtp_auth.forms import LoginStatsForm
 from mtp_auth.models import (
     ApplicationUserMapping, PrisonUserMapping, Role, Flag,
@@ -519,29 +517,30 @@ class AccountRequestViewSet(viewsets.ModelViewSet):
         super().perform_destroy(instance)
 
 
-class LoginStatsView(AdminViewMixin, TemplateView):
+class LoginStatsView(AdminReportView):
     title = _('Staff logins per prison')
     template_name = 'admin/mtp_auth/login-stats.html'
+    form_class = LoginStatsForm
     required_permissions = ['transaction.view_dashboard']
     excluded_nomis_ids = {'ZCH'}
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        current_month_progress, months = self.get_months()
+        self.current_month_progress = current_month_progress
+        self.months = months
+
+    def get_form_kwargs(self):
+        form_kwargs = super().get_form_kwargs()
+        form_kwargs['months'] = self.months
+        return form_kwargs
+
     def get_context_data(self, **kwargs):
         context_data = super().get_context_data(**kwargs)
-
-        current_month_progress, months = self.get_months()
-
-        form = LoginStatsForm(months, data=self.request.GET.dict())
-        if not form.is_valid():
-            messages.error(self.request, 'Invalid form, using default filters')
-            form = LoginStatsForm(months, data={})
-            assert form.is_valid(), 'Empty form should be valid'
+        form = context_data['form']
 
         prisons = self.get_prisons()
-        login_counts = self.get_login_counts(
-            form.cleaned_data['application'],
-            current_month_progress,
-            months,
-        )
+        login_counts = self.get_login_counts(form.cleaned_data['application'])
 
         login_stats = []
         for nomis_id, prison_name in prisons:
@@ -550,7 +549,7 @@ class LoginStatsView(AdminViewMixin, TemplateView):
                 'prison_name': prison_name,
             }
             monthly_counts = []
-            for month in months:
+            for month in self.months:
                 month_key = date_format(month, 'Y-m')
                 month_count = login_counts[(nomis_id, month_key)]
                 login_stat[month_key] = month_count
@@ -565,7 +564,6 @@ class LoginStatsView(AdminViewMixin, TemplateView):
         )
 
         context_data['form'] = form
-        context_data['months'] = months
         context_data['login_stats'] = login_stats
         return context_data
 
@@ -576,7 +574,8 @@ class LoginStatsView(AdminViewMixin, TemplateView):
         prisons.append(('', _('Prison not specified')))
         return prisons
 
-    def get_months(self):
+    @classmethod
+    def get_months(cls):
         today = now()
         month_start = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
@@ -601,7 +600,7 @@ class LoginStatsView(AdminViewMixin, TemplateView):
 
         return current_month_progress, months
 
-    def get_login_counts(self, application, current_month_progress, months):
+    def get_login_counts(self, application):
         login_count_query = """
             WITH users AS (
               SELECT user_id, COUNT(*) AS login_count
@@ -621,10 +620,10 @@ class LoginStatsView(AdminViewMixin, TemplateView):
             application = Application.objects.get(client_id=application)
         except Application.DoesNotExist:
             return login_counts
-        for i, month in enumerate(months):
+        for i, month in enumerate(self.months):
             if i == 0:
                 def scale_func(count):
-                    return int(round(count / current_month_progress))
+                    return int(round(count / self.current_month_progress))
             else:
                 def scale_func(count):
                     return count

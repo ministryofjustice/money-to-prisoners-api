@@ -1,16 +1,8 @@
-{% extends 'admin/base_site.html' %}
+{% extends 'core/report.html' %}
 {% load i18n %}
 {% load static %}
 {% load credit %}
 {% load simple_admin %}
-
-{% block extrastyle %}
-  {{ block.super }}
-  <link rel="stylesheet" type="text/css" href="{% static 'admin/css/changelists.css' %}" />
-  <link rel="stylesheet" type="text/css" href="{% static 'stylesheets/admin-reports.css' %}"/>
-{% endblock %}
-
-{% block bodyclass %}{{ block.super }} change-list{% endblock %}
 
 {% block breadcrumbs %}
   <div class="breadcrumbs">
@@ -39,7 +31,7 @@
           <thead>
           <tr>
             {% sortable_table_header form 'nomis_id' _('Prison') %}
-            {% for month in months %}
+            {% for month in view.months %}
               {% if forloop.first %}
                 {% sortable_table_header form month|date:'Y-m' _('Expected this month *') %}
               {% else %}

@@ -1,0 +1,8 @@
+{% extends 'admin/base_site.html' %}
+
+{% block bodyclass %}{{ block.super }} change-list{% endblock %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  {{ view.media }}
+{% endblock %}

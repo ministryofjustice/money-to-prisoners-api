@@ -6,10 +6,10 @@ from django.db import models
 from django.urls import reverse_lazy
 from django.utils.formats import date_format
 from django.utils.translation import gettext_lazy as _
-from django.views.generic import FormView, TemplateView
+from django.views.generic import FormView
 
 from core.forms import DigitalTakeupReportForm, PrisonDigitalTakeupForm
-from core.views import AdminViewMixin
+from core.views import AdminViewMixin, AdminReportView
 from performance.forms import DigitalTakeupUploadForm
 from performance.models import DigitalTakeup
 from prison.models import Prison
@@ -87,19 +87,16 @@ class DigitalTakeupUploadView(AdminViewMixin, FormView):
                              '\n' + ', '.join(common_prison_credit_differences))
 
 
-class PrisonDigitalTakeupView(AdminViewMixin, TemplateView):
+class PrisonDigitalTakeupView(AdminReportView):
     title = _('Digital take-up per prison')
     template_name = 'admin/performance/prison_performance.html'
+    form_class = PrisonDigitalTakeupForm
     required_permissions = ['transaction.view_dashboard']
     excluded_nomis_ids = {'ZCH'}
 
     def get_context_data(self, **kwargs):
         context_data = super().get_context_data(**kwargs)
-        form = PrisonDigitalTakeupForm(data=self.request.GET.dict())
-        if not form.is_valid():
-            messages.error(self.request, 'Invalid form, using default filters')
-            form = PrisonDigitalTakeupForm(data={})
-            assert form.is_valid(), 'Empty form should be valid'
+        form = context_data['form']
 
         prisons = Prison.objects.exclude(
             nomis_id__in=self.excluded_nomis_ids
@@ -156,7 +153,7 @@ class PrisonDigitalTakeupView(AdminViewMixin, TemplateView):
         return context_data
 
 
-class DigitalTakeupReport(AdminViewMixin, TemplateView):
+class DigitalTakeupReport(AdminReportView):
     """
     Uses *reported* digital and postal credits to calculate digital take-up.
     Using this, the scaled/extrapolated postal credits are inferred from accurately counted credits.
@@ -166,6 +163,7 @@ class DigitalTakeupReport(AdminViewMixin, TemplateView):
     """
     title = _('Digital take-up report')
     template_name = 'performance/digital-takeup-report.html'
+    form_class = DigitalTakeupReportForm
     required_permissions = ['transaction.view_dashboard']
 
     def __init__(self, **kwargs):
@@ -174,11 +172,7 @@ class DigitalTakeupReport(AdminViewMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context_data = super().get_context_data(**kwargs)
-        form = DigitalTakeupReportForm(data=self.request.GET.dict())
-        if not form.is_valid():
-            messages.error(self.request, 'Invalid form, using default filters')
-            form = DigitalTakeupReportForm(data={})
-            assert form.is_valid(), 'Empty form should be valid'
+        form = context_data['form']
 
         self.exclude_private_estate = form.cleaned_data['private_estate'] == 'exclude'
 

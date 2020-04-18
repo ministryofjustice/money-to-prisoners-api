@@ -49,11 +49,11 @@ class LoginCountTestCase(TestCase):
         self.login(another_user_in_prison, application, (2018, 4, 11))
         self.login(user_not_in_prison, application, (2018, 4, 10))
 
-        view = LoginStatsView()
-
         now = make_aware(datetime.datetime(2018, 4, 15, 12))
         with mock.patch('mtp_auth.views.now', return_value=now):
-            current_month_progress, months = view.get_months()
+            view = LoginStatsView()
+            current_month_progress, months = view.current_month_progress, view.months
+
         # "today" midday is roughly half way through April
         self.assertAlmostEqual(current_month_progress, 0.5, delta=0.02)
 
@@ -61,11 +61,7 @@ class LoginCountTestCase(TestCase):
         this_month = date_format(this_month, 'Y-m')
         last_month = date_format(last_month, 'Y-m')
 
-        login_counts = view.get_login_counts(
-            application.client_id,
-            current_month_progress,
-            months,
-        )
+        login_counts = view.get_login_counts(application.client_id)
 
         # expect there to be double by the end of the month
         self.assertEqual(login_counts[(prison.nomis_id, this_month)], 4)

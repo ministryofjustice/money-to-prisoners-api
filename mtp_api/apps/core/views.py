@@ -64,6 +64,36 @@ class AdminViewMixin:
         return super().get_context_data(**context)
 
 
+class AdminReportView(AdminViewMixin, FormView, metaclass=MediaDefiningClass):
+    """
+    Base class for report views that use GET-based forms to filter results
+    """
+    form_class = NotImplemented
+
+    class Media:
+        css = {
+            'all': (
+                'admin/css/changelists.css',
+                'stylesheets/admin-reports.css',
+            )
+        }
+
+    def get_form_kwargs(self):
+        return {}
+
+    def get_context_data(self, **kwargs):
+        context_data = super().get_context_data(**kwargs)
+
+        form = self.form_class(data=self.request.GET.dict(), **self.get_form_kwargs())
+        if not form.is_valid():
+            messages.error(self.request, 'Invalid form, using default filters')
+            form = self.form_class(data={})
+            assert form.is_valid(), 'Empty form should be valid'
+        context_data['form'] = form
+
+        return context_data
+
+
 class DashboardView(AdminViewMixin, TemplateView, metaclass=MediaDefiningClass):
     """
     Django admin view which presents an overview report for MTP
