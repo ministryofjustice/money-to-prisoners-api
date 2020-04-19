@@ -22,6 +22,7 @@ class AdminSite(admin.AdminSite):
     def get_urls(self):
         from core.views import DashboardView, DownloadPublicKeyView, RecreateTestDataView, UpdateNOMISTokenView
         from credit.views_admin import CreditReportAdminView
+        from disbursement.views_admin import DisbursementReportAdminView
         from mtp_auth.views import LoginStatsView
         from payment.views import PaymentSearchView
         from performance.view_dashboard import PerformanceDashboardView
@@ -36,6 +37,8 @@ class AdminSite(admin.AdminSite):
             # performance dashboard and reports
             url(r'^credit/report/$', CreditReportAdminView.as_view(),
                 name='credit-report'),
+            url(r'^disbursement/report/$', DisbursementReportAdminView.as_view(),
+                name='disbursement-report'),
             url(r'^performance/dashboard/$', PerformanceDashboardView.as_view(),
                 name='performance_dashboard'),
             url(r'^performance/login-stats/$', LoginStatsView.as_view(),
