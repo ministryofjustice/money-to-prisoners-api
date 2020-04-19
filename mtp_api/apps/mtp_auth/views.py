@@ -2,6 +2,7 @@ import collections
 import logging
 from urllib.parse import urlsplit, urlunsplit, urlencode, parse_qs
 
+from django.conf import settings
 from django.contrib.admin.models import LogEntry, CHANGE as CHANGE_LOG_ENTRY, DELETION as DELETION_LOG_ENTRY
 from django.contrib.admin.options import get_content_type_for_model
 from django.contrib.auth import password_validation, get_user_model
@@ -11,10 +12,10 @@ from django.db import connection
 from django.db.transaction import atomic
 from django.forms import ValidationError
 from django.http import Http404
+from django.utils import timezone
 from django.utils.dateformat import format as date_format
 from django.utils.decorators import method_decorator
 from django.utils.text import capfirst
-from django.utils.timezone import now
 from django.utils.translation import gettext, gettext_lazy as _
 from django.views.decorators.debug import sensitive_post_parameters, sensitive_variables
 from mtp_common.tasks import send_email
@@ -526,7 +527,7 @@ class LoginStatsView(AdminReportView):
 
     @classmethod
     def get_months(cls):
-        today = now()
+        today = timezone.localtime()
         month_start = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
         next_month = month_start.month + 1
@@ -601,11 +602,12 @@ class LoginStatsView(AdminReportView):
         return prisons
 
     def get_login_counts(self, application):
-        login_count_query = """
+        login_count_query = f"""
             WITH users AS (
               SELECT user_id, COUNT(*) AS login_count
               FROM mtp_auth_login
-              WHERE application_id = %(application_id)s AND date_trunc('month', created) = %(month)s
+              WHERE application_id = %(application_id)s
+                AND date_trunc('month', created AT TIME ZONE '{settings.TIME_ZONE}') = %(month)s
               GROUP BY user_id
             )
             SELECT prison_id, SUM(login_count)::integer AS login_count

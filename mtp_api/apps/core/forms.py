@@ -7,8 +7,8 @@ import pytz
 from django import forms
 from django.contrib.admin import widgets
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from django.utils.functional import cached_property
-from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 import jwt
 
@@ -102,7 +102,7 @@ class PrisonDigitalTakeupForm(AdminReportForm):
     @property
     def period_date_range(self):
         period = self.cleaned_data['period']
-        today = now()
+        today = timezone.localtime()
 
         try:
             days = int(period)
@@ -152,7 +152,7 @@ class BasePeriodAdminReportForm(AdminReportForm):
 
     @property
     def current_period(self):
-        first_of_month = now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        first_of_month = timezone.localtime().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         period = self.cleaned_data['period']
         if period == 'quarterly':
             return first_of_month.replace(month=math.ceil(first_of_month.month / 3) * 3 - 2)
@@ -304,7 +304,7 @@ class UpdateNOMISTokenForm(forms.Form):
         try:
             self.token_data = token.read().strip()
             self.decoded_token = self.decode_token(self.token_data)
-            today = now()
+            today = timezone.now()
             if 'iat' in self.decoded_token and self.decoded_token['iat'] > today:
                 raise ValidationError(_('Token is not yet valid'), 'premature')
             if 'exp' in self.decoded_token and self.decoded_token['exp'] < today:

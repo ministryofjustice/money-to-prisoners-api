@@ -50,7 +50,7 @@ class LoginCountTestCase(TestCase):
         self.login(user_not_in_prison, application, (2018, 4, 10))
 
         now = make_aware(datetime.datetime(2018, 4, 15, 12))
-        with mock.patch('mtp_auth.views.now', return_value=now):
+        with mock.patch('mtp_auth.views.timezone.localtime', return_value=now):
             view = LoginStatsView()
             current_month_progress, months = view.current_month_progress, view.months
 

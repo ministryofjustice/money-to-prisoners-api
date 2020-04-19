@@ -1,8 +1,10 @@
 import datetime
 import itertools
 
+from django.conf import settings
 from django.db import connection, models
 from django.db.models.expressions import RawSQL
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from core import dictfetchall, mean
@@ -14,7 +16,7 @@ class DigitalTakeupManager(models.Manager):
         Per-month digital take-up averages
         """
         if since is None:
-            today = datetime.date.today()
+            today = timezone.localdate()
             since = max(DigitalTakeup.reports_start, today.replace(year=today.year - 2, month=1, day=1))
 
         if exclude_private_estate:
@@ -40,12 +42,14 @@ class DigitalTakeupManager(models.Manager):
         WITH
             {included_prisons_sql}
             credit_count AS (
-                SELECT date_trunc('month', received_at) AS date,
+                SELECT
+                    date_trunc('month', received_at AT TIME ZONE '{settings.TIME_ZONE}')::timestamp WITH TIME ZONE
+                        AS date,
                     COUNT(*) AS accurate_credits_by_mtp
                 FROM credit_credit
                 {credit_count_join_sql}
                 WHERE resolution = 'credited' AND received_at >= %(since)s
-                GROUP BY date_trunc('month', received_at)
+                GROUP BY date_trunc('month', received_at AT TIME ZONE '{settings.TIME_ZONE}')
             ),
             average_takeup AS (
                 SELECT date_trunc('month', date) AS date,
