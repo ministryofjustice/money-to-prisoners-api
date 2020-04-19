@@ -523,7 +523,6 @@ class LoginStatsView(AdminReportView):
     template_name = 'admin/mtp_auth/login/prison-report.html'
     form_class = LoginStatsForm
     required_permissions = ['transaction.view_dashboard']
-    excluded_nomis_ids = {'ZCH'}
 
     @classmethod
     def get_months(cls):
@@ -596,9 +595,11 @@ class LoginStatsView(AdminReportView):
         return context_data
 
     def get_prisons(self):
-        prisons = list(Prison.objects.exclude(
-            nomis_id__in=self.excluded_nomis_ids
-        ).order_by('nomis_id').values_list('nomis_id', 'name'))
+        prisons = Prison.objects \
+            .exclude(nomis_id__in=self.excluded_nomis_ids) \
+            .order_by('nomis_id') \
+            .values_list('nomis_id', 'name')
+        prisons = list(prisons)
         prisons.append(('', _('Prison not specified')))
         return prisons
 

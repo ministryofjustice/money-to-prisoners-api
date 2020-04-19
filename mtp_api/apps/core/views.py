@@ -70,6 +70,9 @@ class AdminReportView(AdminViewMixin, FormView, metaclass=MediaDefiningClass):
     """
     form_class = NotImplemented
 
+    # test prisons that should not feature in any report
+    excluded_nomis_ids = {'ZCH'}
+
     class Media:
         css = {
             'all': (

@@ -39,6 +39,7 @@ class DisbursementReportAdminView(AdminReportView):
     def get_monthly_rows(self):
         return Disbursement.objects \
             .filter(resolution=DISBURSEMENT_RESOLUTION.SENT) \
+            .exclude(prison__in=self.excluded_nomis_ids) \
             .order_by() \
             .annotate(date=TruncMonth('created')) \
             .values('date') \
@@ -60,7 +61,6 @@ class PrisonDisbursementReportAdminView(AdminReportView):
     template_name = 'admin/disbursement/disbursement/prison-report.html'
     form_class = PrisonDisbursementReportForm
     required_permissions = ['transaction.view_dashboard']
-    excluded_nomis_ids = {'ZCH'}
 
     def get_context_data(self, **kwargs):
         context_data = super().get_context_data(**kwargs)

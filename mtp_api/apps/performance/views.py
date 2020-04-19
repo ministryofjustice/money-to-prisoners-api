@@ -92,7 +92,6 @@ class PrisonDigitalTakeupView(AdminReportView):
     template_name = 'admin/performance/digitaltakeup/prison-report.html'
     form_class = PrisonDigitalTakeupForm
     required_permissions = ['transaction.view_dashboard']
-    excluded_nomis_ids = {'ZCH'}
 
     def get_context_data(self, **kwargs):
         context_data = super().get_context_data(**kwargs)

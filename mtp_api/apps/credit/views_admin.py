@@ -21,7 +21,6 @@ class CreditReportAdminView(AdminReportView):
     template_name = 'admin/credit/credit/report.html'
     form_class = CreditReportForm
     required_permissions = ['transaction.view_dashboard']
-    excluded_nomis_ids = {'ZCH'}
 
     def get_context_data(self, **kwargs):
         context_data = super().get_context_data(**kwargs)
@@ -71,7 +70,6 @@ class PrisonCreditReportAdminView(AdminReportView):
     template_name = 'admin/credit/credit/prison-report.html'
     form_class = PrisonCreditReportForm
     required_permissions = ['transaction.view_dashboard']
-    excluded_nomis_ids = {'ZCH'}
 
     def get_context_data(self, **kwargs):
         context_data = super().get_context_data(**kwargs)
