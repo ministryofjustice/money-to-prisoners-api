@@ -64,7 +64,7 @@ class AdminViewMixin:
         return super().get_context_data(**context)
 
 
-class AdminReportView(AdminViewMixin, FormView, metaclass=MediaDefiningClass):
+class BaseAdminReportView(AdminViewMixin, FormView, metaclass=MediaDefiningClass):
     """
     Base class for report views that use GET-based forms to filter results
     """

@@ -9,7 +9,7 @@ from django.utils.translation import gettext_lazy as _
 from django.views.generic import FormView
 
 from core.forms import DigitalTakeupReportForm, PrisonDigitalTakeupForm
-from core.views import AdminViewMixin, AdminReportView
+from core.views import AdminViewMixin, BaseAdminReportView
 from performance.forms import DigitalTakeupUploadForm
 from performance.models import DigitalTakeup
 from prison.models import Prison
@@ -87,7 +87,7 @@ class DigitalTakeupUploadView(AdminViewMixin, FormView):
                              '\n' + ', '.join(common_prison_credit_differences))
 
 
-class PrisonDigitalTakeupView(AdminReportView):
+class PrisonDigitalTakeupView(BaseAdminReportView):
     title = _('Digital take-up per prison')
     template_name = 'admin/performance/digitaltakeup/prison-report.html'
     form_class = PrisonDigitalTakeupForm
@@ -152,7 +152,7 @@ class PrisonDigitalTakeupView(AdminReportView):
         return context_data
 
 
-class DigitalTakeupReport(AdminReportView):
+class DigitalTakeupReport(BaseAdminReportView):
     """
     Uses *reported* digital and postal credits to calculate digital take-up.
     Using this, the scaled/extrapolated postal credits are inferred from accurately counted credits.

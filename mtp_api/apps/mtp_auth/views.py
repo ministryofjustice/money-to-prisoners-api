@@ -26,7 +26,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.settings import api_settings
 
-from core.views import AdminReportView
+from core.views import BaseAdminReportView
 from mtp_auth.forms import LoginStatsForm
 from mtp_auth.models import (
     ApplicationUserMapping, PrisonUserMapping, Role, Flag,
@@ -518,7 +518,7 @@ class AccountRequestViewSet(viewsets.ModelViewSet):
         super().perform_destroy(instance)
 
 
-class LoginStatsView(AdminReportView):
+class LoginStatsView(BaseAdminReportView):
     title = _('Staff logins per prison')
     template_name = 'admin/mtp_auth/login/prison-report.html'
     form_class = LoginStatsForm

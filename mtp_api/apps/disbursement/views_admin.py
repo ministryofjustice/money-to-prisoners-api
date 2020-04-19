@@ -4,7 +4,7 @@ from django.db.models.functions import TruncMonth
 from django.utils.translation import gettext_lazy as _
 
 from core.forms import BasePeriodAdminReportForm, BasePrisonAdminReportForm
-from core.views import AdminReportView
+from core.views import BaseAdminReportView
 from disbursement.models import Disbursement, DISBURSEMENT_RESOLUTION
 from prison.models import Prison
 
@@ -13,7 +13,7 @@ class DisbursementReportForm(BasePeriodAdminReportForm):
     pass
 
 
-class DisbursementReportAdminView(AdminReportView):
+class DisbursementReportAdminView(BaseAdminReportView):
     title = _('Disbursement report')
     template_name = 'admin/disbursement/disbursement/report.html'
     form_class = DisbursementReportForm
@@ -56,7 +56,7 @@ class PrisonDisbursementReportForm(BasePrisonAdminReportForm):
     ), initial='nomis_id')
 
 
-class PrisonDisbursementReportAdminView(AdminReportView):
+class PrisonDisbursementReportAdminView(BaseAdminReportView):
     title = _('Disbursements per-prison')
     template_name = 'admin/disbursement/disbursement/prison-report.html'
     form_class = PrisonDisbursementReportForm
