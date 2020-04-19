@@ -30,7 +30,7 @@ from core.views import AdminReportView
 from mtp_auth.forms import LoginStatsForm
 from mtp_auth.models import (
     ApplicationUserMapping, PrisonUserMapping, Role, Flag,
-    FailedLoginAttempt, PasswordChangeRequest, AccountRequest
+    FailedLoginAttempt, PasswordChangeRequest, AccountRequest, Login,
 )
 from mtp_auth.permissions import UserPermissions, AnyAdminClientIDPermissions, AccountRequestPremissions
 from mtp_auth.serializers import (
@@ -520,7 +520,7 @@ class AccountRequestViewSet(viewsets.ModelViewSet):
 
 class LoginStatsView(AdminReportView):
     title = _('Staff logins per prison')
-    template_name = 'admin/mtp_auth/login-stats.html'
+    template_name = 'admin/mtp_auth/login/prison-report.html'
     form_class = LoginStatsForm
     required_permissions = ['transaction.view_dashboard']
     excluded_nomis_ids = {'ZCH'}
@@ -590,6 +590,7 @@ class LoginStatsView(AdminReportView):
             reverse=reversed_order
         )
 
+        context_data['opts'] = Login._meta
         context_data['form'] = form
         context_data['login_stats'] = login_stats
         return context_data

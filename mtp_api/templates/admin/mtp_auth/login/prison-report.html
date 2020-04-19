@@ -1,12 +1,13 @@
 {% extends 'core/report.html' %}
 {% load i18n %}
-{% load static %}
+{% load admin_urls %}
 {% load credit %}
 {% load simple_admin %}
 
 {% block breadcrumbs %}
   <div class="breadcrumbs">
     <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
     &rsaquo; {{ title }}
   </div>
 {% endblock %}
@@ -55,6 +56,12 @@
         <section id="admin-report-notes">
           <h2>{% trans 'Notes on this report' %}</h2>
           <dl>
+            <dt>{% trans 'Staff logins' %}</dt>
+            <dd>
+              {% trans 'These are successful login attempts by users grouped by the prisons they are assigned to.' %}
+              {% trans 'Since a user can be assigned to multiple prisons, one user login can appear in several rows.' %}
+              {% trans 'The private estate do not use the Digital cashbook.' %}
+            </dd>
             <dt>* {% trans 'Expected this month' %}</dt>
             <dd>
               {% trans 'The number of logins this month assumes the same constant rate of logins as seen so far.' %}

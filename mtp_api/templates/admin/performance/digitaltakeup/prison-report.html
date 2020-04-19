@@ -1,7 +1,6 @@
 {% extends 'core/report.html' %}
 {% load i18n %}
 {% load admin_urls %}
-{% load static %}
 {% load credit %}
 {% load simple_admin %}
 
@@ -25,6 +24,7 @@
 <div id="changelist" class="module filtered">
   <div id="changelist-filter">
     <h2>{% trans 'Filter' %}</h2>
+
     <h3>{{ form.period.label }}</h3>
     {% admin_choice_list form form.period %}
   </div>

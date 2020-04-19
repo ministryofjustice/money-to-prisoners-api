@@ -89,7 +89,7 @@ class DigitalTakeupUploadView(AdminViewMixin, FormView):
 
 class PrisonDigitalTakeupView(AdminReportView):
     title = _('Digital take-up per prison')
-    template_name = 'admin/performance/prison_performance.html'
+    template_name = 'admin/performance/digitaltakeup/prison-report.html'
     form_class = PrisonDigitalTakeupForm
     required_permissions = ['transaction.view_dashboard']
     excluded_nomis_ids = {'ZCH'}
@@ -162,7 +162,7 @@ class DigitalTakeupReport(AdminReportView):
     Uses trained curves for predicting future digital and postal credits and hence digital take-up and savings.
     """
     title = _('Digital take-up report')
-    template_name = 'performance/digital-takeup-report.html'
+    template_name = 'admin/performance/digitaltakeup/report.html'
     form_class = DigitalTakeupReportForm
     required_permissions = ['transaction.view_dashboard']
 
