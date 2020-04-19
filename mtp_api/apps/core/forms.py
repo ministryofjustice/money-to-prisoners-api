@@ -83,7 +83,7 @@ class AdminReportForm(forms.Form):
         return ordering, False
 
 
-class PrisonDigitalTakeupForm(AdminReportForm):
+class BasePrisonAdminReportForm(AdminReportForm):
     period = forms.ChoiceField(label=_('Period'), choices=(
         ('7', _('Last 7 days')),
         ('30', _('Last 30 days')),
@@ -92,12 +92,6 @@ class PrisonDigitalTakeupForm(AdminReportForm):
         ('this_quarter', _('This quarter')),
         ('last_quarter', _('Last quarter')),
     ), initial='30')
-    ordering = forms.ChoiceField(choices=(
-        ('nomis_id', _('Prison')),
-        ('credits_by_post', _('Credits by post')),
-        ('credits_by_mtp', _('Credits by digital service')),
-        ('digital_takeup', _('Digital take-up')),
-    ), initial='nomis_id')
 
     @property
     def period_date_range(self):
@@ -141,6 +135,15 @@ class PrisonDigitalTakeupForm(AdminReportForm):
             return first_of_last_quarter.date(), first_of_quarter.date()
 
         raise NotImplementedError
+
+
+class PrisonDigitalTakeupForm(BasePrisonAdminReportForm):
+    ordering = forms.ChoiceField(choices=(
+        ('nomis_id', _('Prison')),
+        ('credits_by_post', _('Credits by post')),
+        ('credits_by_mtp', _('Credits by digital service')),
+        ('digital_takeup', _('Digital take-up')),
+    ), initial='nomis_id')
 
 
 class BasePeriodAdminReportForm(AdminReportForm):
