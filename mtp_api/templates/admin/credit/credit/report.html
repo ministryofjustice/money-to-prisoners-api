@@ -1,0 +1,76 @@
+{% extends 'core/report.html' %}
+{% load admin_urls %}
+{% load i18n %}
+{% load credit %}
+{% load simple_admin %}
+
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+    &rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+    &rsaquo; {{ title }}
+  </div>
+{% endblock %}
+
+{% block content %}
+  <p>
+    <a href="#admin-report-notes">
+      {% trans 'See important notes below' %}…
+    </a>
+  </p>
+
+  <div id="content-main">
+    <div id="changelist" class="module filtered">
+      <div id="changelist-filter">
+        <h2>{% trans 'Filter' %}</h2>
+
+        <h3>{{ form.period.label }}</h3>
+        {% admin_choice_list form form.period %}
+
+        <h3>{{ form.private_estate.label }}</h3>
+        {% admin_choice_list form form.private_estate %}
+      </div>
+
+      <div class="results">
+        {% if rows %}
+
+          <table>
+            <thead>
+              <tr>
+                <th><div class="text"><span>{% trans 'Period' %}</span></div></th>
+                <th><div class="text"><span>{% trans 'Digital credits' %}</span></div></th>
+                <th><div class="text"><span>{% trans 'Digital credit amount' %}</span></div></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in rows %}
+                <tr class="{% cycle 'row1' 'row2' %}">
+                  <td>{{ row.date_label }}</td>
+                  <td>{{ row.count|format_number }}</td>
+                  <td>{{ row.amount|format_amount }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+        {% else %}
+          <p class="errornote">
+            {% trans 'No data reported.' %}
+          </p>
+        {% endif %}
+
+        <section id="admin-report-notes">
+          <h2>{% trans 'Notes on this report' %}</h2>
+          <dl>
+            <dt>{% trans 'Digital credits' %}</dt>
+            <dd>
+              {% trans 'A credit is money sent to a prisoner using the digital service by bank transfer or debit card.' %}
+              {% trans 'Postal credits sent as cash, cheque or postal order do not use the digital service.' %}
+            </dd>
+          </dl>
+        </section>
+      </div>
+    </div>
+  </div>
+{% endblock %}
