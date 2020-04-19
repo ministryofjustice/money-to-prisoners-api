@@ -98,11 +98,11 @@ class PrisonDigitalTakeupView(AdminReportView):
         context_data = super().get_context_data(**kwargs)
         form = context_data['form']
 
-        prisons = Prison.objects.exclude(
-            nomis_id__in=self.excluded_nomis_ids
-        ).exclude(
-            private_estate=True,
-        ).values_list('nomis_id', 'name')
+        prisons = Prison.objects \
+            .exclude(nomis_id__in=self.excluded_nomis_ids) \
+            .exclude(private_estate=True) \
+            .order_by() \
+            .values_list('nomis_id', 'name')
         prisons = {
             nomis_id: {
                 'name': prison,
@@ -113,7 +113,6 @@ class PrisonDigitalTakeupView(AdminReportView):
             }
             for nomis_id, prison in prisons
         }
-        included_prison_set = set(prisons.keys())
 
         since_date, until_date = form.period_date_range
         period_filters = {'date__gte': since_date}
@@ -121,7 +120,6 @@ class PrisonDigitalTakeupView(AdminReportView):
             period_filters['date__lt'] = until_date
 
         takeup = DigitalTakeup.objects.filter(
-            prison__in=included_prison_set,
             **period_filters
         ).values('prison').order_by('prison').annotate(
             credits_by_post=models.Sum('credits_by_post'),
@@ -129,6 +127,8 @@ class PrisonDigitalTakeupView(AdminReportView):
         )
 
         for row in takeup:
+            if row['prison'] not in prisons:
+                continue
             credits_by_post, credits_by_mtp = row['credits_by_post'], row['credits_by_mtp']
             if credits_by_post or credits_by_mtp:
                 digital_takeup = credits_by_mtp / (credits_by_post + credits_by_mtp)
