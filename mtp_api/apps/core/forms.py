@@ -174,6 +174,7 @@ class BasePeriodAdminReportForm(AdminReportForm):
     period = forms.ChoiceField(label=_('Report type'), choices=(
         ('monthly', _('Monthly')),
         ('quarterly', _('Quarterly')),
+        ('yearly', _('Calendar years')),
         ('financial', _('Financial years')),
     ), initial='monthly')
 
@@ -183,6 +184,8 @@ class BasePeriodAdminReportForm(AdminReportForm):
         period = self.cleaned_data['period']
         if period == 'quarterly':
             return first_of_month.replace(month=math.ceil(first_of_month.month / 3) * 3 - 2)
+        elif period == 'yearly':
+            return first_of_month.replace(month=1)
         elif period == 'financial':
             if first_of_month.month < 4:
                 return first_of_month.replace(year=first_of_month.year - 1, month=4)
@@ -195,6 +198,8 @@ class BasePeriodAdminReportForm(AdminReportForm):
         period = self.cleaned_data['period']
         if period == 'quarterly':
             return lambda d: 'Q%d %d' % (math.ceil(d.month / 3), d.year)
+        elif period == 'yearly':
+            return lambda d: str(d.year)
         elif period == 'financial':
             def format_date(d):
                 if d.month < 4:
@@ -213,8 +218,10 @@ class BasePeriodAdminReportForm(AdminReportForm):
     def group_months_into_periods(self, monthly_rows):
         if self.cleaned_data['period'] == 'quarterly':
             yield from self.group_months_into_quarters(monthly_rows)
+        elif self.cleaned_data['period'] == 'yearly':
+            yield from self.group_months_into_years(12, monthly_rows)
         elif self.cleaned_data['period'] == 'financial':
-            yield from self.group_months_into_financial_years(monthly_rows)
+            yield from self.group_months_into_years(3, monthly_rows)
         else:
             yield from monthly_rows
 
@@ -236,7 +243,7 @@ class BasePeriodAdminReportForm(AdminReportForm):
         if 'date' in collected:
             yield collected
 
-    def group_months_into_financial_years(self, monthly_rows):
+    def group_months_into_years(self, last_month_of_year, monthly_rows):
         collected = collections.defaultdict(int)
         for row in monthly_rows:
             row_date = row.pop('date')
@@ -247,7 +254,7 @@ class BasePeriodAdminReportForm(AdminReportForm):
                     collected[key] = None
                 else:
                     collected[key] += value
-            if row_date.month == 3:
+            if row_date.month == last_month_of_year:
                 yield collected
                 collected = collections.defaultdict(int)
         if 'date' in collected:
@@ -279,7 +286,7 @@ class DigitalTakeupReportForm(BasePeriodAdminReportForm):
         period = self.cleaned_data['period']
         if period == 'quarterly':
             return 3
-        if period == 'financial':
+        if period in ('yearly', 'financial'):
             return 12
         return 1
 
@@ -294,8 +301,8 @@ class DigitalTakeupReportForm(BasePeriodAdminReportForm):
                     month = 1
                 date = date.replace(month=month)
                 yield date
-        elif period == 'financial':
-            # this financial year and next
+        elif period in ('yearly', 'financial'):
+            # this calendar/financial year and next
             yield date.replace(year=date.year + 1)
             yield date.replace(year=date.year + 2)
         else:
