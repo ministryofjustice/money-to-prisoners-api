@@ -91,6 +91,8 @@ class BasePrisonAdminReportForm(AdminReportForm):
         ('last_month', _('Last month')),
         ('this_quarter', _('This quarter')),
         ('last_quarter', _('Last quarter')),
+        ('this_year', _('This year')),
+        ('last_year', _('Last year')),
         ('this_fin_year', _('This financial year')),
         ('last_fin_year', _('Last financial year')),
     ), initial='30')
@@ -135,6 +137,16 @@ class BasePrisonAdminReportForm(AdminReportForm):
             else:
                 first_of_last_quarter = first_of_quarter.replace(month=last_quarter_month)
             return first_of_last_quarter.date(), first_of_quarter.date()
+
+        if first_of_quarter.month == 1:
+            first_of_year = first_of_quarter
+        else:
+            first_of_year = first_of_quarter.replace(year=first_of_quarter.year - 1, month=1)
+        if period == 'this_year':
+            return first_of_year.date(), None
+        if period == 'last_year':
+            first_of_last_year = first_of_year.replace(year=first_of_year.year - 1)
+            return first_of_last_year.date(), first_of_year.date()
 
         if first_of_quarter.month == 4:
             first_of_fin_year = first_of_quarter
