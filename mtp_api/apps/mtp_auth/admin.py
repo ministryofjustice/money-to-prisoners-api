@@ -45,7 +45,7 @@ class JobInformationAdmin(ModelAdmin):
     list_filter = ('title', 'prison_estate')
 
     def fullname(self, obj):
-        return f'{obj.user.first_name} {obj.user.last_name}'
+        return obj.user.get_full_name()
 
     def email(self, obj):
         return obj.user.email
