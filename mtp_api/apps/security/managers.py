@@ -1,7 +1,7 @@
 import logging
 
 from django.db import connection, models, transaction
-from django.db.models import Count, Sum, Subquery, OuterRef
+from django.db.models import Count, Sum, Subquery, OuterRef, Q
 from django.db.models.functions import Coalesce
 
 logger = logging.getLogger('mtp')
@@ -253,21 +253,33 @@ class PrisonerProfileQuerySet(models.QuerySet):
         self.recalculate_disbursement_totals()
 
     def recalculate_credit_totals(self):
+        from credit.constants import CREDIT_STATUS
         from security.models import PrisonerProfile
+
+        # Implicit assumption that credits associated with a prisoner_profile have been operated on by
+        # update_security_profiles batch job because they are associated there
+        # This will change with earlier association of prisoner profile
 
         self.update(
             credit_count=Coalesce(Subquery(
                 PrisonerProfile.objects.filter(
                     id=OuterRef('id'),
                 ).annotate(
-                    calculated=Count('credits', distinct=True)
+                    calculated=Count(
+                        'credits',
+                        distinct=True,
+                        filter=Q(credits__resolution=CREDIT_STATUS.CREDITED)
+                    )
                 ).values('calculated')[:1]
             ), 0),
             credit_total=Coalesce(Subquery(
                 PrisonerProfile.objects.filter(
                     id=OuterRef('id'),
                 ).annotate(
-                    calculated=Sum('credits__amount')
+                    calculated=Sum(
+                        'credits__amount',
+                        filter=Q(credits__resolution=CREDIT_STATUS.CREDITED)
+                    )
                 ).values('calculated')[:1]
             ), 0),
         )
@@ -298,21 +310,33 @@ class SenderProfileQuerySet(models.QuerySet):
         self.recalculate_credit_totals()
 
     def recalculate_credit_totals(self):
+        from credit.constants import CREDIT_STATUS
         from security.models import SenderProfile
+
+        # Implicit assumption that credits with a sender have have been operated on by
+        # update_security_profiles batch job because they are associated there
+        # This will change with earlier association of sender profile
 
         self.update(
             credit_count=Coalesce(Subquery(
                 SenderProfile.objects.filter(
                     id=OuterRef('id'),
                 ).annotate(
-                    calculated=Count('credits', distinct=True)
+                    calculated=Count(
+                        'credits',
+                        distinct=True,
+                        filter=Q(credits__resolution=CREDIT_STATUS.CREDITED)
+                    )
                 ).values('calculated')[:1]
             ), 0),
             credit_total=Coalesce(Subquery(
                 SenderProfile.objects.filter(
                     id=OuterRef('id'),
                 ).annotate(
-                    calculated=Sum('credits__amount')
+                    calculated=Sum(
+                        'credits__amount',
+                        filter=Q(credits__resolution=CREDIT_STATUS.CREDITED)
+                    )
                 ).values('calculated')[:1]
             ), 0),
         )
@@ -381,8 +405,9 @@ class CheckManager(models.Manager):
         from notification.rules import RULES
         from security.constants import CHECK_STATUS
 
-        #This call should be redundant now, as the profiles are created and associated within the CreditManager.create method but lets leave it in for now
-        # for cautions sake. e.g. could a Payment remain in the INITIAL resolution state after an update?
+        # This call should be redundant now, as the profiles are created and associated within the CreditManager.create
+        # method but lets leave it in for now for cautions sake. e.g. could a Payment remain in the INITIAL resolution
+        # state after an update?
         temporary_profiles = credit.attach_profiles()
         matched_rule_codes = self._get_matching_rules(credit)
         for field in temporary_profiles:

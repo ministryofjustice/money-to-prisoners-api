@@ -55,6 +55,7 @@ class Credit(TimeStampedModel):
 
     sender_profile = models.ForeignKey('security.SenderProfile', related_name='credits', blank=True, null=True,
                                        on_delete=models.SET_NULL)
+    is_counted_in_sender_profile_total = models.BooleanField(default=False)
     prisoner_profile = models.ForeignKey('security.PrisonerProfile', related_name='credits', blank=True, null=True,
                                          on_delete=models.SET_NULL)
 
@@ -153,7 +154,9 @@ class Credit(TimeStampedModel):
                     self.prisoner_profile = PrisonerProfile.objects.create_or_update_for_credit(self)
                 else:
                     logger.warning(
-                        'Could not create PrisonerProfile for credit %s because Credit lacked either  a prison or prisoner name', self
+                        'Could not create PrisonerProfile for credit %s because Credit lacked either  a prison or '
+                        'prisoner name',
+                        self
                     )
             profiles.append('prisoner_profile')
         if not self.sender_profile:

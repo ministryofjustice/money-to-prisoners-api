@@ -72,8 +72,8 @@ class CreditManager(models.Manager):
 
     def create(self, *args, **kwargs):
         credit_instance = super(CreditManager, self).create(*args, **kwargs)
-        #We intentionally disregard the return in this invocation of the fn
-        _  = credit_instance.attach_profiles()
+        # We intentionally disregard the return in this invocation of the fn
+        _ = credit_instance.attach_profiles()
         return credit_instance
 
     @atomic

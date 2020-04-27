@@ -45,7 +45,8 @@ class Command(BaseCommand):
             PrisonerProfile.objects.update_current_prisons()
 
     def handle_credit_update(self, batch_size):
-        new_credits = Credit.objects.filter(sender_profile__isnull=True).order_by('pk')
+        # Implicit filter on resolution not in initial / failed through CompletedCreditManager.get_queryset()
+        new_credits = Credit.objects.filter(is_counted_in_sender_profile_total=False).order_by('pk')
         new_credits_count = new_credits.count()
         if not new_credits_count:
             self.stdout.write(self.style.SUCCESS('No new credits'))
@@ -89,12 +90,18 @@ class Command(BaseCommand):
     def process_credit_batch(self, new_credits):
         sender_profiles = []
         prisoner_profiles = []
+        credits_with_sender_profiles = []
         for credit in new_credits:
             self.create_or_update_profiles_for_credit(credit)
             if credit.sender_profile:
                 sender_profiles.append(credit.sender_profile.pk)
+                credits_with_sender_profiles.append(credit)
+            else:
+                logger.warning('Sender profile could not be found for credit %s', credit)
             if credit.prisoner_profile:
                 prisoner_profiles.append(credit.prisoner_profile.pk)
+            else:
+                logger.warning('Prisoner profile could not be found for credit %s', credit)
 
         SenderProfile.objects.filter(
             pk__in=sender_profiles
@@ -103,6 +110,9 @@ class Command(BaseCommand):
             pk__in=prisoner_profiles
         ).recalculate_credit_totals()
 
+        for credit in credits_with_sender_profiles:
+            credit.is_counted_in_sender_profile_total = True
+            credit.save()
         create_notification_events(records=new_credits)
         return len(new_credits)
 
@@ -128,8 +138,10 @@ class Command(BaseCommand):
         return len(new_disbursements)
 
     def create_or_update_profiles_for_credit(self, credit):
-        sender_profile = SenderProfile.objects.create_or_update_for_credit(credit)
-        if credit.prison:
+        if not credit.sender_profile:
+            # TODO this method does not need to return, pull sender_proffile off credit object
+            sender_profile = SenderProfile.objects.create_or_update_for_credit(credit)
+        if credit.prison and credit.sender_profile and not credit.prisoner_profile:
             prisoner_profile = PrisonerProfile.objects.create_or_update_for_credit(credit)
             prisoner_profile.senders.add(sender_profile)
 
