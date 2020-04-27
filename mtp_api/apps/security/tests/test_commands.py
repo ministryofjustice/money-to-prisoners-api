@@ -2,6 +2,7 @@ from django.core.management import call_command
 from django.test import TestCase
 from django.utils import timezone
 
+from credit.constants import CREDIT_RESOLUTION
 from core.tests.utils import make_test_users
 from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION
 from disbursement.tests.utils import (
@@ -38,11 +39,15 @@ class UpdateSecurityProfilesTestCase(TestCase):
 
         for sender_profile in SenderProfile.objects.all():
             self.assertEqual(
-                len(sender_profile.credits.all()),
+                len(sender_profile.credits.filter(
+                    resolution=CREDIT_RESOLUTION.CREDITED
+                ).all()),
                 sender_profile.credit_count
             )
             self.assertEqual(
-                sum([credit.amount for credit in sender_profile.credits.all()]),
+                sum([credit.amount for credit in sender_profile.credits.filter(
+                    resolution=CREDIT_RESOLUTION.CREDITED
+                ).all()]),
                 sender_profile.credit_total
             )
 
@@ -63,11 +68,15 @@ class UpdateSecurityProfilesTestCase(TestCase):
                 self.assertTrue(prisoner_profile.single_offender_id)
 
             self.assertEqual(
-                sum([credit.amount for credit in prisoner_profile.credits.all()]),
+                sum([credit.amount for credit in prisoner_profile.credits.filter(
+                    resolution=CREDIT_RESOLUTION.CREDITED
+                ).all()]),
                 prisoner_profile.credit_total
             )
             self.assertEqual(
-                len(prisoner_profile.credits.all()),
+                len(prisoner_profile.credits.filter(
+                    resolution=CREDIT_RESOLUTION.CREDITED
+                ).all()),
                 prisoner_profile.credit_count
             )
 
@@ -113,7 +122,7 @@ class UpdateSecurityProfilesTestCase(TestCase):
         new_transactions[0]['prisoner_number'] = prisoner_to_update.prisoner_number
         new_transactions[0]['prisoner_dob'] = prisoner_to_update.prisoner_dob
 
-        create_transactions(new_transactions)
+        create_transactions(new_transactions, overrides={'credited': True})
         call_command('update_security_profiles', verbosity=0)
 
         sender_to_update.refresh_from_db()
@@ -168,7 +177,7 @@ class UpdateSecurityProfilesTestCase(TestCase):
         new_payments[0]['prisoner_number'] = prisoner_to_update.prisoner_number
         new_payments[0]['prisoner_dob'] = prisoner_to_update.prisoner_dob
 
-        create_payments(new_payments)
+        create_payments(new_payments, overrides={'credited': True})
         call_command('update_security_profiles', verbosity=0)
 
         sender_to_update.refresh_from_db()

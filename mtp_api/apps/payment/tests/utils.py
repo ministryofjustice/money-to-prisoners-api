@@ -97,21 +97,25 @@ def generate_initial_payment_data(tot=50, days_of_history=7):
     return data_list
 
 
-def generate_payments(payment_batch=50, consistent_history=False, days_of_history=7):
+def generate_payments(payment_batch=50, consistent_history=False, days_of_history=7, overrides=None):
     data_list = generate_initial_payment_data(
         tot=payment_batch,
         days_of_history=days_of_history
     )
-    return create_payments(data_list, consistent_history)
+    return create_payments(data_list, consistent_history, overrides=None)
 
 
-def create_payments(data_list, consistent_history=False):
+# TODO consistent_history doesn't seem to do anything, yet is provided by some calling functions...
+def create_payments(data_list, consistent_history=False, overrides=None):
     owner_status_chooser = get_owner_and_status_chooser()
     payments = []
     for payment_counter, data in enumerate(data_list, start=1):
         new_payment = setup_payment(
             owner_status_chooser,
-            latest_payment_date(), payment_counter, data
+            latest_payment_date(),
+            payment_counter,
+            data,
+            overrides
         )
         payments.append(new_payment)
 
@@ -134,7 +138,7 @@ def create_payments(data_list, consistent_history=False):
     return payments
 
 
-def setup_payment(owner_status_chooser, end_date, payment_counter, data):
+def setup_payment(owner_status_chooser, end_date, payment_counter, data, overrides=None):
     older_than_yesterday = (
         data['created'].date() < (end_date.date() - datetime.timedelta(days=1))
     )
@@ -166,6 +170,8 @@ def setup_payment(owner_status_chooser, end_date, payment_counter, data):
                 'credited': False
             })
 
+    if overrides:
+        data.update(overrides)
     with MockModelTimestamps(data['created'], data['modified']):
         new_payment = save_payment(data)
 

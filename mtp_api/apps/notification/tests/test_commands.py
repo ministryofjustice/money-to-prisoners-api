@@ -46,7 +46,7 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
         test_users = make_test_users()
         self.security_staff = test_users['security_staff']
         load_random_prisoner_locations()
-        generate_payments(payment_batch=20, days_of_history=2)
+        generate_payments(payment_batch=20, days_of_history=2, overrides={'credited': True})
         generate_disbursements(disbursement_batch=20, days_of_history=2)
 
     @override_settings(ENVIRONMENT='prod')
@@ -88,7 +88,7 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
     def test_sends_first_email_with_events(self):
         user = self.security_staff[0]
         EmailNotificationPreferences(user=user, frequency=EMAIL_FREQUENCY.DAILY).save()
-        self.create_profiles_but_unlink_objects()
+        call_command('update_security_profiles')
         for profile in PrisonerProfile.objects.all():
             profile.monitoring_users.add(user)
         call_command('update_security_profiles')
@@ -108,7 +108,7 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
         user = self.security_staff[0]
         user.flags.create(name=EMAILS_STARTED_FLAG)
         EmailNotificationPreferences(user=user, frequency=EMAIL_FREQUENCY.DAILY).save()
-        self.create_profiles_but_unlink_objects()
+        call_command('update_security_profiles')
         for profile in DebitCardSenderDetails.objects.all():
             profile.monitoring_users.add(user)
         call_command('update_security_profiles')
@@ -191,7 +191,7 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
         user = self.security_staff[0]
         user.flags.create(name=EMAILS_STARTED_FLAG)
         EmailNotificationPreferences(user=user, frequency=EMAIL_FREQUENCY.DAILY).save()
-        self.create_profiles_but_unlink_objects()
+        call_command('update_security_profiles')
         for profile in DebitCardSenderDetails.objects.all():
             profile.monitoring_users.add(user)
         call_command('update_security_profiles')
@@ -326,6 +326,7 @@ class SendNotificationReportTestCase(NotificationBaseTestCase):
             dimensions = worksheet.calculate_dimension()
             rows, _columns = coordinate_to_tuple(dimensions.split(':')[1])
             self.assertEqual(rows, 2)
+            # TODO This test seems very flaky
             self.assertEqual(worksheet['F2'].value, '£125.01')
             self.assertEqual(worksheet['H2'].value, credit.prisoner_name)
             self.assertIn(f'/credits/{credit.id}/', worksheet['B2'].hyperlink.target)
@@ -340,7 +341,7 @@ class SendNotificationReportTestCase(NotificationBaseTestCase):
 
     def test_reports_generated_for_monitored_prisoners(self):
         security_staff = self.make_2days_of_random_models()
-        self.create_profiles_but_unlink_objects()
+        call_command('update_security_profiles')
 
         # set up scenario such that every prisoner is monitored by 1 person
         # except for one prisoner that has 2 monitors
