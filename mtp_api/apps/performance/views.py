@@ -91,7 +91,6 @@ class PrisonDigitalTakeupView(BaseAdminReportView):
     title = _('Digital take-up per prison')
     template_name = 'admin/performance/digitaltakeup/prison-report.html'
     form_class = PrisonDigitalTakeupForm
-    required_permissions = ['transaction.view_dashboard']
 
     def get_context_data(self, **kwargs):
         context_data = super().get_context_data(**kwargs)
@@ -163,7 +162,6 @@ class DigitalTakeupReport(BaseAdminReportView):
     title = _('Digital take-up report')
     template_name = 'admin/performance/digitaltakeup/report.html'
     form_class = DigitalTakeupReportForm
-    required_permissions = ['transaction.view_dashboard']
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

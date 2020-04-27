@@ -20,7 +20,6 @@ class CreditReportAdminView(BaseAdminReportView):
     title = _('Credit report')
     template_name = 'admin/credit/credit/report.html'
     form_class = CreditReportForm
-    required_permissions = ['transaction.view_dashboard']
 
     def get_context_data(self, **kwargs):
         context_data = super().get_context_data(**kwargs)
@@ -69,7 +68,6 @@ class PrisonCreditReportAdminView(BaseAdminReportView):
     title = _('Credits per-prison')
     template_name = 'admin/credit/credit/prison-report.html'
     form_class = PrisonCreditReportForm
-    required_permissions = ['transaction.view_dashboard']
 
     def get_context_data(self, **kwargs):
         context_data = super().get_context_data(**kwargs)

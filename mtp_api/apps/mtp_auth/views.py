@@ -522,7 +522,6 @@ class LoginStatsView(BaseAdminReportView):
     title = _('Staff logins per prison')
     template_name = 'admin/mtp_auth/login/prison-report.html'
     form_class = LoginStatsForm
-    required_permissions = ['transaction.view_dashboard']
 
     @classmethod
     def get_months(cls):

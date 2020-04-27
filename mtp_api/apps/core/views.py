@@ -69,6 +69,7 @@ class BaseAdminReportView(AdminViewMixin, FormView, metaclass=MediaDefiningClass
     Base class for report views that use GET-based forms to filter results
     """
     form_class = NotImplemented
+    required_permissions = ['transaction.view_dashboard']
 
     # test prisons that should not feature in any report
     excluded_nomis_ids = {'ZCH'}

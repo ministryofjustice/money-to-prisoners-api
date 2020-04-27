@@ -17,7 +17,6 @@ class DisbursementReportAdminView(BaseAdminReportView):
     title = _('Disbursement report')
     template_name = 'admin/disbursement/disbursement/report.html'
     form_class = DisbursementReportForm
-    required_permissions = ['transaction.view_dashboard']
 
     def get_context_data(self, **kwargs):
         context_data = super().get_context_data(**kwargs)
@@ -60,7 +59,6 @@ class PrisonDisbursementReportAdminView(BaseAdminReportView):
     title = _('Disbursements per-prison')
     template_name = 'admin/disbursement/disbursement/prison-report.html'
     form_class = PrisonDisbursementReportForm
-    required_permissions = ['transaction.view_dashboard']
 
     def get_context_data(self, **kwargs):
         context_data = super().get_context_data(**kwargs)
