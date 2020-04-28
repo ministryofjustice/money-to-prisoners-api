@@ -35,7 +35,7 @@ class NotificationBaseTestCase(TestCase):
 
     def create_profiles_but_unlink_objects(self):
         call_command('update_security_profiles')
-        Credit.objects.update(sender_profile=None, prisoner_profile=None)
+        Credit.objects.update(is_counted_in_sender_profile_total=False)
         Disbursement.objects.update(recipient_profile=None, prisoner_profile=None)
         # NB: profiles will have incorrect counts and totals
 
@@ -88,7 +88,7 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
     def test_sends_first_email_with_events(self):
         user = self.security_staff[0]
         EmailNotificationPreferences(user=user, frequency=EMAIL_FREQUENCY.DAILY).save()
-        call_command('update_security_profiles')
+        self.create_profiles_but_unlink_objects()
         for profile in PrisonerProfile.objects.all():
             profile.monitoring_users.add(user)
         call_command('update_security_profiles')
@@ -108,7 +108,7 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
         user = self.security_staff[0]
         user.flags.create(name=EMAILS_STARTED_FLAG)
         EmailNotificationPreferences(user=user, frequency=EMAIL_FREQUENCY.DAILY).save()
-        call_command('update_security_profiles')
+        self.create_profiles_but_unlink_objects()
         for profile in DebitCardSenderDetails.objects.all():
             profile.monitoring_users.add(user)
         call_command('update_security_profiles')
@@ -191,7 +191,7 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
         user = self.security_staff[0]
         user.flags.create(name=EMAILS_STARTED_FLAG)
         EmailNotificationPreferences(user=user, frequency=EMAIL_FREQUENCY.DAILY).save()
-        call_command('update_security_profiles')
+        self.create_profiles_but_unlink_objects()
         for profile in DebitCardSenderDetails.objects.all():
             profile.monitoring_users.add(user)
         call_command('update_security_profiles')
@@ -341,7 +341,7 @@ class SendNotificationReportTestCase(NotificationBaseTestCase):
 
     def test_reports_generated_for_monitored_prisoners(self):
         security_staff = self.make_2days_of_random_models()
-        call_command('update_security_profiles')
+        self.create_profiles_but_unlink_objects()
 
         # set up scenario such that every prisoner is monitored by 1 person
         # except for one prisoner that has 2 monitors
