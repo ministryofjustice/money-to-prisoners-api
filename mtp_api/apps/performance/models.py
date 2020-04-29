@@ -1,11 +1,74 @@
 import datetime
 import itertools
 
+from django.conf import settings
 from django.db import connection, models
 from django.db.models.expressions import RawSQL
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from core import dictfetchall, mean
+
+
+class DigitalTakeupManager(models.Manager):
+    def digital_takeup_per_month(self, since=None, exclude_private_estate=False):
+        """
+        Per-month digital take-up averages
+        """
+        if since is None:
+            today = timezone.localdate()
+            since = max(DigitalTakeup.reports_start, today.replace(year=today.year - 2, month=1, day=1))
+
+        if exclude_private_estate:
+            included_prisons_sql = """
+                included_prisons AS (
+                    SELECT prison_prison.nomis_id as nomis_id
+                    FROM prison_prison
+                    WHERE prison_prison.private_estate IS false
+                ),
+            """
+            credit_count_join_sql = """
+                JOIN included_prisons ON included_prisons.nomis_id = credit_credit.prison_id
+            """
+            average_takeup_join_sql = """
+                JOIN included_prisons ON included_prisons.nomis_id = performance_digitaltakeup.prison_id
+            """
+        else:
+            included_prisons_sql = ''
+            credit_count_join_sql = ''
+            average_takeup_join_sql = ''
+
+        sql = f"""
+        WITH
+            {included_prisons_sql}
+            credit_count AS (
+                SELECT
+                    date_trunc('month', received_at AT TIME ZONE '{settings.TIME_ZONE}')::timestamp WITH TIME ZONE
+                        AS date,
+                    COUNT(*) AS accurate_credits_by_mtp
+                FROM credit_credit
+                {credit_count_join_sql}
+                WHERE resolution = 'credited' AND received_at >= %(since)s
+                GROUP BY date_trunc('month', received_at AT TIME ZONE '{settings.TIME_ZONE}')
+            ),
+            average_takeup AS (
+                SELECT date_trunc('month', date) AS date,
+                    SUM(credits_by_post) AS reported_credits_by_post,
+                    SUM(credits_by_mtp) AS reported_credits_by_mtp
+                FROM performance_digitaltakeup
+                {average_takeup_join_sql}
+                WHERE date >= %(since)s
+                GROUP BY date_trunc('month', date)
+            )
+        SELECT credit_count.date, accurate_credits_by_mtp, reported_credits_by_post, reported_credits_by_mtp
+        FROM credit_count
+        FULL OUTER JOIN average_takeup ON credit_count.date = average_takeup.date
+        ORDER BY credit_count.date
+        """
+
+        with connection.cursor() as cursor:
+            cursor.execute(sql, params={'since': since})
+            return dictfetchall(cursor)
 
 
 class DigitalTakeupQueryset(models.QuerySet):
@@ -33,36 +96,6 @@ class DigitalTakeupQueryset(models.QuerySet):
                 'digital_takeup_per_day': mean(value['digital_takeup'] for value in group),
             }
 
-    def digital_takeup_per_month(self, since=None):
-        """
-        Per-month digital take-up averages
-        :return:  generator
-        """
-        if since is None:
-            today = datetime.date.today()
-            since = max(DigitalTakeup.reports_start, today.replace(year=today.year - 2, month=1, day=1))
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                WITH credit_count AS (
-                  SELECT date_trunc('month', received_at) AS date,
-                    COUNT(*) AS accurate_credits_by_mtp
-                  FROM credit_credit
-                  WHERE resolution = 'credited' AND received_at >= %(since)s
-                  GROUP BY date_trunc('month', received_at)
-                ), average_takeup AS (
-                  SELECT date_trunc('month', date) AS date,
-                    SUM(credits_by_post) AS reported_credits_by_post,
-                    SUM(credits_by_mtp) AS reported_credits_by_mtp
-                  FROM performance_digitaltakeup
-                  WHERE date >= %(since)s
-                  GROUP BY date_trunc('month', date)
-                )
-                SELECT credit_count.date, accurate_credits_by_mtp, reported_credits_by_post, reported_credits_by_mtp
-                FROM credit_count FULL OUTER JOIN average_takeup ON credit_count.date = average_takeup.date
-                ORDER BY credit_count.date
-            """, params={'since': since})
-            return dictfetchall(cursor)
-
     def mean_digital_takeup(self):
         """
         Get averaged digital take-up
@@ -87,7 +120,7 @@ class DigitalTakeup(models.Model):
     amount_by_post = models.IntegerField(verbose_name=_('Amount by post'), null=True)
     amount_by_mtp = models.IntegerField(verbose_name=_('Amount sent digitally'), null=True)
 
-    objects = DigitalTakeupQueryset.as_manager()
+    objects = DigitalTakeupManager.from_queryset(DigitalTakeupQueryset)()
 
     reports_start = datetime.date(2017, 1, 1)
 

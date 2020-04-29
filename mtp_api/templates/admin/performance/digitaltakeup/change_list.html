@@ -1,5 +1,6 @@
 {% extends 'admin/change_list.html' %}
 {% load i18n %}
+{% load credit %}
 {% load tick_charts %}
 
 {% block object-tools-items %}
@@ -10,7 +11,12 @@
 {% endblock %}
 
 {% block filters %}
-    {% tick_chart values=cl.queryset.digital_takeup_per_day stride_field='date' value_field='digital_takeup_per_day' max_value=1.0 %}
+  {% tick_chart values=cl.queryset.digital_takeup_per_day stride_field='date' value_field='digital_takeup_per_day' max_value=1.0 %}
+
+  <div class="actions">
+    {% trans 'Average digital take-up' %}:
+    {{ cl.queryset.mean_digital_takeup|format_percentage }}
+  </div>
 
   {{ block.super }}
 {% endblock %}

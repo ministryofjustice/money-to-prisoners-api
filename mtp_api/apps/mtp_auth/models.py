@@ -94,6 +94,9 @@ class JobInformation(TimeStampedModel):
     prison_estate = models.CharField(max_length=255)
     tasks = models.TextField()
 
+    class Meta:
+        verbose_name_plural = 'job information'
+
 
 class Login(models.Model):
     created = models.DateTimeField(auto_now_add=True)

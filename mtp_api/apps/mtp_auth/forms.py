@@ -2,8 +2,10 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from django.core.exceptions import ValidationError
+from django.utils.dateformat import format as date_format
 from django.utils.translation import gettext_lazy as _
 
+from core.forms import AdminReportForm
 from mtp_auth.constants import CASHBOOK_OAUTH_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID
 
 User = get_user_model()
@@ -66,15 +68,18 @@ class RestrictedUserChangeForm(UserChangeForm):
         return email
 
 
-class LoginStatsForm(forms.Form):
+class LoginStatsForm(AdminReportForm):
     application = forms.ChoiceField(label=_('Application'), choices=(
-        (CASHBOOK_OAUTH_CLIENT_ID, 'Digital cashbook'),
-        (NOMS_OPS_OAUTH_CLIENT_ID, 'Prisoner money intelligence'),
+        (CASHBOOK_OAUTH_CLIENT_ID, _('Digital cashbook')),
+        (NOMS_OPS_OAUTH_CLIENT_ID, _('Prisoner money intelligence')),
     ), initial=CASHBOOK_OAUTH_CLIENT_ID)
+    ordering = forms.ChoiceField(choices=(
+        ('nomis_id', _('Prison')),
+    ), initial='nomis_id')
 
-    def __init__(self, **kwargs):
-        data = kwargs.pop('data', {})
-        for field_name, field in self.base_fields.items():
-            if field_name not in data:
-                data[field_name] = field.initial
-        super().__init__(data=data, **kwargs)
+    def __init__(self, months, **kwargs):
+        self.base_fields['ordering'].choices.extend((
+            (date_format(month, 'Y-m'), date_format(month, 'F'))
+            for month in months
+        ))
+        super().__init__(**kwargs)

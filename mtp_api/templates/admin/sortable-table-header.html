@@ -1,0 +1,13 @@
+<th class="sortable {% if currently_sorted %}sorted{% endif %}">
+  {% if currently_sorted %}
+    <div class="sortoptions">
+      <a href="?{{ query_string_without_ordering }}&amp;ordering={{ ordering_query_string }}" class="toggle {{ currently_sorted }}"></a>
+    </div>
+  {% endif %}
+  <div class="text">
+    <a href="?{{ query_string_without_ordering }}&amp;ordering={{ ordering_query_string }}">
+      {{ title }}
+    </a>
+  </div>
+  <div class="clear"></div>
+</th>

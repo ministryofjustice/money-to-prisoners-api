@@ -9,7 +9,7 @@ from prison.models import Prison
 class DigitalUptakeTestCase(TestCase):
     fixtures = ['initial_types', 'test_prisons']
 
-    def test_calculate_uptake(self):
+    def test_calculate_takeup(self):
         self.assertIsNone(DigitalTakeup.objects.mean_digital_takeup())
         date = datetime.date(2016, 10, 26)
         prison1 = Prison.objects.get(pk='INP')

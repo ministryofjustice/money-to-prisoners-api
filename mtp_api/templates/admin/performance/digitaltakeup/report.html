@@ -1,0 +1,225 @@
+{% extends 'core/report.html' %}
+{% load i18n %}
+{% load admin_urls %}
+{% load credit %}
+{% load simple_admin %}
+
+{% block extrastyle %}
+  {{ block.super }}
+
+  <style>
+    #takeup-chart {
+      width: 800px;
+      height: 400px;
+      margin: 10px 8px;
+    }
+  </style>
+{% endblock %}
+
+{% block extrahead %}
+  {{ block.super }}
+
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+  <script>
+    google.charts.load('current', {packages: ['corechart']});
+    google.charts.setOnLoadCallback(function () {
+      var chartData = new google.visualization.DataTable({
+        cols: [
+          {type: 'string', label: '{% trans 'Periods' %}'},
+          {type: 'number', label: '{% trans 'NOMIS digital credits' %}'},
+          {type: 'number', label: '{% trans 'NOMIS postal credits' %}'},
+          {type: 'number', label: '{% trans 'Digital credits' %}'},
+          {type: 'boolean', role: 'certainty'},
+          {type: 'number', label: '{% trans 'Scaled postal credits' %}'},
+          {type: 'boolean', role: 'certainty'}
+        ],
+        rows: {{ chart_rows_json|safe }}
+      });
+      {% if not show_reported %}
+        chartData = new google.visualization.DataView(chartData);
+        chartData.hideColumns([1, 2]);
+      {% endif %}
+      var chart = document.getElementById('takeup-chart');
+      if (!chart) {
+        return;
+      }
+      chart = new google.visualization.LineChart(chart);
+      chart.draw(chartData, {
+        fontName: 'Roboto, "Lucida Grande", Verdana, Arial, sans-serif',
+        colors: [
+          {% if show_reported %}
+            '#d5e8f3', '#f9d6d6',
+          {% endif %}
+          '#2b8cc4', '#df3034'
+        ],
+        hAxis: {
+          baselineColor: '#333',
+          textStyle: {color: '#333'}
+        },
+        vAxis: {
+          minValue: 0,
+          format: 'short',
+          baselineColor: '#333',
+          textStyle: {color: '#333'},
+          textPosition: 'in'
+        },
+        chartArea: {
+          top: 30,
+          right: 0,
+          bottom: 80,
+          left: 0
+        },
+        title: '{% trans 'Digital take-up' %} ({% if exclude_private_estate %}{% trans 'excluding private estate' %}{% else %}{% trans 'including private estate' %}{% endif %})',
+        legend: {
+          position: 'bottom',
+          alignment: 'end',
+          maxLines: 1,
+          textStyle: {
+            color: '#333'
+          }
+        }
+      });
+    });
+  </script>
+{% endblock %}
+
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+    &rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+    &rsaquo; {{ title }}
+  </div>
+{% endblock %}
+
+{% block content %}
+  <p>
+    <strong>{% trans 'Warning' %}:</strong>
+    {% if exclude_private_estate %}
+      {% trans 'Digital credits and scaled postal orders exclude private estate!' %}
+    {% else %}
+      {% trans 'Assuming digital take-up is the same in private prisons as in the public estate.' %}
+    {% endif %}
+    <br />
+    <a href="#admin-report-notes">
+      {% trans 'See important notes below' %}…
+    </a>
+  </p>
+
+  <div id="content-main">
+    <div id="changelist" class="module filtered">
+      <div id="changelist-filter">
+        <h2>{% trans 'Filter' %}</h2>
+
+        <h3>{{ form.period.label }}</h3>
+        {% admin_choice_list form form.period %}
+
+        <h3>{{ form.private_estate.label }} *</h3>
+        {% admin_choice_list form form.private_estate %}
+
+        <h3>{{ form.show_reported.label }} *</h3>
+        {% admin_choice_list form form.show_reported %}
+
+        <h3>{{ form.show_savings.label }} †</h3>
+        {% admin_choice_list form form.show_savings %}
+
+        <h3>{{ form.show_predictions.label }} ‡</h3>
+        {% admin_choice_list form form.show_predictions %}
+      </div>
+
+      <div class="results">
+        {% if rows %}
+
+          <table>
+            <thead>
+              <tr>
+                <th></th>
+                {% if show_reported %}
+                  <th><div class="text quiet"><span>{% trans 'NOMIS digital credits' %} *</span></div></th>
+                  <th><div class="text quiet"><span>{% trans 'NOMIS postal credits' %} *</span></div></th>
+                {% endif %}
+                <th><div class="text"><span>{% trans 'Average digital take-up' %}</span></div></th>
+                <th><div class="text"><span>{% trans 'Digital credits' %}</span></div></th>
+                <th><div class="text"><span>{% trans 'Scaled postal credits' %} *</span></div></th>
+                {% if show_savings %}
+                  <th><div class="text"><span>{% trans 'Gross savings enabled' %} †</span></div></th>
+                {% endif %}
+              </tr>
+            </thead>
+            <tbody>
+              {% regroup rows by predicted as grouped_rows %}
+              {% for rows in grouped_rows %}
+                {% if rows.grouper %}
+                  <tr class="{% cycle 'row1' 'row2' as row_styles %}">
+                    <td colspan="{% if show_reported and show_savings %}7{% elif show_reported %}6{% elif show_savings %}5{% else %}4{% endif %}" style="text-align:center">
+                      {% trans 'Predictions begin' %}
+                    </td>
+                  </tr>
+                {% endif %}
+                {% for row in rows.list %}
+                  <tr class="{% cycle row_styles %}">
+                    <td>{{ row.date_label }}</td>
+                    {% if show_reported %}
+                      <td class="quiet">{{ row.reported_credits_by_mtp|format_number }}</td>
+                      <td class="quiet">{{ row.reported_credits_by_post|format_number }}</td>
+                    {% endif %}
+                    <td>{{ row.digital_takeup|format_percentage }}</td>
+                    <td>{{ row.accurate_credits_by_mtp|format_number }}</td>
+                    <td>{{ row.extrapolated_credits_by_post|format_number }}</td>
+                    {% if show_savings %}
+                      <td>{{ row.savings|format_amount }}</td>
+                    {% endif %}
+                  </tr>
+                {% endfor %}
+              {% endfor %}
+            </tbody>
+          </table>
+
+          <div id="takeup-chart"></div>
+
+        {% else %}
+          <p class="errornote">
+            {% trans 'No data reported.' %}
+          </p>
+        {% endif %}
+
+        <section id="admin-report-notes">
+          <h2>{% trans 'Notes on this report' %}</h2>
+          <dl>
+            <dt>* {% trans 'Digital take-up' %}</dt>
+            <dd>
+              {% trans 'Digital take-up is the proportion of credits received through the digital service.' %}
+              {% trans 'This is based on reports from NOMIS.' %}
+              {% trans 'NOMIS reports do not always show the accurate number of credits received neither by post nor digitally across the public estate.' %}
+              {% trans 'They do not include the private estate at all.' %}
+              {% trans 'By assuming that digital take-up is correct (i.e. the proportion of each), the postal credits are extrapolated from the known accurate number of digital credits.' %}
+            </dd>
+
+            <dt>† {% trans 'Gross savings enabled' %}</dt>
+            <dd>
+              {% trans 'Gross savings are calculated as the difference between the actual cost and the cost had all transactions been non-digital.' %}
+              {% trans 'The costs per transaction are' %}:
+              <ul>
+                <li>
+                  {% blocktrans trimmed with cost=form.cleaned_data.postal_cost|format_amount %}
+                    {{ cost }} for non-digital
+                  {% endblocktrans %}
+                </li>
+                <li>
+                  {% blocktrans trimmed with cost=form.cleaned_data.digital_cost|format_amount %}
+                    {{ cost }} for digital
+                  {% endblocktrans %}
+                </li>
+              </ul>
+            </dd>
+
+            <dt>‡ {% trans 'Predictions' %}</dt>
+            <dd>
+              {% trans 'Digital credits and scaled postal credits are predicted based on historic data.' %}
+            </dd>
+          </dl>
+        </section>
+      </div>
+    </div>
+  </div>
+{% endblock %}

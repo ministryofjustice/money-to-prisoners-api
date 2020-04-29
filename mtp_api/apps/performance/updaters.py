@@ -95,9 +95,8 @@ class CompletionRateUpdater(BaseUpdater):
     def _get_queryset(self):
         end_date = self.timestamp + timedelta(days=7)
         return Transaction.objects.filter(
-            # __date__ or not .date()
-            received_at__gte=self.timestamp.date(),
-            received_at__lt=end_date.date(),
+            received_at__date__gte=self.timestamp.date(),
+            received_at__date__lt=end_date.date(),
             category=TRANSACTION_CATEGORY.CREDIT,
             source=TRANSACTION_SOURCE.BANK_TRANSFER
         )

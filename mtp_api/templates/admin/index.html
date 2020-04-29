@@ -13,25 +13,49 @@
           <tbody>
             <tr>
               <th scope="row">
-                <a href="{% url 'performance_dashboard' %}">{% trans 'TV dashboard' %}</a>
+                <a href="{% url 'admin:credit-report' %}">{% trans 'Credit report' %}</a>
               </th>
               <td></td>
             </tr>
             <tr>
               <th scope="row">
-                <a href="{% url 'admin:prison-performance' %}">{% trans 'Prison performance' %}</a>
+                <a href="{% url 'admin:credit-prison-report' %}">{% trans 'Credits per-prison' %}</a>
               </th>
               <td></td>
             </tr>
             <tr>
               <th scope="row">
-                <a href="{% url 'admin:digital_takeup_report' %}">{% trans 'Digital take-up & savings report' %}</a>
+                <a href="{% url 'admin:disbursement-report' %}">{% trans 'Disbursement report' %}</a>
               </th>
               <td></td>
             </tr>
             <tr>
               <th scope="row">
-                <a href="{% url 'admin:login-stats' %}">{% trans 'Login stats' %}</a>
+                <a href="{% url 'admin:disbursement-prison-report' %}">{% trans 'Disbursements per-prison' %}</a>
+              </th>
+              <td></td>
+            </tr>
+            <tr>
+              <th scope="row">
+                <a href="{% url 'admin:digital_takeup_report' %}">{% trans 'Digital take-up report' %}</a>
+              </th>
+              <td></td>
+            </tr>
+            <tr>
+              <th scope="row">
+                <a href="{% url 'admin:digital_takeup_prisons' %}">{% trans 'Digital take-up per prison' %}</a>
+              </th>
+              <td></td>
+            </tr>
+            <tr>
+              <th scope="row">
+                <a href="{% url 'admin:login-stats' %}">{% trans 'Staff logins per prison' %}</a>
+              </th>
+              <td></td>
+            </tr>
+            <tr>
+              <th scope="row">
+                <a href="{% url 'admin:performance_dashboard' %}">{% trans 'TV dashboard' %}</a>
               </th>
               <td></td>
             </tr>

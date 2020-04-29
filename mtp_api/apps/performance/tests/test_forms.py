@@ -9,7 +9,7 @@ from performance.forms import DigitalTakeupUploadForm
 from performance.models import DigitalTakeup
 
 
-class DigitalUptakeTestCase(TestCase):
+class DigitalTakeupUploadTestCase(TestCase):
     fixtures = ['initial_types', 'test_nomis_mtp_prisons']
 
     def test_spreadsheet_parsing(self):

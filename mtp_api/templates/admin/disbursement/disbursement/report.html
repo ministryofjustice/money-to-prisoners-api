@@ -1,0 +1,74 @@
+{% extends 'core/report.html' %}
+{% load i18n %}
+{% load admin_urls %}
+{% load credit %}
+{% load simple_admin %}
+
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+    &rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+    &rsaquo; {{ title }}
+  </div>
+{% endblock %}
+
+{% block content %}
+  <p>
+    <a href="#admin-report-notes">
+      {% trans 'See important notes below' %}…
+    </a>
+  </p>
+
+  <div id="content-main">
+    <div id="changelist" class="module filtered">
+      <div id="changelist-filter">
+        <h2>{% trans 'Filter' %}</h2>
+
+        <h3>{{ form.period.label }}</h3>
+        {% admin_choice_list form form.period %}
+      </div>
+
+      <div class="results">
+        {% if rows %}
+
+          <table>
+            <thead>
+              <tr>
+                <th><div class="text"><span>{% trans 'Period' %}</span></div></th>
+                <th><div class="text"><span>{% trans 'Digital disbursements' %}</span></div></th>
+                <th><div class="text"><span>{% trans 'Digital disbursement amount' %}</span></div></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in rows %}
+                <tr class="{% cycle 'row1' 'row2' %}">
+                  <td>{{ row.date_label }}</td>
+                  <td>{{ row.count|format_number }}</td>
+                  <td>{{ row.amount|format_amount }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+        {% else %}
+          <p class="errornote">
+            {% trans 'No data reported.' %}
+          </p>
+        {% endif %}
+
+        <section id="admin-report-notes">
+          <h2>{% trans 'Notes on this report' %}</h2>
+          <dl>
+            <dt>{% trans 'Digital disbursements' %}</dt>
+            <dd>
+              {% trans 'A disbursement is money sent by a prisoner using the digital service by bank transfer or cheque.' %}
+              {% trans 'Traditional cash, cheque and postal order disbursements do not use the digital service.' %}
+              {% trans 'Digital disbursements are not available in the private estate.' %}
+            </dd>
+          </dl>
+        </section>
+      </div>
+    </div>
+  </div>
+{% endblock %}

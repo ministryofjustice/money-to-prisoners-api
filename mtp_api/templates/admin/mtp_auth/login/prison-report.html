@@ -1,0 +1,75 @@
+{% extends 'core/report.html' %}
+{% load i18n %}
+{% load admin_urls %}
+{% load credit %}
+{% load simple_admin %}
+
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+    &rsaquo; {{ title }}
+  </div>
+{% endblock %}
+
+{% block content %}
+  <p>
+    <a href="#admin-report-notes">
+      {% trans 'See important notes below' %}…
+    </a>
+  </p>
+
+  <div id="content-main">
+    <div id="changelist" class="module filtered">
+      <div id="changelist-filter">
+        <h2>{% trans 'Filter' %}</h2>
+        <h3>{{ form.application.label }}</h3>
+        {% admin_choice_list form form.application %}
+      </div>
+
+      <div class="results">
+        <table class="login-table">
+          <thead>
+          <tr>
+            {% sortable_table_header form 'nomis_id' _('Prison') %}
+            {% for month in view.months %}
+              {% if forloop.first %}
+                {% sortable_table_header form month|date:'Y-m' _('Expected this month *') %}
+              {% else %}
+                {% sortable_table_header form month|date:'Y-m' month|date:'F' %}
+              {% endif %}
+            {% endfor %}
+          </tr>
+          </thead>
+          <tbody>
+            {% for login_stat in login_stats %}
+              <tr class="{% cycle 'row1' 'row2' %}">
+                <td>{{ login_stat.prison_name }}</td>
+                {% for login_count in login_stat.monthly_counts %}
+                  <td>{{ login_count|format_number }}</td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        <section id="admin-report-notes">
+          <h2>{% trans 'Notes on this report' %}</h2>
+          <dl>
+            <dt>{% trans 'Staff logins' %}</dt>
+            <dd>
+              {% trans 'These are successful login attempts by users grouped by the prisons they are assigned to.' %}
+              {% trans 'Since a user can be assigned to multiple prisons, one user login can appear in several rows.' %}
+              {% trans 'The private estate do not use the Digital cashbook.' %}
+            </dd>
+            <dt>* {% trans 'Expected this month' %}</dt>
+            <dd>
+              {% trans 'The number of logins this month assumes the same constant rate of logins as seen so far.' %}
+              {% trans 'This will be inaccurate at the beginning of the month.' %}
+            </dd>
+          </dl>
+        </section>
+      </div>
+    </div>
+  </div>
+{% endblock %}
