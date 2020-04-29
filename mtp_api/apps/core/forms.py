@@ -97,8 +97,13 @@ class BasePrisonAdminReportForm(AdminReportForm):
         ('last_fin_year', _('Last financial year')),
     ), initial='30')
 
-    @property
+    @cached_property
     def period_date_range(self):
+        """
+        Returns a pair of datetime.date which represent the selected period [since, until).
+        I.e. range filter should be used as ≥ `since` AND < `until`, where `until` may be None
+        and indicates an open-ended range.
+        """
         period = self.cleaned_data['period']
         today = timezone.localtime()
 
@@ -111,6 +116,20 @@ class BasePrisonAdminReportForm(AdminReportForm):
             return since_date, None
 
         first_of_month = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        if period in ('this_month', 'last_month'):
+            return self._make_month_range(period, first_of_month)
+
+        first_of_quarter = first_of_month.replace(month=math.ceil(first_of_month.month / 3) * 3 - 2)
+        if period in ('this_quarter', 'last_quarter'):
+            return self._make_quarter_range(period, first_of_quarter)
+        if period in ('this_year', 'last_year'):
+            return self._make_year_range(period, first_of_quarter)
+        if period in ('this_fin_year', 'last_fin_year'):
+            return self._make_financial_year_range(period, first_of_quarter)
+
+        raise NotImplementedError
+
+    def _make_month_range(self, period, first_of_month):
         if period == 'this_month':
             return first_of_month.date(), None
         if period == 'last_month':
@@ -124,20 +143,21 @@ class BasePrisonAdminReportForm(AdminReportForm):
                 first_of_last_month = first_of_month.replace(month=last_month)
             return first_of_last_month.date(), first_of_month.date()
 
-        first_of_quarter = first_of_month.replace(month=math.ceil(first_of_month.month / 3) * 3 - 2)
+    def _make_quarter_range(self, period, first_of_quarter):
         if period == 'this_quarter':
             return first_of_quarter.date(), None
         if period == 'last_quarter':
             last_quarter_month = first_of_quarter.month - 4
             if last_quarter_month < 1:
                 first_of_last_quarter = first_of_quarter.replace(
-                    year=first_of_month.year - 1,
+                    year=first_of_quarter.year - 1,
                     month=10,
                 )
             else:
                 first_of_last_quarter = first_of_quarter.replace(month=last_quarter_month)
             return first_of_last_quarter.date(), first_of_quarter.date()
 
+    def _make_year_range(self, period, first_of_quarter):
         if first_of_quarter.month == 1:
             first_of_year = first_of_quarter
         else:
@@ -148,6 +168,7 @@ class BasePrisonAdminReportForm(AdminReportForm):
             first_of_last_year = first_of_year.replace(year=first_of_year.year - 1)
             return first_of_last_year.date(), first_of_year.date()
 
+    def _make_financial_year_range(self, period, first_of_quarter):
         if first_of_quarter.month == 4:
             first_of_fin_year = first_of_quarter
         else:
@@ -157,8 +178,6 @@ class BasePrisonAdminReportForm(AdminReportForm):
         if period == 'last_fin_year':
             first_of_last_fin_year = first_of_fin_year.replace(year=first_of_fin_year.year - 1)
             return first_of_last_fin_year.date(), first_of_fin_year.date()
-
-        raise NotImplementedError
 
 
 class PrisonDigitalTakeupForm(BasePrisonAdminReportForm):
