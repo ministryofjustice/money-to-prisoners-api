@@ -235,16 +235,31 @@ class BasePeriodAdminReportForm(AdminReportForm):
         return lambda d: d.strftime('%b %Y')
 
     def group_months_into_periods(self, monthly_rows):
+        """
+        Collect a sequence of month-based dictionaries into longer periods (based on form selection).
+        `monthly_rows` is expected to be an iterable of dictionaries that have 'date' keys
+        and are sorted ascending by this date. All other items in the dictionary are summed into
+        groups by their key. E.g. a quarterly grouping:
+        [
+            {'date': 2020-01-01, 'count': 1},
+            {'date': 2020-02-01, 'count': 1, 'other': 1},
+            {'date': 2020-03-01, 'count': 2}
+        ]
+        ->
+        [{'date': 2020-01-01, 'count': 4, 'other': 1}]
+
+        NB: the input is consumed and the lowest date in a collected group is used for the output date
+        """
         if self.cleaned_data['period'] == 'quarterly':
-            yield from self.group_months_into_quarters(monthly_rows)
+            yield from self._group_months_into_quarters(monthly_rows)
         elif self.cleaned_data['period'] == 'yearly':
-            yield from self.group_months_into_years(12, monthly_rows)
+            yield from self._group_months_into_years(12, monthly_rows)
         elif self.cleaned_data['period'] == 'financial':
-            yield from self.group_months_into_years(3, monthly_rows)
+            yield from self._group_months_into_years(3, monthly_rows)
         else:
             yield from monthly_rows
 
-    def group_months_into_quarters(self, monthly_rows):
+    def _group_months_into_quarters(self, monthly_rows):
         quarter_end_months = {3, 6, 9, 12}
         collected = collections.defaultdict(int)
         for row in monthly_rows:
@@ -262,7 +277,7 @@ class BasePeriodAdminReportForm(AdminReportForm):
         if 'date' in collected:
             yield collected
 
-    def group_months_into_years(self, last_month_of_year, monthly_rows):
+    def _group_months_into_years(self, last_month_of_year, monthly_rows):
         collected = collections.defaultdict(int)
         for row in monthly_rows:
             row_date = row.pop('date')
