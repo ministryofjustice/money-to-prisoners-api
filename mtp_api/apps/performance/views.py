@@ -163,35 +163,31 @@ class DigitalTakeupReport(BaseAdminReportView):
     template_name = 'admin/performance/digitaltakeup/report.html'
     form_class = DigitalTakeupReportForm
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.exclude_private_estate = True
-
     def get_context_data(self, **kwargs):
         context_data = super().get_context_data(**kwargs)
         form = context_data['form']
 
-        self.exclude_private_estate = form.cleaned_data['private_estate'] == 'exclude'
+        exclude_private_estate = form.cleaned_data['private_estate'] == 'exclude'
 
-        rows = form.group_months_into_periods(self.get_monthly_rows())
+        rows = form.group_months_into_periods(self.get_monthly_rows(exclude_private_estate))
 
         context_data['opts'] = DigitalTakeup._meta
         context_data['form'] = form
-        context_data['exclude_private_estate'] = self.exclude_private_estate
+        context_data['exclude_private_estate'] = exclude_private_estate
         context_data['show_reported'] = form.cleaned_data['show_reported'] == 'show'
         context_data['show_savings'] = form.cleaned_data['show_savings'] == 'show'
         context_data['rows'] = list(self.process_rows(rows, form))
 
         context_data['show_predictions'] = form.cleaned_data['show_predictions'] == 'show'
         if context_data['show_predictions']:
-            self.predict_rows(context_data['rows'], form)
+            self.predict_rows(context_data['rows'], form, exclude_private_estate)
 
         context_data['chart_rows_json'] = self.process_chart_rows(context_data['rows'])
         return context_data
 
-    def get_monthly_rows(self):
+    def get_monthly_rows(self, exclude_private_estate):
         yield from DigitalTakeup.objects.digital_takeup_per_month(
-            exclude_private_estate=self.exclude_private_estate
+            exclude_private_estate=exclude_private_estate
         )
 
     def process_rows(self, rows, form):
@@ -219,7 +215,7 @@ class DigitalTakeupReport(BaseAdminReportView):
                 row['savings'] = None
             yield row
 
-    def predict_rows(self, rows, form):
+    def predict_rows(self, rows, form, exclude_private_estate):
         from performance.prediction import date_to_curve_point, load_curve
 
         if not rows:
@@ -229,7 +225,7 @@ class DigitalTakeupReport(BaseAdminReportView):
         scale_factor = form.prediction_scale
         cost_difference = form.cleaned_data['postal_cost'] - form.cleaned_data['digital_cost']
 
-        if self.exclude_private_estate:
+        if exclude_private_estate:
             key_suffix = 'without_private_estate'
         else:
             key_suffix = 'with_private_estate'
