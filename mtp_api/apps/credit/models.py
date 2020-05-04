@@ -144,7 +144,6 @@ class Credit(TimeStampedModel):
     def attach_profiles(self):
         from security.models import PrisonerProfile, SenderProfile
 
-        profiles = []
         if not self.prisoner_profile:
             try:
                 self.prisoner_profile = PrisonerProfile.objects.get_for_credit(self)
@@ -158,7 +157,6 @@ class Credit(TimeStampedModel):
                         'prisoner name',
                         self
                     )
-            profiles.append('prisoner_profile')
         if not self.sender_profile:
             try:
                 self.sender_profile = SenderProfile.objects.get_for_credit(self)
@@ -173,8 +171,6 @@ class Credit(TimeStampedModel):
                         'because credit lacked either a prison or prisoner name',
                         self
                     )
-            profiles.append('sender_profile')
-        return profiles
 
     @property
     def source(self):

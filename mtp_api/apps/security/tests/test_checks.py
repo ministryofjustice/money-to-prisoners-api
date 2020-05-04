@@ -274,8 +274,6 @@ class CreditCheckTestCase(TestCase):
         generate_payments(10)
         call_command('update_security_profiles')
         credit = Credit.objects.credited().first()
-        credit.prisoner_profile = None
-        credit.sender_profile = None
         credit.owner = None
         credit.resolution = CREDIT_RESOLUTION.INITIAL
         payment = credit.payment

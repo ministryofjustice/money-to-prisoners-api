@@ -27,3 +27,10 @@ static/
 media/
 venv/
 spooler/
+
+# testing
+htmlcov/
+.coverage
+
+# linters / code intelligence
+.mypy_cache/
