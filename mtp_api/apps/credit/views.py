@@ -139,6 +139,10 @@ class MonitoredProfileFilter(django_filters.BooleanFilter):
         return qs
 
 
+class NumberInFilter(django_filters.BaseInFilter, django_filters.NumberFilter):
+    pass
+
+
 class CreditListFilter(django_filters.FilterSet):
     status = StatusChoiceFilter(choices=CREDIT_STATUS.choices)
     user = django_filters.ModelChoiceFilter(field_name='owner', queryset=User.objects.all())
@@ -182,6 +186,8 @@ class CreditListFilter(django_filters.FilterSet):
     sender_ip_address = django_filters.CharFilter(field_name='payment__ip_address')
 
     payment_reference = django_filters.CharFilter(field_name='payment__uuid', lookup_expr='startswith')
+
+    exclude_credit__in = NumberInFilter(field_name='id', lookup_expr='in', exclude=True)
 
     exclude_amount__endswith = django_filters.CharFilter(
         field_name='amount', lookup_expr='endswith', exclude=True
