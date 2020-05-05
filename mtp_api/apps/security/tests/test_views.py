@@ -631,7 +631,6 @@ class PrisonerCreditListTestCase(SecurityViewTestCase):
                 check.reject(user, 'looks dodgy')
                 rejected_checks.append(credit.id)
 
-
         # Execute
         data = self._get_list(
             self._get_authorised_user(), path_params=[prisoner.id], include_checks=True

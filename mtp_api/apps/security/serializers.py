@@ -248,8 +248,8 @@ class CheckCreditSerializer(CheckSerializer):
 
     class Meta:
         model = Check
-        fields = CheckSerializer.Meta.fields + tuple(
-            'credit'
+        fields = CheckSerializer.Meta.fields + (
+            'credit',
         )
 
 

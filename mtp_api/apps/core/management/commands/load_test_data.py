@@ -2,6 +2,7 @@ import textwrap
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.core.management import BaseCommand, call_command
 
 from account.models import Balance
@@ -22,6 +23,8 @@ from security.models import (
 )
 from transaction.models import Transaction
 from transaction.tests.utils import generate_transactions
+
+User = get_user_model()
 
 
 class Command(BaseCommand):
@@ -113,6 +116,7 @@ class Command(BaseCommand):
         call_command('loaddata', *fixtures, verbosity=verbosity)
 
         print_message('Giving super users full API access')
+        self.create_super_admin()
         give_superusers_full_access()
 
         print_message('Making test users')
@@ -172,3 +176,20 @@ class Command(BaseCommand):
         ))
         verbosity = options.get('verbosity', 1)
         call_command('loaddata', 'initial_groups.json', verbosity=verbosity)
+
+    def create_super_admin(self):
+        try:
+            admin_user = User.objects.get(username='admin')
+        except User.DoesNotExist:
+            admin_user = User.objects.create_superuser(
+                username='admin',
+                email='admin@mtp.local',
+                password='adminadmin',
+                first_name='Admin',
+                last_name='User',
+            )
+        for group in Group.objects.all():
+            admin_user.groups.add(group)
+        give_superusers_full_access()
+
+        self.stdout.write(self.style.SUCCESS('Model creation finished'))
