@@ -32,12 +32,12 @@ from security.models import (
 from security.permissions import SecurityCheckPermissions, SecurityProfilePermissions
 from security.serializers import (
     AcceptCheckSerializer,
-    CheckSerializer,
+    CheckCreditSerializer,
     PrisonerProfileSerializer,
     RecipientProfileSerializer,
     RejectCheckSerializer,
     SavedSearchSerializer,
-    SenderProfileSerializer,
+    SenderProfileSerializer
 )
 
 
@@ -209,8 +209,9 @@ class SenderProfileView(
 
 class SenderProfileCreditsView(GetCredits):
     def list(self, request, sender_pk=None):
+        include_checks = request.GET.get('include_checks', 'False').lower() == 'true'
         sender = get_object_or_404(SenderProfile, pk=sender_pk)
-        queryset = self.get_queryset().filter(sender_profile=sender)
+        queryset = self.get_queryset(include_checks).filter(sender_profile=sender)
         queryset = self.filter_queryset(queryset)
 
         page = self.paginate_queryset(queryset)
@@ -315,8 +316,9 @@ class PrisonerProfileView(
 
 class PrisonerProfileCreditsView(GetCredits):
     def list(self, request, prisoner_pk=None):
+        include_checks = request.GET.get('include_checks', 'False').lower() == 'true'
         prisoner = get_object_or_404(PrisonerProfile, pk=prisoner_pk)
-        queryset = self.get_queryset().filter(prisoner_profile=prisoner)
+        queryset = self.get_queryset(include_checks).filter(prisoner_profile=prisoner)
         queryset = self.filter_queryset(queryset)
 
         page = self.paginate_queryset(queryset)
@@ -516,7 +518,7 @@ class CheckView(
     queryset = Check.objects.all()
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
     filter_class = CheckListFilter
-    serializer_class = CheckSerializer
+    serializer_class = CheckCreditSerializer
     ordering_fields = ('created',)
     ordering = ('created',)
 

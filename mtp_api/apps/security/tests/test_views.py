@@ -270,6 +270,48 @@ class SenderCreditListTestCase(SecurityViewTestCase):
         for credit in sender.credits.all():
             self.assertTrue(credit.id in [d['id'] for d in data])
 
+    def test_list_credits_for_sender_include_checks(self):
+        # Setup
+        sender = SenderProfile.objects.last()  # first is anonymous
+        accepted_checks = []
+        rejected_checks = []
+        user = self._get_authorised_user()
+        for credit in sender.credits.all():
+            check = Check.objects.create_for_credit(credit)
+            if check.status != 'accepted':
+                check.reject(user, 'looks dodgy')
+                rejected_checks.append(credit.id)
+
+        # Execute
+        data = self._get_list(
+            self._get_authorised_user(), path_params=[sender.id], include_credits=True
+        )['results']
+
+        # Assert
+        self.assertGreater(len(data), 0)
+        self.assertEqual(
+            len(sender.credits.all()), len(data)
+        )
+        for credit in sender.credits.all():
+            self.assertTrue(credit.id in [d['id'] for d in data])
+
+        for datum in data:
+            self.assertIn('security_check', datum)
+            self.assertIn('rules', datum['security_check'])
+            self.assertIn('description', datum['security_check'])
+            self.assertIn('actioned_by', datum['security_check'])
+            if datum['id'] in accepted_checks:
+                self.assertEqual(datum['security_check']['status'], 'accepted')
+                self.assertEqual(
+                    datum['security_check']['description'],
+                    'Credit matched no rules and was automatically accepted'
+                )
+                self.assertEqual(datum['security_check']['user'], user.id)
+            if datum['id'] in accepted_checks:
+                self.assertEqual(datum['security_check']['status'], 'rejected')
+                self.assertEqual(datum['security_check']['description'], 'looks dodgy')
+                self.assertEqual(datum['security_check']['user'], user.id)
+
 
 class RecipientProfileListTestCase(SecurityViewTestCase):
     def _get_url(self, *args, **kwargs):
@@ -576,6 +618,49 @@ class PrisonerCreditListTestCase(SecurityViewTestCase):
         )
         for credit in prisoner.credits.all():
             self.assertTrue(credit.id in [d['id'] for d in data])
+
+    def test_list_credits_for_prisoner_include_checks(self):
+        # Setup
+        prisoner = PrisonerProfile.objects.first()
+        accepted_checks = []
+        rejected_checks = []
+        user = self._get_authorised_user()
+        for credit in prisoner.credits.all():
+            check = Check.objects.create_for_credit(credit)
+            if check.status != 'accepted':
+                check.reject(user, 'looks dodgy')
+                rejected_checks.append(credit.id)
+
+
+        # Execute
+        data = self._get_list(
+            self._get_authorised_user(), path_params=[prisoner.id], include_checks=True
+        )['results']
+
+        # Assert
+        self.assertGreater(len(data), 0)
+        self.assertEqual(
+            len(prisoner.credits.all()), len(data)
+        )
+        for credit in prisoner.credits.all():
+            self.assertTrue(credit.id in [d['id'] for d in data])
+
+        for datum in data:
+            self.assertIn('security_check', datum)
+            self.assertIn('rules', datum['security_check'])
+            self.assertIn('description', datum['security_check'])
+            self.assertIn('actioned_by', datum['security_check'])
+            if datum['id'] in accepted_checks:
+                self.assertEqual(datum['security_check']['status'], 'accepted')
+                self.assertEqual(
+                    datum['security_check']['description'],
+                    'Credit matched no rules and was automatically accepted'
+                )
+                self.assertEqual(datum['security_check']['user'], user.id)
+            if datum['id'] in accepted_checks:
+                self.assertEqual(datum['security_check']['status'], 'rejected')
+                self.assertEqual(datum['security_check']['description'], 'looks dodgy')
+                self.assertEqual(datum['security_check']['user'], user.id)
 
 
 class PrisonerDisbursementListTestCase(SecurityViewTestCase):

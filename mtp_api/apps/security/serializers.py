@@ -2,7 +2,6 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from credit.serializers import SecurityCreditSerializer
 from prison.models import Prison
 from security.models import (
     BankTransferRecipientDetails,
@@ -218,7 +217,6 @@ class SavedSearchSerializer(serializers.ModelSerializer):
 
 
 class CheckSerializer(serializers.ModelSerializer):
-    credit = SecurityCreditSerializer()
     actioned_by_name = serializers.SerializerMethodField('get_actioned_by_name_from_user')
 
     class Meta:
@@ -243,7 +241,19 @@ class CheckSerializer(serializers.ModelSerializer):
             return None
 
 
-class AcceptCheckSerializer(CheckSerializer):
+class CheckCreditSerializer(CheckSerializer):
+    from credit.serializers import SecurityCreditSerializer
+
+    credit = SecurityCreditSerializer(many=False)
+
+    class Meta:
+        model = Check
+        fields = CheckSerializer.Meta.fields + tuple(
+            'credit'
+        )
+
+
+class AcceptCheckSerializer(CheckCreditSerializer):
     decision_reason = serializers.CharField(allow_blank=True)
 
     class Meta:
@@ -262,7 +272,7 @@ class AcceptCheckSerializer(CheckSerializer):
             )
 
 
-class RejectCheckSerializer(CheckSerializer):
+class RejectCheckSerializer(CheckCreditSerializer):
     decision_reason = serializers.CharField(required=True)
 
     class Meta:

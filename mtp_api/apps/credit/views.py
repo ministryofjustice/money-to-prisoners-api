@@ -30,7 +30,7 @@ from credit.constants import CREDIT_STATUS, CREDIT_SOURCE, LOG_ACTIONS
 from credit.models import Credit, Comment, ProcessingBatch, PrivateEstateBatch
 from credit.permissions import CreditPermissions, PrivateEstateBatchPermissions
 from credit.serializers import (
-    CreditSerializer, SecurityCreditSerializer, CreditedOnlyCreditSerializer,
+    CreditCheckSerializer, SecurityCreditCheckSerializer, CreditedOnlyCreditSerializer,
     IdsCreditSerializer, CommentSerializer, ProcessingBatchSerializer,
     PrivateEstateBatchSerializer, PrivateEstateBatchCreditSerializer,
     CreditsGroupedByCreditedSerializer,
@@ -264,15 +264,18 @@ class GetCredits(CreditViewMixin, mixins.ListModelMixin, viewsets.GenericViewSet
         )
     )
 
-    def get_queryset(self):
-        return super().get_queryset().select_related('transaction').select_related('payment__batch')
+    def get_queryset(self, include_checks=False):
+        q = super().get_queryset().select_related('transaction').select_related('payment__batch')
+        if include_checks:
+            q = q.select_related('security_check')
+        return q
 
     def get_serializer_class(self):
         if self.request.user.has_perm(
                 'transaction.view_bank_details_transaction'):
-            return SecurityCreditSerializer
+            return SecurityCreditCheckSerializer
         else:
-            return CreditSerializer
+            return CreditCheckSerializer
 
 
 class CreditsGroupedByCreditedList(CreditViewMixin, generics.ListAPIView):
