@@ -58,22 +58,9 @@ class Command(BaseCommand):
         new_credits = Credit.objects.filter(
             sender_profile__isnull=True
         ).order_by('pk')
-        new_credits_count = new_credits.count()
-        if not new_credits_count:
-            self.stdout.write(self.style.SUCCESS('Legacy Credits: No new credits'))
-            return
-        else:
-            self.stdout.write(f'Legacy Credits: Updating profiles for (at least) {new_credits_count} new credits')
-
-        processed_count = 0
-        while True:
-            count = self.attach_profiles_for_legacy_credits(new_credits[0:batch_size])
-            if count == 0:
-                break
-            processed_count += count
-            self.stdout.write(f'Legacy Credits: Processed {processed_count} credits')
-
-        self.stdout.write(self.style.SUCCESS('Legacy Credits: Processed all credits'))
+        self.batch_and_execute_entity_calculation(
+            new_credits, 'new credits', self.attach_profiles_for_legacy_credits, batch_size
+        )
 
     def handle_credit_update_for_attached_prisoner_profiles(self, batch_size):
         # Now that we have the association between prisoner_profile/prisoner_profile populated, it makes sense to run
@@ -85,24 +72,9 @@ class Command(BaseCommand):
             credits__is_counted_in_prisoner_profile_total=False,
             credits__resolution=CREDIT_RESOLUTION.CREDITED
         ).order_by('pk')
-        prisoner_profiles_count = prisoner_profiles.count()
-        if not prisoner_profiles_count:
-            self.stdout.write(self.style.SUCCESS('No prisoner profiles require updating'))
-            return
-        else:
-            self.stdout.write(f'Updating {prisoner_profiles_count} prisoner profiles')
-
-        processed_new_credits_count = 0
-        while True:
-            count = self.calculate_credit_totals_for_prisoner_profiles(prisoner_profiles[0:batch_size])
-            if count == 0:
-                break
-            processed_new_credits_count += count
-            self.stdout.write(
-                f'Processed {prisoner_profiles_count} prisoner profiles for {processed_new_credits_count} new credits'
-            )
-
-        self.stdout.write(self.style.SUCCESS('Updated all prisoner profiles'))
+        self.batch_and_execute_entity_calculation(
+            prisoner_profiles, 'prisoner profiles', self.calculate_credit_totals_for_prisoner_profiles, batch_size
+        )
 
     def handle_credit_update_for_attached_sender_profiles(self, batch_size):
         # Now that we have the association between sender_profile/sender_profile populated, it makes sense to run
@@ -111,46 +83,40 @@ class Command(BaseCommand):
             credits__is_counted_in_sender_profile_total=False,
             credits__resolution=CREDIT_RESOLUTION.CREDITED
         ).order_by('pk')
-        sender_profiles_count = sender_profiles.count()
-        if not sender_profiles_count:
-            self.stdout.write(self.style.SUCCESS('No sender profiles require updating'))
+        self.batch_and_execute_entity_calculation(
+            sender_profiles, 'sender profiles', self.calculate_credit_totals_for_sender_profiles, batch_size
+        )
+
+    def batch_and_execute_entity_calculation(
+        self, entitys, entity_model_name_plural, calculate_credit_totals_fn, batch_size
+    ):
+        entitys_count = entitys.count()
+        if not entitys_count:
+            self.stdout.write(self.style.SUCCESS(f'No {entity_model_name_plural} require updating'))
             return
         else:
-            self.stdout.write(f'Updating {sender_profiles_count} sender profiles')
+            self.stdout.write(f'Updating {entitys_count} {entity_model_name_plural}')
 
-        processed_new_credits_count = 0
+        processed_entitys_count = 0
         while True:
-            count = self.calculate_credit_totals_for_sender_profiles(sender_profiles[0:batch_size])
+            count = calculate_credit_totals_fn(entitys[0:batch_size])
             if count == 0:
                 break
-            processed_new_credits_count += count
+            processed_entitys_count += count
             self.stdout.write(
-                f'Processed {sender_profiles_count} sender profiles for {processed_new_credits_count} new credits'
+                f'Processed {entitys_count} {entity_model_name_plural} for {processed_entitys_count} new credits'
             )
 
-        self.stdout.write(self.style.SUCCESS('Updated all sender profiles'))
+        self.stdout.write(self.style.SUCCESS(f'Updated all {entity_model_name_plural}'))
 
     def handle_disbursement_update(self, batch_size):
         new_disbursements = Disbursement.objects.filter(
             recipient_profile__isnull=True,
             resolution=DISBURSEMENT_RESOLUTION.SENT,
         ).order_by('pk')
-        new_disbursements_count = new_disbursements.count()
-        if not new_disbursements_count:
-            self.stdout.write(self.style.SUCCESS('No new disbursements'))
-            return
-        else:
-            self.stdout.write(f'Updating profiles for (at least) {new_disbursements_count} new disbursements')
-
-        processed_count = 0
-        while True:
-            count = self.process_disbursement_batch(new_disbursements[0:batch_size])
-            if count == 0:
-                break
-            processed_count += count
-            self.stdout.write(f'Processed {processed_count} disbursements')
-
-        self.stdout.write(self.style.SUCCESS('Processed all disbursements'))
+        self.batch_and_execute_entity_calculation(
+            new_disbursements, 'disbursements', self.process_disbursement_batch, batch_size
+        )
 
     @atomic()
     def attach_profiles_for_legacy_credits(self, new_credits):
