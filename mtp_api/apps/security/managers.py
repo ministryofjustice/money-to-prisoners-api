@@ -254,6 +254,7 @@ class PrisonerProfileQuerySet(models.QuerySet):
 
     def recalculate_credit_totals(self):
         from credit.constants import CREDIT_RESOLUTION
+        from credit.models import Credit
         from security.models import PrisonerProfile
 
         self.update(
@@ -279,6 +280,16 @@ class PrisonerProfileQuerySet(models.QuerySet):
                 ).values('calculated')[:1]
             ), 0),
         )
+        new_credits = Credit.objects.filter(
+            prisoner_profile__in=self,
+            resolution=CREDIT_RESOLUTION.CREDITED,
+            is_counted_in_prisoner_profile_total=False
+        )
+        new_credits_ids = [c.id for c in new_credits]
+        new_credits.update(is_counted_in_prisoner_profile_total=True)
+        # This is kinda grim, but I don't like the idea of passing around stale
+        # objects. If anyone can think of a nicer way to do these please feel free to refactor
+        return Credit.objects.filter(id__in=new_credits_ids)
 
     def recalculate_disbursement_totals(self):
         from security.models import PrisonerProfile
@@ -307,6 +318,7 @@ class SenderProfileQuerySet(models.QuerySet):
 
     def recalculate_credit_totals(self):
         from credit.constants import CREDIT_RESOLUTION
+        from credit.models import Credit
         from security.models import SenderProfile
 
         self.update(
@@ -332,6 +344,16 @@ class SenderProfileQuerySet(models.QuerySet):
                 ).values('calculated')[:1]
             ), 0),
         )
+        new_credits = Credit.objects.filter(
+            sender_profile__in=self,
+            resolution=CREDIT_RESOLUTION.CREDITED,
+            is_counted_in_sender_profile_total=False
+        )
+        new_credits_ids = [c.id for c in new_credits]
+        new_credits.update(is_counted_in_sender_profile_total=True)
+        # This is kinda grim, but I don't like the idea of passing around stale
+        # objects. If anyone can think of a nicer way to do these please feel free to refactor
+        return Credit.objects.filter(id__in=new_credits_ids)
 
 
 class RecipientProfileQuerySet(models.QuerySet):

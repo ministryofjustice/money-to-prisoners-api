@@ -56,6 +56,7 @@ class Credit(TimeStampedModel):
     sender_profile = models.ForeignKey('security.SenderProfile', related_name='credits', blank=True, null=True,
                                        on_delete=models.SET_NULL)
     is_counted_in_sender_profile_total = models.BooleanField(default=False)
+    is_counted_in_prisoner_profile_total = models.BooleanField(default=False)
     prisoner_profile = models.ForeignKey('security.PrisonerProfile', related_name='credits', blank=True, null=True,
                                          on_delete=models.SET_NULL)
 

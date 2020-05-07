@@ -1,8 +1,10 @@
 import logging
 
+from django.db.models import Subquery
 from django.db.transaction import atomic
 from django.core.management import BaseCommand, CommandError
 
+from credit.constants import CREDIT_RESOLUTION
 from credit.models import Credit
 from disbursement.constants import DISBURSEMENT_RESOLUTION
 from disbursement.models import Disbursement
@@ -45,24 +47,88 @@ class Command(BaseCommand):
             PrisonerProfile.objects.update_current_prisons()
 
     def handle_credit_update(self, batch_size):
+        # TODO Remove below function once the logs show that it consistently
+        # does not operate on any credits
+        self.handle_profile_attachment_for_legacy_credits(batch_size)
+        self.handle_credit_update_for_attached_prisoner_profiles(batch_size)
+        self.handle_credit_update_for_attached_sender_profiles(batch_size)
+
+    def handle_profile_attachment_for_legacy_credits(self, batch_size):
         # Implicit filter on resolution not in initial / failed through CompletedCreditManager.get_queryset()
-        new_credits = Credit.objects.filter(is_counted_in_sender_profile_total=False).order_by('pk')
+        new_credits = Credit.objects.filter(
+            sender_profile__isnull=True
+        ).order_by('pk')
         new_credits_count = new_credits.count()
         if not new_credits_count:
-            self.stdout.write(self.style.SUCCESS('No new credits'))
+            self.stdout.write(self.style.SUCCESS('Legacy Credits: No new credits'))
             return
         else:
-            self.stdout.write(f'Updating profiles for (at least) {new_credits_count} new credits')
+            self.stdout.write(f'Legacy Credits: Updating profiles for (at least) {new_credits_count} new credits')
 
         processed_count = 0
         while True:
-            count = self.process_credit_batch(new_credits[0:batch_size])
+            count = self.attach_profiles_for_legacy_credits(new_credits[0:batch_size])
             if count == 0:
                 break
             processed_count += count
-            self.stdout.write(f'Processed {processed_count} credits')
+            self.stdout.write(f'Legacy Credits: Processed {processed_count} credits')
 
-        self.stdout.write(self.style.SUCCESS('Processed all credits'))
+        self.stdout.write(self.style.SUCCESS('Legacy Credits: Processed all credits'))
+
+    def handle_credit_update_for_attached_prisoner_profiles(self, batch_size):
+        # Now that we have the association between prisoner_profile/prisoner_profile populated, it makes sense to run
+        # this job once per prisoner/prisoner profile instead of once per credit
+
+        # The reason why we're using is_counted_in_sender_profile_total is because sender_profile will always be able
+        # to be associated, therefore if the sender profile is not associated we know it also needs a prisoner profile
+        prisoner_profiles = PrisonerProfile.objects.filter(
+            credits__is_counted_in_prisoner_profile_total=False,
+            credits__resolution=CREDIT_RESOLUTION.CREDITED
+        ).order_by('pk')
+        prisoner_profiles_count = prisoner_profiles.count()
+        if not prisoner_profiles_count:
+            self.stdout.write(self.style.SUCCESS('No prisoner profiles require updating'))
+            return
+        else:
+            self.stdout.write(f'Updating {prisoner_profiles_count} prisoner profiles')
+
+        processed_new_credits_count = 0
+        while True:
+            count = self.calculate_credit_totals_for_prisoner_profiles(prisoner_profiles[0:batch_size])
+            if count == 0:
+                break
+            processed_new_credits_count += count
+            self.stdout.write(
+                f'Processed {prisoner_profiles_count} prisoner profiles for {processed_new_credits_count} new credits'
+            )
+
+        self.stdout.write(self.style.SUCCESS('Updated all prisoner profiles'))
+
+    def handle_credit_update_for_attached_sender_profiles(self, batch_size):
+        # Now that we have the association between sender_profile/sender_profile populated, it makes sense to run
+        # this job once per sender/sender profile instead of once per credit
+        sender_profiles = SenderProfile.objects.filter(
+            credits__is_counted_in_sender_profile_total=False,
+            credits__resolution=CREDIT_RESOLUTION.CREDITED
+        ).order_by('pk')
+        sender_profiles_count = sender_profiles.count()
+        if not sender_profiles_count:
+            self.stdout.write(self.style.SUCCESS('No sender profiles require updating'))
+            return
+        else:
+            self.stdout.write(f'Updating {sender_profiles_count} sender profiles')
+
+        processed_new_credits_count = 0
+        while True:
+            count = self.calculate_credit_totals_for_sender_profiles(sender_profiles[0:batch_size])
+            if count == 0:
+                break
+            processed_new_credits_count += count
+            self.stdout.write(
+                f'Processed {sender_profiles_count} sender profiles for {processed_new_credits_count} new credits'
+            )
+
+        self.stdout.write(self.style.SUCCESS('Updated all sender profiles'))
 
     def handle_disbursement_update(self, batch_size):
         new_disbursements = Disbursement.objects.filter(
@@ -87,15 +153,13 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('Processed all disbursements'))
 
     @atomic()
-    def process_credit_batch(self, new_credits):
+    def attach_profiles_for_legacy_credits(self, new_credits):
         sender_profiles = []
         prisoner_profiles = []
-        credits_with_sender_profiles = []
         for credit in new_credits:
             self.create_or_update_profiles_for_credit(credit)
             if credit.sender_profile:
                 sender_profiles.append(credit.sender_profile.pk)
-                credits_with_sender_profiles.append(credit)
             else:
                 logger.warning('Sender profile could not be found for credit %s', credit)
             if credit.prisoner_profile:
@@ -103,16 +167,25 @@ class Command(BaseCommand):
             else:
                 logger.warning('Prisoner profile could not be found for credit %s', credit)
 
-        SenderProfile.objects.filter(
-            pk__in=sender_profiles
-        ).recalculate_credit_totals()
-        PrisonerProfile.objects.filter(
+        # TODO this was previous behaviour, but I feel like it might not be appropriate now
+        return len(new_credits)
+
+    @atomic()
+    def calculate_credit_totals_for_prisoner_profiles(self, prisoner_profiles):
+        new_credits = PrisonerProfile.objects.filter(
             pk__in=prisoner_profiles
         ).recalculate_credit_totals()
+        return len(new_credits)
 
-        for credit in credits_with_sender_profiles:
-            credit.is_counted_in_sender_profile_total = True
-            credit.save()
+    @atomic()
+    def calculate_credit_totals_for_sender_profiles(self, sender_profiles):
+        new_credits = SenderProfile.objects.filter(
+            pk__in=sender_profiles
+        ).recalculate_credit_totals()
+
+        # The reason why we dispatched notifications on calculation of sender total and not prisoner is because we
+        # don't want to duplicate notifications and because we know that a credit will always
+        # have a sender, but potentially may not have a prisoner associated.
         create_notification_events(records=new_credits)
         return len(new_credits)
 
