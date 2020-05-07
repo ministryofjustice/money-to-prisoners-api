@@ -35,7 +35,10 @@ class NotificationBaseTestCase(TestCase):
 
     def create_profiles_but_unlink_objects(self):
         call_command('update_security_profiles')
-        Credit.objects.update(is_counted_in_sender_profile_total=False)
+        Credit.objects.update(
+            is_counted_in_sender_profile_total=False,
+            is_counted_in_prisoner_profile_total=False
+        )
         Disbursement.objects.update(recipient_profile=None, prisoner_profile=None)
         # NB: profiles will have incorrect counts and totals
 

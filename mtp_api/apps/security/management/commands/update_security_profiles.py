@@ -1,6 +1,5 @@
 import logging
 
-from django.db.models import Subquery
 from django.db.transaction import atomic
 from django.core.management import BaseCommand, CommandError
 
@@ -73,7 +72,8 @@ class Command(BaseCommand):
             credits__resolution=CREDIT_RESOLUTION.CREDITED
         ).order_by('pk')
         self.batch_and_execute_entity_calculation(
-            prisoner_profiles, 'prisoner profiles', self.calculate_credit_totals_for_prisoner_profiles, batch_size
+            prisoner_profiles, 'prisoner profiles', self.calculate_credit_totals_for_prisoner_profiles, batch_size,
+            granular_entity='credits'
         )
 
     def handle_credit_update_for_attached_sender_profiles(self, batch_size):
@@ -84,28 +84,30 @@ class Command(BaseCommand):
             credits__resolution=CREDIT_RESOLUTION.CREDITED
         ).order_by('pk')
         self.batch_and_execute_entity_calculation(
-            sender_profiles, 'sender profiles', self.calculate_credit_totals_for_sender_profiles, batch_size
+            sender_profiles, 'sender profiles', self.calculate_credit_totals_for_sender_profiles, batch_size,
+            granular_entity='credits'
         )
 
     def batch_and_execute_entity_calculation(
-        self, entitys, entity_model_name_plural, calculate_credit_totals_fn, batch_size
+        self, entities, entity_model_name_plural, calculate_credit_totals_fn, batch_size, granular_entity=None
     ):
-        entitys_count = entitys.count()
-        if not entitys_count:
+        entities_count = entities.count()
+        if not entities_count:
             self.stdout.write(self.style.SUCCESS(f'No {entity_model_name_plural} require updating'))
             return
         else:
-            self.stdout.write(f'Updating {entitys_count} {entity_model_name_plural}')
+            self.stdout.write(f'Updating {entities_count} {entity_model_name_plural}')
 
-        processed_entitys_count = 0
+        processed_entities_count = 0
         while True:
-            count = calculate_credit_totals_fn(entitys[0:batch_size])
+            count = calculate_credit_totals_fn(entities[0:batch_size])
             if count == 0:
                 break
-            processed_entitys_count += count
-            self.stdout.write(
-                f'Processed {entitys_count} {entity_model_name_plural} for {processed_entitys_count} new credits'
-            )
+            processed_entities_count += count
+            processed_log_msg = f'Processed {entities_count} {entity_model_name_plural}'
+            if granular_entity:
+                processed_log_msg += 'for {processed_entities_count} new {granular_entity}'
+            self.stdout.write(processed_log_msg)
 
         self.stdout.write(self.style.SUCCESS(f'Updated all {entity_model_name_plural}'))
 
