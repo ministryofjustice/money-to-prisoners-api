@@ -163,6 +163,8 @@ def setup_payment(owner_status_chooser, end_date, payment_counter, data, overrid
     elif data['status'] == PAYMENT_STATUS.TAKEN:
         owner, status = owner_status_chooser(data['prison'])
         data['processor_id'] = str(uuid.uuid1())
+        # TODO This is a horrible piece of implicit logic, can we please make it explicit
+        # or document it somewhere
         if older_than_yesterday:
             data.update({
                 'owner': owner,

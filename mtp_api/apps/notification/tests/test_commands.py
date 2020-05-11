@@ -52,7 +52,8 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
         load_random_prisoner_locations()
         generate_payments(
             payment_batch=20, days_of_history=1,
-            overrides={'status': PAYMENT_STATUS.TAKEN, 'credited': True})
+            overrides={'status': PAYMENT_STATUS.TAKEN, 'credited': True}
+        )
         generate_disbursements(disbursement_batch=20, days_of_history=1)
 
     @override_settings(ENVIRONMENT='prod')
@@ -332,7 +333,6 @@ class SendNotificationReportTestCase(NotificationBaseTestCase):
             dimensions = worksheet.calculate_dimension()
             rows, _columns = coordinate_to_tuple(dimensions.split(':')[1])
             self.assertEqual(rows, 2)
-            # TODO This test seems very flaky
             self.assertEqual(worksheet['F2'].value, '£125.01')
             self.assertEqual(worksheet['H2'].value, credit.prisoner_name)
             self.assertIn(f'/credits/{credit.id}/', worksheet['B2'].hyperlink.target)
