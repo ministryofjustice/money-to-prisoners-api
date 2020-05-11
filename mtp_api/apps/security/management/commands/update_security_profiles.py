@@ -106,7 +106,7 @@ class Command(BaseCommand):
             processed_entities_count += count
             processed_log_msg = f'Processed {entities_count} {entity_model_name_plural}'
             if granular_entity:
-                processed_log_msg += 'for {processed_entities_count} new {granular_entity}'
+                processed_log_msg += f'for {processed_entities_count} new {granular_entity}'
             self.stdout.write(processed_log_msg)
 
         self.stdout.write(self.style.SUCCESS(f'Updated all {entity_model_name_plural}'))

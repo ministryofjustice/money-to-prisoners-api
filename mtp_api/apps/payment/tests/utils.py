@@ -102,7 +102,7 @@ def generate_payments(payment_batch=50, consistent_history=False, days_of_histor
         tot=payment_batch,
         days_of_history=days_of_history
     )
-    return create_payments(data_list, consistent_history, overrides=None)
+    return create_payments(data_list, consistent_history, overrides)
 
 
 # TODO consistent_history doesn't seem to do anything, yet is provided by some calling functions...
@@ -142,23 +142,27 @@ def setup_payment(owner_status_chooser, end_date, payment_counter, data, overrid
     older_than_yesterday = (
         data['created'].date() < (end_date.date() - datetime.timedelta(days=1))
     )
-    if not bool(payment_counter % 11):  # 1 in 11 is expired
+    if overrides and overrides.get('status'):
+        data['status'] = overrides['status']
+    elif not bool(payment_counter % 11):  # 1 in 11 is expired
         data['status'] = PAYMENT_STATUS.EXPIRED
     elif not bool(payment_counter % 10):  # 1 in 10 is rejected
         data['status'] = PAYMENT_STATUS.REJECTED
     elif not bool(payment_counter % 4):  # 1 in 4ish is pending
         data['status'] = PAYMENT_STATUS.PENDING
+    else:  # otherwise it's taken
+        data['status'] = PAYMENT_STATUS.TAKEN
 
+    if data['status'] == PAYMENT_STATUS.PENDING:
         del data['cardholder_name']
         del data['card_number_first_digits']
         del data['card_number_last_digits']
         del data['card_expiry_date']
         del data['card_brand']
         del data['billing_address']
-    else:  # otherwise it's taken
+    elif data['status'] == PAYMENT_STATUS.TAKEN:
         owner, status = owner_status_chooser(data['prison'])
         data['processor_id'] = str(uuid.uuid1())
-        data['status'] = PAYMENT_STATUS.TAKEN
         if older_than_yesterday:
             data.update({
                 'owner': owner,
