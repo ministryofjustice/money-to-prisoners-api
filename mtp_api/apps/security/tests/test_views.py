@@ -816,7 +816,7 @@ class BaseCheckTestCase(APITestCase, AuthTestCaseMixin):
                 description='Failed rules',
                 actioned_at=now(),
                 actioned_by=self.security_fiu_users[0],
-                rejection_reason='because...',
+                decision_reason='because...',
             )
 
         for credit in Credit.objects.all():
@@ -1122,6 +1122,9 @@ class AcceptCheckTestCase(BaseCheckTestCase):
                 kwargs={'pk': check.pk},
             ),
             format='json',
+            data={
+                'decision_reason': '',
+            },
             HTTP_AUTHORIZATION=auth,
         )
 
@@ -1144,6 +1147,9 @@ class AcceptCheckTestCase(BaseCheckTestCase):
                 kwargs={'pk': check.pk},
             ),
             format='json',
+            data={
+                'decision_reason': '',
+            },
             HTTP_AUTHORIZATION=auth,
         )
 
@@ -1172,6 +1178,9 @@ class AcceptCheckTestCase(BaseCheckTestCase):
                 kwargs={'pk': check.pk},
             ),
             format='json',
+            data={
+                'decision_reason': '',
+            },
             HTTP_AUTHORIZATION=auth,
         )
 
@@ -1197,6 +1206,9 @@ class AcceptCheckTestCase(BaseCheckTestCase):
                 kwargs={'pk': check.pk},
             ),
             format='json',
+            data={
+                'decision_reason': '',
+            },
             HTTP_AUTHORIZATION=auth,
         )
 
@@ -1231,7 +1243,7 @@ class RejectCheckTestCase(BaseCheckTestCase):
                 kwargs={'pk': check.pk},
             ),
             data={
-                'rejection_reason': 'Some reason',
+                'decision_reason': 'Some reason',
             },
             format='json',
             HTTP_AUTHORIZATION=auth,
@@ -1257,7 +1269,7 @@ class RejectCheckTestCase(BaseCheckTestCase):
                 kwargs={'pk': check.pk},
             ),
             data={
-                'rejection_reason': reason,
+                'decision_reason': reason,
             },
             format='json',
             HTTP_AUTHORIZATION=auth,
@@ -1270,7 +1282,7 @@ class RejectCheckTestCase(BaseCheckTestCase):
         self.assertEqual(check.status, CHECK_STATUS.REJECTED)
         self.assertEqual(check.actioned_by, authorised_user)
         self.assertEqual(check.actioned_at, mocked_now())
-        self.assertEqual(check.rejection_reason, reason)
+        self.assertEqual(check.decision_reason, reason)
 
     @mock.patch('security.models.now')
     def test_can_reject_a_rejected_check(self, mocked_now):
@@ -1290,7 +1302,7 @@ class RejectCheckTestCase(BaseCheckTestCase):
                 kwargs={'pk': check.pk},
             ),
             data={
-                'rejection_reason': reason,
+                'decision_reason': reason,
             },
             format='json',
             HTTP_AUTHORIZATION=auth,
@@ -1302,7 +1314,7 @@ class RejectCheckTestCase(BaseCheckTestCase):
 
         self.assertEqual(check.status, CHECK_STATUS.REJECTED)
         self.assertNotEqual(check.actioned_at, mocked_now())
-        self.assertNotEqual(check.rejection_reason, reason)
+        self.assertNotEqual(check.decision_reason, reason)
 
     def test_empty_reason_raises_error(self):
         """
@@ -1319,7 +1331,7 @@ class RejectCheckTestCase(BaseCheckTestCase):
                 kwargs={'pk': check.pk},
             ),
             {
-                'rejection_reason': '',
+                'decision_reason': '',
             },
             format='json',
             HTTP_AUTHORIZATION=auth,
@@ -1329,7 +1341,7 @@ class RejectCheckTestCase(BaseCheckTestCase):
         self.assertDictEqual(
             response.json(),
             {
-                'rejection_reason': ['This field may not be blank.'],
+                'decision_reason': ['This field may not be blank.'],
             }
         )
 
@@ -1352,7 +1364,7 @@ class RejectCheckTestCase(BaseCheckTestCase):
                 kwargs={'pk': check.pk},
             ),
             {
-                'rejection_reason': 'some reason',
+                'decision_reason': 'some reason',
             },
             format='json',
             HTTP_AUTHORIZATION=auth,

@@ -60,6 +60,28 @@ class CheckTestCase(TestCase):
         self.assertEqual(check.actioned_by, user)
 
     @mock.patch('security.models.now')
+    def test_can_accept_a_pending_check_with_reason(self, mocked_now):
+        """
+        Test that a pending check can be accepted.
+        """
+        mocked_now.return_value = timezone.make_aware(datetime.datetime(2019, 1, 1))
+
+        user = basic_user.make()
+        check = mommy.make(
+            Check,
+            status=CHECK_STATUS.PENDING,
+            actioned_at=None,
+            actioned_by=None,
+        )
+        reason = 'A good reason'
+
+        check.accept(by=user, reason=reason)
+        check.refresh_from_db()
+
+        self.assertEqual(check.status, CHECK_STATUS.ACCEPTED)
+        self.assertEqual(check.decision_reason, reason)
+
+    @mock.patch('security.models.now')
     def test_can_accept_an_accepted_check(self, mocked_now):
         """
         Test that accepting an already accepted check doesn't do anything.
@@ -127,7 +149,7 @@ class CheckTestCase(TestCase):
         self.assertEqual(check.status, CHECK_STATUS.REJECTED)
         self.assertEqual(check.actioned_at, mocked_now())
         self.assertEqual(check.actioned_by, user)
-        self.assertEqual(check.rejection_reason, reason)
+        self.assertEqual(check.decision_reason, reason)
 
     @mock.patch('security.models.now')
     def test_can_reject_a_rejected_check(self, mocked_now):
@@ -142,7 +164,7 @@ class CheckTestCase(TestCase):
             status=CHECK_STATUS.REJECTED,
             actioned_at=mocked_now() - datetime.timedelta(days=1),
             actioned_by=existing_check_user,
-            rejection_reason='Some old reason',
+            decision_reason='Some old reason',
         )
         reason = 'Some reason'
 
@@ -152,7 +174,7 @@ class CheckTestCase(TestCase):
         self.assertEqual(check.status, CHECK_STATUS.REJECTED)
         self.assertEqual(check.actioned_by, existing_check_user)
         self.assertNotEqual(check.actioned_at, mocked_now())
-        self.assertNotEqual(check.rejection_reason, reason)
+        self.assertNotEqual(check.decision_reason, reason)
 
     def test_empty_reason_raises_error(self):
         """

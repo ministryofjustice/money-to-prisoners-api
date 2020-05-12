@@ -296,7 +296,7 @@ class Check(TimeStampedModel):
         null=True,
         blank=True,
     )
-    rejection_reason = models.TextField(blank=True)
+    decision_reason = models.TextField(blank=True)
 
     objects = CheckManager()
 
@@ -305,7 +305,7 @@ class Check(TimeStampedModel):
             ('view_check', 'Can view check'),
         )
 
-    def accept(self, by):
+    def accept(self, by, reason=''):
         """
         Accepts a check.
 
@@ -322,6 +322,7 @@ class Check(TimeStampedModel):
         self.status = CHECK_STATUS.ACCEPTED
         self.actioned_by = by
         self.actioned_at = now()
+        self.decision_reason = reason
         self.save()
 
     def reject(self, by, reason):
@@ -346,7 +347,7 @@ class Check(TimeStampedModel):
         self.status = CHECK_STATUS.REJECTED
         self.actioned_by = by
         self.actioned_at = now()
-        self.rejection_reason = reason
+        self.decision_reason = reason
         self.save()
 
     def __str__(self):
