@@ -182,9 +182,9 @@ class CreditAdmin(admin.ModelAdmin):
         until_credited_times = []
         for credit in queryset.prefetch_related('log_set'):
             logs = sorted(credit.log_set.all(), key=lambda l: l.created)
-            for l in logs:
-                if l.action == LOG_ACTIONS.CREDITED:
-                    until_credited_times.append(l.created - credit.received_at)
+            for log in logs:
+                if log.action == LOG_ACTIONS.CREDITED:
+                    until_credited_times.append(log.created - credit.received_at)
 
         if until_credited_times:
             avg_credit_time = (sum(until_credited_times, timedelta(0)) /
