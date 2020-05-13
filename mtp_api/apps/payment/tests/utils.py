@@ -10,6 +10,7 @@ from faker import Faker
 from core.tests.utils import MockModelTimestamps
 from credit.constants import CREDIT_RESOLUTION
 from credit.models import Credit
+from security.models import Check
 from credit.tests.utils import (
     get_owner_and_status_chooser, create_credit_log, random_amount,
     build_sender_prisoner_pairs,
@@ -211,6 +212,7 @@ def save_payment(data):
     )
     credit.save()
     data['credit'] = credit
+    Check.objects.create_for_credit(credit)
 
     return Payment.objects.create(**data)
 
