@@ -1,14 +1,9 @@
-import logging
-
 from django.db import connection, models
 from django.db.models import Q
 from django.db.transaction import atomic
 
 from credit import InvalidCreditStateException
 from credit.constants import LOG_ACTIONS, CREDIT_STATUS, CREDIT_RESOLUTION
-
-
-logger = logging.getLogger(__name__)
 
 
 class CreditQuerySet(models.QuerySet):

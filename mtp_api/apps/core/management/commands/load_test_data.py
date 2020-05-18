@@ -190,6 +190,5 @@ class Command(BaseCommand):
             )
         for group in Group.objects.all():
             admin_user.groups.add(group)
-        give_superusers_full_access()
 
         self.stdout.write(self.style.SUCCESS('Model creation finished'))

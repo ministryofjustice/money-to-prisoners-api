@@ -89,7 +89,7 @@ class Command(BaseCommand):
         )
 
     def batch_and_execute_entity_calculation(
-        self, entities, entity_model_name_plural, calculate_credit_totals_fn, batch_size, granular_entity=None
+        self, entities, entity_model_name_plural, calculate_entity_totals_fn, batch_size, granular_entity=None
     ):
         entities_count = entities.count()
         if not entities_count:
@@ -100,13 +100,13 @@ class Command(BaseCommand):
 
         processed_entities_count = 0
         while True:
-            count = calculate_credit_totals_fn(entities[0:batch_size])
+            count = calculate_entity_totals_fn(entities[0:batch_size])
             if count == 0:
                 break
             processed_entities_count += count
             processed_log_msg = f'Processed {entities_count} {entity_model_name_plural}'
             if granular_entity:
-                processed_log_msg += f'for {processed_entities_count} new {granular_entity}'
+                processed_log_msg += f' for {processed_entities_count} new {granular_entity}'
             self.stdout.write(processed_log_msg)
 
         self.stdout.write(self.style.SUCCESS(f'Updated all {entity_model_name_plural}'))
@@ -182,6 +182,8 @@ class Command(BaseCommand):
         if not credit.sender_profile:
             # TODO this method does not need to return, pull sender_proffile off credit object
             sender_profile = SenderProfile.objects.create_or_update_for_credit(credit)
+        else:
+            sender_profile = credit.sender_profile
         if credit.prison and credit.sender_profile and not credit.prisoner_profile:
             prisoner_profile = PrisonerProfile.objects.create_or_update_for_credit(credit)
             prisoner_profile.senders.add(sender_profile)

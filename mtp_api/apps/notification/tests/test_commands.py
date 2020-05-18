@@ -51,7 +51,7 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
         self.security_staff = test_users['security_staff']
         load_random_prisoner_locations()
         generate_payments(
-            payment_batch=20, days_of_history=1,
+            payment_batch=20, days_of_history=2,
             overrides={'status': PAYMENT_STATUS.TAKEN, 'credited': True}
         )
         generate_disbursements(disbursement_batch=20, days_of_history=1)
