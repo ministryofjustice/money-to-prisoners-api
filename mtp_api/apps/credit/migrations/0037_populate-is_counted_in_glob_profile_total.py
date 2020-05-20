@@ -3,6 +3,7 @@ import logging
 
 from django.db import migrations
 from django.db.models.aggregates import Max
+from django.db.models import Q, BooleanField, ExpressionWrapper
 
 
 logger = logging.getLogger('mtp')
@@ -17,18 +18,18 @@ def populate_initial_credit_profile_total_values(apps, schema_editor):
     range_start = 0
     for range_end in range(batch_size, last_id + batch_size, batch_size):
         credit.objects.filter(
-            sender_profile__isnull=False,
             id__gte=range_start,
             id__lt=range_end
         ).update(
-            is_counted_in_sender_profile_total=True
-        )
-        credit.objects.filter(
-            prisoner_profile__isnull=False,
-            id__gte=range_start,
-            id__lt=range_end
-        ).update(
-            is_counted_in_prisoner_profile_total=True
+            is_counted_in_sender_profile_total=ExpressionWrapper(
+                Q(sender_profile_id__isnull=False),
+                output_field=BooleanField()
+
+            ),
+            is_counted_in_prisoner_profile_total=ExpressionWrapper(
+                Q(prisoner_profile_id__isnull=False),
+                output_field=BooleanField()
+            )
         )
         logger.info('Updated is_counted_in_*_profile_total for %s <= credit.id < %s', range_start, range_end)
         range_start = range_end
