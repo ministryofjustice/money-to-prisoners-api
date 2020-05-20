@@ -13,7 +13,7 @@ def populate_initial_credit_profile_total_values(apps, schema_editor):
     credit = apps.get_model('credit', 'Credit')
 
     batch_size = 5000
-    last_id = credit.objects.aggregate(Max('id'))['id__max']
+    last_id = credit.objects.aggregate(Max('id'))['id__max'] or 0
     logger.info('Highest value of credit.id is %s', last_id)
     range_start = 0
     for range_end in range(batch_size, last_id + batch_size, batch_size):
