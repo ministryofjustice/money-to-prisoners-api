@@ -178,6 +178,8 @@ class CreditListFilter(django_filters.FilterSet):
     sender_account_number__isblank = BlankStringFilter(field_name='transaction__sender_account_number')
     sender_roll_number__isblank = BlankStringFilter(field_name='transaction__sender_roll_number')
 
+    security_check__isnull = django_filters.BooleanFilter(field_name='security_check', lookup_expr='isnull')
+
     card_expiry_date = django_filters.CharFilter(field_name='payment__card_expiry_date')
     card_number_first_digits = django_filters.CharFilter(field_name='payment__card_number_first_digits')
     card_number_last_digits = django_filters.CharFilter(field_name='payment__card_number_last_digits')
