@@ -497,6 +497,9 @@ class CheckListFilter(django_filters.FilterSet):
     credit_resolution = django_filters.CharFilter(
         field_name='credit__resolution', lookup_expr='exact',
     )
+    actioned_by = django_filters.BooleanFilter(
+        field_name='actioned_by', lookup_expr='isnull', exclude=True,
+    )
 
     class Meta:
         model = Check

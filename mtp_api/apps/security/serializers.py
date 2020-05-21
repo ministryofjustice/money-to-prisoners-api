@@ -219,6 +219,7 @@ class SavedSearchSerializer(serializers.ModelSerializer):
 
 class CheckSerializer(serializers.ModelSerializer):
     credit = SecurityCreditSerializer()
+    actioned_by_name = serializers.SerializerMethodField('get_actioned_by_name_from_user')
 
     class Meta:
         model = Check
@@ -230,7 +231,16 @@ class CheckSerializer(serializers.ModelSerializer):
             'rules',
             'actioned_at',
             'actioned_by',
+            'decision_reason',
+            'actioned_by_name',
         )
+
+    def get_actioned_by_name_from_user(self, check):
+        if check.actioned_by is not None:
+            actioned_by_name = check.actioned_by.get_full_name()
+            return actioned_by_name
+        else:
+            return None
 
 
 class AcceptCheckSerializer(CheckSerializer):
