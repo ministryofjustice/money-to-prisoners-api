@@ -30,10 +30,16 @@ from credit.constants import CREDIT_STATUS, CREDIT_SOURCE, LOG_ACTIONS
 from credit.models import Credit, Comment, ProcessingBatch, PrivateEstateBatch
 from credit.permissions import CreditPermissions, PrivateEstateBatchPermissions
 from credit.serializers import (
-    CreditCheckSerializer, SecurityCreditCheckSerializer, CreditedOnlyCreditSerializer,
-    IdsCreditSerializer, CommentSerializer, ProcessingBatchSerializer,
-    PrivateEstateBatchSerializer, PrivateEstateBatchCreditSerializer,
+    CommentSerializer,
+    CreditedOnlyCreditSerializer,
+    CreditSerializer,
     CreditsGroupedByCreditedSerializer,
+    IdsCreditSerializer,
+    PrivateEstateBatchCreditSerializer,
+    PrivateEstateBatchSerializer,
+    ProcessingBatchSerializer,
+    SecurityCreditCheckSerializer,
+    SecurityCreditSerializer,
 )
 from mtp_auth.models import PrisonUserMapping
 from mtp_auth.permissions import (
@@ -179,6 +185,9 @@ class CreditListFilter(django_filters.FilterSet):
     sender_roll_number__isblank = BlankStringFilter(field_name='transaction__sender_roll_number')
 
     security_check__isnull = django_filters.BooleanFilter(field_name='security_check', lookup_expr='isnull')
+    security_check__actioned_by__isnull = django_filters.BooleanFilter(
+        field_name='security_check__actioned_by', lookup_expr='isnull'
+    )
 
     card_expiry_date = django_filters.CharFilter(field_name='payment__card_expiry_date')
     card_number_first_digits = django_filters.CharFilter(field_name='payment__card_number_first_digits')
@@ -273,11 +282,14 @@ class GetCredits(CreditViewMixin, mixins.ListModelMixin, viewsets.GenericViewSet
         return q
 
     def get_serializer_class(self):
-        if self.request.user.has_perm(
-                'transaction.view_bank_details_transaction'):
+        if self.request.user.has_perm('security.view_check'):
             return SecurityCreditCheckSerializer
+        if self.request.user.has_perm(
+            'transaction.view_bank_details_transaction'
+        ):
+            return SecurityCreditSerializer
         else:
-            return CreditCheckSerializer
+            return CreditSerializer
 
 
 class CreditsGroupedByCreditedList(CreditViewMixin, generics.ListAPIView):

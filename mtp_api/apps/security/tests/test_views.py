@@ -39,9 +39,9 @@ class SecurityViewTestCase(APITestCase, AuthTestCaseMixin):
 
     def setUp(self):
         super().setUp()
-        test_users = make_test_users()
-        self.prison_clerks = test_users['prison_clerks']
-        self.security_staff = test_users['security_staff']
+        self.test_users = make_test_users()
+        self.prison_clerks = self.test_users['prison_clerks']
+        self.security_staff = self.test_users['security_staff']
         load_random_prisoner_locations()
         generate_transactions(transaction_batch=100, days_of_history=5)
         generate_payments(payment_batch=100, days_of_history=5)
@@ -254,6 +254,10 @@ class SenderProfileListTestCase(SecurityViewTestCase):
 
 
 class SenderCreditListTestCase(SecurityViewTestCase):
+
+    def _get_authorised_user(self):
+        return self.test_users['security_fiu_users'][0]
+
     def _get_url(self, *args, **kwargs):
         return reverse('sender-credits-list', args=args)
 
@@ -423,6 +427,10 @@ class RecipientProfileDisbursementListTestCase(SecurityViewTestCase):
 
 
 class PrisonerProfileListTestCase(SecurityViewTestCase):
+
+    def _get_authorised_user(self):
+        return self.test_users['security_fiu_users'][0]
+
     def _get_url(self, *args, **kwargs):
         return reverse('prisonerprofile-list')
 
@@ -603,6 +611,10 @@ class PrisonerProfileListTestCase(SecurityViewTestCase):
 
 
 class PrisonerCreditListTestCase(SecurityViewTestCase):
+
+    def _get_authorised_user(self):
+        return self.test_users['security_fiu_users'][0]
+
     def _get_url(self, *args, **kwargs):
         return reverse('prisoner-credits-list', args=args)
 
