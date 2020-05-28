@@ -384,33 +384,6 @@ class RecipientProfileQuerySet(models.QuerySet):
 class CheckManager(models.Manager):
     ENABLED_RULE_CODES = ('FIUMONP', 'FIUMONS', 'CSFREQ', 'CSNUM', 'CPNUM')
 
-    def should_check_credit(self, credit):
-        from credit.constants import CREDIT_RESOLUTION
-        from payment.constants import PAYMENT_STATUS
-
-        if credit.resolution != CREDIT_RESOLUTION.INITIAL:
-            # it's too late once credits reach any other resolution
-            return False
-        if not hasattr(credit, 'payment'):
-            # checks only apply to debit card payments
-            return False
-        if credit.payment.status != PAYMENT_STATUS.PENDING:
-            # payment must be pending for checks to apply
-            return False
-
-        return self._credit_has_enough_detail(credit)
-
-    def _credit_has_enough_detail(self, credit):
-        payment = credit.payment
-        return all(
-            getattr(payment, field)
-            for field in (
-                'email', 'cardholder_name',
-                'card_number_first_digits', 'card_number_last_digits', 'card_expiry_date',
-                'billing_address',
-            )
-        )
-
     def create_for_credit(self, credit):
         from notification.rules import RULES
         from security.constants import CHECK_STATUS

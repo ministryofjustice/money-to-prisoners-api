@@ -239,9 +239,9 @@ class CreditCheckTestCase(TestCase):
         generate_payments()
 
         for credit in Credit.objects.credit_pending():
-            self.assertFalse(Check.objects.should_check_credit(credit))
+            self.assertFalse(credit.should_check())
         for credit in Credit.objects.credited():
-            self.assertFalse(Check.objects.should_check_credit(credit))
+            self.assertFalse(credit.should_check())
 
     def test_will_not_check_transactions(self):
         make_test_users(clerks_per_prison=1)
@@ -249,13 +249,13 @@ class CreditCheckTestCase(TestCase):
         generate_transactions(consistent_history=True)
 
         for credit in Credit.objects.credit_pending():
-            self.assertFalse(Check.objects.should_check_credit(credit))
+            self.assertFalse(credit.should_check())
         for credit in Credit.objects.credited():
-            self.assertFalse(Check.objects.should_check_credit(credit))
+            self.assertFalse(credit.should_check())
         for credit in Credit.objects.refund_pending():
-            self.assertFalse(Check.objects.should_check_credit(credit))
+            self.assertFalse(credit.should_check())
         for credit in Credit.objects.refunded():
-            self.assertFalse(Check.objects.should_check_credit(credit))
+            self.assertFalse(credit.should_check())
 
     def test_will_not_check_non_pending_payments(self):
         make_test_users(clerks_per_prison=1)
@@ -266,7 +266,7 @@ class CreditCheckTestCase(TestCase):
         credit.resolution = CREDIT_RESOLUTION.INITIAL
         credit.payment.status = PAYMENT_STATUS.FAILED
         credit.save()
-        self.assertFalse(Check.objects.should_check_credit(credit))
+        self.assertFalse(credit.should_check())
 
     def _make_candidate_credit(self):
         make_test_users(clerks_per_prison=1)
@@ -289,11 +289,11 @@ class CreditCheckTestCase(TestCase):
         payment.card_expiry_date = None
         payment.cardholder_name = None
         payment.card_brand = None
-        self.assertFalse(Check.objects.should_check_credit(credit))
+        self.assertFalse(credit.should_check())
 
     def test_credit_checked_with_no_matching_rules(self):
         credit = self._make_candidate_credit()
-        self.assertTrue(Check.objects.should_check_credit(credit))
+        self.assertTrue(credit.should_check())
         check = Check.objects.create_for_credit(credit)
         self.assertEqual(check.status, CHECK_STATUS.ACCEPTED)
         self.assertIn('automatically accepted', check.description)
@@ -307,7 +307,7 @@ class CreditCheckTestCase(TestCase):
         fiu_user = fiu_group.user_set.first()
         prisoner_profile.monitoring_users.add(fiu_user)
         sender_profile.debit_card_details.first().monitoring_users.add(fiu_user)
-        self.assertTrue(Check.objects.should_check_credit(credit))
+        self.assertTrue(credit.should_check())
         check = Check.objects.create_for_credit(credit)
         self.assertEqual(check.status, CHECK_STATUS.PENDING)
         self.assertIn('FIU prisoners', check.description)
@@ -324,7 +324,7 @@ class CreditCheckTestCase(TestCase):
         fiu_user = fiu_group.user_set.first()
         prisoner_profile.monitoring_users.add(fiu_user)
         sender_profile.debit_card_details.first().monitoring_users.add(fiu_user)
-        self.assertTrue(Check.objects.should_check_credit(credit))
+        self.assertTrue(credit.should_check())
         check = Check.objects.create_for_credit(credit)
         self.assertEqual(check.status, CHECK_STATUS.PENDING)
         self.assertIn('FIU prisoners', check.description)

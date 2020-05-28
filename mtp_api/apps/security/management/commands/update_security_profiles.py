@@ -122,20 +122,8 @@ class Command(BaseCommand):
 
     @atomic()
     def attach_profiles_for_legacy_credits(self, new_credits):
-        sender_profiles = []
-        prisoner_profiles = []
         for credit in new_credits:
-            self.create_or_update_profiles_for_credit(credit)
-            if credit.sender_profile:
-                sender_profiles.append(credit.sender_profile.pk)
-            else:
-                logger.warning('Sender profile could not be found for credit %s', credit)
-            if credit.prisoner_profile:
-                prisoner_profiles.append(credit.prisoner_profile.pk)
-            else:
-                logger.warning('Prisoner profile could not be found for credit %s', credit)
-
-        # TODO this was previous behaviour, but I feel like it might not be appropriate now
+            credit.attach_profiles()
         return len(new_credits)
 
     @atomic()

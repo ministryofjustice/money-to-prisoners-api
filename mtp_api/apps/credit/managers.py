@@ -65,11 +65,6 @@ class CreditManager(models.Manager):
                 (CREDIT_RESOLUTION.PENDING,)
             )
 
-    def create(self, *args, **kwargs):
-        credit_instance = super(CreditManager, self).create(*args, **kwargs)
-        credit_instance.attach_profiles()
-        return credit_instance
-
     @atomic
     def reconcile(self, start_date, end_date, user, **kwargs):
         from credit.models import Log

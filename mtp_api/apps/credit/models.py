@@ -158,7 +158,7 @@ class Credit(TimeStampedModel):
                         'prisoner name',
                         self
                     )
-        if not self.sender_profile:
+        if not self.sender_profile and self.has_enough_detail_for_sender_profile():
             try:
                 self.sender_profile = SenderProfile.objects.get_for_credit(self)
             except SenderProfile.DoesNotExist:
@@ -172,6 +172,40 @@ class Credit(TimeStampedModel):
                         'because credit lacked either a prison or prisoner name',
                         self
                     )
+
+    def should_check(self):
+        from credit.constants import CREDIT_RESOLUTION
+        from payment.constants import PAYMENT_STATUS
+
+        if self.resolution != CREDIT_RESOLUTION.INITIAL:
+            # it's too late once credits reach any other resolution
+            return False
+        if self.source != CREDIT_SOURCE.ONLINE:
+            # checks only apply to debit card payments
+            return False
+        if self.payment.status != PAYMENT_STATUS.PENDING:
+            # payment must be pending for checks to apply
+            return False
+
+        return self.has_enough_detail_for_sender_profile()
+
+    def has_enough_detail_for_sender_profile(self):
+        if self.source == CREDIT_SOURCE.ONLINE:
+            return all(
+                getattr(self.payment, field)
+                for field in (
+                    'email', 'cardholder_name',
+                    'card_number_first_digits', 'card_number_last_digits', 'card_expiry_date',
+                    'billing_address',
+                )
+            )
+        elif self.source == CREDIT_SOURCE.BANK_TRANSFER:
+            return all(
+                getattr(self, field)
+                for field in (
+                    'sender_name', 'sender_sort_code', 'sender_account_number', 'sender_roll_number'
+                )
+            )
 
     @property
     def source(self):

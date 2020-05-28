@@ -148,12 +148,11 @@ def update_credit_for_payment(instance, **kwargs):
         )
 
 
-@receiver(post_save, sender=Payment, dispatch_uid='create_check_if_needed')
-def create_security_check_if_needed(instance: Payment, **kwargs):
+@receiver(post_save, sender=Payment, dispatch_uid='create_security_check_if_needed_and_attach_profiles')
+def create_security_check_if_needed_and_attach_profiles(instance: Payment, **kwargs):
     credit = instance.credit
-    if hasattr(credit, 'security_check'):
-        # security check already exists
-        return
-    if not Check.objects.should_check_credit(credit):
-        return
-    Check.objects.create_for_credit(credit)
+    if instance.status == PAYMENT_STATUS.TAKEN:
+        instance.credit.attach_profiles()
+        instance.credit.save()
+    if not hasattr(credit, 'security_check') and credit.should_check():
+        Check.objects.create_for_credit(credit)
