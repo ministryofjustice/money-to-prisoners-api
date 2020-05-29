@@ -70,7 +70,7 @@ class Command(BaseCommand):
         prisoner_profiles = PrisonerProfile.objects.filter(
             credits__is_counted_in_prisoner_profile_total=False,
             credits__resolution=CREDIT_RESOLUTION.CREDITED
-        ).order_by('pk')
+        ).order_by('pk').values_list('pk', flat=True)
         self.batch_and_execute_entity_calculation(
             prisoner_profiles, 'prisoner profiles', self.calculate_credit_totals_for_prisoner_profiles, batch_size,
             granular_entity='credits'
@@ -82,7 +82,7 @@ class Command(BaseCommand):
         sender_profiles = SenderProfile.objects.filter(
             credits__is_counted_in_sender_profile_total=False,
             credits__resolution=CREDIT_RESOLUTION.CREDITED
-        ).order_by('pk')
+        ).order_by('pk').values_list('pk', flat=True)
         self.batch_and_execute_entity_calculation(
             sender_profiles, 'sender profiles', self.calculate_credit_totals_for_sender_profiles, batch_size,
             granular_entity='credits'
@@ -91,6 +91,11 @@ class Command(BaseCommand):
     def batch_and_execute_entity_calculation(
         self, entities, entity_model_name_plural, calculate_entity_totals_fn, batch_size, granular_entity=None
     ):
+        def chunker(initial, n):
+            """Yield successive n-sized chunks from lst."""
+            for i in range(0, len(initial), n):
+                yield initial[i:i + n]
+
         entities_count = entities.count()
         if not entities_count:
             self.stdout.write(self.style.SUCCESS(f'No {entity_model_name_plural} require updating'))
@@ -98,15 +103,12 @@ class Command(BaseCommand):
         else:
             self.stdout.write(f'Updating {entities_count} {entity_model_name_plural}')
 
-        processed_entities_count = 0
-        while True:
-            count = calculate_entity_totals_fn(entities[0:batch_size])
-            if count == 0:
-                break
-            processed_entities_count += count
-            processed_log_msg = f'Processed {entities_count} {entity_model_name_plural}'
+        # We prefetch the query and load into memory to avoid any infinite loops.
+        for entity_slice in list(chunker(entities, batch_size)):
+            count = calculate_entity_totals_fn(entity_slice)
+            processed_log_msg = f'Processed {batch_size} {entity_model_name_plural}'
             if granular_entity:
-                processed_log_msg += f' for {processed_entities_count} new {granular_entity}'
+                processed_log_msg += f' for {count} new {granular_entity}'
             self.stdout.write(processed_log_msg)
 
         self.stdout.write(self.style.SUCCESS(f'Updated all {entity_model_name_plural}'))
