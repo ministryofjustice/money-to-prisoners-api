@@ -35,7 +35,6 @@ class PrisonerProfileManager(models.Manager):
         return self.get(prisoner_number=disbursement.prisoner_number)
 
     def create_or_update_for_credit(self, credit):
-        assert not credit.prisoner_profile, 'Prisoner profile already linked'
         assert credit.prison, 'Credit does not have a known prisoner'
 
         prisoner_profile, _ = self.update_or_create(
@@ -51,7 +50,8 @@ class PrisonerProfileManager(models.Manager):
             if not prisoner_profile.provided_names.filter(name=provided_name).exists():
                 prisoner_profile.provided_names.create(name=provided_name)
 
-        prisoner_profile.prisons.add(credit.prison)
+        if credit.prison not in prisoner_profile.prisons.all():
+            prisoner_profile.prisons.add(credit.prison)
         credit.prisoner_profile = prisoner_profile
         credit.save()
         return prisoner_profile
@@ -129,7 +129,6 @@ class SenderProfileManager(models.Manager):
         )
 
     def create_or_update_for_credit(self, credit):
-        assert not credit.sender_profile, 'Sender profile already linked'
 
         if hasattr(credit, 'transaction'):
             sender_profile = self._create_or_update_for_bank_transfer(credit)
@@ -139,7 +138,7 @@ class SenderProfileManager(models.Manager):
             logger.error(f'Credit {credit.pk} does not have a payment nor transaction')
             sender_profile = self.get_or_create_anonymous_sender()
 
-        if credit.prison:
+        if credit.prison and credit.prison not in sender_profile.prisons.all():
             sender_profile.prisons.add(credit.prison)
         credit.sender_profile = sender_profile
         credit.save()

@@ -145,33 +145,29 @@ class Credit(TimeStampedModel):
     def attach_profiles(self):
         from security.models import PrisonerProfile, SenderProfile
 
-        if not self.prisoner_profile:
-            try:
-                self.prisoner_profile = PrisonerProfile.objects.get_for_credit(self)
-            except PrisonerProfile.DoesNotExist:
-                logger.info('Could not find PrisonerProfile to attach to credit %s', self)
-                if self.prison and self.prisoner_name:
-                    self.prisoner_profile = PrisonerProfile.objects.create_or_update_for_credit(self)
-                else:
-                    logger.warning(
-                        'Could not create PrisonerProfile for credit %s because Credit lacked either  a prison or '
-                        'prisoner name',
-                        self
-                    )
-        if not self.sender_profile and self.has_enough_detail_for_sender_profile():
-            try:
-                self.sender_profile = SenderProfile.objects.get_for_credit(self)
-            except SenderProfile.DoesNotExist:
-                logger.info('Could not find SenderProfile to attach to credit %s', self)
-                self.sender_profile = SenderProfile.objects.create_or_update_for_credit(self)
-                if self.prisoner_profile:
-                    self.prisoner_profile.senders.add(self.sender_profile)
-                else:
-                    logger.warning(
-                        'Associated a sender with credit %s, but could not create PrisonerProfile '
-                        'because credit lacked either a prison or prisoner name',
-                        self
-                    )
+        if self.prison and self.prisoner_name:
+            self.prisoner_profile = PrisonerProfile.objects.create_or_update_for_credit(self)
+        else:
+            logger.warning(
+                'Could not create PrisonerProfile for credit %s because Credit lacked either a prison or '
+                'prisoner name',
+                self
+            )
+        if self.has_enough_detail_for_sender_profile():
+            self.sender_profile = SenderProfile.objects.create_or_update_for_credit(self)
+            if self.prisoner_profile:
+                self.prisoner_profile.senders.add(self.sender_profile)
+            else:
+                logger.warning(
+                    'Associated a sender with credit %s, but could not create PrisonerProfile '
+                    'because credit lacked either a prison or prisoner name',
+                    self
+                )
+        else:
+            logger.warning(
+                'Could not create SenderProfile for credit %s because Credit lacked necessary information',
+                self
+            )
 
     def should_check(self):
         from credit.constants import CREDIT_RESOLUTION
