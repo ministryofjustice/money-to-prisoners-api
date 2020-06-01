@@ -154,7 +154,9 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
             prisoner_number=prisoner_profile_1.prisoner_number, prisoner_name=prisoner_profile_1.prisoner_name,
             prison=PrisonerLocation.objects.get(prisoner_number=prisoner_profile_1.prisoner_number).prison,
             resolution=CREDIT_RESOLUTION.CREDITED, reconciled=True, private_estate_batch=None,
-            prisoner_profile=None, sender_profile=None,
+            prisoner_profile=prisoner_profile_1, sender_profile=sender_profile_1,
+            is_counted_in_prisoner_profile_total=False,
+            is_counted_in_sender_profile_total=False
         )
         mommy.make(
             Payment,
@@ -169,7 +171,9 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
             prisoner_number=prisoner_profile_2.prisoner_number, prisoner_name=prisoner_profile_2.prisoner_name,
             prison=PrisonerLocation.objects.get(prisoner_number=prisoner_profile_2.prisoner_number).prison,
             resolution=CREDIT_RESOLUTION.CREDITED, reconciled=True, private_estate_batch=None,
-            prisoner_profile=None, sender_profile=None,
+            prisoner_profile=prisoner_profile_2, sender_profile=sender_profile_2,
+            is_counted_in_prisoner_profile_total=False,
+            is_counted_in_sender_profile_total=False
         )
         mommy.make(
             Payment,

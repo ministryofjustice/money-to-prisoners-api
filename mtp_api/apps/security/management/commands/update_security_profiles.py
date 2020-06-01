@@ -168,16 +168,6 @@ class Command(BaseCommand):
         create_notification_events(records=new_disbursements)
         return len(new_disbursements)
 
-    def create_or_update_profiles_for_credit(self, credit):
-        if not credit.sender_profile:
-            # TODO this method does not need to return, pull sender_proffile off credit object
-            sender_profile = SenderProfile.objects.create_or_update_for_credit(credit)
-        else:
-            sender_profile = credit.sender_profile
-        if credit.prison and credit.sender_profile and not credit.prisoner_profile:
-            prisoner_profile = PrisonerProfile.objects.create_or_update_for_credit(credit)
-            prisoner_profile.senders.add(sender_profile)
-
     def create_or_update_profiles_for_disbursement(self, disbursement):
         recipient_profile = RecipientProfile.objects.create_or_update_for_disbursement(disbursement)
         prisoner_profile = PrisonerProfile.objects.create_or_update_for_disbursement(disbursement)

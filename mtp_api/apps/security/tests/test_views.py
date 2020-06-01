@@ -150,7 +150,11 @@ class SenderProfileListTestCase(SecurityViewTestCase):
 
     def test_filter_by_prisoner_count(self):
         data = self._get_list(self._get_authorised_user(), prisoner_count__gte=3)['results']
-        bank_prisoner_counts = Credit.objects.filter(transaction__isnull=False).values(
+        bank_prisoner_counts = Credit.objects.filter(
+            transaction__isnull=False,
+            is_counted_in_prisoner_profile_total=True,
+            is_counted_in_sender_profile_total=True
+        ).values(
             'transaction__sender_name',
             'transaction__sender_sort_code',
             'transaction__sender_account_number',
@@ -164,7 +168,11 @@ class SenderProfileListTestCase(SecurityViewTestCase):
 
         bank_prisoner_counts = bank_prisoner_counts.filter(prisoner_count__gte=3)
 
-        card_prisoner_counts = Credit.objects.filter(payment__isnull=False).values(
+        card_prisoner_counts = Credit.objects.filter(
+            payment__isnull=False,
+            is_counted_in_prisoner_profile_total=True,
+            is_counted_in_sender_profile_total=True
+        ).values(
             'payment__card_expiry_date',
             'payment__card_number_last_digits',
             'payment__billing_address__postcode',
@@ -478,7 +486,12 @@ class PrisonerProfileListTestCase(SecurityViewTestCase):
     def test_filter_by_sender_count(self):
         data = self._get_list(self._get_authorised_user(), sender_count__gte=3)['results']
         bank_pairs = (
-            Credit.objects.filter(transaction__isnull=False, prisoner_number__isnull=False).values(
+            Credit.objects.filter(
+                transaction__isnull=False,
+                prisoner_number__isnull=False,
+                is_counted_in_prisoner_profile_total=True,
+                is_counted_in_sender_profile_total=True
+            ).values(
                 'prisoner_number',
                 'transaction__sender_name',
                 'transaction__sender_sort_code',
@@ -494,7 +507,12 @@ class PrisonerProfileListTestCase(SecurityViewTestCase):
         )
 
         card_pairs = (
-            Credit.objects.filter(payment__isnull=False, prisoner_number__isnull=False).values(
+            Credit.objects.filter(
+                payment__isnull=False,
+                prisoner_number__isnull=False,
+                is_counted_in_prisoner_profile_total=True,
+                is_counted_in_sender_profile_total=True
+            ).values(
                 'prisoner_number',
                 'payment__card_expiry_date',
                 'payment__card_number_last_digits',
