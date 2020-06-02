@@ -25,6 +25,8 @@ from mtp_auth.tests.mommy_recipes import (
 )
 from prison.models import Prison
 
+User = get_user_model()
+
 
 class MockModelTimestamps:
     """
@@ -237,3 +239,21 @@ def format_date_or_datetime(value):
     if isinstance(value, datetime):
         return DateTimeField().to_representation(value)
     return DateField().to_representation(value)
+
+
+def create_super_admin(stdout=None, style_success=None):
+    try:
+        admin_user = User.objects.get(username='admin')
+    except User.DoesNotExist:
+        admin_user = User.objects.create_superuser(
+            username='admin',
+            email='admin@mtp.local',
+            password='adminadmin',
+            first_name='Admin',
+            last_name='User',
+        )
+    for group in Group.objects.all():
+        admin_user.groups.add(group)
+
+    if stdout and style_success:
+        stdout.write(style_success('Model creation finished'))

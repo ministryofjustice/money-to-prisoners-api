@@ -5,13 +5,12 @@ import threading
 import types
 
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Group
 from django.core.management import call_command
 from django.core.management.commands.testserver import Command as TestServerCommand
 from django.db import connection
 
 from core.management.commands import synchronised
-from core.tests.utils import give_superusers_full_access
+from core.tests.utils import create_super_admin
 
 User = get_user_model()
 
@@ -51,7 +50,7 @@ class Command(TestServerCommand):
             db_name = create_test_db(*args, **kwargs)
             call_command('loaddata', *fixture_labels, **{'verbosity': this.verbosity})
             this.load_test_data()
-            this.create_super_admin()
+            this._create_super_admin()
             return db_name
 
         connection.creation.create_test_db = types.MethodType(
@@ -78,22 +77,8 @@ class Command(TestServerCommand):
         )
 
     @synchronised
-    def create_super_admin(self):
-        try:
-            admin_user = User.objects.get(username='admin')
-        except User.DoesNotExist:
-            admin_user = User.objects.create_superuser(
-                username='admin',
-                email='admin@mtp.local',
-                password='adminadmin',
-                first_name='Admin',
-                last_name='User',
-            )
-        for group in Group.objects.all():
-            admin_user.groups.add(group)
-        give_superusers_full_access()
-
-        self.stdout.write(self.style.SUCCESS('Model creation finished'))
+    def _create_super_admin(self):
+        return create_super_admin(self.stdout, self.style.SUCCESS)
 
     def start_controller(self, controller_port):
         self.controller = socketserver.TCPServer(('0', controller_port), self.controller_request)
