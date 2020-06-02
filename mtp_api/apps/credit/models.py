@@ -197,7 +197,7 @@ class Credit(TimeStampedModel):
             )
         elif self.source == CREDIT_SOURCE.BANK_TRANSFER:
             return all(
-                getattr(self, field)
+                getattr(self.transaction, field)
                 for field in (
                     'sender_name', 'sender_sort_code', 'sender_account_number', 'sender_roll_number'
                 )
