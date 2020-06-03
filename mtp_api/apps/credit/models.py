@@ -199,7 +199,7 @@ class Credit(TimeStampedModel):
             return all(
                 getattr(self.transaction, field)
                 for field in (
-                    'sender_name', 'sender_sort_code', 'sender_account_number', 'sender_roll_number'
+                    'sender_name', 'sender_sort_code', 'sender_account_number'
                 )
             )
 

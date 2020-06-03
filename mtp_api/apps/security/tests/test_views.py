@@ -489,8 +489,7 @@ class PrisonerProfileListTestCase(SecurityViewTestCase):
             Credit.objects.filter(
                 transaction__isnull=False,
                 prisoner_number__isnull=False,
-                is_counted_in_prisoner_profile_total=True,
-                is_counted_in_sender_profile_total=True
+                sender_profile_id__isnull=False
             ).values(
                 'prisoner_number',
                 'transaction__sender_name',
@@ -510,8 +509,7 @@ class PrisonerProfileListTestCase(SecurityViewTestCase):
             Credit.objects.filter(
                 payment__isnull=False,
                 prisoner_number__isnull=False,
-                is_counted_in_prisoner_profile_total=True,
-                is_counted_in_sender_profile_total=True
+                sender_profile_id__isnull=False
             ).values(
                 'prisoner_number',
                 'payment__card_expiry_date',
