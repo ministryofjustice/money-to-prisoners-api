@@ -3,6 +3,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from credit.constants import CREDIT_RESOLUTION
+from credit.models import Credit
 from core.tests.utils import make_test_users
 from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION
 from disbursement.tests.utils import (
@@ -51,6 +52,14 @@ class UpdateSecurityProfilesTestCase(TestCase):
                 sender_profile.credit_total
             )
 
+        self.assertEqual(
+            Credit.objects.filter(
+                is_counted_in_sender_profile_total=False,
+                resolution=CREDIT_RESOLUTION.CREDITED
+            ).count(),
+            0
+        )
+
         for recipient_profile in RecipientProfile.objects.filter(
             bank_transfer_details__isnull=False
         ):
@@ -88,6 +97,13 @@ class UpdateSecurityProfilesTestCase(TestCase):
                 len(prisoner_profile.disbursements.all()),
                 prisoner_profile.disbursement_count
             )
+        self.assertEqual(
+            Credit.objects.filter(
+                is_counted_in_prisoner_profile_total=False,
+                resolution=CREDIT_RESOLUTION.CREDITED
+            ).count(),
+            0
+        )
 
     def test_update_security_profiles_subsequent_bank_transfer(self):
         generate_transactions(transaction_batch=100, days_of_history=5)
@@ -298,6 +314,37 @@ class UpdateSecurityProfilesTestCase(TestCase):
         prisoner_profile.refresh_from_db()
         recipient_names = list(recipient_name.name for recipient_name in prisoner_profile.provided_names.all())
         self.assertEqual(recipient_names[-1], 'Mr. John Doe')
+
+        self.assertEqual(
+            prisoner_profile.credit_count,
+            prisoner_profile.credits.filter(
+                resolution=CREDIT_RESOLUTION.CREDITED
+            ).count()
+        )
+        self.assertEqual(
+            prisoner_profile.credit_total,
+            sum([
+                c.amount
+                for c in prisoner_profile.credits.filter(
+                    resolution=CREDIT_RESOLUTION.CREDITED
+                ).all()
+            ])
+        )
+        self.assertEqual(
+            sender_profile.credit_count,
+            sender_profile.credits.filter(
+                resolution=CREDIT_RESOLUTION.CREDITED
+            ).count()
+        )
+        self.assertEqual(
+            sender_profile.credit_total,
+            sum([
+                c.amount
+                for c in sender_profile.credits.filter(
+                    resolution=CREDIT_RESOLUTION.CREDITED
+                ).all()
+            ])
+        )
 
 
 class UpdateCurrentPrisonsTestCase(TestCase):

@@ -152,8 +152,7 @@ class SenderProfileListTestCase(SecurityViewTestCase):
         data = self._get_list(self._get_authorised_user(), prisoner_count__gte=3)['results']
         bank_prisoner_counts = Credit.objects.filter(
             transaction__isnull=False,
-            is_counted_in_prisoner_profile_total=True,
-            is_counted_in_sender_profile_total=True
+            prisoner_profile_id__isnull=False,
         ).values(
             'transaction__sender_name',
             'transaction__sender_sort_code',
@@ -170,8 +169,7 @@ class SenderProfileListTestCase(SecurityViewTestCase):
 
         card_prisoner_counts = Credit.objects.filter(
             payment__isnull=False,
-            is_counted_in_prisoner_profile_total=True,
-            is_counted_in_sender_profile_total=True
+            prisoner_profile_id__isnull=False,
         ).values(
             'payment__card_expiry_date',
             'payment__card_number_last_digits',
