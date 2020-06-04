@@ -47,7 +47,7 @@ class Command(BaseCommand):
 
     def handle_credit_update(self, batch_size):
         # TODO Remove below function once the logs show that it consistently
-        # does not operate on any credits
+        # does not operate on any credits, and once bank transfers have been deprecated
         self.handle_profile_attachment_for_legacy_credits(batch_size)
         self.handle_credit_update_for_attached_prisoner_profiles(batch_size)
         self.handle_credit_update_for_attached_sender_profiles(batch_size)

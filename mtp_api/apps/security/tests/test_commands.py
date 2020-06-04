@@ -44,13 +44,13 @@ class UpdateSecurityProfilesTestCase(TestCase):
             self.assertEqual(
                 len(sender_profile.credits.filter(
                     resolution=CREDIT_RESOLUTION.CREDITED
-                ).all()),
+                )),
                 sender_profile.credit_count
             )
             self.assertEqual(
                 sum([credit.amount for credit in sender_profile.credits.filter(
                     resolution=CREDIT_RESOLUTION.CREDITED
-                ).all()]),
+                )]),
                 sender_profile.credit_total
             )
 
@@ -81,13 +81,13 @@ class UpdateSecurityProfilesTestCase(TestCase):
             self.assertEqual(
                 sum([credit.amount for credit in prisoner_profile.credits.filter(
                     resolution=CREDIT_RESOLUTION.CREDITED
-                ).all()]),
+                )]),
                 prisoner_profile.credit_total
             )
             self.assertEqual(
                 len(prisoner_profile.credits.filter(
                     resolution=CREDIT_RESOLUTION.CREDITED
-                ).all()),
+                )),
                 prisoner_profile.credit_count
             )
 
