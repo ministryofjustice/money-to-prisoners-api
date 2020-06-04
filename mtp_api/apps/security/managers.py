@@ -129,7 +129,6 @@ class SenderProfileManager(models.Manager):
         )
 
     def create_or_update_for_credit(self, credit):
-
         if hasattr(credit, 'transaction'):
             sender_profile = self._create_or_update_for_bank_transfer(credit)
         elif hasattr(credit, 'payment'):

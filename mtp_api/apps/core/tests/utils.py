@@ -3,6 +3,7 @@ from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group, Permission
+from django.db.models.fields.related import ForeignObjectRel
 from oauth2_provider.models import Application
 from rest_framework.fields import DateField, DateTimeField
 
@@ -257,3 +258,33 @@ def create_super_admin(stdout=None, style_success=None):
 
     if stdout and style_success:
         stdout.write(style_success('Model creation finished'))
+
+
+def delete_nullable_fields(queryset, null_fields_to_leave_populated=None):
+    """
+    This is intended for testing the minimum amount of data needed to be populated on an
+    object for a codeflow, whilst also using the test data setup fixtures of the happy path
+    """
+    blankable_fields = set()
+    sample_instance = queryset.first()
+    for field in sample_instance._meta.get_fields():
+        # We don't want to blank any related objects
+        if (
+            getattr(field, 'null', False)
+            and not isinstance(field, ForeignObjectRel)
+        ):
+            blankable_fields.add(field.name)
+    if null_fields_to_leave_populated:
+        to_be_blanked_fields = blankable_fields - null_fields_to_leave_populated
+    else:
+        to_be_blanked_fields = blankable_fields
+
+    for instance in queryset:
+        for field in to_be_blanked_fields:
+            setattr(instance, field, None)
+        instance.save()
+        instance.refresh_from_db()
+        assert all([
+            getattr(instance, field_name) is None
+            for field_name in to_be_blanked_fields
+        ])

@@ -4,13 +4,15 @@ from django.utils import timezone
 
 from credit.constants import CREDIT_RESOLUTION
 from credit.models import Credit
-from core.tests.utils import make_test_users
+from core.tests.utils import make_test_users, delete_nullable_fields
 from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION
+from disbursement.models import Disbursement
 from disbursement.tests.utils import (
     generate_disbursements, generate_initial_disbursement_data,
     create_disbursements
 )
 from payment.constants import PAYMENT_STATUS
+from payment.models import Payment
 from payment.tests.utils import (
     create_payments, generate_payments, generate_initial_payment_data
 )
@@ -18,7 +20,7 @@ from prison.models import PrisonerLocation, Prison
 from prison.tests.utils import load_random_prisoner_locations
 from security.models import SenderProfile, PrisonerProfile, RecipientProfile
 from transaction.tests.utils import (
-    create_transactions, generate_transactions, generate_initial_transactions_data
+    create_transactions, generate_initial_transactions_data, generate_transactions
 )
 
 
@@ -344,6 +346,108 @@ class UpdateSecurityProfilesTestCase(TestCase):
                     resolution=CREDIT_RESOLUTION.CREDITED
                 ).all()
             ])
+        )
+
+    def test_profile_update_minimum_viable_data(self):
+        generate_transactions(transaction_batch=100, days_of_history=5)
+        generate_payments(payment_batch=100, days_of_history=5)
+        generate_disbursements(disbursement_batch=100, days_of_history=5)
+
+        delete_nullable_fields(
+            Payment.objects.all(),
+            null_fields_to_leave_populated=set([
+                'email',
+                'cardholder_name',
+                'card_number_first_digits',
+                'card_number_last_digits',
+                'card_expiry_date',
+                'billing_address',
+            ])
+        )
+        delete_nullable_fields(
+            Credit.objects.all(),
+            null_fields_to_leave_populated=set([
+                'prison',
+                'prisoner_name',
+                'prisoner_number',  # Needed to populate PrisonerProfile
+                'single_offender_id'  # Needed to populate PrisonerProfile
+            ])
+        )
+        delete_nullable_fields(
+            Disbursement.objects.all(),
+            null_fields_to_leave_populated=set([
+                'sort_code',  # Needed to populate BankAccount
+                'account_number'  # Needed to populate BankAccount
+            ])
+        )
+
+        call_command('update_security_profiles', verbosity=0)
+
+        for sender_profile in SenderProfile.objects.all():
+            self.assertEqual(
+                len(sender_profile.credits.filter(
+                    resolution=CREDIT_RESOLUTION.CREDITED
+                ).all()),
+                sender_profile.credit_count
+            )
+            self.assertEqual(
+                sum([credit.amount for credit in sender_profile.credits.filter(
+                    resolution=CREDIT_RESOLUTION.CREDITED
+                ).all()]),
+                sender_profile.credit_total
+            )
+
+        self.assertEqual(
+            Credit.objects.filter(
+                is_counted_in_sender_profile_total=False,
+                resolution=CREDIT_RESOLUTION.CREDITED
+            ).count(),
+            0
+        )
+
+        for recipient_profile in RecipientProfile.objects.filter(
+            bank_transfer_details__isnull=False
+        ):
+            self.assertEqual(
+                sum([disbursement.amount for disbursement in recipient_profile.disbursements.all()]),
+                recipient_profile.disbursement_total
+            )
+            self.assertEqual(
+                len(recipient_profile.disbursements.all()),
+                recipient_profile.disbursement_count
+            )
+
+        for prisoner_profile in PrisonerProfile.objects.all():
+            if prisoner_profile.credits.count():
+                self.assertTrue(prisoner_profile.single_offender_id)
+
+            self.assertEqual(
+                sum([credit.amount for credit in prisoner_profile.credits.filter(
+                    resolution=CREDIT_RESOLUTION.CREDITED
+                ).all()]),
+                prisoner_profile.credit_total
+            )
+            self.assertEqual(
+                len(prisoner_profile.credits.filter(
+                    resolution=CREDIT_RESOLUTION.CREDITED
+                ).all()),
+                prisoner_profile.credit_count
+            )
+
+            self.assertEqual(
+                sum([disbursement.amount for disbursement in prisoner_profile.disbursements.all()]),
+                prisoner_profile.disbursement_total
+            )
+            self.assertEqual(
+                len(prisoner_profile.disbursements.all()),
+                prisoner_profile.disbursement_count
+            )
+        self.assertEqual(
+            Credit.objects.filter(
+                is_counted_in_prisoner_profile_total=False,
+                resolution=CREDIT_RESOLUTION.CREDITED
+            ).count(),
+            0
         )
 
 
