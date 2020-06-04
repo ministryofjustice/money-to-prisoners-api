@@ -7,7 +7,7 @@ from mtp_common.test_utils import silence_logger
 
 from credit.constants import CREDIT_RESOLUTION
 from credit.models import Credit
-from core.tests.utils import make_test_users, delete_nullable_fields
+from core.tests.utils import make_test_users, delete_non_related_nullable_fields
 from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION
 from disbursement.models import Disbursement
 from disbursement.tests.utils import (
@@ -26,6 +26,7 @@ from security.models import SenderProfile, PrisonerProfile, RecipientProfile
 from transaction.tests.utils import (
     create_transactions, generate_initial_transactions_data, generate_transactions
 )
+from transaction.models import Transaction
 
 
 class UpdateSecurityProfilesTestCase(TestCase):
@@ -342,7 +343,7 @@ class UpdateSecurityProfilesTestCase(TestCase):
         generate_payments(payment_batch=100, days_of_history=5)
         generate_disbursements(disbursement_batch=100, days_of_history=5)
 
-        delete_nullable_fields(
+        delete_non_related_nullable_fields(
             Payment.objects.all(),
             null_fields_to_leave_populated=set([
                 'email',
@@ -353,7 +354,15 @@ class UpdateSecurityProfilesTestCase(TestCase):
                 'billing_address',
             ])
         )
-        delete_nullable_fields(
+        delete_non_related_nullable_fields(
+            Transaction.objects.all(),
+            null_fields_to_leave_populated=set([
+                'sender_name',
+                'sender_sort_code',
+                'sender_account_number'
+            ])
+        )
+        delete_non_related_nullable_fields(
             Credit.objects.all(),
             null_fields_to_leave_populated=set([
                 'prison',
@@ -362,7 +371,7 @@ class UpdateSecurityProfilesTestCase(TestCase):
                 'single_offender_id'  # Needed to populate PrisonerProfile
             ])
         )
-        delete_nullable_fields(
+        delete_non_related_nullable_fields(
             Disbursement.objects.all(),
             null_fields_to_leave_populated=set([
                 'sort_code',  # Needed to populate BankAccount

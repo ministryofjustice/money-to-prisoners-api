@@ -3,7 +3,6 @@ from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group, Permission
-from django.db.models.fields.related import ForeignObjectRel
 from oauth2_provider.models import Application
 from rest_framework.fields import DateField, DateTimeField
 
@@ -260,7 +259,7 @@ def create_super_admin(stdout=None, style_success=None):
         stdout.write(style_success('Model creation finished'))
 
 
-def delete_nullable_fields(queryset, null_fields_to_leave_populated=None):
+def delete_non_related_nullable_fields(queryset, null_fields_to_leave_populated=None):
     """
     This is intended for testing the minimum amount of data needed to be populated on an
     object for a codeflow, whilst also using the test data setup fixtures of the happy path
@@ -271,7 +270,7 @@ def delete_nullable_fields(queryset, null_fields_to_leave_populated=None):
         # We don't want to blank any related objects
         if (
             getattr(field, 'null', False)
-            and not isinstance(field, ForeignObjectRel)
+            and not getattr(field, 'related_model', False)
         ):
             blankable_fields.add(field.name)
     if null_fields_to_leave_populated:
