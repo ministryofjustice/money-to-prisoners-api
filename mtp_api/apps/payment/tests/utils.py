@@ -179,12 +179,12 @@ def setup_payment(owner_status_chooser, end_date, payment_counter, data, overrid
     if overrides:
         data.update(overrides)
     with MockModelTimestamps(data['created'], data['modified']):
-        new_payment = save_payment(data)
+        new_payment = save_payment(data, overrides)
 
     return new_payment
 
 
-def save_payment(data):
+def save_payment(data, overrides=None):
     is_taken = data['status'] == PAYMENT_STATUS.TAKEN
     if is_taken:
         if data.pop('credited', False):
@@ -209,7 +209,7 @@ def save_payment(data):
         billing_address = BillingAddress.objects.create(**billing_address)
         data['billing_address'] = billing_address
 
-    credit = Credit(
+    credit_data = dict(
         amount=data['amount'],
         prisoner_dob=prisoner_dob,
         prisoner_number=prisoner_number,
@@ -221,6 +221,9 @@ def save_payment(data):
         received_at=None if not is_taken else data['created'],
         resolution=resolution,
     )
+    if overrides:
+        credit_data.update(overrides.get('credit', {}))
+    credit = Credit(**credit_data)
     credit.save()
     data['credit'] = credit
 
