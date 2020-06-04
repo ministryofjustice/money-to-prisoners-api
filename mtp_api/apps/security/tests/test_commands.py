@@ -1,6 +1,9 @@
 from django.core.management import call_command
 from django.test import TestCase
 from django.utils import timezone
+from django.test.utils import captured_stdout
+
+from mtp_common.test_utils import silence_logger
 
 from credit.constants import CREDIT_RESOLUTION
 from credit.models import Credit
@@ -11,6 +14,7 @@ from disbursement.tests.utils import (
     generate_disbursements, generate_initial_disbursement_data,
     create_disbursements
 )
+
 from payment.constants import PAYMENT_STATUS
 from payment.models import Payment
 from payment.tests.utils import (
@@ -34,12 +38,7 @@ class UpdateSecurityProfilesTestCase(TestCase):
         self.security_staff = test_users['security_staff']
         load_random_prisoner_locations()
 
-    def test_update_security_profiles_initial(self):
-        generate_transactions(transaction_batch=100, days_of_history=5)
-        generate_payments(payment_batch=100, days_of_history=5)
-        generate_disbursements(disbursement_batch=100, days_of_history=5)
-        call_command('update_security_profiles', verbosity=0)
-
+    def _assert_counts(self):
         for sender_profile in SenderProfile.objects.all():
             self.assertEqual(
                 len(sender_profile.credits.filter(
@@ -107,6 +106,17 @@ class UpdateSecurityProfilesTestCase(TestCase):
             0
         )
 
+    @captured_stdout()
+    @silence_logger()
+    def test_update_security_profiles_initial(self):
+        generate_transactions(transaction_batch=100, days_of_history=5)
+        generate_payments(payment_batch=100, days_of_history=5)
+        generate_disbursements(disbursement_batch=100, days_of_history=5)
+        call_command('update_security_profiles', verbosity=0)
+        self._assert_counts()
+
+    @captured_stdout()
+    @silence_logger()
     def test_update_security_profiles_subsequent_bank_transfer(self):
         generate_transactions(transaction_batch=100, days_of_history=5)
         generate_payments(payment_batch=100, days_of_history=5)
@@ -163,6 +173,8 @@ class UpdateSecurityProfilesTestCase(TestCase):
             initial_prisoner_credit_total + new_transactions[0]['amount']
         )
 
+    @captured_stdout()
+    @silence_logger()
     def test_update_security_profiles_subsequent_card_payment(self):
         generate_transactions(transaction_batch=100, days_of_history=5)
         generate_payments(payment_batch=100, days_of_history=5)
@@ -227,6 +239,8 @@ class UpdateSecurityProfilesTestCase(TestCase):
             initial_prisoner_credit_total + new_payments[0]['amount']
         )
 
+    @captured_stdout()
+    @silence_logger()
     def test_update_security_profiles_subsequent_disbursement(self):
         generate_transactions(transaction_batch=100, days_of_history=5)
         generate_payments(payment_batch=100, days_of_history=5)
@@ -281,6 +295,8 @@ class UpdateSecurityProfilesTestCase(TestCase):
             initial_prisoner_disbursement_total + new_disbursements[0]['amount']
         )
 
+    @captured_stdout()
+    @silence_logger()
     def test_update_prisoner_profiles(self):
         payments = generate_payments(payment_batch=100, days_of_history=5)
         call_command('update_security_profiles', verbosity=0)
@@ -315,39 +331,12 @@ class UpdateSecurityProfilesTestCase(TestCase):
 
         prisoner_profile.refresh_from_db()
         recipient_names = list(recipient_name.name for recipient_name in prisoner_profile.provided_names.all())
+
         self.assertEqual(recipient_names[-1], 'Mr. John Doe')
+        self._assert_counts()
 
-        self.assertEqual(
-            prisoner_profile.credit_count,
-            prisoner_profile.credits.filter(
-                resolution=CREDIT_RESOLUTION.CREDITED
-            ).count()
-        )
-        self.assertEqual(
-            prisoner_profile.credit_total,
-            sum([
-                c.amount
-                for c in prisoner_profile.credits.filter(
-                    resolution=CREDIT_RESOLUTION.CREDITED
-                ).all()
-            ])
-        )
-        self.assertEqual(
-            sender_profile.credit_count,
-            sender_profile.credits.filter(
-                resolution=CREDIT_RESOLUTION.CREDITED
-            ).count()
-        )
-        self.assertEqual(
-            sender_profile.credit_total,
-            sum([
-                c.amount
-                for c in sender_profile.credits.filter(
-                    resolution=CREDIT_RESOLUTION.CREDITED
-                ).all()
-            ])
-        )
-
+    @captured_stdout()
+    @silence_logger()
     def test_profile_update_minimum_viable_data(self):
         generate_transactions(transaction_batch=100, days_of_history=5)
         generate_payments(payment_batch=100, days_of_history=5)
@@ -383,72 +372,7 @@ class UpdateSecurityProfilesTestCase(TestCase):
 
         call_command('update_security_profiles', verbosity=0)
 
-        for sender_profile in SenderProfile.objects.all():
-            self.assertEqual(
-                len(sender_profile.credits.filter(
-                    resolution=CREDIT_RESOLUTION.CREDITED
-                ).all()),
-                sender_profile.credit_count
-            )
-            self.assertEqual(
-                sum([credit.amount for credit in sender_profile.credits.filter(
-                    resolution=CREDIT_RESOLUTION.CREDITED
-                ).all()]),
-                sender_profile.credit_total
-            )
-
-        self.assertEqual(
-            Credit.objects.filter(
-                is_counted_in_sender_profile_total=False,
-                resolution=CREDIT_RESOLUTION.CREDITED
-            ).count(),
-            0
-        )
-
-        for recipient_profile in RecipientProfile.objects.filter(
-            bank_transfer_details__isnull=False
-        ):
-            self.assertEqual(
-                sum([disbursement.amount for disbursement in recipient_profile.disbursements.all()]),
-                recipient_profile.disbursement_total
-            )
-            self.assertEqual(
-                len(recipient_profile.disbursements.all()),
-                recipient_profile.disbursement_count
-            )
-
-        for prisoner_profile in PrisonerProfile.objects.all():
-            if prisoner_profile.credits.count():
-                self.assertTrue(prisoner_profile.single_offender_id)
-
-            self.assertEqual(
-                sum([credit.amount for credit in prisoner_profile.credits.filter(
-                    resolution=CREDIT_RESOLUTION.CREDITED
-                ).all()]),
-                prisoner_profile.credit_total
-            )
-            self.assertEqual(
-                len(prisoner_profile.credits.filter(
-                    resolution=CREDIT_RESOLUTION.CREDITED
-                ).all()),
-                prisoner_profile.credit_count
-            )
-
-            self.assertEqual(
-                sum([disbursement.amount for disbursement in prisoner_profile.disbursements.all()]),
-                prisoner_profile.disbursement_total
-            )
-            self.assertEqual(
-                len(prisoner_profile.disbursements.all()),
-                prisoner_profile.disbursement_count
-            )
-        self.assertEqual(
-            Credit.objects.filter(
-                is_counted_in_prisoner_profile_total=False,
-                resolution=CREDIT_RESOLUTION.CREDITED
-            ).count(),
-            0
-        )
+        self._assert_counts()
 
 
 class UpdateCurrentPrisonsTestCase(TestCase):
@@ -461,6 +385,8 @@ class UpdateCurrentPrisonsTestCase(TestCase):
         self.security_staff = test_users['security_staff']
         load_random_prisoner_locations()
 
+    @captured_stdout()
+    @silence_logger()
     def test_update_current_prisons(self):
         generate_transactions(transaction_batch=100, days_of_history=5)
         generate_payments(payment_batch=100, days_of_history=5)
