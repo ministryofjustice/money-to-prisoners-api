@@ -10,7 +10,7 @@ from django.core.management.commands.testserver import Command as TestServerComm
 from django.db import connection
 
 from core.management.commands import synchronised
-from core.tests.utils import create_super_admin
+from core.tests.utils import create_super_admin, give_superusers_full_access
 
 User = get_user_model()
 
@@ -78,7 +78,8 @@ class Command(TestServerCommand):
 
     @synchronised
     def _create_super_admin(self):
-        return create_super_admin(self.stdout, self.style.SUCCESS)
+        create_super_admin(self.stdout, self.style.SUCCESS)
+        give_superusers_full_access()
 
     def start_controller(self, controller_port):
         self.controller = socketserver.TCPServer(('0', controller_port), self.controller_request)
