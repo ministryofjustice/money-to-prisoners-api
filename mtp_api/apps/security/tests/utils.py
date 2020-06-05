@@ -1,5 +1,6 @@
 import random
 
+import faker
 from django.contrib.auth.models import Group
 
 from credit.models import Credit, CREDIT_RESOLUTION, LOG_ACTIONS as CREDIT_LOG_ACTIONS
@@ -7,7 +8,9 @@ from prison.models import Prison
 from payment.models import Payment, PAYMENT_STATUS
 from payment.tests.utils import generate_payments
 from security.models import Check, PrisonerProfile, SenderProfile
+from django.db.models import Count
 
+fake = faker.Faker()
 
 PAYMENT_FILTERS_FOR_INVALID_CHECK = dict(
     status=PAYMENT_STATUS.PENDING,
@@ -39,14 +42,21 @@ def _get_credit_values(credit_filters):
     return dict(
         {
             'amount': random.randint(100, 1000000),
-            'prisoner_number': 24601,
-            'prisoner_name': 'Jean ValJean',
-            'prisoner_profile_id': PrisonerProfile.objects.filter(
-            ).order_by('-credit_count').first().id,
-            'sender_profile_id': SenderProfile.objects.filter(
-                debit_card_details__isnull=False
-            ).order_by('-credit_count').first().id,
-            'prison_id': Prison.objects.first().nomis_id
+            'prisoner_number': random.randint(100, 1000000),
+            'prisoner_name': fake.name(),
+            'prisoner_profile_id': random.choice(
+                PrisonerProfile.objects.annotate(
+                    cred_count=Count('credits')
+                ).order_by('-cred_count').all()[:5]
+            ).id,
+            'sender_profile_id': random.choice(
+                SenderProfile.objects.filter(
+                    debit_card_details__isnull=False
+                ).annotate(
+                    cred_count=Count('credits')
+                ).order_by('-cred_count').all()[:5]
+            ).id,
+            'prison_id': random.choice(Prison.objects.all()).nomis_id
         },
         **{
             key: val for key, val in credit_filters.items()
