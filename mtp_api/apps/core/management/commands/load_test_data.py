@@ -61,6 +61,8 @@ class Command(BaseCommand):
                             help='Number of new payments to create')
         parser.add_argument('--number-of-disbursements', default=50, type=int,
                             help='Number of new disbursements to create')
+        parser.add_argument('--number-of-checks', default=10, type=int,
+                            help='Number of new security checks to create')
         parser.add_argument('--digital-takeup', action='store_true',
                             help='Generate digital take-up')
         parser.add_argument('--days-of-history', default=7, type=int,
@@ -140,6 +142,7 @@ class Command(BaseCommand):
         number_of_transactions = options['number_of_transactions']
         number_of_payments = options['number_of_payments']
         number_of_disbursements = options['number_of_disbursements']
+        number_of_checks = options['number_of_checks']
         days_of_history = options['days_of_history']
         if credits == 'random':
             print_message('Generating random credits')
@@ -165,9 +168,11 @@ class Command(BaseCommand):
             disbursement_batch=number_of_disbursements,
             days_of_history=days_of_history
         )
-        call_command('update_security_profiles')
+        generate_checks(
+            number_of_checks=number_of_checks
+        )
 
-        generate_checks()
+        call_command('update_security_profiles')
 
         digital_takeup = options['digital_takeup']
         if digital_takeup:
