@@ -38,6 +38,22 @@ PAYMENT_FILTERS_FOR_VALID_CHECK = dict(
 )
 
 
+def _get_payment_values(payment_filters):
+    return dict(
+        card_number_first_digits='{:04}'.format(random.randint(0, 9999)),
+        card_number_last_digits='{:04d}'.format(random.randint(0, 9999)),
+        cardholder_name=fake.name(),
+        card_expiry_date='{:02d}/{:02d}'.format(
+            random.randint(0, 99),
+            random.randint(0, 99)
+        ),
+        **{
+            key: val for key, val in payment_filters.items()
+            if '__' not in key
+        }
+    )
+
+
 def _get_credit_values(credit_filters):
     return dict(
         {
@@ -97,7 +113,7 @@ def generate_checks(number_of_checks=1, specific_payments_to_check=tuple()):
         if not candidate_payment:
             candidate_payment = generate_payments(payment_batch=1, overrides=dict(
                 credit=_get_credit_values(credit_filters),
-                **filter_set
+                **_get_payment_values(filter_set)
             ))[0]
         candidate_payment.credit.log_set.filter(action=CREDIT_LOG_ACTIONS.CREDITED).delete()
         checks.append(Check.objects.create_for_credit(candidate_payment.credit))
