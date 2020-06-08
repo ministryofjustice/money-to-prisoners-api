@@ -1,3 +1,4 @@
+import logging
 from datetime import timedelta
 
 from django.core.exceptions import ValidationError
@@ -73,7 +74,7 @@ class ScheduledCommandsTestCase(TestCase):
         )
         command.save()
         run_commands = run_scheduled_commands.Command()
-        with captured_stdout() as stdout, silence_logger():
+        with captured_stdout() as stdout, silence_logger(level=logging.ERROR):
             run_commands.handle()
 
         stdout = stdout.getvalue()
@@ -96,6 +97,6 @@ class ScheduledCommandsTestCase(TestCase):
         )
         command.save()
         run_commands = run_scheduled_commands.Command()
-        with captured_stdout(), silence_logger():
+        with captured_stdout(), silence_logger(level=logging.ERROR):
             run_commands.handle()
         self.assertEqual(ScheduledCommand.objects.all().count(), 0)
