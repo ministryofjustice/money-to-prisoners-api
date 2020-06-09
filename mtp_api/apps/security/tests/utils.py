@@ -15,7 +15,7 @@ fake = faker.Faker()
 PAYMENT_FILTERS_FOR_INVALID_CHECK = dict(
     status=PAYMENT_STATUS.PENDING,
     credit=dict(
-        resolution=CREDIT_RESOLUTION.PENDING,
+        resolution=CREDIT_RESOLUTION.INITIAL,
         owner_id=None,
         sender_profile_id=None,
         prisoner_profile_id=None,
@@ -26,7 +26,7 @@ PAYMENT_FILTERS_FOR_INVALID_CHECK = dict(
 PAYMENT_FILTERS_FOR_VALID_CHECK = dict(
     status=PAYMENT_STATUS.PENDING,
     credit=dict(
-        resolution=CREDIT_RESOLUTION.PENDING,
+        resolution=CREDIT_RESOLUTION.INITIAL,
         # This only works because get_or_create ignores values with __ in any call to create()
         # these values must be included in the defaults if NOT NULL
         owner__isnull=True,
