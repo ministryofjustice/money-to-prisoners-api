@@ -36,8 +36,8 @@ class Command(BaseCommand):
     help = textwrap.dedent(__doc__).strip()
 
     def add_arguments(self, parser):
-        parser.add_argument('--protect-superusers', action='store_true',
-                            help='Prevents superusers from being deleted')
+        parser.add_argument('--no-protect-superusers', action='store_true',
+                            help='Dont prevent superusers from being deleted')
         parser.add_argument('--protect-usernames', nargs='*',
                             help='Prevents specific usernames being deleted')
         parser.add_argument('--protect-credits', action='store_true',
@@ -73,7 +73,7 @@ class Command(BaseCommand):
             return self.handle_prod(**options)
 
         verbosity = options.get('verbosity', 1)
-        protect_superusers = options['protect_superusers']
+        no_protect_superusers = options['no_protect_superusers']
         protect_usernames = options['protect_usernames']
         protect_credits = options['protect_credits']
         prisons = options['prisons']
@@ -99,7 +99,7 @@ class Command(BaseCommand):
             Check.objects.all().delete()
 
         user_set = get_user_model().objects.exclude(username__in=protect_usernames or [])
-        if protect_superusers:
+        if not no_protect_superusers:
             user_set = user_set.exclude(is_superuser=True)
         print_message('Deleting %d users' % user_set.count())
         user_set.delete()
