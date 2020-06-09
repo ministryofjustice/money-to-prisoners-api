@@ -53,7 +53,7 @@ class Command(BaseCommand):
     @synchronised
     def load_test_data(self, verbosity=1, **kwargs):
         call_command(
-            'load_test_data', protect_superusers=True,
+            'load_test_data', no_protect_superusers=False,
             verbosity=verbosity, **kwargs
         )
 

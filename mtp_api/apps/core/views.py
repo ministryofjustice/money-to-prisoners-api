@@ -200,7 +200,7 @@ class RecreateTestDataView(AdminViewMixin, FormView):
 
         if scenario in ('random', 'cashbook', 'training', 'nomis-api-dev'):
             options.update({
-                'protect_superusers': True,
+                'no_protect_superusers': False,
                 'protect_usernames': ['transaction-uploader'],
                 'protect_credits': False,
                 'clerks_per_prison': 4,
