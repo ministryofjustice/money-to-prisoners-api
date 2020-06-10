@@ -60,20 +60,24 @@ def make_applications():
     owner = get_user_model().objects.first()
 
     def make_application_and_roles(client_id, name, *roles):
-        new_app, _ = Application.objects.get_or_create(
-            client_id=client_id,
-            client_type='confidential',
-            authorization_grant_type='password',
-            client_secret=client_id,
-            name=name,
-            user=owner,
-        )
+        app = Application.objects.filter(
+            client_id=client_id
+        ).first()
+        if not app:
+            app = Application.objects.create(
+                client_id=client_id,
+                client_type='confidential',
+                authorization_grant_type='password',
+                client_secret=client_id,
+                name=name,
+                user=owner,
+            )
         for role in roles:
             groups = [Group.objects.get_or_create(name=group)[0] for group in role['groups']]
             key_group, groups = groups[0], groups[1:]
             role, _ = Role.objects.get_or_create(
                 name=role['name'],
-                application=new_app,
+                application=app,
                 key_group=key_group,
                 login_url='http://localhost/%s/' % client_id,
             )
