@@ -151,8 +151,8 @@ def update_credit_for_payment(instance, **kwargs):
 @receiver(post_save, sender=Payment, dispatch_uid='create_security_check_if_needed_and_attach_profiles')
 def create_security_check_if_needed_and_attach_profiles(instance: Payment, **kwargs):
     credit = instance.credit
-    if instance.status == PAYMENT_STATUS.TAKEN:
-        instance.credit.attach_profiles()
-        instance.credit.save()
-    if not hasattr(credit, 'security_check') and credit.should_check():
-        Check.objects.create_for_credit(credit)
+    if credit.has_enough_detail_for_sender_profile():
+        credit.attach_profiles()
+        credit.save()
+        if not hasattr(credit, 'security_check') and credit.should_check():
+            Check.objects.create_for_credit(credit)

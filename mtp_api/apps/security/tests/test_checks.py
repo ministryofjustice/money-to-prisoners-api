@@ -384,6 +384,7 @@ class AutomaticCreditCheckTestCase(APITestCase, AuthTestCaseMixin):
             format='json', HTTP_AUTHORIZATION=auth_header,
         )
         payment = response.json()
+        self.assertQuerysetEqual(Check.objects.filter(credit__payment__uuid=payment['uuid']), [])
 
         payment_update = {
             'email': 'sender@outside.local',
@@ -410,3 +411,57 @@ class AutomaticCreditCheckTestCase(APITestCase, AuthTestCaseMixin):
         self.assertEqual(payment.status, PAYMENT_STATUS.PENDING)
         self.assertEqual(payment.credit.resolution, CREDIT_RESOLUTION.INITIAL)
         self.assertTrue(hasattr(payment.credit, 'security_check'))
+        self.assertEqual(payment.credit.security_check.status, CHECK_STATUS.ACCEPTED)
+
+    def test_pending_check_created_for_monitored_user(self):
+        """
+        Ensures that a payment updated by send-money will automatically create a pending check for monitored prisoner
+        """
+        fiu_group = Group.objects.get(name='FIU')
+        fiu_user = fiu_group.user_set.first()
+        prisoner_profile, _ = PrisonerProfile.objects.get_or_create(prisoner_number='A1409AE')
+        prisoner_profile.monitoring_users.add(fiu_user)
+        prisoner_profile.save()
+
+        auth_header = self.get_http_authorization_for_user(self.send_money_user)
+        new_payment = {
+            'amount': 1255,
+            'service_charge': 0,
+            'recipient_name': 'James Halls',
+            'prisoner_number': 'A1409AE',
+            'prisoner_dob': '1989-01-21',
+            'ip_address': '127.0.0.1',
+        }
+        response = self.client.post(
+            reverse('payment-list'), data=new_payment,
+            format='json', HTTP_AUTHORIZATION=auth_header,
+        )
+        payment = response.json()
+        self.assertQuerysetEqual(Check.objects.filter(credit__payment__uuid=payment['uuid']), [])
+
+        payment_update = {
+            'email': 'sender@outside.local',
+            'worldpay_id': '12345',
+            'cardholder_name': 'Mary Halls',
+            'card_number_first_digits': '111122',
+            'card_number_last_digits': '8888',
+            'card_expiry_date': '10/20',
+            'card_brand': 'Visa',
+            'billing_address': {
+                'line1': '62 Petty France',
+                'line2': '',
+                'city': 'London',
+                'country': 'UK',
+                'postcode': 'SW1H 9EU'
+            },
+        }
+        response = self.client.patch(
+            reverse('payment-detail', args=[payment['uuid']]), data=payment_update,
+            format='json', HTTP_AUTHORIZATION=auth_header,
+        )
+        payment = response.json()
+        payment = Payment.objects.get(uuid=payment['uuid'])
+        self.assertEqual(payment.status, PAYMENT_STATUS.PENDING)
+        self.assertEqual(payment.credit.resolution, CREDIT_RESOLUTION.INITIAL)
+        self.assertTrue(hasattr(payment.credit, 'security_check'))
+        self.assertEqual(payment.credit.security_check.status, CHECK_STATUS.PENDING)
