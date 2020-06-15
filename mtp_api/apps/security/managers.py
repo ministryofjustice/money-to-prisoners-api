@@ -54,6 +54,7 @@ class PrisonerProfileManager(models.Manager):
             prisoner_profile.prisons.add(credit.prison)
         credit.prisoner_profile = prisoner_profile
         credit.save()
+        logger.info('Attached prisoner profile %s to credit %s', prisoner_profile, credit)
         return prisoner_profile
 
     def create_or_update_for_disbursement(self, disbursement):
@@ -141,6 +142,7 @@ class SenderProfileManager(models.Manager):
             sender_profile.prisons.add(credit.prison)
         credit.sender_profile = sender_profile
         credit.save()
+        logger.info('Attached sender profile %s to credit %s', sender_profile, credit)
         return sender_profile
 
     def _create_or_update_for_bank_transfer(self, credit):
