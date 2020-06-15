@@ -144,12 +144,13 @@ class Credit(TimeStampedModel):
 
     def attach_profiles(self):
         from security.models import PrisonerProfile, SenderProfile
+        assert self.resolution != CREDIT_RESOLUTION.FAILED, 'Do not attach profiles for failed credits'
 
         if not self.prisoner_profile and self.prison and self.prisoner_name:
             self.prisoner_profile = PrisonerProfile.objects.create_or_update_for_credit(self)
         if not self.sender_profile and self.has_enough_detail_for_sender_profile():
             self.sender_profile = SenderProfile.objects.create_or_update_for_credit(self)
-        if self.resolution not in CREDIT_RESOLUTION.FAILED and self.prisoner_profile and self.sender_profile:
+        if self.prisoner_profile and self.sender_profile:
             self.prisoner_profile.senders.add(self.sender_profile)
 
         if not self.prisoner_profile:
