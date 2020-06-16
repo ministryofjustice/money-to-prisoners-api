@@ -252,6 +252,10 @@ class PrisonerProfile(TimeStampedModel):
         logger.info('Removing association between Prisoner Profile %s and Sender Profile %s', self, sender_profile)
         self.senders.remove(sender_profile)
 
+    def add_prison(self, prison):
+        logger.info('Associating Prisoner Profile: %s with Prison %s', self, prison)
+        self.prisons.add(prison)
+
 
 class ProvidedPrisonerName(models.Model):
     name = models.CharField(max_length=250)

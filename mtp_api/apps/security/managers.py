@@ -51,7 +51,7 @@ class PrisonerProfileManager(models.Manager):
                 prisoner_profile.provided_names.create(name=provided_name)
 
         if credit.prison not in prisoner_profile.prisons.all():
-            prisoner_profile.prisons.add(credit.prison)
+            prisoner_profile.add_prison(credit.prison)
         credit.prisoner_profile = prisoner_profile
         credit.save()
         logger.info('Attached prisoner profile %s to credit %s', prisoner_profile, credit)
@@ -78,7 +78,7 @@ class PrisonerProfileManager(models.Manager):
             prisoner_number=disbursement.prisoner_number,
             defaults=prisoner_profile_defaults,
         )
-        prisoner_profile.prisons.add(disbursement.prison)
+        prisoner_profile.add_prison(disbursement.prison)
         disbursement.prisoner_profile = prisoner_profile
         disbursement.save()
         return prisoner_profile

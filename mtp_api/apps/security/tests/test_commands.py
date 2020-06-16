@@ -15,7 +15,6 @@ from disbursement.tests.utils import (
     create_disbursements
 )
 
-from payment.constants import PAYMENT_STATUS
 from payment.models import Payment
 from payment.tests.utils import (
     create_payments, generate_payments, generate_initial_payment_data
@@ -302,8 +301,7 @@ class UpdateSecurityProfilesTestCase(TestCase):
         payments = generate_payments(payment_batch=100, days_of_history=5)
         call_command('update_security_profiles', verbosity=0)
 
-        valid_payments = filter(lambda payment: payment.status == PAYMENT_STATUS.TAKEN and payment.credit.prison,
-                                payments)
+        valid_payments = filter(lambda payment: payment.credit.prison, payments)
         prisoner_numbers = set(payment.prisoner_number for payment in valid_payments)
         self.assertEqual(PrisonerProfile.objects.all().count(), len(prisoner_numbers))
 
