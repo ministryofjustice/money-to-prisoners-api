@@ -130,6 +130,7 @@ class SenderProfileManager(models.Manager):
         )
 
     def create_or_update_for_credit(self, credit):
+        from credit.constants import CREDIT_RESOLUTION
         if hasattr(credit, 'transaction'):
             sender_profile = self._create_or_update_for_bank_transfer(credit)
         elif hasattr(credit, 'payment'):
@@ -138,8 +139,14 @@ class SenderProfileManager(models.Manager):
             logger.error(f'Credit {credit.pk} does not have a payment nor transaction')
             sender_profile = self.get_or_create_anonymous_sender()
 
-        if credit.prison and credit.prison not in sender_profile.prisons.all():
-            sender_profile.prisons.add(credit.prison)
+        # Annoyingly we still have to add this resolution clause for test setup, due to the fact that our test setup
+        # does not go through the realistic state mutation properly, simply creating entities in their final state
+        if (
+            credit.prison
+            and credit.resolution != CREDIT_RESOLUTION.FAILED
+            and credit.prison not in sender_profile.prisons.all()
+        ):
+            sender_profile.add_prison(credit.prison)
         credit.sender_profile = sender_profile
         credit.save()
         logger.info('Attached sender profile %s to credit %s', sender_profile, credit)

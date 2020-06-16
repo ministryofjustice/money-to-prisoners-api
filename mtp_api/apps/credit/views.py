@@ -1,4 +1,5 @@
 from functools import reduce
+import logging
 import re
 
 from django.contrib.auth import get_user_model
@@ -26,7 +27,7 @@ from core.filters import (
 )
 from core.models import TruncUtcDate
 from core.permissions import ActionsBasedPermissions
-from credit.constants import CREDIT_STATUS, CREDIT_SOURCE, LOG_ACTIONS
+from credit.constants import CREDIT_RESOLUTION, CREDIT_STATUS, CREDIT_SOURCE, LOG_ACTIONS
 from credit.models import Credit, Comment, ProcessingBatch, PrivateEstateBatch
 from credit.permissions import CreditPermissions, PrivateEstateBatchPermissions
 from credit.serializers import (
@@ -50,6 +51,7 @@ from mtp_auth.permissions import (
 from prison.models import Prison
 
 User = get_user_model()
+logger = logging.getLogger('mtp')
 
 
 class CreditTextSearchFilter(django_filters.CharFilter):
@@ -242,9 +244,11 @@ class CreditListFilter(django_filters.FilterSet):
         }
 
 
-class CreditViewMixin:
+class CreditViewMixin(object):
+    root_queryset = Credit.objects
+
     def get_queryset(self):
-        queryset = Credit.objects.all()
+        queryset = self.root_queryset.all()
         cashbook_client = self.request.auth.application.client_id == CASHBOOK_OAUTH_CLIENT_ID
 
         if self.request.user.has_perm('credit.view_any_credit') and not cashbook_client:
@@ -275,10 +279,19 @@ class GetCredits(CreditViewMixin, mixins.ListModelMixin, viewsets.GenericViewSet
         )
     )
 
-    def get_queryset(self, include_checks=False):
+    def get_queryset(self, include_checks=False, only_completed=False):
         q = super().get_queryset().select_related('transaction').select_related('payment__batch')
         if include_checks:
             q = q.select_related('security_check')
+        if only_completed:
+            if self.root_queryset != Credit.objects_all:
+                logger.warning('only_completed is only meaningful when using Credit.objects_all')
+            q = q.exclude(
+                resolution__in=(
+                    CREDIT_RESOLUTION.INITIAL,
+                    CREDIT_RESOLUTION.FAILED,
+                )
+            )
         return q
 
     def get_serializer_class(self):

@@ -16,6 +16,7 @@ from core.filters import (
 )
 from core.permissions import ActionsBasedPermissions
 from credit.constants import CREDIT_SOURCE
+from credit.models import Credit
 from credit.views import GetCredits
 from disbursement.views import GetDisbursementsView
 from mtp_auth.permissions import NomsOpsClientIDPermissions
@@ -208,10 +209,13 @@ class SenderProfileView(
 
 
 class SenderProfileCreditsView(GetCredits):
+    root_queryset = Credit.objects_all
+
     def list(self, request, sender_pk=None):
         include_checks = request.GET.get('include_checks', 'False').lower() == 'true'
+        only_completed = request.GET.get('only_completed', 'True').lower() == 'true'
         sender = get_object_or_404(SenderProfile, pk=sender_pk)
-        queryset = self.get_queryset(include_checks).filter(sender_profile=sender)
+        queryset = self.get_queryset(include_checks, only_completed).filter(sender_profile=sender)
         queryset = self.filter_queryset(queryset)
 
         page = self.paginate_queryset(queryset)
@@ -315,10 +319,13 @@ class PrisonerProfileView(
 
 
 class PrisonerProfileCreditsView(GetCredits):
+    root_queryset = Credit.objects_all
+
     def list(self, request, prisoner_pk=None):
         include_checks = request.GET.get('include_checks', 'False').lower() == 'true'
+        only_completed = request.GET.get('only_completed', 'True').lower() == 'true'
         prisoner = get_object_or_404(PrisonerProfile, pk=prisoner_pk)
-        queryset = self.get_queryset(include_checks).filter(prisoner_profile=prisoner)
+        queryset = self.get_queryset(include_checks, only_completed).filter(prisoner_profile=prisoner)
         queryset = self.filter_queryset(queryset)
 
         page = self.paginate_queryset(queryset)

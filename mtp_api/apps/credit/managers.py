@@ -118,6 +118,8 @@ class CreditManager(models.Manager):
         to_update.update(reviewed=True)
 
 
+# TODO Refactor this as it goes against django good practice
+# https://docs.djangoproject.com/en/2.0/topics/db/managers/#don-t-filter-away-any-results-in-this-type-of-manager-subclass  # noqa: E501
 class CompletedCreditManager(CreditManager):
     def get_queryset(self):
         return super().get_queryset().exclude(

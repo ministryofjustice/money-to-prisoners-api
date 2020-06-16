@@ -227,7 +227,9 @@ def save_payment(data, overrides=None):
     credit.save()
     data['credit'] = credit
 
-    return Payment.objects.create(**data)
+    payment = Payment.objects.create(**data)
+    credit.attach_profiles(ignore_credit_resolution=True)
+    return payment
 
 
 def generate_payment_logs(payments):
