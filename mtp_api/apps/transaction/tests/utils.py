@@ -254,7 +254,7 @@ def generate_transactions(
     return transactions
 
 
-def create_transactions(data_list, consistent_history=False):
+def create_transactions(data_list, consistent_history=False, overrides=None):
     owner_status_chooser = get_owner_and_status_chooser()
     transactions = []
     if consistent_history:
@@ -269,14 +269,15 @@ def create_transactions(data_list, consistent_history=False):
             owner_status_chooser
         )
     for transaction_counter, data in enumerate(data_list, start=1):
-        new_transaction = create_transaction(transaction_counter, data)
+        new_transaction = create_transaction(transaction_counter, data, overrides)
         transactions.append(new_transaction)
     generate_transaction_logs(transactions)
     return transactions
 
 
-def setup_historical_transaction(owner_status_chooser,
-                                 end_date, transaction_counter, data):
+def setup_historical_transaction(
+    owner_status_chooser, end_date, transaction_counter, data, overrides=None
+):
     if (data['category'] == TRANSACTION_CATEGORY.CREDIT and
             data['source'] == TRANSACTION_SOURCE.BANK_TRANSFER):
         is_valid = data.get('prison', None) and not data.get('incomplete_sender_info')
@@ -299,14 +300,17 @@ def setup_historical_transaction(owner_status_chooser,
             else:
                 data.update({'refunded': True})
 
+    if overrides:
+        data.update(overrides)
     with MockModelTimestamps(data['created'], data['modified']):
         new_transaction = save_transaction(data)
 
     return new_transaction
 
 
-def setup_transaction(owner_status_chooser,
-                      transaction_counter, data):
+def setup_transaction(
+    owner_status_chooser, transaction_counter, data, overrides=None
+):
     if data['category'] == TRANSACTION_CATEGORY.CREDIT:
         is_valid = data.get('prison', None) and not data.get('incomplete_sender_info')
 
@@ -328,6 +332,8 @@ def setup_transaction(owner_status_chooser,
             else:
                 data.update({'refunded': True})
 
+    if overrides:
+        data.update(overrides)
     with MockModelTimestamps(data['created'], data['modified']):
         new_transaction = save_transaction(data)
 

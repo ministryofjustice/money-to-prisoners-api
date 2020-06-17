@@ -97,21 +97,25 @@ def generate_initial_payment_data(tot=50, days_of_history=7):
     return data_list
 
 
-def generate_payments(payment_batch=50, consistent_history=False, days_of_history=7):
+def generate_payments(payment_batch=50, consistent_history=False, days_of_history=7, overrides=None):
     data_list = generate_initial_payment_data(
         tot=payment_batch,
         days_of_history=days_of_history
     )
-    return create_payments(data_list, consistent_history)
+    return create_payments(data_list, consistent_history, overrides)
 
 
-def create_payments(data_list, consistent_history=False):
+# TODO consistent_history doesn't seem to do anything, yet is provided by some calling functions...
+def create_payments(data_list, consistent_history=False, overrides=None):
     owner_status_chooser = get_owner_and_status_chooser()
     payments = []
     for payment_counter, data in enumerate(data_list, start=1):
         new_payment = setup_payment(
             owner_status_chooser,
-            latest_payment_date(), payment_counter, data
+            latest_payment_date(),
+            payment_counter,
+            data,
+            overrides
         )
         payments.append(new_payment)
 
@@ -134,27 +138,33 @@ def create_payments(data_list, consistent_history=False):
     return payments
 
 
-def setup_payment(owner_status_chooser, end_date, payment_counter, data):
+def setup_payment(owner_status_chooser, end_date, payment_counter, data, overrides=None):
     older_than_yesterday = (
         data['created'].date() < (end_date.date() - datetime.timedelta(days=1))
     )
-    if not bool(payment_counter % 11):  # 1 in 11 is expired
+    if overrides and overrides.get('status'):
+        data['status'] = overrides['status']
+    elif not bool(payment_counter % 11):  # 1 in 11 is expired
         data['status'] = PAYMENT_STATUS.EXPIRED
     elif not bool(payment_counter % 10):  # 1 in 10 is rejected
         data['status'] = PAYMENT_STATUS.REJECTED
     elif not bool(payment_counter % 4):  # 1 in 4ish is pending
         data['status'] = PAYMENT_STATUS.PENDING
+    else:  # otherwise it's taken
+        data['status'] = PAYMENT_STATUS.TAKEN
 
+    if data['status'] == PAYMENT_STATUS.PENDING:
         del data['cardholder_name']
         del data['card_number_first_digits']
         del data['card_number_last_digits']
         del data['card_expiry_date']
         del data['card_brand']
         del data['billing_address']
-    else:  # otherwise it's taken
+    elif data['status'] == PAYMENT_STATUS.TAKEN:
         owner, status = owner_status_chooser(data['prison'])
         data['processor_id'] = str(uuid.uuid1())
-        data['status'] = PAYMENT_STATUS.TAKEN
+        # TODO This is a horrible piece of implicit logic, can we please make it explicit
+        # or document it somewhere
         if older_than_yesterday:
             data.update({
                 'owner': owner,
@@ -166,13 +176,15 @@ def setup_payment(owner_status_chooser, end_date, payment_counter, data):
                 'credited': False
             })
 
+    if overrides:
+        data.update(overrides)
     with MockModelTimestamps(data['created'], data['modified']):
-        new_payment = save_payment(data)
+        new_payment = save_payment(data, overrides)
 
     return new_payment
 
 
-def save_payment(data):
+def save_payment(data, overrides=None):
     is_taken = data['status'] == PAYMENT_STATUS.TAKEN
     if is_taken:
         if data.pop('credited', False):
@@ -197,7 +209,7 @@ def save_payment(data):
         billing_address = BillingAddress.objects.create(**billing_address)
         data['billing_address'] = billing_address
 
-    credit = Credit(
+    credit_data = dict(
         amount=data['amount'],
         prisoner_dob=prisoner_dob,
         prisoner_number=prisoner_number,
@@ -209,10 +221,15 @@ def save_payment(data):
         received_at=None if not is_taken else data['created'],
         resolution=resolution,
     )
+    if overrides:
+        credit_data.update(overrides.get('credit', {}))
+    credit = Credit(**credit_data)
     credit.save()
     data['credit'] = credit
 
-    return Payment.objects.create(**data)
+    payment = Payment.objects.create(**data)
+    credit.attach_profiles(ignore_credit_resolution=True)
+    return payment
 
 
 def generate_payment_logs(payments):

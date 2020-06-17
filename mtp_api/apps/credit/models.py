@@ -55,6 +55,8 @@ class Credit(TimeStampedModel):
 
     sender_profile = models.ForeignKey('security.SenderProfile', related_name='credits', blank=True, null=True,
                                        on_delete=models.SET_NULL)
+    is_counted_in_sender_profile_total = models.BooleanField(default=False)
+    is_counted_in_prisoner_profile_total = models.BooleanField(default=False)
     prisoner_profile = models.ForeignKey('security.PrisonerProfile', related_name='credits', blank=True, null=True,
                                          on_delete=models.SET_NULL)
 
@@ -139,6 +141,91 @@ class Credit(TimeStampedModel):
             credit=self,
             by_user=by_user
         )
+
+    def attach_profiles(self, ignore_credit_resolution=False):
+        from security.models import PrisonerProfile, SenderProfile
+        assert ignore_credit_resolution or self.resolution != CREDIT_RESOLUTION.FAILED, \
+            'Do not attach profiles for failed credits outside of test setup'
+
+        if not self.prisoner_profile and self.prison and self.prisoner_name:
+            self.prisoner_profile = PrisonerProfile.objects.create_or_update_for_credit(self)
+        if not self.sender_profile and self.has_enough_detail_for_sender_profile():
+            self.sender_profile = SenderProfile.objects.create_or_update_for_credit(self)
+        if self.resolution != CREDIT_RESOLUTION.FAILED and self.prisoner_profile and self.sender_profile:
+            # Annoyingly we still have to add this resolution clause for test setup, due to the fact that our test setup
+            # does not go through the realistic state mutation properly, simply creating entities in their final state
+            self.prisoner_profile.add_sender(self.sender_profile)
+
+        if not self.prisoner_profile:
+            logger.info(
+                'Could not create PrisonerProfile for credit %s because Credit lacked either a prison or '
+                'prisoner name',
+                self
+            )
+        if not self.sender_profile:
+            logger.info(
+                'Could not create SenderProfile for credit %s because Credit lacked necessary information',
+                self
+            )
+
+    def update_profiles_on_failed_state(self):
+        # If a credit moves into failed after being linked to prisoner/sender profiles (at least one use case for this
+        # , namely a payment being rejected by FIU) and there are now no completed credits linking prisoner profile
+        # and sender profile, we remove the association
+        if not self.sender_profile_id:
+            return
+        if self.prisoner_profile_id:
+            sender_prisoner_valid_credit_count = Credit.objects.filter(
+                sender_profile_id=self.sender_profile_id,
+                prisoner_profile_id=self.prisoner_profile_id,
+            ).exclude(
+                id=self.id
+            ).count()
+            if sender_prisoner_valid_credit_count == 0:
+                self.prisoner_profile.remove_sender(self.sender_profile)
+        if self.prison_id:
+            sender_prison_valid_credit_count = Credit.objects.filter(
+                sender_profile_id=self.sender_profile_id,
+                prison_id=self.prison_id,
+            ).exclude(
+                id=self.id
+            ).count()
+            if sender_prison_valid_credit_count == 0:
+                self.sender_profile.remove_prison(self.prison)
+
+    def should_check(self):
+        from credit.constants import CREDIT_RESOLUTION
+        from payment.constants import PAYMENT_STATUS
+
+        if self.resolution != CREDIT_RESOLUTION.INITIAL:
+            # it's too late once credits reach any other resolution
+            return False
+        if self.source != CREDIT_SOURCE.ONLINE:
+            # checks only apply to debit card payments
+            return False
+        if self.payment.status != PAYMENT_STATUS.PENDING:
+            # payment must be pending for checks to apply
+            return False
+
+        return self.has_enough_detail_for_sender_profile()
+
+    def has_enough_detail_for_sender_profile(self):
+        if self.source == CREDIT_SOURCE.ONLINE:
+            return all(
+                getattr(self.payment, field)
+                for field in (
+                    'email', 'cardholder_name',
+                    'card_number_first_digits', 'card_number_last_digits', 'card_expiry_date',
+                    'billing_address',
+                )
+            )
+        elif self.source == CREDIT_SOURCE.BANK_TRANSFER:
+            return all(
+                getattr(self.transaction, field)
+                for field in (
+                    'sender_name', 'sender_sort_code', 'sender_account_number'
+                )
+            )
 
     @property
     def source(self):
@@ -441,6 +528,7 @@ def credit_set_manual_receiver(credit, by_user, **kwargs):
 
 @receiver(credit_failed)
 def credit_failed_receiver(credit, **kwargs):
+    credit.update_profiles_on_failed_state()
     Log.objects.credits_failed([credit])
 
 

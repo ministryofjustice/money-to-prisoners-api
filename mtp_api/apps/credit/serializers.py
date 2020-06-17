@@ -148,6 +148,30 @@ class SecurityCreditSerializer(CreditSerializer):
             return None
 
 
+class CreditCheckSerializer(CreditSerializer):
+    from security.serializers import CheckSerializer
+
+    security_check = CheckSerializer()
+
+    class Meta:
+        model = Credit
+        fields = CreditSerializer.Meta.fields + (
+            'security_check',
+        )
+
+
+class SecurityCreditCheckSerializer(SecurityCreditSerializer):
+    from security.serializers import CheckSerializer
+
+    security_check = CheckSerializer()
+
+    class Meta:
+        model = Credit
+        fields = SecurityCreditSerializer.Meta.fields + (
+            'security_check',
+        )
+
+
 class ProcessingBatchSerializer(serializers.ModelSerializer):
     expired = serializers.BooleanField(read_only=True)
 

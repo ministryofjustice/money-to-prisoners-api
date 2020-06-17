@@ -119,7 +119,7 @@ class CreditListTestCase(
         )
         amount_pattern_checker = self._get_amount_pattern_checker(filters, noop_checker)
         valid_checker = self._get_valid_checker(filters, noop_checker)
-        pk_checker = self._get_multivalue_attribute_checker('pk', filters, noop_checker)
+        pk_checker = self._get_primary_key_checker(filters, noop_checker)
 
         expected_ids = [
             c.pk
@@ -177,6 +177,14 @@ class CreditListTestCase(
                 return lambda c: filters[filter_name].lower() in getattr_path(c, attribute_path, '').lower()
             return lambda c: getattr_path(c, attribute_path) == filters[filter_name]
         return noop_checker
+
+    def _get_primary_key_checker(self, filters, noop_checker, text_search=False):
+        if 'exclude_credit__in' in filters:
+            excluded_pks = filters['exclude_credit__in']
+            if type(excluded_pks) is not list:
+                excluded_pks = [excluded_pks]
+            return lambda c: c.id not in excluded_pks
+        return self._get_multivalue_attribute_checker('pk', filters, noop_checker, text_search)
 
     def _get_prison_type_checker(self, filter_name, list_attribute_path, filters, noop_checker):
         if filters.get(filter_name):
@@ -351,6 +359,13 @@ class CreditListWithDefaultsTestCase(CreditListTestCase):
                 search.append(credit.pk)
         self._test_response_with_filters({
             'pk': search
+        })
+
+    def test_exclude_credit__in(self):
+        credits = self.credits.copy()
+        credit_to_exclude = credits.pop(0)
+        self._test_response_with_filters({
+            'exclude_credit__in': [credit_to_exclude.id]
         })
 
 

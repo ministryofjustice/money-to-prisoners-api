@@ -239,9 +239,9 @@ class CreditCheckTestCase(TestCase):
         generate_payments()
 
         for credit in Credit.objects.credit_pending():
-            self.assertFalse(Check.objects.should_check_credit(credit))
+            self.assertFalse(credit.should_check())
         for credit in Credit.objects.credited():
-            self.assertFalse(Check.objects.should_check_credit(credit))
+            self.assertFalse(credit.should_check())
 
     def test_will_not_check_transactions(self):
         make_test_users(clerks_per_prison=1)
@@ -249,13 +249,13 @@ class CreditCheckTestCase(TestCase):
         generate_transactions(consistent_history=True)
 
         for credit in Credit.objects.credit_pending():
-            self.assertFalse(Check.objects.should_check_credit(credit))
+            self.assertFalse(credit.should_check())
         for credit in Credit.objects.credited():
-            self.assertFalse(Check.objects.should_check_credit(credit))
+            self.assertFalse(credit.should_check())
         for credit in Credit.objects.refund_pending():
-            self.assertFalse(Check.objects.should_check_credit(credit))
+            self.assertFalse(credit.should_check())
         for credit in Credit.objects.refunded():
-            self.assertFalse(Check.objects.should_check_credit(credit))
+            self.assertFalse(credit.should_check())
 
     def test_will_not_check_non_pending_payments(self):
         make_test_users(clerks_per_prison=1)
@@ -266,7 +266,7 @@ class CreditCheckTestCase(TestCase):
         credit.resolution = CREDIT_RESOLUTION.INITIAL
         credit.payment.status = PAYMENT_STATUS.FAILED
         credit.save()
-        self.assertFalse(Check.objects.should_check_credit(credit))
+        self.assertFalse(credit.should_check())
 
     def _make_candidate_credit(self):
         make_test_users(clerks_per_prison=1)
@@ -274,8 +274,6 @@ class CreditCheckTestCase(TestCase):
         generate_payments(10)
         call_command('update_security_profiles')
         credit = Credit.objects.credited().first()
-        credit.prisoner_profile = None
-        credit.sender_profile = None
         credit.owner = None
         credit.resolution = CREDIT_RESOLUTION.INITIAL
         payment = credit.payment
@@ -291,11 +289,11 @@ class CreditCheckTestCase(TestCase):
         payment.card_expiry_date = None
         payment.cardholder_name = None
         payment.card_brand = None
-        self.assertFalse(Check.objects.should_check_credit(credit))
+        self.assertFalse(credit.should_check())
 
     def test_credit_checked_with_no_matching_rules(self):
         credit = self._make_candidate_credit()
-        self.assertTrue(Check.objects.should_check_credit(credit))
+        self.assertTrue(credit.should_check())
         check = Check.objects.create_for_credit(credit)
         self.assertEqual(check.status, CHECK_STATUS.ACCEPTED)
         self.assertIn('automatically accepted', check.description)
@@ -309,7 +307,7 @@ class CreditCheckTestCase(TestCase):
         fiu_user = fiu_group.user_set.first()
         prisoner_profile.monitoring_users.add(fiu_user)
         sender_profile.debit_card_details.first().monitoring_users.add(fiu_user)
-        self.assertTrue(Check.objects.should_check_credit(credit))
+        self.assertTrue(credit.should_check())
         check = Check.objects.create_for_credit(credit)
         self.assertEqual(check.status, CHECK_STATUS.PENDING)
         self.assertIn('FIU prisoners', check.description)
@@ -326,7 +324,7 @@ class CreditCheckTestCase(TestCase):
         fiu_user = fiu_group.user_set.first()
         prisoner_profile.monitoring_users.add(fiu_user)
         sender_profile.debit_card_details.first().monitoring_users.add(fiu_user)
-        self.assertTrue(Check.objects.should_check_credit(credit))
+        self.assertTrue(credit.should_check())
         check = Check.objects.create_for_credit(credit)
         self.assertEqual(check.status, CHECK_STATUS.PENDING)
         self.assertIn('FIU prisoners', check.description)
@@ -386,6 +384,7 @@ class AutomaticCreditCheckTestCase(APITestCase, AuthTestCaseMixin):
             format='json', HTTP_AUTHORIZATION=auth_header,
         )
         payment = response.json()
+        self.assertQuerysetEqual(Check.objects.filter(credit__payment__uuid=payment['uuid']), [])
 
         payment_update = {
             'email': 'sender@outside.local',
@@ -412,3 +411,57 @@ class AutomaticCreditCheckTestCase(APITestCase, AuthTestCaseMixin):
         self.assertEqual(payment.status, PAYMENT_STATUS.PENDING)
         self.assertEqual(payment.credit.resolution, CREDIT_RESOLUTION.INITIAL)
         self.assertTrue(hasattr(payment.credit, 'security_check'))
+        self.assertEqual(payment.credit.security_check.status, CHECK_STATUS.ACCEPTED)
+
+    def test_pending_check_created_for_monitored_user(self):
+        """
+        Ensures that a payment updated by send-money will automatically create a pending check for monitored prisoner
+        """
+        fiu_group = Group.objects.get(name='FIU')
+        fiu_user = fiu_group.user_set.first()
+        prisoner_profile, _ = PrisonerProfile.objects.get_or_create(prisoner_number='A1409AE')
+        prisoner_profile.monitoring_users.add(fiu_user)
+        prisoner_profile.save()
+
+        auth_header = self.get_http_authorization_for_user(self.send_money_user)
+        new_payment = {
+            'amount': 1255,
+            'service_charge': 0,
+            'recipient_name': 'James Halls',
+            'prisoner_number': 'A1409AE',
+            'prisoner_dob': '1989-01-21',
+            'ip_address': '127.0.0.1',
+        }
+        response = self.client.post(
+            reverse('payment-list'), data=new_payment,
+            format='json', HTTP_AUTHORIZATION=auth_header,
+        )
+        payment = response.json()
+        self.assertQuerysetEqual(Check.objects.filter(credit__payment__uuid=payment['uuid']), [])
+
+        payment_update = {
+            'email': 'sender@outside.local',
+            'worldpay_id': '12345',
+            'cardholder_name': 'Mary Halls',
+            'card_number_first_digits': '111122',
+            'card_number_last_digits': '8888',
+            'card_expiry_date': '10/20',
+            'card_brand': 'Visa',
+            'billing_address': {
+                'line1': '62 Petty France',
+                'line2': '',
+                'city': 'London',
+                'country': 'UK',
+                'postcode': 'SW1H 9EU'
+            },
+        }
+        response = self.client.patch(
+            reverse('payment-detail', args=[payment['uuid']]), data=payment_update,
+            format='json', HTTP_AUTHORIZATION=auth_header,
+        )
+        payment = response.json()
+        payment = Payment.objects.get(uuid=payment['uuid'])
+        self.assertEqual(payment.status, PAYMENT_STATUS.PENDING)
+        self.assertEqual(payment.credit.resolution, CREDIT_RESOLUTION.INITIAL)
+        self.assertTrue(hasattr(payment.credit, 'security_check'))
+        self.assertEqual(payment.credit.security_check.status, CHECK_STATUS.PENDING)

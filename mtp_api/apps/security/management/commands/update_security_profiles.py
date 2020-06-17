@@ -3,6 +3,7 @@ import logging
 from django.db.transaction import atomic
 from django.core.management import BaseCommand, CommandError
 
+from credit.constants import CREDIT_RESOLUTION
 from credit.models import Credit
 from disbursement.constants import DISBURSEMENT_RESOLUTION
 from disbursement.models import Disbursement
@@ -45,64 +46,104 @@ class Command(BaseCommand):
             PrisonerProfile.objects.update_current_prisons()
 
     def handle_credit_update(self, batch_size):
-        new_credits = Credit.objects.filter(sender_profile__isnull=True).order_by('pk')
-        new_credits_count = new_credits.count()
-        if not new_credits_count:
-            self.stdout.write(self.style.SUCCESS('No new credits'))
+        # TODO Remove below function once the logs show that it consistently
+        # does not operate on any credits, and once bank transfers have been deprecated
+        self.handle_profile_attachment_for_legacy_credits(batch_size)
+        self.handle_credit_update_for_attached_prisoner_profiles(batch_size)
+        self.handle_credit_update_for_attached_sender_profiles(batch_size)
+
+    def handle_profile_attachment_for_legacy_credits(self, batch_size):
+        # Implicit filter on resolution not in initial / failed through CompletedCreditManager.get_queryset()
+        new_credits = Credit.objects.filter(
+            sender_profile__isnull=True
+        ).order_by('pk')
+        self.batch_and_execute_entity_calculation(
+            new_credits, 'new credits', self.attach_profiles_for_legacy_credits, batch_size
+        )
+
+    def handle_credit_update_for_attached_prisoner_profiles(self, batch_size):
+        # Now that we have the association between prisoner_profile/prisoner_profile populated, it makes sense to run
+        # this job once per prisoner/prisoner profile instead of once per credit
+
+        # The reason why we're using is_counted_in_sender_profile_total is because sender_profile will always be able
+        # to be associated, therefore if the sender profile is not associated we know it also needs a prisoner profile
+        prisoner_profiles = PrisonerProfile.objects.filter(
+            credits__is_counted_in_prisoner_profile_total=False,
+            credits__resolution=CREDIT_RESOLUTION.CREDITED
+        ).order_by('pk').values_list('pk', flat=True)
+        self.batch_and_execute_entity_calculation(
+            prisoner_profiles, 'prisoner profiles', self.calculate_credit_totals_for_prisoner_profiles, batch_size,
+            granular_entity='credits'
+        )
+
+    def handle_credit_update_for_attached_sender_profiles(self, batch_size):
+        # Now that we have the association between sender_profile/sender_profile populated, it makes sense to run
+        # this job once per sender/sender profile instead of once per credit
+        sender_profiles = SenderProfile.objects.filter(
+            credits__is_counted_in_sender_profile_total=False,
+            credits__resolution=CREDIT_RESOLUTION.CREDITED
+        ).order_by('pk').values_list('pk', flat=True)
+        self.batch_and_execute_entity_calculation(
+            sender_profiles, 'sender profiles', self.calculate_credit_totals_for_sender_profiles, batch_size,
+            granular_entity='credits'
+        )
+
+    def batch_and_execute_entity_calculation(
+        self, entities, entity_model_name_plural, calculate_entity_totals_fn, batch_size, granular_entity=None
+    ):
+        def chunker(initial, n):
+            """Yield successive n-sized chunks from lst."""
+            for i in range(0, len(initial), n):
+                yield initial[i:i + n]
+
+        entities_count = entities.count()
+        if not entities_count:
+            self.stdout.write(self.style.SUCCESS(f'No {entity_model_name_plural} require updating'))
             return
         else:
-            self.stdout.write(f'Updating profiles for (at least) {new_credits_count} new credits')
+            self.stdout.write(f'Updating {entities_count} {entity_model_name_plural}')
 
-        processed_count = 0
-        while True:
-            count = self.process_credit_batch(new_credits[0:batch_size])
-            if count == 0:
-                break
-            processed_count += count
-            self.stdout.write(f'Processed {processed_count} credits')
+        # We prefetch the query and load into memory to avoid any infinite loops.
+        for entity_slice in list(chunker(entities, batch_size)):
+            count = calculate_entity_totals_fn(entity_slice)
+            processed_log_msg = f'Processed {batch_size} {entity_model_name_plural}'
+            if granular_entity:
+                processed_log_msg += f' for {count} new {granular_entity}'
+            self.stdout.write(processed_log_msg)
 
-        self.stdout.write(self.style.SUCCESS('Processed all credits'))
+        self.stdout.write(self.style.SUCCESS(f'Updated all {entity_model_name_plural}'))
 
     def handle_disbursement_update(self, batch_size):
         new_disbursements = Disbursement.objects.filter(
             recipient_profile__isnull=True,
             resolution=DISBURSEMENT_RESOLUTION.SENT,
         ).order_by('pk')
-        new_disbursements_count = new_disbursements.count()
-        if not new_disbursements_count:
-            self.stdout.write(self.style.SUCCESS('No new disbursements'))
-            return
-        else:
-            self.stdout.write(f'Updating profiles for (at least) {new_disbursements_count} new disbursements')
-
-        processed_count = 0
-        while True:
-            count = self.process_disbursement_batch(new_disbursements[0:batch_size])
-            if count == 0:
-                break
-            processed_count += count
-            self.stdout.write(f'Processed {processed_count} disbursements')
-
-        self.stdout.write(self.style.SUCCESS('Processed all disbursements'))
+        self.batch_and_execute_entity_calculation(
+            new_disbursements, 'disbursements', self.process_disbursement_batch, batch_size
+        )
 
     @atomic()
-    def process_credit_batch(self, new_credits):
-        sender_profiles = []
-        prisoner_profiles = []
+    def attach_profiles_for_legacy_credits(self, new_credits):
         for credit in new_credits:
-            self.create_or_update_profiles_for_credit(credit)
-            if credit.sender_profile:
-                sender_profiles.append(credit.sender_profile.pk)
-            if credit.prisoner_profile:
-                prisoner_profiles.append(credit.prisoner_profile.pk)
+            credit.attach_profiles()
+        return len(new_credits)
 
-        SenderProfile.objects.filter(
-            pk__in=sender_profiles
-        ).recalculate_credit_totals()
-        PrisonerProfile.objects.filter(
+    @atomic()
+    def calculate_credit_totals_for_prisoner_profiles(self, prisoner_profiles):
+        new_credits = PrisonerProfile.objects.filter(
             pk__in=prisoner_profiles
         ).recalculate_credit_totals()
+        return len(new_credits)
 
+    @atomic()
+    def calculate_credit_totals_for_sender_profiles(self, sender_profiles):
+        new_credits = SenderProfile.objects.filter(
+            pk__in=sender_profiles
+        ).recalculate_credit_totals()
+
+        # The reason why we dispatched notifications on calculation of sender total and not prisoner is because we
+        # don't want to duplicate notifications and because we know that a credit will always
+        # have a sender, but potentially may not have a prisoner associated.
         create_notification_events(records=new_credits)
         return len(new_credits)
 
@@ -126,12 +167,6 @@ class Command(BaseCommand):
 
         create_notification_events(records=new_disbursements)
         return len(new_disbursements)
-
-    def create_or_update_profiles_for_credit(self, credit):
-        sender_profile = SenderProfile.objects.create_or_update_for_credit(credit)
-        if credit.prison:
-            prisoner_profile = PrisonerProfile.objects.create_or_update_for_credit(credit)
-            prisoner_profile.senders.add(sender_profile)
 
     def create_or_update_profiles_for_disbursement(self, disbursement):
         recipient_profile = RecipientProfile.objects.create_or_update_for_disbursement(disbursement)

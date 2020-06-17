@@ -23,6 +23,7 @@ from notification.management.commands.send_notification_emails import (
 from notification.models import Event, EmailNotificationPreferences
 from notification.rules import RULES
 from notification.tests.utils import make_sender, make_prisoner, make_csfreq_credits
+from payment.constants import PAYMENT_STATUS
 from payment.models import Payment
 from payment.tests.utils import generate_payments
 from prison.models import PrisonerLocation
@@ -35,7 +36,10 @@ class NotificationBaseTestCase(TestCase):
 
     def create_profiles_but_unlink_objects(self):
         call_command('update_security_profiles')
-        Credit.objects.update(sender_profile=None, prisoner_profile=None)
+        Credit.objects.update(
+            is_counted_in_sender_profile_total=False,
+            is_counted_in_prisoner_profile_total=False
+        )
         Disbursement.objects.update(recipient_profile=None, prisoner_profile=None)
         # NB: profiles will have incorrect counts and totals
 
@@ -46,8 +50,11 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
         test_users = make_test_users()
         self.security_staff = test_users['security_staff']
         load_random_prisoner_locations()
-        generate_payments(payment_batch=20, days_of_history=2)
-        generate_disbursements(disbursement_batch=20, days_of_history=2)
+        generate_payments(
+            payment_batch=20, days_of_history=2,
+            overrides={'status': PAYMENT_STATUS.TAKEN, 'credited': True}
+        )
+        generate_disbursements(disbursement_batch=20, days_of_history=1)
 
     @override_settings(ENVIRONMENT='prod')
     def test_does_not_send_email_notifications_for_no_events(self):
@@ -147,7 +154,9 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
             prisoner_number=prisoner_profile_1.prisoner_number, prisoner_name=prisoner_profile_1.prisoner_name,
             prison=PrisonerLocation.objects.get(prisoner_number=prisoner_profile_1.prisoner_number).prison,
             resolution=CREDIT_RESOLUTION.CREDITED, reconciled=True, private_estate_batch=None,
-            prisoner_profile=None, sender_profile=None,
+            prisoner_profile=prisoner_profile_1, sender_profile=sender_profile_1,
+            is_counted_in_prisoner_profile_total=False,
+            is_counted_in_sender_profile_total=False
         )
         mommy.make(
             Payment,
@@ -162,7 +171,9 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
             prisoner_number=prisoner_profile_2.prisoner_number, prisoner_name=prisoner_profile_2.prisoner_name,
             prison=PrisonerLocation.objects.get(prisoner_number=prisoner_profile_2.prisoner_number).prison,
             resolution=CREDIT_RESOLUTION.CREDITED, reconciled=True, private_estate_batch=None,
-            prisoner_profile=None, sender_profile=None,
+            prisoner_profile=prisoner_profile_2, sender_profile=sender_profile_2,
+            is_counted_in_prisoner_profile_total=False,
+            is_counted_in_sender_profile_total=False
         )
         mommy.make(
             Payment,

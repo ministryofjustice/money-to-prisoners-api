@@ -6,8 +6,11 @@ from django.core.management import BaseCommand, call_command
 
 from account.models import Balance
 from core.tests.utils import (
+    create_super_admin,
     give_superusers_full_access,
-    make_test_users, make_test_user_admins, make_token_retrieval_user,
+    make_test_users,
+    make_test_user_admins,
+    make_token_retrieval_user,
 )
 from credit.models import Credit
 from disbursement.models import Disbursement
@@ -17,11 +20,12 @@ from payment.tests.utils import generate_payments
 from performance.tests.utils import generate_digital_takeup
 from prison.models import Prison
 from prison.tests.utils import load_prisoner_locations_from_file, load_random_prisoner_locations
-from security.models import (
-    SenderProfile, PrisonerProfile, SavedSearch, RecipientProfile
-)
+from security.tests.utils import generate_checks
+from security.models import Check, PrisonerProfile, RecipientProfile, SavedSearch, SenderProfile
 from transaction.models import Transaction
 from transaction.tests.utils import generate_transactions
+
+User = get_user_model()
 
 
 class Command(BaseCommand):
@@ -32,8 +36,8 @@ class Command(BaseCommand):
     help = textwrap.dedent(__doc__).strip()
 
     def add_arguments(self, parser):
-        parser.add_argument('--protect-superusers', action='store_true',
-                            help='Prevents superusers from being deleted')
+        parser.add_argument('--no-protect-superusers', action='store_true',
+                            help='Dont prevent superusers from being deleted')
         parser.add_argument('--protect-usernames', nargs='*',
                             help='Prevents specific usernames being deleted')
         parser.add_argument('--protect-credits', action='store_true',
@@ -57,6 +61,8 @@ class Command(BaseCommand):
                             help='Number of new payments to create')
         parser.add_argument('--number-of-disbursements', default=50, type=int,
                             help='Number of new disbursements to create')
+        parser.add_argument('--number-of-checks', default=10, type=int,
+                            help='Number of new security checks to create')
         parser.add_argument('--digital-takeup', action='store_true',
                             help='Generate digital take-up')
         parser.add_argument('--days-of-history', default=7, type=int,
@@ -67,7 +73,7 @@ class Command(BaseCommand):
             return self.handle_prod(**options)
 
         verbosity = options.get('verbosity', 1)
-        protect_superusers = options['protect_superusers']
+        no_protect_superusers = options['no_protect_superusers']
         protect_usernames = options['protect_usernames']
         protect_credits = options['protect_credits']
         prisons = options['prisons']
@@ -90,9 +96,10 @@ class Command(BaseCommand):
             SavedSearch.objects.all().delete()
             Disbursement.objects.all().delete()
             RecipientProfile.objects.all().delete()
+            Check.objects.all().delete()
 
         user_set = get_user_model().objects.exclude(username__in=protect_usernames or [])
-        if protect_superusers:
+        if not no_protect_superusers:
             user_set = user_set.exclude(is_superuser=True)
         print_message('Deleting %d users' % user_set.count())
         user_set.delete()
@@ -113,6 +120,7 @@ class Command(BaseCommand):
         call_command('loaddata', *fixtures, verbosity=verbosity)
 
         print_message('Giving super users full API access')
+        create_super_admin(self.stdout, self.style.SUCCESS)
         give_superusers_full_access()
 
         print_message('Making test users')
@@ -134,6 +142,7 @@ class Command(BaseCommand):
         number_of_transactions = options['number_of_transactions']
         number_of_payments = options['number_of_payments']
         number_of_disbursements = options['number_of_disbursements']
+        number_of_checks = options['number_of_checks']
         days_of_history = options['days_of_history']
         if credits == 'random':
             print_message('Generating random credits')
@@ -159,6 +168,10 @@ class Command(BaseCommand):
             disbursement_batch=number_of_disbursements,
             days_of_history=days_of_history
         )
+        generate_checks(
+            number_of_checks=number_of_checks
+        )
+
         call_command('update_security_profiles')
 
         digital_takeup = options['digital_takeup']

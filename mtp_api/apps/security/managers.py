@@ -1,7 +1,7 @@
 import logging
 
 from django.db import connection, models, transaction
-from django.db.models import Count, Sum, Subquery, OuterRef
+from django.db.models import Count, Sum, Subquery, OuterRef, Q
 from django.db.models.functions import Coalesce
 
 logger = logging.getLogger('mtp')
@@ -35,7 +35,6 @@ class PrisonerProfileManager(models.Manager):
         return self.get(prisoner_number=disbursement.prisoner_number)
 
     def create_or_update_for_credit(self, credit):
-        assert not credit.prisoner_profile, 'Prisoner profile already linked'
         assert credit.prison, 'Credit does not have a known prisoner'
 
         prisoner_profile, _ = self.update_or_create(
@@ -51,9 +50,11 @@ class PrisonerProfileManager(models.Manager):
             if not prisoner_profile.provided_names.filter(name=provided_name).exists():
                 prisoner_profile.provided_names.create(name=provided_name)
 
-        prisoner_profile.prisons.add(credit.prison)
+        if credit.prison not in prisoner_profile.prisons.all():
+            prisoner_profile.add_prison(credit.prison)
         credit.prisoner_profile = prisoner_profile
         credit.save()
+        logger.info('Attached prisoner profile %s to credit %s', prisoner_profile, credit)
         return prisoner_profile
 
     def create_or_update_for_disbursement(self, disbursement):
@@ -77,7 +78,7 @@ class PrisonerProfileManager(models.Manager):
             prisoner_number=disbursement.prisoner_number,
             defaults=prisoner_profile_defaults,
         )
-        prisoner_profile.prisons.add(disbursement.prison)
+        prisoner_profile.add_prison(disbursement.prison)
         disbursement.prisoner_profile = prisoner_profile
         disbursement.save()
         return prisoner_profile
@@ -129,8 +130,7 @@ class SenderProfileManager(models.Manager):
         )
 
     def create_or_update_for_credit(self, credit):
-        assert not credit.sender_profile, 'Sender profile already linked'
-
+        from credit.constants import CREDIT_RESOLUTION
         if hasattr(credit, 'transaction'):
             sender_profile = self._create_or_update_for_bank_transfer(credit)
         elif hasattr(credit, 'payment'):
@@ -139,10 +139,17 @@ class SenderProfileManager(models.Manager):
             logger.error(f'Credit {credit.pk} does not have a payment nor transaction')
             sender_profile = self.get_or_create_anonymous_sender()
 
-        if credit.prison:
-            sender_profile.prisons.add(credit.prison)
+        # Annoyingly we still have to add this resolution clause for test setup, due to the fact that our test setup
+        # does not go through the realistic state mutation properly, simply creating entities in their final state
+        if (
+            credit.prison
+            and credit.resolution != CREDIT_RESOLUTION.FAILED
+            and credit.prison not in sender_profile.prisons.all()
+        ):
+            sender_profile.add_prison(credit.prison)
         credit.sender_profile = sender_profile
         credit.save()
+        logger.info('Attached sender profile %s to credit %s', sender_profile, credit)
         return sender_profile
 
     def _create_or_update_for_bank_transfer(self, credit):
@@ -253,6 +260,8 @@ class PrisonerProfileQuerySet(models.QuerySet):
         self.recalculate_disbursement_totals()
 
     def recalculate_credit_totals(self):
+        from credit.constants import CREDIT_RESOLUTION
+        from credit.models import Credit
         from security.models import PrisonerProfile
 
         self.update(
@@ -260,17 +269,34 @@ class PrisonerProfileQuerySet(models.QuerySet):
                 PrisonerProfile.objects.filter(
                     id=OuterRef('id'),
                 ).annotate(
-                    calculated=Count('credits', distinct=True)
+                    calculated=Count(
+                        'credits',
+                        distinct=True,
+                        filter=Q(credits__resolution=CREDIT_RESOLUTION.CREDITED)
+                    )
                 ).values('calculated')[:1]
             ), 0),
             credit_total=Coalesce(Subquery(
                 PrisonerProfile.objects.filter(
                     id=OuterRef('id'),
                 ).annotate(
-                    calculated=Sum('credits__amount')
+                    calculated=Sum(
+                        'credits__amount',
+                        filter=Q(credits__resolution=CREDIT_RESOLUTION.CREDITED)
+                    )
                 ).values('calculated')[:1]
             ), 0),
         )
+        new_credits = Credit.objects.filter(
+            prisoner_profile__in=self,
+            resolution=CREDIT_RESOLUTION.CREDITED,
+            is_counted_in_prisoner_profile_total=False
+        )
+        new_credits_ids = [c.id for c in new_credits]
+        new_credits.update(is_counted_in_prisoner_profile_total=True)
+        # This is kinda grim, but I don't like the idea of passing around stale
+        # objects. If anyone can think of a nicer way to do these please feel free to refactor
+        return Credit.objects.filter(id__in=new_credits_ids)
 
     def recalculate_disbursement_totals(self):
         from security.models import PrisonerProfile
@@ -298,6 +324,8 @@ class SenderProfileQuerySet(models.QuerySet):
         self.recalculate_credit_totals()
 
     def recalculate_credit_totals(self):
+        from credit.constants import CREDIT_RESOLUTION
+        from credit.models import Credit
         from security.models import SenderProfile
 
         self.update(
@@ -305,17 +333,34 @@ class SenderProfileQuerySet(models.QuerySet):
                 SenderProfile.objects.filter(
                     id=OuterRef('id'),
                 ).annotate(
-                    calculated=Count('credits', distinct=True)
+                    calculated=Count(
+                        'credits',
+                        distinct=True,
+                        filter=Q(credits__resolution=CREDIT_RESOLUTION.CREDITED)
+                    )
                 ).values('calculated')[:1]
             ), 0),
             credit_total=Coalesce(Subquery(
                 SenderProfile.objects.filter(
                     id=OuterRef('id'),
                 ).annotate(
-                    calculated=Sum('credits__amount')
+                    calculated=Sum(
+                        'credits__amount',
+                        filter=Q(credits__resolution=CREDIT_RESOLUTION.CREDITED)
+                    )
                 ).values('calculated')[:1]
             ), 0),
         )
+        new_credits = Credit.objects.filter(
+            sender_profile__in=self,
+            resolution=CREDIT_RESOLUTION.CREDITED,
+            is_counted_in_sender_profile_total=False
+        )
+        new_credits_ids = [c.id for c in new_credits]
+        new_credits.update(is_counted_in_sender_profile_total=True)
+        # This is kinda grim, but I don't like the idea of passing around stale
+        # objects. If anyone can think of a nicer way to do these please feel free to refactor
+        return Credit.objects.filter(id__in=new_credits_ids)
 
 
 class RecipientProfileQuerySet(models.QuerySet):
@@ -346,45 +391,11 @@ class RecipientProfileQuerySet(models.QuerySet):
 class CheckManager(models.Manager):
     ENABLED_RULE_CODES = ('FIUMONP', 'FIUMONS', 'CSFREQ', 'CSNUM', 'CPNUM')
 
-    def should_check_credit(self, credit):
-        from credit.constants import CREDIT_RESOLUTION
-        from payment.constants import PAYMENT_STATUS
-
-        if credit.resolution != CREDIT_RESOLUTION.INITIAL:
-            # it's too late once credits reach any other resolution
-            return False
-        if not hasattr(credit, 'payment'):
-            # checks only apply to debit card payments
-            return False
-        if credit.payment.status != PAYMENT_STATUS.PENDING:
-            # payment must be pending for checks to apply
-            return False
-
-        return self._credit_has_enough_detail(credit)
-
-    def _credit_has_enough_detail(self, credit):
-        if credit.sender_profile and credit.prisoner_profile:
-            # NB: currently, profiles cannot yet be attached to credits that are "initial"
-            return True
-
-        payment = credit.payment
-        return all(
-            getattr(payment, field)
-            for field in (
-                'email', 'cardholder_name',
-                'card_number_first_digits', 'card_number_last_digits', 'card_expiry_date',
-                'billing_address',
-            )
-        )
-
     def create_for_credit(self, credit):
         from notification.rules import RULES
         from security.constants import CHECK_STATUS
 
-        temporary_profiles = self._attach_profiles(credit)
         matched_rule_codes = self._get_matching_rules(credit)
-        for field in temporary_profiles:
-            setattr(credit, field, None)
 
         if matched_rule_codes:
             description = (
@@ -402,24 +413,6 @@ class CheckManager(models.Manager):
             description=description,
             rules=matched_rule_codes,
         )
-
-    def _attach_profiles(self, credit):
-        from security.models import PrisonerProfile, SenderProfile
-
-        temporary_profiles = []
-        if not credit.prisoner_profile:
-            try:
-                credit.prisoner_profile = PrisonerProfile.objects.get_for_credit(credit)
-                temporary_profiles.append('prisoner_profile')
-            except PrisonerProfile.DoesNotExist:
-                pass
-        if not credit.sender_profile:
-            try:
-                credit.sender_profile = SenderProfile.objects.get_for_credit(credit)
-                temporary_profiles.append('sender_profile')
-            except SenderProfile.DoesNotExist:
-                pass
-        return temporary_profiles
 
     def _get_matching_rules(self, credit):
         from notification.rules import RULES

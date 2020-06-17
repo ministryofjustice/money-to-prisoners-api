@@ -1,6 +1,7 @@
 import datetime
 from collections import defaultdict
 from itertools import chain
+import logging
 from unittest import mock
 
 from django.core.management import call_command
@@ -20,6 +21,8 @@ from disbursement.models import Disbursement
 from disbursement.tests.utils import generate_disbursements
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from mtp_auth.tests.mommy_recipes import create_security_staff_user
+from mtp_common.test_utils import silence_logger
+from payment.constants import PAYMENT_STATUS
 from payment.tests.utils import generate_payments
 from prison.tests.utils import load_random_prisoner_locations
 from security.constants import CHECK_STATUS
@@ -37,11 +40,12 @@ from transaction.tests.utils import generate_transactions
 class SecurityViewTestCase(APITestCase, AuthTestCaseMixin):
     fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
+    @silence_logger(level=logging.ERROR)
     def setUp(self):
         super().setUp()
-        test_users = make_test_users()
-        self.prison_clerks = test_users['prison_clerks']
-        self.security_staff = test_users['security_staff']
+        self.test_users = make_test_users()
+        self.prison_clerks = self.test_users['prison_clerks']
+        self.security_staff = self.test_users['security_staff']
         load_random_prisoner_locations()
         generate_transactions(transaction_batch=100, days_of_history=5)
         generate_payments(payment_batch=100, days_of_history=5)
@@ -150,7 +154,10 @@ class SenderProfileListTestCase(SecurityViewTestCase):
 
     def test_filter_by_prisoner_count(self):
         data = self._get_list(self._get_authorised_user(), prisoner_count__gte=3)['results']
-        bank_prisoner_counts = Credit.objects.filter(transaction__isnull=False).values(
+        bank_prisoner_counts = Credit.objects.filter(
+            transaction__isnull=False,
+            prisoner_profile_id__isnull=False,
+        ).values(
             'transaction__sender_name',
             'transaction__sender_sort_code',
             'transaction__sender_account_number',
@@ -164,7 +171,10 @@ class SenderProfileListTestCase(SecurityViewTestCase):
 
         bank_prisoner_counts = bank_prisoner_counts.filter(prisoner_count__gte=3)
 
-        card_prisoner_counts = Credit.objects.filter(payment__isnull=False).values(
+        card_prisoner_counts = Credit.objects.filter(
+            payment__isnull=False,
+            prisoner_profile_id__isnull=False,
+        ).values(
             'payment__card_expiry_date',
             'payment__card_number_last_digits',
             'payment__billing_address__postcode',
@@ -254,6 +264,10 @@ class SenderProfileListTestCase(SecurityViewTestCase):
 
 
 class SenderCreditListTestCase(SecurityViewTestCase):
+
+    def _get_authorised_user(self):
+        return self.test_users['security_fiu_users'][0]
+
     def _get_url(self, *args, **kwargs):
         return reverse('sender-credits-list', args=args)
 
@@ -269,6 +283,69 @@ class SenderCreditListTestCase(SecurityViewTestCase):
         )
         for credit in sender.credits.all():
             self.assertTrue(credit.id in [d['id'] for d in data])
+
+        self.assertFalse(any([d['resolution'] in (CREDIT_RESOLUTION.FAILED, CREDIT_RESOLUTION.INITIAL) for d in data]))
+
+    def test_list_credits_for_sender_includes_not_completed(self):
+        payments = generate_payments(10, days_of_history=1, overrides={'status': PAYMENT_STATUS.REJECTED})
+        sender_profile_id = list(filter(lambda p: p.credit.sender_profile_id, payments))[0].credit.sender_profile_id
+        credits = Credit.objects_all.filter(
+            sender_profile_id=sender_profile_id
+        )
+        data = self._get_list(
+            self._get_authorised_user(), path_params=[sender_profile_id], only_completed=False
+        )['results']
+        self.assertTrue(len(data) > 0)
+
+        self.assertEqual(
+            len(credits), len(data)
+        )
+        for credit in credits:
+            self.assertTrue(credit.id in [d['id'] for d in data])
+
+        self.assertTrue(any([d['resolution'] in (CREDIT_RESOLUTION.FAILED, CREDIT_RESOLUTION.INITIAL) for d in data]))
+
+    def test_list_credits_for_sender_include_checks(self):
+        # Setup
+        sender = SenderProfile.objects.last()  # first is anonymous
+        accepted_checks = []
+        rejected_checks = []
+        user = self._get_authorised_user()
+        for credit in sender.credits.all():
+            check = Check.objects.create_for_credit(credit)
+            if check.status != 'accepted':
+                check.reject(user, 'looks dodgy')
+                rejected_checks.append(credit.id)
+
+        # Execute
+        data = self._get_list(
+            self._get_authorised_user(), path_params=[sender.id], include_credits=True
+        )['results']
+
+        # Assert
+        self.assertGreater(len(data), 0)
+        self.assertEqual(
+            len(sender.credits.all()), len(data)
+        )
+        for credit in sender.credits.all():
+            self.assertTrue(credit.id in [d['id'] for d in data])
+
+        for datum in data:
+            self.assertIn('security_check', datum)
+            self.assertIn('rules', datum['security_check'])
+            self.assertIn('description', datum['security_check'])
+            self.assertIn('actioned_by', datum['security_check'])
+            if datum['id'] in accepted_checks:
+                self.assertEqual(datum['security_check']['status'], 'accepted')
+                self.assertEqual(
+                    datum['security_check']['description'],
+                    'Credit matched no rules and was automatically accepted'
+                )
+                self.assertEqual(datum['security_check']['user'], user.id)
+            if datum['id'] in accepted_checks:
+                self.assertEqual(datum['security_check']['status'], 'rejected')
+                self.assertEqual(datum['security_check']['description'], 'looks dodgy')
+                self.assertEqual(datum['security_check']['user'], user.id)
 
 
 class RecipientProfileListTestCase(SecurityViewTestCase):
@@ -381,6 +458,10 @@ class RecipientProfileDisbursementListTestCase(SecurityViewTestCase):
 
 
 class PrisonerProfileListTestCase(SecurityViewTestCase):
+
+    def _get_authorised_user(self):
+        return self.test_users['security_fiu_users'][0]
+
     def _get_url(self, *args, **kwargs):
         return reverse('prisonerprofile-list')
 
@@ -428,7 +509,11 @@ class PrisonerProfileListTestCase(SecurityViewTestCase):
     def test_filter_by_sender_count(self):
         data = self._get_list(self._get_authorised_user(), sender_count__gte=3)['results']
         bank_pairs = (
-            Credit.objects.filter(transaction__isnull=False, prisoner_number__isnull=False).values(
+            Credit.objects.filter(
+                transaction__isnull=False,
+                prisoner_number__isnull=False,
+                sender_profile_id__isnull=False
+            ).values(
                 'prisoner_number',
                 'transaction__sender_name',
                 'transaction__sender_sort_code',
@@ -444,7 +529,11 @@ class PrisonerProfileListTestCase(SecurityViewTestCase):
         )
 
         card_pairs = (
-            Credit.objects.filter(payment__isnull=False, prisoner_number__isnull=False).values(
+            Credit.objects.filter(
+                payment__isnull=False,
+                prisoner_number__isnull=False,
+                sender_profile_id__isnull=False
+            ).values(
                 'prisoner_number',
                 'payment__card_expiry_date',
                 'payment__card_number_last_digits',
@@ -561,6 +650,10 @@ class PrisonerProfileListTestCase(SecurityViewTestCase):
 
 
 class PrisonerCreditListTestCase(SecurityViewTestCase):
+
+    def _get_authorised_user(self):
+        return self.test_users['security_fiu_users'][0]
+
     def _get_url(self, *args, **kwargs):
         return reverse('prisoner-credits-list', args=args)
 
@@ -576,6 +669,71 @@ class PrisonerCreditListTestCase(SecurityViewTestCase):
         )
         for credit in prisoner.credits.all():
             self.assertTrue(credit.id in [d['id'] for d in data])
+
+        self.assertFalse(any([d['resolution'] in (CREDIT_RESOLUTION.FAILED, CREDIT_RESOLUTION.INITIAL) for d in data]))
+
+    def test_list_credits_for_prisoner_includes_not_completed(self):
+        payments = generate_payments(10, days_of_history=1, overrides={'status': PAYMENT_STATUS.REJECTED})
+        prisoner_profile_id = list(
+            filter(lambda p: p.credit.prisoner_profile_id, payments)
+        )[0].credit.prisoner_profile_id
+        credits = Credit.objects_all.filter(
+            prisoner_profile_id=prisoner_profile_id
+        )
+        data = self._get_list(
+            self._get_authorised_user(), path_params=[prisoner_profile_id], only_completed=False
+        )['results']
+        self.assertTrue(len(data) > 0)
+
+        self.assertEqual(
+            len(credits), len(data)
+        )
+        for credit in credits:
+            self.assertTrue(credit.id in [d['id'] for d in data])
+
+        self.assertTrue(any([d['resolution'] in (CREDIT_RESOLUTION.FAILED, CREDIT_RESOLUTION.INITIAL) for d in data]))
+
+    def test_list_credits_for_prisoner_include_checks(self):
+        # Setup
+        prisoner = PrisonerProfile.objects.first()
+        accepted_checks = []
+        rejected_checks = []
+        user = self._get_authorised_user()
+        for credit in prisoner.credits.all():
+            check = Check.objects.create_for_credit(credit)
+            if check.status != 'accepted':
+                check.reject(user, 'looks dodgy')
+                rejected_checks.append(credit.id)
+
+        # Execute
+        data = self._get_list(
+            self._get_authorised_user(), path_params=[prisoner.id], include_checks=True
+        )['results']
+
+        # Assert
+        self.assertGreater(len(data), 0)
+        self.assertEqual(
+            len(prisoner.credits.all()), len(data)
+        )
+        for credit in prisoner.credits.all():
+            self.assertTrue(credit.id in [d['id'] for d in data])
+
+        for datum in data:
+            self.assertIn('security_check', datum)
+            self.assertIn('rules', datum['security_check'])
+            self.assertIn('description', datum['security_check'])
+            self.assertIn('actioned_by', datum['security_check'])
+            if datum['id'] in accepted_checks:
+                self.assertEqual(datum['security_check']['status'], 'accepted')
+                self.assertEqual(
+                    datum['security_check']['description'],
+                    'Credit matched no rules and was automatically accepted'
+                )
+                self.assertEqual(datum['security_check']['user'], user.id)
+            if datum['id'] in accepted_checks:
+                self.assertEqual(datum['security_check']['status'], 'rejected')
+                self.assertEqual(datum['security_check']['description'], 'looks dodgy')
+                self.assertEqual(datum['security_check']['user'], user.id)
 
 
 class PrisonerDisbursementListTestCase(SecurityViewTestCase):
@@ -869,7 +1027,7 @@ class BaseCheckTestCase(APITestCase, AuthTestCaseMixin):
                 'prison_name': expected_check.credit.prison.name,
                 'prisoner_name': expected_check.credit.prisoner_name,
                 'prisoner_number': expected_check.credit.prisoner_number,
-                'prisoner_profile': None,
+                'prisoner_profile': expected_check.credit.prisoner_profile_id,
                 'received_at': format_date_or_datetime(expected_check.credit.received_at),
                 'reconciliation_code': expected_check.credit.reconciliation_code,
                 'refunded_at': None,
@@ -891,6 +1049,8 @@ class BaseCheckTestCase(APITestCase, AuthTestCaseMixin):
             'actioned_by_name': actual_check_data['actioned_by_name'],
             'decision_reason': expected_check.decision_reason if expected_check.decision_reason else '',
         }
+        # TODO add `pprint.pformat`ed dictdiffer output on failure, to make failures easier to view
+        # https://dictdiffer.readthedocs.io/en/latest/#dictdiffer.diff
         self.assertDictEqual(actual_check_data, expected_data_item)
 
 

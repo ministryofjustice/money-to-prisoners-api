@@ -64,7 +64,7 @@ class RecreateTestDataViewTestCase(TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(method.call_count, 1)
             expected_options_subset = {
-                'protect_superusers': True,
+                'no_protect_superusers': False,
                 'protect_usernames': ['transaction-uploader'],
                 'protect_credits': False,
                 'no_color': True,

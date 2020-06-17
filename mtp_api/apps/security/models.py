@@ -1,3 +1,5 @@
+import logging
+
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.postgres.fields import ArrayField
@@ -16,6 +18,8 @@ from security.managers import (
     CheckManager,
 )
 from security.signals import prisoner_profile_current_prisons_need_updating
+
+logger = logging.getLogger('mtp')
 
 
 class SenderProfile(TimeStampedModel):
@@ -55,6 +59,14 @@ class SenderProfile(TimeStampedModel):
         if details:
             return details.sender_bank_account.monitoring_users
         return User.objects.none()
+
+    def add_prison(self, prison):
+        logger.info('Associating Sender Profile: %s with Prison %s', self, prison)
+        self.prisons.add(prison)
+
+    def remove_prison(self, prison):
+        logger.info('Removing association between Sender Profile %s and Prison %s', self, prison)
+        self.prisons.remove(prison)
 
 
 class BankAccount(models.Model):
@@ -231,6 +243,18 @@ class PrisonerProfile(TimeStampedModel):
 
     def get_monitoring_users(self):
         return self.monitoring_users
+
+    def add_sender(self, sender_profile):
+        logger.info('Associating Prisoner Profile: %s with Sender Profile %s', self, sender_profile)
+        self.senders.add(sender_profile)
+
+    def remove_sender(self, sender_profile):
+        logger.info('Removing association between Prisoner Profile %s and Sender Profile %s', self, sender_profile)
+        self.senders.remove(sender_profile)
+
+    def add_prison(self, prison):
+        logger.info('Associating Prisoner Profile: %s with Prison %s', self, prison)
+        self.prisons.add(prison)
 
 
 class ProvidedPrisonerName(models.Model):

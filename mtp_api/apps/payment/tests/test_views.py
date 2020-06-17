@@ -167,7 +167,7 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         load_random_prisoner_locations(2)
 
     def _test_update_payment(self, **update_fields):
-        user = self.send_money_users[0]
+        self.user = self.send_money_users[0]
 
         new_payment = {
             'prisoner_number': 'A1409AE',
@@ -182,15 +182,15 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
             reverse('payment-list'),
             data=new_payment,
             format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user),
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.user),
         )
-        payment_uuid = response.data['uuid']
+        self.payment_uuid = response.data['uuid']
 
         response = self.client.patch(
-            reverse('payment-detail', args=[payment_uuid]),
+            reverse('payment-detail', args=[self.payment_uuid]),
             data=update_fields,
             format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user),
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.user),
         )
         return response
 
@@ -213,7 +213,35 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertIsNotNone(credit.received_at)
 
     def test_update_status_to_rejected_succeeds(self):
-        response = self._test_update_payment(status=PAYMENT_STATUS.REJECTED)
+        # First update, that generates a check
+        self._test_update_payment(**{
+            'email': 'someone@mtp.local',
+            'cardholder_name': 'Mr Testy McTestington',
+            'card_number_first_digits': '1234',
+            'card_number_last_digits': '9876',
+            'card_expiry_date': '10/30',
+            'billing_address': {
+                'line1': '62 Petty France',
+                'line2': '',
+                'city': 'London',
+                'country': 'UK',
+                'postcode': 'SW1H 9EU'
+            }
+        })
+        payment = Payment.objects.first()
+        credit = payment.credit
+        self.assertQuerysetEqual(credit.prisoner_profile.senders.all(), [credit.sender_profile], transform=lambda x: x)
+        self.assertQuerysetEqual(credit.sender_profile.prisons.all(), [credit.prison], transform=lambda x: x)
+
+        response = self.client.patch(
+            reverse('payment-detail', args=[self.payment_uuid]),
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.user),
+            data=dict(status=PAYMENT_STATUS.REJECTED)
+        )
+        payment.refresh_from_db()
+        # We cannot refresh_from_db because we override the default Manager to exclude the state we're mutating into :(
+        credit = Credit.objects_all.get(id=credit.id)
 
         self.assertEqual(response.status_code, http_status.HTTP_200_OK)
         self.assertTrue(response.data['uuid'] is not None)
@@ -221,11 +249,10 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         # check changes in db
         self.assertEqual(Payment.objects.count(), 1)
 
-        payment = Payment.objects.first()
-        credit = payment.credit
-
         self.assertEqual(payment.status, PAYMENT_STATUS.REJECTED)
         self.assertEqual(credit.resolution, CREDIT_RESOLUTION.FAILED)
+        self.assertQuerysetEqual(credit.prisoner_profile.senders.all(), [])
+        self.assertQuerysetEqual(credit.sender_profile.prisons.all(), [])
         self.assertIsNotNone(credit.prison)
         self.assertIsNotNone(credit.prisoner_name)
         self.assertIsNone(credit.received_at)

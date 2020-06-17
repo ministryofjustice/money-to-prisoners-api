@@ -1,4 +1,5 @@
 from functools import reduce
+import logging
 import re
 
 from django.contrib.auth import get_user_model
@@ -26,14 +27,20 @@ from core.filters import (
 )
 from core.models import TruncUtcDate
 from core.permissions import ActionsBasedPermissions
-from credit.constants import CREDIT_STATUS, CREDIT_SOURCE, LOG_ACTIONS
+from credit.constants import CREDIT_RESOLUTION, CREDIT_STATUS, CREDIT_SOURCE, LOG_ACTIONS
 from credit.models import Credit, Comment, ProcessingBatch, PrivateEstateBatch
 from credit.permissions import CreditPermissions, PrivateEstateBatchPermissions
 from credit.serializers import (
-    CreditSerializer, SecurityCreditSerializer, CreditedOnlyCreditSerializer,
-    IdsCreditSerializer, CommentSerializer, ProcessingBatchSerializer,
-    PrivateEstateBatchSerializer, PrivateEstateBatchCreditSerializer,
+    CommentSerializer,
+    CreditedOnlyCreditSerializer,
+    CreditSerializer,
     CreditsGroupedByCreditedSerializer,
+    IdsCreditSerializer,
+    PrivateEstateBatchCreditSerializer,
+    PrivateEstateBatchSerializer,
+    ProcessingBatchSerializer,
+    SecurityCreditCheckSerializer,
+    SecurityCreditSerializer,
 )
 from mtp_auth.models import PrisonUserMapping
 from mtp_auth.permissions import (
@@ -44,6 +51,7 @@ from mtp_auth.permissions import (
 from prison.models import Prison
 
 User = get_user_model()
+logger = logging.getLogger('mtp')
 
 
 class CreditTextSearchFilter(django_filters.CharFilter):
@@ -139,6 +147,10 @@ class MonitoredProfileFilter(django_filters.BooleanFilter):
         return qs
 
 
+class NumberInFilter(django_filters.BaseInFilter, django_filters.NumberFilter):
+    pass
+
+
 class CreditListFilter(django_filters.FilterSet):
     status = StatusChoiceFilter(choices=CREDIT_STATUS.choices)
     user = django_filters.ModelChoiceFilter(field_name='owner', queryset=User.objects.all())
@@ -174,6 +186,11 @@ class CreditListFilter(django_filters.FilterSet):
     sender_account_number__isblank = BlankStringFilter(field_name='transaction__sender_account_number')
     sender_roll_number__isblank = BlankStringFilter(field_name='transaction__sender_roll_number')
 
+    security_check__isnull = django_filters.BooleanFilter(field_name='security_check', lookup_expr='isnull')
+    security_check__actioned_by__isnull = django_filters.BooleanFilter(
+        field_name='security_check__actioned_by', lookup_expr='isnull'
+    )
+
     card_expiry_date = django_filters.CharFilter(field_name='payment__card_expiry_date')
     card_number_first_digits = django_filters.CharFilter(field_name='payment__card_number_first_digits')
     card_number_last_digits = django_filters.CharFilter(field_name='payment__card_number_last_digits')
@@ -182,6 +199,8 @@ class CreditListFilter(django_filters.FilterSet):
     sender_ip_address = django_filters.CharFilter(field_name='payment__ip_address')
 
     payment_reference = django_filters.CharFilter(field_name='payment__uuid', lookup_expr='startswith')
+
+    exclude_credit__in = NumberInFilter(field_name='id', lookup_expr='in', exclude=True)
 
     exclude_amount__endswith = django_filters.CharFilter(
         field_name='amount', lookup_expr='endswith', exclude=True
@@ -225,9 +244,11 @@ class CreditListFilter(django_filters.FilterSet):
         }
 
 
-class CreditViewMixin:
+class CreditViewMixin(object):
+    root_queryset = Credit.objects
+
     def get_queryset(self):
-        queryset = Credit.objects.all()
+        queryset = self.root_queryset.all()
         cashbook_client = self.request.auth.application.client_id == CASHBOOK_OAUTH_CLIENT_ID
 
         if self.request.user.has_perm('credit.view_any_credit') and not cashbook_client:
@@ -258,12 +279,27 @@ class GetCredits(CreditViewMixin, mixins.ListModelMixin, viewsets.GenericViewSet
         )
     )
 
-    def get_queryset(self):
-        return super().get_queryset().select_related('transaction').select_related('payment__batch')
+    def get_queryset(self, include_checks=False, only_completed=False):
+        q = super().get_queryset().select_related('transaction').select_related('payment__batch')
+        if include_checks:
+            q = q.select_related('security_check')
+        if only_completed:
+            if self.root_queryset != Credit.objects_all:
+                logger.warning('only_completed is only meaningful when using Credit.objects_all')
+            q = q.exclude(
+                resolution__in=(
+                    CREDIT_RESOLUTION.INITIAL,
+                    CREDIT_RESOLUTION.FAILED,
+                )
+            )
+        return q
 
     def get_serializer_class(self):
+        if self.request.user.has_perm('security.view_check'):
+            return SecurityCreditCheckSerializer
         if self.request.user.has_perm(
-                'transaction.view_bank_details_transaction'):
+            'transaction.view_bank_details_transaction'
+        ):
             return SecurityCreditSerializer
         else:
             return CreditSerializer

@@ -25,6 +25,8 @@ from mtp_auth.tests.mommy_recipes import (
 )
 from prison.models import Prison
 
+User = get_user_model()
+
 
 class MockModelTimestamps:
     """
@@ -58,20 +60,24 @@ def make_applications():
     owner = get_user_model().objects.first()
 
     def make_application_and_roles(client_id, name, *roles):
-        new_app, _ = Application.objects.get_or_create(
-            client_id=client_id,
-            client_type='confidential',
-            authorization_grant_type='password',
-            client_secret=client_id,
-            name=name,
-            user=owner,
-        )
+        app = Application.objects.filter(
+            client_id=client_id
+        ).first()
+        if not app:
+            app = Application.objects.create(
+                client_id=client_id,
+                client_type='confidential',
+                authorization_grant_type='password',
+                client_secret=client_id,
+                name=name,
+                user=owner,
+            )
         for role in roles:
             groups = [Group.objects.get_or_create(name=group)[0] for group in role['groups']]
             key_group, groups = groups[0], groups[1:]
             role, _ = Role.objects.get_or_create(
                 name=role['name'],
-                application=new_app,
+                application=app,
                 key_group=key_group,
                 login_url='http://localhost/%s/' % client_id,
             )
@@ -237,3 +243,51 @@ def format_date_or_datetime(value):
     if isinstance(value, datetime):
         return DateTimeField().to_representation(value)
     return DateField().to_representation(value)
+
+
+def create_super_admin(stdout=None, style_success=None):
+    try:
+        admin_user = User.objects.get(username='admin')
+    except User.DoesNotExist:
+        admin_user = User.objects.create_superuser(
+            username='admin',
+            email='admin@mtp.local',
+            password='adminadmin',
+            first_name='Admin',
+            last_name='User',
+        )
+    for group in Group.objects.all():
+        admin_user.groups.add(group)
+
+    if stdout and style_success:
+        stdout.write(style_success('Model creation finished'))
+
+
+def delete_non_related_nullable_fields(queryset, null_fields_to_leave_populated=None):
+    """
+    This is intended for testing the minimum amount of data needed to be populated on an
+    object for a codeflow, whilst also using the test data setup fixtures of the happy path
+    """
+    blankable_fields = set()
+    sample_instance = queryset.first()
+    for field in sample_instance._meta.get_fields():
+        # We don't want to blank any related objects
+        if (
+            getattr(field, 'null', False)
+            and not getattr(field, 'related_model', False)
+        ):
+            blankable_fields.add(field.name)
+    if null_fields_to_leave_populated:
+        to_be_blanked_fields = blankable_fields - null_fields_to_leave_populated
+    else:
+        to_be_blanked_fields = blankable_fields
+
+    for instance in queryset:
+        for field in to_be_blanked_fields:
+            setattr(instance, field, None)
+        instance.save()
+        instance.refresh_from_db()
+        assert all([
+            getattr(instance, field_name) is None
+            for field_name in to_be_blanked_fields
+        ])
