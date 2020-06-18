@@ -53,6 +53,7 @@ class DigitalTakeupUploadView(AdminViewMixin, FormView):
         from credit.models import Log, LOG_ACTIONS
 
         credited = Log.objects.filter(created__date=date, action=LOG_ACTIONS.CREDITED) \
+            .exclude(credit__prison__private_estate=True) \
             .values('credit__prison__nomis_id') \
             .order_by('credit__prison__nomis_id') \
             .annotate(count=models.Count('credit__prison__nomis_id'))
