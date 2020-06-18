@@ -195,6 +195,8 @@ class SenderProfileView(
 
     def get_queryset(self):
         qs = super().get_queryset()
+        if getattr(self, 'swagger_fake_view', False):
+            return qs
         qs = qs.annotate(
             monitoring=Exists(
                 SenderProfile.objects.filter(
@@ -306,6 +308,8 @@ class PrisonerProfileView(
 
     def get_queryset(self):
         qs = super().get_queryset()
+        if getattr(self, 'swagger_fake_view', False):
+            return qs
         qs = qs.annotate(
             monitoring=Exists(
                 PrisonerProfile.objects.filter(
@@ -430,6 +434,8 @@ class RecipientProfileView(
 
     def get_queryset(self):
         qs = super().get_queryset()
+        if getattr(self, 'swagger_fake_view', False):
+            return qs
         qs = qs.annotate(
             monitoring=Exists(
                 RecipientProfile.objects.filter(
@@ -483,6 +489,8 @@ class SavedSearchView(
     )
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return self.queryset.all()
         return self.queryset.filter(user=self.request.user)
 
 

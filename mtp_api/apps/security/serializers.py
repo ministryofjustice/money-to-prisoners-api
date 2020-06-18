@@ -63,7 +63,11 @@ class PrisonSerializer(serializers.ModelSerializer):
     Serializer for nested prison fields.
     """
 
+    # TODO Deduplicate this and prison.serializers.PrisonSerializer
+    # so drf-yasg stops complaining about serializer namespace collisions
+    # without custom ref name
     class Meta:
+        ref_name = 'NOMIS Prison'
         model = Prison
         fields = (
             'nomis_id',

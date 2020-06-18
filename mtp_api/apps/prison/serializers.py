@@ -22,7 +22,11 @@ class PrisonSerializer(serializers.ModelSerializer):
     categories = CategorySerializer(many=True)
     short_name = serializers.CharField(read_only=True)
 
+    # TODO Deduplicate this and security.serializers.PrisonSerializer
+    # so drf-yasg stops complaining about serializer namespace collisions
+    # without custom ref name
     class Meta:
+        ref_name = 'Prison Prison'
         model = Prison
         fields = (
             'nomis_id',

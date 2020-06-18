@@ -14,6 +14,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from core.permissions import ActionsBasedPermissions, ActionsBasedViewPermissions
+from core.serializers import NullSerializer
 from core.views import AdminViewMixin
 from credit.signals import credit_prisons_need_updating
 from mtp_auth.models import PrisonUserMapping
@@ -78,6 +79,7 @@ class PrisonerLocationView(
 class DeleteOldPrisonerLocationsView(generics.GenericAPIView):
     queryset = PrisonerLocation.objects.all()
     action = 'destroy'
+    serializer_class = NullSerializer
 
     permission_classes = (
         IsAuthenticated, NomsOpsClientIDPermissions,
@@ -96,6 +98,7 @@ class DeleteOldPrisonerLocationsView(generics.GenericAPIView):
 class DeleteInactivePrisonerLocationsView(generics.GenericAPIView):
     queryset = PrisonerLocation.objects.filter(active=False)
     action = 'destroy'
+    serializer_class = NullSerializer
 
     permission_classes = (
         IsAuthenticated, NomsOpsClientIDPermissions,

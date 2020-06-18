@@ -75,7 +75,11 @@ class UserSerializer(serializers.ModelSerializer):
 
     allowed_self_updates = {'first_name', 'last_name', 'email', 'prisons'}
 
+    # TODO Deduplicate this and disbursements.serializers.UserSerializer
+    # so drf-yasg stops complaining about serializer namespace collisions
+    # without custom ref name
     class Meta:
+        ref_name = 'Detailed User'
         model = User
         read_only_fields = ('pk', 'flags')
         fields = (

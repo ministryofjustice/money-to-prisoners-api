@@ -30,7 +30,7 @@ from rest_framework.response import Response
 from core.forms import RecreateTestDataForm, UpdateNOMISTokenForm
 from core.models import FileDownload, Token
 from core.permissions import ActionsBasedPermissions, TokenPermissions
-from core.serializers import FileDownloadSerializer, TokenSerializer
+from core.serializers import FileDownloadSerializer, NullSerializer, TokenSerializer
 
 logger = logging.getLogger('mtp')
 
@@ -268,6 +268,7 @@ class FileDownloadView(
 
 
 class MissingFileDownloadView(generics.GenericAPIView):
+    serializer_class = NullSerializer
     queryset = FileDownload.objects.all()
     action = 'list'
     permission_classes = (

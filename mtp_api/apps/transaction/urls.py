@@ -8,5 +8,9 @@ urlpatterns = [
         'post': 'create',
         'patch': 'patch_processed',
     }), name='transaction-list'),
-    url(r'^transactions/reconcile/$', views.ReconcileTransactionsView.as_view(), name='reconcile-transactions'),
+    url(
+        r'^transactions/reconcile/$',
+        views.ReconcileTransactionsView.as_view(actions={'post': 'patch_processed'}),
+        name='reconcile-transactions'
+    ),
 ]

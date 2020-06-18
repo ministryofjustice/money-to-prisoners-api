@@ -60,6 +60,7 @@ INSTALLED_APPS = (
     'anymail',
     'oauth2_provider',
     'rest_framework',
+    'drf_yasg',
     'django_filters',
 
     # MTP api & admin
@@ -340,6 +341,33 @@ CLOUD_PLATFORM_MIGRATION_URL = os.environ.get('CLOUD_PLATFORM_MIGRATION_URL', ''
 ANALYTICAL_PLATFORM_BUCKET = os.environ.get('ANALYTICAL_PLATFORM_BUCKET', '')
 AWS_IAM_ROLE_ARN = os.environ.get('AWS_IAM_ROLE_ARN', '')
 ANALYTICAL_PLATFORM_BUCKET_PATH = os.environ.get('ANALYTICAL_PLATFORM_BUCKET_PATH', '')
+
+SWAGGER_SETTINGS = {
+    'USE_SESSION_AUTH': False,
+    'SECURITY_DEFINITIONS': {
+        'oauth2_provider': {
+            'type': 'oauth2',
+            'description': 'test',
+            'flow': 'password',
+            'tokenUrl': urljoin(API_URL, '/oauth2/token/'),
+            'authorizationUrl': urljoin(API_URL, '/oauth2/authorize/'),
+            'scopes': {
+                'read': 'Read scope',
+                'write': 'Write scope',
+            }
+        }
+    },
+    'SHOW_REQUEST_HEADERS': True,
+    'SECURITY': [{
+        'password': ['read', 'write']
+    }],
+    'REFETCH_SCHEMA_WITH_AUTH': True,
+    'OAUTH2_CONFIG': {
+        'clientId': os.environ.get('MTP_SWAGGER_CLIENT_ID'),
+        'clientSecret': os.environ.get('MTP_SWAGGER_CLIENT_SECRET'),
+        'appName': 'Money To Prisoners'
+    }
+}
 
 try:
     from .local import *  # noqa
