@@ -2,15 +2,17 @@ import random
 
 import faker
 from django.contrib.auth.models import Group
+from django.utils.crypto import get_random_string
 
 from credit.models import Credit, CREDIT_RESOLUTION, LOG_ACTIONS as CREDIT_LOG_ACTIONS
 from prison.models import Prison
 from payment.models import Payment, PAYMENT_STATUS
 from payment.tests.utils import generate_payments
+from prison.tests.utils import random_prisoner_number
 from security.models import Check, PrisonerProfile, SenderProfile
 from django.db.models import Count
 
-fake = faker.Faker()
+fake = faker.Faker(locale='en_GB')
 
 PAYMENT_FILTERS_FOR_INVALID_CHECK = dict(
     status=PAYMENT_STATUS.PENDING,
@@ -40,13 +42,10 @@ PAYMENT_FILTERS_FOR_VALID_CHECK = dict(
 
 def _get_payment_values(payment_filters, cardholder_name):
     return dict(
-        card_number_first_digits='{:04}'.format(random.randint(0, 9999)),
-        card_number_last_digits='{:04d}'.format(random.randint(0, 9999)),
+        card_number_first_digits=get_random_string(6, '0123456789'),
+        card_number_last_digits=get_random_string(4, '0123456789'),
         cardholder_name=cardholder_name,
-        card_expiry_date='{:02d}/{:02d}'.format(
-            random.randint(0, 99),
-            random.randint(0, 99)
-        ),
+        card_expiry_date=fake.date_time_between(start_date='now', end_date='+5y').strftime('%m/%y'),
         **{
             key: val for key, val in payment_filters.items()
             if '__' not in key
@@ -58,7 +57,7 @@ def _get_credit_values(credit_filters, sender_profile_id, prisoner_profile_id, p
     return dict(
         {
             'amount': random.randint(100, 1000000),
-            'prisoner_number': random.randint(100, 1000000),
+            'prisoner_number': random_prisoner_number(),
             'prisoner_name': prisoner_name,
             'prisoner_profile_id': prisoner_profile_id,
             'sender_profile_id': sender_profile_id,
