@@ -239,6 +239,16 @@ class CheckSerializer(serializers.ModelSerializer):
             'actioned_by_name',
             'assigned_to_name',
         )
+        read_only = (
+            'id',
+            'credit',
+            'status',
+            'description',
+            'rules',
+            'actioned_at',
+            'actioned_by',
+            'decision_reason',
+        )
 
     def get_actioned_by_name_from_user(self, check):
         if check.actioned_by is not None:
@@ -272,6 +282,7 @@ class CheckCreditSerializer(CheckSerializer):
         fields = CheckSerializer.Meta.fields + (
             'credit',
         )
+        read_only = CheckSerializer.Meta.read_only
 
 
 class AcceptCheckSerializer(CheckCreditSerializer):
@@ -280,6 +291,12 @@ class AcceptCheckSerializer(CheckCreditSerializer):
     class Meta:
         model = Check
         fields = ('decision_reason',)
+        read_only = (
+            'id',
+            'credit',
+            'description',
+            'rules'
+        )
 
     def accept(self, by):
         try:
@@ -299,6 +316,12 @@ class RejectCheckSerializer(CheckCreditSerializer):
     class Meta:
         model = Check
         fields = ('decision_reason',)
+        read_only = (
+            'id',
+            'credit',
+            'description',
+            'rules'
+        )
 
     def reject(self, by):
         try:
