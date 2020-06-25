@@ -949,7 +949,7 @@ class BaseCheckTestCase(APITestCase, AuthTestCaseMixin):
 
     def setUp(self):
         super().setUp()
-        test_users = make_test_users()
+        test_users = make_test_users(num_security_fiu_users=2)
         self.prison_clerks = test_users['prison_clerks']
         self.security_fiu_users = test_users['security_fiu_users']
         load_random_prisoner_locations()
@@ -1302,6 +1302,104 @@ class PatchCheckTestCase(BaseCheckTestCase):
         actual_check_data = response.json()
         actual_check_data['assigned_to'] = assigned_to_user.id
         actual_check_data['assigned_to_name'] = assigned_to_user.get_full_name()
+
+        check = Check.objects.get(pk=actual_check_data['id'])
+        self.assertCheckEqual(check, actual_check_data)
+
+    def test_patch_fails_on_when_already_assigned(self):
+        """
+        Tests related to patching a single security check.
+        """
+        check = Check.objects.first()
+        assigned_to_user = self.security_fiu_users[0]
+        new_assigned_to_user = self.security_fiu_users[1]
+
+        auth = self.get_http_authorization_for_user(self._get_authorised_user())
+        response = self.client.patch(
+            reverse(
+                'security-check-detail',
+                kwargs={'pk': check.pk},
+            ),
+            data={
+                'assigned_to': assigned_to_user.id
+            },
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+        actual_check_data = response.json()
+
+        response = self.client.patch(
+            reverse(
+                'security-check-detail',
+                kwargs={'pk': check.pk},
+            ),
+            data={
+                'assigned_to': new_assigned_to_user.id
+            },
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_400_BAD_REQUEST)
+
+        # Assert check unchanged
+        actual_check_data['assigned_to'] = assigned_to_user.id
+        actual_check_data['assigned_to_name'] = assigned_to_user.get_full_name()
+
+        check = Check.objects.get(pk=actual_check_data['id'])
+        self.assertCheckEqual(check, actual_check_data)
+
+    def test_patch_succeeds_after_removal_of_assignment(self):
+        """
+        Tests related to patching a single security check.
+        """
+        check = Check.objects.first()
+        assigned_to_user = self.security_fiu_users[0]
+        new_assigned_to_user = self.security_fiu_users[1]
+
+        auth = self.get_http_authorization_for_user(self._get_authorised_user())
+        response = self.client.patch(
+            reverse(
+                'security-check-detail',
+                kwargs={'pk': check.pk},
+            ),
+            data={
+                'assigned_to': assigned_to_user.id
+            },
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+
+        response = self.client.patch(
+            reverse(
+                'security-check-detail',
+                kwargs={'pk': check.pk},
+            ),
+            data={
+                'assigned_to': None
+            },
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+
+        response = self.client.patch(
+            reverse(
+                'security-check-detail',
+                kwargs={'pk': check.pk},
+            ),
+            data={
+                'assigned_to': new_assigned_to_user.id
+            },
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+
+        actual_check_data = response.json()
+        actual_check_data['assigned_to'] = new_assigned_to_user.id
+        actual_check_data['assigned_to_name'] = new_assigned_to_user.get_full_name()
 
         check = Check.objects.get(pk=actual_check_data['id'])
         self.assertCheckEqual(check, actual_check_data)

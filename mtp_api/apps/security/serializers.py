@@ -254,6 +254,13 @@ class CheckSerializer(serializers.ModelSerializer):
         else:
             return None
 
+    def update(self, instance, validated_data):
+        if instance.assigned_to_id and validated_data.get('assigned_to') not in (None, instance.assigned_to_id):
+            raise ValidationError(
+                'That check is already assigned to {}'.format(instance.assigned_to.get_full_name())
+            )
+        return super().update(instance, validated_data)
+
 
 class CheckCreditSerializer(CheckSerializer):
     from credit.serializers import SecurityCreditSerializer

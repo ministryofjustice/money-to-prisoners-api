@@ -114,7 +114,7 @@ def give_superusers_full_access():
             )
 
 
-def make_test_users(clerks_per_prison=2):
+def make_test_users(clerks_per_prison=2, num_security_fiu_users=1):
     # prison clerks
     prison_clerks = []
     for prison in Prison.objects.all():
@@ -123,7 +123,10 @@ def make_test_users(clerks_per_prison=2):
 
     # noms-ops users
     prisoner_location_admins = [create_prisoner_location_admin()]
-    security_fiu_users = [create_security_fiu_user()]
+    security_fiu_users = [
+        create_security_fiu_user(name_and_password=f'security-fiu-{number}')
+        for number in range(num_security_fiu_users)
+    ]
     security_users = [
         create_security_staff_user(),
         create_security_staff_user(name_and_password='prison-security', prisons=[Prison.objects.first()]),
