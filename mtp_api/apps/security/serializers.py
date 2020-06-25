@@ -222,6 +222,7 @@ class SavedSearchSerializer(serializers.ModelSerializer):
 
 class CheckSerializer(serializers.ModelSerializer):
     actioned_by_name = serializers.SerializerMethodField('get_actioned_by_name_from_user')
+    assigned_to_name = serializers.SerializerMethodField('get_assigned_to_name_from_user')
 
     class Meta:
         model = Check
@@ -233,14 +234,23 @@ class CheckSerializer(serializers.ModelSerializer):
             'rules',
             'actioned_at',
             'actioned_by',
+            'assigned_to',
             'decision_reason',
             'actioned_by_name',
+            'assigned_to_name',
         )
 
     def get_actioned_by_name_from_user(self, check):
         if check.actioned_by is not None:
             actioned_by_name = check.actioned_by.get_full_name()
             return actioned_by_name
+        else:
+            return None
+
+    def get_assigned_to_name_from_user(self, check):
+        if check.assigned_to is not None:
+            assigned_to_name = check.assigned_to.get_full_name()
+            return assigned_to_name
         else:
             return None
 
