@@ -1,0 +1,13 @@
+# copy this sample file to `local.py` and edit for local settings that will NOT be committed
+# these are overlayed on top of base settings
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'mtp_api',
+#         'USER': 'postgres',
+#         'PASSWORD': '',
+#     },
+# }
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
