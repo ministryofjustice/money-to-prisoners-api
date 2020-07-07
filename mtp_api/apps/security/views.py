@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user_model
 from django.db.models import Count, Exists, OuterRef, Q
 from django.shortcuts import get_object_or_404
 import django_filters
@@ -40,6 +41,8 @@ from security.serializers import (
     SavedSearchSerializer,
     SenderProfileSerializer
 )
+
+User = get_user_model()
 
 
 class SenderCreditSourceFilter(django_filters.ChoiceFilter):
@@ -516,6 +519,9 @@ class CheckListFilter(django_filters.FilterSet):
     )
     actioned_by = django_filters.BooleanFilter(
         field_name='actioned_by', lookup_expr='isnull', exclude=True,
+    )
+    assigned_to = django_filters.ModelChoiceFilter(
+        field_name='assigned_to', queryset=User.objects.all()
     )
 
     class Meta:
