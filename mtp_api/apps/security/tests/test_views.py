@@ -1300,8 +1300,8 @@ class PatchCheckTestCase(BaseCheckTestCase):
         self.assertEqual(response.status_code, http_status.HTTP_200_OK)
 
         actual_check_data = response.json()
-        actual_check_data['assigned_to'] = assigned_to_user.id
-        actual_check_data['assigned_to_name'] = assigned_to_user.get_full_name()
+        self.assertEqual(actual_check_data['assigned_to'], assigned_to_user.id)
+        self.assertEqual(actual_check_data['assigned_to_name'], assigned_to_user.get_full_name())
 
         check = Check.objects.get(pk=actual_check_data['id'])
         self.assertCheckEqual(check, actual_check_data)
@@ -1343,8 +1343,8 @@ class PatchCheckTestCase(BaseCheckTestCase):
         self.assertEqual(response.status_code, http_status.HTTP_400_BAD_REQUEST)
 
         # Assert check unchanged
-        actual_check_data['assigned_to'] = assigned_to_user.id
-        actual_check_data['assigned_to_name'] = assigned_to_user.get_full_name()
+        self.assertEqual(actual_check_data['assigned_to'], assigned_to_user.id)
+        self.assertEqual(actual_check_data['assigned_to_name'], assigned_to_user.get_full_name())
 
         check = Check.objects.get(pk=actual_check_data['id'])
         self.assertCheckEqual(check, actual_check_data)
@@ -1398,8 +1398,50 @@ class PatchCheckTestCase(BaseCheckTestCase):
         self.assertEqual(response.status_code, http_status.HTTP_200_OK)
 
         actual_check_data = response.json()
-        actual_check_data['assigned_to'] = new_assigned_to_user.id
-        actual_check_data['assigned_to_name'] = new_assigned_to_user.get_full_name()
+        self.assertEqual(actual_check_data['assigned_to'], new_assigned_to_user.id)
+        self.assertEqual(actual_check_data['assigned_to_name'], new_assigned_to_user.get_full_name())
+
+        check = Check.objects.get(pk=actual_check_data['id'])
+        self.assertCheckEqual(check, actual_check_data)
+
+    def test_patch_fails_on_when_patching_read_only_field(self):
+        """
+        Tests related to patching a single security check.
+        """
+        check = Check.objects.first()
+        assigned_to_user = self.security_fiu_users[0]
+
+        auth = self.get_http_authorization_for_user(self._get_authorised_user())
+        response = self.client.patch(
+            reverse(
+                'security-check-detail',
+                kwargs={'pk': check.pk},
+            ),
+            data={
+                'assigned_to': assigned_to_user.id
+            },
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+        actual_check_data = response.json()
+
+        assert check.status != CHECK_STATUS.ACCEPTED
+        response = self.client.patch(
+            reverse(
+                'security-check-detail',
+                kwargs={'pk': check.pk},
+            ),
+            data={
+                'status': CHECK_STATUS.ACCEPTED
+            },
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+
+        # Assert check unchanged
+        self.assertEqual(actual_check_data['assigned_to'], assigned_to_user.id)
+        self.assertEqual(actual_check_data['assigned_to_name'], assigned_to_user.get_full_name())
 
         check = Check.objects.get(pk=actual_check_data['id'])
         self.assertCheckEqual(check, actual_check_data)

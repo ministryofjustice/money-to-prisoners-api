@@ -194,7 +194,7 @@ class SavedSearchSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SavedSearch
-        read_only_fields = ('id',)
+        read_only_fields_fields = ('id',)
         fields = (
             'id',
             'description',
@@ -239,7 +239,7 @@ class CheckSerializer(serializers.ModelSerializer):
             'actioned_by_name',
             'assigned_to_name',
         )
-        read_only = (
+        read_only_fields = (
             'id',
             'credit',
             'status',
@@ -282,7 +282,7 @@ class CheckCreditSerializer(CheckSerializer):
         fields = CheckSerializer.Meta.fields + (
             'credit',
         )
-        read_only = CheckSerializer.Meta.read_only
+        read_only_fields = CheckSerializer.Meta.read_only_fields
 
 
 class AcceptCheckSerializer(CheckCreditSerializer):
@@ -291,7 +291,7 @@ class AcceptCheckSerializer(CheckCreditSerializer):
     class Meta:
         model = Check
         fields = ('decision_reason',)
-        read_only = (
+        read_only_fields = (
             'id',
             'credit',
             'description',
@@ -316,7 +316,7 @@ class RejectCheckSerializer(CheckCreditSerializer):
     class Meta:
         model = Check
         fields = ('decision_reason',)
-        read_only = (
+        read_only_fields = (
             'id',
             'credit',
             'description',
