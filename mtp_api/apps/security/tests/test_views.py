@@ -3,7 +3,9 @@ from collections import defaultdict
 from itertools import chain
 import logging
 from unittest import mock
+from pprint import pformat
 
+import dictdiffer
 from django.core.management import call_command
 from django.db.models import Count, Q
 from django.urls import reverse
@@ -947,7 +949,7 @@ class BaseCheckTestCase(APITestCase, AuthTestCaseMixin):
 
     def setUp(self):
         super().setUp()
-        test_users = make_test_users()
+        test_users = make_test_users(num_security_fiu_users=2)
         self.prison_clerks = test_users['prison_clerks']
         self.security_fiu_users = test_users['security_fiu_users']
         load_random_prisoner_locations()
@@ -1047,11 +1049,15 @@ class BaseCheckTestCase(APITestCase, AuthTestCaseMixin):
             'actioned_at': format_date_or_datetime(expected_check.actioned_at),
             'actioned_by': expected_check.actioned_by.pk if expected_check.actioned_by else None,
             'actioned_by_name': actual_check_data['actioned_by_name'],
+            'assigned_to': expected_check.assigned_to.pk if expected_check.assigned_to else None,
+            'assigned_to_name': actual_check_data['assigned_to_name'],
             'decision_reason': expected_check.decision_reason if expected_check.decision_reason else '',
         }
         # TODO add `pprint.pformat`ed dictdiffer output on failure, to make failures easier to view
         # https://dictdiffer.readthedocs.io/en/latest/#dictdiffer.diff
-        self.assertDictEqual(actual_check_data, expected_data_item)
+        assert expected_data_item == actual_check_data, pformat(
+            list(dictdiffer.diff(expected_data_item, actual_check_data))
+        )
 
 
 class CheckListTestCase(BaseCheckTestCase):
@@ -1267,6 +1273,180 @@ class CheckListTestCase(BaseCheckTestCase):
             self.assertIsNotNone(item['actioned_by'])
 
 
+class PatchCheckTestCase(BaseCheckTestCase):
+    """
+    Tests related to patching security checks.
+    """
+
+    def test_patch(self):
+        """
+        Tests related to patching a single security check.
+        """
+        check = Check.objects.first()
+        assigned_to_user = self.security_fiu_users[0]
+
+        auth = self.get_http_authorization_for_user(self._get_authorised_user())
+        response = self.client.patch(
+            reverse(
+                'security-check-detail',
+                kwargs={'pk': check.pk},
+            ),
+            data={
+                'assigned_to': assigned_to_user.id
+            },
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+
+        actual_check_data = response.json()
+        self.assertEqual(actual_check_data['assigned_to'], assigned_to_user.id)
+        self.assertEqual(actual_check_data['assigned_to_name'], assigned_to_user.get_full_name())
+
+        check = Check.objects.get(pk=actual_check_data['id'])
+        self.assertCheckEqual(check, actual_check_data)
+
+    def test_patch_fails_on_when_already_assigned(self):
+        """
+        Tests related to patching a single security check.
+        """
+        check = Check.objects.first()
+        assigned_to_user = self.security_fiu_users[0]
+        new_assigned_to_user = self.security_fiu_users[1]
+
+        auth = self.get_http_authorization_for_user(self._get_authorised_user())
+        response = self.client.patch(
+            reverse(
+                'security-check-detail',
+                kwargs={'pk': check.pk},
+            ),
+            data={
+                'assigned_to': assigned_to_user.id
+            },
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+        actual_check_data = response.json()
+
+        response = self.client.patch(
+            reverse(
+                'security-check-detail',
+                kwargs={'pk': check.pk},
+            ),
+            data={
+                'assigned_to': new_assigned_to_user.id
+            },
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_400_BAD_REQUEST)
+
+        # Assert check unchanged
+        self.assertEqual(actual_check_data['assigned_to'], assigned_to_user.id)
+        self.assertEqual(actual_check_data['assigned_to_name'], assigned_to_user.get_full_name())
+
+        check = Check.objects.get(pk=actual_check_data['id'])
+        self.assertCheckEqual(check, actual_check_data)
+
+    def test_patch_succeeds_after_removal_of_assignment(self):
+        """
+        Tests related to patching a single security check.
+        """
+        check = Check.objects.first()
+        assigned_to_user = self.security_fiu_users[0]
+        new_assigned_to_user = self.security_fiu_users[1]
+
+        auth = self.get_http_authorization_for_user(self._get_authorised_user())
+        response = self.client.patch(
+            reverse(
+                'security-check-detail',
+                kwargs={'pk': check.pk},
+            ),
+            data={
+                'assigned_to': assigned_to_user.id
+            },
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+
+        response = self.client.patch(
+            reverse(
+                'security-check-detail',
+                kwargs={'pk': check.pk},
+            ),
+            data={
+                'assigned_to': None
+            },
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+
+        response = self.client.patch(
+            reverse(
+                'security-check-detail',
+                kwargs={'pk': check.pk},
+            ),
+            data={
+                'assigned_to': new_assigned_to_user.id
+            },
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+
+        actual_check_data = response.json()
+        self.assertEqual(actual_check_data['assigned_to'], new_assigned_to_user.id)
+        self.assertEqual(actual_check_data['assigned_to_name'], new_assigned_to_user.get_full_name())
+
+        check = Check.objects.get(pk=actual_check_data['id'])
+        self.assertCheckEqual(check, actual_check_data)
+
+    def test_patch_fails_on_when_patching_read_only_field(self):
+        """
+        Tests related to patching a single security check.
+        """
+        check = Check.objects.first()
+        assigned_to_user = self.security_fiu_users[0]
+
+        auth = self.get_http_authorization_for_user(self._get_authorised_user())
+        response = self.client.patch(
+            reverse(
+                'security-check-detail',
+                kwargs={'pk': check.pk},
+            ),
+            data={
+                'assigned_to': assigned_to_user.id
+            },
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+        actual_check_data = response.json()
+
+        assert check.status != CHECK_STATUS.ACCEPTED
+        response = self.client.patch(
+            reverse(
+                'security-check-detail',
+                kwargs={'pk': check.pk},
+            ),
+            data={
+                'status': CHECK_STATUS.ACCEPTED
+            },
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+
+        # Assert check unchanged
+        self.assertEqual(actual_check_data['assigned_to'], assigned_to_user.id)
+        self.assertEqual(actual_check_data['assigned_to_name'], assigned_to_user.get_full_name())
+
+        check = Check.objects.get(pk=actual_check_data['id'])
+        self.assertCheckEqual(check, actual_check_data)
+
+
 class GetCheckTestCase(BaseCheckTestCase):
     """
     Tests related to getting a single security check.
@@ -1277,6 +1457,28 @@ class GetCheckTestCase(BaseCheckTestCase):
         Test that the get object endpoint returns check details.
         """
         check = Check.objects.first()
+
+        auth = self.get_http_authorization_for_user(self._get_authorised_user())
+        response = self.client.get(
+            reverse(
+                'security-check-detail',
+                kwargs={'pk': check.pk},
+            ),
+            format='json',
+            HTTP_AUTHORIZATION=auth,
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+
+        actual_check_data = response.json()
+        self.assertCheckEqual(check, actual_check_data)
+
+    def test_get_assigned_check(self):
+        """
+        Test that the get object endpoint returns check details including assignment
+        """
+        check = Check.objects.first()
+        check.assigned_to = self.security_fiu_users[0]
+        check.save()
 
         auth = self.get_http_authorization_for_user(self._get_authorised_user())
         response = self.client.get(

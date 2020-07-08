@@ -319,8 +319,16 @@ class Check(TimeStampedModel):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
+        related_name='security_check_actioned_by'
     )
     decision_reason = models.TextField(blank=True)
+    assigned_to = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='security_check_assigned_to'
+    )
 
     objects = CheckManager()
 

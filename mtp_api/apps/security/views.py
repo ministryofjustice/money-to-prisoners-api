@@ -528,6 +528,7 @@ class CheckListFilter(django_filters.FilterSet):
 class CheckView(
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
     viewsets.GenericViewSet,
 ):
     queryset = Check.objects.all()

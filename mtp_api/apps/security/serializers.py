@@ -222,6 +222,7 @@ class SavedSearchSerializer(serializers.ModelSerializer):
 
 class CheckSerializer(serializers.ModelSerializer):
     actioned_by_name = serializers.SerializerMethodField('get_actioned_by_name_from_user')
+    assigned_to_name = serializers.SerializerMethodField('get_assigned_to_name_from_user')
 
     class Meta:
         model = Check
@@ -233,8 +234,20 @@ class CheckSerializer(serializers.ModelSerializer):
             'rules',
             'actioned_at',
             'actioned_by',
+            'assigned_to',
             'decision_reason',
             'actioned_by_name',
+            'assigned_to_name',
+        )
+        read_only_fields = (
+            'id',
+            'credit',
+            'status',
+            'description',
+            'rules',
+            'actioned_at',
+            'actioned_by',
+            'decision_reason',
         )
 
     def get_actioned_by_name_from_user(self, check):
@@ -243,6 +256,20 @@ class CheckSerializer(serializers.ModelSerializer):
             return actioned_by_name
         else:
             return None
+
+    def get_assigned_to_name_from_user(self, check):
+        if check.assigned_to is not None:
+            assigned_to_name = check.assigned_to.get_full_name()
+            return assigned_to_name
+        else:
+            return None
+
+    def update(self, instance, validated_data):
+        if instance.assigned_to_id and validated_data.get('assigned_to') not in (None, instance.assigned_to_id):
+            raise ValidationError(
+                'That check is already assigned to {}'.format(instance.assigned_to.get_full_name())
+            )
+        return super().update(instance, validated_data)
 
 
 class CheckCreditSerializer(CheckSerializer):
@@ -255,6 +282,7 @@ class CheckCreditSerializer(CheckSerializer):
         fields = CheckSerializer.Meta.fields + (
             'credit',
         )
+        read_only_fields = CheckSerializer.Meta.read_only_fields
 
 
 class AcceptCheckSerializer(CheckCreditSerializer):
@@ -263,6 +291,12 @@ class AcceptCheckSerializer(CheckCreditSerializer):
     class Meta:
         model = Check
         fields = ('decision_reason',)
+        read_only_fields = (
+            'id',
+            'credit',
+            'description',
+            'rules'
+        )
 
     def accept(self, by):
         try:
@@ -282,6 +316,12 @@ class RejectCheckSerializer(CheckCreditSerializer):
     class Meta:
         model = Check
         fields = ('decision_reason',)
+        read_only_fields = (
+            'id',
+            'credit',
+            'description',
+            'rules'
+        )
 
     def reject(self, by):
         try:
