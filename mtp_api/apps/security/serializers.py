@@ -194,7 +194,7 @@ class SavedSearchSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SavedSearch
-        read_only_fields_fields = ('id',)
+        read_only_fields = ('id',)
         fields = (
             'id',
             'description',

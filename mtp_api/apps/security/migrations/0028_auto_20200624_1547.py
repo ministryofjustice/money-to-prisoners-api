@@ -16,11 +16,23 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='check',
             name='assigned_to',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='assigned_to', to=settings.AUTH_USER_MODEL),
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name='security_check_assigned_to',
+                to=settings.AUTH_USER_MODEL
+            ),
         ),
         migrations.AlterField(
             model_name='check',
             name='actioned_by',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='actioned_by', to=settings.AUTH_USER_MODEL),
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name='security_check_actioned_by',
+                to=settings.AUTH_USER_MODEL
+            ),
         ),
     ]
