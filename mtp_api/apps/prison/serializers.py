@@ -1,8 +1,15 @@
+import logging
+
 from django.db import transaction
 from django.utils.translation import gettext as _
+from mtp_common import nomis
+import requests
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from prison.models import PrisonerLocation, Prison, Category, Population, PrisonBankAccount
+
+logger = logging.getLogger('mtp')
 
 
 class PopulationSerializer(serializers.ModelSerializer):
@@ -78,6 +85,34 @@ class PrisonerValiditySerializer(serializers.ModelSerializer):
             'prisoner_number',
             'prisoner_dob',
         )
+
+
+class PrisonerAccountBalanceSerializer(serializers.Serializer):
+    combined_account_balance = serializers.SerializerMethodField()
+
+    def get_combined_account_balance(self, prisoner_location: PrisonerLocation):
+        if prisoner_location.prison.private_estate:
+            # NB: balances are not known in private estate currently
+            return 0
+
+        try:
+            nomis_account_balances = nomis.get_account_balances(
+                prisoner_location.prison.nomis_id,
+                prisoner_location.prisoner_number,
+            )
+            return (
+                nomis_account_balances['cash'] +
+                nomis_account_balances['spends'] +
+                nomis_account_balances['savings']
+            )
+        except KeyError:
+            msg = f'NOMIS balances for {prisoner_location.prisoner_number} is malformed'
+            logger.exception(msg)
+            raise ValidationError(msg)
+        except requests.RequestException:
+            msg = f'Cannot lookup NOMIS balances for {prisoner_location.prisoner_number}'
+            logger.exception(msg)
+            raise ValidationError(msg)
 
 
 class PrisonBankAccountSerializer(serializers.ModelSerializer):

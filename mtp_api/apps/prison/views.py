@@ -26,8 +26,10 @@ from mtp_auth.permissions import (
 from prison.forms import LoadOffendersForm
 from prison.models import PrisonerLocation, Category, Population, Prison
 from prison.serializers import (
-    PrisonerLocationSerializer, PrisonerValiditySerializer, PrisonSerializer,
-    PopulationSerializer, CategorySerializer
+    PrisonerLocationSerializer,
+    PrisonerValiditySerializer,
+    PrisonerAccountBalanceSerializer,
+    PrisonSerializer, PopulationSerializer, CategorySerializer,
 )
 from security.signals import prisoner_profile_current_prisons_need_updating
 
@@ -140,6 +142,17 @@ class PrisonerValidityView(mixins.ListModelMixin, viewsets.GenericViewSet):
                                             'fields are required'},
                             status=status.HTTP_400_BAD_REQUEST)
         return super().list(request, *args, **kwargs)
+
+
+class PrisonerAccountBalanceView(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+    queryset = PrisonerLocation.objects.filter(active=True)
+    permission_classes = (
+        IsAuthenticated, SendMoneyClientIDPermissions,
+    )
+    serializer_class = PrisonerAccountBalanceSerializer
+    lookup_field = 'prisoner_number'
+    lookup_url_kwarg = 'prisoner_number'
+    lookup_value_regex = '[A-Za-z][0-9]{4}[A-Za-z]{2}'
 
 
 class PrisonView(mixins.ListModelMixin, viewsets.GenericViewSet):
