@@ -566,8 +566,17 @@ class PrisonerAccountBalanceTestCase(AuthTestCaseMixin, APITestCase):
         self.assertIn(b'Cannot lookup NOMIS balances', response.content)
 
     @mock.patch('prison.serializers.nomis')
-    def test_unexpected_nomis_response(self, mocked_nomis):
+    def test_nomis_response_with_missing_accounts(self, mocked_nomis):
         mocked_nomis.get_account_balances.return_value = {'cash': 0}
+
+        with silence_logger():
+            response = self.make_api_call(self.prisoner_location_public, self.send_money_user)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn(b'malformed', response.content)
+
+    @mock.patch('prison.serializers.nomis')
+    def test_nomis_response_with_unexpected_account_values(self, mocked_nomis):
+        mocked_nomis.get_account_balances.return_value = {'cash': 1000, 'spends': 550, 'savings': None}
 
         with silence_logger():
             response = self.make_api_call(self.prisoner_location_public, self.send_money_user)
