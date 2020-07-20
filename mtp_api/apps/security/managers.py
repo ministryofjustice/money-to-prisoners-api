@@ -398,10 +398,7 @@ class CheckManager(models.Manager):
         matched_rule_codes = self._get_matching_rules(credit)
 
         if matched_rule_codes:
-            description = (
-                'Credit matched: ' +
-                '. '.join(RULES[rule_code].description for rule_code in matched_rule_codes)
-            )
+            description = '. '.join(RULES[rule_code].description for rule_code in matched_rule_codes)
             status = CHECK_STATUS.PENDING
         else:
             description = 'Credit matched no rules and was automatically accepted'
