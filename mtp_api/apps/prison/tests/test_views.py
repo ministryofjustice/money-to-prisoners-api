@@ -1,9 +1,12 @@
+import itertools
 import random
 from unittest import mock
 
 from django.urls import reverse
 from django.utils.dateformat import format as format_date
 from model_mommy import mommy
+from mtp_common.test_utils import silence_logger
+import requests
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -486,6 +489,99 @@ class PrisonerValidityViewTestCase(AuthTestCaseMixin, APITestCase):
         valid_data_with_filter['prisons'] = ','.join(other_prisons.values_list('nomis_id', flat=True))
         response = self.call_authorised_endpoint(valid_data_with_filter)
         self.assertEmptyResponse(response)
+
+
+class PrisonerAccountBalanceTestCase(AuthTestCaseMixin, APITestCase):
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
+
+    def setUp(self):
+        super().setUp()
+
+        # make 1 prisoner in a public prison and in a private one
+        public_prison = Prison.objects.get(nomis_id='INP')
+        public_prison.private_estate = False
+        public_prison.save()
+        private_prison = Prison.objects.get(nomis_id='IXB')
+        private_prison.private_estate = True
+        private_prison.save()
+        load_random_prisoner_locations(number_of_prisoners=2)
+        prisoner_locations = PrisonerLocation.objects.order_by('?')[0:2]
+        prisoner_location_public, prisoner_location_private = prisoner_locations
+        prisoner_location_public.prison = public_prison
+        prisoner_location_public.save()
+        prisoner_location_private.prison = private_prison
+        prisoner_location_private.save()
+        self.prisoner_location_public = prisoner_location_public
+        self.prisoner_location_private = prisoner_location_private
+
+        # make standard users
+        test_users = make_test_users(clerks_per_prison=1, num_security_fiu_users=0)
+        send_money_users = test_users.pop('send_money_users')
+        self.send_money_user = send_money_users[0]
+        self.other_users = itertools.chain.from_iterable(test_users.values())
+
+    def make_api_call(self, prisoner_location, user=None):
+        prisoner_number = prisoner_location.prisoner_number
+        url = reverse('prisoner_account_balance-detail', kwargs={'prisoner_number': prisoner_number})
+        kwargs = {'format': 'json'}
+        if user:
+            kwargs['HTTP_AUTHORIZATION'] = self.get_http_authorization_for_user(user)
+        return self.client.get(url, **kwargs)
+
+    def test_fails_without_authentication(self):
+        response = self.make_api_call(self.prisoner_location_public)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED, msg='access without auth')
+
+    def test_fails_without_application_permissions(self):
+        for another_user in self.other_users:
+            response = self.make_api_call(self.prisoner_location_public, another_user)
+            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, msg=f'accessed by {another_user}')
+
+    @mock.patch('prison.serializers.nomis')
+    def test_retrieving_combined_balance_in_public_estate(self, mocked_nomis):
+        mocked_nomis.get_account_balances.return_value = {'cash': 3000, 'spends': 550, 'savings': 12000}
+
+        response = self.make_api_call(self.prisoner_location_public, self.send_money_user)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_data = response.json()
+        self.assertDictEqual(response_data, {'combined_account_balance': 3000 + 550 + 12000})
+
+    @mock.patch('prison.serializers.nomis')
+    def test_retrieving_combined_balance_in_private_estate(self, mocked_nomis):
+        mocked_nomis.get_account_balances.return_value = {'cash': 1000, 'spends': 550, 'savings': 12000}
+
+        response = self.make_api_call(self.prisoner_location_private, self.send_money_user)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_data = response.json()
+        self.assertDictEqual(response_data, {'combined_account_balance': 0})
+        mocked_nomis.get_account_balances.assert_not_called()
+
+    @mock.patch('prison.serializers.nomis')
+    def test_nomis_error_propagates(self, mocked_nomis):
+        mocked_nomis.get_account_balances.side_effect = requests.HTTPError('403 Client Error: FORBIDDEN')
+
+        with silence_logger():
+            response = self.make_api_call(self.prisoner_location_public, self.send_money_user)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn(b'Cannot lookup NOMIS balances', response.content)
+
+    @mock.patch('prison.serializers.nomis')
+    def test_nomis_response_with_missing_accounts(self, mocked_nomis):
+        mocked_nomis.get_account_balances.return_value = {'cash': 0}
+
+        with silence_logger():
+            response = self.make_api_call(self.prisoner_location_public, self.send_money_user)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn(b'malformed', response.content)
+
+    @mock.patch('prison.serializers.nomis')
+    def test_nomis_response_with_unexpected_account_values(self, mocked_nomis):
+        mocked_nomis.get_account_balances.return_value = {'cash': 1000, 'spends': 550, 'savings': None}
+
+        with silence_logger():
+            response = self.make_api_call(self.prisoner_location_public, self.send_money_user)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn(b'malformed', response.content)
 
 
 class PrisonViewTestCase(AuthTestCaseMixin, APITestCase):
