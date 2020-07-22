@@ -309,15 +309,17 @@ class SenderCreditListTestCase(SecurityViewTestCase):
 
     def test_list_credits_for_sender_include_checks(self):
         # Setup
-        sender = SenderProfile.objects.last()  # first is anonymous
+        sender = SenderProfile.objects.order_by('-credit_count').first()
         accepted_checks = []
         rejected_checks = []
         user = self._get_authorised_user()
         for credit in sender.credits.all():
             check = Check.objects.create_for_credit(credit)
-            if check.status != 'accepted':
+            if check.status == CHECK_STATUS.PENDING:
                 check.reject(user, 'looks dodgy')
                 rejected_checks.append(credit.id)
+            elif check.status == CHECK_STATUS.ACCEPTED:
+                accepted_checks.append(credit.id)
 
         # Execute
         data = self._get_list(
@@ -343,11 +345,10 @@ class SenderCreditListTestCase(SecurityViewTestCase):
                     datum['security_check']['description'],
                     'Credit matched no rules and was automatically accepted'
                 )
-                self.assertEqual(datum['security_check']['user'], user.id)
-            if datum['id'] in accepted_checks:
+            if datum['id'] in rejected_checks:
                 self.assertEqual(datum['security_check']['status'], 'rejected')
-                self.assertEqual(datum['security_check']['description'], 'looks dodgy')
-                self.assertEqual(datum['security_check']['user'], user.id)
+                self.assertEqual(datum['security_check']['decision_reason'], 'looks dodgy')
+                self.assertEqual(datum['security_check']['actioned_by'], user.id)
 
 
 class RecipientProfileListTestCase(SecurityViewTestCase):
@@ -697,15 +698,17 @@ class PrisonerCreditListTestCase(SecurityViewTestCase):
 
     def test_list_credits_for_prisoner_include_checks(self):
         # Setup
-        prisoner = PrisonerProfile.objects.first()
+        prisoner = PrisonerProfile.objects.order_by('-credit_count').first()
         accepted_checks = []
         rejected_checks = []
         user = self._get_authorised_user()
         for credit in prisoner.credits.all():
             check = Check.objects.create_for_credit(credit)
-            if check.status != 'accepted':
+            if check.status == CHECK_STATUS.PENDING:
                 check.reject(user, 'looks dodgy')
                 rejected_checks.append(credit.id)
+            elif check.status == CHECK_STATUS.ACCEPTED:
+                accepted_checks.append(credit.id)
 
         # Execute
         data = self._get_list(
@@ -731,11 +734,10 @@ class PrisonerCreditListTestCase(SecurityViewTestCase):
                     datum['security_check']['description'],
                     'Credit matched no rules and was automatically accepted'
                 )
-                self.assertEqual(datum['security_check']['user'], user.id)
-            if datum['id'] in accepted_checks:
+            if datum['id'] in rejected_checks:
                 self.assertEqual(datum['security_check']['status'], 'rejected')
-                self.assertEqual(datum['security_check']['description'], 'looks dodgy')
-                self.assertEqual(datum['security_check']['user'], user.id)
+                self.assertEqual(datum['security_check']['decision_reason'], 'looks dodgy')
+                self.assertEqual(datum['security_check']['actioned_by'], user.id)
 
 
 class PrisonerDisbursementListTestCase(SecurityViewTestCase):
@@ -743,7 +745,7 @@ class PrisonerDisbursementListTestCase(SecurityViewTestCase):
         return reverse('prisoner-disbursements-list', args=args)
 
     def test_list_disbursements_for_prisoner(self):
-        prisoner = PrisonerProfile.objects.first()
+        prisoner = PrisonerProfile.objects.order_by('-disbursement_count').first()
         data = self._get_list(
             self._get_authorised_user(), path_params=[prisoner.id]
         )['results']
