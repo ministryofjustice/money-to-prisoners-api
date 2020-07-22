@@ -341,9 +341,9 @@ class SenderCreditListTestCase(SecurityViewTestCase):
             self.assertIn('actioned_by', datum['security_check'])
             if datum['id'] in accepted_checks:
                 self.assertEqual(datum['security_check']['status'], 'accepted')
-                self.assertEqual(
+                self.assertListEqual(
                     datum['security_check']['description'],
-                    'Credit matched no rules and was automatically accepted'
+                    ['Credit matched no rules and was automatically accepted'],
                 )
             if datum['id'] in rejected_checks:
                 self.assertEqual(datum['security_check']['status'], 'rejected')
@@ -730,9 +730,9 @@ class PrisonerCreditListTestCase(SecurityViewTestCase):
             self.assertIn('actioned_by', datum['security_check'])
             if datum['id'] in accepted_checks:
                 self.assertEqual(datum['security_check']['status'], 'accepted')
-                self.assertEqual(
+                self.assertListEqual(
                     datum['security_check']['description'],
-                    'Credit matched no rules and was automatically accepted'
+                    ['Credit matched no rules and was automatically accepted'],
                 )
             if datum['id'] in rejected_checks:
                 self.assertEqual(datum['security_check']['status'], 'rejected')
@@ -966,7 +966,7 @@ class BaseCheckTestCase(APITestCase, AuthTestCaseMixin):
                 credit=credit,
                 status=CHECK_STATUS.PENDING,
                 rules=['ABC', 'DEF'],
-                description='Failed rules',
+                description=['Failed rules'],
             )
 
         for credit in Credit.objects_all.filter(resolution=CREDIT_RESOLUTION.FAILED):
@@ -975,7 +975,7 @@ class BaseCheckTestCase(APITestCase, AuthTestCaseMixin):
                 credit=credit,
                 status=CHECK_STATUS.REJECTED,
                 rules=['ABC', 'DEF'],
-                description='Failed rules',
+                description=['Failed rules'],
                 actioned_at=now(),
                 actioned_by=self.security_fiu_users[0],
                 decision_reason='because...',
@@ -987,7 +987,7 @@ class BaseCheckTestCase(APITestCase, AuthTestCaseMixin):
                 credit=credit,
                 status=CHECK_STATUS.ACCEPTED,
                 rules=['ABC', 'DEF'],
-                description='Failed rules',
+                description=['Failed rules'],
                 actioned_at=now(),
                 actioned_by=self.security_fiu_users[0],
             )

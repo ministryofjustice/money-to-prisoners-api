@@ -518,7 +518,7 @@ class GetPaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         # reset check to pending
         check = payment.credit.security_check
         check.status = CHECK_STATUS.PENDING
-        check.description = 'Credit matched FIU monitoring rules'
+        check.description = ['Credit matched FIU monitoring rules']
         check.rules = ['FIUMONP']
         check.save()
         response = self.client.get(
