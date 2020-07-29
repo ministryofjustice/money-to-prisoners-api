@@ -1,10 +1,11 @@
 import logging
 
 from django.db import transaction
+from django.core.exceptions import ObjectDoesNotExist
 from django.utils.translation import gettext as _
 from mtp_common import nomis
 import requests
-from rest_framework import serializers
+from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
 
 from prison.models import PrisonerLocation, Prison, Category, Population, PrisonBankAccount
@@ -77,6 +78,23 @@ class PrisonerLocationSerializer(serializers.ModelSerializer):
             }
         }
 
+    @transaction.atomic
+    def fetch_and_update(self):
+        try:
+            new_location = nomis.get_location(self.instance.prisoner_number)
+            new_prison = Prison.objects.get(nomis_id=new_location['nomis_id'])
+        except requests.RequestException:
+            logger.error(f'Cannot look up prisoner location for {self.instance.prisoner_number} in nomis')
+            return None
+        except ObjectDoesNotExist:
+            logger.error(f'Cannot find prison matching {new_location.nomis_id} in Prison table')
+            return None
+        else:
+            logger.info(
+                f'Moving {self.instance.prisoner_number} from {self.instance.prison.nomis_id} to {new_prison.nomis_id}'
+            )
+            return self.update(self.instance, {'prison': new_prison})
+
 
 class PrisonerValiditySerializer(serializers.ModelSerializer):
     class Meta:
@@ -91,7 +109,7 @@ class PrisonerAccountBalanceSerializer(serializers.Serializer):
     NOMIS_ACCOUNTS = {'cash', 'spends', 'savings'}
     combined_account_balance = serializers.SerializerMethodField()
 
-    def get_combined_account_balance(self, prisoner_location: PrisonerLocation):
+    def get_combined_account_balance(self, prisoner_location: PrisonerLocation, update_location_on_not_found=True):
         if prisoner_location.prison.private_estate:
             # NB: balances are not known in private estate currently
             return 0
@@ -110,10 +128,27 @@ class PrisonerAccountBalanceSerializer(serializers.Serializer):
             msg = f'NOMIS balances for {prisoner_location.prisoner_number} is malformed: {e}'
             logger.exception(msg)
             raise ValidationError(msg)
-        except requests.RequestException:
-            msg = f'Cannot lookup NOMIS balances for {prisoner_location.prisoner_number}'
-            logger.exception(msg)
-            raise ValidationError(msg)
+        except requests.RequestException as e:
+            # TODO I think this message is rendered on page, make it nicer
+            msg = (
+                f'Cannot lookup NOMIS balances for {prisoner_location.prisoner_number} in '
+                f'{prisoner_location.prison.nomis_id}'
+            )
+            if (
+                getattr(e, 'response', None) is not None and
+                e.response.status_code == status.HTTP_400_BAD_REQUEST
+                and update_location_on_not_found
+            ):
+                logger.warning(msg)
+                new_location = PrisonerLocationSerializer(prisoner_location).fetch_and_update()
+                if new_location:
+                    return self.get_combined_account_balance(new_location, update_location_on_not_found=False)
+                else:
+                    # TODO add better message
+                    raise ValidationError(msg)
+            else:
+                logger.exception(msg)
+                raise ValidationError(msg)
         else:
             return sum(nomis_account_balances[account] for account in self.NOMIS_ACCOUNTS)
 
