@@ -145,7 +145,9 @@ class PrisonerAccountBalanceSerializer(serializers.Serializer):
                     return self.get_combined_account_balance(new_location, update_location_on_not_found=False)
                 else:
                     # TODO add better message
-                    raise ValidationError(msg)
+                    raise ValidationError(
+                        f'Could not find location for prisoner_number {prisoner_location.prisoner_number} in NOMIS'
+                    )
             else:
                 logger.exception(msg)
                 raise ValidationError(msg)
