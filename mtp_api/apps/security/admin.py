@@ -175,7 +175,11 @@ class CheckAdmin(admin.ModelAdmin):
     date_hierarchy = 'created'
     list_select_related = ('credit',)
     exclude = ('credit',)
-    readonly_fields = ('credit_link',)
+    readonly_fields = (
+        'rules',
+        'description',
+        'credit_link',
+    )
     actions = ['display_stats']
 
     @add_short_description(_('credit'))

@@ -296,7 +296,8 @@ class CreditCheckTestCase(TestCase):
         self.assertTrue(credit.should_check())
         check = Check.objects.create_for_credit(credit)
         self.assertEqual(check.status, CHECK_STATUS.ACCEPTED)
-        self.assertIn('automatically accepted', check.description)
+        self.assertEqual(len(check.description), 1)
+        self.assertIn('automatically accepted', check.description[0])
         self.assertFalse(check.rules)
 
     def test_credit_without_profiles_checked_with_matched_rules(self):
@@ -310,8 +311,10 @@ class CreditCheckTestCase(TestCase):
         self.assertTrue(credit.should_check())
         check = Check.objects.create_for_credit(credit)
         self.assertEqual(check.status, CHECK_STATUS.PENDING)
-        self.assertIn('FIU prisoners', check.description)
-        self.assertIn('FIU payment sources', check.description)
+        self.assertEqual(len(check.description), 2)
+        description = '\n'.join(check.description)
+        self.assertIn('FIU prisoners', description)
+        self.assertIn('FIU payment sources', description)
         self.assertListEqual(sorted(check.rules), ['FIUMONP', 'FIUMONS'])
 
     def test_credit_with_profiles_checked_with_matched_rules(self):
@@ -327,8 +330,10 @@ class CreditCheckTestCase(TestCase):
         self.assertTrue(credit.should_check())
         check = Check.objects.create_for_credit(credit)
         self.assertEqual(check.status, CHECK_STATUS.PENDING)
-        self.assertIn('FIU prisoners', check.description)
-        self.assertIn('FIU payment sources', check.description)
+        self.assertEqual(len(check.description), 2)
+        description = '\n'.join(check.description)
+        self.assertIn('FIU prisoners', description)
+        self.assertIn('FIU payment sources', description)
         self.assertListEqual(sorted(check.rules), ['FIUMONP', 'FIUMONS'])
 
     def test_credit_with_matched_csfreq_rule(self):
