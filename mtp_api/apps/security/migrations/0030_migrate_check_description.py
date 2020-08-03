@@ -21,7 +21,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='check',
             name='description_migration',
-            field=django.contrib.postgres.fields.ArrayField(base_field=models.CharField(max_length=100), blank=True, null=True, size=None),
+            field=django.contrib.postgres.fields.ArrayField(base_field=models.CharField(max_length=200), blank=True, null=True, size=None),
         ),
         migrations.RunSQL(sql=SPLIT_CHECK_DESCRIPTION, reverse_sql=JOIN_CHECK_DESCRIPTION),
         migrations.RemoveField(

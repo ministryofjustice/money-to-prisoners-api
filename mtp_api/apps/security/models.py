@@ -308,7 +308,7 @@ class Check(TimeStampedModel):
         db_index=True,
     )
     description = ArrayField(
-        models.CharField(max_length=100),
+        models.CharField(max_length=200),
         null=True,
         blank=True,
     )
