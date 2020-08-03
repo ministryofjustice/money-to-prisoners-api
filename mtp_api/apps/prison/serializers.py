@@ -1,13 +1,13 @@
 import logging
 
 from django.db import transaction
-from django.core.exceptions import ObjectDoesNotExist
 from django.utils.translation import gettext as _
 from mtp_common import nomis
 import requests
 from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
 
+from credit.signals import credit_prisons_need_updating
 from prison.models import PrisonerLocation, Prison, Category, Population, PrisonBankAccount
 
 logger = logging.getLogger('mtp')
@@ -82,18 +82,26 @@ class PrisonerLocationSerializer(serializers.ModelSerializer):
     def fetch_and_update(self):
         try:
             new_location = nomis.get_location(self.instance.prisoner_number)
+            if not new_location:
+                logger.error(
+                    'Malformed response from nomis when looking up prisoner location for '
+                    f'{self.instance.prisoner_number}'
+                )
+                return None
             new_prison = Prison.objects.get(nomis_id=new_location['nomis_id'])
         except requests.RequestException:
             logger.error(f'Cannot look up prisoner location for {self.instance.prisoner_number} in nomis')
             return None
-        except ObjectDoesNotExist:
+        except Prison.DoesNotExist:
             logger.error(f'Cannot find prison matching {new_location.nomis_id} in Prison table')
             return None
         else:
             logger.info(
                 f'Moving {self.instance.prisoner_number} from {self.instance.prison.nomis_id} to {new_prison.nomis_id}'
             )
-            return self.update(self.instance, {'prison': new_prison})
+            updated_location = self.update(self.instance, {'prison': new_prison})
+            credit_prisons_need_updating.send(sender=PrisonerLocation)
+            return updated_location
 
 
 class PrisonerValiditySerializer(serializers.ModelSerializer):
@@ -135,8 +143,8 @@ class PrisonerAccountBalanceSerializer(serializers.Serializer):
                 f'{prisoner_location.prison.nomis_id}'
             )
             if (
-                getattr(e, 'response', None) is not None and
-                e.response.status_code == status.HTTP_400_BAD_REQUEST
+                getattr(e, 'response', None) is not None
+                and e.response.status_code == status.HTTP_400_BAD_REQUEST
                 and update_location_on_not_found
             ):
                 logger.warning(msg)
