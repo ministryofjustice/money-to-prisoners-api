@@ -7,8 +7,8 @@ import requests
 from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
 
-from credit.signals import credit_prisons_need_updating
 from prison.models import PrisonerLocation, Prison, Category, Population, PrisonBankAccount
+from prison.utils import fetch_prisoner_location_from_nomis
 
 logger = logging.getLogger('mtp')
 
@@ -78,31 +78,6 @@ class PrisonerLocationSerializer(serializers.ModelSerializer):
             }
         }
 
-    @transaction.atomic
-    def fetch_and_update(self):
-        try:
-            new_location = nomis.get_location(self.instance.prisoner_number)
-            if not new_location:
-                logger.error(
-                    'Malformed response from nomis when looking up prisoner location for '
-                    f'{self.instance.prisoner_number}'
-                )
-                return None
-            new_prison = Prison.objects.get(nomis_id=new_location['nomis_id'])
-        except requests.RequestException:
-            logger.error(f'Cannot look up prisoner location for {self.instance.prisoner_number} in nomis')
-            return None
-        except Prison.DoesNotExist:
-            logger.error(f'Cannot find prison matching {new_location.nomis_id} in Prison table')
-            return None
-        else:
-            logger.info(
-                f'Moving {self.instance.prisoner_number} from {self.instance.prison.nomis_id} to {new_prison.nomis_id}'
-            )
-            updated_location = self.update(self.instance, {'prison': new_prison})
-            credit_prisons_need_updating.send(sender=PrisonerLocation)
-            return updated_location
-
 
 class PrisonerValiditySerializer(serializers.ModelSerializer):
     class Meta:
@@ -137,7 +112,6 @@ class PrisonerAccountBalanceSerializer(serializers.Serializer):
             logger.exception(msg)
             raise ValidationError(msg)
         except requests.RequestException as e:
-            # TODO I think this message is rendered on page, make it nicer
             msg = (
                 f'Cannot lookup NOMIS balances for {prisoner_location.prisoner_number} in '
                 f'{prisoner_location.prison.nomis_id}'
@@ -148,11 +122,10 @@ class PrisonerAccountBalanceSerializer(serializers.Serializer):
                 and update_location_on_not_found
             ):
                 logger.warning(msg)
-                new_location = PrisonerLocationSerializer(prisoner_location).fetch_and_update()
+                new_location = fetch_prisoner_location_from_nomis(prisoner_location)
                 if new_location:
                     return self.get_combined_account_balance(new_location, update_location_on_not_found=False)
                 else:
-                    # TODO add better message
                     raise ValidationError(
                         f'Could not find location for prisoner_number {prisoner_location.prisoner_number} in NOMIS'
                     )

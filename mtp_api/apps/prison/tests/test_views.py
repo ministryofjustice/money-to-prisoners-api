@@ -599,6 +599,7 @@ class PrisonerAccountBalanceTestCase(AuthTestCaseMixin, APITestCase):
     def test_prisoner_location_mismatch_prisoner_found(self, *args):
         # We need more than one public prison!
         Prison.objects.update(private_estate=False)
+        existing_prison = self.prisoner_location_public.prison
         new_prison = Prison.objects.filter(
             private_estate=False
         ).exclude(
@@ -644,7 +645,7 @@ class PrisonerAccountBalanceTestCase(AuthTestCaseMixin, APITestCase):
         self.assertIn('combined_account_balance', response.json().keys())
 
         self.prisoner_location_public.refresh_from_db()
-        self.assertEqual(self.prisoner_location_public.prison, new_prison)
+        self.assertEqual(self.prisoner_location_public.prison, existing_prison)
 
     @override_settings(
         NOMIS_ELITE_BASE_URL='http://helloiamnom.is'
