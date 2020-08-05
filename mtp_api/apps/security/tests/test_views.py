@@ -309,15 +309,17 @@ class SenderCreditListTestCase(SecurityViewTestCase):
 
     def test_list_credits_for_sender_include_checks(self):
         # Setup
-        sender = SenderProfile.objects.last()  # first is anonymous
+        sender = SenderProfile.objects.order_by('-credit_count').first()
         accepted_checks = []
         rejected_checks = []
         user = self._get_authorised_user()
         for credit in sender.credits.all():
             check = Check.objects.create_for_credit(credit)
-            if check.status != 'accepted':
+            if check.status == CHECK_STATUS.PENDING:
                 check.reject(user, 'looks dodgy')
                 rejected_checks.append(credit.id)
+            elif check.status == CHECK_STATUS.ACCEPTED:
+                accepted_checks.append(credit.id)
 
         # Execute
         data = self._get_list(
@@ -339,15 +341,14 @@ class SenderCreditListTestCase(SecurityViewTestCase):
             self.assertIn('actioned_by', datum['security_check'])
             if datum['id'] in accepted_checks:
                 self.assertEqual(datum['security_check']['status'], 'accepted')
-                self.assertEqual(
+                self.assertListEqual(
                     datum['security_check']['description'],
-                    'Credit matched no rules and was automatically accepted'
+                    ['Credit matched no rules and was automatically accepted'],
                 )
-                self.assertEqual(datum['security_check']['user'], user.id)
-            if datum['id'] in accepted_checks:
+            if datum['id'] in rejected_checks:
                 self.assertEqual(datum['security_check']['status'], 'rejected')
-                self.assertEqual(datum['security_check']['description'], 'looks dodgy')
-                self.assertEqual(datum['security_check']['user'], user.id)
+                self.assertEqual(datum['security_check']['decision_reason'], 'looks dodgy')
+                self.assertEqual(datum['security_check']['actioned_by'], user.id)
 
 
 class RecipientProfileListTestCase(SecurityViewTestCase):
@@ -697,15 +698,17 @@ class PrisonerCreditListTestCase(SecurityViewTestCase):
 
     def test_list_credits_for_prisoner_include_checks(self):
         # Setup
-        prisoner = PrisonerProfile.objects.first()
+        prisoner = PrisonerProfile.objects.order_by('-credit_count').first()
         accepted_checks = []
         rejected_checks = []
         user = self._get_authorised_user()
         for credit in prisoner.credits.all():
             check = Check.objects.create_for_credit(credit)
-            if check.status != 'accepted':
+            if check.status == CHECK_STATUS.PENDING:
                 check.reject(user, 'looks dodgy')
                 rejected_checks.append(credit.id)
+            elif check.status == CHECK_STATUS.ACCEPTED:
+                accepted_checks.append(credit.id)
 
         # Execute
         data = self._get_list(
@@ -727,15 +730,14 @@ class PrisonerCreditListTestCase(SecurityViewTestCase):
             self.assertIn('actioned_by', datum['security_check'])
             if datum['id'] in accepted_checks:
                 self.assertEqual(datum['security_check']['status'], 'accepted')
-                self.assertEqual(
+                self.assertListEqual(
                     datum['security_check']['description'],
-                    'Credit matched no rules and was automatically accepted'
+                    ['Credit matched no rules and was automatically accepted'],
                 )
-                self.assertEqual(datum['security_check']['user'], user.id)
-            if datum['id'] in accepted_checks:
+            if datum['id'] in rejected_checks:
                 self.assertEqual(datum['security_check']['status'], 'rejected')
-                self.assertEqual(datum['security_check']['description'], 'looks dodgy')
-                self.assertEqual(datum['security_check']['user'], user.id)
+                self.assertEqual(datum['security_check']['decision_reason'], 'looks dodgy')
+                self.assertEqual(datum['security_check']['actioned_by'], user.id)
 
 
 class PrisonerDisbursementListTestCase(SecurityViewTestCase):
@@ -743,7 +745,7 @@ class PrisonerDisbursementListTestCase(SecurityViewTestCase):
         return reverse('prisoner-disbursements-list', args=args)
 
     def test_list_disbursements_for_prisoner(self):
-        prisoner = PrisonerProfile.objects.first()
+        prisoner = PrisonerProfile.objects.order_by('-disbursement_count').first()
         data = self._get_list(
             self._get_authorised_user(), path_params=[prisoner.id]
         )['results']
@@ -964,7 +966,7 @@ class BaseCheckTestCase(APITestCase, AuthTestCaseMixin):
                 credit=credit,
                 status=CHECK_STATUS.PENDING,
                 rules=['ABC', 'DEF'],
-                description='Failed rules',
+                description=['Failed rules'],
             )
 
         for credit in Credit.objects_all.filter(resolution=CREDIT_RESOLUTION.FAILED):
@@ -973,7 +975,7 @@ class BaseCheckTestCase(APITestCase, AuthTestCaseMixin):
                 credit=credit,
                 status=CHECK_STATUS.REJECTED,
                 rules=['ABC', 'DEF'],
-                description='Failed rules',
+                description=['Failed rules'],
                 actioned_at=now(),
                 actioned_by=self.security_fiu_users[0],
                 decision_reason='because...',
@@ -985,7 +987,7 @@ class BaseCheckTestCase(APITestCase, AuthTestCaseMixin):
                 credit=credit,
                 status=CHECK_STATUS.ACCEPTED,
                 rules=['ABC', 'DEF'],
-                description='Failed rules',
+                description=['Failed rules'],
                 actioned_at=now(),
                 actioned_by=self.security_fiu_users[0],
             )
