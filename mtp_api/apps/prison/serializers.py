@@ -4,10 +4,11 @@ from django.db import transaction
 from django.utils.translation import gettext as _
 from mtp_common import nomis
 import requests
-from rest_framework import serializers
+from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
 
 from prison.models import PrisonerLocation, Prison, Category, Population, PrisonBankAccount
+from prison.utils import fetch_prisoner_location_from_nomis
 
 logger = logging.getLogger('mtp')
 
@@ -91,7 +92,7 @@ class PrisonerAccountBalanceSerializer(serializers.Serializer):
     NOMIS_ACCOUNTS = {'cash', 'spends', 'savings'}
     combined_account_balance = serializers.SerializerMethodField()
 
-    def get_combined_account_balance(self, prisoner_location: PrisonerLocation):
+    def get_combined_account_balance(self, prisoner_location: PrisonerLocation, update_location_on_not_found=True):
         if prisoner_location.prison.private_estate:
             # NB: balances are not known in private estate currently
             return 0
@@ -110,10 +111,27 @@ class PrisonerAccountBalanceSerializer(serializers.Serializer):
             msg = f'NOMIS balances for {prisoner_location.prisoner_number} is malformed: {e}'
             logger.exception(msg)
             raise ValidationError(msg)
-        except requests.RequestException:
-            msg = f'Cannot lookup NOMIS balances for {prisoner_location.prisoner_number}'
-            logger.exception(msg)
-            raise ValidationError(msg)
+        except requests.RequestException as e:
+            msg = (
+                f'Cannot lookup NOMIS balances for {prisoner_location.prisoner_number} in '
+                f'{prisoner_location.prison.nomis_id}'
+            )
+            if (
+                getattr(e, 'response', None) is not None
+                and e.response.status_code == status.HTTP_400_BAD_REQUEST
+                and update_location_on_not_found
+            ):
+                logger.warning(msg)
+                new_location = fetch_prisoner_location_from_nomis(prisoner_location)
+                if new_location:
+                    return self.get_combined_account_balance(new_location, update_location_on_not_found=False)
+                else:
+                    raise ValidationError(
+                        f'Could not find location for prisoner_number {prisoner_location.prisoner_number} in NOMIS'
+                    )
+            else:
+                logger.exception(msg)
+                raise ValidationError(msg)
         else:
             return sum(nomis_account_balances[account] for account in self.NOMIS_ACCOUNTS)
 

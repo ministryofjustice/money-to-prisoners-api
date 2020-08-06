@@ -2,11 +2,16 @@ import itertools
 import random
 from unittest import mock
 
+from django.conf import settings
+from django.core.cache import cache
+from django.test import override_settings
 from django.urls import reverse
 from django.utils.dateformat import format as format_date
 from model_mommy import mommy
+from mtp_common.nomis import EliteNomisConnector
 from mtp_common.test_utils import silence_logger
 import requests
+import responses
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -520,6 +525,10 @@ class PrisonerAccountBalanceTestCase(AuthTestCaseMixin, APITestCase):
         self.send_money_user = send_money_users[0]
         self.other_users = itertools.chain.from_iterable(test_users.values())
 
+    @staticmethod
+    def tearDown():
+        cache.clear()
+
     def make_api_call(self, prisoner_location, user=None):
         prisoner_number = prisoner_location.prisoner_number
         url = reverse('prisoner_account_balance-detail', kwargs={'prisoner_number': prisoner_number})
@@ -582,6 +591,99 @@ class PrisonerAccountBalanceTestCase(AuthTestCaseMixin, APITestCase):
             response = self.make_api_call(self.prisoner_location_public, self.send_money_user)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn(b'malformed', response.content)
+
+    @override_settings(
+        NOMIS_ELITE_BASE_URL='http://helloiamnom.is'
+    )
+    @mock.patch('mtp_api.apps.prison.serializers.nomis.connector', EliteNomisConnector())
+    def test_prisoner_location_mismatch_prisoner_found(self, *args):
+        # We need more than one public prison!
+        Prison.objects.update(private_estate=False)
+        existing_prison = self.prisoner_location_public.prison
+        new_prison = Prison.objects.filter(
+            private_estate=False
+        ).exclude(
+            nomis_id=self.prisoner_location_public.prison.nomis_id,
+        ).first()
+
+        with responses.RequestsMock() as rsps:
+            rsps.add(
+                responses.POST,
+                f'{settings.NOMIS_ELITE_BASE_URL}/auth/oauth/token',
+                json={
+                    'access_token': 'amanaccesstoken',
+                    'expires_in': 3600
+                }
+            )
+            rsps.add(
+                responses.GET,
+                f'{settings.NOMIS_ELITE_BASE_URL}/elite2api/api/v1/prison/{self.prisoner_location_public.prison.nomis_id}/offenders/{self.prisoner_location_public.prisoner_number}/accounts',  # noqa: E501
+                status=400,
+                json={'thisshouldnot': 'matter'}
+            )
+            rsps.add(
+                responses.GET,
+                f'{settings.NOMIS_ELITE_BASE_URL}/elite2api/api/v1/offenders/{self.prisoner_location_public.prisoner_number}/location',  # noqa: E501
+                json={
+                    'establishment': {
+                        'code': new_prison.nomis_id,
+                        'desc': new_prison.name
+                    },
+                }
+            )
+            rsps.add(
+                responses.GET,
+                f'{settings.NOMIS_ELITE_BASE_URL}/elite2api/api/v1/prison/{new_prison.nomis_id}/offenders/{self.prisoner_location_public.prisoner_number}/accounts',  # noqa: E501
+                status=200,
+                json={
+                    'cash': 1000, 'spends': 550, 'savings': 12000
+                }
+            )
+            response = self.make_api_call(self.prisoner_location_public, self.send_money_user)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('combined_account_balance', response.json().keys())
+
+        self.prisoner_location_public.refresh_from_db()
+        self.assertEqual(self.prisoner_location_public.prison, existing_prison)
+
+    @override_settings(
+        NOMIS_ELITE_BASE_URL='http://helloiamnom.is'
+    )
+    @mock.patch('mtp_api.apps.prison.serializers.nomis.connector', EliteNomisConnector())
+    def test_prisoner_location_mismatch_no_prisoner_found(self, *args):
+        initial_prison = self.prisoner_location_public.prison
+
+        with responses.RequestsMock() as rsps:
+            rsps.add(
+                responses.POST,
+                f'{settings.NOMIS_ELITE_BASE_URL}/auth/oauth/token',
+                json={
+                    'access_token': 'amanaccesstoken',
+                    'expires_in': 3600
+                }
+            )
+            rsps.add(
+                responses.GET,
+                f'{settings.NOMIS_ELITE_BASE_URL}/elite2api/api/v1/prison/{self.prisoner_location_public.prison.nomis_id}/offenders/{self.prisoner_location_public.prisoner_number}/accounts',  # noqa: E501
+                status=400,
+                json={'thisshouldnot': 'matter'}
+            )
+            rsps.add(
+                responses.GET,
+                f'{settings.NOMIS_ELITE_BASE_URL}/elite2api/api/v1/offenders/{self.prisoner_location_public.prisoner_number}/location',  # noqa: E501
+                status=400,
+            )
+            response = self.make_api_call(self.prisoner_location_public, self.send_money_user)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn(
+            f'Could not find location for prisoner_number {self.prisoner_location_public.prisoner_number} in NOMIS',
+            response.json()
+        )
+
+        self.prisoner_location_public.refresh_from_db()
+        self.assertEqual(self.prisoner_location_public.prison, initial_prison)
 
 
 class PrisonViewTestCase(AuthTestCaseMixin, APITestCase):

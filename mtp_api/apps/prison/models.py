@@ -106,7 +106,7 @@ class PrisonerLocation(TimeStampedModel):
     single_offender_id = models.UUIDField(blank=True, null=True)
     prisoner_dob = models.DateField()
     prison = models.ForeignKey(Prison, on_delete=models.CASCADE)
-    active = models.BooleanField(default=False)
+    active = models.BooleanField(default=False, db_index=True)
 
     class Meta:
         permissions = (

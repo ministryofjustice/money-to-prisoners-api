@@ -109,6 +109,7 @@ class Credit(TimeStampedModel):
             models.Index(fields=['-amount', 'id']),
             models.Index(fields=['prisoner_number', 'id']),
             models.Index(fields=['-prisoner_number', 'id']),
+            models.Index(fields=['owner_id', 'reconciled', 'resolution']),
         ]
 
     def __str__(self):
