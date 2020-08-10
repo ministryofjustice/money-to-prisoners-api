@@ -2,18 +2,17 @@ from datetime import datetime
 from unittest import mock
 
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Group, Permission
+from django.contrib.auth.models import Group
 from oauth2_provider.models import Application
 from rest_framework.fields import DateField, DateTimeField
 
 from mtp_auth.constants import (
     CASHBOOK_OAUTH_CLIENT_ID, BANK_ADMIN_OAUTH_CLIENT_ID,
-    NOMS_OPS_OAUTH_CLIENT_ID, SEND_MONEY_CLIENT_ID
+    NOMS_OPS_OAUTH_CLIENT_ID, SEND_MONEY_CLIENT_ID,
 )
 from mtp_auth.models import Role, ApplicationUserMapping, PrisonUserMapping
 from mtp_auth.tests.mommy_recipes import (
     create_bank_admin,
-    create_basic_user,
     create_disbursement_bank_admin,
     create_prison_clerk,
     create_prisoner_location_admin,
@@ -218,20 +217,6 @@ def make_test_user_admins():
         'bank_admin_uas': refund_bank_admins,
         'security_staff_uas': security_users
     }
-
-
-# TODO: Remove once all apps move to NOMIS Elite2
-def make_token_retrieval_user():
-    user = create_basic_user('_token_retrieval')
-    user.user_permissions.add(
-        Permission.objects.get_by_natural_key('view_token', 'core', 'token')
-    )
-    for application in Application.objects.all():
-        ApplicationUserMapping.objects.get_or_create(
-            user=user,
-            application=application,
-        )
-    return user
 
 
 def format_date_or_datetime(value):

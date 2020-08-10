@@ -3,14 +3,11 @@ import datetime
 import math
 from urllib.parse import urlencode
 
-import pytz
 from django import forms
 from django.contrib.admin import widgets
-from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
-import jwt
 
 
 class RecreateTestDataForm(forms.Form):
@@ -348,35 +345,3 @@ class DigitalTakeupReportForm(BasePeriodAdminReportForm):
                     month = 1
                 date = date.replace(month=month)
                 yield date
-
-
-# TODO: Remove once all apps move to NOMIS Elite2
-class UpdateNOMISTokenForm(forms.Form):
-    token = forms.FileField(label=_('Client token file'))
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.token_data = None
-        self.decoded_token = None
-
-    @classmethod
-    def decode_token(cls, token):
-        token = jwt.decode(token, verify=False)
-        for date_key in ('iat', 'exp'):
-            if date_key in token:
-                token[date_key] = datetime.datetime.utcfromtimestamp(token[date_key]).replace(tzinfo=pytz.utc)
-        return token
-
-    def clean_token(self):
-        token = self.cleaned_data.get('token')
-        try:
-            self.token_data = token.read().strip()
-            self.decoded_token = self.decode_token(self.token_data)
-            today = timezone.now()
-            if 'iat' in self.decoded_token and self.decoded_token['iat'] > today:
-                raise ValidationError(_('Token is not yet valid'), 'premature')
-            if 'exp' in self.decoded_token and self.decoded_token['exp'] < today:
-                raise ValidationError(_('Token has already expired'), 'expired')
-        except (ValueError, jwt.DecodeError):
-            raise ValidationError(_('Invalid client token'), 'invalid')
-        return token

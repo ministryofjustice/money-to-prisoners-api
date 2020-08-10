@@ -5,8 +5,6 @@ from django.conf import settings
 from django.conf.urls import url
 from django.contrib import admin
 from django.contrib.admin.utils import prepare_lookup_value
-from django.db import models
-from django.forms import widgets
 from django.utils import formats
 from django.utils.translation import gettext_lazy as _
 
@@ -20,7 +18,7 @@ class AdminSite(admin.AdminSite):
     site_url = None
 
     def get_urls(self):
-        from core.views import DashboardView, DownloadPublicKeyView, RecreateTestDataView, UpdateNOMISTokenView
+        from core.views import DashboardView, RecreateTestDataView
         from credit.views_admin import CreditReportAdminView, PrisonCreditReportAdminView
         from disbursement.views_admin import DisbursementReportAdminView, PrisonDisbursementReportAdminView
         from mtp_auth.views import LoginStatsView
@@ -60,10 +58,6 @@ class AdminSite(admin.AdminSite):
 
             # testing views
             url(r'^testing/recreate-data/$', RecreateTestDataView.as_view(), name='recreate_test_data'),
-
-            # TODO: Remove once all apps move to NOMIS Elite2
-            url(r'^core/token/nomis/public-key/$', DownloadPublicKeyView.as_view(), name='download_public_key'),
-            url(r'^core/token/nomis/change/$', UpdateNOMISTokenView.as_view(), name='update_nomis_token'),
         ] + super().get_urls()
 
     def index(self, request, extra_context=None):
@@ -260,14 +254,3 @@ class RelatedAnyFieldListFilter(admin.RelatedFieldListFilter):
                     'display': _('Any'),
                 }
             yield c
-
-
-# TODO: Remove once all apps move to NOMIS Elite2
-class TokenAdmin(admin.ModelAdmin):
-    list_display = ('name', 'expires')
-    formfield_overrides = {
-        models.TextField: {'widget': widgets.PasswordInput(attrs={'class': 'vTextField'})},
-    }
-
-
-site.register(core_models.Token, TokenAdmin)
