@@ -8,7 +8,7 @@ from django.test import override_settings
 from django.urls import reverse
 from django.utils.dateformat import format as format_date
 from model_mommy import mommy
-from mtp_common.nomis import EliteNomisConnector
+from mtp_common.nomis import Connector
 from mtp_common.test_utils import silence_logger
 import requests
 import responses
@@ -593,9 +593,11 @@ class PrisonerAccountBalanceTestCase(AuthTestCaseMixin, APITestCase):
         self.assertIn(b'malformed', response.content)
 
     @override_settings(
-        NOMIS_ELITE_BASE_URL='http://helloiamnom.is'
+        HMPPS_CLIENT_SECRET='EXAMPLE',
+        HMPPS_AUTH_BASE_URL='https://sign-in-dev.hmpps.local/auth/',
+        HMPPS_PRISON_API_BASE_URL='https://api-dev.prison.local/',
     )
-    @mock.patch('mtp_api.apps.prison.serializers.nomis.connector', EliteNomisConnector())
+    @mock.patch('mtp_api.apps.prison.serializers.nomis.connector', Connector())
     def test_prisoner_location_mismatch_prisoner_found(self, *args):
         # We need more than one public prison!
         Prison.objects.update(private_estate=False)
@@ -609,7 +611,7 @@ class PrisonerAccountBalanceTestCase(AuthTestCaseMixin, APITestCase):
         with responses.RequestsMock() as rsps:
             rsps.add(
                 responses.POST,
-                f'{settings.NOMIS_ELITE_BASE_URL}/auth/oauth/token',
+                f'{settings.HMPPS_AUTH_BASE_URL}oauth/token',
                 json={
                     'access_token': 'amanaccesstoken',
                     'expires_in': 3600
@@ -617,13 +619,13 @@ class PrisonerAccountBalanceTestCase(AuthTestCaseMixin, APITestCase):
             )
             rsps.add(
                 responses.GET,
-                f'{settings.NOMIS_ELITE_BASE_URL}/elite2api/api/v1/prison/{self.prisoner_location_public.prison.nomis_id}/offenders/{self.prisoner_location_public.prisoner_number}/accounts',  # noqa: E501
+                f'{settings.HMPPS_PRISON_API_BASE_URL}api/v1/prison/{self.prisoner_location_public.prison.nomis_id}/offenders/{self.prisoner_location_public.prisoner_number}/accounts',  # noqa: E501
                 status=400,
                 json={'thisshouldnot': 'matter'}
             )
             rsps.add(
                 responses.GET,
-                f'{settings.NOMIS_ELITE_BASE_URL}/elite2api/api/v1/offenders/{self.prisoner_location_public.prisoner_number}/location',  # noqa: E501
+                f'{settings.HMPPS_PRISON_API_BASE_URL}api/v1/offenders/{self.prisoner_location_public.prisoner_number}/location',  # noqa: E501
                 json={
                     'establishment': {
                         'code': new_prison.nomis_id,
@@ -633,7 +635,7 @@ class PrisonerAccountBalanceTestCase(AuthTestCaseMixin, APITestCase):
             )
             rsps.add(
                 responses.GET,
-                f'{settings.NOMIS_ELITE_BASE_URL}/elite2api/api/v1/prison/{new_prison.nomis_id}/offenders/{self.prisoner_location_public.prisoner_number}/accounts',  # noqa: E501
+                f'{settings.HMPPS_PRISON_API_BASE_URL}api/v1/prison/{new_prison.nomis_id}/offenders/{self.prisoner_location_public.prisoner_number}/accounts',  # noqa: E501
                 status=200,
                 json={
                     'cash': 1000, 'spends': 550, 'savings': 12000
@@ -648,16 +650,18 @@ class PrisonerAccountBalanceTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(self.prisoner_location_public.prison, existing_prison)
 
     @override_settings(
-        NOMIS_ELITE_BASE_URL='http://helloiamnom.is'
+        HMPPS_CLIENT_SECRET='EXAMPLE',
+        HMPPS_AUTH_BASE_URL='https://sign-in-dev.hmpps.local/auth/',
+        HMPPS_PRISON_API_BASE_URL='https://api-dev.prison.local/',
     )
-    @mock.patch('mtp_api.apps.prison.serializers.nomis.connector', EliteNomisConnector())
+    @mock.patch('mtp_api.apps.prison.serializers.nomis.connector', Connector())
     def test_prisoner_location_mismatch_no_prisoner_found(self, *args):
         initial_prison = self.prisoner_location_public.prison
 
         with responses.RequestsMock() as rsps:
             rsps.add(
                 responses.POST,
-                f'{settings.NOMIS_ELITE_BASE_URL}/auth/oauth/token',
+                f'{settings.HMPPS_AUTH_BASE_URL}oauth/token',
                 json={
                     'access_token': 'amanaccesstoken',
                     'expires_in': 3600
@@ -665,13 +669,13 @@ class PrisonerAccountBalanceTestCase(AuthTestCaseMixin, APITestCase):
             )
             rsps.add(
                 responses.GET,
-                f'{settings.NOMIS_ELITE_BASE_URL}/elite2api/api/v1/prison/{self.prisoner_location_public.prison.nomis_id}/offenders/{self.prisoner_location_public.prisoner_number}/accounts',  # noqa: E501
+                f'{settings.HMPPS_PRISON_API_BASE_URL}api/v1/prison/{self.prisoner_location_public.prison.nomis_id}/offenders/{self.prisoner_location_public.prisoner_number}/accounts',  # noqa: E501
                 status=400,
                 json={'thisshouldnot': 'matter'}
             )
             rsps.add(
                 responses.GET,
-                f'{settings.NOMIS_ELITE_BASE_URL}/elite2api/api/v1/offenders/{self.prisoner_location_public.prisoner_number}/location',  # noqa: E501
+                f'{settings.HMPPS_PRISON_API_BASE_URL}api/v1/offenders/{self.prisoner_location_public.prisoner_number}/location',  # noqa: E501
                 status=400,
             )
             response = self.make_api_call(self.prisoner_location_public, self.send_money_user)
