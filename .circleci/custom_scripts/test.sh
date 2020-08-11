@@ -20,4 +20,3 @@ docker run \
   --link postgres \
   ${tag} \
   /bin/bash -cx '/app/venv/bin/pip install -r requirements/ci.txt && cd /app && venv/bin/python manage.py test ${TESTMODULES[*]} --verbosity=2'
-
