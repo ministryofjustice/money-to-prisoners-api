@@ -320,14 +320,10 @@ ZENDESK_API_USERNAME = os.environ.get('ZENDESK_API_USERNAME', '')
 ZENDESK_API_TOKEN = os.environ.get('ZENDESK_API_TOKEN', '')
 ZENDESK_GROUP_ID = 26417927
 
-NOMIS_API_BASE_URL = os.environ.get('NOMIS_API_BASE_URL', '')
-NOMIS_API_CLIENT_TOKEN = os.environ.get('NOMIS_API_CLIENT_TOKEN', '')
-NOMIS_API_PUBLIC_KEY = os.environ.get('NOMIS_API_PUBLIC_KEY', '').encode('utf8').decode('unicode_escape')
-NOMIS_API_PRIVATE_KEY = os.environ.get('NOMIS_API_PRIVATE_KEY', '').encode('utf8').decode('unicode_escape')
-
-NOMIS_ELITE_CLIENT_ID = os.environ.get('NOMIS_ELITE_CLIENT_ID', '')
-NOMIS_ELITE_CLIENT_SECRET = os.environ.get('NOMIS_ELITE_CLIENT_SECRET', '')
-NOMIS_ELITE_BASE_URL = os.environ.get('NOMIS_ELITE_BASE_URL', '')
+HMPPS_CLIENT_ID = os.environ.get('HMPPS_CLIENT_ID', 'prisoner-money')
+HMPPS_CLIENT_SECRET = os.environ.get('HMPPS_CLIENT_SECRET', '')
+HMPPS_AUTH_BASE_URL = os.environ.get('HMPPS_AUTH_BASE_URL', '')
+HMPPS_PRISON_API_BASE_URL = os.environ.get('HMPPS_PRISON_API_BASE_URL', '')
 
 OFFENDER_API_URL = os.environ.get('OFFENDER_API_URL', '')
 OFFENDER_API_CLIENT_ID = os.environ.get('OFFENDER_API_CLIENT_ID', '')
