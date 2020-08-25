@@ -61,14 +61,11 @@ NB: you should pull updates before pushing to merge correctly.
 
 This is handled by [money-to-prisoners-deploy](https://github.com/ministryofjustice/money-to-prisoners-deploy/).
 
-## Documentation
+## API Documentation
 
-We have both swagger and redoc.io integration with this API. This is disabled on production, but can be found on the test environment:
-* Swagger - `xdg-open ${MTP_TEST_API_BASE_URL}/swagger/`
-* Redoc - `xdg-open ${MTP_TEST_API_BASE_URL}/redoc/`
-Note that both of these URLS require the MOJ PPTP VPN to be enabled
-
-They can also be found on your development environment:
+We have both swagger and redoc.io integration with this API.
+They can be found on your development environment:
 * Swagger http://localhost:8000/swagger/
 * Redoc https://localhost:8000/redoc/
 
+Similar pages are also available on the test environment

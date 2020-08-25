@@ -3,5 +3,4 @@
 
 money-to-prisoners-common[monitoring]>=9.19,<9.20
 
-sentry-sdk==0.16.5
 uWSGI==2.0.19.1
