@@ -1,4 +1,4 @@
-#!/bin/env sh
+#!/usr/bin/env sh
 
 export CIRCLE_BRANCH_LOWERCASE=$(echo $CIRCLE_BRANCH | tr '[:upper:]' '[:lower:]')
 

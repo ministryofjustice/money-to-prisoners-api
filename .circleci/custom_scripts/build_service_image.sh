@@ -1,4 +1,4 @@
-#!/bin/env sh
+#!/usr/bin/env sh
 . ${CIRCLE_WORKING_DIRECTORY}/.circleci/custom_scripts/pull_base_image.sh
 docker build \
   --force-rm \

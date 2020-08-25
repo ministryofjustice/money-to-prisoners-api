@@ -1,4 +1,4 @@
-#!/bin/env sh
+#!/usr/bin/env sh
 . ${CIRCLE_WORKING_DIRECTORY}/.circleci/custom_scripts/common.sh
 docker load -i "${CIRCLE_WORKING_DIRECTORY}/imagedump/${tag}.tar.gz"
 TESTMODULES=$(circleci tests glob "mtp_api/apps/**/tests/test_*.py" | circleci tests split --split-by=timings | tr "/" "." | sed 's/.py//g')
