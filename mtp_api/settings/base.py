@@ -257,17 +257,16 @@ TEST_RUNNER = 'mtp_common.test_utils.runner.TestRunner'
 
 # sentry exception handling
 if os.environ.get('SENTRY_DSN'):
-    INSTALLED_APPS = ('raven.contrib.django.raven_compat',) + INSTALLED_APPS
-    RAVEN_CONFIG = {
-        'dsn': os.environ['SENTRY_DSN'],
-        'release': APP_GIT_COMMIT or 'unknown',
-    }
-    LOGGING['handlers']['sentry'] = {
-        'level': 'ERROR',
-        'class': 'raven.contrib.django.raven_compat.handlers.SentryHandler'
-    }
-    LOGGING['root']['handlers'].append('sentry')
-    LOGGING['loggers']['mtp']['handlers'].append('sentry')
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+
+    sentry_sdk.init(
+        dsn=os.environ['SENTRY_DSN'],
+        integrations=[DjangoIntegration()],
+        environment=ENVIRONMENT,
+        release=APP_GIT_COMMIT or 'unknown',
+        send_default_pii=DEBUG,  # TODO: decide if prod apps should report user details
+    )
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (

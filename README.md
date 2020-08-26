@@ -60,3 +60,12 @@ NB: you should pull updates before pushing to merge correctly.
 ## Deploying
 
 This is handled by [money-to-prisoners-deploy](https://github.com/ministryofjustice/money-to-prisoners-deploy/).
+
+## API Documentation
+
+We have both swagger and redoc.io integration with this API.
+They can be found on your development environment:
+* Swagger http://localhost:8000/swagger/
+* Redoc https://localhost:8000/redoc/
+
+Similar pages are also available on the test environment
