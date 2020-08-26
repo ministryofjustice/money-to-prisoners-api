@@ -10,4 +10,3 @@ if [[ "${CIRCLE_BRANCH}" == "master" ]]; then
   docker tag ${tag} ${registry}:${app}
   docker push ${registry}:${app}
 fi
-

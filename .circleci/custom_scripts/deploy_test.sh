@@ -14,4 +14,3 @@ if [[ "${CIRCLE_BRANCH}" == "master" ]]; then
 else
   echo "Not deploying to test"
 fi
-

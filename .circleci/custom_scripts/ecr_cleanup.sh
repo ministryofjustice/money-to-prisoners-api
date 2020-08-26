@@ -21,4 +21,3 @@ if [[ "${CIRCLE_BRANCH}" != "master" ]]; then
   IMAGES_TO_DELETE=$(aws ecr describe-images --repository-name prisoner-money/money-to-prisoners --query 'imageDetails[?contains(map(&starts_with(@, '"'"${app}.${CIRCLE_BRANCH_LOWERCASE}."'"'), @.imageTags), `true`) && ! contains(@.imageTags, '"'"${tag}"'"')].imageDigest' --output text)
   delete_images
 fi
-
