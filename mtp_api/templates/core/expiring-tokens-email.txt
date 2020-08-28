@@ -1,2 +1,0 @@
-These tokens are expiring in a week:
-{{ token_names }}

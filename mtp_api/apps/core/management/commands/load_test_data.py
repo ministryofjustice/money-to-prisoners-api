@@ -10,7 +10,6 @@ from core.tests.utils import (
     give_superusers_full_access,
     make_test_users,
     make_test_user_admins,
-    make_token_retrieval_user,
 )
 from credit.models import Credit
 from disbursement.models import Disbursement
@@ -128,9 +127,6 @@ class Command(BaseCommand):
         print_message('Making test user admins')
         make_test_user_admins()
         print_message('Making token retrieval user')
-
-        # TODO: Remove once all apps move to NOMIS Elite2
-        make_token_retrieval_user()
 
         if 'nomis' in prisoners:
             load_prisoner_locations_from_file('test_nomis_prisoner_locations.csv')

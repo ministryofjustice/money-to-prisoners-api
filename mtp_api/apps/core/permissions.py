@@ -94,11 +94,3 @@ class ActionsBasedViewPermissions(ActionsBasedPermissions):
         'list': ['%(app_label)s.view_%(model_name)s'],
         'retrieve': ['%(app_label)s.view_%(model_name)s'],
     })
-
-
-# TODO: Remove once all apps move to NOMIS Elite2
-class TokenPermissions(ActionsBasedPermissions):
-    actions_perms_map = ActionsBasedPermissions.actions_perms_map.copy()
-    actions_perms_map.update({
-        'retrieve': ['%(app_label)s.view_%(model_name)s'],
-    })

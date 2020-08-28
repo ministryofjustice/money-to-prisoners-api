@@ -6,9 +6,6 @@ from core import views
 router = routers.DefaultRouter()
 router.register(r'file-downloads', views.FileDownloadView)
 
-# TODO: Remove once all apps move to NOMIS Elite2
-router.register(r'tokens', views.TokenView)
-
 urlpatterns = [
     url(
         r'^file-downloads/missing/$',
