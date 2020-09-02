@@ -1,0 +1,33 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:9.4-alpine
+    environment:
+      POSTGRES_DB: mtp_api
+      POSTGRES_USER: mtp_api
+      POSTGRES_PASSWORD: postgres
+
+  api:
+    build:
+      context: ../money-to-prisoners-api
+      dockerfile: Dockerfile-dev
+      args:
+        ECR_ENDPOINT: ${ECR_ENDPOINT}
+        SERVICE: api
+    ports:
+      - "8000:8000"
+      # - "8800:8800"
+    links:
+      - db
+    user: mtp
+    environment:
+      ENV: local
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+      DJANGO_SETTINGS_MODULE: mtp_api.settings.local
+      DEBUG: "True"
+      DB_NAME: mtp_api
+      DB_USERNAME: mtp_api
+      DB_PASSWORD: postgres
+      DB_HOST: db
+      DB_PORT: 5432

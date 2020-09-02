@@ -69,3 +69,15 @@ They can be found on your development environment:
 * Redoc https://localhost:8000/redoc/
 
 Similar pages are also available on the test environment
+
+## Dockerised development environment
+
+Native-build mode must be enabled for alternative .dockerignore (Dockerfile-dev.dockerignore) to be used
+
+`COMPOSE_DOCKER_CLI_BUILD=1 docker-compose up --build`
+
+or if for some reason you wish to build individual services through docker
+
+`DOCKER_BUILDKIT=1 docker build -d Dockerfile-dev .`
+
+with the addition of any appropriate `--build-arg` parameters

@@ -1,0 +1,38 @@
+ARG ECR_ENDPOINT
+ARG SERVICE
+FROM ${ECR_ENDPOINT}/prisoner-money/money-to-prisoners:${SERVICE}
+
+# We need to be root to move over the venv and install npm packages (annoyingly)
+USER root
+
+# avoid trashing venv
+RUN cp -r --preserve=ownership /app/node_modules /node_modules
+RUN cp -r --preserve=ownership /app/venv /venv
+# ENV NODE_PATH=/node_modules
+# Upgrade npm to avoid https://github.com/npm/npm/issues/9863
+RUN npm install -g npm
+
+# # Use glob in conjunction with Dockerfile-dev.dockerignore so that we avoid trashing venv
+# COPY ./* /app/
+COPY --chown=mtp:mtp . /app/
+#This should already be the case but just to be sure...
+WORKDIR /app
+
+# # https://github.com/npm/npm/issues/13306#issuecomment-236876133
+# RUN cd $(npm root -g)/npm \
+  # && npm install fs-extra \
+  # && sed -i -e s/graceful-fs/fs-extra/ -e s/fs.rename/fs.move/ ./lib/utils/rename.js
+
+# For some annoying reason NPM wants to run as root
+RUN npm --loglevel warn --color false install
+
+# The remaining build should be done as the user expected to run the service
+USER mtp
+# RUN /venv/bin/pip install -r /app/requirements/dev.txt -e /app
+RUN /venv/bin/pip install -r /app/requirements/dev.txt
+# #Always activate the venv, even when exec-ing in
+# ENTRYPOINT [".", "/venv/bin/activate"]
+# # CMD is run after ENTRYPOINT
+# CMD ["python", "/app/run.py", "serve"]
+CMD . /venv/bin/activate && python /app/run.py serve
+# vim: ft=dockerfile
