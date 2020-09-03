@@ -25,17 +25,15 @@ ENV DJANGO_SETTINGS_MODULE=${LOCAL_DJANGO_SETTINGS_MODULE}
   # && npm install fs-extra \
   # && sed -i -e s/graceful-fs/fs-extra/ -e s/fs.rename/fs.move/ ./lib/utils/rename.js
 
-# For some annoying reason NPM wants to run as root
-RUN npm --loglevel warn --color false install
 
 # The remaining build should be done as the user expected to run the service
 USER mtp
-# RUN /venv/bin/pip install -r /app/requirements/dev.txt -e /app
-RUN /venv/bin/pip install -r /app/requirements/dev.txt
 # #Always activate the venv, even when exec-ing in
-# ENTRYPOINT [".", "/venv/bin/activate"]
+# These environment variables are equivilent to venv activation
+# For more info: https://pythonspeed.com/articles/activate-virtualenv-dockerfile/
+ENV VIRTUAL_ENV=/venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+RUN python /app/run.py build
 # # CMD is run after ENTRYPOINT
-# CMD ["python", "/app/run.py", "serve"]
-RUN . /venv/bin/activate && DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE} python /app/run.py build
-CMD . /venv/bin/activate && python /app/run.py serve
+CMD ["python", "/app/run.py", "serve"]
 # vim: ft=dockerfile
