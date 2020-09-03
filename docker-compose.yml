@@ -24,7 +24,7 @@ services:
     user: mtp
     environment:
       ENV: local
-      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+      DJANGO_SECRET_KEY: ${API_DJANGO_SECRET_KEY}
       DJANGO_SETTINGS_MODULE: mtp_api.settings.local
       DEBUG: "True"
       DB_NAME: mtp_api
@@ -32,3 +32,119 @@ services:
       DB_PASSWORD: postgres
       DB_HOST: db
       DB_PORT: 5432
+  noms-ops:
+    build:
+      context: ../money-to-prisoners-noms-ops
+      dockerfile: ../money-to-prisoners-api/Dockerfile-dev #TODO move this/g
+      args:
+        ECR_ENDPOINT: ${ECR_ENDPOINT}
+        SERVICE: noms-ops
+        LOCAL_DJANGO_SETTINGS_MODULE: mtp_noms_ops.settings.local
+    ports:
+      - "8003:8003"
+      # - "8800:8800"
+    links:
+      - api
+    user: mtp
+    environment:
+      ENV: local
+      DJANGO_SECRET_KEY: ${NOMS_OPS_DJANGO_SECRET_KEY}
+      DJANGO_SETTINGS_MODULE: mtp_noms_ops.settings.local
+      DEBUG: "True"
+  send-money:
+    build:
+      context: ../money-to-prisoners-send-money
+      dockerfile: ../money-to-prisoners-api/Dockerfile-dev #TODO move this/g
+      args:
+        ECR_ENDPOINT: ${ECR_ENDPOINT}
+        SERVICE: send-money
+        LOCAL_DJANGO_SETTINGS_MODULE: mtp_send_money.settings.local
+    ports:
+      - "8004:8004"
+      # - "8800:8800"
+    links:
+      - api
+    user: mtp
+    environment:
+      ENV: local
+      DJANGO_SECRET_KEY: ${SEND_MONEY_DJANGO_SECRET_KEY}
+      DJANGO_SETTINGS_MODULE: mtp_send_money.settings.local
+      DEBUG: "True"
+  cashbook:
+    build:
+      context: ../money-to-prisoners-cashbook
+      dockerfile: ../money-to-prisoners-api/Dockerfile-dev #TODO move this/g
+      args:
+        ECR_ENDPOINT: ${ECR_ENDPOINT}
+        SERVICE: cashbook
+        LOCAL_DJANGO_SETTINGS_MODULE: mtp_cashbook.settings.local
+    ports:
+      - "8003:8003"
+      # - "8800:8800"
+    links:
+      - api
+    user: mtp
+    environment:
+      ENV: local
+      DJANGO_SECRET_KEY: ${CASHBOOK_DJANGO_SECRET_KEY}
+      DJANGO_SETTINGS_MODULE: mtp_cashbook.settings.local
+      DEBUG: "True"
+  bank-admin:
+    build:
+      context: ../money-to-prisoners-bank-admin
+      dockerfile: ../money-to-prisoners-api/Dockerfile-dev #TODO move this/g
+      args:
+        ECR_ENDPOINT: ${ECR_ENDPOINT}
+        SERVICE: bank-admin
+        LOCAL_DJANGO_SETTINGS_MODULE: mtp_bank_admin.settings.local
+    ports:
+      - "8003:8003"
+      # - "8800:8800"
+    links:
+      - api
+    user: mtp
+    environment:
+      ENV: local
+      DJANGO_SECRET_KEY: ${BANK_ADMIN_DJANGO_SECRET_KEY}
+      DJANGO_SETTINGS_MODULE: mtp_bank_admin.settings.local
+      DEBUG: "True"
+  # start-page:
+    # build:
+      # context: ../money-to-prisoners-start-page
+      # dockerfile: ../money-to-prisoners-api/Dockerfile-dev #TODO move this/g
+      # args:
+        # ECR_ENDPOINT: ${ECR_ENDPOINT}
+        # SERVICE: start-page
+    # ports:
+      # - "8003:8003"
+      # # - "8800:8800"
+    # links:
+      # - api
+    # user: mtp
+    # environment:
+      # ENV: local
+      # DEBUG: "True"
+  # transaction-uploader:
+    # build:
+      # context: ../money-to-prisoners-transaction-uploader
+      # dockerfile: ../money-to-prisoners-api/Dockerfile-dev #TODO move this/g
+      # args:
+        # ECR_ENDPOINT: ${ECR_ENDPOINT}
+        # SERVICE: transaction-uploader
+    # ports:
+      # - "8003:8003"
+      # # - "8800:8800"
+    # links:
+      # - api
+    # user: mtp
+    # environment:
+      # ENV: local
+      # DEBUG: "True"
+
+
+
+
+
+
+
+
