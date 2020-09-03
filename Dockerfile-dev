@@ -17,6 +17,8 @@ RUN npm install -g npm
 COPY --chown=mtp:mtp . /app/
 #This should already be the case but just to be sure...
 WORKDIR /app
+ARG LOCAL_DJANGO_SETTINGS_MODULE
+ENV DJANGO_SETTINGS_MODULE=${LOCAL_DJANGO_SETTINGS_MODULE}
 
 # # https://github.com/npm/npm/issues/13306#issuecomment-236876133
 # RUN cd $(npm root -g)/npm \
@@ -34,5 +36,6 @@ RUN /venv/bin/pip install -r /app/requirements/dev.txt
 # ENTRYPOINT [".", "/venv/bin/activate"]
 # # CMD is run after ENTRYPOINT
 # CMD ["python", "/app/run.py", "serve"]
+RUN . /venv/bin/activate && DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE} python /app/run.py build
 CMD . /venv/bin/activate && python /app/run.py serve
 # vim: ft=dockerfile

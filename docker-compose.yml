@@ -15,6 +15,7 @@ services:
       args:
         ECR_ENDPOINT: ${ECR_ENDPOINT}
         SERVICE: api
+        LOCAL_DJANGO_SETTINGS_MODULE: mtp_api.settings.local
     ports:
       - "8000:8000"
       # - "8800:8800"
