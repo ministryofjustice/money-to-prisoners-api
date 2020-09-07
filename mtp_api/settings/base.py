@@ -17,7 +17,10 @@ TEAM_EMAIL = os.environ.get('TEAM_EMAIL', 'mtp@localhost')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 SECRET_KEY = 'CHANGE_ME'
-ALLOWED_HOSTS = []
+if DEBUG:
+    ALLOWED_HOSTS = ['localhost', 'api']
+else:
+    ALLOWED_HOSTS = []
 
 START_PAGE_URL = os.environ.get('START_PAGE_URL', 'https://www.gov.uk/send-prisoner-money')
 API_URL = (

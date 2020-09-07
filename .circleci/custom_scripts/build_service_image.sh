@@ -1,5 +1,6 @@
 #!/usr/bin/env sh
 . ${CIRCLE_WORKING_DIRECTORY}/.circleci/custom_scripts/pull_base_image.sh
+echo 'mtp_api/settings/local.py' >> .dockerignore
 docker build \
   --force-rm \
   --build-arg APP_GIT_COMMIT=${CIRCLE_SHA1} \
