@@ -22,7 +22,6 @@ package.json
 package-lock.json
 webpack.config.js
 mtp_api/assets/
-mtp_api/settings/local.py
 static/
 media/
 venv/
