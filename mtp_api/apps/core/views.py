@@ -228,6 +228,14 @@ class RecreateTestDataView(AdminViewMixin, FormView):
                 'protect_credits': False,
             })
             call_command('delete_all_data', **options)
+        elif scenario == 'production-scale':
+            options.update({
+                'protect_credits': True,
+                'prisons': ['nomis'],
+                'credits': 'production-scale',
+            })
+            call_command('load_test_data', **options)
+
 
         output.seek(0)
         command_output = output.read()

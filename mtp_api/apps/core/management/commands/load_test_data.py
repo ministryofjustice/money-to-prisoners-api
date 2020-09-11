@@ -1,8 +1,11 @@
+import logging
 import textwrap
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management import BaseCommand, call_command
+
+from mtp_common.test_utils import silence_logger
 
 from account.models import Balance
 from core.tests.utils import (
@@ -52,7 +55,7 @@ class Command(BaseCommand):
         parser.add_argument('--clerks-per-prison', type=int, default=2,
                             help='The number of clerks to make for the Cashbook')
         parser.add_argument('--credits', default='random',
-                            choices=['none', 'random', 'nomis'],
+                            choices=['none', 'random', 'nomis', 'production-scale'],
                             help='Create new credits using this method')
         parser.add_argument('--number-of-transactions', default=20, type=int,
                             help='Number of new transactions to create')
@@ -80,6 +83,20 @@ class Command(BaseCommand):
         number_of_prisoners = options['number_of_prisoners']
         clerks_per_prison = options['clerks_per_prison']
         credits = options['credits']
+        number_of_transactions = options['number_of_transactions']
+        number_of_payments = options['number_of_payments']
+        number_of_disbursements = options['number_of_disbursements']
+        number_of_checks = options['number_of_checks']
+        days_of_history = options['days_of_history']
+
+        if credits == 'production-scale':
+            number_of_transactions = 300000
+            number_of_payments = 3000000
+            number_of_prisoners = 80000
+            number_of_disbursements = 20000
+            number_of_checks = 900000
+            days_of_history = 1300
+            prisons.append('nomis')
 
         print_message = self.stdout.write if verbosity else lambda m: m
 
@@ -135,11 +152,6 @@ class Command(BaseCommand):
         if 'sample' in prisoners:
             load_random_prisoner_locations(number_of_prisoners=number_of_prisoners)
 
-        number_of_transactions = options['number_of_transactions']
-        number_of_payments = options['number_of_payments']
-        number_of_disbursements = options['number_of_disbursements']
-        number_of_checks = options['number_of_checks']
-        days_of_history = options['days_of_history']
         if credits == 'random':
             print_message('Generating random credits')
             generate_transactions(transaction_batch=number_of_transactions)
@@ -160,15 +172,36 @@ class Command(BaseCommand):
                 consistent_history=True,
                 days_of_history=days_of_history
             )
+        elif credits == 'production-scale':
+            print_message('Generating production-like transactions')
+            generate_transactions(
+                transaction_batch=number_of_transactions,
+                predetermined_transactions=True,
+                consistent_history=True,
+                include_debits=True,
+                include_administrative_credits=True,
+                include_unidentified_credits=True,
+                days_of_history=days_of_history
+            )
+            print_message('Generating production-like payments/credits')
+            generate_payments(
+                payment_batch=number_of_payments,
+                consistent_history=True,
+                days_of_history=days_of_history
+            )
+        print_message('Generating disbursements')
         generate_disbursements(
             disbursement_batch=number_of_disbursements,
             days_of_history=days_of_history
         )
+        print_message('Generating checks')
         generate_checks(
             number_of_checks=number_of_checks
         )
 
-        call_command('update_security_profiles')
+        print_message('Associating credits with profiles')
+        with silence_logger(level=logging.WARNING):
+            call_command('update_security_profiles')
 
         digital_takeup = options['digital_takeup']
         if digital_takeup:
