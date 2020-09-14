@@ -97,16 +97,29 @@ def generate_initial_payment_data(tot=50, days_of_history=7):
     return data_list
 
 
-def generate_payments(payment_batch=50, consistent_history=False, days_of_history=7, overrides=None):
+def generate_payments(
+    payment_batch=50, consistent_history=False, days_of_history=7, overrides=None,
+    attach_profiles_to_individual_credits=True
+):
+    """
+    Generate fake payment objects either for automated tests or test/development environment.
+
+    :param payment_batch int: Number of payments to generate
+    :param consistent_history bool: Doesn't actually seem to do anything in this context
+    :param days_of_history int: Number of days of history to generate
+    :param overrides dict: Dict of attributes to apply to all payments. overrides['credit'] will be applied to credit
+    :param attach_profiles_to_individual_credits bool: Whether to run credit.attach_profiles on individual credits
+    :rtype list<payment.models.Payment>
+    """
     data_list = generate_initial_payment_data(
         tot=payment_batch,
         days_of_history=days_of_history
     )
-    return create_payments(data_list, consistent_history, overrides)
+    return create_payments(data_list, consistent_history, overrides, attach_profiles_to_individual_credits)
 
 
 # TODO consistent_history doesn't seem to do anything, yet is provided by some calling functions...
-def create_payments(data_list, consistent_history=False, overrides=None):
+def create_payments(data_list, consistent_history=False, overrides=None, attach_profiles_to_individual_credits=True):
     owner_status_chooser = get_owner_and_status_chooser()
     payments = []
     for payment_counter, data in enumerate(data_list, start=1):
@@ -115,7 +128,8 @@ def create_payments(data_list, consistent_history=False, overrides=None):
             latest_payment_date(),
             payment_counter,
             data,
-            overrides
+            overrides,
+            attach_profiles_to_individual_credits
         )
         payments.append(new_payment)
 
@@ -138,7 +152,9 @@ def create_payments(data_list, consistent_history=False, overrides=None):
     return payments
 
 
-def setup_payment(owner_status_chooser, end_date, payment_counter, data, overrides=None):
+def setup_payment(
+    owner_status_chooser, end_date, payment_counter, data, overrides=None, attach_profiles_to_individual_credits=True
+):
     older_than_yesterday = (
         data['created'].date() < (end_date.date() - datetime.timedelta(days=1))
     )
@@ -179,12 +195,12 @@ def setup_payment(owner_status_chooser, end_date, payment_counter, data, overrid
     if overrides:
         data.update(overrides)
     with MockModelTimestamps(data['created'], data['modified']):
-        new_payment = save_payment(data, overrides)
+        new_payment = save_payment(data, overrides, attach_profiles_to_individual_credits)
 
     return new_payment
 
 
-def save_payment(data, overrides=None):
+def save_payment(data, overrides=None, attach_profiles_to_individual_credits=True):
     is_taken = data['status'] == PAYMENT_STATUS.TAKEN
     if is_taken:
         if data.pop('credited', False):
@@ -228,7 +244,8 @@ def save_payment(data, overrides=None):
     data['credit'] = credit
 
     payment = Payment.objects.create(**data)
-    credit.attach_profiles(ignore_credit_resolution=True)
+    if attach_profiles_to_individual_credits:
+        credit.attach_profiles(ignore_credit_resolution=True)
     return payment
 
 

@@ -187,7 +187,8 @@ class Command(BaseCommand):
             generate_payments(
                 payment_batch=number_of_payments,
                 consistent_history=True,
-                days_of_history=days_of_history
+                days_of_history=days_of_history,
+                attach_profiles_to_individual_credits=False
             )
         print_message('Generating disbursements')
         generate_disbursements(
@@ -198,7 +199,6 @@ class Command(BaseCommand):
         generate_checks(
             number_of_checks=number_of_checks
         )
-
         print_message('Associating credits with profiles')
         with silence_logger(level=logging.WARNING):
             call_command('update_security_profiles')
