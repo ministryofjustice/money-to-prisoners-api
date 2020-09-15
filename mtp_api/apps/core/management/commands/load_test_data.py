@@ -20,15 +20,16 @@ from disbursement.tests.utils import generate_disbursements
 from payment.models import Batch, Payment
 from payment.tests.utils import generate_payments
 from performance.tests.utils import generate_digital_takeup
-from prison.models import Prison
+from prison.models import Prison, PrisonerLocation
 from prison.tests.utils import load_prisoner_locations_from_file, load_random_prisoner_locations
-from security.tests.utils import generate_checks
+from security.tests.utils import generate_checks, generate_prisoner_profiles_from_prisoner_locations, generate_sender_profiles_from_prisoner_profiles
 from security.models import Check, PrisonerProfile, RecipientProfile, SavedSearch, SenderProfile
 from transaction.models import Transaction
 from transaction.tests.utils import generate_transactions
 
 User = get_user_model()
 
+logger = logging.getLogger('MTP')
 
 class Command(BaseCommand):
     """
@@ -89,18 +90,10 @@ class Command(BaseCommand):
         number_of_checks = options['number_of_checks']
         days_of_history = options['days_of_history']
 
-        if credits == 'production-scale':
-            number_of_transactions = 300000
-            number_of_payments = 3000000
-            number_of_prisoners = 80000
-            number_of_disbursements = 20000
-            number_of_checks = 900000
-            days_of_history = 1300
-            prisons.append('nomis')
 
         print_message = self.stdout.write if verbosity else lambda m: m
 
-        if not protect_credits:
+        if not protect_credits and credits != 'production-scale':
             print_message('Deleting all credits')
             Balance.objects.all().delete()
             Transaction.objects.all().delete()
@@ -113,15 +106,58 @@ class Command(BaseCommand):
             Disbursement.objects.all().delete()
             RecipientProfile.objects.all().delete()
             Check.objects.all().delete()
+        if credits == 'production-scale':
+            # N.B. This scenario will eat your RAM like there's no tomorrow.
+            # If running it outside your development environment, be sure that it's not using the same
+            # resource pool as a production service
+            # If running it on your development environment you may need to tweak
+            number_of_existing_transactions  = Transaction.objects.count()
+            number_of_existing_payments  = Payment.objects.count()
+            number_of_existing_prisoner_locations = PrisonerLocation.objects.count()
+            number_of_existing_prisoners_profiles = PrisonerProfile.objects.count()
+            number_of_existing_disbursements  = Disbursement.objects.count()
+            number_of_existing_checks  = Check.objects.count()
 
-        user_set = get_user_model().objects.exclude(username__in=protect_usernames or [])
-        if not no_protect_superusers:
-            user_set = user_set.exclude(is_superuser=True)
-        print_message('Deleting %d users' % user_set.count())
-        user_set.delete()
+            number_of_existing_prisoners = min([number_of_existing_prisoner_locations, number_of_existing_prisoners_profiles])
 
-        print_message('Deleting all prisons')
-        Prison.objects.all().delete()
+            number_of_desired_transactions = 300000
+            number_of_desired_payments = 3000000
+            number_of_desired_prisoners = 80000
+            number_of_desired_disbursements = 20000
+            number_of_desired_checks = 900000
+
+            number_of_transactions = number_of_desired_transactions - number_of_existing_transactions
+            logger.info(
+                f'Number of transactions to be created is {number_of_desired_transactions} - {number_of_existing_transactions} = {number_of_transactions}'
+            )
+            number_of_payments = number_of_desired_payments - number_of_existing_payments
+            logger.info(
+                f'Number of payments to be created is {number_of_desired_payments} - {number_of_existing_payments} = {number_of_payments}'
+            )
+            number_of_prisoners = number_of_desired_prisoners - number_of_existing_prisoners
+            logger.info(
+                f'Number of prisoners to be created is {number_of_desired_prisoners} - {number_of_existing_prisoners} = {number_of_prisoners}'
+            )
+            number_of_disbursements = number_of_desired_disbursements - number_of_existing_disbursements
+            logger.info(
+                f'Number of disbursements to be created is {number_of_desired_disbursements} - {number_of_existing_disbursements} = {number_of_disbursements}'
+            )
+            number_of_checks = number_of_desired_checks - number_of_existing_checks
+            logger.info(
+                f'Number of checks to be created is {number_of_desired_checks} - {number_of_existing_checks} = {number_of_checks}'
+            )
+            days_of_history = 1300
+            prisons.append('nomis-api-dev')
+            prisoners.append('sample')
+        else:
+            user_set = get_user_model().objects.exclude(username__in=protect_usernames or [])
+            if not no_protect_superusers:
+                user_set = user_set.exclude(is_superuser=True)
+            print_message('Deleting %d users' % user_set.count())
+            user_set.delete()
+
+            print_message('Deleting all prisons')
+            Prison.objects.all().delete()
 
         fixtures = ['initial_groups.json', 'initial_types.json']
         if 'sample' in prisons:
@@ -139,18 +175,22 @@ class Command(BaseCommand):
         create_super_admin(self.stdout, self.style.SUCCESS)
         give_superusers_full_access()
 
-        print_message('Making test users')
-        make_test_users(clerks_per_prison=clerks_per_prison)
-        print_message('Making test user admins')
-        make_test_user_admins()
-        print_message('Making token retrieval user')
+        if credits != 'production-scale' or User.objects.count() < 2:
+            print_message('Making test users')
+            make_test_users(clerks_per_prison=clerks_per_prison)
+            print_message('Making test user admins')
+            make_test_user_admins()
+            print_message('Making token retrieval user')
 
         if 'nomis' in prisoners:
-            load_prisoner_locations_from_file('test_nomis_prisoner_locations.csv')
+            prisoner_locations = load_prisoner_locations_from_file('test_nomis_prisoner_locations.csv')
         if 'nomis-api-dev' in prisoners:
-            load_prisoner_locations_from_file('dev_nomis_api_prisoner_locations.csv')
+            prisoner_locations = load_prisoner_locations_from_file('dev_nomis_api_prisoner_locations.csv')
         if 'sample' in prisoners:
-            load_random_prisoner_locations(number_of_prisoners=number_of_prisoners)
+            prisoner_locations = load_random_prisoner_locations(number_of_prisoners=number_of_prisoners)
+        prisoner_profiles = generate_prisoner_profiles_from_prisoner_locations(prisoner_locations)
+        no_of_senders = len(prisoner_profiles)
+        generate_sender_profiles_from_prisoner_profiles(no_of_senders)
 
         if credits == 'random':
             print_message('Generating random credits')

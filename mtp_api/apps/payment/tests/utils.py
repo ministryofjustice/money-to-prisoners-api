@@ -25,10 +25,7 @@ def latest_payment_date():
     return timezone.now()
 
 
-def get_sender_prisoner_pairs():
-    number_of_prisoners = PrisonerLocation.objects.all().count()
-    number_of_senders = number_of_prisoners
-
+def create_fake_sender_data(number_of_senders):
     senders = []
     for _ in range(number_of_senders):
         expiry_date = fake.date_time_between(start_date='now', end_date='+5y')
@@ -62,7 +59,14 @@ def get_sender_prisoner_pairs():
                 'billing_address': billing_address,
             }
         )
+    return senders
 
+
+def get_sender_prisoner_pairs():
+    number_of_prisoners = PrisonerLocation.objects.all().count()
+    number_of_senders = number_of_prisoners
+
+    senders = create_fake_sender_data(number_of_senders)
     prisoners = list(PrisonerLocation.objects.all())
 
     sender_prisoner_pairs = build_sender_prisoner_pairs(senders, prisoners)

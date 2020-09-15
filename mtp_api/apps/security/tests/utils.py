@@ -1,3 +1,4 @@
+import logging
 import random
 
 import faker
@@ -6,13 +7,15 @@ from django.utils.crypto import get_random_string
 
 from credit.models import Credit, CREDIT_RESOLUTION, LOG_ACTIONS as CREDIT_LOG_ACTIONS
 from prison.models import Prison
-from payment.models import Payment, PAYMENT_STATUS
-from payment.tests.utils import generate_payments
+from payment.models import BillingAddress, Payment, PAYMENT_STATUS
+from payment.tests.utils import create_fake_sender_data, generate_payments
 from prison.tests.utils import random_prisoner_number
-from security.models import Check, PrisonerProfile, SenderProfile
+from security.models import Check, DebitCardSenderDetails, PrisonerProfile, SenderProfile
 from django.db.models import Count
 
 fake = faker.Faker(locale='en_GB')
+
+logger = logging.getLogger('MTP')
 
 PAYMENT_FILTERS_FOR_INVALID_CHECK = dict(
     status=PAYMENT_STATUS.PENDING,
@@ -77,10 +80,15 @@ def generate_checks(number_of_checks=1, specific_payments_to_check=tuple()):
 
     fiu = Group.objects.get(name='FIU').user_set.first()
     prisoner_profiles = PrisonerProfile.objects.all()
+    if not prisoner_profiles:
+        logger.warning('No prisoner profiles present!')
     for prisoner_profile in prisoner_profiles:
         prisoner_profile.monitoring_users.add(fiu)
         prisoner_profile.save()
+
     sender_profiles = SenderProfile.objects.all()
+    if not sender_profiles:
+        logger.warning('No sender profiles present!')
     for sender_profile in sender_profiles:
         monitored_instance = None
         if sender_profile.debit_card_details.count():
@@ -162,3 +170,45 @@ def generate_checks(number_of_checks=1, specific_payments_to_check=tuple()):
         checks.append(Check.objects.create_for_credit(candidate_payment.credit))
 
     return checks
+
+
+def generate_prisoner_profiles_from_prisoner_locations(prisoner_locations):
+    return PrisonerProfile.objects.bulk_create(
+        [
+            PrisonerProfile(
+                prisoner_name=prisoner_location.prisoner_name,
+                prisoner_number=prisoner_location.prisoner_number,
+                single_offender_id=prisoner_location.single_offender_id,
+                prisoner_dob=prisoner_location.prisoner_dob,
+                current_prison_id=prisoner_location.prison_id
+            )
+            for prisoner_location in prisoner_locations
+        ]
+    )
+
+def generate_sender_profiles_from_prisoner_profiles(no_of_senders):
+    fake_sender_data = create_fake_sender_data(no_of_senders)
+    return SenderProfile.objects.bulk_create(
+        [
+            SenderProfile(
+                debit_card_details=[
+                    DebitCardSenderDetails(
+                        postcode=fake_sender_datum['billing_address']['postcode'],
+                        card_number_last_digits=fake_sender_datum['card_number_last_digits'],
+                        card_expiry_date=fake_sender_datum['card_expiry_date'],
+                        billing_address=BillingAddress(
+                            **fake_sender_datum['billing_address']
+                        ),
+                    )
+                ],
+                #  prisoner_name=prisoner_location.prisoner_name,
+                #  prisoner_number=prisoner_location.prisoner_number,
+                #  single_offender_id=prisoner_location.single_offender_id,
+                #  prisoner_dob=prisoner_location.prisoner_dob,
+                #  current_prison_id=prisoner_location.prison_id
+                #  prisoner
+            )
+            for fake_sender_datum in fake_sender_data
+        ]
+    )
+
