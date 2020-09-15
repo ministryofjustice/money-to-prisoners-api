@@ -173,6 +173,12 @@ def generate_checks(number_of_checks=1, specific_payments_to_check=tuple()):
 
 
 def generate_prisoner_profiles_from_prisoner_locations(prisoner_locations):
+    # TODO remove this when updated to django 3.* and `ignore_conficts` kwarg available
+    existing_prisoner_profiles = PrisonerProfile.objects.values('prisoner_number')
+    prisoner_locations_filtered = filter(
+        lambda pl: pl.prisoner_number in existing_prisoner_profiles,
+        prisoner_locations
+    )
     return PrisonerProfile.objects.bulk_create(
         [
             PrisonerProfile(
@@ -182,9 +188,10 @@ def generate_prisoner_profiles_from_prisoner_locations(prisoner_locations):
                 prisoner_dob=prisoner_location.prisoner_dob,
                 current_prison_id=prisoner_location.prison_id
             )
-            for prisoner_location in prisoner_locations
+            for prisoner_location in prisoner_locations_filtered
         ]
     )
+
 
 def generate_sender_profiles_from_prisoner_profiles(no_of_senders):
     fake_sender_data = create_fake_sender_data(no_of_senders)
@@ -196,19 +203,14 @@ def generate_sender_profiles_from_prisoner_profiles(no_of_senders):
                         postcode=fake_sender_datum['billing_address']['postcode'],
                         card_number_last_digits=fake_sender_datum['card_number_last_digits'],
                         card_expiry_date=fake_sender_datum['card_expiry_date'],
-                        billing_address=BillingAddress(
-                            **fake_sender_datum['billing_address']
-                        ),
+                        billing_addresses=[
+                            BillingAddress(
+                                **fake_sender_datum['billing_address']
+                            )
+                        ]
                     )
                 ],
-                #  prisoner_name=prisoner_location.prisoner_name,
-                #  prisoner_number=prisoner_location.prisoner_number,
-                #  single_offender_id=prisoner_location.single_offender_id,
-                #  prisoner_dob=prisoner_location.prisoner_dob,
-                #  current_prison_id=prisoner_location.prison_id
-                #  prisoner
             )
             for fake_sender_datum in fake_sender_data
         ]
     )
-

@@ -29,8 +29,6 @@ from transaction.tests.utils import generate_transactions
 
 User = get_user_model()
 
-logger = logging.getLogger('MTP')
-
 class Command(BaseCommand):
     """
     Generates data for automated or user testing, creating standard users
@@ -53,6 +51,8 @@ class Command(BaseCommand):
                             help='Create prisoners from these sets')
         parser.add_argument('--number-of-prisoners', default=50, type=int,
                             help='Number of sample prisoners to create (no effect for nomis)')
+        parser.add_argument('--number-of-senders', default=50, type=int,
+                            help='Number of sample senders to create')
         parser.add_argument('--clerks-per-prison', type=int, default=2,
                             help='The number of clerks to make for the Cashbook')
         parser.add_argument('--credits', default='random',
@@ -82,6 +82,7 @@ class Command(BaseCommand):
         prisons = options['prisons']
         prisoners = options['prisoners']
         number_of_prisoners = options['number_of_prisoners']
+        number_of_senders = options['number_of_senders']
         clerks_per_prison = options['clerks_per_prison']
         credits = options['credits']
         number_of_transactions = options['number_of_transactions']
@@ -106,6 +107,7 @@ class Command(BaseCommand):
             Disbursement.objects.all().delete()
             RecipientProfile.objects.all().delete()
             Check.objects.all().delete()
+
         if credits == 'production-scale':
             # N.B. This scenario will eat your RAM like there's no tomorrow.
             # If running it outside your development environment, be sure that it's not using the same
@@ -117,33 +119,39 @@ class Command(BaseCommand):
             number_of_existing_prisoners_profiles = PrisonerProfile.objects.count()
             number_of_existing_disbursements  = Disbursement.objects.count()
             number_of_existing_checks  = Check.objects.count()
+            number_of_existing_senders  = SenderProfile.objects.count()
 
             number_of_existing_prisoners = min([number_of_existing_prisoner_locations, number_of_existing_prisoners_profiles])
 
             number_of_desired_transactions = 300000
             number_of_desired_payments = 3000000
             number_of_desired_prisoners = 80000
+            number_of_desired_senders =  700000
             number_of_desired_disbursements = 20000
             number_of_desired_checks = 900000
 
             number_of_transactions = number_of_desired_transactions - number_of_existing_transactions
-            logger.info(
+            print_message(
                 f'Number of transactions to be created is {number_of_desired_transactions} - {number_of_existing_transactions} = {number_of_transactions}'
             )
             number_of_payments = number_of_desired_payments - number_of_existing_payments
-            logger.info(
+            print_message(
                 f'Number of payments to be created is {number_of_desired_payments} - {number_of_existing_payments} = {number_of_payments}'
             )
             number_of_prisoners = number_of_desired_prisoners - number_of_existing_prisoners
-            logger.info(
+            print_message(
                 f'Number of prisoners to be created is {number_of_desired_prisoners} - {number_of_existing_prisoners} = {number_of_prisoners}'
             )
+            number_of_senders = number_of_desired_senders - number_of_existing_senders
+            print_message(
+                f'Number of senders to be created is {number_of_desired_senders} - {number_of_existing_senders} = {number_of_senders}'
+            )
             number_of_disbursements = number_of_desired_disbursements - number_of_existing_disbursements
-            logger.info(
+            print_message(
                 f'Number of disbursements to be created is {number_of_desired_disbursements} - {number_of_existing_disbursements} = {number_of_disbursements}'
             )
             number_of_checks = number_of_desired_checks - number_of_existing_checks
-            logger.info(
+            print_message(
                 f'Number of checks to be created is {number_of_desired_checks} - {number_of_existing_checks} = {number_of_checks}'
             )
             days_of_history = 1300
@@ -182,15 +190,22 @@ class Command(BaseCommand):
             make_test_user_admins()
             print_message('Making token retrieval user')
 
+        prisoner_locations = None
         if 'nomis' in prisoners:
             prisoner_locations = load_prisoner_locations_from_file('test_nomis_prisoner_locations.csv')
         if 'nomis-api-dev' in prisoners:
             prisoner_locations = load_prisoner_locations_from_file('dev_nomis_api_prisoner_locations.csv')
         if 'sample' in prisoners:
             prisoner_locations = load_random_prisoner_locations(number_of_prisoners=number_of_prisoners)
+        if not prisoner_locations:
+            prisoner_locations = PrisonerLocation.objects.all()
+
+        print_message(f'Generating (at least) {number_of_prisoners} prisoner profiles')
         prisoner_profiles = generate_prisoner_profiles_from_prisoner_locations(prisoner_locations)
-        no_of_senders = len(prisoner_profiles)
-        generate_sender_profiles_from_prisoner_profiles(no_of_senders)
+        print_message(f'Generated {len(prisoner_profiles)} prisoner profiles')
+        print_message(f'Generating {number_of_senders} sender profiles')
+        sender_profiles = generate_sender_profiles_from_prisoner_profiles(number_of_senders)
+        print_message(f'Generated {len(sender_profiles)} sender profiles')
 
         if credits == 'random':
             print_message('Generating random credits')
