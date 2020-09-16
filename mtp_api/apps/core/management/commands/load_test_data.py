@@ -130,29 +130,29 @@ class Command(BaseCommand):
             number_of_desired_disbursements = 20000
             number_of_desired_checks = 900000
 
-            number_of_transactions = number_of_desired_transactions - number_of_existing_transactions
+            number_of_transactions = max(0, number_of_desired_transactions - number_of_existing_transactions)
             print_message(
-                f'Number of transactions to be created is {number_of_desired_transactions} - {number_of_existing_transactions} = {number_of_transactions}'
+                f'Number of transactions to be created is {number_of_desired_transactions} - {number_of_existing_transactions} <= {number_of_transactions}'
             )
-            number_of_payments = number_of_desired_payments - number_of_existing_payments
+            number_of_payments = max(0, number_of_desired_payments - number_of_existing_payments)
             print_message(
-                f'Number of payments to be created is {number_of_desired_payments} - {number_of_existing_payments} = {number_of_payments}'
+                f'Number of payments to be created is {number_of_desired_payments} - {number_of_existing_payments} <= {number_of_payments}'
             )
-            number_of_prisoners = number_of_desired_prisoners - number_of_existing_prisoners
+            number_of_prisoners = max(0, number_of_desired_prisoners - number_of_existing_prisoners)
             print_message(
-                f'Number of prisoners to be created is {number_of_desired_prisoners} - {number_of_existing_prisoners} = {number_of_prisoners}'
+                f'Number of prisoners to be created is {number_of_desired_prisoners} - {number_of_existing_prisoners} <= {number_of_prisoners}'
             )
-            number_of_senders = number_of_desired_senders - number_of_existing_senders
+            number_of_senders = max(0, number_of_desired_senders - number_of_existing_senders)
             print_message(
-                f'Number of senders to be created is {number_of_desired_senders} - {number_of_existing_senders} = {number_of_senders}'
+                f'Number of senders to be created is {number_of_desired_senders} - {number_of_existing_senders} <= {number_of_senders}'
             )
-            number_of_disbursements = number_of_desired_disbursements - number_of_existing_disbursements
+            number_of_disbursements = max(0, number_of_desired_disbursements - number_of_existing_disbursements)
             print_message(
-                f'Number of disbursements to be created is {number_of_desired_disbursements} - {number_of_existing_disbursements} = {number_of_disbursements}'
+                f'Number of disbursements to be created is {number_of_desired_disbursements} - {number_of_existing_disbursements} <= {number_of_disbursements}'
             )
-            number_of_checks = number_of_desired_checks - number_of_existing_checks
+            number_of_checks = max(0, number_of_desired_checks - number_of_existing_checks)
             print_message(
-                f'Number of checks to be created is {number_of_desired_checks} - {number_of_existing_checks} = {number_of_checks}'
+                f'Number of checks to be created is {number_of_desired_checks} - {number_of_existing_checks} <= {number_of_checks}'
             )
             days_of_history = 1300
             prisons.append('nomis-api-dev')

@@ -195,22 +195,19 @@ def generate_prisoner_profiles_from_prisoner_locations(prisoner_locations):
 
 def generate_sender_profiles_from_prisoner_profiles(no_of_senders):
     fake_sender_data = create_fake_sender_data(no_of_senders)
-    return SenderProfile.objects.bulk_create(
+    # Have to do this in an unintuitive direction due to directionality of relationships
+    return BillingAddress.objects.bulk_create(
         [
-            SenderProfile(
-                debit_card_details=[
-                    DebitCardSenderDetails(
-                        postcode=fake_sender_datum['billing_address']['postcode'],
-                        card_number_last_digits=fake_sender_datum['card_number_last_digits'],
-                        card_expiry_date=fake_sender_datum['card_expiry_date'],
-                        billing_addresses=[
-                            BillingAddress(
-                                **fake_sender_datum['billing_address']
-                            )
-                        ]
-                    )
-                ],
+            BillingAddress(
+                debit_card_sender_details=DebitCardSenderDetails(
+                    postcode=fake_sender_datum['billing_address']['postcode'],
+                    card_number_last_digits=fake_sender_datum['card_number_last_digits'],
+                    card_expiry_date=fake_sender_datum['card_expiry_date'],
+                    sender=SenderProfile()
+                ),
+                **fake_sender_datum['billing_address'],
             )
             for fake_sender_datum in fake_sender_data
-        ]
+        ],
+        batch_size=500
     )
