@@ -62,9 +62,10 @@ def create_fake_sender_data(number_of_senders):
     return senders
 
 
-def get_sender_prisoner_pairs():
+def get_sender_prisoner_pairs(number_of_senders=None):
     number_of_prisoners = PrisonerLocation.objects.all().count()
-    number_of_senders = number_of_prisoners
+    if not number_of_senders:
+        number_of_senders = number_of_prisoners
 
     senders = create_fake_sender_data(number_of_senders)
     prisoners = list(PrisonerLocation.objects.all())
@@ -73,9 +74,9 @@ def get_sender_prisoner_pairs():
     return cycle(sender_prisoner_pairs)
 
 
-def generate_initial_payment_data(tot=50, days_of_history=7):
+def generate_initial_payment_data(tot=50, days_of_history=7, number_of_senders=None):
     data_list = []
-    sender_prisoner_pairs = get_sender_prisoner_pairs()
+    sender_prisoner_pairs = get_sender_prisoner_pairs(number_of_senders)
     for _ in range(tot):
         random_date = latest_payment_date() - datetime.timedelta(
             minutes=random.randint(0, 1440 * days_of_history)
@@ -103,7 +104,7 @@ def generate_initial_payment_data(tot=50, days_of_history=7):
 
 def generate_payments(
     payment_batch=50, consistent_history=False, days_of_history=7, overrides=None,
-    attach_profiles_to_individual_credits=True
+    attach_profiles_to_individual_credits=True, number_of_senders=None
 ):
     """
     Generate fake payment objects either for automated tests or test/development environment.
@@ -113,11 +114,14 @@ def generate_payments(
     :param days_of_history int: Number of days of history to generate
     :param overrides dict: Dict of attributes to apply to all payments. overrides['credit'] will be applied to credit
     :param attach_profiles_to_individual_credits bool: Whether to run credit.attach_profiles on individual credits
+    :param number_of_senders int/None: If not None, specifies how many senders to generate.
+                                       If None, number of existing PrisonerLocation entries used
     :rtype list<payment.models.Payment>
     """
     data_list = generate_initial_payment_data(
         tot=payment_batch,
-        days_of_history=days_of_history
+        days_of_history=days_of_history,
+        number_of_senders=number_of_senders
     )
     return create_payments(data_list, consistent_history, overrides, attach_profiles_to_individual_credits)
 

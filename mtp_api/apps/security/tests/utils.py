@@ -3,11 +3,12 @@ import random
 
 import faker
 from django.contrib.auth.models import Group
+from django.db import transaction
 from django.utils.crypto import get_random_string
 
 from credit.models import Credit, CREDIT_RESOLUTION, LOG_ACTIONS as CREDIT_LOG_ACTIONS
 from prison.models import Prison
-from payment.models import BillingAddress, Payment, PAYMENT_STATUS
+from payment.models import Payment, PAYMENT_STATUS
 from payment.tests.utils import create_fake_sender_data, generate_payments
 from prison.tests.utils import random_prisoner_number
 from security.models import Check, DebitCardSenderDetails, PrisonerProfile, SenderProfile
@@ -99,6 +100,11 @@ def generate_checks(number_of_checks=1, specific_payments_to_check=tuple()):
             monitored_instance.monitoring_users.add(fiu)
             monitored_instance.save()
 
+    # We want some senders to have more than one check, lets say those that have a check have at least 5
+
+    number_of_senders_to_use = int((number_of_checks * 5) / len(sender_profiles))
+    number_of_prisoners_to_use = int((number_of_checks * 5) / len(prisoner_profiles))
+
     filters = [
         PAYMENT_FILTERS_FOR_INVALID_CHECK,
         *([PAYMENT_FILTERS_FOR_VALID_CHECK] * number_of_checks),
@@ -121,7 +127,7 @@ def generate_checks(number_of_checks=1, specific_payments_to_check=tuple()):
                     debit_card_details__isnull=False
                 ).annotate(
                     cred_count=Count('credits')
-                ).order_by('-cred_count').all()[:5]
+                ).order_by('-cred_count').all()[:number_of_senders_to_use]
             ).id
             cardholder_name = fake_sender_names[sender_profile_id]
         if (
@@ -136,7 +142,7 @@ def generate_checks(number_of_checks=1, specific_payments_to_check=tuple()):
             prisoner_profile_id = random.choice(
                 PrisonerProfile.objects.annotate(
                     cred_count=Count('credits')
-                ).order_by('-cred_count').all()[:5]
+                ).order_by('-cred_count').all()[:number_of_prisoners_to_use]
             ).id
             prisoner_name = fake_prisoner_names[prisoner_profile_id]
         credit_filters = filter_set.pop('credit', {})
@@ -173,10 +179,10 @@ def generate_checks(number_of_checks=1, specific_payments_to_check=tuple()):
 
 
 def generate_prisoner_profiles_from_prisoner_locations(prisoner_locations):
-    # TODO remove this when updated to django 3.* and `ignore_conficts` kwarg available
+    # TODO remove this when updated to django 3.* and `ignore_conflicts` kwarg available
     existing_prisoner_profiles = PrisonerProfile.objects.values('prisoner_number')
     prisoner_locations_filtered = filter(
-        lambda pl: pl.prisoner_number in existing_prisoner_profiles,
+        lambda pl: pl.prisoner_number not in existing_prisoner_profiles,
         prisoner_locations
     )
     return PrisonerProfile.objects.bulk_create(
@@ -193,21 +199,68 @@ def generate_prisoner_profiles_from_prisoner_locations(prisoner_locations):
     )
 
 
-def generate_sender_profiles_from_prisoner_profiles(no_of_senders):
-    fake_sender_data = create_fake_sender_data(no_of_senders)
-    # Have to do this in an unintuitive direction due to directionality of relationships
-    return BillingAddress.objects.bulk_create(
+def generate_sender_profiles_from_payments(number_of_senders):
+    print('Querying for payments from which to generate sender profiles')
+    suitable_payments = Payment.objects.filter(
+        email__isnull=False,
+        cardholder_name__isnull=False,
+        card_number_first_digits__isnull=False,
+        card_number_last_digits__isnull=False,
+        card_expiry_date__isnull=False,
+        billing_address__isnull=False,
+        credit__isnull=False,
+    ).distinct(
+        'card_number_last_digits',
+        'card_expiry_date',
+        'billing_address__postcode'
+    ).order_by(
+        'card_number_last_digits',
+        'card_expiry_date',
+        'billing_address__postcode'
+    )
+    assert len(suitable_payments) >= number_of_senders, f'{len(suitable_payments)} < {number_of_senders}'
+
+    suitable_payments_without_dcsd = suitable_payments.filter(
+        billing_address__debit_card_sender_details__isnull=True,
+    )
+    suitable_payments_without_dcsd_count = suitable_payments_without_dcsd.count()
+    print(f'Generating data for {suitable_payments_without_dcsd_count} DebitCardSenderDetails')
+    dcsd_data = create_fake_sender_data(suitable_payments_without_dcsd.count())
+    print('Generating sender profiles')
+    senders = [SenderProfile() for _ in range(number_of_senders)]
+    print('Commiting SenderProfiles')
+    SenderProfile.objects.bulk_create(
+        senders,
+        batch_size=500
+    )
+    suitable_payments_iter = iter(suitable_payments)
+
+    print('Assigning Credits to Senders')
+    for sender in senders:
+        payment = next(suitable_payments_iter)
+        sender.credits.add(payment.credit)
+        sender.save()
+    print('Commiting DebitCardSenderDetails')
+    dcsd_instances = DebitCardSenderDetails.objects.bulk_create(
         [
-            BillingAddress(
-                debit_card_sender_details=DebitCardSenderDetails(
-                    postcode=fake_sender_datum['billing_address']['postcode'],
-                    card_number_last_digits=fake_sender_datum['card_number_last_digits'],
-                    card_expiry_date=fake_sender_datum['card_expiry_date'],
-                    sender=SenderProfile()
-                ),
-                **fake_sender_datum['billing_address'],
+            DebitCardSenderDetails(
+                postcode=dcsd_datum['billing_address']['postcode'],
+                card_number_last_digits=dcsd_datum['card_number_last_digits'],
+                card_expiry_date=dcsd_datum['card_expiry_date'],
+                sender=random.choice(senders)
             )
-            for fake_sender_datum in fake_sender_data
+            for dcsd_datum in dcsd_data
         ],
         batch_size=500
     )
+    dcsd_instances_iter = iter(dcsd_instances)
+    print('Assigning DebitCardSenderDetails to Payments')
+    for payment in suitable_payments_without_dcsd:
+        dcsd = next(dcsd_instances_iter)
+        billing_address = payment.billing_address
+        billing_address.debit_card_sender_detail = dcsd
+        billing_address.save()
+    transaction.commit()
+
+
+    return senders

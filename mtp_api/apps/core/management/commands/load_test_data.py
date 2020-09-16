@@ -22,7 +22,7 @@ from payment.tests.utils import generate_payments
 from performance.tests.utils import generate_digital_takeup
 from prison.models import Prison, PrisonerLocation
 from prison.tests.utils import load_prisoner_locations_from_file, load_random_prisoner_locations
-from security.tests.utils import generate_checks, generate_prisoner_profiles_from_prisoner_locations, generate_sender_profiles_from_prisoner_profiles
+from security.tests.utils import generate_checks, generate_prisoner_profiles_from_prisoner_locations, generate_sender_profiles_from_payments
 from security.models import Check, PrisonerProfile, RecipientProfile, SavedSearch, SenderProfile
 from transaction.models import Transaction
 from transaction.tests.utils import generate_transactions
@@ -121,15 +121,21 @@ class Command(BaseCommand):
             number_of_existing_checks  = Check.objects.count()
             number_of_existing_senders  = SenderProfile.objects.count()
 
-            number_of_existing_prisoners = min([number_of_existing_prisoner_locations, number_of_existing_prisoners_profiles])
+            number_of_existing_prisoners = min(
+                [number_of_existing_prisoner_locations, number_of_existing_prisoners_profiles]
+            )
 
             number_of_desired_transactions = 300000
             number_of_desired_payments = 3000000
             number_of_desired_prisoners = 80000
-            number_of_desired_senders =  700000
+            number_of_desired_senders = 700000
             number_of_desired_disbursements = 20000
             number_of_desired_checks = 900000
 
+            number_of_prisoners = max(0, number_of_desired_prisoners - number_of_existing_prisoners)
+            print_message(
+                f'Number of prisoners to be created is {number_of_desired_prisoners} - {number_of_existing_prisoners} <= {number_of_prisoners}'
+            )
             number_of_transactions = max(0, number_of_desired_transactions - number_of_existing_transactions)
             print_message(
                 f'Number of transactions to be created is {number_of_desired_transactions} - {number_of_existing_transactions} <= {number_of_transactions}'
@@ -138,17 +144,13 @@ class Command(BaseCommand):
             print_message(
                 f'Number of payments to be created is {number_of_desired_payments} - {number_of_existing_payments} <= {number_of_payments}'
             )
-            number_of_prisoners = max(0, number_of_desired_prisoners - number_of_existing_prisoners)
+            number_of_disbursements = max(0, number_of_desired_disbursements - number_of_existing_disbursements)
             print_message(
-                f'Number of prisoners to be created is {number_of_desired_prisoners} - {number_of_existing_prisoners} <= {number_of_prisoners}'
+                f'Number of disbursements to be created is {number_of_desired_disbursements} - {number_of_existing_disbursements} <= {number_of_disbursements}'
             )
             number_of_senders = max(0, number_of_desired_senders - number_of_existing_senders)
             print_message(
                 f'Number of senders to be created is {number_of_desired_senders} - {number_of_existing_senders} <= {number_of_senders}'
-            )
-            number_of_disbursements = max(0, number_of_desired_disbursements - number_of_existing_disbursements)
-            print_message(
-                f'Number of disbursements to be created is {number_of_desired_disbursements} - {number_of_existing_disbursements} <= {number_of_disbursements}'
             )
             number_of_checks = max(0, number_of_desired_checks - number_of_existing_checks)
             print_message(
@@ -203,9 +205,6 @@ class Command(BaseCommand):
         print_message(f'Generating (at least) {number_of_prisoners} prisoner profiles')
         prisoner_profiles = generate_prisoner_profiles_from_prisoner_locations(prisoner_locations)
         print_message(f'Generated {len(prisoner_profiles)} prisoner profiles')
-        print_message(f'Generating {number_of_senders} sender profiles')
-        sender_profiles = generate_sender_profiles_from_prisoner_profiles(number_of_senders)
-        print_message(f'Generated {len(sender_profiles)} sender profiles')
 
         if credits == 'random':
             print_message('Generating random credits')
@@ -243,8 +242,13 @@ class Command(BaseCommand):
                 payment_batch=number_of_payments,
                 consistent_history=True,
                 days_of_history=days_of_history,
-                attach_profiles_to_individual_credits=False
+                attach_profiles_to_individual_credits=False,
+                number_of_senders=number_of_senders
             )
+        print_message(f'Generating {number_of_senders} sender profiles')
+        sender_profiles = generate_sender_profiles_from_payments(number_of_senders)
+        print_message(f'Generated {len(sender_profiles)} sender profiles')
+
         print_message('Generating disbursements')
         generate_disbursements(
             disbursement_batch=number_of_disbursements,
