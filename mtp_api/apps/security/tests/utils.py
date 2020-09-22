@@ -31,6 +31,13 @@ PAYMENT_FILTERS_FOR_INVALID_CHECK = dict(
 
 PAYMENT_FILTERS_FOR_VALID_CHECK = dict(
     status=PAYMENT_STATUS.PENDING,
+    email__isnull=False,
+    cardholder_name__isnull=False,
+    card_number_first_digits__isnull=False,
+    card_number_last_digits__isnull=False,
+    card_expiry_date__isnull=False,
+    billing_address__isnull=False,
+    credit__isnull=False,
     credit=dict(
         resolution=CREDIT_RESOLUTION.INITIAL,
         # This only works because get_or_create ignores values with __ in any call to create()
@@ -39,7 +46,8 @@ PAYMENT_FILTERS_FOR_VALID_CHECK = dict(
         prisoner_number__isnull=False,
         prisoner_name__isnull=False,
         sender_profile__isnull=False,
-        prison_id__isnull=False
+        prison_id__isnull=False,
+        debit_card_sender_details__isnull=False
     )
 )
 
@@ -74,7 +82,7 @@ def _get_credit_values(credit_filters, sender_profile_id, prisoner_profile_id, p
     )
 
 
-def generate_checks(number_of_checks=1, specific_payments_to_check=tuple()):
+def generate_checks(number_of_checks=1, specific_payments_to_check=tuple(), create_invalid_checks=True):
     checks = []
     fake_prisoner_names = {pp_id[0]: fake.name() for pp_id in PrisonerProfile.objects.values_list('id')}
     fake_sender_names = {sp_id[0]: fake.name() for sp_id in SenderProfile.objects.values_list('id')}
@@ -105,11 +113,14 @@ def generate_checks(number_of_checks=1, specific_payments_to_check=tuple()):
     number_of_senders_to_use = int((number_of_checks * 5) / len(sender_profiles))
     number_of_prisoners_to_use = int((number_of_checks * 5) / len(prisoner_profiles))
 
-    filters = [
-        PAYMENT_FILTERS_FOR_INVALID_CHECK,
+    if create_invalid_checks:
+        filters = [PAYMENT_FILTERS_FOR_INVALID_CHECK]
+    else:
+        filters = []
+    filters.extend([
         *([PAYMENT_FILTERS_FOR_VALID_CHECK] * number_of_checks),
         *specific_payments_to_check
-    ]
+    ])
 
     for filter_set in filters:
         filter_set = filter_set.copy()
@@ -185,7 +196,7 @@ def generate_prisoner_profiles_from_prisoner_locations(prisoner_locations):
         lambda pl: pl.prisoner_number not in existing_prisoner_profiles,
         prisoner_locations
     )
-    return PrisonerProfile.objects.bulk_create(
+    prisoner_profiles = PrisonerProfile.objects.bulk_create(
         [
             PrisonerProfile(
                 prisoner_name=prisoner_location.prisoner_name,
@@ -197,6 +208,25 @@ def generate_prisoner_profiles_from_prisoner_locations(prisoner_locations):
             for prisoner_location in prisoner_locations_filtered
         ]
     )
+    suitable_credits = Credit.objects.filter(
+        payment__isnull=False
+    )
+    assert len(suitable_credits) >= len(prisoner_profiles), f'{len(suitable_credits)} < {len(prisoner_profiles)}'
+    for suitable_credit in suitable_credits:
+        prisoner_profile = random.choice(prisoner_profiles)
+        suitable_credit.prison = prisoner_profile.current_prison
+        suitable_credit.prisoner_name = prisoner_profile.prisoner_name
+        suitable_credit.prisoner_dob = prisoner_profile.prisoner_dob
+        suitable_credit.single_offender_id = prisoner_profile.single_offender_id
+        suitable_credit.save()
+
+        payment = suitable_credit.payment
+        payment.recipient_name = prisoner_profile.prisoner_name
+        payment.save()
+
+        prisoner_profile.credits.add(suitable_credit)
+        prisoner_profile.save()
+    return prisoner_profiles
 
 
 def generate_sender_profiles_from_payments(number_of_senders):

@@ -202,10 +202,6 @@ class Command(BaseCommand):
         if not prisoner_locations:
             prisoner_locations = PrisonerLocation.objects.all()
 
-        print_message(f'Generating (at least) {number_of_prisoners} prisoner profiles')
-        prisoner_profiles = generate_prisoner_profiles_from_prisoner_locations(prisoner_locations)
-        print_message(f'Generated {len(prisoner_profiles)} prisoner profiles')
-
         if credits == 'random':
             print_message('Generating random credits')
             generate_transactions(transaction_batch=number_of_transactions)
@@ -245,6 +241,10 @@ class Command(BaseCommand):
                 attach_profiles_to_individual_credits=False,
                 number_of_senders=number_of_senders
             )
+        print_message(f'Generating (at least) {number_of_prisoners} prisoner profiles')
+        prisoner_profiles = generate_prisoner_profiles_from_prisoner_locations(prisoner_locations)
+        print_message(f'Generated {len(prisoner_profiles)} prisoner profiles')
+
         print_message(f'Generating {number_of_senders} sender profiles')
         sender_profiles = generate_sender_profiles_from_payments(number_of_senders)
         print_message(f'Generated {len(sender_profiles)} sender profiles')
@@ -256,7 +256,8 @@ class Command(BaseCommand):
         )
         print_message('Generating checks')
         generate_checks(
-            number_of_checks=number_of_checks
+            number_of_checks=number_of_checks,
+            create_invalid_checks=False
         )
         print_message('Associating credits with profiles')
         with silence_logger(level=logging.WARNING):
