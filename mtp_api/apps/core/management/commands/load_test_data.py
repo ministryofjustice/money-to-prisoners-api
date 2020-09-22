@@ -22,12 +22,17 @@ from payment.tests.utils import generate_payments
 from performance.tests.utils import generate_digital_takeup
 from prison.models import Prison, PrisonerLocation
 from prison.tests.utils import load_prisoner_locations_from_file, load_random_prisoner_locations
-from security.tests.utils import generate_checks, generate_prisoner_profiles_from_prisoner_locations, generate_sender_profiles_from_payments
+from security.tests.utils import (
+    generate_checks,
+    generate_prisoner_profiles_from_prisoner_locations,
+    generate_sender_profiles_from_payments
+)
 from security.models import Check, PrisonerProfile, RecipientProfile, SavedSearch, SenderProfile
 from transaction.models import Transaction
 from transaction.tests.utils import generate_transactions
 
 User = get_user_model()
+
 
 class Command(BaseCommand):
     """
@@ -71,7 +76,7 @@ class Command(BaseCommand):
         parser.add_argument('--days-of-history', default=7, type=int,
                             help='Number of days of historical credits')
 
-    def handle(self, *args, **options):
+    def handle(self, *args, **options):  # noqa: C901
         if settings.ENVIRONMENT == 'prod':
             return self.handle_prod(**options)
 
@@ -91,7 +96,6 @@ class Command(BaseCommand):
         number_of_checks = options['number_of_checks']
         days_of_history = options['days_of_history']
 
-
         print_message = self.stdout.write if verbosity else lambda m: m
 
         if not protect_credits and credits != 'production-scale':
@@ -109,17 +113,19 @@ class Command(BaseCommand):
             Check.objects.all().delete()
 
         if credits == 'production-scale':
-            # N.B. This scenario will eat your RAM like there's no tomorrow.
+            # N.B. This scenario will eat your RAM like there's no tomorrow. ~13GB usage is
+            # about as far as I've got before it's keeled over and i've had to rerun
             # If running it outside your development environment, be sure that it's not using the same
             # resource pool as a production service
-            # If running it on your development environment you may need to tweak
-            number_of_existing_transactions  = Transaction.objects.count()
-            number_of_existing_payments  = Payment.objects.count()
+            # If running it on your development environment you may need to tweak oom-killer so it
+            # doesn't kill this process as soon as you near the memory limit of your system
+            number_of_existing_transactions = Transaction.objects.count()
+            number_of_existing_payments = Payment.objects.count()
             number_of_existing_prisoner_locations = PrisonerLocation.objects.count()
             number_of_existing_prisoners_profiles = PrisonerProfile.objects.count()
-            number_of_existing_disbursements  = Disbursement.objects.count()
-            number_of_existing_checks  = Check.objects.count()
-            number_of_existing_senders  = SenderProfile.objects.count()
+            number_of_existing_disbursements = Disbursement.objects.count()
+            number_of_existing_checks = Check.objects.count()
+            number_of_existing_senders = SenderProfile.objects.count()
 
             number_of_existing_prisoners = min(
                 [number_of_existing_prisoner_locations, number_of_existing_prisoners_profiles]
@@ -132,29 +138,47 @@ class Command(BaseCommand):
             number_of_desired_disbursements = 20000
             number_of_desired_checks = 900000
 
-            number_of_prisoners = max(0, number_of_desired_prisoners - number_of_existing_prisoners)
-            print_message(
-                f'Number of prisoners to be created is {number_of_desired_prisoners} - {number_of_existing_prisoners} <= {number_of_prisoners}'
+            number_of_prisoners = max(
+                0, number_of_desired_prisoners - number_of_existing_prisoners
             )
-            number_of_transactions = max(0, number_of_desired_transactions - number_of_existing_transactions)
             print_message(
-                f'Number of transactions to be created is {number_of_desired_transactions} - {number_of_existing_transactions} <= {number_of_transactions}'
+                f'Number of prisoners to be created is {number_of_desired_prisoners} - {number_of_existing_prisoners}'
+                f' <= {number_of_prisoners}'
             )
-            number_of_payments = max(0, number_of_desired_payments - number_of_existing_payments)
-            print_message(
-                f'Number of payments to be created is {number_of_desired_payments} - {number_of_existing_payments} <= {number_of_payments}'
+            number_of_transactions = max(
+                0, number_of_desired_transactions - number_of_existing_transactions
             )
-            number_of_disbursements = max(0, number_of_desired_disbursements - number_of_existing_disbursements)
             print_message(
-                f'Number of disbursements to be created is {number_of_desired_disbursements} - {number_of_existing_disbursements} <= {number_of_disbursements}'
+                f'Number of transactions to be created is {number_of_desired_transactions} - '
+                f'{number_of_existing_transactions} <= {number_of_transactions}'
             )
-            number_of_senders = max(0, number_of_desired_senders - number_of_existing_senders)
-            print_message(
-                f'Number of senders to be created is {number_of_desired_senders} - {number_of_existing_senders} <= {number_of_senders}'
+            number_of_payments = max(
+                0, number_of_desired_payments - number_of_existing_payments
             )
-            number_of_checks = max(0, number_of_desired_checks - number_of_existing_checks)
             print_message(
-                f'Number of checks to be created is {number_of_desired_checks} - {number_of_existing_checks} <= {number_of_checks}'
+                f'Number of payments to be created is {number_of_desired_payments} - {number_of_existing_payments}'
+                f' <= {number_of_payments}'
+            )
+            number_of_disbursements = max(
+                0, number_of_desired_disbursements - number_of_existing_disbursements
+            )
+            print_message(
+                f'Number of disbursements to be created is {number_of_desired_disbursements} - '
+                f'{number_of_existing_disbursements} <= {number_of_disbursements}'
+            )
+            number_of_senders = max(
+                0, number_of_desired_senders - number_of_existing_senders
+            )
+            print_message(
+                f'Number of senders to be created is {number_of_desired_senders} - {number_of_existing_senders}'
+                f' <= {number_of_senders}'
+            )
+            number_of_checks = max(
+                0, number_of_desired_checks - number_of_existing_checks
+            )
+            print_message(
+                f'Number of checks to be created is {number_of_desired_checks} - {number_of_existing_checks}'
+                f' <= {number_of_checks}'
             )
             days_of_history = 1300
             prisons.append('nomis-api-dev')

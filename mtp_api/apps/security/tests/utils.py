@@ -292,5 +292,4 @@ def generate_sender_profiles_from_payments(number_of_senders):
         billing_address.save()
     transaction.commit()
 
-
     return senders

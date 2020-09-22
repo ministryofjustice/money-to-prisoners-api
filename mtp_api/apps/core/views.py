@@ -236,7 +236,6 @@ class RecreateTestDataView(AdminViewMixin, FormView):
             })
             call_command('load_test_data', **options)
 
-
         output.seek(0)
         command_output = output.read()
 
