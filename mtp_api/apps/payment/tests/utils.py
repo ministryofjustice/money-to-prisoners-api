@@ -1,3 +1,4 @@
+from copy import deepcopy
 import datetime
 from itertools import cycle
 import random
@@ -25,12 +26,27 @@ def latest_payment_date():
     return timezone.now()
 
 
-def create_fake_sender_data(number_of_senders):
+def create_fake_sender_data(number_of_senders, stable_across_reruns=True):
+    """
+    Generate data needed for Payment/BillignAddress using Faker
+
+    Sometimes we want this to be stable, but in the case where we're running
+    production-scale generation of fake data we want it to vary the data it
+    generates to avoid unique constraint collisions
+
+    :param number_of_senders int: Number of data entries to generate
+    :param stable_across_reruns bool: Whether or not to refresh the local seed before generation
+    """
+    if not stable_across_reruns:
+        fake_local = deepcopy(fake)
+        fake_local.seed_instance(random.randint(0, 65535))
+    else:
+        fake_local = fake
     senders = []
     for _ in range(number_of_senders):
-        expiry_date = fake.date_time_between(start_date='now', end_date='+5y')
-        full_name = ' '.join([fake.first_name(), fake.last_name()])
-        address_parts = fake.address().split('\n')
+        expiry_date = fake_local.date_time_between(start_date='now', end_date='+5y')
+        full_name = ' '.join([fake_local.first_name(), fake_local.last_name()])
+        address_parts = fake_local.address().split('\n')
         billing_address = {}
         if len(address_parts) == 4:
             billing_address = {
@@ -53,7 +69,7 @@ def create_fake_sender_data(number_of_senders):
                 'card_number_first_digits': get_random_string(6, '0123456789'),
                 'card_number_last_digits': get_random_string(4, '0123456789'),
                 'card_expiry_date': expiry_date.strftime('%m/%y'),
-                'ip_address': fake.ipv4(),
+                'ip_address': fake_local.ipv4(),
                 'email': '%s@mail.local' % full_name.replace(' ', '.'),
                 'card_brand': 'Visa',
                 'billing_address': billing_address,

@@ -3,7 +3,6 @@ import random
 
 import faker
 from django.contrib.auth.models import Group
-from django.db import transaction
 from django.utils.crypto import get_random_string
 
 from credit.models import Credit, CREDIT_RESOLUTION, LOG_ACTIONS as CREDIT_LOG_ACTIONS
@@ -37,6 +36,7 @@ PAYMENT_FILTERS_FOR_VALID_CHECK = dict(
     card_number_last_digits__isnull=False,
     card_expiry_date__isnull=False,
     billing_address__isnull=False,
+    billing_address__debit_card_sender_details__isnull=False,
     credit__isnull=False,
     credit=dict(
         resolution=CREDIT_RESOLUTION.INITIAL,
@@ -47,7 +47,6 @@ PAYMENT_FILTERS_FOR_VALID_CHECK = dict(
         prisoner_name__isnull=False,
         sender_profile__isnull=False,
         prison_id__isnull=False,
-        debit_card_sender_details__isnull=False
     )
 )
 
@@ -191,11 +190,13 @@ def generate_checks(number_of_checks=1, specific_payments_to_check=tuple(), crea
 
 def generate_prisoner_profiles_from_prisoner_locations(prisoner_locations):
     # TODO remove this when updated to django 3.* and `ignore_conflicts` kwarg available
-    existing_prisoner_profiles = PrisonerProfile.objects.values('prisoner_number')
+    existing_prisoner_profiles = PrisonerProfile.objects.values_list('prisoner_number', flat=True)
     prisoner_locations_filtered = filter(
         lambda pl: pl.prisoner_number not in existing_prisoner_profiles,
         prisoner_locations
     )
+    if not list(prisoner_locations_filtered):
+        return list(prisoner_locations_filtered)
     prisoner_profiles = PrisonerProfile.objects.bulk_create(
         [
             PrisonerProfile(
@@ -211,7 +212,8 @@ def generate_prisoner_profiles_from_prisoner_locations(prisoner_locations):
     suitable_credits = Credit.objects.filter(
         payment__isnull=False
     )
-    assert len(suitable_credits) >= len(prisoner_profiles), f'{len(suitable_credits)} < {len(prisoner_profiles)}'
+    suitable_credits_count = suitable_credits.count()
+    assert suitable_credits_count >= len(prisoner_profiles), f'{suitable_credits_count} < {len(prisoner_profiles)}'
     for suitable_credit in suitable_credits:
         prisoner_profile = random.choice(prisoner_profiles)
         suitable_credit.prison = prisoner_profile.current_prison
@@ -255,7 +257,10 @@ def generate_sender_profiles_from_payments(number_of_senders):
     )
     suitable_payments_without_dcsd_count = suitable_payments_without_dcsd.count()
     print(f'Generating data for {suitable_payments_without_dcsd_count} DebitCardSenderDetails')
-    dcsd_data = create_fake_sender_data(suitable_payments_without_dcsd.count())
+    dcsd_data = create_fake_sender_data(
+        suitable_payments_without_dcsd_count,
+        stable_across_reruns=False
+    )
     print('Generating sender profiles')
     senders = [SenderProfile() for _ in range(number_of_senders)]
     print('Commiting SenderProfiles')
@@ -290,6 +295,5 @@ def generate_sender_profiles_from_payments(number_of_senders):
         billing_address = payment.billing_address
         billing_address.debit_card_sender_detail = dcsd
         billing_address.save()
-    transaction.commit()
 
     return senders
