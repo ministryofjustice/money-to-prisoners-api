@@ -95,6 +95,7 @@ class Command(BaseCommand):
         number_of_disbursements = options['number_of_disbursements']
         number_of_checks = options['number_of_checks']
         days_of_history = options['days_of_history']
+        extra_generate_checks_args = {}
 
         print_message = self.stdout.write if verbosity else lambda m: m
 
@@ -265,13 +266,19 @@ class Command(BaseCommand):
                 attach_profiles_to_individual_credits=False,
                 number_of_senders=number_of_senders
             )
-        print_message(f'Generating (at least) {number_of_prisoners} prisoner profiles')
-        prisoner_profiles = generate_prisoner_profiles_from_prisoner_locations(prisoner_locations)
-        print_message(f'Generated {len(prisoner_profiles)} prisoner profiles')
+            print_message(f'Generating (at least) {number_of_prisoners} prisoner profiles')
+            prisoner_profiles = generate_prisoner_profiles_from_prisoner_locations(prisoner_locations)
+            print_message(f'Generated {len(prisoner_profiles)} prisoner profiles')
 
-        print_message(f'Generating {number_of_senders} sender profiles')
-        sender_profiles = generate_sender_profiles_from_payments(number_of_senders)
-        print_message(f'Generated {len(sender_profiles)} sender profiles')
+            print_message(f'Generating {number_of_senders} sender profiles')
+            sender_profiles = generate_sender_profiles_from_payments(number_of_senders)
+            print_message(f'Generated {len(sender_profiles)} sender profiles')
+
+            extra_generate_checks_args.update({
+                'create_invalid_checks': False,
+                'number_of_senders_to_use': int((number_of_checks * 5) / len(sender_profiles)),
+                'number_of_prisoners_to_use': int((number_of_checks * 5) / len(prisoner_profiles))
+            })
 
         print_message('Generating disbursements')
         generate_disbursements(
@@ -281,7 +288,7 @@ class Command(BaseCommand):
         print_message('Generating checks')
         generate_checks(
             number_of_checks=number_of_checks,
-            create_invalid_checks=False
+            **extra_generate_checks_args
         )
         print_message('Associating credits with profiles')
         with silence_logger(level=logging.WARNING):

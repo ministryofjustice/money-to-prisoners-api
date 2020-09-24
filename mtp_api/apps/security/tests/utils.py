@@ -82,7 +82,10 @@ def _get_credit_values(credit_filters, sender_profile_id, prisoner_profile_id, p
     )
 
 
-def generate_checks(number_of_checks=1, specific_payments_to_check=tuple(), create_invalid_checks=True):
+def generate_checks(
+    number_of_checks=1, specific_payments_to_check=tuple(), create_invalid_checks=True,
+    number_of_prisoners_to_use=5, number_of_senders_to_use=5
+):
     checks = []
     fake_prisoner_names = {pp_id[0]: fake.name() for pp_id in PrisonerProfile.objects.values_list('id')}
     fake_sender_names = {sp_id[0]: fake.name() for sp_id in SenderProfile.objects.values_list('id')}
@@ -107,11 +110,6 @@ def generate_checks(number_of_checks=1, specific_payments_to_check=tuple(), crea
         if monitored_instance:
             monitored_instance.monitoring_users.add(fiu)
             monitored_instance.save()
-
-    # We want some senders to have more than one check, lets say those that have a check have at least 5
-
-    number_of_senders_to_use = int((number_of_checks * 5) / len(sender_profiles))
-    number_of_prisoners_to_use = int((number_of_checks * 5) / len(prisoner_profiles))
 
     if create_invalid_checks:
         filters = [PAYMENT_FILTERS_FOR_INVALID_CHECK]
