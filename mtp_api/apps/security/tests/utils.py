@@ -286,10 +286,7 @@ def generate_sender_profiles_from_payments(number_of_senders):
     if not all_orphaned_senders_count:
         return []
     print(f'Generating data for {all_orphaned_senders_count} DebitCardSenderDetails')
-    dcsd_data = create_fake_sender_data(
-        all_orphaned_senders_count,
-        stable_across_reruns=False
-    )
+    dcsd_data = create_fake_sender_data(all_orphaned_senders_count)
     all_orphaned_senders_iter = iter(all_orphaned_senders)
     print('Commiting DebitCardSenderDetails')
     dcsd_instances = DebitCardSenderDetails.objects.bulk_create(
