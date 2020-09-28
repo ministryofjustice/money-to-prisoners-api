@@ -258,7 +258,6 @@ def generate_sender_profiles_from_payments(number_of_senders):
     suitable_payments_without_dcsd = suitable_payments.filter(
         billing_address__debit_card_sender_details__isnull=True,
     )
-    #  suitable_payments_without_dcsd_count = suitable_payments_without_dcsd.count()
     print('Generating sender profiles')
     senders = [SenderProfile() for _ in range(number_of_senders)]
     print('Commiting SenderProfiles')
@@ -301,10 +300,10 @@ def generate_sender_profiles_from_payments(number_of_senders):
         ],
         batch_size=500
     )
-    dcsd_instances_iter = iter(dcsd_instances)
-    print('Assigning DebitCardSenderDetails to Payments')
-    for payment in suitable_payments_without_dcsd:
-        dcsd = next(dcsd_instances_iter)
+    suitable_payments_without_dcsd_iter = iter(suitable_payments_without_dcsd)
+    print('Assigning Payments to DebitCardSenderDetails')
+    for dcsd in dcsd_instances:
+        payment = next(suitable_payments_without_dcsd_iter)
         billing_address = payment.billing_address
         billing_address.debit_card_sender_detail = dcsd
         billing_address.save()

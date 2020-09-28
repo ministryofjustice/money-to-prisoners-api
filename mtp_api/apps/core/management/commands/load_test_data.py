@@ -274,10 +274,12 @@ class Command(BaseCommand):
             sender_profiles = generate_sender_profiles_from_payments(number_of_senders)
             print_message(f'Generated {len(sender_profiles)} sender profiles')
 
+            prisoner_profiles_count = PrisonerProfile.objects.count()
+            sender_profiles_count = SenderProfile.objects.count()
             extra_generate_checks_args.update({
                 'create_invalid_checks': False,
-                'number_of_senders_to_use': int((number_of_checks * 5) / len(sender_profiles)),
-                'number_of_prisoners_to_use': int((number_of_checks * 5) / len(prisoner_profiles))
+                'number_of_senders_to_use': int((number_of_checks * 5) / sender_profiles_count),
+                'number_of_prisoners_to_use': int((number_of_checks * 5) / prisoner_profiles_count)
             })
 
         print_message('Generating disbursements')
