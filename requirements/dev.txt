@@ -2,3 +2,5 @@
 -r base.txt
 
 money-to-prisoners-common[testing]>=9.20,<9.21
+pdbpp
+django-pdb

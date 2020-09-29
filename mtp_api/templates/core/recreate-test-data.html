@@ -1,4 +1,5 @@
 {% extends 'admin/base_site.html' %}
+{% load static %}
 {% load i18n %}
 
 {% url 'admin:recreate_test_data' as this_url %}
@@ -29,5 +30,19 @@
 
   {% endif %}
 </div>
+<script type="text/javascript" src="{% static 'admin/js/vendor/jquery/jquery.min.js' %}"></script>
+<script>
+  $(document).ready(function() {
+    $('#id_scenario').on(
+      'change', function(eventObject) {
+        if (eventObject.target.selectedOptions[0] === $('#id_scenario > option[value=production-scale]')[0]){
+          $('form > p > input').prop('disabled', true);
+        } else {
+          $('form > p > input').prop('disabled', false);
+        }
+      }
+    )
+  });
+</script>
 
 {% endblock %}

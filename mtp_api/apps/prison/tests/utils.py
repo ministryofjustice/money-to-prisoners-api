@@ -53,7 +53,7 @@ def load_random_prisoner_locations(number_of_prisoners=50, single_offender_id=Tr
             'active': True,
         } for _ in range(number_of_prisoners - 2)
     ]
-    PrisonerLocation.objects.bulk_create(
+    return PrisonerLocation.objects.bulk_create(
         map(lambda data: PrisonerLocation(**data), prisoner_locations)
     )
 
@@ -78,7 +78,7 @@ def load_prisoner_locations_from_file(filename, single_offender_id=True):
         prisoner_location['prisoner_dob'] = parse_date(prisoner_location['prisoner_dob'])
         prisoner_location['active'] = True
 
-    PrisonerLocation.objects.bulk_create(
+    return PrisonerLocation.objects.bulk_create(
         map(lambda data: PrisonerLocation(**data), prisoner_locations)
     )
 
