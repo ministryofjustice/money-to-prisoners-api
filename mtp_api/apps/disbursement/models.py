@@ -61,9 +61,6 @@ class Disbursement(TimeStampedModel):
     class Meta:
         ordering = ('id',)
         get_latest_by = 'created'
-        permissions = (
-            ('view_disbursement', 'Can view disbursements'),
-        )
         indexes = [
             models.Index(fields=['created', 'id']),
             models.Index(fields=['-created', 'id']),
