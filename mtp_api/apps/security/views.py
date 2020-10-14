@@ -242,27 +242,27 @@ class PrisonerProfileListFilter(django_filters.FilterSet):
     )
 
     prisoner_name = django_filters.CharFilter(
-        name='prisoner_name', lookup_expr='icontains'
+        field_name='prisoner_name', lookup_expr='icontains'
     )
 
     current_prison = django_filters.ModelMultipleChoiceFilter(
         queryset=Prison.objects.all(),
     )
     prison = django_filters.ModelMultipleChoiceFilter(
-        name='prisons', queryset=Prison.objects.all()
+        field_name='prisons', queryset=Prison.objects.all()
     )
-    prison_region = django_filters.CharFilter(name='prisons__region')
-    prison_population = MultipleValueFilter(name='prisons__populations__name')
-    prison_category = MultipleValueFilter(name='prisons__categories__name')
+    prison_region = django_filters.CharFilter(field_name='prisons__region')
+    prison_population = MultipleValueFilter(field_name='prisons__populations__name')
+    prison_category = MultipleValueFilter(field_name='prisons__categories__name')
 
     senders = django_filters.ModelMultipleChoiceFilter(
-        name='senders', queryset=SenderProfile.objects.all()
+        field_name='senders', queryset=SenderProfile.objects.all()
     )
     sender_count__gte = django_filters.NumberFilter(
-        name='sender_count', lookup_expr='gte'
+        field_name='sender_count', lookup_expr='gte'
     )
     sender_count__lte = django_filters.NumberFilter(
-        name='sender_count', lookup_expr='lte'
+        field_name='sender_count', lookup_expr='lte'
     )
 
     monitoring = django_filters.BooleanFilter()

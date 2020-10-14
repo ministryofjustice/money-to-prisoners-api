@@ -37,7 +37,7 @@ class TransactionListFilter(django_filters.FilterSet):
     received_at__gte = IsoDateTimeFilter(
         field_name='received_at', lookup_expr='gte'
     )
-    pk = MultipleValueFilter(name='pk')
+    pk = MultipleValueFilter(field_name='pk')
 
     class Meta:
         model = Transaction
