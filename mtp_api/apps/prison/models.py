@@ -131,3 +131,17 @@ class PrisonerCreditNoticeEmail(models.Model):
 
     def __str__(self):
         return '%s <%s>' % (self.prison.name, self.email)
+
+
+class PrisonerBalance(TimeStampedModel):
+    prisoner_number = models.CharField(max_length=250, primary_key=True)
+    prison = models.ForeignKey(Prison, on_delete=models.CASCADE)
+    amount = models.BigIntegerField()
+
+    class Meta:
+        index_together = (
+            ('prisoner_number', 'prison'),
+        )
+
+    def __str__(self):
+        return f'{self.prisoner_number} has balance £{self.amount/100:0.2f}'
