@@ -3,6 +3,7 @@ import logging
 
 from django.conf import settings
 from django.contrib.admin.models import LogEntry, CHANGE as CHANGE_LOG_ENTRY
+from django.contrib import messages
 from django.core.management import call_command
 from django.db import transaction
 from django.urls import reverse_lazy
@@ -23,8 +24,8 @@ from mtp_auth.permissions import (
     NOMS_OPS_OAUTH_CLIENT_ID, CASHBOOK_OAUTH_CLIENT_ID,
     get_client_permissions_class
 )
-from prison.forms import LoadOffendersForm
-from prison.models import PrisonerLocation, Category, Population, Prison
+from prison.forms import LoadOffendersForm, PrisonerBalanceUploadForm
+from prison.models import PrisonerLocation, Category, Population, Prison, PrisonerBalance
 from prison.serializers import (
     PrisonerLocationSerializer,
     PrisonerValiditySerializer,
@@ -177,6 +178,26 @@ class CategoryView(mixins.ListModelMixin, viewsets.GenericViewSet):
     permission_classes = (IsAuthenticated,)
     serializer_class = CategorySerializer
     queryset = Category.objects.all()
+
+
+class PrisonerBalanceUploadView(AdminViewMixin, FormView):
+    title = _('Prisoner balance upload')
+    form_class = PrisonerBalanceUploadForm
+    template_name = 'admin/prison/prisonerbalance/upload.html'
+    success_url = reverse_lazy('admin:prison_prisonerbalance_changelist')
+    required_permissions = [
+        'prison.add_prisonerbalance', 'prison.change_prisonerbalance', 'prison.delete_prisonerbalance',
+    ]
+
+    def get_context_data(self, **kwargs):
+        context_data = super().get_context_data(**kwargs)
+        context_data['opts'] = PrisonerBalance._meta
+        return context_data
+
+    def form_valid(self, form):
+        result = form.save()
+        messages.success(self.request, f'Deleted {result["deleted"]} balances. Saved {result["created"]} balances.')
+        return super().form_valid(form)
 
 
 class LoadOffendersView(AdminViewMixin, FormView):

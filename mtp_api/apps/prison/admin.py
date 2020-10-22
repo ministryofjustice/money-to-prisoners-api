@@ -63,6 +63,7 @@ class PrisonerCreditNoticeEmailAdmin(ModelAdmin):
 class PrisonerBalanceAdmin(ModelAdmin):
     list_display = ('prisoner_number', 'prison', 'formatted_amount')
     list_filter = ('prison',)
+    ordering = ('prisoner_number',)
     search_fields = ('prisoner_name',)
     readonly_fields = ('created',)
 
