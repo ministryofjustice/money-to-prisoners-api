@@ -43,6 +43,7 @@ class Prison(TimeStampedModel):
     pre_approval_required = models.BooleanField(default=False)
 
     private_estate = models.BooleanField(default=False)
+    use_nomis_for_balances = models.BooleanField(default=True)
     cms_establishment_code = models.CharField(max_length=10, blank=True)
 
     name_prefixes = ('HMP/YOI', 'HMP', 'HMYOI/RC', 'HMYOI', 'IRC', 'STC')

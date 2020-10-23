@@ -20,7 +20,7 @@ from core.tests.utils import make_test_users
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from mtp_auth.constants import CASHBOOK_OAUTH_CLIENT_ID
 from mtp_auth.models import PrisonUserMapping
-from prison.models import Prison, PrisonerLocation, Population, Category
+from prison.models import Prison, PrisonerLocation, Population, Category, PrisonerBalance
 from prison.serializers import TOLERATED_NOMIS_ERROR_CODES
 from prison.tests.utils import (
     random_prisoner_name, random_prisoner_number, random_prisoner_dob,
@@ -510,6 +510,7 @@ class PrisonerAccountBalanceTestCase(AuthTestCaseMixin, APITestCase):
         public_prison.save()
         private_prison = Prison.objects.get(nomis_id='IXB')
         private_prison.private_estate = True
+        private_prison.use_nomis_for_balances = False
         private_prison.save()
         load_random_prisoner_locations(number_of_prisoners=2)
         prisoner_locations = PrisonerLocation.objects.order_by('?')[0:2]
@@ -558,8 +559,40 @@ class PrisonerAccountBalanceTestCase(AuthTestCaseMixin, APITestCase):
         self.assertDictEqual(response_data, {'combined_account_balance': 3000 + 550 + 12000})
 
     @mock.patch('prison.serializers.nomis')
-    def test_retrieving_combined_balance_in_private_estate(self, mocked_nomis):
+    def test_retrieving_combined_balance_from_prison_without_nomis_no_prisoner_balance(self, mocked_nomis):
         mocked_nomis.get_account_balances.return_value = {'cash': 1000, 'spends': 550, 'savings': 12000}
+
+        response = self.make_api_call(self.prisoner_location_private, self.send_money_user)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_data = response.json()
+        self.assertDictEqual(response_data, {'combined_account_balance': 0})
+        mocked_nomis.get_account_balances.assert_not_called()
+
+    @mock.patch('prison.serializers.nomis')
+    def test_retrieving_combined_balance_from_prison_without_nomis_with_prisoner_balance(self, mocked_nomis):
+        mocked_nomis.get_account_balances.return_value = {'cash': 1000, 'spends': 550, 'savings': 12000}
+        PrisonerBalance.objects.create(
+            prisoner_number=self.prisoner_location_private.prisoner_number,
+            prison=self.prisoner_location_private.prison,
+            amount=80000,
+        )
+
+        response = self.make_api_call(self.prisoner_location_private, self.send_money_user)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_data = response.json()
+        self.assertDictEqual(response_data, {'combined_account_balance': 80000})
+        mocked_nomis.get_account_balances.assert_not_called()
+
+    @mock.patch('prison.serializers.nomis')
+    def test_retrieving_combined_balance_from_prison_without_nomis_with_prisoner_balance_in_other_prison(
+        self, mocked_nomis
+    ):
+        mocked_nomis.get_account_balances.return_value = {'cash': 1000, 'spends': 550, 'savings': 12000}
+        PrisonerBalance.objects.create(
+            prisoner_number=self.prisoner_location_private.prisoner_number,
+            prison=self.prisoner_location_public.prison,
+            amount=70000,
+        )
 
         response = self.make_api_call(self.prisoner_location_private, self.send_money_user)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -602,7 +635,7 @@ class PrisonerAccountBalanceTestCase(AuthTestCaseMixin, APITestCase):
     @mock.patch('mtp_api.apps.prison.serializers.nomis.connector', Connector())
     def test_prisoner_location_mismatch_prisoner_found(self, *args):
         # We need more than one public prison!
-        Prison.objects.update(private_estate=False)
+        Prison.objects.update(private_estate=False, use_nomis_for_balances=True)
         existing_prison = self.prisoner_location_public.prison
         new_prison = Prison.objects.filter(
             private_estate=False
