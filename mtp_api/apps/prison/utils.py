@@ -20,10 +20,10 @@ def fetch_prisoner_location_from_nomis(prisoner_location: PrisonerLocation) -> O
             return None
         new_prison = Prison.objects.get(nomis_id=new_location['nomis_id'])
     except requests.RequestException:
-        logger.error(f'Cannot look up prisoner location for {prisoner_location.prisoner_number} in nomis')
+        logger.error(f'Cannot look up prisoner location for {prisoner_location.prisoner_number} in NOMIS')
         return None
     except Prison.DoesNotExist:
-        logger.error(f'Cannot find prison matching {new_location.nomis_id} in Prison table')
+        logger.error(f'Cannot find prison matching {new_location["nomis_id"]} in Prison table')
         return None
     else:
         logger.info(
