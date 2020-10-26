@@ -21,6 +21,7 @@ TOLERATED_NOMIS_ERROR_CODES = (
     status.HTTP_507_INSUFFICIENT_STORAGE
 )
 
+
 class PopulationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Population

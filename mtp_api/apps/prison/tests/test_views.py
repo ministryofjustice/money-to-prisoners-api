@@ -723,6 +723,7 @@ class PrisonerAccountBalanceTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json(), expected_response)
 
+
 class PrisonViewTestCase(AuthTestCaseMixin, APITestCase):
     fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
