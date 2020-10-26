@@ -21,6 +21,7 @@ from mtp_auth.tests.utils import AuthTestCaseMixin
 from mtp_auth.constants import CASHBOOK_OAUTH_CLIENT_ID
 from mtp_auth.models import PrisonUserMapping
 from prison.models import Prison, PrisonerLocation, Population, Category
+from prison.serializers import TOLERATED_NOMIS_ERROR_CODES
 from prison.tests.utils import (
     random_prisoner_name, random_prisoner_number, random_prisoner_dob,
     load_random_prisoner_locations
@@ -690,15 +691,9 @@ class PrisonerAccountBalanceTestCase(AuthTestCaseMixin, APITestCase):
         self.prisoner_location_public.refresh_from_db()
         self.assertEqual(self.prisoner_location_public.prison, initial_prison)
 
-
-    @parameterized.expand([
-        (status.HTTP_404_NOT_FOUND,),
-        (status.HTTP_500_INTERNAL_SERVER_ERROR,),
-        (status.HTTP_502_BAD_GATEWAY,),
-        (status.HTTP_503_SERVICE_UNAVAILABLE,),
-        (status.HTTP_504_GATEWAY_TIMEOUT,),
-        (status.HTTP_507_INSUFFICIENT_STORAGE,),
-    ])
+    @parameterized.expand(
+        [(code,) for code in TOLERATED_NOMIS_ERROR_CODES]
+    )
     @mock.patch('mtp_api.apps.prison.serializers.nomis.connector', Connector())
     @override_settings(
         HMPPS_CLIENT_SECRET='EXAMPLE',
