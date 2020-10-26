@@ -21,6 +21,8 @@ class PrisonerBalanceUploadFormTestCase(PrisonerBalanceUploadBaseTestCase):
     def parse_file(self, file_name, prison=None):
         if not prison:
             prison = Prison.objects.last()
+        prison.use_nomis_for_balances = False
+        prison.save()
         file_path = self.path_test_csv_folder / file_name
         with File(file_path.open('rb')) as csv_file:
             form = PrisonerBalanceUploadForm(
@@ -197,6 +199,8 @@ class PrisonerBalanceUploadViewTestCase(PrisonerBalanceUploadBaseTestCase):
     def test_can_upload_valid_file(self):
         file_path = self.path_test_csv_folder / 'sample-balances.csv'
         chosen_prison = Prison.objects.last()
+        chosen_prison.use_nomis_for_balances = False
+        chosen_prison.save()
         self.login_as_granted_user()
         with file_path.open('rb') as csv_file:
             response = self.client.post(self.url, data={

@@ -17,7 +17,7 @@ class LoadOffendersForm(forms.Form):
 
 class PrisonerBalanceUploadForm(forms.Form):
     csv_file = forms.FileField(label=_('Prisoner balances file'), allow_empty_file=True, widget=AdminFileWidget)
-    prison = ModelChoiceField(queryset=Prison.objects.all().order_by('-private_estate', 'nomis_id'))
+    prison = ModelChoiceField(queryset=Prison.objects.filter(use_nomis_for_balances=False))
 
     def clean_csv_file(self):
         csv_file = self.cleaned_data.get('csv_file')
