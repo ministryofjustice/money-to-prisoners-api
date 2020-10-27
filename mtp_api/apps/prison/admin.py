@@ -1,13 +1,15 @@
 from django.contrib import admin, messages
 from django.contrib.admin import ModelAdmin
-from django.utils.translation import gettext
+from django.utils.translation import gettext, gettext_lazy as _
 
-from core.admin import DateFilter
+from core.admin import DateFilter, add_short_description
 from prison.models import (
     Prison, Population, Category,
     PrisonBankAccount, RemittanceEmail,
     PrisonerLocation, PrisonerCreditNoticeEmail,
+    PrisonerBalance,
 )
+from transaction.utils import format_amount
 
 
 @admin.register(Population)
@@ -55,3 +57,16 @@ class PrisonerLocationAdmin(ModelAdmin):
 @admin.register(PrisonerCreditNoticeEmail)
 class PrisonerCreditNoticeEmailAdmin(ModelAdmin):
     list_display = ('prison', 'email')
+
+
+@admin.register(PrisonerBalance)
+class PrisonerBalanceAdmin(ModelAdmin):
+    list_display = ('prisoner_number', 'prison', 'formatted_amount')
+    list_filter = ('prison',)
+    ordering = ('prisoner_number',)
+    search_fields = ('prisoner_name',)
+    readonly_fields = ('created',)
+
+    @add_short_description(_('amount'))
+    def formatted_amount(self, instance):
+        return format_amount(instance.amount)

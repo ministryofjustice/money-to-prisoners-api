@@ -7,7 +7,7 @@ import requests
 from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
 
-from prison.models import PrisonerLocation, Prison, Category, Population, PrisonBankAccount
+from prison.models import PrisonerLocation, Prison, Category, Population, PrisonBankAccount, PrisonerBalance
 from prison.utils import fetch_prisoner_location_from_nomis
 
 logger = logging.getLogger('mtp')
@@ -102,10 +102,20 @@ class PrisonerAccountBalanceSerializer(serializers.Serializer):
     combined_account_balance = serializers.SerializerMethodField()
 
     def get_combined_account_balance(self, prisoner_location: PrisonerLocation, update_location_on_not_found=True):
-        if prisoner_location.prison.private_estate:
-            # NB: balances are not known in private estate currently
-            return 0
+        if not prisoner_location.prison.use_nomis_for_balances:
+            # for establishments that do not use nomis for prisoner monies, check internal records instead
+            try:
+                balance_from_prison_without_nomis = PrisonerBalance.objects.get(
+                    prisoner_number=prisoner_location.prisoner_number,
+                    prison=prisoner_location.prison.nomis_id,
+                )
+                return balance_from_prison_without_nomis.amount
+            except PrisonerBalance.DoesNotExist:
+                # balances will only be provided for people above a certain threshold
+                # therefore a missing balance actually indicates a low (and acceptable) balance
+                return 0
 
+        # otherwise, check NOMIS each time
         try:
             nomis_account_balances = nomis.get_account_balances(
                 prisoner_location.prison.nomis_id,
