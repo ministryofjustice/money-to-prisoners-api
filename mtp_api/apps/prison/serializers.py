@@ -12,6 +12,15 @@ from prison.utils import fetch_prisoner_location_from_nomis
 
 logger = logging.getLogger('mtp')
 
+TOLERATED_NOMIS_ERROR_CODES = (
+    status.HTTP_404_NOT_FOUND,
+    status.HTTP_500_INTERNAL_SERVER_ERROR,
+    status.HTTP_502_BAD_GATEWAY,
+    status.HTTP_503_SERVICE_UNAVAILABLE,
+    status.HTTP_504_GATEWAY_TIMEOUT,
+    status.HTTP_507_INSUFFICIENT_STORAGE
+)
+
 
 class PopulationSerializer(serializers.ModelSerializer):
     class Meta:
@@ -129,6 +138,16 @@ class PrisonerAccountBalanceSerializer(serializers.Serializer):
                     raise ValidationError(
                         f'Could not find location for prisoner_number {prisoner_location.prisoner_number} in NOMIS'
                     )
+            elif (
+                getattr(e, 'response', None) is not None
+                and e.response.status_code in TOLERATED_NOMIS_ERROR_CODES
+            ):
+                # We want to explicitly allow through in the case of a NOMIS outage
+                logger.warning(
+                    f'Tried to contact nomis to fetch balance for {prisoner_location.prisoner_number} but recieved '
+                    f'HTTP error code {e.response.status_code}. Allowing payment to continue without balance check'
+                )
+                return 0
             else:
                 logger.exception(msg)
                 raise ValidationError(msg)

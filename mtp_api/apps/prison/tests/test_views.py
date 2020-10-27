@@ -10,6 +10,7 @@ from django.utils.dateformat import format as format_date
 from model_mommy import mommy
 from mtp_common.nomis import Connector
 from mtp_common.test_utils import silence_logger
+from parameterized import parameterized
 import requests
 import responses
 from rest_framework import status
@@ -20,6 +21,7 @@ from mtp_auth.tests.utils import AuthTestCaseMixin
 from mtp_auth.constants import CASHBOOK_OAUTH_CLIENT_ID
 from mtp_auth.models import PrisonUserMapping
 from prison.models import Prison, PrisonerLocation, Population, Category
+from prison.serializers import TOLERATED_NOMIS_ERROR_CODES
 from prison.tests.utils import (
     random_prisoner_name, random_prisoner_number, random_prisoner_dob,
     load_random_prisoner_locations
@@ -688,6 +690,38 @@ class PrisonerAccountBalanceTestCase(AuthTestCaseMixin, APITestCase):
 
         self.prisoner_location_public.refresh_from_db()
         self.assertEqual(self.prisoner_location_public.prison, initial_prison)
+
+    @parameterized.expand(
+        [(code,) for code in TOLERATED_NOMIS_ERROR_CODES]
+    )
+    @mock.patch('mtp_api.apps.prison.serializers.nomis.connector', Connector())
+    @override_settings(
+        HMPPS_CLIENT_SECRET='EXAMPLE',
+        HMPPS_AUTH_BASE_URL='https://sign-in-dev.hmpps.local/auth/',
+        HMPPS_PRISON_API_BASE_URL='https://api-dev.prison.local/',
+    )
+    def test_nomis_outage(self, status_code, *args):
+        expected_response = {
+            'combined_account_balance': 0
+        }
+        with responses.RequestsMock() as rsps:
+            rsps.add(
+                responses.POST,
+                f'{settings.HMPPS_AUTH_BASE_URL}oauth/token',
+                json={
+                    'access_token': 'amanaccesstoken',
+                    'expires_in': 3600
+                }
+            )
+            rsps.add(
+                responses.GET,
+                f'{settings.HMPPS_PRISON_API_BASE_URL}api/v1/prison/{self.prisoner_location_public.prison.nomis_id}/offenders/{self.prisoner_location_public.prisoner_number}/accounts',  # noqa: E501
+                status=status_code,
+            )
+            response = self.make_api_call(self.prisoner_location_public, self.send_money_user)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), expected_response)
 
 
 class PrisonViewTestCase(AuthTestCaseMixin, APITestCase):
