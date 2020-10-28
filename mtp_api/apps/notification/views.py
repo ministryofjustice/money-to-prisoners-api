@@ -1,11 +1,10 @@
 from django.db.models import Q
-import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, status, views, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from core.filters import IsoDateTimeFilter, SafeOrderingFilter, MultipleValueFilter
+from core.filters import IsoDateTimeFilter, SafeOrderingFilter, MultipleValueFilter, BaseFilterSet
 from core.models import TruncLocalDate
 from core.permissions import ActionsBasedPermissions
 from mtp_auth.permissions import NomsOpsClientIDPermissions
@@ -47,7 +46,7 @@ class EventPagesView(views.APIView):
         })
 
 
-class EventViewFilter(django_filters.FilterSet):
+class EventViewFilter(BaseFilterSet):
     triggered_at__lt = IsoDateTimeFilter(
         field_name='triggered_at', lookup_expr='lt'
     )

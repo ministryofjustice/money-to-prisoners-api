@@ -1,4 +1,3 @@
-import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
@@ -8,7 +7,7 @@ from rest_framework import status as http_status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from core.filters import IsoDateTimeFilter
+from core.filters import IsoDateTimeFilter, BaseFilterSet
 from core.views import AdminViewMixin
 from mtp_auth.permissions import (
     BankAdminClientIDPermissions, SendMoneyClientIDPermissions,
@@ -21,7 +20,7 @@ from payment.permissions import BatchPermissions, PaymentPermissions
 from payment.serializers import BatchSerializer, PaymentSerializer
 
 
-class BatchListFilter(django_filters.FilterSet):
+class BatchListFilter(BaseFilterSet):
     class Meta:
         model = Batch
         fields = ('date',)
@@ -40,7 +39,7 @@ class BatchView(
     )
 
 
-class PaymentListFilter(django_filters.FilterSet):
+class PaymentListFilter(BaseFilterSet):
     modified__lt = IsoDateTimeFilter(
         field_name='modified', lookup_expr='lt'
     )
