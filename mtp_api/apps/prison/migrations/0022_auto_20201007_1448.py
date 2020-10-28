@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('prison', '0019_auto_20200804_1139'),
+        ('prison', '0021_prison_use_nomis_for_balances'),
     ]
 
     operations = [
