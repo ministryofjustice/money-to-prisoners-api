@@ -35,7 +35,7 @@ class PrisonerBalanceUploadForm(forms.Form):
         csv_reader = csv.DictReader(csv_contents)
         balances = []
         for line in csv_reader:
-            prisoner_number = line['prisonernumber'].strip().upper()
+            prisoner_number = line['prisonnumber'].strip().upper()
             # check that prisoner number follows expected pattern (else indicates malformed file)
             validate_prisoner_number(prisoner_number)
             amount = line['totalamount']
