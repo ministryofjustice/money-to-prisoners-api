@@ -1,5 +1,6 @@
 from django.contrib import admin, messages
-from django.contrib.admin import ModelAdmin
+from django.contrib.admin import ModelAdmin, RelatedFieldListFilter
+from django.db import models
 from django.utils.translation import gettext, gettext_lazy as _
 
 from core.admin import DateFilter, add_short_description
@@ -59,10 +60,22 @@ class PrisonerCreditNoticeEmailAdmin(ModelAdmin):
     list_display = ('prison', 'email')
 
 
+class LastModifiedPrisonFilter(RelatedFieldListFilter):
+    def field_choices(self, field, request, model_admin):
+        choices = model_admin.get_queryset(request).order_by() \
+            .values('prison__pk', 'prison__name') \
+            .annotate(modified=models.Max('modified'))
+        choices = [
+            (prison['prison__pk'], f'{prison["prison__name"]} ({prison["modified"].strftime("%d %b")})')
+            for prison in choices
+        ]
+        return sorted(choices, key=lambda choice: choice[1])
+
+
 @admin.register(PrisonerBalance)
 class PrisonerBalanceAdmin(ModelAdmin):
     list_display = ('prisoner_number', 'prison', 'formatted_amount')
-    list_filter = ('prison',)
+    list_filter = (('prison', LastModifiedPrisonFilter),)
     ordering = ('prisoner_number',)
     search_fields = ('prisoner_name',)
     readonly_fields = ('created',)
