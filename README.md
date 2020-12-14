@@ -65,8 +65,13 @@ This is handled by [money-to-prisoners-deploy](https://github.com/ministryofjust
 
 We have both swagger and redoc.io integration with this API.
 They can be found on your development environment:
-* Swagger http://localhost:8000/swagger/
-* Redoc https://localhost:8000/redoc/
+* Swagger: http://localhost:8000/swagger/
+* Redoc: https://localhost:8000/redoc/
 
 Similar pages are also available on the test environment
 
+## Additional Bespoke Packages
+
+There are several dependencies of the ``money-to-prisoners-api`` python library which are maintained by this team, so they may require code-changes when the dependencies (e.g. Django) of the ``money-to-prisoners-api`` python library are incremented.
+
+* django-moj-irat: https://github.com/ministryofjustice/django-moj-irat
