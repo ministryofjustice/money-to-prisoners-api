@@ -335,7 +335,7 @@ class Check(TimeStampedModel):
     )
     rejection_reasons = JSONField(
         name='rejection_reasons',
-        default={}
+        default=dict
     )
 
     objects = CheckManager()
