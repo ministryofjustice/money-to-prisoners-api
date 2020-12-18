@@ -1,6 +1,6 @@
 # Dependencies needed for all environments
 # NB: this is not the complete set needed to run the app
-Django>=2.2,<2.3
+Django>=2.2.16,<2.3
 psycopg2-binary>=2.8.4,<2.9
 djangorestframework==3.9.0
 drf-yasg==1.17.1
