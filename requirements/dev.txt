@@ -1,7 +1,7 @@
 # Place development dependencies here
 -r base.txt
 
-money-to-prisoners-common[testing]>=9.20,<9.21
+money-to-prisoners-common[testing]>=10.0,<10.1
 parameterized==0.7.4
 pdbpp
 django-pdb
