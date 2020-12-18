@@ -2,7 +2,7 @@ import logging
 
 from django.conf import settings
 from django.contrib.auth.models import User
-from django.contrib.postgres.fields import ArrayField
+from django.contrib.postgres.fields import ArrayField, JSONField
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.dispatch import receiver
@@ -333,6 +333,10 @@ class Check(TimeStampedModel):
         blank=True,
         related_name='security_check_assigned_to'
     )
+    rejection_reasons = JSONField(
+        name='rejection_reasons',
+        default=dict
+    )
 
     objects = CheckManager()
 
@@ -361,7 +365,7 @@ class Check(TimeStampedModel):
         self.decision_reason = reason
         self.save()
 
-    def reject(self, by, reason):
+    def reject(self, by, reason, rejection_reasons):
         """
         Rejects a check.
 
@@ -375,15 +379,11 @@ class Check(TimeStampedModel):
                 'status': ValidationError(_('Cannot reject an accepted check.'), 'conflict'),
             })
 
-        if not reason:
-            raise ValidationError({
-                'reason': ValidationError(_('This field cannot be blank.'), 'required'),
-            })
-
         self.status = CHECK_STATUS.REJECTED
         self.actioned_by = by
         self.actioned_at = now()
         self.decision_reason = reason
+        self.rejection_reasons = rejection_reasons
         self.save()
 
     def __str__(self):

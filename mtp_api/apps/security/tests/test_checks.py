@@ -27,15 +27,25 @@ from security.models import (
     Check, CHECK_STATUS,
     PrisonerProfile, SenderProfile,
 )
+from security.tests.utils import (
+    generate_checks,
+    generate_sender_profiles_from_payments,
+    generate_prisoner_profiles_from_prisoner_locations
+)
 from transaction.tests.utils import generate_transactions
 
 User = get_user_model()
 
 
-class CheckTestCase(TestCase):
+class CheckTestCase(APITestCase, AuthTestCaseMixin):
     """
     Tests related to the Check model.
     """
+    fixtures = [
+        'initial_groups.json',
+        'initial_types.json',
+        'test_prisons.json'
+    ]
 
     @mock.patch('security.models.now')
     def test_can_accept_a_pending_check(self, mocked_now):
@@ -140,10 +150,11 @@ class CheckTestCase(TestCase):
             status=CHECK_STATUS.PENDING,
             actioned_at=None,
             actioned_by=None,
+            rejection_reasons={'payment_source_linked_other_prisoners': True}
         )
         reason = 'Some reason'
 
-        check.reject(by=user, reason=reason)
+        check.reject(by=user, reason=reason, rejection_reasons={'payment_source_linked_other_prisoners': True})
         check.refresh_from_db()
 
         self.assertEqual(check.status, CHECK_STATUS.REJECTED)
@@ -165,22 +176,24 @@ class CheckTestCase(TestCase):
             actioned_at=mocked_now() - datetime.timedelta(days=1),
             actioned_by=existing_check_user,
             decision_reason='Some old reason',
+            rejection_reasons={'payment_source_linked_other_prisoners': True}
         )
         reason = 'Some reason'
 
-        check.reject(by=user, reason=reason)
+        check.reject(by=user, reason=reason, rejection_reasons={'payment_source_multiple_cards': True})
         check.refresh_from_db()
 
         self.assertEqual(check.status, CHECK_STATUS.REJECTED)
         self.assertEqual(check.actioned_by, existing_check_user)
+        self.assertEqual(check.rejection_reasons, {'payment_source_linked_other_prisoners': True})
         self.assertNotEqual(check.actioned_at, mocked_now())
         self.assertNotEqual(check.decision_reason, reason)
 
-    def test_empty_reason_raises_error(self):
+    def test_empty_rejection_reason_raises_error(self):
         """
         Test that rejecting a check without reason raises ValidationError.
         """
-        user = basic_user.make()
+        users = make_test_users(clerks_per_prison=1)
         check = mommy.make(
             Check,
             status=CHECK_STATUS.PENDING,
@@ -188,12 +201,21 @@ class CheckTestCase(TestCase):
             actioned_by=None,
         )
 
-        with self.assertRaises(ValidationError) as e:
-            check.reject(by=user, reason='')
+        # Execute
+        response = self.client.post(
+            reverse('security-check-reject', kwargs={'pk': check.id}),
+            {
+                'decision_reason': 'thisshouldntmatter',
+                'rejection_reasons': {
+                }
+            },
+            format='json', HTTP_AUTHORIZATION=self.get_http_authorization_for_user(users['security_fiu_users'][0])
+        )
 
+        self.assertEqual(response.status_code, 400)
         self.assertEqual(
-            e.exception.message_dict,
-            {'reason': ['This field cannot be blank.']},
+            response.json(),
+            {'rejection_reasons': ['This field cannot be blank.']},
         )
 
     @mock.patch('security.models.now')
@@ -213,7 +235,7 @@ class CheckTestCase(TestCase):
         reason = 'Some reason'
 
         with self.assertRaises(ValidationError) as e:
-            check.reject(by=user, reason=reason)
+            check.reject(by=user, reason=reason, rejection_reasons={'payment_source_linked_other_prisoners': True})
 
         self.assertEqual(
             e.exception.message_dict,
@@ -225,6 +247,71 @@ class CheckTestCase(TestCase):
         self.assertEqual(check.status, CHECK_STATUS.ACCEPTED)
         self.assertEqual(check.actioned_by, existing_check_user)
         self.assertNotEqual(check.actioned_at, mocked_now())
+
+    def test_can_reject_check_with_rejection_reason(self):
+        # Setup
+        users = make_test_users(clerks_per_prison=1)
+        prisoner_locations = load_random_prisoner_locations()
+        generate_payments(payment_batch=50)
+        generate_prisoner_profiles_from_prisoner_locations(prisoner_locations)
+        generate_sender_profiles_from_payments(number_of_senders=1, reassign_dcsd=True)
+        check_list = generate_checks(number_of_checks=1, create_invalid_checks=False)
+        assert check_list[0].status == 'pending'
+
+        # Execute
+        response = self.client.post(
+            reverse('security-check-reject', kwargs={'pk': check_list[0].id}),
+            {
+                'decision_reason': 'computer says no',
+                'rejection_reasons': {
+                    'payment_source_linked_other_prisoners': True,
+                }
+            },
+            format='json', HTTP_AUTHORIZATION=self.get_http_authorization_for_user(users['security_fiu_users'][0])
+        )
+
+        # Assert Response
+        self.assertEqual(response.status_code, 204)
+
+        # Assert State Change
+        check = Check.objects.get(id=check_list[0].id)
+        self.assertEqual(check.rejection_reasons, {'payment_source_linked_other_prisoners': True})
+        self.assertEqual(check.decision_reason, 'computer says no')
+
+    def test_cannot_accept_check_with_rejection_reason(self):
+        # Setup
+        users = make_test_users(clerks_per_prison=1)
+        prisoner_locations = load_random_prisoner_locations()
+        generate_payments(payment_batch=50)
+        generate_prisoner_profiles_from_prisoner_locations(prisoner_locations)
+        generate_sender_profiles_from_payments(number_of_senders=1, reassign_dcsd=True)
+        check_list = generate_checks(number_of_checks=1, create_invalid_checks=False)
+        assert check_list[0].status == 'pending'
+
+        # Execute
+        response = self.client.post(
+            reverse('security-check-accept', kwargs={'pk': check_list[0].id}),
+            {
+                'decision_reason': 'computer says no',
+                'rejection_reasons': {
+                    'payment_source_linked_other_prisoners': True,
+                }
+            },
+            format='json', HTTP_AUTHORIZATION=self.get_http_authorization_for_user(users['security_fiu_users'][0])
+        )
+
+        # Assert Response
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json(),
+            {'non_field_errors': ['You cannot give rejection reasons when accepting a check']}
+        )
+
+        # Assert State Change
+        check = Check.objects.get(id=check_list[0].id)
+        self.assertEqual(check.status, 'pending')
+        self.assertEqual(check.rejection_reasons, {})
+        self.assertEqual(check.decision_reason, '')
 
 
 class CreditCheckTestCase(TestCase):

@@ -238,6 +238,7 @@ class CheckSerializer(serializers.ModelSerializer):
             'decision_reason',
             'actioned_by_name',
             'assigned_to_name',
+            'rejection_reasons',
         )
         read_only_fields = (
             'id',
@@ -286,17 +287,22 @@ class CheckCreditSerializer(CheckSerializer):
 
 
 class AcceptCheckSerializer(CheckCreditSerializer):
-    decision_reason = serializers.CharField(allow_blank=True)
+    decision_reason = serializers.CharField(required=True, allow_blank=True)
 
     class Meta:
         model = Check
-        fields = ('decision_reason',)
+        fields = ('decision_reason', 'rejection_reasons')
         read_only_fields = (
             'id',
             'credit',
             'description',
             'rules'
         )
+
+    def validate(self, data):
+        if 'rejection_reasons' in data:
+            raise serializers.ValidationError('You cannot give rejection reasons when accepting a check')
+        return super().validate(data)
 
     def accept(self, by):
         try:
@@ -311,11 +317,15 @@ class AcceptCheckSerializer(CheckCreditSerializer):
 
 
 class RejectCheckSerializer(CheckCreditSerializer):
-    decision_reason = serializers.CharField(required=True)
+    decision_reason = serializers.CharField(required=True, allow_blank=True)
+    rejection_reasons = serializers.JSONField(required=True)
 
     class Meta:
         model = Check
-        fields = ('decision_reason',)
+        fields = (
+            'decision_reason',
+            'rejection_reasons'
+        )
         read_only_fields = (
             'id',
             'credit',
@@ -323,11 +333,17 @@ class RejectCheckSerializer(CheckCreditSerializer):
             'rules'
         )
 
+    def validate_rejection_reasons(self, data):
+        if not data:
+            raise serializers.ValidationError('This field cannot be blank.')
+        return data
+
     def reject(self, by):
         try:
             self.instance.reject(
                 by,
                 self.validated_data['decision_reason'],
+                self.validated_data['rejection_reasons'],
             )
         except DjangoValidationError as e:
             raise ValidationError(

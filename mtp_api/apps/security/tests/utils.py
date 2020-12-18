@@ -234,7 +234,7 @@ def generate_prisoner_profiles_from_prisoner_locations(prisoner_locations):
 
 
 @transaction.atomic()
-def generate_sender_profiles_from_payments(number_of_senders):
+def generate_sender_profiles_from_payments(number_of_senders, reassign_dcsd=False):
     print('Querying for payments from which to generate sender profiles')
     suitable_payments = Payment.objects.filter(
         email__isnull=False,
@@ -303,7 +303,10 @@ def generate_sender_profiles_from_payments(number_of_senders):
     suitable_payments_without_dcsd_iter = iter(suitable_payments_without_dcsd)
     print('Assigning Payments to DebitCardSenderDetails')
     for dcsd in dcsd_instances:
-        payment = next(suitable_payments_without_dcsd_iter)
+        if reassign_dcsd:
+            payment = next(suitable_payments_iter)
+        else:
+            payment = next(suitable_payments_without_dcsd_iter)
         billing_address = payment.billing_address
         billing_address.debit_card_sender_detail = dcsd
         billing_address.save()

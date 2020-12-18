@@ -316,7 +316,7 @@ class SenderCreditListTestCase(SecurityViewTestCase):
         for credit in sender.credits.all():
             check = Check.objects.create_for_credit(credit)
             if check.status == CHECK_STATUS.PENDING:
-                check.reject(user, 'looks dodgy')
+                check.reject(user, 'looks dodgy', {'payment_source_linked_other_prisoners': True})
                 rejected_checks.append(credit.id)
             elif check.status == CHECK_STATUS.ACCEPTED:
                 accepted_checks.append(credit.id)
@@ -349,6 +349,10 @@ class SenderCreditListTestCase(SecurityViewTestCase):
                 self.assertEqual(datum['security_check']['status'], 'rejected')
                 self.assertEqual(datum['security_check']['decision_reason'], 'looks dodgy')
                 self.assertEqual(datum['security_check']['actioned_by'], user.id)
+                self.assertEqual(
+                    datum['security_check']['rejection_reasons'],
+                    {'payment_source_linked_other_prisoners': True}
+                )
 
 
 class RecipientProfileListTestCase(SecurityViewTestCase):
@@ -705,7 +709,7 @@ class PrisonerCreditListTestCase(SecurityViewTestCase):
         for credit in prisoner.credits.all():
             check = Check.objects.create_for_credit(credit)
             if check.status == CHECK_STATUS.PENDING:
-                check.reject(user, 'looks dodgy')
+                check.reject(user, 'looks dodgy', {'payment_source_linked_other_prisoners': True})
                 rejected_checks.append(credit.id)
             elif check.status == CHECK_STATUS.ACCEPTED:
                 accepted_checks.append(credit.id)
@@ -738,6 +742,10 @@ class PrisonerCreditListTestCase(SecurityViewTestCase):
                 self.assertEqual(datum['security_check']['status'], 'rejected')
                 self.assertEqual(datum['security_check']['decision_reason'], 'looks dodgy')
                 self.assertEqual(datum['security_check']['actioned_by'], user.id)
+                self.assertEqual(
+                    datum['security_check']['rejection_reasons'],
+                    {'payment_source_linked_other_prisoners': True}
+                )
 
 
 class PrisonerDisbursementListTestCase(SecurityViewTestCase):
@@ -979,6 +987,7 @@ class BaseCheckTestCase(APITestCase, AuthTestCaseMixin):
                 actioned_at=now(),
                 actioned_by=self.security_fiu_users[0],
                 decision_reason='because...',
+                rejection_reasons={'payment_source_linked_other_prisoners': True}
             )
 
         for credit in Credit.objects.all():
@@ -1054,9 +1063,10 @@ class BaseCheckTestCase(APITestCase, AuthTestCaseMixin):
             'assigned_to': expected_check.assigned_to.pk if expected_check.assigned_to else None,
             'assigned_to_name': actual_check_data['assigned_to_name'],
             'decision_reason': expected_check.decision_reason if expected_check.decision_reason else '',
+            'rejection_reasons': (
+                expected_check.rejection_reasons if expected_check.status == CHECK_STATUS.REJECTED else {}
+            )
         }
-        # TODO add `pprint.pformat`ed dictdiffer output on failure, to make failures easier to view
-        # https://dictdiffer.readthedocs.io/en/latest/#dictdiffer.diff
         assert expected_data_item == actual_check_data, pformat(
             list(dictdiffer.diff(expected_data_item, actual_check_data))
         )
@@ -1637,6 +1647,7 @@ class RejectCheckTestCase(BaseCheckTestCase):
             ),
             data={
                 'decision_reason': 'Some reason',
+                'rejection_reasons': {'payment_source_linked_other_prisoners': True}
             },
             format='json',
             HTTP_AUTHORIZATION=auth,
@@ -1663,6 +1674,7 @@ class RejectCheckTestCase(BaseCheckTestCase):
             ),
             data={
                 'decision_reason': reason,
+                'rejection_reasons': {'payment_source_linked_other_prisoners': True}
             },
             format='json',
             HTTP_AUTHORIZATION=auth,
@@ -1696,6 +1708,7 @@ class RejectCheckTestCase(BaseCheckTestCase):
             ),
             data={
                 'decision_reason': reason,
+                'rejection_reasons': {'payment_source_linked_other_prisoners': True}
             },
             format='json',
             HTTP_AUTHORIZATION=auth,
@@ -1709,9 +1722,9 @@ class RejectCheckTestCase(BaseCheckTestCase):
         self.assertNotEqual(check.actioned_at, mocked_now())
         self.assertNotEqual(check.decision_reason, reason)
 
-    def test_empty_reason_raises_error(self):
+    def test_empty_rejection_reason_raises_error(self):
         """
-        Test that rejecting a check without reason returns status code 400.
+        Test that rejecting a check without rejection_reason returns status code 400.
         """
         check = Check.objects.filter(status=CHECK_STATUS.PENDING).first()
 
@@ -1724,7 +1737,7 @@ class RejectCheckTestCase(BaseCheckTestCase):
                 kwargs={'pk': check.pk},
             ),
             {
-                'decision_reason': '',
+                'decision_reason': 'thisdoesntmatter',
             },
             format='json',
             HTTP_AUTHORIZATION=auth,
@@ -1734,7 +1747,7 @@ class RejectCheckTestCase(BaseCheckTestCase):
         self.assertDictEqual(
             response.json(),
             {
-                'decision_reason': ['This field may not be blank.'],
+                'rejection_reasons': ['This field is required.']
             }
         )
 
@@ -1758,6 +1771,7 @@ class RejectCheckTestCase(BaseCheckTestCase):
             ),
             {
                 'decision_reason': 'some reason',
+                'rejection_reasons': {'payment_source_linked_other_prisoners': True}
             },
             format='json',
             HTTP_AUTHORIZATION=auth,

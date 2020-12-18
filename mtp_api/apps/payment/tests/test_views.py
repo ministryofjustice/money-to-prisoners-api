@@ -531,7 +531,7 @@ class GetPaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(security_check['user_actioned'], False)
 
         # mock rejected check
-        check.reject(self.security_fiu_user, 'Cap exceeded')
+        check.reject(self.security_fiu_user, 'Cap exceeded', {'payment_source_linked_other_prisoners': True})
         response = self.client.get(
             reverse('payment-detail', kwargs={'pk': new_payment['uuid']}), format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.send_money_user)
