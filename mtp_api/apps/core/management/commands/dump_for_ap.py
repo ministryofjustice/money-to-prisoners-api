@@ -11,6 +11,7 @@ from credit.constants import CREDIT_STATUS
 from credit.models import Credit, LOG_ACTIONS as CREDIT_LOG_ACTIONS
 from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION
 from disbursement.models import Disbursement, LOG_ACTIONS as DISBURSEMENT_LOG_ACTIONS
+from payment.models import BillingAddress
 from transaction.utils import format_amount
 
 
@@ -53,6 +54,9 @@ class Serialiser:
         cls.serialisers[record_type] = cls
         cls.serialised_model = serialised_model
 
+    def __init__(self):
+        self.exported_at_local_time = timezone.now()
+
     def get_modified_records(self, after, before):
         filters = {}
         if after:
@@ -67,10 +71,6 @@ class Serialiser:
 
 
 class CreditSerialiser(Serialiser, serialised_model=Credit):
-
-    def __init__(self):
-        self.exported_at_local_time = timezone.now()
-
     def serialise(self, record: Credit):
         status = record.status
         if status:
@@ -121,6 +121,9 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
 
         if hasattr(record, 'payment'):
             payment = record.payment
+            billing_address = payment.billing_address
+            if not billing_address:
+                billing_address = BillingAddress()
             return {
                 'Date started': payment.created,
                 'Payment method': 'Debit card',
@@ -128,11 +131,11 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
                 'Debit card first six digits': payment.card_number_first_digits or 'Unknown',
                 'Debit card last four digits': payment.card_number_last_digits,
                 'Debit card expiry': payment.card_expiry_date,
-                'Debit card billing address line 1': payment.billing_address.line1,
-                'Debit card billing address line 2': payment.billing_address.line2,
-                'Debit card billing address city': payment.billing_address.city,
-                'Debit card billing address postcode': payment.billing_address.postcode,
-                'Debit card billing address country': payment.billing_address.country,
+                'Debit card billing address line 1': billing_address.line1,
+                'Debit card billing address line 2': billing_address.line2,
+                'Debit card billing address city': billing_address.city,
+                'Debit card billing address postcode': billing_address.postcode,
+                'Debit card billing address country': billing_address.country,
                 'Sender email': payment.email,
                 'Sender IP address': payment.ip_address,
                 'WorldPay order code': payment.worldpay_id,
@@ -145,10 +148,6 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
 
 
 class DisbursementSerialiser(Serialiser, serialised_model=Disbursement):
-
-    def __init__(self):
-        self.exported_at_local_time = timezone.now()
-
     def serialise(self, record: Disbursement):
         return {
             'Exported at': self.exported_at_local_time,
