@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('security', '0030_migrate_check_description'),
+        ('security', '0031_check_rejection_reasons'),
     ]
 
     operations = [
