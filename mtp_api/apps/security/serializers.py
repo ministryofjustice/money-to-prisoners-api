@@ -300,7 +300,7 @@ class AcceptCheckSerializer(CheckCreditSerializer):
         )
 
     def validate(self, data):
-        if 'rejection_reasons' in data:
+        if data.get('rejection_reasons'):
             raise serializers.ValidationError('You cannot give rejection reasons when accepting a check')
         return super().validate(data)
 

@@ -1565,6 +1565,38 @@ class AcceptCheckTestCase(BaseCheckTestCase):
         self.assertEqual(check.actioned_at, mocked_now())
 
     @mock.patch('security.models.now')
+    def test_can_accept_a_pending_check_with_empty_rejection_reasons(self, mocked_now):
+        """
+        Test that a pending check can be accepted if payload contains empty rejection reasons
+        """
+        mocked_now.return_value = make_aware(datetime.datetime(2019, 4, 1))
+
+        check = Check.objects.filter(status=CHECK_STATUS.PENDING).first()
+
+        authorised_user = self._get_authorised_user()
+        auth = self.get_http_authorization_for_user(authorised_user)
+        response = self.client.post(
+            reverse(
+                'security-check-accept',
+                kwargs={'pk': check.pk},
+            ),
+            format='json',
+            data={
+                'decision_reason': '',
+                'rejection_reasons': {},
+            },
+            HTTP_AUTHORIZATION=auth,
+        )
+
+        self.assertEqual(response.status_code, http_status.HTTP_204_NO_CONTENT)
+
+        check.refresh_from_db()
+
+        self.assertEqual(check.status, CHECK_STATUS.ACCEPTED)
+        self.assertEqual(check.actioned_by, authorised_user)
+        self.assertEqual(check.actioned_at, mocked_now())
+
+    @mock.patch('security.models.now')
     def test_can_accept_an_accepted_check(self, mocked_now):
         """
         Test that accepting an already accepted check doesn't do anything.
