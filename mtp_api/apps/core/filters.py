@@ -21,6 +21,24 @@ from user_event_log.utils import record_user_event
 from user_event_log.constants import USER_EVENT_KINDS
 
 
+class ParamsOnlyFilterSetForm(forms.Form):
+    def _post_clean(self):
+        super()._post_clean()
+        self.cleaned_data = dict(
+            filter(
+                lambda x: x[0] in self.data.keys(),
+                self.cleaned_data.items()
+            )
+        )
+
+
+class BaseFilterSet(django_filters.FilterSet):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._meta.form = ParamsOnlyFilterSetForm
+
+
 class MultipleFieldCharFilter(django_filters.CharFilter):
     def __init__(self, *args, **kwargs):
         distinct = kwargs.get('distinct', True)
@@ -235,6 +253,9 @@ class LogNomsOpsSearchDjangoFilterBackend(DjangoFilterBackend):
         if filter_class:
             filterset = filter_class(request.query_params, queryset=queryset, request=request)
             qs = filterset.qs
+            if filterset.errors:
+                # Previous functionality was to return 0 rows on error, we replicate this here
+                return qs.none()
 
             if self._should_log(request, view, filterset):
                 self._log(request, qs, filterset)

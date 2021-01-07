@@ -1,6 +1,6 @@
 from unittest import mock
 
-from django_filters import FilterSet, STRICTNESS
+from django_filters import FilterSet
 from django_filters.constants import EMPTY_VALUES
 from django.contrib.auth import get_user_model
 from django.db.models import Q
@@ -167,7 +167,6 @@ class UserTestFilter(FilterSet):
     class Meta:
         model = User
         fields = ('pk', 'first_name', 'last_name', 'last_login')
-        strict = STRICTNESS.RETURN_NO_RESULTS
 
 
 class UserTestView(
@@ -327,7 +326,7 @@ class LogNomsOpsSearchDjangoFilterBackendTestCase(AuthTestCaseMixin, APITestCase
 
         view = UserTestView.as_view({'get': 'list'})
         response = view(request)
-        # 200 as strict == STRICTNESS.RETURN_NO_RESULTS
+        # 200 as strict == STRICTNESS.RETURN_NO_RESULTS is now hardcoded since django-filters 2.0
         self.assertEqual(response.status_code, 200)
 
         user_events = UserEvent.objects.all()

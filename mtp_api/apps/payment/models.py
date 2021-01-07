@@ -27,9 +27,6 @@ class Batch(TimeStampedModel):
         verbose_name_plural = 'batches'
         ordering = ('date',)
         get_latest_by = 'date'
-        permissions = (
-            ('view_batch', 'Can view batch'),
-        )
 
     def __str__(self):
         return '%s (%s)' % (self.ref_code, self.date)
@@ -89,9 +86,6 @@ class Payment(TimeStampedModel):
     class Meta:
         ordering = ('created',)
         get_latest_by = 'created'
-        permissions = (
-            ('view_payment', 'Can view payment'),
-        )
         indexes = [
             models.Index(fields=['modified']),
         ]

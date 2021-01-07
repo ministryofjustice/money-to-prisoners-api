@@ -15,6 +15,7 @@ from rest_framework.views import APIView
 
 from core.filters import (
     annotate_filter,
+    BaseFilterSet,
     BlankStringFilter,
     IsoDateTimeFilter,
     LogNomsOpsSearchDjangoFilterBackend,
@@ -151,7 +152,7 @@ class NumberInFilter(django_filters.BaseInFilter, django_filters.NumberFilter):
     pass
 
 
-class CreditListFilter(django_filters.FilterSet):
+class CreditListFilter(BaseFilterSet):
     status = StatusChoiceFilter(choices=CREDIT_STATUS.choices)
     user = django_filters.ModelChoiceFilter(field_name='owner', queryset=User.objects.all())
     valid = ValidCreditFilter(widget=django_filters.widgets.BooleanWidget)
@@ -491,7 +492,7 @@ class ProcessingBatchView(
         return self.queryset.filter(user=self.request.user).order_by('-id')
 
 
-class PrivateEstateBatchFilter(django_filters.FilterSet):
+class PrivateEstateBatchFilter(BaseFilterSet):
     class Meta:
         model = PrivateEstateBatch
         fields = {

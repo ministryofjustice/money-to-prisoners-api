@@ -83,7 +83,6 @@ class Transaction(TimeStampedModel):
         ordering = ('received_at', 'id',)
         get_latest_by = 'received_at'
         permissions = (
-            ('view_transaction', 'Can view transaction'),
             ('view_dashboard', 'Can view dashboard'),
             ('view_bank_details_transaction', 'Can view bank details of transaction'),
             ('patch_processed_transaction', 'Can patch processed transaction'),

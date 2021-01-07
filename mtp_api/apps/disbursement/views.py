@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 
 from core.filters import (
     annotate_filter,
+    BaseFilterSet,
     IsoDateTimeFilter,
     LogNomsOpsSearchDjangoFilterBackend,
     MultipleValueFilter,
@@ -39,7 +40,7 @@ class MonitoredProfileFilter(django_filters.BooleanFilter):
         return qs
 
 
-class DisbursementFilter(django_filters.FilterSet):
+class DisbursementFilter(BaseFilterSet):
     logged_at__lt = annotate_filter(
         IsoDateTimeFilter(field_name='logged_at', lookup_expr='lt'),
         {'logged_at': TruncUtcDate('log__created')}

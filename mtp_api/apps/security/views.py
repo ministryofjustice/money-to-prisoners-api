@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.settings import api_settings
 
 from core.filters import (
+    BaseFilterSet,
     IsoDateTimeFilter,
     LogNomsOpsSearchDjangoFilterBackend,
     MultipleFieldCharFilter,
@@ -88,7 +89,7 @@ class MonitorProfileMixin(viewsets.GenericViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class SenderProfileListFilter(django_filters.FilterSet):
+class SenderProfileListFilter(BaseFilterSet):
     simple_search = SplitTextInMultipleFieldsFilter(
         field_names=(
             'bank_transfer_details__sender_name',
@@ -232,7 +233,7 @@ class SenderProfileCreditsView(GetCredits):
         return Response(serializer.data)
 
 
-class PrisonerProfileListFilter(django_filters.FilterSet):
+class PrisonerProfileListFilter(BaseFilterSet):
     simple_search = SplitTextInMultipleFieldsFilter(
         field_names=(
             'prisoner_name',
@@ -242,27 +243,27 @@ class PrisonerProfileListFilter(django_filters.FilterSet):
     )
 
     prisoner_name = django_filters.CharFilter(
-        name='prisoner_name', lookup_expr='icontains'
+        field_name='prisoner_name', lookup_expr='icontains'
     )
 
     current_prison = django_filters.ModelMultipleChoiceFilter(
         queryset=Prison.objects.all(),
     )
     prison = django_filters.ModelMultipleChoiceFilter(
-        name='prisons', queryset=Prison.objects.all()
+        field_name='prisons', queryset=Prison.objects.all()
     )
-    prison_region = django_filters.CharFilter(name='prisons__region')
-    prison_population = MultipleValueFilter(name='prisons__populations__name')
-    prison_category = MultipleValueFilter(name='prisons__categories__name')
+    prison_region = django_filters.CharFilter(field_name='prisons__region')
+    prison_population = MultipleValueFilter(field_name='prisons__populations__name')
+    prison_category = MultipleValueFilter(field_name='prisons__categories__name')
 
     senders = django_filters.ModelMultipleChoiceFilter(
-        name='senders', queryset=SenderProfile.objects.all()
+        field_name='senders', queryset=SenderProfile.objects.all()
     )
     sender_count__gte = django_filters.NumberFilter(
-        name='sender_count', lookup_expr='gte'
+        field_name='sender_count', lookup_expr='gte'
     )
     sender_count__lte = django_filters.NumberFilter(
-        name='sender_count', lookup_expr='lte'
+        field_name='sender_count', lookup_expr='lte'
     )
 
     monitoring = django_filters.BooleanFilter()
@@ -359,7 +360,7 @@ class PrisonerProfileDisbursementsView(GetDisbursementsView):
         return Response(serializer.data)
 
 
-class RecipientProfileListFilter(django_filters.FilterSet):
+class RecipientProfileListFilter(BaseFilterSet):
     recipient_sort_code = django_filters.CharFilter(
         field_name='bank_transfer_details__recipient_bank_account__sort_code'
     )
@@ -497,7 +498,7 @@ class SavedSearchView(
         return self.queryset.filter(user=self.request.user)
 
 
-class CheckListFilter(django_filters.FilterSet):
+class CheckListFilter(BaseFilterSet):
     rules = django_filters.CharFilter(lookup_expr='icontains')
     started_at__lt = IsoDateTimeFilter(
         field_name='credit__payment__created', lookup_expr='lt',

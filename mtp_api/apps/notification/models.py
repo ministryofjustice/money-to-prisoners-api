@@ -38,9 +38,6 @@ class Event(models.Model):
     user = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE)
 
     class Meta:
-        permissions = (
-            ('view_event', 'Can view event'),
-        )
         indexes = [
             models.Index(fields=['-triggered_at', 'id']),
             models.Index(fields=['rule']),

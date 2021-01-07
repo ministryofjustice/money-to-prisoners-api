@@ -1984,7 +1984,7 @@ class ChangePasswordWithCodeTestCase(AuthBaseTestCase):
         self.current_password = 'Password321='
         self.user.set_password(self.current_password)
         self.user.save()
-        self.new_password = 'newpassword'
+        self.new_password = 'django2point2insistsyouhaveastrongpasswordsohereitis'
         self.incorrect_code = '55d5ff5d-598e-48a8-b68e-54f22c32c472'
 
     def get_change_url(self, code):

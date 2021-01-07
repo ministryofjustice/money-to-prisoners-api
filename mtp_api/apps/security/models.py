@@ -32,9 +32,6 @@ class SenderProfile(TimeStampedModel):
 
     class Meta:
         ordering = ('created',)
-        permissions = (
-            ('view_senderprofile', 'Can view sender profile'),
-        )
         indexes = [
             models.Index(fields=['credit_count']),
             models.Index(fields=['credit_total']),
@@ -168,9 +165,6 @@ class RecipientProfile(TimeStampedModel):
 
     class Meta:
         ordering = ('created',)
-        permissions = (
-            ('view_recipientprofile', 'Can view recipient profile'),
-        )
         indexes = [
             models.Index(fields=['disbursement_count']),
             models.Index(fields=['disbursement_total']),
@@ -225,9 +219,6 @@ class PrisonerProfile(TimeStampedModel):
 
     class Meta:
         ordering = ('created',)
-        permissions = (
-            ('view_prisonerprofile', 'Can view prisoner profile'),
-        )
         unique_together = (
             ('prisoner_number', 'prisoner_dob',),
         )
@@ -339,11 +330,6 @@ class Check(TimeStampedModel):
     )
 
     objects = CheckManager()
-
-    class Meta:
-        permissions = (
-            ('view_check', 'Can view check'),
-        )
 
     def accept(self, by, reason=''):
         """

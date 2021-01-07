@@ -96,7 +96,6 @@ class Credit(TimeStampedModel):
         ordering = ('received_at', 'id',)
         get_latest_by = 'received_at'
         permissions = (
-            ('view_credit', 'Can view credit'),
             ('view_any_credit', 'Can view any credit'),
             ('review_credit', 'Can review credit'),
             ('credit_credit', 'Can credit credit'),
@@ -109,7 +108,7 @@ class Credit(TimeStampedModel):
             models.Index(fields=['-amount', 'id']),
             models.Index(fields=['prisoner_number', 'id']),
             models.Index(fields=['-prisoner_number', 'id']),
-            models.Index(fields=['owner_id', 'reconciled', 'resolution']),
+            models.Index(fields=['owner', 'reconciled', 'resolution']),
         ]
 
     def __str__(self):
@@ -459,9 +458,6 @@ class PrivateEstateBatch(TimeStampedModel):
         ordering = ('date',)
         get_latest_by = 'date'
         verbose_name_plural = 'private estate batches'
-        permissions = (
-            ('view_privateestatebatch', 'Can view batch'),
-        )
         unique_together = (('date', 'prison'),)
 
     def __str__(self):

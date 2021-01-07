@@ -3,7 +3,6 @@ import logging
 from django.db.transaction import atomic
 from django.utils.dateparse import parse_datetime
 from django.utils.translation import gettext_lazy as _
-import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, viewsets, status, generics
 from rest_framework.exceptions import APIException
@@ -12,7 +11,7 @@ from rest_framework.response import Response
 
 from core.filters import (
     StatusChoiceFilter, IsoDateTimeFilter, SafeOrderingFilter,
-    MultipleValueFilter
+    MultipleValueFilter, BaseFilterSet
 )
 from credit import InvalidCreditStateException
 from credit.models import PrivateEstateBatch
@@ -29,7 +28,7 @@ from transaction.serializers import (
 logger = logging.getLogger('mtp')
 
 
-class TransactionListFilter(django_filters.FilterSet):
+class TransactionListFilter(BaseFilterSet):
     status = StatusChoiceFilter(choices=TRANSACTION_STATUS.choices)
     received_at__lt = IsoDateTimeFilter(
         field_name='received_at', lookup_expr='lt'
@@ -37,17 +36,29 @@ class TransactionListFilter(django_filters.FilterSet):
     received_at__gte = IsoDateTimeFilter(
         field_name='received_at', lookup_expr='gte'
     )
-    pk = MultipleValueFilter(name='pk')
+    pk = MultipleValueFilter(field_name='pk')
 
     class Meta:
         model = Transaction
         fields = ('status', 'received_at__lt', 'received_at__gte',)
 
 
+class DjangoFilterBackendEmptyOnErrors(DjangoFilterBackend):
+
+    def filter_queryset(self, request, queryset, view):
+        filterset = self.get_filterset(request, queryset, view)
+        if filterset is None:
+            return queryset
+
+        if not filterset.is_valid() and self.raise_exception:
+            return filterset.qs.none()
+        return filterset.qs
+
+
 class TransactionView(
     mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet
 ):
-    filter_backends = (DjangoFilterBackend, SafeOrderingFilter)
+    filter_backends = (DjangoFilterBackendEmptyOnErrors, SafeOrderingFilter)
     filter_class = TransactionListFilter
     ordering_fields = ('received_at',)
     permission_classes = (
