@@ -77,7 +77,7 @@ class PrisonerBalanceAdmin(ModelAdmin):
     list_display = ('prisoner_number', 'prison', 'formatted_amount')
     list_filter = (('prison', LastModifiedPrisonFilter),)
     ordering = ('prisoner_number',)
-    search_fields = ('prisoner_name',)
+    search_fields = ('prisoner_number',)
     readonly_fields = ('created',)
 
     @add_short_description(_('amount'))
