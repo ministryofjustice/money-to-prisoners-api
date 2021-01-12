@@ -4,6 +4,8 @@ from django.db import connection, models, transaction
 from django.db.models import Count, Sum, Subquery, OuterRef, Q
 from django.db.models.functions import Coalesce
 
+from credit.models import Credit
+
 logger = logging.getLogger('mtp')
 
 
@@ -420,3 +422,16 @@ class CheckManager(models.Manager):
             if rule.applies_to(credit) and rule.triggered(credit):
                 matched_rule_codes.append(rule_code)
         return matched_rule_codes
+
+
+class CheckAutoAcceptRuleManager(models.Manager):
+
+    def is_active_auto_accept_for_credit(self, credit: Credit) -> bool:
+        auto_accept_rule = self.filter(
+            debit_card_sender_details=credit.sender_profile.debit_card_details.first(),
+            prisoner_profile=credit.prisoner_profile
+        ).first()
+        if auto_accept_rule:
+            return auto_accept_rule.is_active()
+        else:
+            return False

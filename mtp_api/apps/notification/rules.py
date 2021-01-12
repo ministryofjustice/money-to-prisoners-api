@@ -12,7 +12,7 @@ from notification.models import (
     Event, CreditEvent, DisbursementEvent,
     SenderProfileEvent, RecipientProfileEvent, PrisonerProfileEvent,
 )
-from security.models import SenderProfile, RecipientProfile, PrisonerProfile
+from security.models import SenderProfile, RecipientProfile, PrisonerProfile, CheckAutoAcceptRule
 from transaction.utils import format_amount
 
 ENABLED_RULE_CODES = {'MONP', 'MONS'}
@@ -46,8 +46,19 @@ class BaseRule:
     def applies_to(self, record) -> bool:
         return isinstance(record, self.applies_to_models)
 
-    def triggered(self, record) -> Triggered:
+    def rule_specific_trigger(self, record) -> Triggered:
         raise NotImplementedError
+
+    def triggered(self, record):
+        """
+        Determines whether a rule is triggered by the properties of the data object passed in
+
+        For credits we first check auto-accept rules here, and if any apply and are active we do not trigger
+        """
+        if isinstance(record, Credit) and CheckAutoAcceptRule.objects.is_active_auto_accept_for_credit(record):
+            return Triggered(False, active_auto_accept_rule=True)
+        else:
+            return self.rule_specific_trigger(record)
 
     def get_event_trigger(self, record):
         return record
@@ -92,7 +103,7 @@ class BaseRule:
 
 
 class NotWholeNumberRule(BaseRule):
-    def triggered(self, record) -> Triggered:
+    def rule_specific_trigger(self, record) -> Triggered:
         return Triggered(record.amount % 100, amount=record.amount)
 
 
@@ -104,7 +115,7 @@ class HighAmountRule(BaseRule):
             display_limit=format_amount(limit, trim_empty_pence=True, pound_sign=True)
         )
 
-    def triggered(self, record) -> Triggered:
+    def rule_specific_trigger(self, record) -> Triggered:
         return Triggered(record.amount >= self.kwargs['limit'], amount=record.amount)
 
 
@@ -118,7 +129,7 @@ class ContainsSymbols(BaseRule):
         super().__init__(*args, **kwargs)
         self.record_attr_path = record_attr_path
 
-    def triggered(self, record) -> Triggered:
+    def rule_specific_trigger(self, record) -> Triggered:
         value = getattr_path(record, self.record_attr_path, None)
         if not value:
             contains_symbols = False
@@ -148,7 +159,7 @@ class MonitoredRule(BaseRule):
             for user in profile.get_monitoring_users().filter(**user_filters)
         ]
 
-    def triggered(self, record) -> Triggered:
+    def rule_specific_trigger(self, record) -> Triggered:
         profile = self.get_event_trigger(record)
         if profile:
             user_filters = self.kwargs['user_filters']
@@ -186,7 +197,7 @@ class CountingRule(BaseRule):
                 pass
         return None
 
-    def triggered(self, record) -> Triggered:
+    def rule_specific_trigger(self, record) -> Triggered:
         profile = self.get_event_trigger(record)
         if not profile or profile == self.shared_profile:
             return Triggered(False)

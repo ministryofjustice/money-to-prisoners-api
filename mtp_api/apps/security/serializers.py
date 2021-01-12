@@ -7,6 +7,8 @@ from security.models import (
     BankTransferRecipientDetails,
     BankTransferSenderDetails,
     Check,
+    CheckAutoAcceptRule,
+    CheckAutoAcceptRuleState,
     DebitCardSenderDetails,
     PrisonerProfile,
     RecipientProfile,
@@ -349,3 +351,65 @@ class RejectCheckSerializer(CheckCreditSerializer):
             raise ValidationError(
                 detail=e.message_dict,
             )
+
+
+class CheckAutoAcceptRuleStateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = CheckAutoAcceptRuleState
+        fields = '__all__'
+        read_only_fields = (
+            'id',
+            'added_by',
+            'active',
+            'reason',
+        )
+
+
+class CheckAutoAcceptRuleSerializer(serializers.ModelSerializer):
+    states = CheckAutoAcceptRuleStateSerializer(many=True)
+
+    def create(self, validated_data):
+        auto_accept_rule = CheckAutoAcceptRule.objects.create(
+            debit_card_sender_details_id=validated_data['debit_card_sender_details_id'],
+            prisoner_profile_id=validated_data['debit_card_sender_details_id'],
+        )
+        CheckAutoAcceptRuleStateSerializer().create(
+            validated_data={
+                'active': True,
+                'reason': validated_data['reason'],
+                'added_by': validated_data['added_by'],
+                'check_auto_accept_rule': auto_accept_rule
+            }
+        )
+        auto_accept_rule.refresh_from_db()
+        return auto_accept_rule
+
+    def update(self, instance, validated_data):
+        # The only operation we support here is to create a new associated state
+        #  check_auto_accept_rule = CheckAutoAcceptRule.objects.filter(
+            #  debit_card_sender_details_id=validated_data['debit_card_sender_details_id'],
+            #  prisoner_profile_id=validated_data['debit_card_sender_details_id']
+        #  )
+        instance.states.add(
+            CheckAutoAcceptRuleStateSerializer().create(
+                validated_data={
+                    'active': validated_data['active'],
+                    'reason': validated_data['reason'],
+                    'added_by': validated_data['added_by'],
+                    'check_auto_accept_rule': instance
+                }
+            )
+        )
+        instance.save()
+        return instance
+
+    class Meta:
+        model = CheckAutoAcceptRule
+        fields = '__all__'
+        read_only_fields = (
+            'id',
+            'debit_card_sender_details_id',
+            'prisoner_profile_id',
+        )
+
