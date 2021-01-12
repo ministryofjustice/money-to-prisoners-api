@@ -15,7 +15,7 @@ from prison.models import Prison
 from security.constants import CHECK_STATUS
 from security.managers import (
     PrisonerProfileManager, SenderProfileManager, RecipientProfileManager,
-    CheckManager,
+    CheckManager, CheckAutoAcceptRuleManager
 )
 from security.signals import prisoner_profile_current_prisons_need_updating
 
@@ -373,6 +373,41 @@ class Check(TimeStampedModel):
 
     def __str__(self):
         return f'Check {self.status} for {self.credit}'
+
+
+class CheckAutoAcceptRule(TimeStampedModel):
+    debit_card_sender_details = models.ForeignKey(
+        DebitCardSenderDetails, on_delete=models.CASCADE, related_name='check_auto_accept_rules'
+    )
+    prisoner_profile = models.ForeignKey(
+        PrisonerProfile, on_delete=models.CASCADE, related_name='check_auto_accept_rules'
+    )
+
+    objects = CheckAutoAcceptRuleManager()
+
+    def is_active(self):
+        return self.states.order_by('-created').first().active
+
+    class Meta:
+        ordering = ('-created',)
+        unique_together = (
+            ('debit_card_sender_details', 'prisoner_profile',),
+        )
+
+
+class CheckAutoAcceptRuleState(TimeStampedModel):
+    check_auto_accept_rule = models.ForeignKey(
+        CheckAutoAcceptRule, on_delete=models.CASCADE, related_name='states'
+    )
+    added_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='security_check_auto_accept_rule_state_added_by'
+    )
+    active = models.BooleanField()
+    reason = models.TextField()
 
 
 @receiver(prisoner_profile_current_prisons_need_updating)
