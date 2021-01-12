@@ -5,6 +5,7 @@ from django.db.models import Count, Sum, Subquery, OuterRef, Q
 from django.db.models.functions import Coalesce
 
 from credit.models import Credit
+from credit.constants import CREDIT_SOURCE
 
 logger = logging.getLogger('mtp')
 
@@ -427,6 +428,8 @@ class CheckManager(models.Manager):
 class CheckAutoAcceptRuleManager(models.Manager):
 
     def is_active_auto_accept_for_credit(self, credit: Credit) -> bool:
+        if credit.source == CREDIT_SOURCE.BANK_TRANSFER:
+            return False
         auto_accept_rule = self.filter(
             debit_card_sender_details=credit.sender_profile.debit_card_details.first(),
             prisoner_profile=credit.prisoner_profile
