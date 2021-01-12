@@ -609,11 +609,12 @@ class AutoAcceptRuleTestCase(TestCase):
         super().setUp()
         self.users = make_test_users(clerks_per_prison=1)
         prisoner_locations = load_random_prisoner_locations(number_of_prisoners=1)
-        generate_transactions(transaction_batch=1)
         payments = generate_payments(payment_batch=1)
         prisoner_profiles = generate_prisoner_profiles_from_prisoner_locations(prisoner_locations)
         sender_profiles = generate_sender_profiles_from_payments(number_of_senders=1, reassign_dcsd=True)
         prisoner_profiles[0].monitoring_users.add(self.users['security_fiu_users'][0].id)
+        sender_profiles[0].debit_card_details.first().monitoring_users.add(self.users['security_fiu_users'][0].id)
+
         # TODO replace this with API call
         self.auto_accept_rule = CheckAutoAcceptRuleSerializer().create(
             validated_data={
@@ -636,14 +637,6 @@ class AutoAcceptRuleTestCase(TestCase):
             }
         )
         credit = payments[0].credit
-        self.assertEqual(
-            credit.prisoner_profile_id,
-            self.auto_accept_rule.prisoner_profile_id
-        )
-        self.assertEqual(
-            credit.sender_profile.debit_card_details.first().id,
-            self.auto_accept_rule.debit_card_sender_details_id
-        )
         self.assertEqual(Event.objects.count(), 0)
 
         # Call
@@ -672,14 +665,6 @@ class AutoAcceptRuleTestCase(TestCase):
             }
         )
         credit = payments[0].credit
-        self.assertEqual(
-            credit.prisoner_profile_id,
-            self.auto_accept_rule.prisoner_profile_id
-        )
-        self.assertEqual(
-            credit.sender_profile.debit_card_details.first().id,
-            self.auto_accept_rule.debit_card_sender_details_id
-        )
         self.assertEqual(Event.objects.count(), 0)
 
         # Call
@@ -688,4 +673,47 @@ class AutoAcceptRuleTestCase(TestCase):
         # Assert
         self.assertNotEqual(Event.objects.count(), 0)
 
+    def test_payment_where_sender_not_on_auto_accept_caught_by_delayed_capture(self):
+        sender_profile_id = SenderProfile.objects.exclude(
+            id=self.auto_accept_rule.debit_card_sender_details.sender.id
+        ).first().id
+        payments = generate_payments(
+            payment_batch=1,
+            overrides={
+                'credit': {
+                    'prisoner_profile_id': self.auto_accept_rule.prisoner_profile_id,
+                    'sender_profile_id': sender_profile_id
+                }
+            }
+        )
+        credit = payments[0].credit
+        self.assertEqual(Event.objects.count(), 0)
+
+        # Call
+        create_notification_events([credit])
+
+        # Assert
+        self.assertNotEqual(Event.objects.count(), 0)
+
+    def test_payment_where_prisoner_not_on_auto_accept_caught_by_delayed_capture(self):
+        prisoner_profile_id = PrisonerProfile.objects.exclude(
+            id=self.auto_accept_rule.prisoner_profile_id
+        ).first().id
+        payments = generate_payments(
+            payment_batch=1,
+            overrides={
+                'credit': {
+                    'prisoner_profile_id': prisoner_profile_id,
+                    'sender_profile_id': self.auto_accept_rule.debit_card_sender_details.sender.id
+                }
+            }
+        )
+        credit = payments[0].credit
+        self.assertEqual(Event.objects.count(), 0)
+
+        # Call
+        create_notification_events([credit])
+
+        # Assert
+        self.assertNotEqual(Event.objects.count(), 0)
 

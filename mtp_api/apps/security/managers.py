@@ -426,6 +426,7 @@ class CheckManager(models.Manager):
 class CheckAutoAcceptRuleManager(models.Manager):
 
     def is_active_auto_accept_for_credit(self, credit: Credit) -> bool:
+        # TODO remove this with https://dsdmoj.atlassian.net/browse/MTP-1776
         if credit.source == CREDIT_SOURCE.BANK_TRANSFER:
             return False
         auto_accept_rule = self.filter(
