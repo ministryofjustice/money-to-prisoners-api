@@ -301,6 +301,8 @@ def generate_sender_profiles_from_payments(number_of_senders, reassign_dcsd=Fals
         batch_size=500
     )
     suitable_payments_without_dcsd_iter = iter(suitable_payments_without_dcsd)
+    if reassign_dcsd:
+        suitable_payments_iter = iter(suitable_payments)
     print('Assigning Payments to DebitCardSenderDetails')
     for dcsd in dcsd_instances:
         if reassign_dcsd:
