@@ -30,11 +30,16 @@ from prison.tests.utils import load_random_prisoner_locations
 from security.constants import CHECK_STATUS
 from security.models import (
     Check,
+    CheckAutoAcceptRule,
     PrisonerProfile,
     RecipientProfile,
     SavedSearch,
     SearchFilter,
     SenderProfile,
+)
+from security.tests.utils import (
+    generate_sender_profiles_from_payments,
+    generate_prisoner_profiles_from_prisoner_locations
 )
 from transaction.tests.utils import generate_transactions
 
@@ -1788,3 +1793,61 @@ class RejectCheckTestCase(BaseCheckTestCase):
         check.refresh_from_db()
 
         self.assertEqual(check.status, CHECK_STATUS.ACCEPTED)
+
+
+class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
+
+    def setUp(self):
+        super().setUp()
+        self.users = make_test_users(num_security_fiu_users=2)
+        self.added_by_user = self.users['security_fiu_users'][0]
+        self.auth = self.get_http_authorization_for_user(self.users['security_fiu_users'][0])
+
+        prisoner_locations = load_random_prisoner_locations(number_of_prisoners=1)
+        generate_payments(payment_batch=1)
+
+        self.prisoner_profile = generate_prisoner_profiles_from_prisoner_locations(prisoner_locations)[0]
+        self.sender_profile = generate_sender_profiles_from_payments(number_of_senders=1, reassign_dcsd=True)[0]
+        self.debit_card_sender_details = self.sender_profile.debit_card_details.first()
+
+    def test_auto_accept_rule_create(self):
+        response = self.client.post(
+            reverse(
+                'security-check-auto-accept-list'
+            ),
+            data={
+                'prisoner_profile_id': self.prisoner_profile.id,
+                'debit_card_sender_details_id': self.debit_card_sender_details.id,
+                'reason': 'they have amazing hair',
+                'added_by': self.added_by_user.id
+            },
+            format='json',
+            HTTP_AUTHORIZATION=self.auth,
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(
+            response.json(),
+            {
+                'prisoner_profile_id': self.prisoner_profile.id,
+                'debit_card_sender_details_id': self.debit_card_sender_details.id,
+                'states': [
+                    {
+                        'active': True,
+                        'reason': 'they have amazing hair',
+                        'added_by': self.added_by_user.id
+                    }
+                ]
+            }
+        )
+        self.assertEqual(CheckAutoAcceptRule.objects.count(), 1)
+        auto_accept_rule = CheckAutoAcceptRule.objects.first()
+        self.assertEqual(auto_accept_rule.prisoner_profile_id, self.prisoner_profile.id)
+        self.assertEqual(auto_accept_rule.debit_card_sender_detail_id, self.debit_card_sender_details.id)
+        self.assertEqual(auto_accept_rule.is_active(), True)
+
+    def test_auto_accept_rule_deactivate(self):
+        pass
+
+    def test_auto_accept_rule_reactivate(self):
+        pass

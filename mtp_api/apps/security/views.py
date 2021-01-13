@@ -26,6 +26,7 @@ from prison.models import Prison
 from security.models import (
     BankAccount,
     Check,
+    CheckAutoAcceptRule,
     DebitCardSenderDetails,
     PrisonerProfile,
     RecipientProfile,
@@ -36,6 +37,7 @@ from security.permissions import SecurityCheckPermissions, SecurityProfilePermis
 from security.serializers import (
     AcceptCheckSerializer,
     CheckCreditSerializer,
+    CheckAutoAcceptRuleSerializer,
     PrisonerProfileSerializer,
     RecipientProfileSerializer,
     RejectCheckSerializer,
@@ -586,3 +588,22 @@ class CheckView(
         serializer.is_valid(raise_exception=True)
         check = serializer.reject(by=request.user)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class CheckAutoAcceptRuleView(
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+):
+    queryset = CheckAutoAcceptRule.objects.all()
+    filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
+    serializer_class = CheckAutoAcceptRuleSerializer
+    ordering_fields = ('created',)
+    ordering = ('created',)
+
+    permission_classes = (
+        IsAuthenticated,
+        NomsOpsClientIDPermissions,
+    )
