@@ -30,11 +30,6 @@ class Migration(migrations.Migration):
                 'unique_together': {('debit_card_sender_details', 'prisoner_profile')},
             },
         ),
-        migrations.AlterField(
-            model_name='check',
-            name='rejection_reasons',
-            field=django.contrib.postgres.fields.jsonb.JSONField(default=dict),
-        ),
         migrations.CreateModel(
             name='CheckAutoAcceptRuleState',
             fields=[

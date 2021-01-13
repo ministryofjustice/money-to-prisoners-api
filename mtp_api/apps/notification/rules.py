@@ -56,7 +56,7 @@ class BaseRule:
         For credits we first check auto-accept rules here, and if any apply and are active we do not trigger
         """
         if isinstance(record, Credit) and CheckAutoAcceptRule.objects.is_active_auto_accept_for_credit(record):
-            return Triggered(False, active_auto_accept_rule=True)
+            return Triggered(False)
         else:
             return self.rule_specific_trigger(record)
 

@@ -602,6 +602,7 @@ class ContainsSymbolsTestCase(TestCase):
                 msg=f'Credit from {credit.sender_name} should not trigger',
             )
 
+
 class AutoAcceptRuleTestCase(TestCase):
     fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
@@ -609,7 +610,7 @@ class AutoAcceptRuleTestCase(TestCase):
         super().setUp()
         self.users = make_test_users(clerks_per_prison=1)
         prisoner_locations = load_random_prisoner_locations(number_of_prisoners=1)
-        payments = generate_payments(payment_batch=1)
+        generate_payments(payment_batch=1)
         prisoner_profiles = generate_prisoner_profiles_from_prisoner_locations(prisoner_locations)
         sender_profiles = generate_sender_profiles_from_payments(number_of_senders=1, reassign_dcsd=True)
         prisoner_profiles[0].monitoring_users.add(self.users['security_fiu_users'][0].id)
@@ -644,7 +645,6 @@ class AutoAcceptRuleTestCase(TestCase):
 
         # Assert
         self.assertEqual(Event.objects.count(), 0)
-
 
     def test_payment_for_pair_with_inactive_auto_accept_caught_by_delayed_capture(self):
         CheckAutoAcceptRuleSerializer().update(
@@ -716,4 +716,3 @@ class AutoAcceptRuleTestCase(TestCase):
 
         # Assert
         self.assertNotEqual(Event.objects.count(), 0)
-
