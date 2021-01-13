@@ -125,7 +125,13 @@
     "name": "FIU",
     "permissions": [
       ["view_check", "security", "check"],
-      ["change_check", "security", "check"]
+      ["change_check", "security", "check"],
+      ["add_checkautoacceptrule", "security", "checkautoacceptrule"],
+      ["view_checkautoacceptrule", "security", "checkautoacceptrule"],
+      ["change_checkautoacceptrule", "security", "checkautoacceptrule"],
+      ["add_checkautoacceptrulestate", "security", "checkautoacceptrulestate"],
+      ["view_checkautoacceptrulestate", "security", "checkautoacceptrulestate"],
+      ["change_checkautoacceptrulestate", "security", "checkautoacceptrulestate"]
     ]
   }
 }

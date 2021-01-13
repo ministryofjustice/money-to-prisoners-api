@@ -372,7 +372,7 @@ class CheckAutoAcceptRuleSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         auto_accept_rule = CheckAutoAcceptRule.objects.create(
             debit_card_sender_details_id=validated_data['debit_card_sender_details_id'],
-            prisoner_profile_id=validated_data['debit_card_sender_details_id'],
+            prisoner_profile_id=validated_data['prisoner_profile_id'],
         )
         CheckAutoAcceptRuleStateSerializer().create(
             validated_data={
@@ -387,10 +387,6 @@ class CheckAutoAcceptRuleSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         # The only operation we support here is to create a new associated state
-        #  check_auto_accept_rule = CheckAutoAcceptRule.objects.filter(
-            #  debit_card_sender_details_id=validated_data['debit_card_sender_details_id'],
-            #  prisoner_profile_id=validated_data['debit_card_sender_details_id']
-        #  )
         instance.states.add(
             CheckAutoAcceptRuleStateSerializer().create(
                 validated_data={
@@ -411,5 +407,5 @@ class CheckAutoAcceptRuleSerializer(serializers.ModelSerializer):
             'id',
             'debit_card_sender_details_id',
             'prisoner_profile_id',
+            'states',
         )
-
