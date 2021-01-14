@@ -5,7 +5,6 @@ from django.db.models import Count, Sum, Subquery, OuterRef, Q
 from django.db.models.functions import Coalesce
 
 from credit.models import Credit
-from credit.constants import CREDIT_SOURCE
 
 logger = logging.getLogger('mtp')
 
@@ -397,12 +396,23 @@ class CheckManager(models.Manager):
     def create_for_credit(self, credit):
         from notification.rules import RULES
         from security.constants import CHECK_STATUS
+        from security.models import CheckAutoAcceptRule
 
         matched_rule_codes = self._get_matching_rules(credit)
-
+        auto_accept_rule = None
         if matched_rule_codes:
             description = [RULES[rule_code].description for rule_code in matched_rule_codes]
-            status = CHECK_STATUS.PENDING
+            auto_accept_rule = CheckAutoAcceptRule.objects.get_active_auto_accept_for_credit(credit)
+            if auto_accept_rule:
+                # If active auto_accept rule:
+                # * `auto_accept_rule` will be `CheckAutoAcceptRule()`
+                # * No FIU check required
+                status = CHECK_STATUS.ACCEPTED
+            else:
+                # If no active auto_accept rule:
+                # * `auto_accept_rule` will be None
+                # * FIU check required
+                status = CHECK_STATUS.PENDING
         else:
             description = ['Credit matched no rules and was automatically accepted']
             status = CHECK_STATUS.ACCEPTED
@@ -411,6 +421,7 @@ class CheckManager(models.Manager):
             credit=credit,
             status=status,
             description=description,
+            auto_accept_rule=auto_accept_rule,
             rules=matched_rule_codes,
         )
 
@@ -427,15 +438,12 @@ class CheckManager(models.Manager):
 
 class CheckAutoAcceptRuleManager(models.Manager):
 
-    def is_active_auto_accept_for_credit(self, credit: Credit) -> bool:
-        # TODO remove this with https://dsdmoj.atlassian.net/browse/MTP-1776
-        if credit.source == CREDIT_SOURCE.BANK_TRANSFER:
-            return False
+    def get_active_auto_accept_for_credit(self, credit: Credit):
         auto_accept_rule = self.filter(
             debit_card_sender_details=credit.sender_profile.debit_card_details.first(),
             prisoner_profile=credit.prisoner_profile
         ).first()
-        if auto_accept_rule:
-            return auto_accept_rule.is_active()
+        if auto_accept_rule and auto_accept_rule.is_active():
+            return auto_accept_rule
         else:
-            return False
+            return None
