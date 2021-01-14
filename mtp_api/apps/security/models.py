@@ -327,6 +327,13 @@ class Check(TimeStampedModel):
         name='rejection_reasons',
         default=dict
     )
+    auto_accept_rule = models.ForeignKey(
+        'security.CheckAutoAcceptRule',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='checks'
+    )
 
     objects = CheckManager()
 

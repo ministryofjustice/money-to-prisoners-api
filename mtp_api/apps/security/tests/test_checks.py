@@ -27,6 +27,7 @@ from security.models import (
     Check, CHECK_STATUS,
     PrisonerProfile, SenderProfile,
 )
+from security.serializers import CheckAutoAcceptRuleSerializer
 from security.tests.utils import (
     generate_checks,
     generate_sender_profiles_from_payments,
@@ -557,3 +558,122 @@ class AutomaticCreditCheckTestCase(APITestCase, AuthTestCaseMixin):
         self.assertEqual(payment.credit.resolution, CREDIT_RESOLUTION.INITIAL)
         self.assertTrue(hasattr(payment.credit, 'security_check'))
         self.assertEqual(payment.credit.security_check.status, CHECK_STATUS.PENDING)
+
+
+class AutoAcceptRuleTestCase(TestCase):
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
+
+    def setUp(self):
+        super().setUp()
+        self.users = make_test_users(clerks_per_prison=1)
+        prisoner_locations = load_random_prisoner_locations(number_of_prisoners=1)
+        generate_payments(payment_batch=1)
+        prisoner_profiles = generate_prisoner_profiles_from_prisoner_locations(prisoner_locations)
+        sender_profiles = generate_sender_profiles_from_payments(number_of_senders=1, reassign_dcsd=True)
+        prisoner_profiles[0].monitoring_users.add(self.users['security_fiu_users'][0].id)
+        sender_profiles[0].debit_card_details.first().monitoring_users.add(self.users['security_fiu_users'][0].id)
+
+        # TODO replace this with API call
+        self.auto_accept_rule = CheckAutoAcceptRuleSerializer().create(
+            validated_data={
+                'prisoner_profile_id': prisoner_profiles[0].id,
+                'debit_card_sender_details_id': sender_profiles[0].debit_card_details.first().id,
+                'reason': 'This person has amazing hair',
+                'added_by': self.users['security_fiu_users'][0]
+            }
+        )
+
+    def test_payment_for_pair_with_active_auto_accept_progresses_immediately(self):
+        # Set up
+        payments = generate_payments(
+            payment_batch=1,
+            overrides={
+                'credit': {
+                    'prisoner_profile_id': self.auto_accept_rule.prisoner_profile_id,
+                    'sender_profile_id': self.auto_accept_rule.debit_card_sender_details.sender.id
+                }
+            }
+        )
+        credit = payments[0].credit
+
+        # Call
+        check = Check.objects.create_for_credit(credit)
+
+        # Assert
+        self.assertEqual(check.auto_accept_rule, self.auto_accept_rule)
+        self.assertEqual(check.rules, ['FIUMONP', 'FIUMONS'])
+        self.assertEqual(check.status, CHECK_STATUS.ACCEPTED)
+
+    def test_payment_for_pair_with_inactive_auto_accept_caught_by_delayed_capture(self):
+        CheckAutoAcceptRuleSerializer().update(
+            instance=self.auto_accept_rule,
+            validated_data={
+                'active': False,
+                'reason': 'Ignore that they cut off their hair',
+                'added_by': self.users['security_fiu_users'][0]
+            }
+        )
+        payments = generate_payments(
+            payment_batch=1,
+            overrides={
+                'credit': {
+                    'prisoner_profile_id': self.auto_accept_rule.prisoner_profile_id,
+                    'sender_profile_id': self.auto_accept_rule.debit_card_sender_details.sender.id
+                }
+            }
+        )
+        credit = payments[0].credit
+
+        # Call
+        check = Check.objects.create_for_credit(credit)
+
+        # Assert
+        self.assertEqual(check.auto_accept_rule, None)
+        self.assertEqual(check.rules, ['FIUMONP', 'FIUMONS'])
+        self.assertEqual(check.status, CHECK_STATUS.PENDING)
+
+    def test_payment_where_sender_not_on_auto_accept_caught_by_delayed_capture(self):
+        sender_profile_id = SenderProfile.objects.exclude(
+            id=self.auto_accept_rule.debit_card_sender_details.sender.id
+        ).first().id
+        payments = generate_payments(
+            payment_batch=1,
+            overrides={
+                'credit': {
+                    'prisoner_profile_id': self.auto_accept_rule.prisoner_profile_id,
+                    'sender_profile_id': sender_profile_id
+                }
+            }
+        )
+        credit = payments[0].credit
+
+        # Call
+        check = Check.objects.create_for_credit(credit)
+
+        # Assert
+        self.assertEqual(check.auto_accept_rule, None)
+        self.assertEqual(check.rules, ['FIUMONP'])
+        self.assertEqual(check.status, CHECK_STATUS.PENDING)
+
+    def test_payment_where_prisoner_not_on_auto_accept_caught_by_delayed_capture(self):
+        prisoner_profile_id = PrisonerProfile.objects.exclude(
+            id=self.auto_accept_rule.prisoner_profile_id
+        ).first().id
+        payments = generate_payments(
+            payment_batch=1,
+            overrides={
+                'credit': {
+                    'prisoner_profile_id': prisoner_profile_id,
+                    'sender_profile_id': self.auto_accept_rule.debit_card_sender_details.sender.id
+                }
+            }
+        )
+        credit = payments[0].credit
+
+        # Call
+        check = Check.objects.create_for_credit(credit)
+
+        # Assert
+        self.assertEqual(check.auto_accept_rule, None)
+        self.assertEqual(check.rules, ['FIUMONS'])
+        self.assertEqual(check.status, CHECK_STATUS.PENDING)
