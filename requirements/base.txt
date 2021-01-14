@@ -2,7 +2,7 @@
 # NB: this is not the complete set needed to run the app
 Django>=2.2.16,<2.3
 psycopg2-binary>=2.8.4,<2.9
-djangorestframework==3.9.0
+djangorestframework>=3.9.1,<3.10.0
 drf-yasg==1.17.1
 django-model-utils==2.4
 django-filter>=2.4.0,<2.5.0
