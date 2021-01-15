@@ -1849,8 +1849,8 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                 'security-check-auto-accept-list'
             ),
             data={
-                'prisoner_profile_id': self.prisoner_profile.id,
-                'debit_card_sender_details_id': self.debit_card_sender_details.id,
+                'prisoner_profile': self.prisoner_profile.id,
+                'debit_card_sender_details': self.debit_card_sender_details.id,
                 'reason': 'they have amazing hair',
                 'added_by': self.added_by_user.id
             },

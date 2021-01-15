@@ -367,12 +367,12 @@ class CheckAutoAcceptRuleStateSerializer(serializers.ModelSerializer):
 
 
 class CheckAutoAcceptRuleSerializer(serializers.ModelSerializer):
-    states = CheckAutoAcceptRuleStateSerializer(many=True)
+    states = CheckAutoAcceptRuleStateSerializer(many=True, required=False)
 
     def create(self, validated_data):
         auto_accept_rule = CheckAutoAcceptRule.objects.create(
-            debit_card_sender_details_id=validated_data['debit_card_sender_details_id'],
-            prisoner_profile_id=validated_data['prisoner_profile_id'],
+            debit_card_sender_details=validated_data['debit_card_sender_details'],
+            prisoner_profile=validated_data['prisoner_profile'],
         )
         CheckAutoAcceptRuleStateSerializer().create(
             validated_data={
