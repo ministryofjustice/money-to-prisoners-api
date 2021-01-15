@@ -35,8 +35,8 @@ prisoner_router.register(
 
 router.register(r'searches', views.SavedSearchView)
 
+router.register(r'security/checks/auto-accept', views.CheckAutoAcceptRuleView, basename='security-check-auto-accept')
 router.register(r'security/checks', views.CheckView, basename='security-check')
-router.register(r'security/foochecks', views.CheckAutoAcceptRuleView, basename='security-check-auto-accept')
 
 
 urlpatterns = [
