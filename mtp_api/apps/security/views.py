@@ -593,7 +593,6 @@ class CheckView(
 class CheckAutoAcceptRuleView(
     mixins.CreateModelMixin,
     mixins.ListModelMixin,
-    mixins.RetrieveModelMixin,
     mixins.UpdateModelMixin,
     viewsets.GenericViewSet,
 ):
@@ -602,7 +601,7 @@ class CheckAutoAcceptRuleView(
     serializer_class = CheckAutoAcceptRuleSerializer
     ordering_fields = ('created',)
     ordering = ('created',)
-
+    #TODO add in security FIU again
     permission_classes = (
         IsAuthenticated,
         NomsOpsClientIDPermissions,
