@@ -11,7 +11,7 @@ db:
 
 django:
   build: .
-  command: ./venv/bin/python run.py --requirements-file requirements/docker.txt --print-task-names --verbosity 2 start --test-mode
+  command: ./venv/bin/python run.py --requirements-file requirements/base.txt --print-task-names --verbosity 2 start --test-mode
   ports:
     - "8000:8000"
     - "8800:8800"

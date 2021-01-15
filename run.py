@@ -6,24 +6,28 @@ if __name__ == '__main__':
     if sys.version_info[0:2] < (3, 4):
         raise SystemExit('python 3.4+ is required')
 
+    root_path = os.path.abspath(os.path.dirname(__file__))
+
     try:
         import mtp_common
 
-        if mtp_common.VERSION < (5,):
+        # NB: this version does not need to be updated unless mtp_common changes significantly
+        if mtp_common.VERSION < (10,):
             raise ImportError
     except ImportError:
         try:
-            try:
-                from pip._internal import main as pip_main
-            except ImportError:
-                from pip import main as pip_main
+            import pkg_resources
         except ImportError:
             raise SystemExit('setuptools and pip are required')
+        try:
+            pip = pkg_resources.load_entry_point('pip', 'console_scripts', 'pip')
+        except pkg_resources.ResolutionError:
+            raise SystemExit('setuptools and pip are required')
 
-        print('Pre-installing MTP-common')
-        pip_main(['--quiet', 'install', '--upgrade', 'money-to-prisoners-common'])
+        print('Pre-installing MTP-common and base requirements')
+        pip(['install', '--requirement', f'{root_path}/requirements/base.txt'])
 
     from mtp_common.build_tasks.executor import Executor
     import mtp_api.apps.core.build_tasks  # noqa
 
-    exit(Executor(root_path=os.path.dirname(__file__)).run())
+    exit(Executor(root_path=root_path).run())

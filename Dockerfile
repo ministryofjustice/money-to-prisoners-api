@@ -11,12 +11,12 @@ RUN set -ex; mkdir -p \
 
 # cache python packages, unless requirements change
 COPY ./requirements requirements
-RUN venv/bin/pip install -r requirements/docker.txt
+RUN venv/bin/pip install -r requirements/base.txt
 
 # add app and build it
 COPY . /app
 RUN set -ex; \
-  venv/bin/python run.py --requirements-file requirements/docker.txt build \
+  venv/bin/python run.py --requirements-file requirements/base.txt build \
   && \
   chown -R mtp:mtp /app
 USER 1000
