@@ -2,6 +2,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from core.serializers import BasicUserSerializer
 from prison.models import Prison
 from security.models import (
     BankTransferRecipientDetails,
@@ -354,20 +355,29 @@ class RejectCheckSerializer(CheckCreditSerializer):
 
 
 class CheckAutoAcceptRuleStateSerializer(serializers.ModelSerializer):
+    added_by = BasicUserSerializer(read_only=True)
 
     class Meta:
         model = CheckAutoAcceptRuleState
-        fields = '__all__'
-        read_only_fields = (
-            'id',
+        fields = [
             'added_by',
             'active',
             'reason',
+            'created'
+        ]
+        read_only_fields = (
+            'id',
+            'active',
         )
 
 
 class CheckAutoAcceptRuleSerializer(serializers.ModelSerializer):
     states = CheckAutoAcceptRuleStateSerializer(many=True, required=False)
+
+    def validate(self, attrs):
+        if not self.instance and len(attrs['states']) != 1:
+            raise ValidationError(f'When creating an auto-accept rule, states must be of length 1, not {len(attrs.states)}')
+        return super().validate(attrs)
 
     def create(self, validated_data):
         auto_accept_rule = CheckAutoAcceptRule.objects.create(
@@ -377,8 +387,8 @@ class CheckAutoAcceptRuleSerializer(serializers.ModelSerializer):
         CheckAutoAcceptRuleStateSerializer().create(
             validated_data={
                 'active': True,
-                'reason': validated_data['reason'],
-                'added_by': validated_data['added_by'],
+                'reason': validated_data['states'][0]['reason'],
+                'added_by': self.context['request'].user,
                 'check_auto_accept_rule': auto_accept_rule
             }
         )
@@ -392,7 +402,7 @@ class CheckAutoAcceptRuleSerializer(serializers.ModelSerializer):
                 validated_data={
                     'active': validated_data['active'],
                     'reason': validated_data['reason'],
-                    'added_by': validated_data['added_by'],
+                    'added_by': self.context['request'].user,
                     'check_auto_accept_rule': instance
                 }
             )
@@ -402,10 +412,8 @@ class CheckAutoAcceptRuleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CheckAutoAcceptRule
-        fields = '__all__'
-        read_only_fields = (
-            'id',
-            'debit_card_sender_details_id',
-            'prisoner_profile_id',
+        fields = [
+            'debit_card_sender_details',
+            'prisoner_profile',
             'states',
-        )
+        ]

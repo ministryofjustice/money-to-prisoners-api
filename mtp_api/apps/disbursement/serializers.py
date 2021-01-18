@@ -1,14 +1,12 @@
-from django.contrib.auth import get_user_model
 from django.db.transaction import atomic
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
+from core.serializers import BasicUserSerializer
 from disbursement.models import Disbursement, Log, Comment
 from disbursement.signals import disbursement_created, disbursement_edited
 from mtp_auth.models import PrisonUserMapping
 from prison.models import PrisonerLocation, Prison
-
-User = get_user_model()
 
 
 class PrisonerInPrisonValidator:
@@ -44,22 +42,8 @@ class PrisonPermittedValidator():
             )
 
 
-class UserSerializer(serializers.ModelSerializer):
-    # TODO Deduplicate this and mtp_auth.serializers.UserSerializer
-    # so drf-yasg stops complaining about serializer namespace collisions
-    # without custom ref name
-    class Meta:
-        ref_name = 'Dispersement User'
-        model = User
-        fields = (
-            'username',
-            'first_name',
-            'last_name',
-        )
-
-
 class LogSerializer(serializers.ModelSerializer):
-    user = UserSerializer()
+    user = BasicUserSerializer()
 
     class Meta:
         model = Log
