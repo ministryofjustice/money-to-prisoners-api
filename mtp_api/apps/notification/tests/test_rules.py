@@ -38,7 +38,7 @@ class RuleTestCase(TestCase):
         load_random_prisoner_locations()
         # generate random data which may or may not match amount rules
         generate_transactions(transaction_batch=200, days_of_history=3)
-        generate_payments(payment_batch=200, days_of_history=3, number_of_senders=1)
+        generate_payments(payment_batch=200, days_of_history=3)
         generate_disbursements(disbursement_batch=200, days_of_history=3)
 
         # £1 does not match NWN or HA rules and no monitoring exists, i.e. no non-counting rules can trigger
@@ -565,7 +565,7 @@ class ContainsSymbolsTestCase(TestCase):
         make_test_users(clerks_per_prison=1)
         load_random_prisoner_locations(number_of_prisoners=1)
         generate_transactions(transaction_batch=1)
-        generate_payments(payment_batch=1, number_of_senders=1)
+        generate_payments(payment_batch=1)
 
     def test_credits_with_symbols(self):
         rule = RULES['CSYM']
