@@ -31,6 +31,7 @@ from security.constants import CHECK_STATUS
 from security.models import (
     Check,
     CheckAutoAcceptRule,
+    CheckAutoAcceptRuleState,
     PrisonerProfile,
     RecipientProfile,
     SavedSearch,
@@ -1878,6 +1879,11 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
         )
         self.assertEqual(response.status_code, 201)
         actual_response = response.json()
+        self.assertIn('id', list(actual_response.keys()))
+        del actual_response['id']
+        self.assertIn('created', list(actual_response.keys()))
+        del actual_response['created']
+        self.assertIn('created', list(actual_response['states'][0].keys()))
         del actual_response['states'][0]['created']
         self.assertDictEqual(
             expected_response,
@@ -1890,10 +1896,204 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
         auto_accept_rule = CheckAutoAcceptRule.objects.first()
         self.assertEqual(auto_accept_rule.prisoner_profile_id, self.prisoner_profile.id)
         self.assertEqual(auto_accept_rule.debit_card_sender_details_id, self.debit_card_sender_details.id)
+        self.assertEqual(auto_accept_rule.get_latest_state().reason, 'they have amazing hair')
+        self.assertEqual(auto_accept_rule.get_latest_state().added_by_id, self.added_by_user.id)
         self.assertEqual(auto_accept_rule.is_active(), True)
 
     def test_auto_accept_rule_deactivate(self):
-        pass
+        expected_response = {
+            'prisoner_profile': self.prisoner_profile.id,
+            'debit_card_sender_details': self.debit_card_sender_details.id,
+            'states': [
+                {
+                    'active': True,
+                    'reason': 'they have amazing hair',
+                    'added_by': {
+                        'first_name': self.added_by_user.first_name,
+                        'last_name': self.added_by_user.last_name,
+                        'username': self.added_by_user.username,
+                    }
+                },
+                {
+                    'active': False,
+                    'reason': 'they have shaved it off',
+                    'added_by': {
+                        'first_name': self.added_by_user.first_name,
+                        'last_name': self.added_by_user.last_name,
+                        'username': self.added_by_user.username,
+                    }
+                }
+            ]
+        }
+        post_response = self.client.post(
+            reverse(
+                'security-check-auto-accept-list'
+            ),
+            data={
+                'prisoner_profile': self.prisoner_profile.id,
+                'debit_card_sender_details': self.debit_card_sender_details.id,
+                'states': [
+                    {
+                        'reason': 'they have amazing hair',
+                        'added_by': self.added_by_user.id
+                    }
+                ]
+            },
+            format='json',
+            HTTP_AUTHORIZATION=self.auth,
+        )
+        self.assertEqual(post_response.status_code, 201)
+        auto_accept_rule = post_response.json()
+        patch_response = self.client.patch(
+            reverse(
+                'security-check-auto-accept-detail',
+                args=[auto_accept_rule['id']]
+            ),
+            data={
+                'states': [
+                    {
+                        'active': False,
+                        'reason': 'they have shaved it off',
+                        'added_by': self.added_by_user.id
+                    }
+                ]
+            },
+            format='json',
+            HTTP_AUTHORIZATION=self.auth,
+        )
+        self.assertEqual(patch_response.status_code, 200)
+        actual_response = patch_response.json()
+        self.assertIn('id', list(actual_response.keys()))
+        del actual_response['id']
+        self.assertIn('created', list(actual_response.keys()))
+        del actual_response['created']
+        self.assertIn('created', list(actual_response['states'][0].keys()))
+        del actual_response['states'][0]['created']
+        self.assertIn('created', list(actual_response['states'][1].keys()))
+        del actual_response['states'][1]['created']
+        self.assertDictEqual(
+            expected_response,
+            actual_response,
+            msg=pformat(
+                list(dictdiffer.diff(expected_response, actual_response))
+            )
+        )
+        self.assertEqual(CheckAutoAcceptRule.objects.count(), 1)
+        self.assertEqual(CheckAutoAcceptRuleState.objects.count(), 2)
+        auto_accept_rule = CheckAutoAcceptRule.objects.first()
+        self.assertEqual(auto_accept_rule.get_latest_state().reason, 'they have shaved it off')
+        self.assertEqual(auto_accept_rule.get_latest_state().added_by_id, self.added_by_user.id)
+        self.assertEqual(auto_accept_rule.is_active(), False)
 
     def test_auto_accept_rule_reactivate(self):
-        pass
+        expected_response = {
+            'prisoner_profile': self.prisoner_profile.id,
+            'debit_card_sender_details': self.debit_card_sender_details.id,
+            'states': [
+                {
+                    'active': True,
+                    'reason': 'they have amazing hair',
+                    'added_by': {
+                        'first_name': self.added_by_user.first_name,
+                        'last_name': self.added_by_user.last_name,
+                        'username': self.added_by_user.username,
+                    }
+                },
+                {
+                    'active': False,
+                    'reason': 'they have shaved it off',
+                    'added_by': {
+                        'first_name': self.added_by_user.first_name,
+                        'last_name': self.added_by_user.last_name,
+                        'username': self.added_by_user.username,
+                    }
+                },
+                {
+                    'active': True,
+                    'reason': 'they grew it back again',
+                    'added_by': {
+                        'first_name': self.added_by_user.first_name,
+                        'last_name': self.added_by_user.last_name,
+                        'username': self.added_by_user.username,
+                    }
+                }
+            ]
+        }
+        post_response = self.client.post(
+            reverse(
+                'security-check-auto-accept-list'
+            ),
+            data={
+                'prisoner_profile': self.prisoner_profile.id,
+                'debit_card_sender_details': self.debit_card_sender_details.id,
+                'states': [
+                    {
+                        'reason': 'they have amazing hair',
+                        'added_by': self.added_by_user.id
+                    }
+                ]
+            },
+            format='json',
+            HTTP_AUTHORIZATION=self.auth,
+        )
+        self.assertEqual(post_response.status_code, 201)
+        auto_accept_rule = post_response.json()
+        patch_response = self.client.patch(
+            reverse(
+                'security-check-auto-accept-detail',
+                args=[auto_accept_rule['id']]
+            ),
+            data={
+                'states': [
+                    {
+                        'active': False,
+                        'reason': 'they have shaved it off',
+                        'added_by': self.added_by_user.id
+                    }
+                ]
+            },
+            format='json',
+            HTTP_AUTHORIZATION=self.auth,
+        )
+        self.assertEqual(patch_response.status_code, 200)
+        patch_response = self.client.patch(
+            reverse(
+                'security-check-auto-accept-detail',
+                args=[auto_accept_rule['id']]
+            ),
+            data={
+                'states': [
+                    {
+                        'active': True,
+                        'reason': 'they grew it back again',
+                        'added_by': self.added_by_user.id
+                    }
+                ]
+            },
+            format='json',
+            HTTP_AUTHORIZATION=self.auth,
+        )
+        actual_response = patch_response.json()
+        self.assertIn('id', list(actual_response.keys()))
+        del actual_response['id']
+        self.assertIn('created', list(actual_response.keys()))
+        del actual_response['created']
+        self.assertIn('created', list(actual_response['states'][0].keys()))
+        del actual_response['states'][0]['created']
+        self.assertIn('created', list(actual_response['states'][1].keys()))
+        del actual_response['states'][1]['created']
+        self.assertIn('created', list(actual_response['states'][2].keys()))
+        del actual_response['states'][2]['created']
+        self.assertDictEqual(
+            expected_response,
+            actual_response,
+            msg=pformat(
+                list(dictdiffer.diff(expected_response, actual_response))
+            )
+        )
+        self.assertEqual(CheckAutoAcceptRule.objects.count(), 1)
+        self.assertEqual(CheckAutoAcceptRuleState.objects.count(), 3)
+        auto_accept_rule = CheckAutoAcceptRule.objects.first()
+        self.assertEqual(auto_accept_rule.get_latest_state().reason, 'they grew it back again')
+        self.assertEqual(auto_accept_rule.get_latest_state().added_by_id, self.added_by_user.id)
+        self.assertEqual(auto_accept_rule.is_active(), True)
