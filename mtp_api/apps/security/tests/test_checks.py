@@ -24,10 +24,9 @@ from payment.models import Payment, PAYMENT_STATUS
 from payment.tests.utils import generate_payments
 from prison.tests.utils import load_random_prisoner_locations
 from security.models import (
-    Check, CHECK_STATUS,
+    Check, CHECK_STATUS, CheckAutoAcceptRule,
     PrisonerProfile, SenderProfile,
 )
-from security.serializers import CheckAutoAcceptRuleSerializer
 from security.tests.utils import (
     generate_checks,
     generate_sender_profiles_from_payments,
@@ -560,7 +559,7 @@ class AutomaticCreditCheckTestCase(APITestCase, AuthTestCaseMixin):
         self.assertEqual(payment.credit.security_check.status, CHECK_STATUS.PENDING)
 
 
-class AutoAcceptRuleTestCase(TestCase):
+class AutoAcceptRuleTestCase(APITestCase, AuthTestCaseMixin):
     fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
     def setUp(self):
@@ -573,15 +572,25 @@ class AutoAcceptRuleTestCase(TestCase):
         prisoner_profiles[0].monitoring_users.add(self.users['security_fiu_users'][0].id)
         sender_profiles[0].debit_card_details.first().monitoring_users.add(self.users['security_fiu_users'][0].id)
 
-        # TODO replace this with API call
-        self.auto_accept_rule = CheckAutoAcceptRuleSerializer().create(
-            validated_data={
-                'prisoner_profile_id': prisoner_profiles[0].id,
-                'debit_card_sender_details_id': sender_profiles[0].debit_card_details.first().id,
-                'reason': 'This person has amazing hair',
-                'added_by': self.users['security_fiu_users'][0]
-            }
+        response = self.client.post(
+            reverse(
+                'security-check-auto-accept-list'
+            ),
+            data={
+                'prisoner_profile': prisoner_profiles[0].id,
+                'debit_card_sender_details': sender_profiles[0].debit_card_details.first().id,
+                'states': [
+                    {
+                        'reason': 'This person has amazing hair',
+                        'added_by_id': self.users['security_fiu_users'][0].id
+                    }
+                ]
+            },
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.users['security_fiu_users'][0]),
         )
+        self.assertEqual(response.status_code, 201)
+        self.auto_accept_rule = CheckAutoAcceptRule.objects.get(id=response.json()['id'])
 
     def test_payment_for_pair_with_active_auto_accept_progresses_immediately(self):
         # Set up
@@ -605,13 +614,22 @@ class AutoAcceptRuleTestCase(TestCase):
         self.assertEqual(check.status, CHECK_STATUS.ACCEPTED)
 
     def test_payment_for_pair_with_inactive_auto_accept_caught_by_delayed_capture(self):
-        CheckAutoAcceptRuleSerializer().update(
-            instance=self.auto_accept_rule,
-            validated_data={
-                'active': False,
-                'reason': 'Ignore that they cut off their hair',
-                'added_by': self.users['security_fiu_users'][0]
-            }
+        self.client.patch(
+            reverse(
+                'security-check-auto-accept-detail',
+                args=[self.auto_accept_rule.id]
+            ),
+            data={
+                'states': [
+                    {
+                        'active': False,
+                        'reason': 'Ignore that they cut off their hair',
+                        'added_by': self.users['security_fiu_users'][0].id
+                    }
+                ]
+            },
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.users['security_fiu_users'][0]),
         )
         payments = generate_payments(
             payment_batch=1,
