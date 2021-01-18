@@ -392,8 +392,11 @@ class CheckAutoAcceptRule(TimeStampedModel):
 
     objects = CheckAutoAcceptRuleManager()
 
+    def get_latest_state(self):
+        return self.states.order_by('-created').first()
+
     def is_active(self):
-        return self.states.order_by('-created').first().active
+        return self.get_latest_state().active
 
     class Meta:
         ordering = ('-created',)

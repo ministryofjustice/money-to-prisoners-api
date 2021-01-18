@@ -355,6 +355,7 @@ class RejectCheckSerializer(CheckCreditSerializer):
 
 
 class CheckAutoAcceptRuleStateSerializer(serializers.ModelSerializer):
+    active = serializers.BooleanField(required=False)
     added_by = BasicUserSerializer(read_only=True)
 
     class Meta:
@@ -367,16 +368,17 @@ class CheckAutoAcceptRuleStateSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = (
             'id',
-            'active',
         )
 
 
 class CheckAutoAcceptRuleSerializer(serializers.ModelSerializer):
-    states = CheckAutoAcceptRuleStateSerializer(many=True, required=False)
+    states = CheckAutoAcceptRuleStateSerializer(many=True, required=True)
 
     def validate(self, attrs):
-        if not self.instance and len(attrs['states']) != 1:
-            raise ValidationError(f'When creating an auto-accept rule, states must be of length 1, not {len(attrs.states)}')
+        if len(attrs['states']) != 1:
+            raise ValidationError(
+                f'When creating or updating an auto-accept rule, states must be of length 1, not {len(attrs.states)}'
+            )
         return super().validate(attrs)
 
     def create(self, validated_data):
@@ -400,8 +402,8 @@ class CheckAutoAcceptRuleSerializer(serializers.ModelSerializer):
         instance.states.add(
             CheckAutoAcceptRuleStateSerializer().create(
                 validated_data={
-                    'active': validated_data['active'],
-                    'reason': validated_data['reason'],
+                    'active': validated_data['states'][0]['active'],
+                    'reason': validated_data['states'][0]['reason'],
                     'added_by': self.context['request'].user,
                     'check_auto_accept_rule': instance
                 }
@@ -413,7 +415,13 @@ class CheckAutoAcceptRuleSerializer(serializers.ModelSerializer):
     class Meta:
         model = CheckAutoAcceptRule
         fields = [
+            'id',
+            'created',
             'debit_card_sender_details',
             'prisoner_profile',
             'states',
+        ]
+        read_only_fields = [
+            'id',
+            'created',
         ]

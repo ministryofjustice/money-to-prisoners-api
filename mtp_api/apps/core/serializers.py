@@ -3,8 +3,8 @@ from rest_framework import serializers
 
 from core.models import FileDownload
 
-
 User = get_user_model()
+
 
 class FileDownloadSerializer(serializers.ModelSerializer):
     class Meta:
@@ -27,5 +27,3 @@ class BasicUserSerializer(serializers.ModelSerializer):
             'first_name',
             'last_name',
         )
-
-
