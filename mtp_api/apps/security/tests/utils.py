@@ -41,6 +41,7 @@ PAYMENT_FILTERS_FOR_VALID_CHECK = dict(
     credit__isnull=False,
     credit=dict(
         resolution=CREDIT_RESOLUTION.INITIAL,
+        security_check__isnull=True,
         # This only works because get_or_create ignores values with __ in any call to create()
         # these values must be included in the defaults if NOT NULL
         owner__isnull=True,
@@ -101,10 +102,12 @@ def generate_checks(
     sender_profiles = SenderProfile.objects.all()
     if not sender_profiles:
         logger.warning('No sender profiles present!')
+    billing_address_sender_profile_id_mapping = {}
     for sender_profile in sender_profiles:
         monitored_instance = None
         if sender_profile.debit_card_details.count():
             monitored_instance = sender_profile.debit_card_details.first()
+            billing_address_sender_profile_id_mapping[sender_profile.id] = monitored_instance.billing_addresses.first()
         elif sender_profile.bank_transfer_details.count():
             monitored_instance = sender_profile.bank_transfer_details.first().sender_bank_account
         if monitored_instance:
@@ -133,7 +136,8 @@ def generate_checks(
         else:
             sender_profile_id = random.choice(
                 SenderProfile.objects.filter(
-                    debit_card_details__isnull=False
+                    debit_card_details__isnull=False,
+                    debit_card_details__billing_addresses__isnull=False
                 ).annotate(
                     cred_count=Count('credits')
                 ).order_by('-cred_count').all()[:number_of_senders_to_use]
@@ -181,8 +185,11 @@ def generate_checks(
                     cardholder_name
                 )
             ))[0]
+            candidate_payment.billing_address = billing_address_sender_profile_id_mapping.get(sender_profile_id)
+            candidate_payment.save()
         candidate_payment.credit.log_set.filter(action=CREDIT_LOG_ACTIONS.CREDITED).delete()
-        checks.append(Check.objects.create_for_credit(candidate_payment.credit))
+        if not hasattr(candidate_payment.credit, 'security_check'):
+            checks.append(Check.objects.create_for_credit(candidate_payment.credit))
 
     return checks
 
