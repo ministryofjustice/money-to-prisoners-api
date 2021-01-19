@@ -187,7 +187,8 @@ def setup_payment(
         del data['card_number_last_digits']
         del data['card_expiry_date']
         del data['card_brand']
-        del data['billing_address']
+        if not bool(payment_counter % 12):  # 2 in 3 of pending checks has a billing_address
+            del data['billing_address']
     elif data['status'] == PAYMENT_STATUS.TAKEN:
         owner, status = owner_status_chooser(data['prison'])
         data['processor_id'] = str(uuid.uuid1())
