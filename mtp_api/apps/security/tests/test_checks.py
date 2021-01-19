@@ -255,12 +255,12 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
         generate_payments(payment_batch=50)
         generate_prisoner_profiles_from_prisoner_locations(prisoner_locations)
         generate_sender_profiles_from_payments(number_of_senders=1, reassign_dcsd=True)
-        check_list = generate_checks(number_of_checks=1, create_invalid_checks=False)
-        assert check_list[0].status == 'pending'
+        generate_checks(number_of_checks=1, create_invalid_checks=False)
+        check = Check.objects.filter(status='pending').first()
 
         # Execute
         response = self.client.post(
-            reverse('security-check-reject', kwargs={'pk': check_list[0].id}),
+            reverse('security-check-reject', kwargs={'pk': check.id}),
             {
                 'decision_reason': 'computer says no',
                 'rejection_reasons': {
@@ -274,7 +274,7 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
         self.assertEqual(response.status_code, 204)
 
         # Assert State Change
-        check = Check.objects.get(id=check_list[0].id)
+        check.refresh_from_db()
         self.assertEqual(check.rejection_reasons, {'payment_source_linked_other_prisoners': True})
         self.assertEqual(check.decision_reason, 'computer says no')
 
@@ -285,12 +285,12 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
         generate_payments(payment_batch=50)
         generate_prisoner_profiles_from_prisoner_locations(prisoner_locations)
         generate_sender_profiles_from_payments(number_of_senders=1, reassign_dcsd=True)
-        check_list = generate_checks(number_of_checks=1, create_invalid_checks=False)
-        assert check_list[0].status == 'pending'
+        generate_checks(number_of_checks=1, create_invalid_checks=False)
+        check = Check.objects.filter(status='pending').first()
 
         # Execute
         response = self.client.post(
-            reverse('security-check-accept', kwargs={'pk': check_list[0].id}),
+            reverse('security-check-accept', kwargs={'pk': check.id}),
             {
                 'decision_reason': 'computer says no',
                 'rejection_reasons': {
@@ -307,8 +307,8 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
             {'non_field_errors': ['You cannot give rejection reasons when accepting a check']}
         )
 
-        # Assert State Change
-        check = Check.objects.get(id=check_list[0].id)
+        # Assert Lack of State Change
+        check.refresh_from_db()
         self.assertEqual(check.status, 'pending')
         self.assertEqual(check.rejection_reasons, {})
         self.assertEqual(check.decision_reason, '')
