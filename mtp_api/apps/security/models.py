@@ -334,6 +334,14 @@ class Check(TimeStampedModel):
         blank=True,
         related_name='checks'
     )
+    # We save active_auto_accept_rule because we need it for the views that load historic checks and
+    # render those whose acceptance was mediated by an active auto-accept rule differently from those that
+    # weren't. The case we are handling here is the case where there exists a deactivated auto-accept rule
+    # We need to link the check to the an auto-accept-rule even if it is deactivated, because we need the
+    # identifier for the use case where someone wants to re-activate an deactivated auto-accept rule
+    active_auto_accept_rule = models.BooleanField(
+        default=False
+    )
 
     objects = CheckManager()
 
