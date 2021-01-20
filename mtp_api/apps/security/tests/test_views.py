@@ -1055,7 +1055,7 @@ class BaseCheckTestCase(APITestCase, AuthTestCaseMixin):
                 'sender_account_number': None,
                 'sender_email': expected_check.credit.sender_email,
                 'sender_name': expected_check.credit.sender_name,
-                'sender_profile': None,
+                'sender_profile': expected_check.credit.sender_profile_id,
                 'sender_roll_number': None,
                 'sender_sort_code': None,
                 'set_manual_at': None,
@@ -1071,7 +1071,13 @@ class BaseCheckTestCase(APITestCase, AuthTestCaseMixin):
             'decision_reason': expected_check.decision_reason if expected_check.decision_reason else '',
             'rejection_reasons': (
                 expected_check.rejection_reasons if expected_check.status == CHECK_STATUS.REJECTED else {}
-            )
+            ),
+            'auto_accept_rule_state': {
+                'added_by': expected_check.auto_accept_rule_state.added_by,
+                'reason': expected_check.auto_accept_rule_state.reason,
+                'created': expected_check.auto_accept_rule_state.created,
+                'auto_accept_rule': expected_check.auto_accept_rule_state.auto_accept_rule.pk,
+            } if expected_check.auto_accept_rule_state else None
         }
         assert expected_data_item == actual_check_data, pformat(
             list(dictdiffer.diff(expected_data_item, actual_check_data))
@@ -1885,6 +1891,8 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
         del actual_response['created']
         self.assertIn('created', list(actual_response['states'][0].keys()))
         del actual_response['states'][0]['created']
+        self.assertIn('auto_accept_rule', list(actual_response['states'][0].keys()))
+        del actual_response['states'][0]['auto_accept_rule']
         self.assertDictEqual(
             expected_response,
             actual_response,
@@ -1967,10 +1975,11 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
         del actual_response['id']
         self.assertIn('created', list(actual_response.keys()))
         del actual_response['created']
-        self.assertIn('created', list(actual_response['states'][0].keys()))
-        del actual_response['states'][0]['created']
-        self.assertIn('created', list(actual_response['states'][1].keys()))
-        del actual_response['states'][1]['created']
+        for state in actual_response['states']:
+            self.assertIn('created', list(state.keys()))
+            del state['created']
+            self.assertIn('auto_accept_rule', list(state.keys()))
+            del state['auto_accept_rule']
         self.assertDictEqual(
             expected_response,
             actual_response,
@@ -2078,12 +2087,11 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
         del actual_response['id']
         self.assertIn('created', list(actual_response.keys()))
         del actual_response['created']
-        self.assertIn('created', list(actual_response['states'][0].keys()))
-        del actual_response['states'][0]['created']
-        self.assertIn('created', list(actual_response['states'][1].keys()))
-        del actual_response['states'][1]['created']
-        self.assertIn('created', list(actual_response['states'][2].keys()))
-        del actual_response['states'][2]['created']
+        for state in actual_response['states']:
+            self.assertIn('created', list(state.keys()))
+            del state['created']
+            self.assertIn('auto_accept_rule', list(state.keys()))
+            del state['auto_accept_rule']
         self.assertDictEqual(
             expected_response,
             actual_response,

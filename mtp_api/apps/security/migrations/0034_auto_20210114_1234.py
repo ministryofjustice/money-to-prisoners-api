@@ -14,12 +14,13 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name='check',
-            name='auto_accept_rule',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='checks', to='security.CheckAutoAcceptRule'),
-        ),
-        migrations.AlterField(
-            model_name='check',
-            name='rejection_reasons',
-            field=django.contrib.postgres.fields.jsonb.JSONField(default=dict),
+            name='auto_accept_rule_state',
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name='checks',
+                to='security.CheckAutoAcceptRuleState'
+            ),
         ),
     ]

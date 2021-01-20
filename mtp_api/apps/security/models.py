@@ -327,20 +327,21 @@ class Check(TimeStampedModel):
         name='rejection_reasons',
         default=dict
     )
-    auto_accept_rule = models.ForeignKey(
-        'security.CheckAutoAcceptRule',
+    # We persist AutoAcceptRuleState for three reasons:
+    # 1. To link an applicable AutoAcceptRule to the Check, even if not active
+    #   * This is for the use case where someone wants to re-activate an deactivated auto-accept rule
+    # 2. To determine whether the rule was active by value of CheckAutoAcceptRuleState.active
+    #   * In the historic views we render those whose acceptance was mediated by an active auto-accept rule
+    #      differently from those that simply had a deactivated auto accept rule and were accepted manually
+    # 3. What the reason was at the time of auto-acceptance
+    #   * In the historic views, for the auto accept rules, we render the auto-accept rule reason active at the time,
+    #      not the most recent
+    auto_accept_rule_state = models.ForeignKey(
+        'security.CheckAutoAcceptRuleState',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name='checks'
-    )
-    # We save active_auto_accept_rule because we need it for the views that load historic checks and
-    # render those whose acceptance was mediated by an active auto-accept rule differently from those that
-    # weren't. The case we are handling here is the case where there exists a deactivated auto-accept rule
-    # We need to link the check to the an auto-accept-rule even if it is deactivated, because we need the
-    # identifier for the use case where someone wants to re-activate an deactivated auto-accept rule
-    active_auto_accept_rule = models.BooleanField(
-        default=False
     )
 
     objects = CheckManager()
@@ -414,7 +415,7 @@ class CheckAutoAcceptRule(TimeStampedModel):
 
 
 class CheckAutoAcceptRuleState(TimeStampedModel):
-    check_auto_accept_rule = models.ForeignKey(
+    auto_accept_rule = models.ForeignKey(
         CheckAutoAcceptRule, on_delete=models.CASCADE, related_name='states'
     )
     added_by = models.ForeignKey(

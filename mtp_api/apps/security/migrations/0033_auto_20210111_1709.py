@@ -39,7 +39,7 @@ class Migration(migrations.Migration):
                 ('active', models.BooleanField()),
                 ('reason', models.TextField()),
                 ('added_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='security_check_auto_accept_rule_state_added_by', to=settings.AUTH_USER_MODEL)),
-                ('check_auto_accept_rule', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='states', to='security.CheckAutoAcceptRule')),
+                ('auto_accept_rule', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='states', to='security.CheckAutoAcceptRule')),
             ],
             options={
                 'abstract': False,

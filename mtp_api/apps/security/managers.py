@@ -397,8 +397,7 @@ class CheckManager(models.Manager):
         from security.models import CheckAutoAcceptRule
 
         matched_rule_codes = self._get_matching_rules(credit)
-        auto_accept_rule = None
-        active_auto_accept_rule = False
+        auto_accept_rule_state = None
         if matched_rule_codes:
             description = [RULES[rule_code].description for rule_code in matched_rule_codes]
             auto_accept_rule = CheckAutoAcceptRule.objects.get_active_auto_accept_for_credit(credit)
@@ -407,12 +406,7 @@ class CheckManager(models.Manager):
                 # * `auto_accept_rule` will be `CheckAutoAcceptRule()`
                 # * No FIU check required
                 status = CHECK_STATUS.ACCEPTED
-                # We save active_auto_accept_rule because we need it for the views that load historic checks and
-                # render those whose acceptance was mediated by an active auto-accept rule differently from those that
-                # weren't. The case we are handling here is the case where there exists a deactivated auto-accept rule
-                # We need to link the check to the an auto-accept-rule even if it is deactivated, because we need the
-                # identifier for the use case where someone wants to re-activate an deactivated auto-accept rule
-                active_auto_accept_rule = True
+                auto_accept_rule_state = auto_accept_rule.get_latest_state()
             else:
                 # If no active auto_accept rule:
                 # * `auto_accept_rule` will be None
@@ -426,8 +420,7 @@ class CheckManager(models.Manager):
             credit=credit,
             status=status,
             description=description,
-            auto_accept_rule=auto_accept_rule,
-            active_auto_accept_rule=active_auto_accept_rule,
+            auto_accept_rule_state=auto_accept_rule_state,
             rules=matched_rule_codes,
         )
 
