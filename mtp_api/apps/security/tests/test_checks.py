@@ -609,7 +609,7 @@ class AutoAcceptRuleTestCase(APITestCase, AuthTestCaseMixin):
         check = Check.objects.create_for_credit(credit)
 
         # Assert
-        self.assertEqual(check.auto_accept_rule, self.auto_accept_rule)
+        self.assertEqual(check.auto_accept_rule_state, self.auto_accept_rule.get_latest_state())
         self.assertEqual(check.rules, ['FIUMONP', 'FIUMONS'])
         self.assertEqual(check.status, CHECK_STATUS.ACCEPTED)
 
@@ -646,7 +646,7 @@ class AutoAcceptRuleTestCase(APITestCase, AuthTestCaseMixin):
         check = Check.objects.create_for_credit(credit)
 
         # Assert
-        self.assertEqual(check.auto_accept_rule, None)
+        self.assertEqual(check.auto_accept_rule_state, None)
         self.assertEqual(check.rules, ['FIUMONP', 'FIUMONS'])
         self.assertEqual(check.status, CHECK_STATUS.PENDING)
 
@@ -669,7 +669,7 @@ class AutoAcceptRuleTestCase(APITestCase, AuthTestCaseMixin):
         check = Check.objects.create_for_credit(credit)
 
         # Assert
-        self.assertEqual(check.auto_accept_rule, None)
+        self.assertEqual(check.auto_accept_rule_state, None)
         self.assertEqual(check.rules, ['FIUMONP'])
         self.assertEqual(check.status, CHECK_STATUS.PENDING)
 
@@ -692,6 +692,6 @@ class AutoAcceptRuleTestCase(APITestCase, AuthTestCaseMixin):
         check = Check.objects.create_for_credit(credit)
 
         # Assert
-        self.assertEqual(check.auto_accept_rule, None)
+        self.assertEqual(check.auto_accept_rule_state, None)
         self.assertEqual(check.rules, ['FIUMONS'])
         self.assertEqual(check.status, CHECK_STATUS.PENDING)
