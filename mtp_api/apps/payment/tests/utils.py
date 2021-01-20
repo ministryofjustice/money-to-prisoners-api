@@ -108,7 +108,7 @@ def generate_initial_payment_data(tot=50, days_of_history=7, number_of_senders=N
 
 def generate_payments(
     payment_batch=50, consistent_history=False, days_of_history=7, overrides=None,
-    attach_profiles_to_individual_credits=True, number_of_senders=None
+    attach_profiles_to_individual_credits=True, number_of_senders=None, reconcile_payments=True
 ):
     """
     Generate fake payment objects either for automated tests or test/development environment.
@@ -120,6 +120,9 @@ def generate_payments(
     :param attach_profiles_to_individual_credits bool: Whether to run credit.attach_profiles on individual credits
     :param number_of_senders int/None: If not None, specifies how many senders to generate.
                                        If None, number of existing PrisonerLocation entries used
+    :param reconcile_payments bool: Whether to run Payment.objects.reconcile, given that the list of models returned
+                                    are NOT updated with the reconciliation data causing potential mismatch with
+                                    future queries
     :rtype list<payment.models.Payment>
     """
     data_list = generate_initial_payment_data(
@@ -127,11 +130,16 @@ def generate_payments(
         days_of_history=days_of_history,
         number_of_senders=number_of_senders
     )
-    return create_payments(data_list, consistent_history, overrides, attach_profiles_to_individual_credits)
+    return create_payments(
+        data_list, consistent_history, overrides, attach_profiles_to_individual_credits, reconcile_payments
+    )
 
 
 # TODO consistent_history doesn't seem to do anything, yet is provided by some calling functions...
-def create_payments(data_list, consistent_history=False, overrides=None, attach_profiles_to_individual_credits=True):
+def create_payments(
+    data_list, consistent_history=False, overrides=None, attach_profiles_to_individual_credits=True,
+    reconcile_payments=True
+):
     owner_status_chooser = get_owner_and_status_chooser()
     payments = []
     for payment_counter, data in enumerate(data_list, start=1):
@@ -148,7 +156,7 @@ def create_payments(data_list, consistent_history=False, overrides=None, attach_
     generate_payment_logs(payments)
 
     earliest_payment = Payment.objects.all().order_by('credit__received_at').first()
-    if earliest_payment:
+    if reconcile_payments and earliest_payment:
         reconciliation_date = earliest_payment.credit.received_at.date()
         while reconciliation_date < latest_payment_date().date() - datetime.timedelta(days=1):
             start_date = datetime.datetime.combine(
@@ -161,6 +169,7 @@ def create_payments(data_list, consistent_history=False, overrides=None, attach_
             )
             Payment.objects.reconcile(start_date, end_date, None)
             reconciliation_date += datetime.timedelta(days=1)
+    # If reconciliation is run, these payment instances do NOT have the resulting reconciliation state change
     return payments
 
 

@@ -1518,6 +1518,58 @@ class GetCheckTestCase(BaseCheckTestCase):
         actual_check_data = response.json()
         self.assertCheckEqual(check, actual_check_data)
 
+    def test_get_check_auto_accept_rule_state_attached(self):
+        """
+        Test that the get object endpoint returns CheckAutoAcceptRuleState when appropriate
+        """
+        # Setup
+        response = self.client.post(
+            reverse(
+                'security-check-auto-accept-list'
+            ),
+            data={
+                'prisoner_profile': PrisonerProfile.objects.first().id,
+                'debit_card_sender_details': SenderProfile.objects.first().debit_card_details.first().id,
+                'states': [
+                    {
+                        'reason': 'This person has amazing hair',
+                        'added_by_id': self._get_authorised_user().id
+                    }
+                ]
+            },
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self._get_authorised_user()),
+        )
+        self.assertEqual(response.status_code, 201)
+        auto_accept_rule = CheckAutoAcceptRule.objects.get(id=response.json()['id'])
+        payments = generate_payments(
+            payment_batch=1,
+            overrides={
+                'credit': {
+                    'prisoner_profile_id': auto_accept_rule.prisoner_profile_id,
+                    'sender_profile_id': auto_accept_rule.debit_card_sender_details.sender.id
+                }
+            },
+            reconcile_payments=False
+        )
+        credit = payments[0].credit
+        check = Check.objects.create_for_credit(credit)
+
+        # Call
+        response = self.client.get(
+            reverse(
+                'security-check-detail',
+                kwargs={'pk': check.pk},
+            ),
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self._get_authorised_user()),
+        )
+
+        # Assert
+        self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+        actual_check_data = response.json()
+        self.assertCheckEqual(check, actual_check_data)
+
 
 class AcceptCheckTestCase(BaseCheckTestCase):
     """
