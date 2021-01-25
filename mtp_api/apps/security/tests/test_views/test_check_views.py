@@ -964,7 +964,7 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
         super().setUp()
         self.users = make_test_users(num_security_fiu_users=2)
         self.added_by_user = self.users['security_fiu_users'][0]
-        self.auth = self.get_http_authorization_for_user(self.users['security_fiu_users'][0])
+        self.updated_by_user = self.users['security_fiu_users'][1]
 
         prisoner_locations = load_random_prisoner_locations(number_of_prisoners=1)
         generate_payments(payment_batch=1)
@@ -1003,7 +1003,7 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                 ]
             },
             format='json',
-            HTTP_AUTHORIZATION=self.auth,
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.added_by_user),
         )
         self.assertEqual(response.status_code, 201)
         actual_response = response.json()
@@ -1048,9 +1048,9 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                     'active': False,
                     'reason': 'they have shaved it off',
                     'added_by': {
-                        'first_name': self.added_by_user.first_name,
-                        'last_name': self.added_by_user.last_name,
-                        'username': self.added_by_user.username,
+                        'first_name': self.updated_by_user.first_name,
+                        'last_name': self.updated_by_user.last_name,
+                        'username': self.updated_by_user.username,
                     }
                 }
             ]
@@ -1069,7 +1069,7 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                 ]
             },
             format='json',
-            HTTP_AUTHORIZATION=self.auth,
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.added_by_user),
         )
         self.assertEqual(post_response.status_code, 201)
         auto_accept_rule = post_response.json()
@@ -1087,7 +1087,7 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                 ]
             },
             format='json',
-            HTTP_AUTHORIZATION=self.auth,
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.updated_by_user),
         )
         self.assertEqual(patch_response.status_code, 200)
         actual_response = patch_response.json()
@@ -1111,7 +1111,7 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
         self.assertEqual(CheckAutoAcceptRuleState.objects.count(), 2)
         auto_accept_rule = CheckAutoAcceptRule.objects.first()
         self.assertEqual(auto_accept_rule.get_latest_state().reason, 'they have shaved it off')
-        self.assertEqual(auto_accept_rule.get_latest_state().added_by_id, self.added_by_user.id)
+        self.assertEqual(auto_accept_rule.get_latest_state().added_by_id, self.updated_by_user.id)
         self.assertEqual(auto_accept_rule.is_active(), False)
 
     def test_auto_accept_rule_reactivate(self):
@@ -1132,18 +1132,18 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                     'active': False,
                     'reason': 'they have shaved it off',
                     'added_by': {
-                        'first_name': self.added_by_user.first_name,
-                        'last_name': self.added_by_user.last_name,
-                        'username': self.added_by_user.username,
+                        'first_name': self.updated_by_user.first_name,
+                        'last_name': self.updated_by_user.last_name,
+                        'username': self.updated_by_user.username,
                     }
                 },
                 {
                     'active': True,
                     'reason': 'they grew it back again',
                     'added_by': {
-                        'first_name': self.added_by_user.first_name,
-                        'last_name': self.added_by_user.last_name,
-                        'username': self.added_by_user.username,
+                        'first_name': self.updated_by_user.first_name,
+                        'last_name': self.updated_by_user.last_name,
+                        'username': self.updated_by_user.username,
                     }
                 }
             ]
@@ -1162,7 +1162,7 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                 ]
             },
             format='json',
-            HTTP_AUTHORIZATION=self.auth,
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.added_by_user),
         )
         self.assertEqual(post_response.status_code, 201)
         auto_accept_rule = post_response.json()
@@ -1180,7 +1180,7 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                 ]
             },
             format='json',
-            HTTP_AUTHORIZATION=self.auth,
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.updated_by_user),
         )
         self.assertEqual(patch_response.status_code, 200)
         patch_response = self.client.patch(
@@ -1197,7 +1197,7 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                 ]
             },
             format='json',
-            HTTP_AUTHORIZATION=self.auth,
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.updated_by_user),
         )
         actual_response = patch_response.json()
         self.assertIn('id', list(actual_response.keys()))
@@ -1220,7 +1220,7 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
         self.assertEqual(CheckAutoAcceptRuleState.objects.count(), 3)
         auto_accept_rule = CheckAutoAcceptRule.objects.first()
         self.assertEqual(auto_accept_rule.get_latest_state().reason, 'they grew it back again')
-        self.assertEqual(auto_accept_rule.get_latest_state().added_by_id, self.added_by_user.id)
+        self.assertEqual(auto_accept_rule.get_latest_state().added_by_id, self.updated_by_user.id)
         self.assertEqual(auto_accept_rule.is_active(), True)
 
     def test_auto_accept_rule_list(self):
@@ -1258,7 +1258,7 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                 ]
             },
             format='json',
-            HTTP_AUTHORIZATION=self.auth,
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.added_by_user),
         )
         self.assertEqual(post_response.status_code, 201)
         post_response_payload = post_response.json()
@@ -1268,7 +1268,7 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                 'security-check-auto-accept-list'
             ),
             format='json',
-            HTTP_AUTHORIZATION=self.auth,
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.updated_by_user),
         )
         self.assertEqual(get_response.status_code, 200)
         actual_response = get_response.json()
