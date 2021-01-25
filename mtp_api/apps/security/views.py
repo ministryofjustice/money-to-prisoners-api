@@ -603,6 +603,6 @@ class CheckAutoAcceptRuleView(
     ordering = ('created',)
     permission_classes = (
         IsAuthenticated,
-        SecurityCheckPermissions,
+        SecurityProfilePermissions,
         NomsOpsClientIDPermissions,
     )

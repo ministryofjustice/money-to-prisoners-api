@@ -605,7 +605,6 @@ class GetCheckTestCase(BaseCheckTestCase):
                 'states': [
                     {
                         'reason': 'This person has amazing hair',
-                        'added_by_id': self._get_authorised_user().id
                     }
                 ]
             },
@@ -1000,7 +999,6 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                 'states': [
                     {
                         'reason': 'they have amazing hair',
-                        'added_by': self.added_by_user.id
                     }
                 ]
             },
@@ -1067,7 +1065,6 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                 'states': [
                     {
                         'reason': 'they have amazing hair',
-                        'added_by': self.added_by_user.id
                     }
                 ]
             },
@@ -1086,7 +1083,6 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                     {
                         'active': False,
                         'reason': 'they have shaved it off',
-                        'added_by': self.added_by_user.id
                     }
                 ]
             },
@@ -1162,7 +1158,6 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                 'states': [
                     {
                         'reason': 'they have amazing hair',
-                        'added_by': self.added_by_user.id
                     }
                 ]
             },
@@ -1181,7 +1176,6 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                     {
                         'active': False,
                         'reason': 'they have shaved it off',
-                        'added_by': self.added_by_user.id
                     }
                 ]
             },
@@ -1199,7 +1193,6 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                     {
                         'active': True,
                         'reason': 'they grew it back again',
-                        'added_by': self.added_by_user.id
                     }
                 ]
             },
@@ -1229,3 +1222,66 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
         self.assertEqual(auto_accept_rule.get_latest_state().reason, 'they grew it back again')
         self.assertEqual(auto_accept_rule.get_latest_state().added_by_id, self.added_by_user.id)
         self.assertEqual(auto_accept_rule.is_active(), True)
+
+    def test_auto_accept_rule_list(self):
+        expected_response = {
+            'count': 1,
+            'next': None,
+            'previous': None,
+            'results': [{
+                'prisoner_profile': self.prisoner_profile.id,
+                'debit_card_sender_details': self.debit_card_sender_details.id,
+                'states': [
+                    {
+                        'active': True,
+                        'reason': 'they have amazing hair',
+                        'added_by': {
+                            'first_name': self.added_by_user.first_name,
+                            'last_name': self.added_by_user.last_name,
+                            'username': self.added_by_user.username,
+                        }
+                    }
+                ]
+            }]
+        }
+        post_response = self.client.post(
+            reverse(
+                'security-check-auto-accept-list'
+            ),
+            data={
+                'prisoner_profile': self.prisoner_profile.id,
+                'debit_card_sender_details': self.debit_card_sender_details.id,
+                'states': [
+                    {
+                        'reason': 'they have amazing hair',
+                    }
+                ]
+            },
+            format='json',
+            HTTP_AUTHORIZATION=self.auth,
+        )
+        self.assertEqual(post_response.status_code, 201)
+        post_response_payload = post_response.json()
+        expected_response['results'][0]['states'][0]['auto_accept_rule'] = post_response_payload['id']
+        get_response = self.client.get(
+            reverse(
+                'security-check-auto-accept-list'
+            ),
+            format='json',
+            HTTP_AUTHORIZATION=self.auth,
+        )
+        self.assertEqual(get_response.status_code, 200)
+        actual_response = get_response.json()
+        self.assertIn('id', list(actual_response['results'][0].keys()))
+        del actual_response['results'][0]['id']
+        self.assertIn('created', list(actual_response['results'][0].keys()))
+        del actual_response['results'][0]['created']
+        self.assertIn('created', list(actual_response['results'][0]['states'][0].keys()))
+        del actual_response['results'][0]['states'][0]['created']
+        self.assertDictEqual(
+            expected_response,
+            actual_response,
+            msg=pformat(
+                list(dictdiffer.diff(expected_response, actual_response))
+            )
+        )
