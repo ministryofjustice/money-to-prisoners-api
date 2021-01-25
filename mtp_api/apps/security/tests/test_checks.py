@@ -582,7 +582,6 @@ class AutoAcceptRuleTestCase(APITestCase, AuthTestCaseMixin):
                 'states': [
                     {
                         'reason': 'This person has amazing hair',
-                        'added_by_id': self.users['security_fiu_users'][0].id
                     }
                 ]
             },
@@ -624,7 +623,6 @@ class AutoAcceptRuleTestCase(APITestCase, AuthTestCaseMixin):
                     {
                         'active': False,
                         'reason': 'Ignore that they cut off their hair',
-                        'added_by': self.users['security_fiu_users'][0].id
                     }
                 ]
             },

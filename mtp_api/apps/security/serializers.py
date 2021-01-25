@@ -239,7 +239,8 @@ class CheckAutoAcceptRuleStateSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = (
             'id',
-            'auto_accept_rule'
+            'auto_accept_rule',
+            'created',
         )
 
     def validate(self, attrs):

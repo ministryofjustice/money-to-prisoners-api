@@ -409,7 +409,7 @@ class CheckAutoAcceptRule(TimeStampedModel):
         return self.get_latest_state().active
 
     class Meta:
-        ordering = ('-created',)
+        ordering = ('created',)
         unique_together = (
             ('debit_card_sender_details', 'prisoner_profile',),
         )
@@ -428,6 +428,9 @@ class CheckAutoAcceptRuleState(TimeStampedModel):
     )
     active = models.BooleanField()
     reason = models.TextField()
+
+    class Meta:
+        ordering = ('created',)
 
 
 @receiver(prisoner_profile_current_prisons_need_updating)
