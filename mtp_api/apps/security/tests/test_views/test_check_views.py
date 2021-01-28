@@ -1030,6 +1030,61 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
         self.assertEqual(auto_accept_rule.get_latest_state().added_by_id, self.added_by_user.id)
         self.assertEqual(auto_accept_rule.is_active(), True)
 
+    def test_auto_accept_rule_create_collision(self):
+        # Setup
+        expected_response = {
+            'non_field_errors': [
+                'An existing AutoAcceptRule is present for this DebitCardSenderDetails/PrisonerProfile pair'
+            ]
+        }
+        successful_response = self.client.post(
+            reverse(
+                'security-check-auto-accept-list'
+            ),
+            data={
+                'prisoner_profile': self.prisoner_profile.id,
+                'debit_card_sender_details': self.debit_card_sender_details.id,
+                'states': [
+                    {
+                        'reason': 'they have amazing hair',
+                    }
+                ]
+            },
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.added_by_user),
+        )
+        self.assertEqual(successful_response.status_code, 201)
+
+        # Call
+        integrity_error_response = self.client.post(
+            reverse(
+                'security-check-auto-accept-list'
+            ),
+            data={
+                'prisoner_profile': self.prisoner_profile.id,
+                'debit_card_sender_details': self.debit_card_sender_details.id,
+                'states': [
+                    {
+                        'reason': 'Oh I know, dont they just',
+                    }
+                ]
+            },
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.added_by_user),
+        )
+
+        # Assert
+        self.assertEqual(integrity_error_response.status_code, 400)
+        actual_response = integrity_error_response.json()
+        self.assertDictEqual(
+            expected_response,
+            actual_response,
+            msg=pformat(
+                list(dictdiffer.diff(expected_response, actual_response))
+            )
+        )
+        self.assertEqual(CheckAutoAcceptRule.objects.count(), 1)
+
     def test_auto_accept_rule_deactivate(self):
         expected_response = {
             'prisoner_profile': self.prisoner_profile.id,
