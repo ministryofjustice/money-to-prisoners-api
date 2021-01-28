@@ -254,6 +254,25 @@ class CheckAutoAcceptRuleStateSerializer(serializers.ModelSerializer):
 class CheckAutoAcceptRuleSerializer(serializers.ModelSerializer):
     states = CheckAutoAcceptRuleStateSerializer(many=True, required=True)
 
+    def is_valid(self, raise_exception=False):
+        # We override is_valid to make this check before the built-in validators catch it, so we can add our own
+        # error message as we want to match against it in logic within noms-ops, therefore want it to be in our control
+        if self.instance is None and CheckAutoAcceptRule.objects.filter(
+            debit_card_sender_details=self.initial_data.get('debit_card_sender_details'),
+            prisoner_profile=self.initial_data.get('prisoner_profile')
+        ).first():
+            # TODO do we do one,both or neither of:
+            # * Ensure Rule is active by adding a second rule state with the reason (via CAARStateSerializer)?
+            # * Associate the check in question (for which we would need the id) of the new/latest CAARState?
+            # This inner exception is intentionally not wrapped in gettext as we rely on it passing a check against
+            # its value in noms-ops
+            raise ValidationError({
+                'non_field_errors': [
+                    'An existing AutoAcceptRule is present for this DebitCardSenderDetails/PrisonerProfile pair'
+                ]
+            })
+        return super().is_valid(raise_exception)
+
     def validate(self, attrs):
         if len(attrs['states']) != 1:
             raise ValidationError(
