@@ -30,8 +30,14 @@ class CommentAdminInline(admin.StackedInline):
 @admin.register(Disbursement)
 class DisbursementAdmin(admin.ModelAdmin):
     list_display = (
-        'recipient_name', 'formatted_amount', 'prisoner_number',
-        'prison', 'resolution', 'method', 'created'
+        'recipient_name',
+        'formatted_amount',
+        'prisoner_number',
+        'prison',
+        'resolution',
+        'method',
+        'invoice_number',
+        'created',
     )
     list_filter = (
         'resolution',
@@ -41,7 +47,14 @@ class DisbursementAdmin(admin.ModelAdmin):
         'recipient_is_company',
     )
     ordering = ('-created',)
-    search_fields = ('prisoner_name', 'prisoner_number', 'recipient_first_name', 'recipient_last_name')
+    search_fields = (
+        'invoice_number',
+        'nomis_transaction_id',
+        'prisoner_name',
+        'prisoner_number',
+        'recipient_first_name',
+        'recipient_last_name',
+    )
     inlines = (LogAdminInline, CommentAdminInline,)
     date_hierarchy = 'created'
     actions = ['display_total_amount']
