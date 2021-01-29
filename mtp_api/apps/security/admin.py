@@ -44,7 +44,7 @@ class SenderProfileAdmin(admin.ModelAdmin):
         DebitCardSenderDetailsAdminInline,
     )
     search_fields = (
-        'bank_transfer_details__sender_bank_account__sender_name',
+        'bank_transfer_details__sender_name',
         'bank_transfer_details__sender_bank_account__sort_code',
         'bank_transfer_details__sender_bank_account__account_number',
         'bank_transfer_details__sender_bank_account__roll_number',
