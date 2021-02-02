@@ -51,7 +51,7 @@ class RemittanceEmailAdmin(ModelAdmin):
 class PrisonerLocationAdmin(ModelAdmin):
     list_display = ('prisoner_name', 'prisoner_number', 'prisoner_dob', 'prison')
     list_filter = ('prison', ('prisoner_dob', DateFilter))
-    search_fields = ('prisoner_name', 'prisoner_number', 'single_offender_id')
+    search_fields = ('prisoner_name', 'prisoner_number')
     readonly_fields = ('created_by',)
 
 
