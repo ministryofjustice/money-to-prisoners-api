@@ -201,7 +201,6 @@ class PrisonerProfile(TimeStampedModel):
 
     prisoner_name = models.CharField(max_length=250)
     prisoner_number = models.CharField(max_length=250, db_index=True)
-    single_offender_id = models.UUIDField(blank=True, null=True)
     prisoner_dob = models.DateField(blank=True, null=True)
     current_prison = models.ForeignKey(
         Prison, on_delete=models.SET_NULL, null=True, related_name='current_prisoners'
