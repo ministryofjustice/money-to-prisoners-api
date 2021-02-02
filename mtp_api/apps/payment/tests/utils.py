@@ -94,7 +94,6 @@ def generate_initial_payment_data(tot=50, days_of_history=7, number_of_senders=N
             'service_charge': int(amount * 0.025),
             'prisoner_name': prisoner.prisoner_name,
             'prisoner_number': prisoner.prisoner_number,
-            'single_offender_id': prisoner.single_offender_id,
             'prisoner_dob': prisoner.prisoner_dob,
             'prison': prisoner.prison,
             'recipient_name': prisoner.prisoner_name,
@@ -227,7 +226,6 @@ def save_payment(data, overrides=None, attach_profiles_to_individual_credits=Tru
 
     prisoner_dob = data.pop('prisoner_dob', None)
     prisoner_number = data.pop('prisoner_number', None)
-    single_offender_id = data.pop('single_offender_id', None)
     prisoner_name = data.pop('prisoner_name', None)
     prison = data.pop('prison', None)
     reconciled = data.pop('reconciled', False)
@@ -242,7 +240,6 @@ def save_payment(data, overrides=None, attach_profiles_to_individual_credits=Tru
         amount=data['amount'],
         prisoner_dob=prisoner_dob,
         prisoner_number=prisoner_number,
-        single_offender_id=single_offender_id,
         prisoner_name=prisoner_name,
         prison=prison,
         reconciled=False if not is_taken else reconciled,
