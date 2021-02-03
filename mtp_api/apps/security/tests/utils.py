@@ -1,8 +1,11 @@
 import logging
 import random
+from unittest.mock import Mock
 
 import faker
 from django.db import transaction
+from django.db.models import Count
+from django.db.utils import IntegrityError
 from django.contrib.auth.models import Group
 from django.utils.crypto import get_random_string
 
@@ -11,8 +14,15 @@ from prison.models import Prison
 from payment.models import Payment, PAYMENT_STATUS
 from payment.tests.utils import create_fake_sender_data, generate_payments
 from prison.tests.utils import random_prisoner_number
-from security.models import Check, DebitCardSenderDetails, PrisonerProfile, SenderProfile
-from django.db.models import Count
+from security.constants import CHECK_STATUS
+from security.models import (
+    Check,
+    CheckAutoAcceptRule,
+    DebitCardSenderDetails,
+    PrisonerProfile,
+    SenderProfile
+)
+from security.serializers import CheckAutoAcceptRuleSerializer
 
 fake = faker.Faker(locale='en_GB')
 
@@ -21,6 +31,7 @@ logger = logging.getLogger('MTP')
 PAYMENT_FILTERS_FOR_INVALID_CHECK = dict(
     status=PAYMENT_STATUS.PENDING,
     credit=dict(
+        security_check__isnull=True,
         resolution=CREDIT_RESOLUTION.INITIAL,
         owner_id=None,
         sender_profile_id=None,
@@ -83,6 +94,7 @@ def _get_credit_values(credit_filters, sender_profile_id, prisoner_profile_id, p
     )
 
 
+# pylint disable = C901 # TODO break this fn up
 def generate_checks(
     number_of_checks=1, specific_payments_to_check=tuple(), create_invalid_checks=True,
     number_of_prisoners_to_use=5, number_of_senders_to_use=5
@@ -99,20 +111,7 @@ def generate_checks(
         prisoner_profile.monitoring_users.add(fiu)
         prisoner_profile.save()
 
-    sender_profiles = SenderProfile.objects.all()
-    if not sender_profiles:
-        logger.warning('No sender profiles present!')
     billing_address_sender_profile_id_mapping = {}
-    for sender_profile in sender_profiles:
-        monitored_instance = None
-        if sender_profile.debit_card_details.count():
-            monitored_instance = sender_profile.debit_card_details.first()
-            billing_address_sender_profile_id_mapping[sender_profile.id] = monitored_instance.billing_addresses.first()
-        elif sender_profile.bank_transfer_details.count():
-            monitored_instance = sender_profile.bank_transfer_details.first().sender_bank_account
-        if monitored_instance:
-            monitored_instance.monitoring_users.add(fiu)
-            monitored_instance.save()
 
     if create_invalid_checks:
         filters = [PAYMENT_FILTERS_FOR_INVALID_CHECK]
@@ -123,31 +122,40 @@ def generate_checks(
         *specific_payments_to_check
     ])
 
-    for filter_set in filters:
+    for j, filter_set in enumerate(filters):
         filter_set = filter_set.copy()
         if (
-            not sender_profiles or (
-                'sender_profile_id' in filter_set.get('credit', [])
-                and not filter_set['credit']['sender_profile_id']
-            )
+            'sender_profile_id' in filter_set.get('credit', [])
+            and not filter_set['credit']['sender_profile_id']
         ):
-            sender_profile_id = None
+            sender_profile = None
             cardholder_name = None
         else:
-            sender_profile_id = random.choice(
+            sender_profile = random.choice(
                 SenderProfile.objects.filter(
                     debit_card_details__isnull=False,
                     debit_card_details__billing_addresses__isnull=False
                 ).annotate(
                     cred_count=Count('credits')
                 ).order_by('-cred_count').all()[:number_of_senders_to_use]
-            ).id
-            cardholder_name = fake_sender_names[sender_profile_id]
-        if (
-            not prisoner_profiles or (
-                'prisoner_profile_id' in filter_set['credit']
-                and not filter_set['credit']['prisoner_profile_id']
             )
+            cardholder_name = fake_sender_names[sender_profile.id]
+            monitored_instance = None
+            if j % 2:
+                if sender_profile.debit_card_details.count():
+                    monitored_instance = sender_profile.debit_card_details.first()
+                    billing_address_sender_profile_id_mapping[
+                        sender_profile.id
+                    ] = monitored_instance.billing_addresses.first()
+                elif sender_profile.bank_transfer_details.count():
+                    monitored_instance = sender_profile.bank_transfer_details.first().sender_bank_account
+                if monitored_instance:
+                    monitored_instance.monitoring_users.add(fiu)
+                    monitored_instance.save()
+
+        if (
+            'prisoner_profile_id' in filter_set['credit']
+            and not filter_set['credit']['prisoner_profile_id']
         ):
             prisoner_profile_id = None
             prisoner_name = None
@@ -158,6 +166,10 @@ def generate_checks(
                 ).order_by('-cred_count').all()[:number_of_prisoners_to_use]
             ).id
             prisoner_name = fake_prisoner_names[prisoner_profile_id]
+            if j % 3:
+                prisoner_profile.monitoring_users.add(fiu)
+                prisoner_profile.save()
+
         credit_filters = filter_set.pop('credit', {})
         candidate_payment = Payment.objects.filter(
             credit=Credit.objects.filter(
@@ -165,7 +177,7 @@ def generate_checks(
             ).get_or_create(
                 **_get_credit_values(
                     credit_filters,
-                    sender_profile_id,
+                    sender_profile.id if sender_profile else None,
                     prisoner_profile_id,
                     prisoner_name
                 )
@@ -176,7 +188,7 @@ def generate_checks(
             candidate_payment = generate_payments(payment_batch=1, overrides=dict(
                 credit=_get_credit_values(
                     credit_filters,
-                    sender_profile_id,
+                    sender_profile.id if sender_profile else None,
                     prisoner_profile_id,
                     prisoner_name
                 ),
@@ -185,11 +197,46 @@ def generate_checks(
                     cardholder_name
                 )
             ))[0]
-            candidate_payment.billing_address = billing_address_sender_profile_id_mapping.get(sender_profile_id)
+            if sender_profile:
+                candidate_payment.billing_address = billing_address_sender_profile_id_mapping.get(sender_profile.id)
             candidate_payment.save()
         candidate_payment.credit.log_set.filter(action=CREDIT_LOG_ACTIONS.CREDITED).delete()
+        # Checks already get created in the payment saving process for applicable credits
+        # (see payment/models.py::create_security_check_if_needed_and_attach_profiles
         if not hasattr(candidate_payment.credit, 'security_check'):
-            checks.append(Check.objects.create_for_credit(candidate_payment.credit))
+            Check.objects.create_for_credit(candidate_payment.credit)
+        else:
+            check = candidate_payment.credit.security_check
+            destination_state, _ = random.choice(CHECK_STATUS)
+            check.status = destination_state
+            check.save()
+
+    # Add auto-accept rules
+    checks = Check.objects.filter(
+        status=CHECK_STATUS.ACCEPTED,
+        credit__payment__billing_address__debit_card_sender_details__isnull=False,
+        credit__prisoner_profile__isnull=False
+    ).all()
+    for i, check in enumerate(checks):
+        if i % 2:
+            user = random.choice(list(Group.objects.filter(name='FIU').first().user_set.all()))
+            try:
+                check_auto_accept_rule = CheckAutoAcceptRuleSerializer(
+                    context={'request': Mock(user=user)}
+                ).create({
+                    'debit_card_sender_details': check.credit.payment.billing_address.debit_card_sender_details,
+                    'prisoner_profile': check.credit.prisoner_profile,
+                    'states': [{'reason': 'I am an automatically generated auto-accept number {i}'}]
+                })
+            except IntegrityError:
+                check_auto_accept_rule = CheckAutoAcceptRule.objects.filter(
+                    debit_card_sender_details=check.credit.payment.billing_address.debit_card_sender_details,
+                    prisoner_profile=check.credit.prisoner_profile
+                ).first()
+
+            check_auto_accept_rule_state = check_auto_accept_rule.states.order_by('-created').first()
+            check_auto_accept_rule_state.checks.add(check)
+            check_auto_accept_rule_state.save()
 
     return checks
 
