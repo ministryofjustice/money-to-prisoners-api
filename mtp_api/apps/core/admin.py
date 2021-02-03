@@ -25,7 +25,7 @@ class AdminSite(admin.AdminSite):
         from payment.views import PaymentSearchView
         from performance.view_dashboard import PerformanceDashboardView
         from performance.views import DigitalTakeupUploadView, DigitalTakeupReport, PrisonDigitalTakeupView
-        from prison.views import PrisonerBalanceUploadView, LoadOffendersView
+        from prison.views import PrisonerBalanceUploadView
 
         return [
             # older dashboards
@@ -57,8 +57,6 @@ class AdminSite(admin.AdminSite):
                 name='payment_search'),
             url(r'^prison/prisonerbalance/upload/$', PrisonerBalanceUploadView.as_view(),
                 name='prisoner_balance_upload'),
-            url(r'^prison/prisonerlocation/load-offenders/$', LoadOffendersView.as_view(),
-                name='load_offenders'),
 
             # testing views
             url(r'^testing/recreate-data/$', RecreateTestDataView.as_view(), name='recreate_test_data'),

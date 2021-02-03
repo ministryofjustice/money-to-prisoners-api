@@ -24,7 +24,7 @@ from mtp_auth.permissions import (
     NOMS_OPS_OAUTH_CLIENT_ID, CASHBOOK_OAUTH_CLIENT_ID,
     get_client_permissions_class
 )
-from prison.forms import LoadOffendersForm, PrisonerBalanceUploadForm
+from prison.forms import PrisonerBalanceUploadForm
 from prison.models import PrisonerLocation, Category, Population, Prison, PrisonerBalance
 from prison.serializers import (
     PrisonerLocationSerializer,
@@ -198,44 +198,3 @@ class PrisonerBalanceUploadView(AdminViewMixin, FormView):
         result = form.save()
         messages.success(self.request, f'Deleted {result["deleted"]} balances. Saved {result["created"]} balances.')
         return super().form_valid(form)
-
-
-class LoadOffendersView(AdminViewMixin, FormView):
-    """
-    Load offenders from Single Offender ID service
-    """
-    title = _('Load offenders')
-    form_class = LoadOffendersForm
-    template_name = 'admin/prison/prisonerlocation/load-offenders.html'
-    success_url = reverse_lazy('admin:prison_prisonerlocation_changelist')
-    superuser_required = True
-
-    def get_context_data(self, **kwargs):
-        available = (
-            settings.OFFENDER_API_URL and
-            settings.OFFENDER_API_CLIENT_ID and settings.OFFENDER_API_CLIENT_SECRET
-        )
-        return super().get_context_data(opts=PrisonerLocation._meta, available=available, **kwargs)
-
-    def form_valid(self, form):
-        output = StringIO()
-        call_command('load_prisoner_locations', no_color=True, stdout=output, stderr=output, verbosity=2,
-                     modified_only=form.cleaned_data['modified_only'])
-        output.seek(0)
-        command_output = output.read()
-
-        LogEntry.objects.log_action(
-            user_id=self.request.user.pk,
-            content_type_id=None, object_id=None,
-            object_repr=_('Offender locations loaded from Single Offender ID'),
-            action_flag=CHANGE_LOG_ENTRY,
-        )
-        logger.info('User "%(username)s" loaded offender locations from Single Offender ID' % {
-            'username': self.request.user.username,
-        })
-        logger.debug(command_output)
-
-        return self.render_to_response(self.get_context_data(
-            form=form,
-            command_output=command_output,
-        ))
