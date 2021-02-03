@@ -3,7 +3,6 @@ import datetime
 from itertools import cycle
 import os
 import random
-import uuid
 
 from django.contrib.auth import get_user_model
 from django.utils.crypto import get_random_string
@@ -33,6 +32,7 @@ def random_prisoner_name():
                       fake.last_name())
     return name.upper()
 
+
 def load_random_prisoner_locations(number_of_prisoners=50):
     prisons = cycle(Prison.objects.all())
     prisoner_locations = generate_predefined_prisoner_locations()
@@ -49,6 +49,7 @@ def load_random_prisoner_locations(number_of_prisoners=50):
     return PrisonerLocation.objects.bulk_create(
         map(lambda data: PrisonerLocation(**data), prisoner_locations)
     )
+
 
 def load_prisoner_locations_from_file(filename):
     """
@@ -68,6 +69,7 @@ def load_prisoner_locations_from_file(filename):
     return PrisonerLocation.objects.bulk_create(
         map(lambda data: PrisonerLocation(**data), prisoner_locations)
     )
+
 
 def generate_predefined_prisoner_locations():
     """
