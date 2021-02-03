@@ -39,7 +39,6 @@ class Credit(TimeStampedModel):
     received_at = models.DateTimeField(auto_now=False, blank=True, null=True, db_index=True)
 
     prisoner_number = models.CharField(max_length=250, blank=True, null=True, db_index=True)
-    single_offender_id = models.UUIDField(blank=True, null=True, db_index=True)
     prisoner_dob = models.DateField(blank=True, null=True)
     prisoner_name = models.CharField(blank=True, null=True, max_length=250)
     prison = models.ForeignKey(Prison, blank=True, null=True, on_delete=models.SET_NULL)
@@ -481,7 +480,6 @@ def update_prison_for_credit(instance, created, **kwargs):
                 prisoner_dob=instance.prisoner_dob,
                 active=True
             )
-            instance.single_offender_id = location.single_offender_id
             instance.prisoner_name = location.prisoner_name
             instance.prison = location.prison
             instance.save()
