@@ -1,5 +1,6 @@
 import logging
 import random
+from typing import Optional, Tuple
 from unittest.mock import Mock
 
 import faker
@@ -94,7 +95,63 @@ def _get_credit_values(credit_filters, sender_profile_id, prisoner_profile_id, p
     )
 
 
-# pylint disable = C901 # TODO break this fn up
+def _get_prisoner_profile(
+    j: int, filter_set: dict, number_of_prisoners_to_use: int, fake_prisoner_names: dict, fiu
+) -> Tuple[Optional[PrisonerProfile], str]:
+    if (
+        'prisoner_profile_id' in filter_set['credit']
+        and not filter_set['credit']['prisoner_profile_id']
+    ):
+        prisoner_profile = None
+        prisoner_name = None
+    else:
+        prisoner_profile = random.choice(
+            PrisonerProfile.objects.annotate(
+                cred_count=Count('credits')
+            ).order_by('-cred_count').all()[:number_of_prisoners_to_use]
+        )
+        prisoner_name = fake_prisoner_names[prisoner_profile.id]
+        if j % 3:
+            prisoner_profile.monitoring_users.add(fiu)
+            prisoner_profile.save()
+    return prisoner_profile, prisoner_name
+
+
+def _get_sender_profile(
+    j: int, filter_set: dict, number_of_senders_to_use: int, fake_sender_names: dict,
+    billing_address_sender_profile_id_mapping: dict, fiu
+) -> Tuple[Optional[SenderProfile], str]:
+    if (
+        'sender_profile_id' in filter_set.get('credit', [])
+        and not filter_set['credit']['sender_profile_id']
+    ):
+        sender_profile = None
+        cardholder_name = None
+    else:
+        sender_profile = random.choice(
+            SenderProfile.objects.filter(
+                debit_card_details__isnull=False,
+                debit_card_details__billing_addresses__isnull=False
+            ).annotate(
+                cred_count=Count('credits')
+            ).order_by('-cred_count').all()[:number_of_senders_to_use]
+        )
+        cardholder_name = fake_sender_names[sender_profile.id]
+        monitored_instance = None
+        if j % 2:
+            if sender_profile.debit_card_details.count():
+                monitored_instance = sender_profile.debit_card_details.first()
+                billing_address_sender_profile_id_mapping[
+                    sender_profile.id
+                ] = monitored_instance.billing_addresses.first()
+            elif sender_profile.bank_transfer_details.count():
+                monitored_instance = sender_profile.bank_transfer_details.first().sender_bank_account
+            if monitored_instance:
+                monitored_instance.monitoring_users.add(fiu)
+                monitored_instance.save()
+    return sender_profile, cardholder_name
+
+
 def generate_checks(
     number_of_checks=1, specific_payments_to_check=tuple(), create_invalid_checks=True,
     number_of_prisoners_to_use=5, number_of_senders_to_use=5
@@ -104,12 +161,6 @@ def generate_checks(
     fake_sender_names = {sp_id[0]: fake.name() for sp_id in SenderProfile.objects.values_list('id')}
 
     fiu = Group.objects.get(name='FIU').user_set.first()
-    prisoner_profiles = PrisonerProfile.objects.all()
-    if not prisoner_profiles:
-        logger.warning('No prisoner profiles present!')
-    for prisoner_profile in prisoner_profiles:
-        prisoner_profile.monitoring_users.add(fiu)
-        prisoner_profile.save()
 
     billing_address_sender_profile_id_mapping = {}
 
@@ -123,53 +174,14 @@ def generate_checks(
     ])
 
     for j, filter_set in enumerate(filters):
+        sender_profile, cardholder_name = _get_sender_profile(
+            j, filter_set, number_of_senders_to_use, fake_sender_names,
+            billing_address_sender_profile_id_mapping, fiu
+        )
         filter_set = filter_set.copy()
-        if (
-            'sender_profile_id' in filter_set.get('credit', [])
-            and not filter_set['credit']['sender_profile_id']
-        ):
-            sender_profile = None
-            cardholder_name = None
-        else:
-            sender_profile = random.choice(
-                SenderProfile.objects.filter(
-                    debit_card_details__isnull=False,
-                    debit_card_details__billing_addresses__isnull=False
-                ).annotate(
-                    cred_count=Count('credits')
-                ).order_by('-cred_count').all()[:number_of_senders_to_use]
-            )
-            cardholder_name = fake_sender_names[sender_profile.id]
-            monitored_instance = None
-            if j % 2:
-                if sender_profile.debit_card_details.count():
-                    monitored_instance = sender_profile.debit_card_details.first()
-                    billing_address_sender_profile_id_mapping[
-                        sender_profile.id
-                    ] = monitored_instance.billing_addresses.first()
-                elif sender_profile.bank_transfer_details.count():
-                    monitored_instance = sender_profile.bank_transfer_details.first().sender_bank_account
-                if monitored_instance:
-                    monitored_instance.monitoring_users.add(fiu)
-                    monitored_instance.save()
-
-        if (
-            'prisoner_profile_id' in filter_set['credit']
-            and not filter_set['credit']['prisoner_profile_id']
-        ):
-            prisoner_profile_id = None
-            prisoner_name = None
-        else:
-            prisoner_profile_id = random.choice(
-                PrisonerProfile.objects.annotate(
-                    cred_count=Count('credits')
-                ).order_by('-cred_count').all()[:number_of_prisoners_to_use]
-            ).id
-            prisoner_name = fake_prisoner_names[prisoner_profile_id]
-            if j % 3:
-                prisoner_profile.monitoring_users.add(fiu)
-                prisoner_profile.save()
-
+        prisoner_profile, prisoner_name = _get_prisoner_profile(
+            j, filter_set, number_of_prisoners_to_use, fake_prisoner_names, fiu
+        )
         credit_filters = filter_set.pop('credit', {})
         candidate_payment = Payment.objects.filter(
             credit=Credit.objects.filter(
@@ -178,7 +190,7 @@ def generate_checks(
                 **_get_credit_values(
                     credit_filters,
                     sender_profile.id if sender_profile else None,
-                    prisoner_profile_id,
+                    prisoner_profile.id if prisoner_profile else None,
                     prisoner_name
                 )
             )[0],
@@ -189,7 +201,7 @@ def generate_checks(
                 credit=_get_credit_values(
                     credit_filters,
                     sender_profile.id if sender_profile else None,
-                    prisoner_profile_id,
+                    prisoner_profile.id if prisoner_profile else None,
                     prisoner_name
                 ),
                 **_get_payment_values(
@@ -226,7 +238,7 @@ def generate_checks(
                 ).create({
                     'debit_card_sender_details': check.credit.payment.billing_address.debit_card_sender_details,
                     'prisoner_profile': check.credit.prisoner_profile,
-                    'states': [{'reason': 'I am an automatically generated auto-accept number {i}'}]
+                    'states': [{'reason': f'I am an automatically generated auto-accept number {i}'}]
                 })
             except IntegrityError:
                 check_auto_accept_rule = CheckAutoAcceptRule.objects.filter(
