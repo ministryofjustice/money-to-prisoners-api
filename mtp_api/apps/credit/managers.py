@@ -50,8 +50,7 @@ class CreditManager(models.Manager):
             cursor.execute(
                 """
                 UPDATE credit_credit
-                SET prison_id = pl.prison_id, prisoner_name = pl.prisoner_name,
-                single_offender_id = pl.single_offender_id
+                SET prison_id = pl.prison_id, prisoner_name = pl.prisoner_name
                 FROM credit_credit AS c
                 LEFT OUTER JOIN prison_prisonerlocation AS pl
                 ON c.prisoner_number = pl.prisoner_number

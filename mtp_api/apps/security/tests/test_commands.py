@@ -74,9 +74,6 @@ class UpdateSecurityProfilesTestCase(TestCase):
             )
 
         for prisoner_profile in PrisonerProfile.objects.all():
-            if prisoner_profile.credits.count():
-                self.assertTrue(prisoner_profile.single_offender_id)
-
             self.assertEqual(
                 sum([credit.amount for credit in prisoner_profile.credits.filter(
                     resolution=CREDIT_RESOLUTION.CREDITED
@@ -366,7 +363,6 @@ class UpdateSecurityProfilesTestCase(TestCase):
                 'prison',
                 'prisoner_name',
                 'prisoner_number',  # Needed to populate PrisonerProfile
-                'single_offender_id'  # Needed to populate PrisonerProfile
             ])
         )
         delete_non_related_nullable_fields(

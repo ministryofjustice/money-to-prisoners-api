@@ -42,7 +42,6 @@ class PrisonerProfileManager(models.Manager):
             defaults=dict(
                 prisoner_name=credit.prisoner_name,
                 prisoner_dob=credit.prisoner_dob,
-                single_offender_id=credit.single_offender_id,
             )
         )
         if hasattr(credit, 'payment') and credit.payment.recipient_name:
@@ -69,7 +68,6 @@ class PrisonerProfileManager(models.Manager):
             )
             prisoner_profile_defaults.update(
                 prisoner_dob=prisoner_location.prisoner_dob,
-                single_offender_id=prisoner_location.single_offender_id,
             )
         except PrisonerLocation.DoesNotExist:
             pass

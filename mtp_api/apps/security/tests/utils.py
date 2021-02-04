@@ -204,7 +204,6 @@ def generate_prisoner_profiles_from_prisoner_locations(prisoner_locations):
             PrisonerProfile(
                 prisoner_name=prisoner_location.prisoner_name,
                 prisoner_number=prisoner_location.prisoner_number,
-                single_offender_id=prisoner_location.single_offender_id,
                 prisoner_dob=prisoner_location.prisoner_dob,
                 current_prison_id=prisoner_location.prison_id
             )
@@ -221,7 +220,6 @@ def generate_prisoner_profiles_from_prisoner_locations(prisoner_locations):
         suitable_credit.prison = prisoner_profile.current_prison
         suitable_credit.prisoner_name = prisoner_profile.prisoner_name
         suitable_credit.prisoner_dob = prisoner_profile.prisoner_dob
-        suitable_credit.single_offender_id = prisoner_profile.single_offender_id
         suitable_credit.save()
 
         payment = suitable_credit.payment

@@ -11,10 +11,6 @@ from django.utils.translation import gettext_lazy as _
 from prison.models import Prison, PrisonerBalance, validate_prisoner_number
 
 
-class LoadOffendersForm(forms.Form):
-    modified_only = forms.BooleanField(label=_('Only load updated offender locations'), required=False)
-
-
 class PrisonerBalanceUploadForm(forms.Form):
     csv_file = forms.FileField(label=_('Prisoner balances file'), allow_empty_file=True, widget=AdminFileWidget)
     prison = ModelChoiceField(queryset=Prison.objects.filter(use_nomis_for_balances=False))
