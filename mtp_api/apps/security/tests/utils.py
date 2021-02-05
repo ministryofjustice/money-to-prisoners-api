@@ -99,7 +99,7 @@ def _get_credit_values(credit_filters, sender_profile_id, prisoner_profile_id, p
 
 def _get_prisoner_profile(
     j: int, filter_set: dict, number_of_prisoners_to_use: int, fake_prisoner_names: dict, fiu
-) -> Tuple[Optional[PrisonerProfile], str]:
+) -> Tuple[Optional[PrisonerProfile], Optional[str]]:
     if (
         'prisoner_profile_id' in filter_set['credit']
         and not filter_set['credit']['prisoner_profile_id']
@@ -122,7 +122,7 @@ def _get_prisoner_profile(
 def _get_sender_profile(
     j: int, filter_set: dict, number_of_senders_to_use: int, fake_sender_names: dict,
     billing_address_sender_profile_id_mapping: dict, fiu
-) -> Tuple[Optional[SenderProfile], str]:
+) -> Tuple[Optional[SenderProfile], Optional[str]]:
     if (
         'sender_profile_id' in filter_set.get('credit', [])
         and not filter_set['credit']['sender_profile_id']
@@ -221,9 +221,8 @@ def generate_checks(
             check = Check.objects.create_for_credit(candidate_payment.credit)
         else:
             check = candidate_payment.credit.security_check
-            if (not overrides or 'state' not in overrides) and j % 3:
-                destination_state, _ = random.choice(CHECK_STATUS)
-                check.status = destination_state
+            if (not overrides or 'state' not in overrides) and j % 5:
+                check.status = random.choice([CHECK_STATUS.ACCEPTED, CHECK_STATUS.REJECTED])
                 check.actioned_at = datetime.now(tz=pytz.utc)
                 check.actioned_by = random.choice(list(Group.objects.filter(name='FIU').first().user_set.all()))
                 check.save()
