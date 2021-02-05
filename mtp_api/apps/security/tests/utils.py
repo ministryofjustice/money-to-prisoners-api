@@ -1,3 +1,4 @@
+from datetime import datetime
 import logging
 import random
 from typing import Optional, Tuple
@@ -9,6 +10,7 @@ from django.db.models import Count
 from django.db.utils import IntegrityError
 from django.contrib.auth.models import Group
 from django.utils.crypto import get_random_string
+import pytz
 
 from credit.models import Credit, CREDIT_RESOLUTION, LOG_ACTIONS as CREDIT_LOG_ACTIONS
 from prison.models import Prison
@@ -154,7 +156,7 @@ def _get_sender_profile(
 
 def generate_checks(
     number_of_checks=1, specific_payments_to_check=tuple(), create_invalid_checks=True,
-    number_of_prisoners_to_use=5, number_of_senders_to_use=5
+    number_of_prisoners_to_use=5, number_of_senders_to_use=5, overrides=None
 ):
     checks = []
     fake_prisoner_names = {pp_id[0]: fake.name() for pp_id in PrisonerProfile.objects.values_list('id')}
@@ -216,11 +218,18 @@ def generate_checks(
         # Checks already get created in the payment saving process for applicable credits
         # (see payment/models.py::create_security_check_if_needed_and_attach_profiles
         if not hasattr(candidate_payment.credit, 'security_check'):
-            Check.objects.create_for_credit(candidate_payment.credit)
+            check = Check.objects.create_for_credit(candidate_payment.credit)
         else:
             check = candidate_payment.credit.security_check
-            destination_state, _ = random.choice(CHECK_STATUS)
-            check.status = destination_state
+            if (not overrides or 'state' not in overrides) and j % 3:
+                destination_state, _ = random.choice(CHECK_STATUS)
+                check.status = destination_state
+                check.actioned_at = datetime.now(tz=pytz.utc)
+                check.actioned_by = random.choice(list(Group.objects.filter(name='FIU').first().user_set.all()))
+                check.save()
+        if overrides:
+            for k, v in overrides.items():
+                setattr(check, k, v)
             check.save()
 
     # Add auto-accept rules
@@ -250,7 +259,7 @@ def generate_checks(
             check_auto_accept_rule_state.checks.add(check)
             check_auto_accept_rule_state.save()
 
-    return checks
+    return Check.objects.all()
 
 
 @transaction.atomic()

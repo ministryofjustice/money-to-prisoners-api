@@ -255,7 +255,7 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
         generate_payments(payment_batch=50)
         generate_prisoner_profiles_from_prisoner_locations(prisoner_locations)
         generate_sender_profiles_from_payments(number_of_senders=1, reassign_dcsd=True)
-        generate_checks(number_of_checks=1, create_invalid_checks=False)
+        generate_checks(number_of_checks=1, create_invalid_checks=False, overrides={'status': 'pending'})
         check = Check.objects.filter(status='pending').first()
 
         # Execute
@@ -285,7 +285,7 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
         generate_payments(payment_batch=50)
         generate_prisoner_profiles_from_prisoner_locations(prisoner_locations)
         generate_sender_profiles_from_payments(number_of_senders=1, reassign_dcsd=True)
-        generate_checks(number_of_checks=1, create_invalid_checks=False)
+        generate_checks(number_of_checks=1, create_invalid_checks=False, overrides={'status': 'pending'})
         check = Check.objects.filter(status='pending').first()
 
         # Execute
