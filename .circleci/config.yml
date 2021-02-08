@@ -45,6 +45,17 @@ jobs:
         path: /tmp/reports
     - store_test_results:
         path: /tmp/reports
+  run_checks:
+    executor: build-test-push
+    steps:
+    - checkout
+    - setup_remote_docker:
+        docker_layer_caching: true
+    - attach_workspace:
+        at: imagedump
+    - run:
+        name: Run Django checks (including makemigrations --checks)
+        command: . ${CIRCLE_WORKING_DIRECTORY}/.circleci/custom_scripts/run_checks.sh
   push_docker_image:
     executor: build-test-push
     steps:
@@ -75,6 +86,9 @@ workflows:
   build-test-push:
     jobs:
       - build_service_image
+      - run_checks:
+          requires:
+            - build_service_image
       - test:
           requires:
             - build_service_image
@@ -87,4 +101,3 @@ workflows:
       - ecr_cleanup:
           requires:
             - push_docker_image
-
