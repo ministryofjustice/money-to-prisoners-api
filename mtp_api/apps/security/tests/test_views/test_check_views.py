@@ -600,8 +600,8 @@ class GetCheckTestCase(BaseCheckTestCase):
                 'security-check-auto-accept-list'
             ),
             data={
-                'prisoner_profile': PrisonerProfile.objects.first().id,
-                'debit_card_sender_details': SenderProfile.objects.first().debit_card_details.first().id,
+                'prisoner_profile_id': PrisonerProfile.objects.first().id,
+                'debit_card_sender_details_id': SenderProfile.objects.first().debit_card_details.first().id,
                 'states': [
                     {
                         'reason': 'This person has amazing hair',
@@ -973,10 +973,46 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
         self.sender_profile = generate_sender_profiles_from_payments(number_of_senders=1, reassign_dcsd=True)[0]
         self.debit_card_sender_details = self.sender_profile.debit_card_details.first()
 
+    @staticmethod
+    def _prisoner_profile_to_api_dict(prisoner_profile):
+        return {
+            'created': format_date_or_datetime(prisoner_profile.created),
+            'credit_count': 0,
+            'credit_total': 0,
+            'current_prison': {
+                'name': prisoner_profile.current_prison.name,
+                'nomis_id': prisoner_profile.current_prison.nomis_id,
+            },
+            'disbursement_count': 0,
+            'disbursement_total': 0,
+            'id': prisoner_profile.id,
+            'modified': format_date_or_datetime(prisoner_profile.modified),
+            'prisoner_dob': prisoner_profile.prisoner_dob.isoformat(),
+            'prisoner_name': prisoner_profile.prisoner_name,
+            'prisoner_number': prisoner_profile.prisoner_number,
+            'prisons': [],
+            'provided_names': []
+        }
+
+    @staticmethod
+    def _debit_card_sender_details_to_api_dict(debit_card_sender_details):
+        return {
+            'card_expiry_date': debit_card_sender_details.card_expiry_date,
+            'card_number_last_digits': debit_card_sender_details.card_number_last_digits,
+            'cardholder_names': [],
+            'postcode': debit_card_sender_details.postcode,
+            'sender': debit_card_sender_details.id,
+            'sender_emails': []
+        }
+
     def test_auto_accept_rule_create(self):
         expected_response = {
-            'prisoner_profile': self.prisoner_profile.id,
-            'debit_card_sender_details': self.debit_card_sender_details.id,
+            'prisoner_profile': self._prisoner_profile_to_api_dict(
+                self.prisoner_profile
+            ),
+            'debit_card_sender_details': self._debit_card_sender_details_to_api_dict(
+                self.debit_card_sender_details
+            ),
             'states': [
                 {
                     'active': True,
@@ -994,8 +1030,8 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                 'security-check-auto-accept-list'
             ),
             data={
-                'prisoner_profile': self.prisoner_profile.id,
-                'debit_card_sender_details': self.debit_card_sender_details.id,
+                'prisoner_profile_id': self.prisoner_profile.id,
+                'debit_card_sender_details_id': self.debit_card_sender_details.id,
                 'states': [
                     {
                         'reason': 'they have amazing hair',
@@ -1042,8 +1078,8 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                 'security-check-auto-accept-list'
             ),
             data={
-                'prisoner_profile': self.prisoner_profile.id,
-                'debit_card_sender_details': self.debit_card_sender_details.id,
+                'prisoner_profile_id': self.prisoner_profile.id,
+                'debit_card_sender_details_id': self.debit_card_sender_details.id,
                 'states': [
                     {
                         'reason': 'they have amazing hair',
@@ -1061,8 +1097,8 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                 'security-check-auto-accept-list'
             ),
             data={
-                'prisoner_profile': self.prisoner_profile.id,
-                'debit_card_sender_details': self.debit_card_sender_details.id,
+                'prisoner_profile_id': self.prisoner_profile.id,
+                'debit_card_sender_details_id': self.debit_card_sender_details.id,
                 'states': [
                     {
                         'reason': 'Oh I know, dont they just',
@@ -1087,8 +1123,12 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
 
     def test_auto_accept_rule_deactivate(self):
         expected_response = {
-            'prisoner_profile': self.prisoner_profile.id,
-            'debit_card_sender_details': self.debit_card_sender_details.id,
+            'prisoner_profile': self._prisoner_profile_to_api_dict(
+                self.prisoner_profile
+            ),
+            'debit_card_sender_details': self._debit_card_sender_details_to_api_dict(
+                self.debit_card_sender_details
+            ),
             'states': [
                 {
                     'active': True,
@@ -1115,8 +1155,8 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                 'security-check-auto-accept-list'
             ),
             data={
-                'prisoner_profile': self.prisoner_profile.id,
-                'debit_card_sender_details': self.debit_card_sender_details.id,
+                'prisoner_profile_id': self.prisoner_profile.id,
+                'debit_card_sender_details_id': self.debit_card_sender_details.id,
                 'states': [
                     {
                         'reason': 'they have amazing hair',
@@ -1171,8 +1211,12 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
 
     def test_auto_accept_rule_reactivate(self):
         expected_response = {
-            'prisoner_profile': self.prisoner_profile.id,
-            'debit_card_sender_details': self.debit_card_sender_details.id,
+            'prisoner_profile': self._prisoner_profile_to_api_dict(
+                self.prisoner_profile
+            ),
+            'debit_card_sender_details': self._debit_card_sender_details_to_api_dict(
+                self.debit_card_sender_details
+            ),
             'states': [
                 {
                     'active': True,
@@ -1208,8 +1252,8 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                 'security-check-auto-accept-list'
             ),
             data={
-                'prisoner_profile': self.prisoner_profile.id,
-                'debit_card_sender_details': self.debit_card_sender_details.id,
+                'prisoner_profile_id': self.prisoner_profile.id,
+                'debit_card_sender_details_id': self.debit_card_sender_details.id,
                 'states': [
                     {
                         'reason': 'they have amazing hair',
@@ -1284,8 +1328,12 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
             'next': None,
             'previous': None,
             'results': [{
-                'prisoner_profile': self.prisoner_profile.id,
-                'debit_card_sender_details': self.debit_card_sender_details.id,
+                'prisoner_profile': self._prisoner_profile_to_api_dict(
+                    self.prisoner_profile
+                ),
+                'debit_card_sender_details': self._debit_card_sender_details_to_api_dict(
+                    self.debit_card_sender_details
+                ),
                 'states': [
                     {
                         'active': True,
@@ -1304,8 +1352,8 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                 'security-check-auto-accept-list'
             ),
             data={
-                'prisoner_profile': self.prisoner_profile.id,
-                'debit_card_sender_details': self.debit_card_sender_details.id,
+                'prisoner_profile_id': self.prisoner_profile.id,
+                'debit_card_sender_details_id': self.debit_card_sender_details.id,
                 'states': [
                     {
                         'reason': 'they have amazing hair',

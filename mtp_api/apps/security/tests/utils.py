@@ -244,8 +244,8 @@ def generate_checks(
                 check_auto_accept_rule = CheckAutoAcceptRuleSerializer(
                     context={'request': Mock(user=user)}
                 ).create({
-                    'debit_card_sender_details': check.credit.payment.billing_address.debit_card_sender_details,
-                    'prisoner_profile': check.credit.prisoner_profile,
+                    'debit_card_sender_details_id': check.credit.payment.billing_address.debit_card_sender_details,
+                    'prisoner_profile_id': check.credit.prisoner_profile,
                     'states': [{'reason': f'I am an automatically generated auto-accept number {i}'}]
                 })
             except IntegrityError:
