@@ -12,7 +12,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('security', '0032_auto_20201007_1448'),
+        ('security', '0033_removed_single_offender_id_from_prisonerprofile'),
     ]
 
     operations = [
@@ -26,7 +26,7 @@ class Migration(migrations.Migration):
                 ('prisoner_profile', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='check_auto_accept_rules', to='security.PrisonerProfile')),
             ],
             options={
-                'ordering': ('-created',),
+                'ordering': ('created',),
                 'unique_together': {('debit_card_sender_details', 'prisoner_profile')},
             },
         ),
@@ -42,7 +42,19 @@ class Migration(migrations.Migration):
                 ('auto_accept_rule', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='states', to='security.CheckAutoAcceptRule')),
             ],
             options={
+                'ordering': ('created',),
                 'abstract': False,
             },
+        ),
+        migrations.AddField(
+            model_name='check',
+            name='auto_accept_rule_state',
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name='checks',
+                to='security.CheckAutoAcceptRuleState'
+            ),
         ),
     ]
