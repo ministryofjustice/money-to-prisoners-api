@@ -14,6 +14,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='check',
             name='rejection_reasons',
-            field=django.contrib.postgres.fields.jsonb.JSONField(default={}),
+            field=django.contrib.postgres.fields.jsonb.JSONField(default=dict),
         ),
     ]
