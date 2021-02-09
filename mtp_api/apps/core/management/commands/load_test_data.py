@@ -181,6 +181,10 @@ class Command(BaseCommand):
                 f'Number of checks to be created is {number_of_desired_checks} - {number_of_existing_checks}'
                 f' <= {number_of_checks}'
             )
+            assert number_of_desired_checks <= 3 * number_of_desired_payments, (
+                'Due to constraints on the number of payments with a billing address '
+                'in mtp_api/payments/tests/utils.py::setup_payment you must have checks <= 3*payments'
+            )
             days_of_history = 1300
             prisons.append('nomis-api-dev')
             prisoners.append('sample')

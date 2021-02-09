@@ -1,12 +1,16 @@
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
+from core.serializers import BasicUserSerializer
 from prison.models import Prison
 from security.models import (
     BankTransferRecipientDetails,
     BankTransferSenderDetails,
     Check,
+    CheckAutoAcceptRule,
+    CheckAutoAcceptRuleState,
     DebitCardSenderDetails,
     PrisonerProfile,
     RecipientProfile,
@@ -220,9 +224,112 @@ class SavedSearchSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 
+class CheckAutoAcceptRuleStateSerializer(serializers.ModelSerializer):
+    active = serializers.BooleanField(required=False)
+    added_by = BasicUserSerializer(read_only=True)
+
+    class Meta:
+        model = CheckAutoAcceptRuleState
+        fields = [
+            'added_by',
+            'active',
+            'reason',
+            'created',
+            'auto_accept_rule'
+        ]
+        read_only_fields = (
+            'id',
+            'auto_accept_rule',
+            'created',
+        )
+
+    def validate(self, attrs):
+        if self.instance and attrs.get('active') is None:
+            raise ValidationError({
+                'active': ValidationError(_('On update, states[0].active must be specified'))
+            })
+        return super().validate(attrs)
+
+
+class CheckAutoAcceptRuleSerializer(serializers.ModelSerializer):
+    states = CheckAutoAcceptRuleStateSerializer(many=True, required=True)
+
+    def is_valid(self, raise_exception=False):
+        # We override is_valid to make this check before the built-in validators catch it, so we can add our own
+        # error message as we want to match against it in logic within noms-ops, therefore want it to be in our control
+        if self.instance is None and CheckAutoAcceptRule.objects.filter(
+            debit_card_sender_details=self.initial_data.get('debit_card_sender_details'),
+            prisoner_profile=self.initial_data.get('prisoner_profile')
+        ).first():
+            # TODO do we do one,both or neither of:
+            # * Ensure Rule is active by adding a second rule state with the reason (via CAARStateSerializer)?
+            # * Associate the check in question (for which we would need the id) of the new/latest CAARState?
+            # This inner exception is intentionally not wrapped in gettext as we rely on it passing a check against
+            # its value in noms-ops
+            raise ValidationError({
+                'non_field_errors': [
+                    'An existing AutoAcceptRule is present for this DebitCardSenderDetails/PrisonerProfile pair'
+                ]
+            })
+        return super().is_valid(raise_exception)
+
+    def validate(self, attrs):
+        if len(attrs['states']) != 1:
+            raise ValidationError(
+                _(f'When creating or updating an auto-accept rule, states must be of length 1, not {len(attrs.states)}')
+            )
+        return super().validate(attrs)
+
+    def create(self, validated_data):
+        auto_accept_rule = CheckAutoAcceptRule.objects.create(
+            debit_card_sender_details=validated_data['debit_card_sender_details'],
+            prisoner_profile=validated_data['prisoner_profile'],
+        )
+        CheckAutoAcceptRuleStateSerializer().create(
+            validated_data={
+                'active': True,
+                'reason': validated_data['states'][0]['reason'],
+                'added_by': self.context['request'].user,
+                'auto_accept_rule': auto_accept_rule
+            }
+        )
+        auto_accept_rule.refresh_from_db()
+        return auto_accept_rule
+
+    def update(self, instance, validated_data):
+        # The only operation we support here is to create a new associated state
+        instance.states.add(
+            CheckAutoAcceptRuleStateSerializer().create(
+                validated_data={
+                    'active': validated_data['states'][0]['active'],
+                    'reason': validated_data['states'][0]['reason'],
+                    'added_by': self.context['request'].user,
+                    'auto_accept_rule': instance
+                }
+            )
+        )
+        instance.save()
+        return instance
+
+    class Meta:
+        model = CheckAutoAcceptRule
+        fields = [
+            'id',
+            'created',
+            'debit_card_sender_details',
+            'prisoner_profile',
+            'states',
+        ]
+        read_only_fields = [
+            'id',
+            'created',
+        ]
+
+
 class CheckSerializer(serializers.ModelSerializer):
     actioned_by_name = serializers.SerializerMethodField('get_actioned_by_name_from_user')
     assigned_to_name = serializers.SerializerMethodField('get_assigned_to_name_from_user')
+    auto_accept_rule_state = CheckAutoAcceptRuleStateSerializer(read_only=True, required=False)
 
     class Meta:
         model = Check
@@ -239,6 +346,7 @@ class CheckSerializer(serializers.ModelSerializer):
             'actioned_by_name',
             'assigned_to_name',
             'rejection_reasons',
+            'auto_accept_rule_state',
         )
         read_only_fields = (
             'id',

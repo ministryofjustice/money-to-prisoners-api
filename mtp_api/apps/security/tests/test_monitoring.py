@@ -2,7 +2,7 @@ from django.urls import reverse
 from rest_framework import status as http_status
 
 from security.models import SenderProfile, PrisonerProfile, RecipientProfile
-from security.tests.test_views import SecurityViewTestCase
+from security.tests.test_views.test_views import SecurityViewTestCase
 
 
 class MonitoringTestMixin:

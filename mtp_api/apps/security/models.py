@@ -15,7 +15,7 @@ from prison.models import Prison
 from security.constants import CHECK_STATUS
 from security.managers import (
     PrisonerProfileManager, SenderProfileManager, RecipientProfileManager,
-    CheckManager,
+    CheckManager, CheckAutoAcceptRuleManager
 )
 from security.signals import prisoner_profile_current_prisons_need_updating
 
@@ -327,6 +327,22 @@ class Check(TimeStampedModel):
         name='rejection_reasons',
         default=dict
     )
+    # We persist AutoAcceptRuleState for three reasons:
+    # 1. To link an applicable AutoAcceptRule to the Check, even if not active
+    #   * This is for the use case where someone wants to re-activate an deactivated auto-accept rule
+    # 2. To determine whether the rule was active by value of CheckAutoAcceptRuleState.active
+    #   * In the historic views we render those whose acceptance was mediated by an active auto-accept rule
+    #      differently from those that simply had a deactivated auto accept rule and were accepted manually
+    # 3. What the reason was at the time of auto-acceptance
+    #   * In the historic views, for the auto accept rules, we render the auto-accept rule reason active at the time,
+    #      not the most recent
+    auto_accept_rule_state = models.ForeignKey(
+        'security.CheckAutoAcceptRuleState',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='checks'
+    )
 
     objects = CheckManager()
 
@@ -373,6 +389,47 @@ class Check(TimeStampedModel):
 
     def __str__(self):
         return f'Check {self.status} for {self.credit}'
+
+
+class CheckAutoAcceptRule(TimeStampedModel):
+    debit_card_sender_details = models.ForeignKey(
+        DebitCardSenderDetails, on_delete=models.CASCADE, related_name='check_auto_accept_rules'
+    )
+    prisoner_profile = models.ForeignKey(
+        PrisonerProfile, on_delete=models.CASCADE, related_name='check_auto_accept_rules'
+    )
+
+    objects = CheckAutoAcceptRuleManager()
+
+    def get_latest_state(self):
+        return self.states.order_by('-created').first()
+
+    def is_active(self):
+        return self.get_latest_state().active
+
+    class Meta:
+        ordering = ('created',)
+        unique_together = (
+            ('debit_card_sender_details', 'prisoner_profile',),
+        )
+
+
+class CheckAutoAcceptRuleState(TimeStampedModel):
+    auto_accept_rule = models.ForeignKey(
+        CheckAutoAcceptRule, on_delete=models.CASCADE, related_name='states'
+    )
+    added_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='security_check_auto_accept_rule_state_added_by'
+    )
+    active = models.BooleanField()
+    reason = models.TextField()
+
+    class Meta:
+        ordering = ('created',)
 
 
 @receiver(prisoner_profile_current_prisons_need_updating)
