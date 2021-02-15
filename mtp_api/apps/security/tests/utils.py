@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 import random
 from typing import Optional, Tuple
@@ -158,7 +158,6 @@ def generate_checks(
     number_of_checks=1, specific_payments_to_check=tuple(), create_invalid_checks=True,
     number_of_prisoners_to_use=5, number_of_senders_to_use=5, overrides=None
 ):
-    checks = []
     fake_prisoner_names = {pp_id[0]: fake.name() for pp_id in PrisonerProfile.objects.values_list('id')}
     fake_sender_names = {sp_id[0]: fake.name() for sp_id in SenderProfile.objects.values_list('id')}
 
@@ -230,7 +229,11 @@ def generate_checks(
             for k, v in overrides.items():
                 setattr(check, k, v)
             check.save()
+    generate_auto_accept_rules()
+    return Check.objects.all()
 
+
+def generate_auto_accept_rules():
     # Add auto-accept rules
     checks = Check.objects.filter(
         status=CHECK_STATUS.ACCEPTED,
@@ -240,13 +243,17 @@ def generate_checks(
     for i, check in enumerate(checks):
         if i % 2:
             user = random.choice(list(Group.objects.filter(name='FIU').first().user_set.all()))
+            # Spread out the creation date to test sorting
+            created_date = datetime.now(tz=pytz.utc) - timedelta(hours=random.randint(0, len(checks)))
             try:
                 check_auto_accept_rule = CheckAutoAcceptRuleSerializer(
                     context={'request': Mock(user=user)}
                 ).create({
                     'debit_card_sender_details_id': check.credit.payment.billing_address.debit_card_sender_details,
                     'prisoner_profile_id': check.credit.prisoner_profile,
-                    'states': [{'reason': f'I am an automatically generated auto-accept number {i}'}]
+                    'states': [{
+                        'reason': f'I am an automatically generated auto-accept number {i}',
+                    }]
                 })
             except IntegrityError:
                 check_auto_accept_rule = CheckAutoAcceptRule.objects.filter(
@@ -254,11 +261,11 @@ def generate_checks(
                     prisoner_profile=check.credit.prisoner_profile
                 ).first()
 
+            check_auto_accept_rule.created = created_date
             check_auto_accept_rule_state = check_auto_accept_rule.states.order_by('-created').first()
             check_auto_accept_rule_state.checks.add(check)
+            check_auto_accept_rule_state.created = created_date
             check_auto_accept_rule_state.save()
-
-    return Check.objects.all()
 
 
 @transaction.atomic()

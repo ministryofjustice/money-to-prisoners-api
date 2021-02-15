@@ -11,3 +11,4 @@ django-pudb3
 pudb
 django-stubs
 djangorestframework-stubs
+types-requests

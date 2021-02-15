@@ -597,6 +597,18 @@ class CheckAutoAcceptRuleFilter(BaseFilterSet):
     prisoner_profile_id = django_filters.ModelChoiceFilter(
         field_name='prisoner_profile_id', queryset=PrisonerProfile.objects.all()
     )
+    ordering = django_filters.OrderingFilter(
+        fields=(
+            ('states__added_by__last_name', 'states__added_by__last_name'),
+            ('states__created', 'states__created'),
+            ('-states__added_by__last_name', '-states__added_by__last_name'),
+            ('-states__created', '-states__created'),
+        )
+    )
+
+    class Meta:
+        model = CheckAutoAcceptRule
+        fields = ['states__added_by__last_name', 'states__created']
 
 
 class CheckAutoAcceptRuleView(
@@ -609,8 +621,10 @@ class CheckAutoAcceptRuleView(
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
     filter_class = CheckAutoAcceptRuleFilter
     serializer_class = CheckAutoAcceptRuleSerializer
-    ordering_fields = ('created',)
-    ordering = ('created',)
+    ordering_fields = (
+        'states_created', '-states_created',
+        'states__added_by__last_name', '-states__added_by__last_name',
+    )
     permission_classes = (
         IsAuthenticated,
         SecurityProfilePermissions,
