@@ -1536,3 +1536,138 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                 list(dictdiffer.diff(expected_response, actual_response))
             )
         )
+
+    def test_auto_accept_rule_list_filter_is_active(self):
+        # Setup
+        datetime_now = datetime.datetime.now()
+        expected_response = {
+            'count': 1,
+            'next': None,
+            'previous': None,
+            'results': [{
+                'prisoner_profile': self._prisoner_profile_to_api_dict(
+                    self.prisoner_profile
+                ),
+                'debit_card_sender_details': self._debit_card_sender_details_to_api_dict(
+                    self.debit_card_sender_details
+                ),
+                'states': [
+                    {
+                        'active': True,
+                        'reason': 'they have amazing hair',
+                        'added_by': {
+                            'first_name': self.added_by_user.first_name,
+                            'last_name': self.added_by_user.last_name,
+                            'username': self.added_by_user.username,
+                        }
+                    }
+                ],
+            }]
+        }
+        check_auto_accept = self.client.post(
+            reverse(
+                'security-check-auto-accept-list'
+            ),
+            data={
+                'prisoner_profile_id': self.prisoner_profile.id,
+                'debit_card_sender_details_id': self.debit_card_sender_details.id,
+                'states': [
+                    {
+                        'reason': 'they have amazing hair',
+                    }
+                ]
+            },
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.added_by_user),
+        )
+        self.assertEqual(check_auto_accept.status_code, 201)
+        # Fix datetime as we can't easily mock this
+        auto_accept_payload_id = check_auto_accept.json()['id']
+        check_auto_accept = CheckAutoAcceptRule.objects.get(id=auto_accept_payload_id)
+        check_auto_accept.created = format_date_or_datetime(datetime_now - datetime.timedelta(hours=4))
+        check_auto_accept.save()
+
+        check_auto_accept_state = check_auto_accept.states.first()
+        check_auto_accept_state.created = format_date_or_datetime(datetime_now - datetime.timedelta(hours=1))
+        check_auto_accept_state.save()
+
+        other_check_auto_accept = self.client.post(
+            reverse(
+                'security-check-auto-accept-list'
+            ),
+            data={
+                'prisoner_profile_id': self.prisoner_profile.id,
+                'debit_card_sender_details_id': self.other_debit_card_sender_details.id,
+                'states': [
+                    {
+                        'reason': 'they have an amazing beard',
+                    }
+                ]
+            },
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.added_by_user),
+        )
+        self.assertEqual(other_check_auto_accept.status_code, 201)
+        # Fix datetime as we can't easily mock this
+        other_auto_accept_payload_id = other_check_auto_accept.json()['id']
+        other_check_auto_accept = CheckAutoAcceptRule.objects.get(id=other_auto_accept_payload_id)
+        other_check_auto_accept.created = format_date_or_datetime(datetime_now - datetime.timedelta(hours=3))
+        other_check_auto_accept.save()
+
+        other_check_auto_accept_state = other_check_auto_accept.states.first()
+        other_check_auto_accept_state.created = format_date_or_datetime(datetime_now - datetime.timedelta(hours=2))
+        other_check_auto_accept_state.save()
+
+        other_check_auto_accept_update = self.client.patch(
+            reverse(
+                'security-check-auto-accept-detail',
+                args=[other_auto_accept_payload_id]
+            ),
+            data={
+                'states': [
+                    {
+                        'active': False,
+                        'reason': 'they shaved it off',
+                    }
+                ]
+            },
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.updated_by_user),
+        )
+        self.assertEqual(other_check_auto_accept_update.status_code, 200)
+        # Fix datetime as we can't easily mock this
+        other_check_auto_accept = CheckAutoAcceptRule.objects.get(id=other_auto_accept_payload_id)
+
+        other_check_auto_accept_state = other_check_auto_accept.states.order_by('-created').first()
+        other_check_auto_accept_state.created = format_date_or_datetime(datetime_now - datetime.timedelta(hours=1))
+        other_check_auto_accept_state.save()
+
+        # Execute
+        get_response = self.client.get(
+            '{}?is_active=true'.format(
+                reverse(
+                    'security-check-auto-accept-list'
+                )
+            ),
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.updated_by_user),
+        )
+
+        # Assert
+        self.assertEqual(get_response.status_code, 200)
+        actual_response = get_response.json()
+        self.assertIn('id', list(actual_response['results'][0].keys()))
+        del actual_response['results'][0]['id']
+        self.assertIn('created', list(actual_response['results'][0].keys()))
+        del actual_response['results'][0]['created']
+        self.assertIn('created', list(actual_response['results'][0]['states'][0].keys()))
+        del actual_response['results'][0]['states'][0]['created']
+        self.assertIn('auto_accept_rule', list(actual_response['results'][0]['states'][0].keys()))
+        del actual_response['results'][0]['states'][0]['auto_accept_rule']
+        self.assertDictEqual(
+            expected_response,
+            actual_response,
+            msg=pformat(
+                list(dictdiffer.diff(expected_response, actual_response))
+            )
+        )
