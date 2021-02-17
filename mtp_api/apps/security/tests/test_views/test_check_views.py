@@ -1013,6 +1013,35 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                 check_auto_accept_state.save()
         return payload
 
+    def _update_auto_accept(self, auto_accept_rule_id, reason, user, active=False, auto_accept_state_created=None):
+        patch_response = self.client.patch(
+            reverse(
+                'security-check-auto-accept-detail',
+                args=[auto_accept_rule_id]
+            ),
+            data={
+                'states': [
+                    {
+                        'active': active,
+                        'reason': reason
+                    }
+                ]
+            },
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user),
+        )
+        self.assertEqual(patch_response.status_code, 200)
+        actual_response = patch_response.json()
+
+        if auto_accept_state_created:
+            auto_accept_payload_id = actual_response['id']
+            check_auto_accept = CheckAutoAcceptRule.objects.get(id=auto_accept_payload_id)
+            check_auto_accept_state = check_auto_accept.states.order_by('-created').first()
+            check_auto_accept_state.created = format_date_or_datetime(auto_accept_state_created)
+            check_auto_accept_state.save()
+
+        return actual_response
+
     @staticmethod
     def _prisoner_profile_to_api_dict(prisoner_profile):
         return {
@@ -1167,26 +1196,14 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
         )
 
         # Call
-        patch_response = self.client.patch(
-            reverse(
-                'security-check-auto-accept-detail',
-                args=[auto_accept_rule['id']]
-            ),
-            data={
-                'states': [
-                    {
-                        'active': False,
-                        'reason': 'they have shaved it off',
-                    }
-                ]
-            },
-            format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.updated_by_user),
+        actual_response = self._update_auto_accept(
+            auto_accept_rule_id=auto_accept_rule['id'],
+            active=False,
+            reason='they have shaved it off',
+            user=self.updated_by_user
         )
 
         # Assert
-        self.assertEqual(patch_response.status_code, 200)
-        actual_response = patch_response.json()
         self.assertIn('id', list(actual_response.keys()))
         del actual_response['id']
         self.assertIn('created', list(actual_response.keys()))
@@ -1255,43 +1272,20 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
             reason='they have amazing hair',
             user=self.added_by_user
         )
-        patch_response = self.client.patch(
-            reverse(
-                'security-check-auto-accept-detail',
-                args=[auto_accept_rule['id']]
-            ),
-            data={
-                'states': [
-                    {
-                        'active': False,
-                        'reason': 'they have shaved it off',
-                    }
-                ]
-            },
-            format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.updated_by_user),
+        self._update_auto_accept(
+            auto_accept_rule_id=auto_accept_rule['id'],
+            active=False,
+            reason='they have shaved it off',
+            user=self.updated_by_user
         )
-        self.assertEqual(patch_response.status_code, 200)
 
         # Call
-        patch_response = self.client.patch(
-            reverse(
-                'security-check-auto-accept-detail',
-                args=[auto_accept_rule['id']]
-            ),
-            data={
-                'states': [
-                    {
-                        'active': True,
-                        'reason': 'they grew it back again',
-                    }
-                ]
-            },
-            format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.updated_by_user),
+        actual_response = self._update_auto_accept(
+            auto_accept_rule_id=auto_accept_rule['id'],
+            active=True,
+            reason='they grew it back again',
+            user=self.updated_by_user
         )
-        self.assertEqual(patch_response.status_code, 200)
-        actual_response = patch_response.json()
 
         # Assert
         self.assertIn('id', list(actual_response.keys()))
@@ -1533,29 +1527,13 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
             auto_accept_state_created=datetime_now - datetime.timedelta(hours=2)
         )
 
-        other_check_auto_accept_update = self.client.patch(
-            reverse(
-                'security-check-auto-accept-detail',
-                args=[other_check_auto_accept['id']]
-            ),
-            data={
-                'states': [
-                    {
-                        'active': False,
-                        'reason': 'they shaved it off',
-                    }
-                ]
-            },
-            format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.updated_by_user),
+        self._update_auto_accept(
+            auto_accept_rule_id=other_check_auto_accept['id'],
+            active=False,
+            reason='they shaved it off',
+            user=self.updated_by_user,
+            auto_accept_state_created=datetime_now - datetime.timedelta(hours=1)
         )
-        self.assertEqual(other_check_auto_accept_update.status_code, 200)
-        # Fix datetime as we can't easily mock this
-        other_check_auto_accept = CheckAutoAcceptRule.objects.get(id=other_check_auto_accept['id'])
-
-        other_check_auto_accept_state = other_check_auto_accept.states.order_by('-created').first()
-        other_check_auto_accept_state.created = format_date_or_datetime(datetime_now - datetime.timedelta(hours=1))
-        other_check_auto_accept_state.save()
 
         # Execute
         get_response = self.client.get(
