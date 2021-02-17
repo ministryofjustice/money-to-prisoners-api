@@ -1040,6 +1040,46 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
             check_auto_accept_state.created = format_date_or_datetime(auto_accept_state_created)
             check_auto_accept_state.save()
 
+        self.assertIn('id', list(actual_response.keys()))
+        del actual_response['id']
+        self.assertIn('created', list(actual_response.keys()))
+        del actual_response['created']
+        for state in actual_response['states']:
+            self.assertIn('created', list(state.keys()))
+            del state['created']
+            self.assertIn('auto_accept_rule', list(state.keys()))
+            del state['auto_accept_rule']
+
+        return actual_response
+
+    def _list_auto_accept(
+        self, url, user, strip_id=True, strip_created=True, strip_states_auto_accept_rule=True,
+        strip_states_created=True
+    ):
+        get_response = self.client.get(
+            url,
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user),
+        )
+
+        # Assert
+        self.assertEqual(get_response.status_code, 200)
+        actual_response = get_response.json()
+
+        for result in actual_response['results']:
+            self.assertIn('id', list(result.keys()))
+            if strip_id:
+                del result['id']
+            self.assertIn('created', list(result.keys()))
+            if strip_created:
+                del result['created']
+            for state in result['states']:
+                self.assertIn('auto_accept_rule', list(state.keys()))
+                if strip_states_auto_accept_rule:
+                    del state['auto_accept_rule']
+                self.assertIn('created', list(state.keys()))
+                if strip_states_created:
+                    del state['created']
         return actual_response
 
     @staticmethod
@@ -1204,15 +1244,6 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
         )
 
         # Assert
-        self.assertIn('id', list(actual_response.keys()))
-        del actual_response['id']
-        self.assertIn('created', list(actual_response.keys()))
-        del actual_response['created']
-        for state in actual_response['states']:
-            self.assertIn('created', list(state.keys()))
-            del state['created']
-            self.assertIn('auto_accept_rule', list(state.keys()))
-            del state['auto_accept_rule']
         self.assertDictEqual(
             expected_response,
             actual_response,
@@ -1288,15 +1319,6 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
         )
 
         # Assert
-        self.assertIn('id', list(actual_response.keys()))
-        del actual_response['id']
-        self.assertIn('created', list(actual_response.keys()))
-        del actual_response['created']
-        for state in actual_response['states']:
-            self.assertIn('created', list(state.keys()))
-            del state['created']
-            self.assertIn('auto_accept_rule', list(state.keys()))
-            del state['auto_accept_rule']
         self.assertDictEqual(
             expected_response,
             actual_response,
@@ -1312,6 +1334,7 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
         self.assertEqual(auto_accept_rule.is_active(), True)
 
     def test_auto_accept_rule_list(self):
+        # Setup
         expected_response = {
             'count': 1,
             'next': None,
@@ -1345,21 +1368,15 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
         )
 
         expected_response['results'][0]['states'][0]['auto_accept_rule'] = post_response_payload['id']
-        get_response = self.client.get(
-            reverse(
+        # Call
+        actual_response = self._list_auto_accept(
+            url=reverse(
                 'security-check-auto-accept-list'
             ),
-            format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.updated_by_user),
+            user=self.updated_by_user,
+            strip_states_auto_accept_rule=False
         )
-        self.assertEqual(get_response.status_code, 200)
-        actual_response = get_response.json()
-        self.assertIn('id', list(actual_response['results'][0].keys()))
-        del actual_response['results'][0]['id']
-        self.assertIn('created', list(actual_response['results'][0].keys()))
-        del actual_response['results'][0]['created']
-        self.assertIn('created', list(actual_response['results'][0]['states'][0].keys()))
-        del actual_response['results'][0]['states'][0]['created']
+        # Assert
         self.assertDictEqual(
             expected_response,
             actual_response,
@@ -1453,26 +1470,19 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
         )
 
         # Call
-        get_response = self.client.get(
-            '{}?ordering={}'.format(
+        actual_response = self._list_auto_accept(
+            url='{}?ordering={}'.format(
                 reverse(
                     'security-check-auto-accept-list',
                 ),
                 querystring
             ),
-            format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.updated_by_user),
+            user=self.updated_by_user,
+            strip_created=False,
+            strip_states_created=False
         )
 
         # Assert
-        self.assertEqual(get_response.status_code, 200)
-        actual_response = get_response.json()
-
-        for result in actual_response['results']:
-            self.assertIn('id', list(result.keys()))
-            del result['id']
-            self.assertIn('auto_accept_rule', list(result['states'][0].keys()))
-            del result['states'][0]['auto_accept_rule']
         self.assertDictEqual(
             expected_response,
             actual_response,
@@ -1536,27 +1546,16 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
         )
 
         # Execute
-        get_response = self.client.get(
+        actual_response = self._list_auto_accept(
             '{}?is_active=true'.format(
                 reverse(
                     'security-check-auto-accept-list'
                 )
             ),
-            format='json',
-            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.updated_by_user),
+            user=self.updated_by_user
         )
 
         # Assert
-        self.assertEqual(get_response.status_code, 200)
-        actual_response = get_response.json()
-        self.assertIn('id', list(actual_response['results'][0].keys()))
-        del actual_response['results'][0]['id']
-        self.assertIn('created', list(actual_response['results'][0].keys()))
-        del actual_response['results'][0]['created']
-        self.assertIn('created', list(actual_response['results'][0]['states'][0].keys()))
-        del actual_response['results'][0]['states'][0]['created']
-        self.assertIn('auto_accept_rule', list(actual_response['results'][0]['states'][0].keys()))
-        del actual_response['results'][0]['states'][0]['auto_accept_rule']
         self.assertDictEqual(
             expected_response,
             actual_response,
