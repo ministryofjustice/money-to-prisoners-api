@@ -68,3 +68,83 @@ class LoginCountTestCase(TestCase):
         self.assertEqual(login_counts[(None, this_month)], 2)
         self.assertEqual(login_counts[(prison.nomis_id, last_month)], 3)
         self.assertEqual(login_counts[(None, last_month)], 0)
+
+    def test_get_months(self):
+        scenarios = [
+            {
+                'name': 'no edge cases',
+                'now': make_aware(datetime.datetime(2020, 11, 15, 12)),
+                'expected_months': [
+                    make_aware(datetime.datetime(2020, 11, 1)),
+                    make_aware(datetime.datetime(2020, 10, 1)),
+                    make_aware(datetime.datetime(2020, 9, 1)),
+                    make_aware(datetime.datetime(2020, 8, 1)),
+                ],
+            },
+            {
+                'name': 'crossing DST',
+                'now': make_aware(datetime.datetime(2020, 5, 15, 12)),
+                'expected_months': [
+                    make_aware(datetime.datetime(2020, 5, 1)),
+                    make_aware(datetime.datetime(2020, 4, 1)),
+                    make_aware(datetime.datetime(2020, 3, 1)),
+                    make_aware(datetime.datetime(2020, 2, 1)),
+                ],
+            },
+            {
+                'name': 'crossing year',
+                'now': make_aware(datetime.datetime(2021, 1, 10, 12)),
+                'expected_months': [
+                    make_aware(datetime.datetime(2021, 1, 1)),
+                    make_aware(datetime.datetime(2020, 12, 1)),
+                    make_aware(datetime.datetime(2020, 11, 1)),
+                    make_aware(datetime.datetime(2020, 10, 1)),
+                ],
+            },
+        ]
+        for scenario in scenarios:
+            name = scenario['name']
+            now = scenario['now']
+            expected_months = scenario['expected_months']
+
+            with self.subTest(scenario=name):
+                with mock.patch('mtp_auth.views.timezone.localtime', return_value=now):
+                    view = LoginStatsView()
+                    months = view.months
+
+                self.assertEqual(months, expected_months)
+
+    def test_get_current_month_progress(self):
+        scenarios = [
+            {
+                'name': 'no edge cases',
+                'now': make_aware(datetime.datetime(2020, 6, 15, 12, 0)),
+                'expected_progress': 0.48,
+            },
+            {
+                'name': 'beginning of month',
+                'now': make_aware(datetime.datetime(2020, 6, 1, 12, 0)),
+                'expected_progress': 0.02,
+            },
+            {
+                'name': 'end of month',
+                'now': make_aware(datetime.datetime(2020, 3, 31, 10, 0)),
+                'expected_progress': 0.98,
+            },
+            {
+                'name': 'crossing year',
+                'now': make_aware(datetime.datetime(2020, 12, 10, 12, 0)),
+                'expected_progress': 0.31,
+            },
+        ]
+        for scenario in scenarios:
+            name = scenario['name']
+            now = scenario['now']
+            expected_progress = scenario['expected_progress']
+
+            with self.subTest(scenario=name):
+                with mock.patch('mtp_auth.views.timezone.localtime', return_value=now):
+                    view = LoginStatsView()
+                    progress = view.current_month_progress
+
+                self.assertAlmostEqual(progress, expected_progress, delta=0.02)

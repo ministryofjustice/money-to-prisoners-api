@@ -1,4 +1,5 @@
 import collections
+from datetime import datetime
 import logging
 from urllib.parse import urlsplit, urlunsplit, urlencode, parse_qs
 
@@ -526,34 +527,49 @@ class LoginStatsView(BaseAdminReportView):
     @classmethod
     def get_months(cls):
         today = timezone.localtime()
-        month_start = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
-        next_month = month_start.month + 1
-        if next_month > 12:
-            next_month = month_start.replace(year=month_start.year + 1, month=1)
-        else:
-            next_month = month_start.replace(month=next_month)
-
-        current_month_progress = (
-            (today.timestamp() - month_start.timestamp()) / (next_month.timestamp() - month_start.timestamp())
-        )
+        month_start = datetime(today.year, today.month, 1)
+        month_start = timezone.make_aware(month_start)
 
         months = []
         while len(months) < 4:
             months.append(month_start)
             month = month_start.month - 1
             if month < 1:
-                month_start = month_start.replace(year=month_start.year - 1, month=12)
+                # 1st December of previous year
+                month_start = datetime(month_start.year - 1, 12, 1)
             else:
-                month_start = month_start.replace(month=month)
+                # Same year, previous month
+                month_start = datetime(month_start.year, month, 1)
+            month_start = timezone.make_aware(month_start)
 
-        return current_month_progress, months
+        return months
+
+    @classmethod
+    def get_current_month_progress(cls):
+        today = timezone.localtime()
+
+        month_start = datetime(today.year, today.month, 1)
+        month_start = timezone.make_aware(month_start)
+
+        next_month = month_start.month + 1
+        if next_month > 12:
+            # 1st January of next year
+            next_month = datetime(month_start.year + 1, 1, 1)
+        else:
+            # Same year, next month
+            next_month = datetime(month_start.year, next_month, 1)
+        next_month = timezone.make_aware(next_month)
+
+        secs_from_1st = today.timestamp() - month_start.timestamp()
+        secs_in_month = next_month.timestamp() - month_start.timestamp()
+
+        return secs_from_1st / secs_in_month
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        current_month_progress, months = self.get_months()
-        self.current_month_progress = current_month_progress
-        self.months = months
+        self.months = self.get_months()
+        self.current_month_progress = self.get_current_month_progress()
 
     def get_form_kwargs(self):
         form_kwargs = super().get_form_kwargs()
