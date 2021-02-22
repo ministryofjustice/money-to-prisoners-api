@@ -8,3 +8,7 @@ parameterized==0.7.4
 pdbpp
 django-pdb
 django-pudb3
+pudb
+django-stubs
+djangorestframework-stubs
+types-requests

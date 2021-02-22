@@ -577,8 +577,8 @@ class AutoAcceptRuleTestCase(APITestCase, AuthTestCaseMixin):
                 'security-check-auto-accept-list'
             ),
             data={
-                'prisoner_profile': prisoner_profiles[0].id,
-                'debit_card_sender_details': sender_profiles[0].debit_card_details.first().id,
+                'prisoner_profile_id': prisoner_profiles[0].id,
+                'debit_card_sender_details_id': sender_profiles[0].debit_card_details.first().id,
                 'states': [
                     {
                         'reason': 'This person has amazing hair',

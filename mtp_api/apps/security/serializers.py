@@ -251,19 +251,42 @@ class CheckAutoAcceptRuleStateSerializer(serializers.ModelSerializer):
         return super().validate(attrs)
 
 
+class DebitCardSenderDetailsCardholderNamesSerializer(DebitCardSenderDetailsSerializer):
+    cardholder_names = serializers.SerializerMethodField()
+    sender = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = DebitCardSenderDetailsSerializer.Meta.model
+        fields = DebitCardSenderDetailsSerializer.Meta.fields + ('cardholder_names', 'sender')
+
+    def get_cardholder_names(self, instance):
+        yield from (cardholder.name for cardholder in instance.cardholder_names.all())
+
+
 class CheckAutoAcceptRuleSerializer(serializers.ModelSerializer):
     states = CheckAutoAcceptRuleStateSerializer(many=True, required=True)
+
+    # List/Retrieve only
+    debit_card_sender_details = DebitCardSenderDetailsCardholderNamesSerializer(read_only=True)
+    prisoner_profile = PrisonerProfileSerializer(read_only=True)
+
+    # Create/Update only
+    debit_card_sender_details_id = serializers.PrimaryKeyRelatedField(
+        queryset=DebitCardSenderDetails.objects.all(),
+        write_only=True
+    )
+    prisoner_profile_id = serializers.PrimaryKeyRelatedField(
+        queryset=PrisonerProfile.objects.all(),
+        write_only=True
+    )
 
     def is_valid(self, raise_exception=False):
         # We override is_valid to make this check before the built-in validators catch it, so we can add our own
         # error message as we want to match against it in logic within noms-ops, therefore want it to be in our control
         if self.instance is None and CheckAutoAcceptRule.objects.filter(
-            debit_card_sender_details=self.initial_data.get('debit_card_sender_details'),
-            prisoner_profile=self.initial_data.get('prisoner_profile')
+            debit_card_sender_details=self.initial_data.get('debit_card_sender_details_id'),
+            prisoner_profile=self.initial_data.get('prisoner_profile_id')
         ).first():
-            # TODO do we do one,both or neither of:
-            # * Ensure Rule is active by adding a second rule state with the reason (via CAARStateSerializer)?
-            # * Associate the check in question (for which we would need the id) of the new/latest CAARState?
             # This inner exception is intentionally not wrapped in gettext as we rely on it passing a check against
             # its value in noms-ops
             raise ValidationError({
@@ -282,8 +305,8 @@ class CheckAutoAcceptRuleSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         auto_accept_rule = CheckAutoAcceptRule.objects.create(
-            debit_card_sender_details=validated_data['debit_card_sender_details'],
-            prisoner_profile=validated_data['prisoner_profile'],
+            debit_card_sender_details=validated_data['debit_card_sender_details_id'],
+            prisoner_profile=validated_data['prisoner_profile_id'],
         )
         CheckAutoAcceptRuleStateSerializer().create(
             validated_data={
@@ -319,10 +342,18 @@ class CheckAutoAcceptRuleSerializer(serializers.ModelSerializer):
             'debit_card_sender_details',
             'prisoner_profile',
             'states',
+            'debit_card_sender_details_id',
+            'prisoner_profile_id',
         ]
         read_only_fields = [
             'id',
             'created',
+            'debit_card_sender_details',
+            'prisoner_profile',
+        ]
+        write_only_fields = [
+            'debit_card_sender_details_id',
+            'prisoner_profile_id',
         ]
 
 

@@ -111,13 +111,17 @@ def create_security_staff_user(name_and_password='security-staff', prisons=()):
     return ssu
 
 
-def create_security_fiu_user(name_and_password='security-fiu'):
+def create_security_fiu_user(name_and_password='security-fiu', first_name=None, last_name=None):
+    if not first_name:
+        first_name = 'Security FIU'
+    if not last_name:
+        last_name = 'Staff'
     groups = Group.objects.filter(name__in=['Security', 'FIU'])
     ssu = create_basic_user(
         name_and_password,
         groups,
-        first_name='Security FIU',
-        last_name='Staff',
+        first_name=first_name,
+        last_name=last_name,
     )
     ssu.flags.create(name='hmpps-employee')
 

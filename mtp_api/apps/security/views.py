@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.db.models import Count, Exists, OuterRef, Q
+from django.db.models import Count, Exists, OuterRef, Q, Subquery
 from django.shortcuts import get_object_or_404
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
@@ -27,6 +27,7 @@ from security.models import (
     BankAccount,
     Check,
     CheckAutoAcceptRule,
+    CheckAutoAcceptRuleState,
     DebitCardSenderDetails,
     PrisonerProfile,
     RecipientProfile,
@@ -597,6 +598,35 @@ class CheckAutoAcceptRuleFilter(BaseFilterSet):
     prisoner_profile_id = django_filters.ModelChoiceFilter(
         field_name='prisoner_profile_id', queryset=PrisonerProfile.objects.all()
     )
+    is_active = django_filters.BooleanFilter(
+        field_name='last_state_active',
+        method='get_is_active',
+    )
+
+    ordering = django_filters.OrderingFilter(
+        fields=(
+            ('states__added_by__last_name', 'states__added_by__last_name'),
+            ('states__created', 'states__created'),
+            ('-states__added_by__last_name', '-states__added_by__last_name'),
+            ('-states__created', '-states__created'),
+        )
+    )
+
+    def get_is_active(self, queryset, name, value):
+        last_state = CheckAutoAcceptRuleState.objects.filter(
+            auto_accept_rule_id=OuterRef('pk')
+        ).order_by(
+            '-created'
+        )
+        return queryset.annotate(
+            last_state_active=Subquery(last_state.values('active')[:1])
+        ).filter(
+            last_state_active=value
+        )
+
+    class Meta:
+        model = CheckAutoAcceptRule
+        fields = ['states__added_by__last_name', 'states__created']
 
 
 class CheckAutoAcceptRuleView(
@@ -609,8 +639,10 @@ class CheckAutoAcceptRuleView(
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
     filter_class = CheckAutoAcceptRuleFilter
     serializer_class = CheckAutoAcceptRuleSerializer
-    ordering_fields = ('created',)
-    ordering = ('created',)
+    ordering_fields = (
+        'states_created', '-states_created',
+        'states__added_by__last_name', '-states__added_by__last_name',
+    )
     permission_classes = (
         IsAuthenticated,
         SecurityProfilePermissions,
