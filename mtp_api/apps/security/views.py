@@ -632,6 +632,7 @@ class CheckAutoAcceptRuleFilter(BaseFilterSet):
 class CheckAutoAcceptRuleView(
     mixins.CreateModelMixin,
     mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
     mixins.UpdateModelMixin,
     viewsets.GenericViewSet,
 ):
