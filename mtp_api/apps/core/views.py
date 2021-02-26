@@ -178,6 +178,40 @@ class RecreateTestDataView(AdminViewMixin, FormView):
     disable_in_production = True
     superuser_required = True
 
+    SCENARIOS_OPTIONS = {
+        'random': {
+            'prisons': ['sample'],
+            'prisoners': ['sample'],
+            'credits': 'random',
+        },
+        'cashbook': {
+            'prisons': ['nomis'],
+            'prisoners': ['sample'],
+            'credits': 'nomis',
+        },
+        'nomis-api-dev': {
+            'prisons': ['nomis-api-dev'],
+            'prisoners': ['nomis-api-dev'],
+            'credits': 'nomis',
+        },
+        'dev-prison-api': {
+            'prisons': ['dev-prison-api'],
+            'prisoners': ['dev-prison-api'],
+            'credits': 'nomis',
+        },
+        'production-scale': {
+            'protect_credits': True,
+            'prisons': ['nomis'],
+            'credits': 'production-scale',
+        },
+        'delete-locations-credits': {
+            'protect_users': 'all',
+            'protect_prisons': True,
+            'protect_prisoner_locations': False,
+            'protect_credits': False,
+        },
+    }
+
     def form_valid(self, form):
         scenario = form.cleaned_data['scenario']
 
@@ -194,46 +228,20 @@ class RecreateTestDataView(AdminViewMixin, FormView):
             'days_of_history': form.cleaned_data['days_of_history'],
         }
 
-        if scenario in ('random', 'cashbook', 'training', 'nomis-api-dev'):
+        if scenario in ('random', 'cashbook', 'training', 'nomis-api-dev', 'dev-prison-api'):
             options.update({
                 'no_protect_superusers': False,
                 'protect_usernames': ['transaction-uploader'],
                 'protect_credits': False,
                 'clerks_per_prison': 4,
             })
-            if scenario == 'random':
-                options.update({
-                    'prisons': ['sample'],
-                    'prisoners': ['sample'],
-                    'credits': 'random',
-                })
-            elif scenario == 'cashbook':
-                options.update({
-                    'prisons': ['nomis'],
-                    'prisoners': ['sample'],
-                    'credits': 'nomis',
-                })
-            elif scenario == 'nomis-api-dev':
-                options.update({
-                    'prisons': ['nomis-api-dev'],
-                    'prisoners': ['nomis-api-dev'],
-                    'credits': 'nomis',
-                })
+            options.update(self.SCENARIOS_OPTIONS[scenario])
             call_command('load_test_data', **options)
         elif scenario == 'delete-locations-credits':
-            options.update({
-                'protect_users': 'all',
-                'protect_prisons': True,
-                'protect_prisoner_locations': False,
-                'protect_credits': False,
-            })
+            options.update(self.SCENARIOS_OPTIONS[scenario])
             call_command('delete_all_data', **options)
         elif scenario == 'production-scale':
-            options.update({
-                'protect_credits': True,
-                'prisons': ['nomis'],
-                'credits': 'production-scale',
-            })
+            options.update(self.SCENARIOS_OPTIONS[scenario])
             call_command('load_test_data', **options)
 
         output.seek(0)

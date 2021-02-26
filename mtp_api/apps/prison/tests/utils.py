@@ -4,10 +4,12 @@ from itertools import cycle
 import os
 import random
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.utils.crypto import get_random_string
 from django.utils.dateparse import parse_date
 from faker import Faker
+from mtp_common import nomis
 
 from prison.models import Prison, PrisonerLocation
 
@@ -65,6 +67,47 @@ def load_prisoner_locations_from_file(filename):
         prisoner_location['prison'] = Prison.objects.get(nomis_id=prisoner_location['prison'])
         prisoner_location['prisoner_dob'] = parse_date(prisoner_location['prisoner_dob'])
         prisoner_location['active'] = True
+
+    return PrisonerLocation.objects.bulk_create(
+        map(lambda data: PrisonerLocation(**data), prisoner_locations)
+    )
+
+
+def load_prisoner_locations_from_dev_prison_api(number_of_prisoners=50):
+    """
+    Get prisoners locations from the dev HMPPS Prison API.
+
+    This relies on the existance of HMP Berwyn ('BWI') in this dev API.
+
+    Note, the number of PrisonerLocation created may be less than the
+    requested number_of_prisoners if this prison doesn't have that many
+    prisoners in dev Prison API.
+    """
+
+    if settings.ENVIRONMENT == 'prod':
+        raise Exception('Do not load prisoner locations from production HMPPS Prison API')
+
+    prison_id = 'BWI'  # HMP Berwyn is present in dev HMPPS Prison API
+    prison = Prison.objects.get(nomis_id=prison_id)
+    created_by = get_user_model().objects.first()
+
+    resp = nomis.connector.get(f'prison/{prison_id}/live_roll')
+    prisoner_ids = resp['noms_ids']
+    prisoner_ids.sort()  # Sort to improve reproducibility
+
+    prisoner_locations = []
+    for prisoner_id in prisoner_ids[:number_of_prisoners]:
+        resp = nomis.connector.get(f'offenders/{prisoner_id}')
+
+        prisoner_location = {
+            'prisoner_number': prisoner_id,
+            'prisoner_name': resp['given_name'] + ' ' + resp['surname'],
+            'prisoner_dob': parse_date(resp['date_of_birth']),
+            'prison': prison,
+            'active': True,
+            'created_by': created_by,
+        }
+        prisoner_locations.append(prisoner_location)
 
     return PrisonerLocation.objects.bulk_create(
         map(lambda data: PrisonerLocation(**data), prisoner_locations)
