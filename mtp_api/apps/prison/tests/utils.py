@@ -1,4 +1,5 @@
 import csv
+from collections import deque
 import datetime
 from itertools import cycle
 import os
@@ -77,33 +78,50 @@ def load_prisoner_locations_from_dev_prison_api(number_of_prisoners=50):
     """
     Get prisoners locations from the dev HMPPS Prison API.
 
-    This relies on the existance of HMP Berwyn ('BWI') in this dev API.
+    This relies on the existance of well-known prisons in the dev API.
 
-    Note, the number of PrisonerLocation created may be less than the
-    requested number_of_prisoners if this prison doesn't have that many
-    prisoners in dev Prison API.
+    See API documentation: https://api.prison.service.justice.gov.uk/swagger-ui/index.html
     """
 
     if settings.ENVIRONMENT == 'prod':
         raise Exception('Do not load prisoner locations from production HMPPS Prison API')
 
-    prison_id = 'BWI'  # HMP Berwyn is present in dev HMPPS Prison API
-    prison = Prison.objects.get(nomis_id=prison_id)
+    prison_ids = [
+        'BWI',  # HMP Berwyn
+        'NMI',  # HMP Nottingham
+        'WLI',  # HMP Wayland
+    ]
     created_by = get_user_model().objects.first()
 
-    resp = nomis.connector.get(f'prison/{prison_id}/live_roll')
-    prisoner_ids = resp['noms_ids']
-    prisoner_ids.sort()  # Sort to improve reproducibility
+    prisons = {}
+    prisoners_ids = {}
+    for prison_id in prison_ids:
+        prisons[prison_id] = Prison.objects.get(pk=prison_id)
 
+        resp = nomis.connector.get(f'prison/{prison_id}/live_roll')
+        resp['noms_ids'].sort()  # Sort to improve reproducibility
+        prisoners_ids[prison_id] = deque(resp['noms_ids'])
+
+    prison_ids = cycle(prison_ids)
     prisoner_locations = []
-    for prisoner_id in prisoner_ids[:number_of_prisoners]:
-        resp = nomis.connector.get(f'offenders/{prisoner_id}')
+    # Cycle through prisons, take a prisoner from each prison's queue
+    # Until we generated enough PrisonerLocation or there are no prisoners left
+    while len(prisoner_locations) < number_of_prisoners:
+        empty = [len(q) == 0 for q in prisoners_ids.values()]
+        if all(empty):
+            break  # No more prisoners in any of these prisons
 
+        prison_id = next(prison_ids)
+        if len(prisoners_ids[prison_id]) == 0:
+            continue  # No more prisoners in this prison
+
+        prisoner_id = prisoners_ids[prison_id].popleft()
+        resp = nomis.connector.get(f'offenders/{prisoner_id}')
         prisoner_location = {
             'prisoner_number': prisoner_id,
             'prisoner_name': resp['given_name'] + ' ' + resp['surname'],
             'prisoner_dob': parse_date(resp['date_of_birth']),
-            'prison': prison,
+            'prison': prisons[prison_id],
             'active': True,
             'created_by': created_by,
         }

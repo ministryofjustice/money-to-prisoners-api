@@ -16,5 +16,41 @@
         3
       ]
     }
+  },
+  {
+    "model": "prison.prison",
+    "pk": "NMI",
+    "fields": {
+        "modified": "2016-12-01T12:00:00Z",
+        "region": "East Midlands",
+        "name": "HMP Nottingham",
+        "created": "2015-10-28T12:00:00Z",
+        "general_ledger_code": "10200770",
+        "populations": [
+            1,
+            3
+        ],
+        "categories": [
+            2
+        ]
+    }
+  },
+  {
+    "model": "prison.prison",
+    "pk": "WLI",
+    "fields": {
+        "modified": "2016-12-01T12:00:00Z",
+        "region": "East of England",
+        "name": "HMP Wayland",
+        "created": "2015-10-28T12:00:00Z",
+        "general_ledger_code": "10201060",
+        "populations": [
+            1,
+            3
+        ],
+        "categories": [
+            3
+        ]
+    }
   }
 ]

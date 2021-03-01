@@ -1,8 +1,9 @@
+from collections import defaultdict
+from copy import copy
 import re
 import json
 
 from django.conf import settings
-from django.core.management import call_command
 from django.test import override_settings, TestCase
 import responses
 
@@ -15,7 +16,6 @@ from prison.tests.utils import (
 )
 
 
-
 class LoadPrisonerLocationsFromDevPrisonAPITestCase(TestCase):
 
     fixtures = [
@@ -25,14 +25,40 @@ class LoadPrisonerLocationsFromDevPrisonAPITestCase(TestCase):
     ]
 
     def setUp(self):
-        self.prison_id = 'BWI'  # HMP Berwyn is present in dev HMPPS Prison API
-        self.n_prisoners_api = 10
-        self.n_prisoners_desired = 5
+        self.prison_ids = [
+            'BWI',  # HMP Berwyn
+            'NMI',  # HMP Nottingham
+            'WLI',  # HMP Wayland
+        ]
+        prisoners_per_prison = {
+            'BWI': 1,
+            'NMI': 5,
+            'WLI': 2,
+        }
+        # Dictionaries with data returned by mocked API
+        self.api_live_roll = defaultdict(list)
+        self.api_offenders_info = {}
+        # Location of each test prisoner
+        self.prisoner_location = {}
 
-        self.prisoners = {}
-        for _ in range(self.n_prisoners_api):
-            prisoner_id = random_prisoner_number()
-            self.prisoners[prisoner_id] = self.random_prisoner()
+        for prison_id, n_prisoners in prisoners_per_prison.items():
+            for _ in range(n_prisoners):
+                prisoner_id = random_prisoner_number()
+                prisoner_info = self.random_prisoner()
+
+                self.api_live_roll[prison_id].append(prisoner_id)
+                self.api_offenders_info[prisoner_id] = prisoner_info
+                self.prisoner_location[prisoner_id] = prison_id
+
+        self.n_prisoners_desired = 5
+        # 1 prisoner from BWI
+        self.expected_prisoner_ids = self.api_live_roll['BWI']
+        # first 2 prisoners from NMI
+        prisoners = copy(self.api_live_roll['NMI'])
+        prisoners.sort()
+        self.expected_prisoner_ids = self.expected_prisoner_ids + prisoners[:2]
+        # another 2 prisoners from WLI
+        self.expected_prisoner_ids = self.expected_prisoner_ids + self.api_live_roll['WLI']
 
     def random_prisoner(self):
         full_name = random_prisoner_name()
@@ -46,9 +72,19 @@ class LoadPrisonerLocationsFromDevPrisonAPITestCase(TestCase):
             # HMPPS Prison API returns more information not included here
         }
 
+    def get_live_roll_callback(self, request):
+        # Mock for `GET prison/PRISON_ID/live_roll`
+        prison_id = request.path_url.split('/')[-2]
+        live_roll = {
+            'noms_ids': self.api_live_roll[prison_id],
+        }
+
+        return (200, {}, json.dumps(live_roll))
+
     def get_offender_info_callback(self, request):
+        # Mock for `GET offenders/PRISONER_ID`
         prisoner_id = request.path_url.split('/')[-1]
-        prisoner_info = self.prisoners[prisoner_id]
+        prisoner_info = self.api_offenders_info[prisoner_id]
 
         return (200, {}, json.dumps(prisoner_info))
 
@@ -69,12 +105,10 @@ class LoadPrisonerLocationsFromDevPrisonAPITestCase(TestCase):
                     'expires_in': 3600,
                 },
             )
-            rsps.add(
+            rsps.add_callback(
                 responses.GET,
-                f'{settings.HMPPS_PRISON_API_BASE_URL}api/v1/prison/{self.prison_id}/live_roll',
-                json={
-                    'noms_ids': list(self.prisoners.keys()),
-                }
+                re.compile(f'{settings.HMPPS_PRISON_API_BASE_URL}api/v1/prison/[A-Z]+/live_roll'),
+                callback=self.get_live_roll_callback,
             )
             rsps.add_callback(
                 responses.GET,
@@ -89,14 +123,13 @@ class LoadPrisonerLocationsFromDevPrisonAPITestCase(TestCase):
 
         self.assertEqual(self.n_prisoners_desired, n_prisoner_locations_created)
 
-        expected_prisoner_ids = list(self.prisoners.keys())
-        expected_prisoner_ids.sort()
-        for prisoner_id in expected_prisoner_ids[:self.n_prisoners_desired]:
-            prisoner_info = self.prisoners[prisoner_id]
+        for prisoner_id in self.expected_prisoner_ids:
+            prisoner_info = self.api_offenders_info[prisoner_id]
+            prison_id = self.prisoner_location[prisoner_id]
 
             location = PrisonerLocation.objects.filter(
                 prisoner_number=prisoner_id,
-                prison_id=self.prison_id,
+                prison_id=prison_id,
             )
 
             self.assertTrue(location.exists())
