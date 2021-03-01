@@ -278,12 +278,11 @@ def generate_auto_accept_rules():
                         }]
                     }
                 )
-                check_auto_accept_rule_state = check_auto_accept_rule.states.filter(
+                inactive_check_auto_accept_rule_state = check_auto_accept_rule.states.filter(
                     active=False
                 ).order_by('-id').first()
-                check_auto_accept_rule_state.checks.add(check)
-                check_auto_accept_rule_state.created = created_date + timedelta(hours=1)
-                check_auto_accept_rule_state.save()
+                inactive_check_auto_accept_rule_state.created = created_date + timedelta(hours=1)
+                inactive_check_auto_accept_rule_state.save()
 
 
 @transaction.atomic()

@@ -618,7 +618,7 @@ class CheckAutoAcceptRuleFilter(BaseFilterSet):
         ).order_by(
             '-created'
         )
-        return queryset.annotate(
+        return queryset.distinct().annotate(
             last_state_active=Subquery(last_state.values('active')[:1])
         ).filter(
             last_state_active=value
