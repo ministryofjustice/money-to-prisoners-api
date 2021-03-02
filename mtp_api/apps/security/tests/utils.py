@@ -19,6 +19,7 @@ from payment.tests.utils import create_fake_sender_data, generate_payments
 from prison.tests.utils import random_prisoner_number
 from security.constants import CHECK_STATUS
 from security.models import (
+    CardholderName,
     Check,
     CheckAutoAcceptRule,
     DebitCardSenderDetails,
@@ -212,7 +213,14 @@ def generate_checks(
             ))[0]
             if sender_profile:
                 candidate_payment.billing_address = billing_address_sender_profile_id_mapping.get(sender_profile.id)
+                # We ensure that the sender profile includes the cardholder name
+                # In the test data there should only be one debit_card_details per sender_profile, we use get_or_create
+                CardholderName.objects.get_or_create(
+                    name=candidate_payment.cardholder_name,
+                    debit_card_sender_details=sender_profile.debit_card_details.first()
+                )
             candidate_payment.save()
+
         candidate_payment.credit.log_set.filter(action=CREDIT_LOG_ACTIONS.CREDITED).delete()
         # Checks already get created in the payment saving process for applicable credits
         # (see payment/models.py::create_security_check_if_needed_and_attach_profiles
