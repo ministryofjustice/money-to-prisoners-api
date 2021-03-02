@@ -1,13 +1,16 @@
 import csv
+from collections import deque
 import datetime
 from itertools import cycle
 import os
 import random
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.utils.crypto import get_random_string
 from django.utils.dateparse import parse_date
 from faker import Faker
+from mtp_common import nomis
 
 from prison.models import Prison, PrisonerLocation
 
@@ -65,6 +68,64 @@ def load_prisoner_locations_from_file(filename):
         prisoner_location['prison'] = Prison.objects.get(nomis_id=prisoner_location['prison'])
         prisoner_location['prisoner_dob'] = parse_date(prisoner_location['prisoner_dob'])
         prisoner_location['active'] = True
+
+    return PrisonerLocation.objects.bulk_create(
+        map(lambda data: PrisonerLocation(**data), prisoner_locations)
+    )
+
+
+def load_prisoner_locations_from_dev_prison_api(number_of_prisoners=50):
+    """
+    Get prisoners locations from the dev HMPPS Prison API.
+
+    This relies on the existance of well-known prisons in the dev API.
+
+    See API documentation: https://api.prison.service.justice.gov.uk/swagger-ui/index.html
+    """
+
+    if settings.ENVIRONMENT == 'prod':
+        raise Exception('Do not load prisoner locations from production HMPPS Prison API')
+
+    prison_ids = [
+        'BWI',  # HMP Berwyn
+        'NMI',  # HMP Nottingham
+        'WLI',  # HMP Wayland
+    ]
+    created_by = get_user_model().objects.first()
+
+    prisons = {}
+    prisoners_ids = {}
+    for prison_id in prison_ids:
+        prisons[prison_id] = Prison.objects.get(pk=prison_id)
+
+        resp = nomis.connector.get(f'prison/{prison_id}/live_roll')
+        resp['noms_ids'].sort()  # Sort to improve reproducibility
+        prisoners_ids[prison_id] = deque(resp['noms_ids'])
+
+    prison_ids = cycle(prison_ids)
+    prisoner_locations = []
+    # Cycle through prisons, take a prisoner from each prison's queue
+    # Until we generated enough PrisonerLocation or there are no prisoners left
+    while len(prisoner_locations) < number_of_prisoners:
+        empty = [len(q) == 0 for q in prisoners_ids.values()]
+        if all(empty):
+            break  # No more prisoners in any of these prisons
+
+        prison_id = next(prison_ids)
+        if len(prisoners_ids[prison_id]) == 0:
+            continue  # No more prisoners in this prison
+
+        prisoner_id = prisoners_ids[prison_id].popleft()
+        resp = nomis.connector.get(f'offenders/{prisoner_id}')
+        prisoner_location = {
+            'prisoner_number': prisoner_id,
+            'prisoner_name': resp['given_name'] + ' ' + resp['surname'],
+            'prisoner_dob': parse_date(resp['date_of_birth']),
+            'prison': prisons[prison_id],
+            'active': True,
+            'created_by': created_by,
+        }
+        prisoner_locations.append(prisoner_location)
 
     return PrisonerLocation.objects.bulk_create(
         map(lambda data: PrisonerLocation(**data), prisoner_locations)

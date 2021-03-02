@@ -21,7 +21,12 @@ from payment.models import Batch, Payment
 from payment.tests.utils import generate_payments
 from performance.tests.utils import generate_digital_takeup
 from prison.models import Prison, PrisonerLocation
-from prison.tests.utils import load_prisoner_locations_from_file, load_random_prisoner_locations
+from prison.tests.utils import (
+    load_prisoner_locations_from_file,
+    load_random_prisoner_locations,
+    load_prisoner_locations_from_dev_prison_api,
+)
+
 from security.tests.utils import (
     generate_checks,
     generate_prisoner_profiles_from_prisoner_locations,
@@ -49,10 +54,10 @@ class Command(BaseCommand):
         parser.add_argument('--protect-credits', action='store_true',
                             help='Prevents existing credits from being deleted')
         parser.add_argument('--prisons', nargs='*', default=['sample'],
-                            choices=['sample', 'nomis', 'mtp', 'nomis-api-dev'],
+                            choices=['sample', 'nomis', 'mtp', 'nomis-api-dev', 'dev-prison-api'],
                             help='Create prisons from these sets')
         parser.add_argument('--prisoners', nargs='*', default=['sample'],
-                            choices=['sample', 'nomis', 'nomis-api-dev'],
+                            choices=['sample', 'nomis', 'nomis-api-dev', 'dev-prison-api'],
                             help='Create prisoners from these sets')
         parser.add_argument('--number-of-prisoners', default=50, type=int,
                             help='Number of sample prisoners to create (no effect for nomis)')
@@ -207,6 +212,8 @@ class Command(BaseCommand):
             fixtures.append('test_nomis_mtp_prisons.json')
         if 'nomis-api-dev' in prisons:
             fixtures.append('dev_nomis_api_prisons.json')
+        if 'dev-prison-api' in prisons:
+            fixtures.append('dev_prison_api_prisons.json')
         print_message('Loading default user group and selected prison fixtures')
         call_command('loaddata', *fixtures, verbosity=verbosity)
 
@@ -226,6 +233,8 @@ class Command(BaseCommand):
             prisoner_locations = load_prisoner_locations_from_file('test_nomis_prisoner_locations.csv')
         if 'nomis-api-dev' in prisoners:
             prisoner_locations = load_prisoner_locations_from_file('dev_nomis_api_prisoner_locations.csv')
+        if 'dev-prison-api' in prisoners:
+            prisoner_locations = load_prisoner_locations_from_dev_prison_api(number_of_prisoners=number_of_prisoners)
         if 'sample' in prisoners:
             prisoner_locations = load_random_prisoner_locations(number_of_prisoners=number_of_prisoners)
         if not prisoner_locations:
