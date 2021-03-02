@@ -241,7 +241,7 @@ def generate_auto_accept_rules():
         credit__prisoner_profile__isnull=False
     ).all()
     for i, check in enumerate(checks):
-        if i % 2:
+        if not i % 2:
             user = random.choice(list(Group.objects.filter(name='FIU').first().user_set.all()))
             # Spread out the creation date to test sorting
             created_date = datetime.now(tz=pytz.utc) - timedelta(hours=random.randint(0, len(checks)))
@@ -252,7 +252,7 @@ def generate_auto_accept_rules():
                     'debit_card_sender_details_id': check.credit.payment.billing_address.debit_card_sender_details,
                     'prisoner_profile_id': check.credit.prisoner_profile,
                     'states': [{
-                        'reason': f'I am an automatically generated auto-accept number {i}',
+                        'reason': f'I am an automatically generated auto-accept active state number {i}',
                     }]
                 })
             except IntegrityError:
@@ -260,12 +260,29 @@ def generate_auto_accept_rules():
                     debit_card_sender_details=check.credit.payment.billing_address.debit_card_sender_details,
                     prisoner_profile=check.credit.prisoner_profile
                 ).first()
-
             check_auto_accept_rule.created = created_date
-            check_auto_accept_rule_state = check_auto_accept_rule.states.order_by('-created').first()
+            check_auto_accept_rule_state = check_auto_accept_rule.states.filter(active=True).order_by('-id').first()
             check_auto_accept_rule_state.checks.add(check)
             check_auto_accept_rule_state.created = created_date
             check_auto_accept_rule_state.save()
+
+            if not i % 4:
+                check_auto_accept_rule = CheckAutoAcceptRuleSerializer(
+                    context={'request': Mock(user=user)}
+                ).update(
+                    instance=check_auto_accept_rule,
+                    validated_data={
+                        'states': [{
+                            'active': False,
+                            'reason': f'I am an automatically generated auto-accept inactive state number {i}',
+                        }]
+                    }
+                )
+                inactive_check_auto_accept_rule_state = check_auto_accept_rule.states.filter(
+                    active=False
+                ).order_by('-id').first()
+                inactive_check_auto_accept_rule_state.created = created_date + timedelta(hours=1)
+                inactive_check_auto_accept_rule_state.save()
 
 
 @transaction.atomic()
