@@ -247,6 +247,9 @@ def generate_auto_accept_rules():
         status=CHECK_STATUS.ACCEPTED,
         credit__payment__billing_address__debit_card_sender_details__isnull=False,
         credit__prisoner_profile__isnull=False
+    ).distinct(
+        'credit__payment__billing_address__debit_card_sender_details_id',
+        'credit__prisoner_profile_id',
     ).all()
     for i, check in enumerate(checks):
         if not i % 2:
