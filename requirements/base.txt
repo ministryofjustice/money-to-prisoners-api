@@ -1,6 +1,6 @@
 # Dependencies needed for all environments
 
-money-to-prisoners-common~=11.0.1
+money-to-prisoners-common~=11.1.0
 
 psycopg2-binary>=2.8.4,<2.9
 djangorestframework>=3.9.1,<3.10.0
