@@ -1386,8 +1386,8 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
         )
 
     @parameterized.expand([
-        ('states__added_by__last_name', 0, 1),
-        ('-states__added_by__last_name', 1, 0),
+        ('states__added_by__first_name', 1, 0),
+        ('-states__added_by__first_name', 0, 1),
         ('states__created', 1, 0),
         ('-states__created', 0, 1),
     ])

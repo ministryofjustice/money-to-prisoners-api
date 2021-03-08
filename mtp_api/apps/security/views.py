@@ -605,9 +605,9 @@ class CheckAutoAcceptRuleFilter(BaseFilterSet):
 
     ordering = django_filters.OrderingFilter(
         fields=(
-            ('states__added_by__last_name', 'states__added_by__last_name'),
+            ('states__added_by__first_name', 'states__added_by__first_name'),
             ('states__created', 'states__created'),
-            ('-states__added_by__last_name', '-states__added_by__last_name'),
+            ('-states__added_by__first_name', '-states__added_by__first_name'),
             ('-states__created', '-states__created'),
         )
     )
@@ -626,7 +626,7 @@ class CheckAutoAcceptRuleFilter(BaseFilterSet):
 
     class Meta:
         model = CheckAutoAcceptRule
-        fields = ['states__added_by__last_name', 'states__created']
+        fields = ['states__added_by__first_name', 'states__created']
 
 
 class CheckAutoAcceptRuleView(
@@ -641,7 +641,7 @@ class CheckAutoAcceptRuleView(
     serializer_class = CheckAutoAcceptRuleSerializer
     ordering_fields = (
         'states_created', '-states_created',
-        'states__added_by__last_name', '-states__added_by__last_name',
+        'states__added_by__first_name', '-states__added_by__first_name',
     )
     permission_classes = (
         IsAuthenticated,
