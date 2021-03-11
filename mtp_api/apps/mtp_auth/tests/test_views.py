@@ -2033,7 +2033,7 @@ class ChangePasswordWithCodeTestCase(AuthBaseTestCase):
 
 
 @mock.patch(
-    'mtp_auth.permissions.AccountRequestPremissions',
+    'mtp_auth.permissions.AccountRequestPermissions',
     (CASHBOOK_OAUTH_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID)
 )
 class AccountRequestTestCase(AuthBaseTestCase):
@@ -2218,11 +2218,14 @@ class AccountRequestTestCase(AuthBaseTestCase):
         })
         self.assertEqual(AccountRequest.objects.count(), 1)
 
-    def test_authentication_requried(self):
+    def test_authentication_required(self):
         url_list = reverse('accountrequest-list')
-        for method in ('get', 'put', 'patch', 'delete'):  # post allowed
+        for method in ('put', 'patch', 'delete'):  # post allowed, get returns only count
             response = getattr(self.client, method)(url_list)
             self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+            response = self.client.get(url_list)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(list(response.json().keys()), ['count'])
 
         AccountRequest.objects.create(
             first_name='Mark', last_name='Smith',
@@ -2781,3 +2784,35 @@ class AccountRequestTestCase(AuthBaseTestCase):
 
         self.assertEqual(AccountRequest.objects.count(), 2)
         self.assertEqual(User.objects.count(), user_count)
+
+    def test_unauthenticated_user_can_view_counts(self):
+        # Setup
+        admin = self.users['prison_clerk_uas'][0]
+        role = Role.objects.get(name='prison-clerk')
+        prison = admin.prisonusermapping.prisons.first()
+        PrisonUserMapping.objects.assign_prisons_to_user(admin, Prison.objects.all())
+
+        user = basic_user.make(is_active=True)
+        role.assign_to_user(user)
+        mommy.make(
+            AccountRequest,
+            first_name=user.first_name, last_name=user.last_name,
+            email=user.email, username=user.username,
+            role=role, prison=prison,
+        )
+        self.assertEqual(AccountRequest.objects.count(), 1)
+
+        # Execute
+        response = self.client.get(
+            reverse('accountrequest-list'),
+            format='json'
+        )
+
+        # Assert
+        self.assertEqual(response.status_code, status.HTTP_200_OK, msg=response.content)
+        self.assertEqual(
+            response.json(),
+            {
+                'count': 1
+            }
+        )
