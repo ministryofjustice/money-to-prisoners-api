@@ -626,7 +626,12 @@ class CheckAutoAcceptRuleFilter(BaseFilterSet):
 
     class Meta:
         model = CheckAutoAcceptRule
-        fields = ['states__added_by__first_name', 'states__created']
+        fields = [
+            'debit_card_sender_details_id',
+            'prisoner_profile_id',
+            'states__added_by__first_name',
+            'states__created'
+        ]
 
 
 class CheckAutoAcceptRuleView(
@@ -637,7 +642,7 @@ class CheckAutoAcceptRuleView(
     viewsets.GenericViewSet,
 ):
     queryset = CheckAutoAcceptRule.objects.all()
-    filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
+    filter_backends = (DjangoFilterBackend,)
     filter_class = CheckAutoAcceptRuleFilter
     serializer_class = CheckAutoAcceptRuleSerializer
     ordering_fields = (
