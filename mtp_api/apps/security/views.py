@@ -637,7 +637,7 @@ class CheckAutoAcceptRuleView(
     viewsets.GenericViewSet,
 ):
     queryset = CheckAutoAcceptRule.objects.all()
-    filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
+    filter_backends = (DjangoFilterBackend,)
     filter_class = CheckAutoAcceptRuleFilter
     serializer_class = CheckAutoAcceptRuleSerializer
     ordering_fields = (
