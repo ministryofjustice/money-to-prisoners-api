@@ -626,7 +626,12 @@ class CheckAutoAcceptRuleFilter(BaseFilterSet):
 
     class Meta:
         model = CheckAutoAcceptRule
-        fields = ['states__added_by__first_name', 'states__created']
+        fields = [
+            'debit_card_sender_details_id',
+            'prisoner_profile_id',
+            'states__added_by__first_name',
+            'states__created'
+        ]
 
 
 class CheckAutoAcceptRuleView(
