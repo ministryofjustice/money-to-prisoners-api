@@ -19,6 +19,7 @@ from django.utils.decorators import method_decorator
 from django.utils.text import capfirst
 from django.utils.translation import gettext, gettext_lazy as _
 from django.views.decorators.debug import sensitive_post_parameters, sensitive_variables
+import django_filters
 from mtp_common.tasks import send_email
 from oauth2_provider.models import Application
 from rest_framework import viewsets, generics, status
@@ -28,12 +29,13 @@ from rest_framework.response import Response
 from rest_framework.settings import api_settings
 
 from core.views import BaseAdminReportView
+from core.filters import BaseFilterSet
 from mtp_auth.forms import LoginStatsForm
 from mtp_auth.models import (
     ApplicationUserMapping, PrisonUserMapping, Role, Flag,
     FailedLoginAttempt, PasswordChangeRequest, AccountRequest, Login,
 )
-from mtp_auth.permissions import UserPermissions, AnyAdminClientIDPermissions, AccountRequestPremissions
+from mtp_auth.permissions import UserPermissions, AnyAdminClientIDPermissions, AccountRequestPermissions
 from mtp_auth.serializers import (
     RoleSerializer, UserSerializer, FlagSerializer, AccountRequestSerializer,
     ChangePasswordSerializer, ResetPasswordSerializer, ChangePasswordWithCodeSerializer,
@@ -362,10 +364,27 @@ class ResetPasswordView(generics.GenericAPIView):
             return self.failure_response(serializer.errors)
 
 
+class AccountRequestFilterset(BaseFilterSet):
+    username = django_filters.CharFilter(
+        field_name='username', lookup_expr='iexact',
+    )
+    role__name = django_filters.CharFilter(field_name='role__name')
+
+    class Meta:
+        model = AccountRequest
+        fields = ['username', 'role__name']
+
+
 class AccountRequestViewSet(viewsets.ModelViewSet):
-    queryset = AccountRequest.objects.none()
-    permission_classes = (AccountRequestPremissions,)
+    queryset = AccountRequest.objects.all()
+    filter_class = AccountRequestFilterset()
+    permission_classes = (AccountRequestPermissions,)
     serializer_class = AccountRequestSerializer
+
+    def list(self, request, *args, **kwargs):
+        if not self.request.user.is_authenticated:
+            return Response(data={'count': self.filter_queryset(self.get_queryset()).count()})
+        return super().list(request, *args, **kwargs)
 
     def get_queryset(self):
         user = self.request.user

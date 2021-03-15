@@ -68,13 +68,15 @@ class SendMoneyClientIDPermissions(ClientIDPermissions):
     client_id = SEND_MONEY_CLIENT_ID
 
 
-class AccountRequestPremissions(BasePermission):
+class AccountRequestPermissions(BasePermission):
     supported_clients = (CASHBOOK_OAUTH_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID)
 
     def has_permission(self, request, view):
         action = getattr(view, 'action', '')
         if action == 'create':
             return request.user and not request.user.is_authenticated
+        if action == 'list' and not request.user.is_authenticated:
+            return True
         if action in ('list', 'retrieve', 'partial_update', 'destroy'):
             return self.is_user_admin(request) and self.supported_app(request)
         return False
