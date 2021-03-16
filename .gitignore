@@ -11,6 +11,8 @@ node_modules/
 npm-debug.log
 
 # app-specific
+.eslintrc.json
+.sass-lint.yml
 docker-compose.yml
 package.json
 package-lock.json
