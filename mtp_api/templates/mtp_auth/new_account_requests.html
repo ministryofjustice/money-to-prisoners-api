@@ -1,7 +1,7 @@
 {% extends 'mtp_common/email_base.html' %}
 {% load i18n %}
 
-{% block inner_content %}
+{% block content %}
   <p>
     {% if names|length == 1 %}
       {% blocktrans trimmed with name=names.0 %}
