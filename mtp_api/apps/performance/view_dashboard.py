@@ -15,11 +15,17 @@ COST_PER_TRANSACTION_BY_DIGITAL = 2.22
 
 
 def get_user_satisfaction():
-    yearly_data = requests.get(
-        'https://www.performance.service.gov.uk/data/send-prisoner-money/customer-satisfaction?'
-        'flatten=true&duration=1&period=year&collect=rating_1%3Asum&collect=rating_2%3Asum&collect=rating_3%3Asum&'
-        'collect=rating_4%3Asum&collect=rating_5%3Asum&collect=total%3Asum&format=json'
-    ).json()
+    try:
+        response = requests.get(
+            'https://www.performance.service.gov.uk/data/send-prisoner-money/customer-satisfaction?'
+            'flatten=true&duration=1&period=year&collect=rating_1%3Asum&collect=rating_2%3Asum&collect=rating_3%3Asum&'
+            'collect=rating_4%3Asum&collect=rating_5%3Asum&collect=total%3Asum&format=json'
+        )
+        response.raise_for_status()
+    except requests.RequestException:
+        return 'Not available'
+
+    yearly_data = response.json()
     yearly_data = yearly_data['data'][0]
 
     total_satisfied_year = yearly_data['rating_4:sum'] + yearly_data['rating_5:sum']
