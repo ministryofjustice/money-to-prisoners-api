@@ -157,6 +157,7 @@ def make_test_users(clerks_per_prison=2, num_security_fiu_users=1):
     link_users_with_client(disbursement_bank_admins, BANK_ADMIN_OAUTH_CLIENT_ID)
     link_users_with_client(send_money_users, SEND_MONEY_CLIENT_ID)
     link_users_with_client(security_users, NOMS_OPS_OAUTH_CLIENT_ID)
+    link_users_with_client(security_fiu_users, NOMS_OPS_OAUTH_CLIENT_ID)
 
     return {
         'prison_clerks': prison_clerks,
@@ -178,11 +179,14 @@ def make_test_user_admins():
             create_prison_clerk, prisons=[prison], name_and_password='ua')
         )
 
-    # security staff user admins
-    security_users = [
-        create_user_admin(create_security_staff_user, name_and_password='security-user-admin'),
-        create_user_admin(create_security_staff_user, name_and_password='prison-security-ua',
-                          prisons=[Prison.objects.first()]),
+    # The only Security user admins should be FIU
+    security_fiu_users = [
+        create_user_admin(create_security_fiu_user, name_and_password='security-fiu-100'),
+        create_user_admin(
+            create_security_fiu_user,
+            name_and_password='security-fiu-101',
+            prisons=[Prison.objects.first()]
+        ),
     ]
 
     # prisoner location user admins
@@ -209,13 +213,13 @@ def make_test_user_admins():
     link_users_with_client(prison_clerks, CASHBOOK_OAUTH_CLIENT_ID)
     link_users_with_client(prisoner_location_admins, NOMS_OPS_OAUTH_CLIENT_ID)
     link_users_with_client(refund_bank_admins, BANK_ADMIN_OAUTH_CLIENT_ID)
-    link_users_with_client(security_users, NOMS_OPS_OAUTH_CLIENT_ID)
+    link_users_with_client(security_fiu_users, NOMS_OPS_OAUTH_CLIENT_ID)
 
     return {
         'prison_clerk_uas': prison_clerks,
         'prisoner_location_uas': prisoner_location_admins,
         'bank_admin_uas': refund_bank_admins,
-        'security_staff_uas': security_users
+        'security_fiu_uas': security_fiu_users,
     }
 
 

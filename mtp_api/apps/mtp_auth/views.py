@@ -86,6 +86,9 @@ def get_managed_user_queryset(user):
 
     queryset = User.objects.exclude(is_superuser=True).filter(groups=user_key_group).order_by('username')
 
+    # Do not match prison for FIU, instead return security & FIU group members (excluding superusers?)
+    if user.groups.filter(name='FIU').exists():
+        return queryset
     prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(user).values_list('pk', flat=True))
     if prisons:
         for prison in prisons:
@@ -478,7 +481,9 @@ class AccountRequestViewSet(viewsets.ModelViewSet):
         role.assign_to_user(user)
         if user_admin:
             user.groups.add(Group.objects.get(name='UserAdmin'))
-        PrisonUserMapping.objects.assign_prisons_from_user(request.user, user)
+        # Do not inherit prison set if creating user (directly or via AccountRequest) is FIU
+        if not request.user.groups.filter(name='FIU').count():
+            PrisonUserMapping.objects.assign_prisons_from_user(request.user, user)
 
         context = {
             'username': user.username,

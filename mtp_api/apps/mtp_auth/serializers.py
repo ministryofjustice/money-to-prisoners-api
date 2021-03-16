@@ -75,9 +75,6 @@ class UserSerializer(serializers.ModelSerializer):
 
     allowed_self_updates = {'first_name', 'last_name', 'email', 'prisons'}
 
-    # TODO Deduplicate this and disbursements.serializers.UserSerializer
-    # so drf-yasg stops complaining about serializer namespace collisions
-    # without custom ref name
     class Meta:
         ref_name = 'Detailed User'
         model = User
@@ -181,10 +178,15 @@ class UserSerializer(serializers.ModelSerializer):
         new_user.set_password(password)
         new_user.save()
 
-        if make_user_admin:
+        # In custom flow, enforce that `UserAdmin` is added to any new `Security` user who has the `can_manage` box
+        # ticked in the form.
+        # In django admin flow, any new user who has been added to FIU group is also added to user admin group
+        if make_user_admin or new_user.groups.filter(name='FIU').exists():
             new_user.groups.add(Group.objects.get(name='UserAdmin'))
 
-        PrisonUserMapping.objects.assign_prisons_from_user(creating_user, new_user)
+        # Do not inherit prison set if creating user (directly or via AccountRequest) is FIU
+        if not creating_user.groups.filter(name='FIU').exists():
+            PrisonUserMapping.objects.assign_prisons_from_user(creating_user, new_user)
         role.assign_to_user(new_user)
 
         context = {
@@ -227,14 +229,26 @@ class UserSerializer(serializers.ModelSerializer):
             if make_user_admin:
                 updated_user.groups.add(user_admin_group)
 
+                # We add the FIU group to enforce current requirement that Security UserAdmin's are synonymous with FIU
+                if updated_user.groups.filter(name='Security').exists():
+                    updated_user.groups.add(Group.objects.filter(name='FIU').first())
+
             ApplicationUserMapping.objects.create(user=updated_user, application=role.application)
             for group in role.groups:
                 updated_user.groups.add(group)
         elif was_user_admin != make_user_admin:
             if make_user_admin:
                 updated_user.groups.add(user_admin_group)
+                # We add the FIU group to enforce current requirement that Security UserAdmin's are synonymous with FIU
+                if updated_user.groups.filter(name='Security').exists():
+                    updated_user.groups.add(Group.objects.filter(name='FIU').first())
             else:
                 updated_user.groups.remove(user_admin_group)
+                # We remove the FIU group if exists to enforce current requirement that Security UserAdmin's are
+                # synonymous with FIU
+                fiu_group_if_exists = updated_user.groups.filter(name='FIU').first()
+                if fiu_group_if_exists:
+                    updated_user.groups.remove(fiu_group_if_exists)
 
         if is_locked_out is False:
             FailedLoginAttempt.objects.filter(user=updated_user).delete()
