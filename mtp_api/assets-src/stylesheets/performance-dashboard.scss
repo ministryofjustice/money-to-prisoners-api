@@ -1,4 +1,4 @@
-@import 'colours/palette';
+@import 'govuk-frontend/govuk/settings/all';
 
 body {
   padding-left: 100px;
@@ -95,42 +95,42 @@ td {
 }
 
 .yellow {
-  color: $yellow;
+  color: govuk-colour('yellow');
 
   .legend &::before {
-    background: $yellow;
+    background: govuk-colour('yellow');
   }
 }
 
 .pink {
-  color: $pink;
+  color: govuk-colour('pink');
 
   .legend &::before {
-    background: $pink;
+    background: govuk-colour('pink');
   }
 }
 
 .purple {
-  color: $mauve;
+  color: govuk-colour('light-purple');
 
   .legend &::before {
-    background: $mauve;
+    background: govuk-colour('light-purple');
   }
 }
 
 .green {
-  color: $grass-green;
+  color: govuk-colour('light-green');
 
   .legend &::before {
-    background: $grass-green;
+    background: govuk-colour('light-green');
   }
 }
 
 .blue {
-  color: $light-blue;
+  color: govuk-colour('light-blue');
 
   .legend &::before {
-    background: $light-blue;
+    background: govuk-colour('light-blue');
   }
 }
 
