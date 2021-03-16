@@ -1,3 +1,7 @@
+"""
+NB: GOV.UK have retired the performance platform
+"""
+
 from datetime import datetime
 
 from django.core.management import BaseCommand

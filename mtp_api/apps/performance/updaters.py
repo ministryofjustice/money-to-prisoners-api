@@ -1,3 +1,7 @@
+"""
+NB: GOV.UK have retired the performance platform
+"""
+
 import base64
 from datetime import datetime, time, timedelta
 import logging
