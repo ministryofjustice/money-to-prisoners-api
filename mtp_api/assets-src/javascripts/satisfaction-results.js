@@ -1,4 +1,4 @@
-/* globals django, google, satisfactionResultsData */
+/* globals google, satisfactionResultsData */
 
 django.jQuery(function ($) {
   'use strict';
@@ -56,7 +56,7 @@ django.jQuery(function ($) {
 
       // draw coloured tabs
       for (i in colourScale) {
-        if (colourScale.hasOwnProperty(i)) {
+        if (Object.prototype.hasOwnProperty.call(colourScale, i)) {
           var colour = colourScale[i];
           var barBounds = cli.getBoundingBox('bar#0#' + i);
           var $rect = $(document.createElementNS(svgNamespace, 'rect'));
@@ -75,7 +75,7 @@ django.jQuery(function ($) {
 
       // draw mean bars
       for (i in means) {
-        if (means.hasOwnProperty(i)) {
+        if (Object.prototype.hasOwnProperty.call(means, i)) {
           var mean = means[i];
           var $meanMarker = $(document.createElementNS(svgNamespace, 'rect'));
           var $meanTextMarker = $(document.createElementNS(svgNamespace, 'text'));
@@ -154,7 +154,7 @@ django.jQuery(function ($) {
       var chartData = new google.visualization.DataTable();
 
       for (var column in satisfactionResultsData.columns) {
-        if (satisfactionResultsData.columns.hasOwnProperty(column)) {
+        if (Object.prototype.hasOwnProperty.call(satisfactionResultsData.columns, column)) {
           chartData.addColumn(satisfactionResultsData.columns[column]);
         }
       }

@@ -1,4 +1,4 @@
-/* globals django, google, creditReportData */
+/* globals google, creditReportData */
 
 django.jQuery(function ($) {
   'use strict';
@@ -127,7 +127,7 @@ django.jQuery(function ($) {
 
       if ($chartRect.size()) {
         for (var weekend in creditReportData.weekends) {
-          if (!creditReportData.weekends.hasOwnProperty(weekend)) {
+          if (!Object.prototype.hasOwnProperty.call(creditReportData.weekends, weekend)) {
             continue;
           }
           weekend = creditReportData.weekends[weekend];
@@ -152,7 +152,7 @@ django.jQuery(function ($) {
   google.charts.setOnLoadCallback(function () {
     chartData = new google.visualization.DataTable();
     for (var column in creditReportData.columns) {
-      if (creditReportData.columns.hasOwnProperty(column)) {
+      if (Object.prototype.hasOwnProperty.call(creditReportData.columns, column)) {
         chartData.addColumn(creditReportData.columns[column]);
       }
     }

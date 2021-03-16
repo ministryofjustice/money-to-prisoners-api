@@ -1,4 +1,4 @@
-/* globals django, Cookies */
+/* globals Cookies */
 
 django.jQuery(function ($) {
   'use strict';
@@ -76,7 +76,7 @@ django.jQuery(function ($) {
     $button.text($button.data('close-label'));
     $button.off('click');
     for (var prefix in prefixes) {
-      if (prefixes.hasOwnProperty(prefix)) {
+      if (Object.prototype.hasOwnProperty.call(prefixes, prefix)) {
         var method = prefixes[prefix] ? prefixes[prefix] + 'RequestFullscreen' : 'requestFullscreen';
         if (dashboardWrapper[method]) {
           dashboardWrapper[method]();

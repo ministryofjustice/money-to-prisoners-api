@@ -1,4 +1,5 @@
-/* globals django, google, creditData, digitalTakeupData, disbursementData */
+/* globals google, creditData, digitalTakeupData, disbursementData */
+'use strict';
 
 var $ = django.jQuery;
 google.charts.load('current', { 'packages': ['corechart']});
