@@ -4,7 +4,6 @@ import pathlib
 from django.test import TestCase
 from django.core.files.base import File
 
-from core.models import ScheduledCommand
 from performance.forms import DigitalTakeupUploadForm
 from performance.models import DigitalTakeup
 
@@ -24,7 +23,6 @@ class DigitalTakeupUploadTestCase(TestCase):
                                                                            form.errors.as_text()))
             form.save()
         self.assertEqual(DigitalTakeup.objects.count(), 111)
-        self.assertEqual(ScheduledCommand.objects.count(), 2)
 
         sample_date = datetime.date(2016, 11, 2)
         self.assertAlmostEqual(DigitalTakeup.objects.mean_digital_takeup(), 0.19, places=2)

@@ -10,8 +10,6 @@ from django.db import transaction
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 
-from core.models import ScheduledCommand
-
 logger = logging.getLogger('mtp')
 
 
@@ -148,12 +146,3 @@ class DigitalTakeupUploadForm(forms.Form):
                 date=self.date,
                 prison_id=nomis_id,
             )
-
-        datestr = self.date.strftime('%Y-%m-%dT00:00:00')
-        job = ScheduledCommand(
-            name='update_performance_platform',
-            arg_string='--resources transactions-by-channel-type --timestamp %s' % datestr,
-            cron_entry='*/10 * * * *',
-            delete_after_next=True
-        )
-        job.save()
