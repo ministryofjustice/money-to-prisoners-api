@@ -1,4 +1,4 @@
-/* globals django, google */
+/* globals google */
 
 django.jQuery(function () {
   'use strict';

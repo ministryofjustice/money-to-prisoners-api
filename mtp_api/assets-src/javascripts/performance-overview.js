@@ -1,4 +1,4 @@
-/* globals django, google, performanceData */
+/* globals google, performanceData */
 'use strict';
 
 function performanceChart ($, data, $chart) {
