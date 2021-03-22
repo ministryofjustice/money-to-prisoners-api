@@ -658,7 +658,9 @@ class ListUserTestCase(AuthBaseTestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def assertCanListUsers(self, requester, allowed_client_ids, exact_prison_match=True):  # noqa: N802
+    def assertCanListUsers(  # noqa: N802
+        self, requester, allowed_client_ids, exact_prison_match=True, no_prison_match=False
+    ):
         response = self.client.get(
             self.get_url(),
             format='json',
@@ -671,10 +673,11 @@ class ListUserTestCase(AuthBaseTestCase):
             user_client_ids = set(user.applicationusermapping_set.values_list('application__client_id', flat=True))
             self.assertTrue(allowed_client_ids.issuperset(user_client_ids),
                             msg='Listed user with unexpected application access')
-            if exact_prison_match:
+
+            if exact_prison_match and not no_prison_match:
                 self.assertSamePrisons(requester, user,
                                        msg='User Admin able to retrieve users without matching prisons')
-            else:
+            elif not no_prison_match:
                 self.assertSubsetPrisons(requester, user,
                                          msg='User Admin able to retrieve users without matching prisons')
         return response.data['results']
@@ -683,9 +686,9 @@ class ListUserTestCase(AuthBaseTestCase):
         self.assertCanListUsers(self.cashbook_uas[0], {'cashbook'})
         self.assertCanListUsers(self.bank_uas[0], {'bank-admin'})
         self.assertCanListUsers(self.pla_uas[0], {'noms-ops'})
-        self.assertCanListUsers(self.security_uas[0], {'noms-ops'})
+        self.assertCanListUsers(self.security_uas[0], {'noms-ops'}, no_prison_match=True)
 
-    def test_list_users_in_same_prison(self):
+    def test_list_users_in_same_prison_cashbook_admin(self):
         users = self.assertCanListUsers(self.cashbook_uas[0], {'cashbook'})
         users = set(user['username'] for user in users)
         self.assertIn(self.cashbook_uas[0].username, users)
@@ -697,12 +700,15 @@ class ListUserTestCase(AuthBaseTestCase):
             for user in (self.security_staff + self.security_uas)
         ))
 
-        users = self.assertCanListUsers(self.security_uas[1], {'noms-ops'}, exact_prison_match=False)
+    def test_list_users_in_same_prison_security_admin(self):
+        users = self.assertCanListUsers(
+            self.security_uas[1], {'noms-ops'}, no_prison_match=True
+        )
         users = set(user['username'] for user in users)
         self.assertIn(self.security_uas[1].username, users)
         self.assertIn(self.security_staff[1].username, users)
-        self.assertNotIn(self.security_uas[0].username, users)
-        self.assertNotIn(self.security_staff[0].username, users)
+        self.assertIn(self.security_uas[0].username, users)
+        self.assertIn(self.security_staff[0].username, users)
         self.assertTrue(all(
             user.username not in users
             for user in (self.prison_clerks + self.cashbook_uas)
