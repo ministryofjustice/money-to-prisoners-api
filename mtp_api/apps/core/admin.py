@@ -26,6 +26,7 @@ class AdminSite(admin.AdminSite):
         from performance.view_dashboard import PerformanceDashboardView
         from performance.views import DigitalTakeupUploadView, DigitalTakeupReport, PrisonDigitalTakeupView
         from prison.views import PrisonerBalanceUploadView
+        from security.views_admin import CheckReportAdminView
 
         return [
             # older dashboards
@@ -51,6 +52,8 @@ class AdminSite(admin.AdminSite):
                 name='digital_takeup_report'),
             url(r'^performance/digitaltakeup/prisons/$', PrisonDigitalTakeupView.as_view(),
                 name='digital_takeup_prisons'),
+            url(r'^security/check/report/$', CheckReportAdminView.as_view(),
+                name='check_report'),
 
             # additional admin views
             url(r'^payment/payment/search/$', PaymentSearchView.as_view(),
