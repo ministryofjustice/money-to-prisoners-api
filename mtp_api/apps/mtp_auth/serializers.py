@@ -178,16 +178,18 @@ class UserSerializer(serializers.ModelSerializer):
         new_user.set_password(password)
         new_user.save()
 
+        role.assign_to_user(new_user)
         # In custom flow, enforce that `UserAdmin` is added to any new `Security` user who has the `can_manage` box
         # ticked in the form.
-        # In django admin flow, any new user who has been added to FIU group is also added to user admin group
+        # Note that the django admin user creation flow does not use this endpoint so this logic won't apply there
         if make_user_admin or new_user.groups.filter(name='FIU').exists():
             new_user.groups.add(Group.objects.get(name='UserAdmin'))
+            if new_user.groups.filter(name='Security').exists():
+                new_user.groups.add(Group.objects.get(name='FIU'))
 
         # Do not inherit prison set if creating user (directly or via AccountRequest) is FIU
         if not creating_user.groups.filter(name='FIU').exists():
             PrisonUserMapping.objects.assign_prisons_from_user(creating_user, new_user)
-        role.assign_to_user(new_user)
 
         context = {
             'username': new_user.username,

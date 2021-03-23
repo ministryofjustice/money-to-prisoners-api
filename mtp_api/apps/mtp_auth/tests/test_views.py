@@ -1075,7 +1075,7 @@ class CreateUserTestCase(AuthBaseTestCase):
 
     def test_created_fiu_user_has_user_admin_group(self):
         """
-        Test new FIU instances assigned by FIU aren't inherited by the new user
+        Test new FIU instances have correct groups
 
         As of MTP-1824, FIU is managing all Security users through the UserAdmin group
         """
@@ -1091,7 +1091,7 @@ class CreateUserTestCase(AuthBaseTestCase):
             self.security_uas[0],
             user_data,
             'noms-ops',
-            Group.objects.filter(name__in=['Security', 'UserAdmin']).all(),
+            Group.objects.filter(name__in=['FIU', 'Security', 'UserAdmin']).all(),
             expected_login_link='http://localhost/noms-ops/',
             assert_prisons_inherited=False
         )
