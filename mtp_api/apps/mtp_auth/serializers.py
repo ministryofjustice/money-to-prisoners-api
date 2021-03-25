@@ -182,7 +182,7 @@ class UserSerializer(serializers.ModelSerializer):
         # In custom flow, enforce that `UserAdmin` is added to any new `Security` user who has the `can_manage` box
         # ticked in the form.
         # Note that the django admin user creation flow does not use this endpoint so this logic won't apply there
-        if make_user_admin or new_user.groups.filter(name='FIU').exists():
+        if make_user_admin:
             new_user.groups.add(Group.objects.get(name='UserAdmin'))
             if new_user.groups.filter(name='Security').exists():
                 new_user.groups.add(Group.objects.get(name='FIU'))

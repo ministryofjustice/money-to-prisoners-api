@@ -828,7 +828,7 @@ class CreateUserTestCase(AuthBaseTestCase):
                 requester, new_user, msg='User Admin able to retrieve users without matching prisons'
             )
         else:
-            self.assertNoPrisons(requester, new_user)
+            self.assertNoPrisons(new_user, msg='New user should not have prisons associated')
 
         if make_user_admin:
             self.assertIn('UserAdmin', new_user.groups.values_list('name', flat=True))
@@ -1557,7 +1557,7 @@ class UpdateUserTestCase(AuthBaseTestCase):
         updated_prisons = PrisonUserMapping.objects.get_prison_set_for_user(
             updated_user
         ).all()
-        self.assertSequenceEqual(list(current_prisons), list(updated_prisons))
+        self.assertEqual(set(current_prisons), set(updated_prisons))
 
     def test_updated_user_removing_fiu_group_also_removes_user_admin_group(self):
         """
@@ -1580,7 +1580,7 @@ class UpdateUserTestCase(AuthBaseTestCase):
         updated_prisons = PrisonUserMapping.objects.get_prison_set_for_user(
             updated_user
         ).all()
-        self.assertSequenceEqual(list(current_prisons), list(updated_prisons))
+        self.assertEqual(set(current_prisons), set(updated_prisons))
 
 
 class DeleteUserTestCase(AuthBaseTestCase):
