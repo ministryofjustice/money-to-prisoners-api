@@ -12,6 +12,7 @@ from credit.models import Credit, LOG_ACTIONS as CREDIT_LOG_ACTIONS
 from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION
 from disbursement.models import Disbursement, LOG_ACTIONS as DISBURSEMENT_LOG_ACTIONS
 from payment.models import PAYMENT_STATUS, BillingAddress
+from security.models import CHECK_STATUS
 from transaction.utils import format_amount
 
 
@@ -86,14 +87,19 @@ class CreditSerialiser(Serialiser):
             status = 'Anonymous'
 
         if hasattr(record, 'security_check'):
-            security_check_status = record.security_check.status
+            security_check_description = ' '.join(record.security_check.description)
+            security_check_status = CHECK_STATUS.for_value(record.security_check.status).display
             if len(record.security_check.rules) > 0:
                 security_check_rules = record.security_check.rules
+                security_check_rejection_reasons = record.security_check.rejection_reasons
             else:
                 security_check_rules = None
+                security_check_rejection_reasons = None
         else:
+            security_check_description = None
             security_check_status = None
             security_check_rules = None
+            security_check_rejection_reasons = None
 
         row = {
             'Exported at': self.exported_at_local_time,
@@ -109,8 +115,10 @@ class CreditSerialiser(Serialiser):
             'Blocked': record.blocked,
             'Status': status,
             'NOMIS transaction': record.nomis_transaction_id,
-            'Security check status': security_check_status,
             'Security check codes': security_check_rules,
+            'Security check description': security_check_description,
+            'Security check status': security_check_status,
+            'Security check rejection reasons': security_check_rejection_reasons,
             **self.serialise_sender(record)
         }
         return row
