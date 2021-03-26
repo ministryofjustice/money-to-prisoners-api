@@ -481,6 +481,8 @@ class AccountRequestViewSet(viewsets.ModelViewSet):
         role.assign_to_user(user)
         if user_admin:
             user.groups.add(Group.objects.get(name='UserAdmin'))
+            if request.user.groups.filter(name='Security').exists():
+                request.user.groups.add(Group.objects.get(name='FIU'))
         # Do not inherit prison set if creating user (directly or via AccountRequest) is FIU
         if not request.user.groups.filter(name='FIU').count():
             PrisonUserMapping.objects.assign_prisons_from_user(request.user, user)
