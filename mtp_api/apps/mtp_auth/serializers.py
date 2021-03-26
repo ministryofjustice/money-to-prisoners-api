@@ -149,14 +149,20 @@ class UserSerializer(serializers.ModelSerializer):
             }
             try:
                 self.initial_data['role'] = managed_roles[role]
+                attrs['role'] = managed_roles[role]
             except KeyError:
                 raise serializers.ValidationError({'role': 'Invalid role: %s' % role})
 
         prisons = self.initial_data.get('prisons')
         if prisons is not None:
-            prison_objects = Prison.objects.filter(
-                nomis_id__in=[prison['nomis_id'] for prison in prisons]
-            )
+            if all([isinstance(prison, Prison) for prison in prisons]):
+                prison_objects = prisons
+            elif any([isinstance(prison, Prison) for prison in prisons]):
+                raise serializers.ValidationError({'prison': 'Invalid prisons: %s' % prisons})
+            else:
+                prison_objects = Prison.objects.filter(
+                    nomis_id__in=[prison['nomis_id'] for prison in prisons]
+                )
             attrs['prisons'] = prison_objects
 
         return super().validate(attrs)
@@ -171,7 +177,7 @@ class UserSerializer(serializers.ModelSerializer):
 
         if not role:
             raise serializers.ValidationError({'role': 'Role must be specified'})
-
+        prisons = validated_data.pop('prisons', None)
         new_user = super().create(validated_data)
 
         password = generate_new_password()
@@ -190,6 +196,9 @@ class UserSerializer(serializers.ModelSerializer):
         # Do not inherit prison set if creating user (directly or via AccountRequest) is FIU
         if not creating_user.groups.filter(name='FIU').exists():
             PrisonUserMapping.objects.assign_prisons_from_user(creating_user, new_user)
+        elif prisons is not None:
+            if self.context.get('from_account_request'):
+                PrisonUserMapping.objects.assign_prisons_to_user(new_user, prisons)
 
         context = {
             'username': new_user.username,
@@ -255,11 +264,13 @@ class UserSerializer(serializers.ModelSerializer):
         if is_locked_out is False:
             FailedLoginAttempt.objects.filter(user=updated_user).delete()
 
+        user_group_names = updated_user.groups.values_list('name', flat=True)
         if prisons is not None:
-            if updated_user.pk != updating_user.pk:
+            if self.context.get('from_account_request'):
+                PrisonUserMapping.objects.assign_prisons_to_user(updated_user, prisons)
+            elif updated_user.pk != updating_user.pk:
                 raise serializers.ValidationError("Cannot change another user's prisons")
-            user_group_names = updated_user.groups.values_list('name', flat=True)
-            if 'Security' in user_group_names and 'UserAdmin' not in user_group_names:
+            elif 'Security' in user_group_names and 'UserAdmin' not in user_group_names:
                 PrisonUserMapping.objects.assign_prisons_to_user(updated_user, prisons)
             else:
                 raise serializers.ValidationError('Only security users can change prisons')

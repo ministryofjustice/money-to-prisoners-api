@@ -456,57 +456,58 @@ class AccountRequestViewSet(viewsets.ModelViewSet):
                         'Super users cannot be edited'
                     )
                 })
-            # inactive users get re-activated
-            user.is_active = True
-            user.save()
-            # existing non-superadmins have their prisons, applications and groups replaced
-            user.groups.clear()
-            PrisonUserMapping.objects.filter(user=user).delete()
-            ApplicationUserMapping.objects.filter(user=user).delete()
-            user_existed = True
-            password = None
-        except User.DoesNotExist:
-            user = User.objects.create(
-                first_name=instance.first_name,
-                last_name=instance.last_name,
-                email=instance.email,
-                username=instance.username,
+            user_serializer = UserSerializer(
+                data=dict(
+                    first_name=instance.first_name,
+                    last_name=instance.last_name,
+                    email=instance.email,
+                    username=instance.username,
+                    role=instance.role.name,
+                    prisons=[instance.prison],
+                    user_admin=user_admin,
+                ),
+                context={
+                    'request': request,
+                    'from_account_request': True
+                }
             )
-            password = generate_new_password()
-            user.set_password(password)
-            user.save()
+            user_serializer.is_valid()
+            user = user_serializer.save()
+            # inactive users get re-activated
+            # existing non-superadmins have their prisons, applications and groups replaced
+            user_existed = True
+        except User.DoesNotExist:
+            user_serializer = UserSerializer(
+                data=dict(
+                    first_name=instance.first_name,
+                    last_name=instance.last_name,
+                    email=instance.email,
+                    username=instance.username,
+                    role=instance.role.name,
+                    prisons=[instance.prison],
+                    user_admin=user_admin,
+                ),
+                context={
+                    'request': request,
+                    'from_account_request': True
+                }
+            )
+            user_serializer.is_valid()
+            user = user_serializer.save()
             user_existed = False
 
-        role = instance.role
-        role.assign_to_user(user)
-        if user_admin:
-            user.groups.add(Group.objects.get(name='UserAdmin'))
-            if request.user.groups.filter(name='Security').exists():
-                request.user.groups.add(Group.objects.get(name='FIU'))
-        # Do not inherit prison set if creating user (directly or via AccountRequest) is FIU
-        if not request.user.groups.filter(name='FIU').count():
-            PrisonUserMapping.objects.assign_prisons_from_user(request.user, user)
 
         context = {
             'username': user.username,
-            'password': password,
-            'service_name': role.application.name.lower(),
-            'login_url': role.login_url,
+            'service_name': instance.role.application.name.lower(),
+            'login_url': instance.role.login_url,
         }
         if user_existed:
-            context.pop('password')
             send_email(
                 user.email, 'mtp_auth/user_moved.txt',
                 capfirst(gettext('Your new %(service_name)s account is ready to use') % context),
                 context=context, html_template='mtp_auth/user_moved.html',
                 anymail_tags=['user-moved'],
-            )
-        else:
-            send_email(
-                user.email, 'mtp_auth/new_user.txt',
-                capfirst(gettext('Your new %(service_name)s account is ready to use') % context),
-                context=context, html_template='mtp_auth/new_user.html',
-                anymail_tags=['new-user'],
             )
 
         LogEntry.objects.log_action(
