@@ -7,11 +7,11 @@ from django.core.management import BaseCommand, CommandError
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 
-from credit.constants import CREDIT_STATUS
+from credit.constants import CREDIT_RESOLUTION, CREDIT_STATUS
 from credit.models import Credit, LOG_ACTIONS as CREDIT_LOG_ACTIONS
 from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION
 from disbursement.models import Disbursement, LOG_ACTIONS as DISBURSEMENT_LOG_ACTIONS
-from payment.models import BillingAddress
+from payment.models import PAYMENT_STATUS, BillingAddress
 from transaction.utils import format_amount
 
 
@@ -74,8 +74,9 @@ class CreditSerialiser(Serialiser):
     record_type = 'credits'
 
     def get_queryset(self):
-        # TODO should we include rejected and expired credits as well?
-        return Credit.objects.all()
+        return Credit.objects_all \
+            .exclude(resolution=CREDIT_RESOLUTION.INITIAL) \
+            .exclude(payment__status=PAYMENT_STATUS.EXPIRED)
 
     def serialise(self, record: Credit):
         status = record.status
