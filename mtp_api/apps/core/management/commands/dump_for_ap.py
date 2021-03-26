@@ -111,7 +111,12 @@ class CreditSerialiser(Serialiser):
             'Prisoner number': record.prisoner_number or 'Unknown',
             'Prisoner name': record.prisoner_name or 'Unknown',
             'Prison': record.prison.short_name if record.prison else 'Unknown',
+            # TODO: check with analytical platform and fiu whether this is needed and
+            #   then rename to something like "Processed by":
             'Owner username': record.owner.username if record.owner else 'Unknown',
+            # TODO: this field is not useful and misleading.
+            #  it applies ONLY to bank transfers that did not have sufficient sender details (no longer possible).
+            #  check with analytical platform and fiu before removing:
             'Blocked': record.blocked,
             'Status': status,
             'NOMIS transaction': record.nomis_transaction_id,
