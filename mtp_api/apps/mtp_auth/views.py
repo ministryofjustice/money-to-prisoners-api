@@ -456,6 +456,8 @@ class AccountRequestViewSet(viewsets.ModelViewSet):
                         'Super users cannot be edited'
                     )
                 })
+            # TODO refactor this into serializer
+            user.is_active = True
             user_serializer = UserSerializer(
                 data=dict(
                     first_name=instance.first_name,
@@ -469,7 +471,8 @@ class AccountRequestViewSet(viewsets.ModelViewSet):
                 context={
                     'request': request,
                     'from_account_request': True
-                }
+                },
+                instance=user
             )
             user_serializer.is_valid()
             user = user_serializer.save()
@@ -477,6 +480,8 @@ class AccountRequestViewSet(viewsets.ModelViewSet):
             # existing non-superadmins have their prisons, applications and groups replaced
             user_existed = True
         except User.DoesNotExist:
+            # TODO check if django handlers nested database transactions in a sensible way
+            # TODO remove this try: except as now creation/update user same interface
             user_serializer = UserSerializer(
                 data=dict(
                     first_name=instance.first_name,
