@@ -167,6 +167,13 @@ class UserSerializer(serializers.ModelSerializer):
 
         return super().validate(attrs)
 
+    @staticmethod
+    def _make_user_admin(new_user):
+        new_user.groups.add(Group.objects.get(name='UserAdmin'))
+        # We add the FIU group to enforce current requirement that Security UserAdmin's are synonymous with FIU
+        if new_user.groups.filter(name='Security').exists():
+            new_user.groups.add(Group.objects.get(name='FIU'))
+
     @atomic
     def create(self, validated_data):
         creating_user = self.context['request'].user
@@ -191,9 +198,7 @@ class UserSerializer(serializers.ModelSerializer):
         # ticked in the form.
         # Note that the django admin user creation flow does not use this endpoint so this logic won't apply there
         if make_user_admin:
-            new_user.groups.add(Group.objects.get(name='UserAdmin'))
-            if new_user.groups.filter(name='Security').exists():
-                new_user.groups.add(Group.objects.get(name='FIU'))
+            self._make_user_admin(new_user)
 
         # Do not inherit prison set if creating user (directly or via AccountRequest) is FIU
         if not creating_user.groups.filter(name='FIU').exists():
@@ -242,21 +247,14 @@ class UserSerializer(serializers.ModelSerializer):
             updated_user.groups.clear()
 
             if make_user_admin:
-                updated_user.groups.add(user_admin_group)
-
-                # We add the FIU group to enforce current requirement that Security UserAdmin's are synonymous with FIU
-                if updated_user.groups.filter(name='Security').exists():
-                    updated_user.groups.add(Group.objects.filter(name='FIU').first())
+                self._make_user_admin(updated_user)
 
             ApplicationUserMapping.objects.create(user=updated_user, application=role.application)
             for group in role.groups:
                 updated_user.groups.add(group)
         elif was_user_admin != make_user_admin:
             if make_user_admin:
-                updated_user.groups.add(user_admin_group)
-                # We add the FIU group to enforce current requirement that Security UserAdmin's are synonymous with FIU
-                if updated_user.groups.filter(name='Security').exists():
-                    updated_user.groups.add(Group.objects.filter(name='FIU').first())
+                self._make_user_admin(updated_user)
             else:
                 updated_user.groups.remove(user_admin_group)
                 # We remove the FIU group if exists to enforce current requirement that Security UserAdmin's are
