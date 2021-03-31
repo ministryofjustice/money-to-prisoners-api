@@ -7,7 +7,6 @@ from django.conf import settings
 from django.contrib.admin.models import LogEntry, CHANGE as CHANGE_LOG_ENTRY, DELETION as DELETION_LOG_ENTRY
 from django.contrib.admin.options import get_content_type_for_model
 from django.contrib.auth import password_validation, get_user_model
-from django.contrib.auth.models import Group
 from django.core.exceptions import NON_FIELD_ERRORS
 from django.db import connection
 from django.db.transaction import atomic
@@ -32,7 +31,7 @@ from core.views import BaseAdminReportView
 from core.filters import BaseFilterSet
 from mtp_auth.forms import LoginStatsForm
 from mtp_auth.models import (
-    ApplicationUserMapping, PrisonUserMapping, Role, Flag,
+    PrisonUserMapping, Role, Flag,
     FailedLoginAttempt, PasswordChangeRequest, AccountRequest, Login,
 )
 from mtp_auth.permissions import UserPermissions, AnyAdminClientIDPermissions, AccountRequestPermissions
@@ -456,51 +455,32 @@ class AccountRequestViewSet(viewsets.ModelViewSet):
                         'Super users cannot be edited'
                     )
                 })
-            # TODO refactor this into serializer
+            serializer_kwargs = {'instance': user}
             user.is_active = True
-            user_serializer = UserSerializer(
-                data=dict(
-                    first_name=instance.first_name,
-                    last_name=instance.last_name,
-                    email=instance.email,
-                    username=instance.username,
-                    role=instance.role.name,
-                    prisons=[instance.prison],
-                    user_admin=user_admin,
-                ),
-                context={
-                    'request': request,
-                    'from_account_request': True
-                },
-                instance=user
-            )
-            user_serializer.is_valid()
-            user = user_serializer.save()
-            # inactive users get re-activated
-            # existing non-superadmins have their prisons, applications and groups replaced
             user_existed = True
         except User.DoesNotExist:
-            # TODO check if django handlers nested database transactions in a sensible way
-            # TODO remove this try: except as now creation/update user same interface
-            user_serializer = UserSerializer(
-                data=dict(
-                    first_name=instance.first_name,
-                    last_name=instance.last_name,
-                    email=instance.email,
-                    username=instance.username,
-                    role=instance.role.name,
-                    prisons=[instance.prison],
-                    user_admin=user_admin,
-                ),
-                context={
-                    'request': request,
-                    'from_account_request': True
-                }
-            )
-            user_serializer.is_valid()
-            user = user_serializer.save()
+            user = None
+            serializer_kwargs = {}
             user_existed = False
 
+        user_serializer = UserSerializer(
+            data=dict(
+                first_name=instance.first_name,
+                last_name=instance.last_name,
+                email=instance.email,
+                username=instance.username,
+                role=instance.role.name,
+                prisons=[instance.prison],
+                user_admin=user_admin,
+            ),
+            context={
+                'request': request,
+                'from_account_request': True
+            },
+            **serializer_kwargs
+        )
+        user_serializer.is_valid()
+        user = user_serializer.save()
 
         context = {
             'username': user.username,

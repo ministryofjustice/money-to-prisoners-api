@@ -172,7 +172,8 @@ class UserSerializer(serializers.ModelSerializer):
         creating_user = self.context['request'].user
 
         role = validated_data.pop('role', None)
-        # Since user_admin is a serializer method field it is read-only, so wouldnt' be appearing in the validated_data if is_valid has run
+        # Since user_admin is a serializer method field it is read-only, so wouldn't' be appearing in the
+        # validated_data if produced through is_valid
         make_user_admin = validated_data.pop('user_admin', False) or self.initial_data.get('user_admin', False)
         validated_data.pop('is_locked_out', None)
 
@@ -228,7 +229,8 @@ class UserSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Cannot change own access permissions')
 
         role = validated_data.pop('role', None)
-        # Since user_admin is a serializer method field it is read-only, so wouldnt' be appearing in the validated_data if is_valid has run
+        # Since user_admin is a serializer method field it is read-only, so wouldn't' be appearing in the
+        # validated_data if produced through is_valid
         make_user_admin = validated_data.pop('user_admin', False) or self.initial_data.get('user_admin', was_user_admin)
         is_locked_out = validated_data.pop('is_locked_out', None)
         prisons = validated_data.pop('prisons', None)
