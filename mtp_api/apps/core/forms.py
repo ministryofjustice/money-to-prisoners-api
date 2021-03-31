@@ -347,3 +347,7 @@ class DigitalTakeupReportForm(BasePeriodAdminReportForm):
                     month = 1
                 date = date.replace(month=month)
                 yield date
+
+
+class ZendeskAdminReportForm(BasePeriodAdminReportForm):
+    pass

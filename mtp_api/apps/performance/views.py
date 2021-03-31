@@ -1,15 +1,21 @@
+import collections
 import json
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.admin.models import LogEntry, ADDITION as ADDITION_LOG_ENTRY
+from django.core.cache import cache
 from django.db import models
 from django.urls import reverse_lazy
 from django.utils.formats import date_format
+from django.utils.timezone import localtime
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import FormView
+import requests
 
-from core.forms import DigitalTakeupReportForm, PrisonDigitalTakeupForm
+from core.forms import DigitalTakeupReportForm, PrisonDigitalTakeupForm, ZendeskAdminReportForm
 from core.views import AdminViewMixin, BaseAdminReportView
+from oauth2_provider.models import Application
 from performance.forms import DigitalTakeupUploadForm
 from performance.models import DigitalTakeup
 from prison.models import Prison
@@ -263,3 +269,79 @@ class DigitalTakeupReport(BaseAdminReportView):
             ]}
             for row in rows
         ], separators=(',', ':'))
+
+
+class ZendeskReportAdminView(BaseAdminReportView):
+    title = _('Zendesk report')
+    template_name = 'performance/zendesk-report.html'
+    form_class = ZendeskAdminReportForm
+
+    cache_lifetime = 60 * 60 * 24  # 1 day
+
+    def get_context_data(self, **kwargs):
+        context_data = super().get_context_data(**kwargs)
+        form = context_data['form']
+
+        current_period = form.current_period
+        format_date = form.period_formatter
+
+        applications = list(Application.objects.order_by('name').values('name', 'client_id'))
+        context_data['applications'] = applications
+
+        rows = form.group_months_into_periods(self.get_monthly_rows(applications))
+        rows = list(filter(lambda r: r['date'] < current_period, rows))
+        for row in rows:
+            row['date_label'] = format_date(row['date'])
+            row['counts'] = [
+                row[application['client_id']]
+                for application in applications
+            ]
+        context_data['rows'] = rows
+
+        return context_data
+
+    def get_monthly_rows(self, applications):
+        """
+        Searches Zendesk for tickets tagged by application and environment to the beginning of 2 years ago
+        """
+        env_tag = settings.ENVIRONMENT
+
+        end_date = localtime().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        for _m in range(end_date.month + 23):
+            if end_date.month == 1:
+                start_date = end_date.replace(year=end_date.year - 1, month=12)
+            else:
+                start_date = end_date.replace(month=end_date.month - 1)
+
+            row = collections.defaultdict(int)
+            row['date'] = start_date
+
+            for application in applications:
+                app_tag = application['client_id']
+                row[app_tag] = self.get_ticket_count(env_tag, app_tag, start_date, end_date)
+
+            yield row
+            end_date = start_date
+
+    def get_ticket_count(self, env_tag, app_tag, start_date, end_date):
+        start_date = start_date.date().isoformat()
+        end_date = end_date.date().isoformat()
+
+        cache_key = f'zendesk_count_{env_tag}_{app_tag}_{start_date}'
+        count = cache.get(cache_key)
+        if count is not None:
+            return count
+
+        query = f'type:ticket created>="{start_date}" created<"{end_date}" tags:"{app_tag} {env_tag}"'
+        try:
+            response = requests.get(
+                f'{settings.ZENDESK_BASE_URL}/api/v2/search/count.json',
+                params={'query': query},
+                auth=(f'{settings.ZENDESK_API_USERNAME}/token', settings.ZENDESK_API_TOKEN),
+                timeout=15,
+            )
+            count = response.json().get('count', 0)
+            cache.set(cache_key, count, timeout=self.cache_lifetime)
+            return count
+        except requests.RequestException:
+            return 0
