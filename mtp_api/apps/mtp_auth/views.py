@@ -457,9 +457,9 @@ class AccountRequestViewSet(viewsets.ModelViewSet):
                 })
             serializer_kwargs = {'instance': user}
             user.is_active = True
+            user.save()
             user_existed = True
         except User.DoesNotExist:
-            user = None
             serializer_kwargs = {}
             user_existed = False
 
