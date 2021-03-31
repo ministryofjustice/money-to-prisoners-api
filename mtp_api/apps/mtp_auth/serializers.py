@@ -270,6 +270,9 @@ class UserSerializer(serializers.ModelSerializer):
         if prisons is not None:
             if self.context.get('from_account_request'):
                 PrisonUserMapping.objects.assign_prisons_to_user(updated_user, prisons)
+
+            if updating_user.groups.filter(name='UserAdmin').first() and 'Security' not in user_group_names:
+                PrisonUserMapping.objects.assign_prisons_from_user(updating_user, updated_user)
             elif updated_user.pk != updating_user.pk:
                 raise serializers.ValidationError("Cannot change another user's prisons")
             elif 'Security' in user_group_names and 'UserAdmin' not in user_group_names:
