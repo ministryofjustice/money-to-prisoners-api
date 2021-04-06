@@ -215,7 +215,7 @@ class AccountRequest(TimeStampedModel):
 
     reason = models.TextField(blank=True)
     role = models.ForeignKey(Role, related_name='+', on_delete=models.CASCADE)
-    prison = models.ForeignKey(Prison, related_name='+', on_delete=models.CASCADE)
+    prison = models.ForeignKey(Prison, related_name='+', on_delete=models.CASCADE, blank=True, null=True)
 
     class Meta:
         ordering = ('created',)
