@@ -212,6 +212,7 @@ class AccountRequest(TimeStampedModel):
     first_name = models.CharField(max_length=30)
     last_name = models.CharField(max_length=30)
     email = models.EmailField()
+    manager_email = models.EmailField(blank=True, null=True)
 
     reason = models.TextField(blank=True)
     role = models.ForeignKey(Role, related_name='+', on_delete=models.CASCADE)
