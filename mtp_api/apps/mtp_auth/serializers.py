@@ -300,6 +300,7 @@ class UniqueKeyRelatedField(serializers.PrimaryKeyRelatedField):
 
 
 class AccountRequestSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = AccountRequest
         fields = '__all__'
@@ -315,3 +316,18 @@ class AccountRequestSerializer(serializers.ModelSerializer):
         fields = super().get_fields()
         fields['role'] = UniqueKeyRelatedField(unique_key='name', queryset=Role.objects.all())
         return fields
+
+    def validate(self, data):
+        role = data['role']
+
+        if role.name == 'security':
+            manager_email = data.get('manager_email', None)
+            if not manager_email:
+                raise serializers.ValidationError({'manager_email': "Manager's email must be specified"})
+        else:
+            # Prison field is only optional for 'security' account requests
+            prison = data.get('prison', None)
+            if not prison:
+                raise serializers.ValidationError({'prison': 'Prison must be specified'})
+
+        return super().validate(data)

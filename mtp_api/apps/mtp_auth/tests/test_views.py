@@ -2055,7 +2055,7 @@ class AccountRequestTestCase(AuthBaseTestCase):
             {
                 'first_name': 'Mark', 'last_name': 'Smith',
                 'email': 'm@mtp.local', 'username': 'abc123',
-                'role': 'security', 'prison': 'IXB',
+                'role': 'security', 'manager_email': 'my.manager@mtp.local',
                 'reason': 'abc',
             },
         ]
@@ -2105,6 +2105,13 @@ class AccountRequestTestCase(AuthBaseTestCase):
                 'email': 'm@mtp.local', 'username': 'abc123',
                 'role': Role.objects.first().pk, 'prison': 'IXB',
             },
+            # for 'security' role manager's email is required
+            {
+                'first_name': 'Mark', 'last_name': 'Smith',
+                'email': 'm@mtp.local', 'username': 'UniqueID12345',
+                'role': 'security', 'prison': 'IXB',
+                'manager_email': '',
+            },
         ]
         for item in invalid:
             response = self.client.post(url_list, data=item, format='json')
@@ -2140,7 +2147,7 @@ class AccountRequestTestCase(AuthBaseTestCase):
         response = self.client.post(url_list, data={
             'first_name': 'Mary', 'last_name': 'Johns',
             'email': 'mary@mtp.local', 'username': 'abc123',
-            'role': 'security', 'prison': 'INP',
+            'role': 'security', 'prison': 'INP', 'manager_email': 'my.manager@mtp.local',
         }, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, msg=response.content)
         self.assertEqual(AccountRequest.objects.count(), 2)
