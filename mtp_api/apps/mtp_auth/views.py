@@ -19,6 +19,7 @@ from django.utils.text import capfirst
 from django.utils.translation import gettext, gettext_lazy as _
 from django.views.decorators.debug import sensitive_post_parameters, sensitive_variables
 import django_filters
+from django_filters.rest_framework import DjangoFilterBackend
 from mtp_common.tasks import send_email
 from oauth2_provider.models import Application
 from rest_framework import viewsets, generics, status
@@ -379,7 +380,8 @@ class AccountRequestFilterset(BaseFilterSet):
 
 class AccountRequestViewSet(viewsets.ModelViewSet):
     queryset = AccountRequest.objects.all()
-    filter_class = AccountRequestFilterset()
+    filter_class = AccountRequestFilterset
+    filter_backends = (DjangoFilterBackend,)
     permission_classes = (AccountRequestPermissions,)
     serializer_class = AccountRequestSerializer
 

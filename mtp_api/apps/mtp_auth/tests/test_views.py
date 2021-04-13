@@ -5,6 +5,7 @@ import logging
 import random
 import re
 from unittest import mock
+from urllib.parse import urlencode
 
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
@@ -2900,7 +2901,7 @@ class AccountRequestTestCase(AuthBaseTestCase):
         self.assertEqual(AccountRequest.objects.count(), 2)
         self.assertEqual(User.objects.count(), user_count)
 
-    def test_unauthenticated_user_can_view_counts(self):
+    def test_unauthenticated_user_filters_for_username(self):
         # Setup
         admin = self.users['prison_clerk_uas'][0]
         role = Role.objects.get(name='prison-clerk')
@@ -2919,7 +2920,10 @@ class AccountRequestTestCase(AuthBaseTestCase):
 
         # Execute
         response = self.client.get(
-            reverse('accountrequest-list'),
+            '{}?{}'.format(
+                reverse('accountrequest-list'),
+                urlencode([('username', user.username), ('role__name', role.name)]),
+            ),
             format='json'
         )
 
@@ -2929,5 +2933,40 @@ class AccountRequestTestCase(AuthBaseTestCase):
             response.json(),
             {
                 'count': 1
+            }
+        )
+
+    def test_unauthenticated_filtering_different_user(self):
+        # Setup
+        admin = self.users['prison_clerk_uas'][0]
+        role = Role.objects.get(name='prison-clerk')
+        prison = admin.prisonusermapping.prisons.first()
+        PrisonUserMapping.objects.assign_prisons_to_user(admin, Prison.objects.all())
+
+        user = basic_user.make(is_active=True)
+        role.assign_to_user(user)
+        mommy.make(
+            AccountRequest,
+            first_name=user.first_name, last_name=user.last_name,
+            email=user.email, username=user.username,
+            role=role, prison=prison,
+        )
+        self.assertEqual(AccountRequest.objects.count(), 1)
+
+        # Execute
+        response = self.client.get(
+            '{}?{}'.format(
+                reverse('accountrequest-list'),
+                urlencode([('username', 'some_other_username'), ('role__name', role.name)]),
+            ),
+            format='json'
+        )
+
+        # Assert
+        self.assertEqual(response.status_code, status.HTTP_200_OK, msg=response.content)
+        self.assertEqual(
+            response.json(),
+            {
+                'count': 0
             }
         )
