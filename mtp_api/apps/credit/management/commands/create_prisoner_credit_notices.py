@@ -37,11 +37,11 @@ class Command(BaseCommand):
         try:
             prison = Prison.objects.get(pk=prison)
         except Prison.DoesNotExist:
-            raise CommandError('Prison %s does not exist' % prison)
+            raise CommandError('Prison does not exist', {'prison_nomis_id', prison})
         if date:
             date = parse_date(date)
             if not date:
-                raise CommandError('Date %s cannot be parsed, use YYYY-MM-DD format' % date)
+                raise CommandError('Date cannot be parsed, use YYYY-MM-DD format', {'date_string': date})
         else:
             date = now().date() - datetime.timedelta(days=1)
         date_range = (make_aware(datetime.datetime.combine(date, datetime.time.min)),

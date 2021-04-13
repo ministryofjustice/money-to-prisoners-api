@@ -194,7 +194,7 @@ class CreditListTestCase(
                     return datetime.datetime.strptime(date, date_format)
                 except (ValueError, TypeError):
                     continue
-            raise ValueError('Cannot parse date %s' % date)
+            raise ValueError('Cannot parse date', {'date': date})
 
         received_at__gte, received_at__lt = filters.get('received_at__gte'), filters.get('received_at__lt')
         received_at__gte = parse_date(received_at__gte) if received_at__gte else None

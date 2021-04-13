@@ -91,7 +91,7 @@ class CheckReportAdminView(BaseAdminReportView):
                     row['pending_amount'] += amount
                 else:
                     logger.warning(
-                        f'Unexpected grouped check status: status={status} triggered_rules={triggered_rules}'
+                        'Unexpected grouped check status', {'status': status, 'triggered_rules': triggered_rules}
                     )
             grouped_rows.append(row)
 
