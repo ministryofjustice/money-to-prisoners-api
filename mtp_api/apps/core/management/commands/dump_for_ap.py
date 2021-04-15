@@ -47,15 +47,16 @@ class Command(BaseCommand):
 
 class Serialiser:
     serialisers = {}
-    serialised_model = None
+    record_type = NotImplemented
 
-    def __init_subclass__(cls, serialised_model):
-        record_type = str(serialised_model._meta.verbose_name_plural)
-        cls.serialisers[record_type] = cls
-        cls.serialised_model = serialised_model
+    def __init_subclass__(cls):
+        cls.serialisers[cls.record_type] = cls
 
     def __init__(self):
         self.exported_at_local_time = timezone.now()
+
+    def get_queryset(self):
+        raise NotImplementedError
 
     def get_modified_records(self, after, before):
         filters = {}
@@ -63,14 +64,19 @@ class Serialiser:
             filters['modified__gte'] = after
         if before:
             filters['modified__lt'] = before
-        # TODO should we include rejected and expired credits as well?
-        return self.serialised_model.objects.filter(**filters).order_by('pk').iterator(chunk_size=1000)
+        return self.get_queryset().filter(**filters).order_by('pk').iterator(chunk_size=1000)
 
     def serialise(self, record):
         raise NotImplementedError
 
 
-class CreditSerialiser(Serialiser, serialised_model=Credit):
+class CreditSerialiser(Serialiser):
+    record_type = 'credits'
+
+    def get_queryset(self):
+        # TODO should we include rejected and expired credits as well?
+        return Credit.objects.all()
+
     def serialise(self, record: Credit):
         status = record.status
         if status:
@@ -147,7 +153,12 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
         }
 
 
-class DisbursementSerialiser(Serialiser, serialised_model=Disbursement):
+class DisbursementSerialiser(Serialiser):
+    record_type = 'disbursements'
+
+    def get_queryset(self):
+        return Disbursement.objects.all()
+
     def serialise(self, record: Disbursement):
         return {
             'Exported at': self.exported_at_local_time,
