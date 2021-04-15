@@ -3,13 +3,13 @@ import pathlib
 import tempfile
 import textwrap
 
-from django.core.management import call_command
-from django.core.management.base import BaseCommand
+from django.core.management import BaseCommand, call_command
 
 
 class Command(BaseCommand):
     """
-    Dump and upload data to S3
+    Dump credits and disbursements updated "yesterday" and upload them to an S3 bucket in Analytical Platform.
+    This command is expected to be scheduled to run once per day (using core.ScheduledCommand model).
     """
     help = textwrap.dedent(__doc__).strip()
 

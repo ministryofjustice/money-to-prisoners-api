@@ -1,6 +1,6 @@
 import datetime
-import textwrap
 import json
+import textwrap
 
 from django.conf import settings
 from django.core.management import BaseCommand, CommandError

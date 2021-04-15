@@ -1,20 +1,20 @@
-import textwrap
 import os
+import textwrap
 
 import boto3
-from django.core.management.base import BaseCommand
 from django.conf import settings
+from django.core.management import BaseCommand
 
 
 class Command(BaseCommand):
     """
-    Upload file to S3
+    Upload a file to an S3 bucket in Analytical Platform
     """
     help = textwrap.dedent(__doc__).strip()
 
     def add_arguments(self, parser):
-        parser.add_argument('file_path', help='Path to dump data')
-        parser.add_argument('object_name', help='Name of the file being stored in AWS S3')
+        parser.add_argument('file_path', help='Path of file to upload')
+        parser.add_argument('object_name', help='Name of the object being stored in S3')
 
     def handle(self, *args, **options):
         if not all([settings.ANALYTICAL_PLATFORM_BUCKET,
