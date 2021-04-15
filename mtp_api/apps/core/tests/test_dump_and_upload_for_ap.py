@@ -5,7 +5,8 @@ from django.core.management import call_command
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
-from core.management.commands.dump_for_ap import Command as DumpCommand, Serialiser
+from core.dump import Serialiser
+from core.management.commands.dump_for_ap import Command as DumpCommand
 from core.management.commands.upload_dump_for_ap import Command as UploadCommand
 
 
@@ -29,7 +30,7 @@ class TestDumpAndUploadForAp(TestCase):
 
         call_command('dump_and_upload_for_ap')
 
-        expected_record_types = set(Serialiser.serialisers)
+        expected_record_types = set(Serialiser.get_serialisers())
 
         record_types = set()
         for call in mocked_dump_for_ap.call_args_list:
