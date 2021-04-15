@@ -465,6 +465,11 @@ class AccountRequestViewSet(viewsets.ModelViewSet):
             serializer_kwargs = {}
             user_existed = False
 
+        if instance.prison:
+            prisons = [instance.prison]
+        else:
+            prisons = None
+
         user_serializer = UserSerializer(
             data=dict(
                 first_name=instance.first_name,
@@ -472,7 +477,7 @@ class AccountRequestViewSet(viewsets.ModelViewSet):
                 email=instance.email,
                 username=instance.username,
                 role=instance.role.name,
-                prisons=[instance.prison],
+                prisons=prisons,
                 user_admin=user_admin,
             ),
             context={
