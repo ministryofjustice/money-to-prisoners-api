@@ -15,6 +15,13 @@ class CreditSerialiser(Serialiser):
     """
     record_type = 'credits'
 
+    def __init__(self, serialise_amount_as_int=False):
+        super().__init__()
+        if serialise_amount_as_int:
+            self.format_amount = lambda amount: amount
+        else:
+            self.format_amount = format_amount
+
     def get_queryset(self):
         return Credit.objects_all \
             .exclude(resolution=CREDIT_RESOLUTION.INITIAL) \
@@ -48,7 +55,7 @@ class CreditSerialiser(Serialiser):
             'URL': f'{settings.NOMS_OPS_URL}/security/credits/{record.id}/',
             'Date received': record.received_at,
             'Date credited': record.log_set.get_action_date(CREDIT_LOG_ACTIONS.CREDITED),
-            'Amount': format_amount(record.amount),
+            'Amount': self.format_amount(record.amount),
             'Prisoner number': record.prisoner_number or 'Unknown',
             'Prisoner name': record.prisoner_name or 'Unknown',
             'Prison': record.prison.short_name if record.prison else 'Unknown',

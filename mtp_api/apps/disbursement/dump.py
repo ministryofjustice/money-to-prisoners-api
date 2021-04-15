@@ -12,6 +12,13 @@ class DisbursementSerialiser(Serialiser):
     """
     record_type = 'disbursements'
 
+    def __init__(self, serialise_amount_as_int=False):
+        super().__init__()
+        if serialise_amount_as_int:
+            self.format_amount = lambda amount: amount
+        else:
+            self.format_amount = format_amount
+
     def get_queryset(self):
         return Disbursement.objects.all()
 
@@ -23,7 +30,7 @@ class DisbursementSerialiser(Serialiser):
             'Date entered': record.created,
             'Date confirmed': record.log_set.get_action_date(DISBURSEMENT_LOG_ACTIONS.CONFIRMED),
             'Date sent': record.log_set.get_action_date(DISBURSEMENT_LOG_ACTIONS.SENT),
-            'Amount': format_amount(record.amount),
+            'Amount': self.format_amount(record.amount),
             'Prisoner number': record.prisoner_number,
             'Prisoner name': record.prisoner_name,
             'Prison': record.prison.short_name,
