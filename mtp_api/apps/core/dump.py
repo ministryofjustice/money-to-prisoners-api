@@ -18,7 +18,7 @@ class Serialiser:
         cls._registry[cls.record_type] = cls
 
     def __init__(self):
-        self.exported_at_local_time = timezone.now()
+        self.exported_at_local_time = timezone.localtime()
 
     @classmethod
     @functools.lru_cache()
