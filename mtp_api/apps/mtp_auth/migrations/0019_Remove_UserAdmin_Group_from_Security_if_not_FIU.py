@@ -16,7 +16,7 @@ def remove_UserAdmin_group_from_security_if_not_FIU(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('mtp_auth', '0016_Add_UserAdmin_group_to_FIU'),
+        ('mtp_auth', '0018_Add_UserAdmin_group_to_FIU'),
     ]
 
     operations = [

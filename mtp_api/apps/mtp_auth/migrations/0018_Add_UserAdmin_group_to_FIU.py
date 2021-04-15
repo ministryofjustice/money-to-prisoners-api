@@ -24,7 +24,7 @@ def remove_UserAdmin_group_from_FIU(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('mtp_auth', '0015_jobinformation'),
+        ('mtp_auth', '0017_add_manager_email_to_account_requests'),
     ]
 
     operations = [
