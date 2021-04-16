@@ -16,13 +16,18 @@ class FIUMonitoredDebitCardsSerialiser(Serialiser):
     def get_headers(self):
         return super().get_headers() + [
             'URL',
+            'Sender name', 'Sender email',
             'Debit card last four digits', 'Debit card expiry', 'Debit card billing address postcode',
         ]
 
     def serialise(self, record: DebitCardSenderDetails):
         row = super().serialise(record)
+        sender_name = next(record.sender.get_sender_names(), 'Unknown')
+        sender_email = record.sender_emails.first() or 'Unknown'
         row.update({
             'URL': f'{settings.NOMS_OPS_URL}/security/senders/{record.sender_id}/',
+            'Sender name': sender_name,
+            'Sender email': sender_email,
             'Debit card last four digits': record.card_number_last_digits,
             'Debit card expiry': record.card_expiry_date,
             'Debit card billing address postcode': record.postcode,
@@ -71,6 +76,7 @@ class AutoAcceptSerialiser(Serialiser):
             'Status', 'Reason', 'Updated by',
             'URL',
             'Sender profile URL',
+            'Sender name', 'Sender email',
             'Debit card last four digits', 'Debit card expiry', 'Debit card billing address postcode',
             'Prisoner profile URL',
             'Prisoner number', 'Prisoner name', 'Prison',
@@ -79,6 +85,8 @@ class AutoAcceptSerialiser(Serialiser):
     def serialise(self, record: CheckAutoAcceptRule):
         state: CheckAutoAcceptRuleState = record.get_latest_state()
         debit_card_sender_details = record.debit_card_sender_details
+        sender_name = next(debit_card_sender_details.sender.get_sender_names(), 'Unknown')
+        sender_email = debit_card_sender_details.sender_emails.first() or 'Unknown'
         prisoner_profile = record.prisoner_profile
         row = super().serialise(record)
         row.update({
@@ -87,6 +95,8 @@ class AutoAcceptSerialiser(Serialiser):
             'Updated by': state.added_by.username if state.added_by else 'Unknown',
             'URL': f'{settings.NOMS_OPS_URL}/security/checks/auto-accept-rules/{record.id}/',
             'Sender profile URL': f'{settings.NOMS_OPS_URL}/security/senders/{debit_card_sender_details.sender_id}/',
+            'Sender name': sender_name,
+            'Sender email': sender_email,
             'Debit card last four digits': debit_card_sender_details.card_number_last_digits,
             'Debit card expiry': debit_card_sender_details.card_expiry_date,
             'Debit card billing address postcode': debit_card_sender_details.postcode,
