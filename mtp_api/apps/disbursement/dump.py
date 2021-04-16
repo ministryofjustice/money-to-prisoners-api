@@ -22,10 +22,25 @@ class DisbursementSerialiser(Serialiser):
     def get_queryset(self):
         return Disbursement.objects.all()
 
+    def get_headers(self):
+        return super().get_headers() + [
+            'URL',
+            'Date entered', 'Date confirmed', 'Date sent',
+            'Amount',
+            'Prisoner number', 'Prisoner name', 'Prison',
+            'Recipient first name', 'Recipient last name',
+            'Payment method',
+            'Bank transfer sort code', 'Bank transfer account', 'Bank transfer roll number',
+            'Recipient address line 1', 'Recipient address line 2', 'Recipient address city',
+            'Recipient address postcode', 'Recipient address country',
+            'Recipient email',
+            'Status',
+            'NOMIS transaction', 'SOP invoice number',
+        ]
+
     def serialise(self, record: Disbursement):
-        return {
-            'Exported at': self.exported_at_local_time,
-            'Internal ID': record.id,
+        row = super().serialise(record)
+        row.update({
             'URL': f'{settings.NOMS_OPS_URL}/security/disbursements/{record.id}/',
             'Date entered': record.created,
             'Date confirmed': record.log_set.get_action_date(DISBURSEMENT_LOG_ACTIONS.CONFIRMED),
@@ -49,4 +64,5 @@ class DisbursementSerialiser(Serialiser):
             'Status': DISBURSEMENT_RESOLUTION.for_value(record.resolution).display,
             'NOMIS transaction': record.nomis_transaction_id,
             'SOP invoice number': record.invoice_number,
-        }
+        })
+        return row

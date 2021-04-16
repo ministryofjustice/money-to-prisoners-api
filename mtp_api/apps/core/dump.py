@@ -37,5 +37,11 @@ class Serialiser:
             filters['modified__lt'] = before
         return self.get_queryset().filter(**filters).order_by('pk').iterator(chunk_size=1000)
 
+    def get_headers(self):
+        return ['Exported at', 'Internal ID']
+
     def serialise(self, record):
-        raise NotImplementedError
+        return {
+            'Exported at': self.exported_at_local_time,
+            'Internal ID': record.id,
+        }

@@ -13,15 +13,21 @@ class FIUMonitoredDebitCardsSerialiser(Serialiser):
     def get_queryset(self):
         return DebitCardSenderDetails.objects.filter(monitoring_users__groups__name='FIU').distinct()
 
+    def get_headers(self):
+        return super().get_headers() + [
+            'URL',
+            'Debit card last four digits', 'Debit card expiry', 'Debit card billing address postcode',
+        ]
+
     def serialise(self, record: DebitCardSenderDetails):
-        return {
-            'Exported at': self.exported_at_local_time,
-            'Internal ID': record.id,
+        row = super().serialise(record)
+        row.update({
             'URL': f'{settings.NOMS_OPS_URL}/security/senders/{record.sender_id}/',
             'Debit card last four digits': record.card_number_last_digits,
             'Debit card expiry': record.card_expiry_date,
             'Debit card billing address postcode': record.postcode,
-        }
+        })
+        return row
 
 
 class FIUMonitoredPrisonerSerialiser(Serialiser):
@@ -33,15 +39,21 @@ class FIUMonitoredPrisonerSerialiser(Serialiser):
     def get_queryset(self):
         return PrisonerProfile.objects.filter(monitoring_users__groups__name='FIU').distinct()
 
+    def get_headers(self):
+        return super().get_headers() + [
+            'URL',
+            'Prisoner number', 'Prisoner name', 'Prison',
+        ]
+
     def serialise(self, record: PrisonerProfile):
-        return {
-            'Exported at': self.exported_at_local_time,
-            'Internal ID': record.id,
+        row = super().serialise(record)
+        row.update({
             'URL': f'{settings.NOMS_OPS_URL}/security/prisoners/{record.id}/',
             'Prisoner number': record.prisoner_number,
             'Prisoner name': record.prisoner_name,
             'Prison': record.current_prison.short_name if record.current_prison else '',
-        }
+        })
+        return row
 
 
 class AutoAcceptSerialiser(Serialiser):
@@ -54,16 +66,25 @@ class AutoAcceptSerialiser(Serialiser):
     def get_queryset(self):
         return CheckAutoAcceptRule.objects.filter()
 
+    def get_headers(self):
+        return super().get_headers() + [
+            'Status', 'Reason', 'Updated by',
+            'URL',
+            'Sender profile URL',
+            'Debit card last four digits', 'Debit card expiry', 'Debit card billing address postcode',
+            'Prisoner profile URL',
+            'Prisoner number', 'Prisoner name', 'Prison',
+        ]
+
     def serialise(self, record: CheckAutoAcceptRule):
         state: CheckAutoAcceptRuleState = record.get_latest_state()
         debit_card_sender_details = record.debit_card_sender_details
         prisoner_profile = record.prisoner_profile
-        return {
-            'Exported at': self.exported_at_local_time,
-            'Internal ID': record.id,
+        row = super().serialise(record)
+        row.update({
             'Status': 'Active' if state.active else 'Inactive',
             'Reason': state.reason,
-            'Updated by username': state.added_by.username if state.added_by else 'Unknown',
+            'Updated by': state.added_by.username if state.added_by else 'Unknown',
             'URL': f'{settings.NOMS_OPS_URL}/security/checks/auto-accept-rules/{record.id}/',
             'Sender profile URL': f'{settings.NOMS_OPS_URL}/security/senders/{debit_card_sender_details.sender_id}/',
             'Debit card last four digits': debit_card_sender_details.card_number_last_digits,
@@ -73,4 +94,5 @@ class AutoAcceptSerialiser(Serialiser):
             'Prisoner number': prisoner_profile.prisoner_number,
             'Prisoner name': prisoner_profile.prisoner_name,
             'Prison': prisoner_profile.current_prison.short_name if prisoner_profile.current_prison else '',
-        }
+        })
+        return row

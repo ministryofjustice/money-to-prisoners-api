@@ -33,6 +33,38 @@ class CreditSerialiser(Serialiser):
                 .exclude(security_check__rules__isnull=True)
         return queryset
 
+    def get_headers(self):
+        headers = super().get_headers() + [
+            'URL',
+            'Date started', 'Date received', 'Date credited',
+            'Amount',
+            'Status',
+
+            'Prisoner number', 'Prisoner name', 'Prison',
+
+            'Payment method',
+            'Sender name',
+        ]
+        if not self.only_with_triggered_rules:
+            # if only credits that triggered security rules are included, there can be no bank transfers
+            headers += [
+                'Bank transfer sort code', 'Bank transfer account', 'Bank transfer roll number',
+            ]
+        headers += [
+            'Debit card first six digits', 'Debit card last four digits', 'Debit card expiry',
+            'Debit card billing address line 1', 'Debit card billing address line 2', 'Debit card billing address city',
+            'Debit card billing address postcode', 'Debit card billing address country',
+            'Sender email', 'Sender IP address',
+
+            'Owner username', 'Blocked',  # TODO: these might be removed, see below
+
+            'NOMIS transaction', 'WorldPay order code',
+
+            'Security check codes', 'Security check description',
+            'Security check status', 'Security check rejection reasons',
+        ]
+        return headers
+
     def serialise(self, record: Credit):
         status = record.status
         if status:
@@ -55,9 +87,8 @@ class CreditSerialiser(Serialiser):
             security_check_rules = None
             security_check_rejection_reasons = None
 
-        row = {
-            'Exported at': self.exported_at_local_time,
-            'Internal ID': record.id,
+        row = super().serialise(record)
+        row.update({
             'URL': f'{settings.NOMS_OPS_URL}/security/credits/{record.id}/',
             'Date received': record.received_at,
             'Date credited': record.log_set.get_action_date(CREDIT_LOG_ACTIONS.CREDITED),
@@ -78,8 +109,8 @@ class CreditSerialiser(Serialiser):
             'Security check description': security_check_description,
             'Security check status': security_check_status,
             'Security check rejection reasons': security_check_rejection_reasons,
-            **self.serialise_sender(record)
-        }
+        })
+        row.update(self.serialise_sender(record))
         return row
 
     def serialise_sender(self, record: Credit):
