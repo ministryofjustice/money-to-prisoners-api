@@ -61,7 +61,7 @@ class CreditSerialiser(Serialiser):
             'NOMIS transaction', 'WorldPay order code',
 
             'Security check codes', 'Security check description',
-            'Security check status', 'Security check rejection reasons',
+            'Security check status', 'Security check actioned by', 'Security check rejection reasons',
         ]
         return headers
 
@@ -73,17 +73,20 @@ class CreditSerialiser(Serialiser):
             status = 'Anonymous'
 
         if hasattr(record, 'security_check'):
-            security_check_description = ' '.join(record.security_check.description)
-            security_check_status = CHECK_STATUS.for_value(record.security_check.status).display
-            if len(record.security_check.rules) > 0:
-                security_check_rules = record.security_check.rules
-                security_check_rejection_reasons = record.security_check.rejection_reasons
+            security_check = record.security_check
+            security_check_description = '; '.join(security_check.description)
+            security_check_status = CHECK_STATUS.for_value(security_check.status).display
+            security_check_actioned_by = security_check.actioned_by.username if security_check.actioned_by else ''
+            if len(security_check.rules) > 0:
+                security_check_rules = security_check.rules
+                security_check_rejection_reasons = security_check.rejection_reasons
             else:
                 security_check_rules = None
                 security_check_rejection_reasons = None
         else:
             security_check_description = None
             security_check_status = None
+            security_check_actioned_by = None
             security_check_rules = None
             security_check_rejection_reasons = None
 
@@ -108,6 +111,7 @@ class CreditSerialiser(Serialiser):
             'Security check codes': security_check_rules,
             'Security check description': security_check_description,
             'Security check status': security_check_status,
+            'Security check actioned by': security_check_actioned_by,
             'Security check rejection reasons': security_check_rejection_reasons,
         })
         row.update(self.serialise_sender(record))
