@@ -15,17 +15,23 @@ class CreditSerialiser(Serialiser):
     """
     record_type = 'credits'
 
-    def __init__(self, serialise_amount_as_int=False):
+    def __init__(self, serialise_amount_as_int=False, only_with_triggered_rules=False):
         super().__init__()
         if serialise_amount_as_int:
             self.format_amount = lambda amount: amount
         else:
             self.format_amount = format_amount
+        self.only_with_triggered_rules = only_with_triggered_rules
 
     def get_queryset(self):
-        return Credit.objects_all \
+        queryset = Credit.objects_all \
             .exclude(resolution=CREDIT_RESOLUTION.INITIAL) \
             .exclude(payment__status=PAYMENT_STATUS.EXPIRED)
+        if self.only_with_triggered_rules:
+            queryset = queryset \
+                .exclude(security_check__rules__len=0) \
+                .exclude(security_check__rules__isnull=True)
+        return queryset
 
     def serialise(self, record: Credit):
         status = record.status
