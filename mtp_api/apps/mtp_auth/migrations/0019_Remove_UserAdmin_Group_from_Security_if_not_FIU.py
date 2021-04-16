@@ -5,7 +5,12 @@ from django.db import migrations
 def remove_UserAdmin_group_from_security_if_not_FIU(apps, schema_editor):
     user_model = apps.get_model('auth', 'user')
     group_model = apps.get_model('auth', 'group')
-    security_users = user_model.objects.filter(groups__name='Security').exclude(groups__name='FIU').all()
+    security_users = user_model.objects.filter(
+        groups__name='Security',
+        is_superuser=False
+    ).exclude(
+        groups__name='FIU'
+    ).all()
     for security_user in security_users:
         assert not security_user.groups.filter(name='FIU').exists()
         if security_user.groups.filter(name='UserAdmin').exists():
