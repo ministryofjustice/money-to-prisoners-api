@@ -4,13 +4,14 @@ from unittest import mock
 
 from django.core.management import call_command
 from django.test import TestCase
+from django.utils.text import slugify
 from django.utils.timezone import now, localtime
 from faker import Faker
 from model_mommy import mommy
 
 from core.tests.utils import make_test_users, make_test_user_admins
 from mtp_auth.management.commands.send_account_request_emails import Command
-from mtp_auth.models import AccountRequest, PrisonUserMapping, Role
+from mtp_auth.models import AccountRequest, Role
 from prison.models import Prison
 
 fake = Faker(locale='en_GB')
@@ -45,7 +46,9 @@ class AccountRequestEmailTestCase(TestCase):
         prisons = list(Prison.objects.all())
         expected_names = {}
         for prison in prisons:
-            expected_names[prison] = set()
+
+            key = 'test-%s-ua' % slugify(prison.name)
+            expected_names[key] = set()
             for _ in range(3):
                 # Request triggering email
                 request = self._make_account_request(
@@ -53,7 +56,7 @@ class AccountRequestEmailTestCase(TestCase):
                     prison=prison,
                     created=yesterday_sometime(),
                 )
-                expected_names[prison].add('%s %s' % (request.first_name, request.last_name))
+                expected_names[key].add('%s %s' % (request.first_name, request.last_name))
                 # Requests *not* triggering emails
                 self._make_account_request(
                     role=prison_clerk_role,
@@ -73,15 +76,21 @@ class AccountRequestEmailTestCase(TestCase):
             prison=None,
             created=yesterday_sometime(),
         )
-        expected_names[None] = set()
-        expected_names[None].add('%s %s' % (security_request.first_name, security_request.last_name))
+        expected_names['security'] = set()
+        expected_names['security'].add('%s %s' % (security_request.first_name, security_request.last_name))
 
         with mock.patch.object(Command, 'email_admins') as method:
             call_command('send_account_request_emails')
         self.assertEqual(method.call_count, 3)
         for call in method.call_args_list:
-            admins, role, prison, names = call[0]
-            self.assertSetEqual(set(names), expected_names[prison])
+            admins, role, names = call[0]
+
+            if role.name == 'security':
+                key = 'security'
+            else:
+                key = admins[0].username
+
+            self.assertSetEqual(set(names), expected_names[key])
 
     def test_find_admins(self):
         command = Command()

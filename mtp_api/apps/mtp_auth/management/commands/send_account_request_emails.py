@@ -43,7 +43,7 @@ class Command(BaseCommand):
             names = group['names']
             admins = self.find_admins(role, prison)
             if admins:
-                self.email_admins(admins, role, prison, names)
+                self.email_admins(admins, role, names)
             else:
                 logger.error('No active user admins for %s in %s' % (role.name, prison.name))
 
@@ -58,7 +58,7 @@ class Command(BaseCommand):
 
         return list(admins)
 
-    def email_admins(self, admins, role, prison, names):
+    def email_admins(self, admins, role, names):
         service_name = role.application.name.lower()
         send_email(
             [admin.email for admin in admins],
