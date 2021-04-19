@@ -34,24 +34,32 @@ class Command(BaseCommand):
             names=ArrayAgg(Concat('first_name', models.Value(' '), 'last_name'))
         )
         for group in grouped_requests:
-            prison = Prison.objects.get(pk=group['prison'])
+            if group['prison']:
+                prison = Prison.objects.get(pk=group['prison'])
+            else:
+                prison = None
+
             role = Role.objects.get(pk=group['role'])
             names = group['names']
             admins = self.find_admins(role, prison)
             if admins:
-                self.email_admins(admins, role, prison, names)
+                self.email_admins(admins, role, names)
             else:
                 logger.error('No active user admins for %s in %s' % (role.name, prison.name))
 
     def find_admins(self, role, prison):
         admins = role.key_group.user_set.filter(
             is_active=True, is_superuser=False
-        ).filter(groups__name='UserAdmin').filter(prisonusermapping__prisons=prison)
+        ).filter(groups__name='UserAdmin')
+
+        # 'security' requests are sent to all UserAdmins/FIU regardless of prison
+        if role.name != 'security':
+            admins = admins.filter(prisonusermapping__prisons=prison)
+
         return list(admins)
 
-    def email_admins(self, admins, role, prison, names):
+    def email_admins(self, admins, role, names):
         service_name = role.application.name.lower()
-        prison_name = prison.short_name
         send_email(
             [admin.email for admin in admins],
             'mtp_auth/new_account_requests.txt',
@@ -60,7 +68,6 @@ class Command(BaseCommand):
             }),
             context={
                 'service_name': service_name,
-                'prison_name': prison_name,
                 'names': names,
                 'login_url': role.login_url,
             },
