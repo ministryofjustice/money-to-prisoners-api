@@ -1560,6 +1560,27 @@ class UpdateUserTestCase(AuthBaseTestCase):
         ).all()
         self.assertEqual(set(current_prisons), set(updated_prisons))
 
+    def test_update_user_passing_role_adding_fiu_group_also_adds_user_admin_group(self):
+        """
+        Test user added to FIU group also has UserAdmin group
+
+        As of MTP-1824, FIU is managing all Security users through the UserAdmin group
+        """
+        user = self.security_users[1]
+        requesting_user = self.security_uas[0]
+        user_data = {
+            'user_admin': True,
+            'role': 'security',
+        }
+
+        self.assertUserUpdated(requesting_user, user.username, user_data)
+
+        updated_user = User.objects.get(username=user.username)
+        self.assertSequenceEqual(
+            updated_user.groups.order_by('name').values_list('name', flat=True),
+            ['FIU', 'Security', 'UserAdmin']
+        )
+
     def test_updated_user_removing_fiu_group_also_removes_user_admin_group(self):
         """
         Test user removed from FIU group also has UserAdmin group
