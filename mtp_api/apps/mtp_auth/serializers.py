@@ -246,12 +246,12 @@ class UserSerializer(serializers.ModelSerializer):
             updated_user.applicationusermapping_set.all().delete()
             updated_user.groups.clear()
 
-            if make_user_admin:
-                self._make_user_admin(updated_user)
-
             ApplicationUserMapping.objects.create(user=updated_user, application=role.application)
             for group in role.groups:
                 updated_user.groups.add(group)
+
+            if make_user_admin:
+                self._make_user_admin(updated_user)
         elif was_user_admin != make_user_admin:
             if make_user_admin:
                 self._make_user_admin(updated_user)
