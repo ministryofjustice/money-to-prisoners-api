@@ -5,6 +5,7 @@ import logging
 import random
 import re
 from unittest import mock
+from urllib.parse import urlencode
 
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
@@ -118,6 +119,10 @@ class AuthBaseTestCase(APITestCase, AuthTestCaseMixin):
         'test_prisons.json',
     ]
 
+    def assertNoPrisons(self, left_user, msg=None):  # noqa: N802
+        left_prisons = prison_set(left_user)
+        self.assertSetEqual(left_prisons, set(), msg=msg or 'User should not have any assigned prisons, but does')
+
     def assertSamePrisons(self, left_user, right_user, msg=None):  # noqa: N802
         left_prisons = prison_set(left_user)
         right_prisons = prison_set(right_user)
@@ -220,7 +225,7 @@ class RoleTestCase(AuthBaseTestCase):
         self.cashbook_uas = test_uas['prison_clerk_uas']
         self.pla_uas = test_uas['prisoner_location_uas']
         self.bank_uas = test_uas['bank_admin_uas']
-        self.security_uas = test_uas['security_staff_uas']
+        self.security_uas = test_uas['security_fiu_uas']
         self.admin_users = self.cashbook_uas + self.pla_uas + self.bank_uas + self.security_uas
 
     def test_cannot_list_roles_when_not_logged_in(self):
@@ -641,7 +646,7 @@ class ListUserTestCase(AuthBaseTestCase):
         self.cashbook_uas = test_uas['prison_clerk_uas']
         self.pla_uas = test_uas['prisoner_location_uas']
         self.bank_uas = test_uas['bank_admin_uas']
-        self.security_uas = test_uas['security_staff_uas']
+        self.security_uas = test_uas['security_fiu_uas']
 
     def get_url(self):
         return reverse('user-list')
@@ -654,7 +659,9 @@ class ListUserTestCase(AuthBaseTestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def assertCanListUsers(self, requester, allowed_client_ids, exact_prison_match=True):  # noqa: N802
+    def assertCanListUsers(  # noqa: N802
+        self, requester, allowed_client_ids, exact_prison_match=True, no_prison_match=False
+    ):
         response = self.client.get(
             self.get_url(),
             format='json',
@@ -667,10 +674,11 @@ class ListUserTestCase(AuthBaseTestCase):
             user_client_ids = set(user.applicationusermapping_set.values_list('application__client_id', flat=True))
             self.assertTrue(allowed_client_ids.issuperset(user_client_ids),
                             msg='Listed user with unexpected application access')
-            if exact_prison_match:
+
+            if exact_prison_match and not no_prison_match:
                 self.assertSamePrisons(requester, user,
                                        msg='User Admin able to retrieve users without matching prisons')
-            else:
+            elif not no_prison_match:
                 self.assertSubsetPrisons(requester, user,
                                          msg='User Admin able to retrieve users without matching prisons')
         return response.data['results']
@@ -679,9 +687,9 @@ class ListUserTestCase(AuthBaseTestCase):
         self.assertCanListUsers(self.cashbook_uas[0], {'cashbook'})
         self.assertCanListUsers(self.bank_uas[0], {'bank-admin'})
         self.assertCanListUsers(self.pla_uas[0], {'noms-ops'})
-        self.assertCanListUsers(self.security_uas[0], {'noms-ops'})
+        self.assertCanListUsers(self.security_uas[0], {'noms-ops'}, no_prison_match=True)
 
-    def test_list_users_in_same_prison(self):
+    def test_list_users_in_same_prison_cashbook_admin(self):
         users = self.assertCanListUsers(self.cashbook_uas[0], {'cashbook'})
         users = set(user['username'] for user in users)
         self.assertIn(self.cashbook_uas[0].username, users)
@@ -693,12 +701,15 @@ class ListUserTestCase(AuthBaseTestCase):
             for user in (self.security_staff + self.security_uas)
         ))
 
-        users = self.assertCanListUsers(self.security_uas[1], {'noms-ops'})
+    def test_list_users_in_same_prison_security_admin(self):
+        users = self.assertCanListUsers(
+            self.security_uas[1], {'noms-ops'}, no_prison_match=True
+        )
         users = set(user['username'] for user in users)
         self.assertIn(self.security_uas[1].username, users)
         self.assertIn(self.security_staff[1].username, users)
-        self.assertNotIn(self.security_uas[0].username, users)
-        self.assertNotIn(self.security_staff[0].username, users)
+        self.assertIn(self.security_uas[0].username, users)
+        self.assertIn(self.security_staff[0].username, users)
         self.assertTrue(all(
             user.username not in users
             for user in (self.prison_clerks + self.cashbook_uas)
@@ -756,7 +767,7 @@ class CreateUserTestCase(AuthBaseTestCase):
         self.cashbook_uas = test_uas['prison_clerk_uas']
         self.pla_uas = test_uas['prisoner_location_uas']
         self.bank_uas = test_uas['bank_admin_uas']
-        self.security_uas = test_uas['security_staff_uas']
+        self.security_uas = test_uas['security_fiu_uas']
 
     def get_url(self):
         return reverse('user-list')
@@ -781,8 +792,10 @@ class CreateUserTestCase(AuthBaseTestCase):
         self.assertEqual(User.objects.filter(username=user_data['username']).count(), 0)
 
     @override_settings(ENVIRONMENT='prod')
-    def assertUserCreated(self, requester, user_data, client_id, groups,  # noqa: N802
-                          target_client_id=None, expected_login_link=None):
+    def assertUserCreated(  # noqa: N802
+        self, requester, user_data, client_id, groups, target_client_id=None, expected_login_link=None,
+        assert_prisons_inherited=True
+    ):
         response = self.client.post(
             self.get_url(),
             format='json',
@@ -811,7 +824,12 @@ class CreateUserTestCase(AuthBaseTestCase):
             set(new_user.groups.all()),
             set(groups)
         )
-        self.assertSamePrisons(requester, new_user, msg='User Admin able to retrieve users without matching prisons')
+        if assert_prisons_inherited:
+            self.assertSamePrisons(
+                requester, new_user, msg='User Admin able to retrieve users without matching prisons'
+            )
+        else:
+            self.assertNoPrisons(new_user, msg='New user should not have prisons associated')
 
         if make_user_admin:
             self.assertIn('UserAdmin', new_user.groups.values_list('name', flat=True))
@@ -1034,6 +1052,51 @@ class CreateUserTestCase(AuthBaseTestCase):
         self.assertIn('Invalid role: bank-admin', response.data['role'])
         self.assertEqual(User.objects.filter(username=user_data['username']).count(), 0)
 
+    def test_fiu_created_user_does_not_inherit_prisons(self):
+        """
+        Test any Prison instances assigned by FIU aren't inherited by the new user
+
+        As of MTP-1824, FIU is managing all Security users through the UserAdmin group
+        """
+        user_data = {
+            'username': 'new-security-staff',
+            'first_name': 'New',
+            'last_name': 'Security Staff',
+            'email': 'nss@mtp.local',
+            'role': 'security',
+        }
+        self.assertUserCreated(
+            self.security_uas[0],
+            user_data,
+            'noms-ops',
+            [Group.objects.get(name='Security')],
+            expected_login_link='http://localhost/noms-ops/',
+            assert_prisons_inherited=False
+        )
+
+    def test_created_fiu_user_has_user_admin_group(self):
+        """
+        Test new FIU instances have correct groups
+
+        As of MTP-1824, FIU is managing all Security users through the UserAdmin group
+        """
+        user_data = {
+            'username': 'new-security-staff',
+            'first_name': 'New',
+            'last_name': 'Security Staff',
+            'email': 'nss@mtp.local',
+            'role': 'security',
+            'user_admin': True
+        }
+        self.assertUserCreated(
+            self.security_uas[0],
+            user_data,
+            'noms-ops',
+            Group.objects.filter(name__in=['FIU', 'Security', 'UserAdmin']).all(),
+            expected_login_link='http://localhost/noms-ops/',
+            assert_prisons_inherited=False
+        )
+
 
 class UpdateUserTestCase(AuthBaseTestCase):
     def setUp(self):
@@ -1049,7 +1112,7 @@ class UpdateUserTestCase(AuthBaseTestCase):
         self.cashbook_uas = test_uas['prison_clerk_uas']
         self.pla_uas = test_uas['prisoner_location_uas']
         self.bank_uas = test_uas['bank_admin_uas']
-        self.security_uas = test_uas['security_staff_uas']
+        self.security_uas = test_uas['security_fiu_uas']
 
     def get_url(self, username):
         return reverse('user-detail', kwargs={'username': username})
@@ -1473,6 +1536,52 @@ class UpdateUserTestCase(AuthBaseTestCase):
             set(updated_prison.values_list('nomis_id', flat=True)),
             set(current_prisons.values_list('nomis_id', flat=True))
         )
+
+    def test_updated_user_adding_fiu_group_also_adds_user_admin_group(self):
+        """
+        Test user added to FIU group also has UserAdmin group
+
+        As of MTP-1824, FIU is managing all Security users through the UserAdmin group
+        """
+        user = self.security_users[1]
+        requesting_user = self.security_uas[0]
+        current_prisons = PrisonUserMapping.objects.get_prison_set_for_user(
+            user
+        ).all()
+        user_data = {'user_admin': True}
+        self.assertUserUpdated(requesting_user, user.username, user_data)
+        updated_user = User.objects.get(username=user.username)
+        self.assertSequenceEqual(
+            updated_user.groups.order_by('name').values_list('name', flat=True),
+            ['FIU', 'Security', 'UserAdmin']
+        )
+        updated_prisons = PrisonUserMapping.objects.get_prison_set_for_user(
+            updated_user
+        ).all()
+        self.assertEqual(set(current_prisons), set(updated_prisons))
+
+    def test_updated_user_removing_fiu_group_also_removes_user_admin_group(self):
+        """
+        Test user removed from FIU group also has UserAdmin group
+
+        As of MTP-1824, FIU is managing all Security users through the UserAdmin group
+        """
+        user = self.security_uas[1]
+        requesting_user = self.security_uas[0]
+        current_prisons = PrisonUserMapping.objects.get_prison_set_for_user(
+            user
+        ).all()
+        user_data = {'user_admin': False}
+        self.assertUserUpdated(requesting_user, user.username, user_data)
+        updated_user = User.objects.get(username=user.username)
+        self.assertSequenceEqual(
+            updated_user.groups.values_list('name', flat=True),
+            ['Security']
+        )
+        updated_prisons = PrisonUserMapping.objects.get_prison_set_for_user(
+            updated_user
+        ).all()
+        self.assertEqual(set(current_prisons), set(updated_prisons))
 
 
 class DeleteUserTestCase(AuthBaseTestCase):
@@ -2792,7 +2901,7 @@ class AccountRequestTestCase(AuthBaseTestCase):
         self.assertEqual(AccountRequest.objects.count(), 2)
         self.assertEqual(User.objects.count(), user_count)
 
-    def test_unauthenticated_user_can_view_counts(self):
+    def test_unauthenticated_user_filters_for_username(self):
         # Setup
         admin = self.users['prison_clerk_uas'][0]
         role = Role.objects.get(name='prison-clerk')
@@ -2811,7 +2920,10 @@ class AccountRequestTestCase(AuthBaseTestCase):
 
         # Execute
         response = self.client.get(
-            reverse('accountrequest-list'),
+            '{}?{}'.format(
+                reverse('accountrequest-list'),
+                urlencode([('username', user.username), ('role__name', role.name)]),
+            ),
             format='json'
         )
 
@@ -2821,5 +2933,40 @@ class AccountRequestTestCase(AuthBaseTestCase):
             response.json(),
             {
                 'count': 1
+            }
+        )
+
+    def test_unauthenticated_filtering_different_user(self):
+        # Setup
+        admin = self.users['prison_clerk_uas'][0]
+        role = Role.objects.get(name='prison-clerk')
+        prison = admin.prisonusermapping.prisons.first()
+        PrisonUserMapping.objects.assign_prisons_to_user(admin, Prison.objects.all())
+
+        user = basic_user.make(is_active=True)
+        role.assign_to_user(user)
+        mommy.make(
+            AccountRequest,
+            first_name=user.first_name, last_name=user.last_name,
+            email=user.email, username=user.username,
+            role=role, prison=prison,
+        )
+        self.assertEqual(AccountRequest.objects.count(), 1)
+
+        # Execute
+        response = self.client.get(
+            '{}?{}'.format(
+                reverse('accountrequest-list'),
+                urlencode([('username', 'some_other_username'), ('role__name', role.name)]),
+            ),
+            format='json'
+        )
+
+        # Assert
+        self.assertEqual(response.status_code, status.HTTP_200_OK, msg=response.content)
+        self.assertEqual(
+            response.json(),
+            {
+                'count': 0
             }
         )

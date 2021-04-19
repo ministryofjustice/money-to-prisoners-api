@@ -121,12 +121,15 @@ class UserAdmin(DjangoUserAdmin):
 
     def response_change(self, request, obj):
         response = super().response_change(request, obj)
+        # THESE DO NOT BLOCK THE UPDATE, THEY ONLY DISPLAY AN ERROR
         if obj.groups.filter(name='UserAdmin').exists() and Role.objects.get_roles_for_user(obj).count() != 1:
             messages.error(request, _('This user will be unable to manage user accounts. '
                                       'Either remove ‘UserAdmin’ group or choose fewer other groups.'))
         if obj.groups.filter(name='PrisonClerk').exists() and (not hasattr(obj, 'prisonusermapping')
                                                                or obj.prisonusermapping.prisons.count() == 0):
             messages.error(request, _('Prison clerks must be assigned to a prison.'))
+        if obj.groups.filter(name='FIU').exists() and not obj.groups.filter(name='UserAdmin').exists():
+            messages.error(request, _('Any new FIU user must also be added to the UserAdmin group'))
         return response
 
 

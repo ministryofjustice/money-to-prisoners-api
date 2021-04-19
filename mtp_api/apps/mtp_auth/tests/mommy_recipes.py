@@ -111,18 +111,25 @@ def create_security_staff_user(name_and_password='security-staff', prisons=()):
     return ssu
 
 
-def create_security_fiu_user(name_and_password='security-fiu', first_name=None, last_name=None):
+def create_security_fiu_user(name_and_password='security-fiu', first_name=None, last_name=None, prisons=None):
     if not first_name:
         first_name = 'Security FIU'
     if not last_name:
         last_name = 'Staff'
-    groups = Group.objects.filter(name__in=['Security', 'FIU'])
+    groups = Group.objects.filter(name__in=['Security', 'FIU', 'UserAdmin'])
     ssu = create_basic_user(
         name_and_password,
         groups,
         first_name=first_name,
         last_name=last_name,
     )
+    if prisons:
+        make(
+            'mtp_auth.PrisonUserMapping',
+            user=ssu,
+            prisons=prisons,
+        )
+
     ssu.flags.create(name='hmpps-employee')
 
     return ssu

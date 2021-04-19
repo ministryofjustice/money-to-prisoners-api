@@ -7,7 +7,6 @@ from django.conf import settings
 from django.contrib.admin.models import LogEntry, CHANGE as CHANGE_LOG_ENTRY, DELETION as DELETION_LOG_ENTRY
 from django.contrib.admin.options import get_content_type_for_model
 from django.contrib.auth import password_validation, get_user_model
-from django.contrib.auth.models import Group
 from django.core.exceptions import NON_FIELD_ERRORS
 from django.db import connection
 from django.db.transaction import atomic
@@ -20,6 +19,7 @@ from django.utils.text import capfirst
 from django.utils.translation import gettext, gettext_lazy as _
 from django.views.decorators.debug import sensitive_post_parameters, sensitive_variables
 import django_filters
+from django_filters.rest_framework import DjangoFilterBackend
 from mtp_common.tasks import send_email
 from oauth2_provider.models import Application
 from rest_framework import viewsets, generics, status
@@ -32,7 +32,7 @@ from core.views import BaseAdminReportView
 from core.filters import BaseFilterSet
 from mtp_auth.forms import LoginStatsForm
 from mtp_auth.models import (
-    ApplicationUserMapping, PrisonUserMapping, Role, Flag,
+    PrisonUserMapping, Role, Flag,
     FailedLoginAttempt, PasswordChangeRequest, AccountRequest, Login,
 )
 from mtp_auth.permissions import UserPermissions, AnyAdminClientIDPermissions, AccountRequestPermissions
@@ -86,6 +86,9 @@ def get_managed_user_queryset(user):
 
     queryset = User.objects.exclude(is_superuser=True).filter(groups=user_key_group).order_by('username')
 
+    # Do not match prison for FIU, instead return security & FIU group members (excluding superusers?)
+    if user.groups.filter(name='FIU').exists():
+        return queryset
     prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(user).values_list('pk', flat=True))
     if prisons:
         for prison in prisons:
@@ -377,7 +380,8 @@ class AccountRequestFilterset(BaseFilterSet):
 
 class AccountRequestViewSet(viewsets.ModelViewSet):
     queryset = AccountRequest.objects.all()
-    filter_class = AccountRequestFilterset()
+    filter_class = AccountRequestFilterset
+    filter_backends = (DjangoFilterBackend,)
     permission_classes = (AccountRequestPermissions,)
     serializer_class = AccountRequestSerializer
 
@@ -453,53 +457,49 @@ class AccountRequestViewSet(viewsets.ModelViewSet):
                         'Super users cannot be edited'
                     )
                 })
-            # inactive users get re-activated
+            serializer_kwargs = {'instance': user}
             user.is_active = True
             user.save()
-            # existing non-superadmins have their prisons, applications and groups replaced
-            user.groups.clear()
-            PrisonUserMapping.objects.filter(user=user).delete()
-            ApplicationUserMapping.objects.filter(user=user).delete()
             user_existed = True
-            password = None
         except User.DoesNotExist:
-            user = User.objects.create(
+            serializer_kwargs = {}
+            user_existed = False
+
+        if instance.prison:
+            prisons = [instance.prison]
+        else:
+            prisons = None
+
+        user_serializer = UserSerializer(
+            data=dict(
                 first_name=instance.first_name,
                 last_name=instance.last_name,
                 email=instance.email,
                 username=instance.username,
-            )
-            password = generate_new_password()
-            user.set_password(password)
-            user.save()
-            user_existed = False
-
-        role = instance.role
-        role.assign_to_user(user)
-        if user_admin:
-            user.groups.add(Group.objects.get(name='UserAdmin'))
-        PrisonUserMapping.objects.assign_prisons_from_user(request.user, user)
+                role=instance.role.name,
+                prisons=prisons,
+                user_admin=user_admin,
+            ),
+            context={
+                'request': request,
+                'from_account_request': True
+            },
+            **serializer_kwargs
+        )
+        user_serializer.is_valid()
+        user = user_serializer.save()
 
         context = {
             'username': user.username,
-            'password': password,
-            'service_name': role.application.name.lower(),
-            'login_url': role.login_url,
+            'service_name': instance.role.application.name.lower(),
+            'login_url': instance.role.login_url,
         }
         if user_existed:
-            context.pop('password')
             send_email(
                 user.email, 'mtp_auth/user_moved.txt',
                 capfirst(gettext('Your new %(service_name)s account is ready to use') % context),
                 context=context, html_template='mtp_auth/user_moved.html',
                 anymail_tags=['user-moved'],
-            )
-        else:
-            send_email(
-                user.email, 'mtp_auth/new_user.txt',
-                capfirst(gettext('Your new %(service_name)s account is ready to use') % context),
-                context=context, html_template='mtp_auth/new_user.html',
-                anymail_tags=['new-user'],
             )
 
         LogEntry.objects.log_action(

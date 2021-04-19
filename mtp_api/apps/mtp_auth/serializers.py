@@ -75,9 +75,6 @@ class UserSerializer(serializers.ModelSerializer):
 
     allowed_self_updates = {'first_name', 'last_name', 'email', 'prisons'}
 
-    # TODO Deduplicate this and disbursements.serializers.UserSerializer
-    # so drf-yasg stops complaining about serializer namespace collisions
-    # without custom ref name
     class Meta:
         ref_name = 'Detailed User'
         model = User
@@ -152,40 +149,63 @@ class UserSerializer(serializers.ModelSerializer):
             }
             try:
                 self.initial_data['role'] = managed_roles[role]
+                attrs['role'] = managed_roles[role]
             except KeyError:
                 raise serializers.ValidationError({'role': 'Invalid role: %s' % role})
 
         prisons = self.initial_data.get('prisons')
         if prisons is not None:
-            prison_objects = Prison.objects.filter(
-                nomis_id__in=[prison['nomis_id'] for prison in prisons]
-            )
+            if all([isinstance(prison, Prison) for prison in prisons]):
+                prison_objects = prisons
+            elif any([isinstance(prison, Prison) for prison in prisons]):
+                raise serializers.ValidationError({'prison': 'Invalid prisons: %s' % prisons})
+            else:
+                prison_objects = Prison.objects.filter(
+                    nomis_id__in=[prison['nomis_id'] for prison in prisons]
+                )
             attrs['prisons'] = prison_objects
 
         return super().validate(attrs)
+
+    @staticmethod
+    def _make_user_admin(new_user):
+        new_user.groups.add(Group.objects.get(name='UserAdmin'))
+        # We add the FIU group to enforce current requirement that Security UserAdmin's are synonymous with FIU
+        if new_user.groups.filter(name='Security').exists():
+            new_user.groups.add(Group.objects.get(name='FIU'))
 
     @atomic
     def create(self, validated_data):
         creating_user = self.context['request'].user
 
         role = validated_data.pop('role', None)
-        make_user_admin = validated_data.pop('user_admin', False)
+        # Since user_admin is a serializer method field it is read-only, so wouldn't' be appearing in the
+        # validated_data if produced through is_valid
+        make_user_admin = validated_data.pop('user_admin', False) or self.initial_data.get('user_admin', False)
         validated_data.pop('is_locked_out', None)
 
         if not role:
             raise serializers.ValidationError({'role': 'Role must be specified'})
-
+        prisons = validated_data.pop('prisons', None)
         new_user = super().create(validated_data)
 
         password = generate_new_password()
         new_user.set_password(password)
         new_user.save()
 
-        if make_user_admin:
-            new_user.groups.add(Group.objects.get(name='UserAdmin'))
-
-        PrisonUserMapping.objects.assign_prisons_from_user(creating_user, new_user)
         role.assign_to_user(new_user)
+        # In custom flow, enforce that `UserAdmin` is added to any new `Security` user who has the `can_manage` box
+        # ticked in the form.
+        # Note that the django admin user creation flow does not use this endpoint so this logic won't apply there
+        if make_user_admin:
+            self._make_user_admin(new_user)
+
+        # Do not inherit prison set if creating user (directly or via AccountRequest) is FIU
+        if not creating_user.groups.filter(name='FIU').exists():
+            PrisonUserMapping.objects.assign_prisons_from_user(creating_user, new_user)
+        elif prisons is not None:
+            if self.context.get('from_account_request'):
+                PrisonUserMapping.objects.assign_prisons_to_user(new_user, prisons)
 
         context = {
             'username': new_user.username,
@@ -214,7 +234,9 @@ class UserSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Cannot change own access permissions')
 
         role = validated_data.pop('role', None)
-        make_user_admin = validated_data.pop('user_admin', was_user_admin)
+        # Since user_admin is a serializer method field it is read-only, so wouldn't' be appearing in the
+        # validated_data if produced through is_valid
+        make_user_admin = validated_data.pop('user_admin', False) or self.initial_data.get('user_admin', was_user_admin)
         is_locked_out = validated_data.pop('is_locked_out', None)
         prisons = validated_data.pop('prisons', None)
 
@@ -225,25 +247,35 @@ class UserSerializer(serializers.ModelSerializer):
             updated_user.groups.clear()
 
             if make_user_admin:
-                updated_user.groups.add(user_admin_group)
+                self._make_user_admin(updated_user)
 
             ApplicationUserMapping.objects.create(user=updated_user, application=role.application)
             for group in role.groups:
                 updated_user.groups.add(group)
         elif was_user_admin != make_user_admin:
             if make_user_admin:
-                updated_user.groups.add(user_admin_group)
+                self._make_user_admin(updated_user)
             else:
                 updated_user.groups.remove(user_admin_group)
+                # We remove the FIU group if exists to enforce current requirement that Security UserAdmin's are
+                # synonymous with FIU
+                fiu_group_if_exists = updated_user.groups.filter(name='FIU').first()
+                if fiu_group_if_exists:
+                    updated_user.groups.remove(fiu_group_if_exists)
 
         if is_locked_out is False:
             FailedLoginAttempt.objects.filter(user=updated_user).delete()
 
+        user_group_names = updated_user.groups.values_list('name', flat=True)
         if prisons is not None:
-            if updated_user.pk != updating_user.pk:
+            if self.context.get('from_account_request'):
+                PrisonUserMapping.objects.assign_prisons_to_user(updated_user, prisons)
+
+            if updating_user.groups.filter(name='UserAdmin').first() and 'Security' not in user_group_names:
+                PrisonUserMapping.objects.assign_prisons_from_user(updating_user, updated_user)
+            elif updated_user.pk != updating_user.pk:
                 raise serializers.ValidationError("Cannot change another user's prisons")
-            user_group_names = updated_user.groups.values_list('name', flat=True)
-            if 'Security' in user_group_names and 'UserAdmin' not in user_group_names:
+            elif 'Security' in user_group_names and 'UserAdmin' not in user_group_names:
                 PrisonUserMapping.objects.assign_prisons_to_user(updated_user, prisons)
             else:
                 raise serializers.ValidationError('Only security users can change prisons')

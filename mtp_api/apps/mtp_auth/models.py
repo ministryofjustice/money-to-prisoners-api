@@ -62,7 +62,7 @@ class Role(models.Model):
     This model defines the application and group mappings a user must have to fit into a specific role.
     Users must be in exactly one key group to be able to manage users. When a new user is created,
     they are assigned a role and gain access to associated application and groups. Separate logic also
-    means that they inherit the creating/approving user's prison set.
+    means that they inherit the creating/approving user's prison set (except from FIU)
     """
     name = models.CharField(max_length=30, unique=True)
     key_group = models.OneToOneField('auth.Group', unique=True, on_delete=models.CASCADE)
@@ -245,7 +245,7 @@ def patch_user_model():
 
     user_model.objects.get_by_natural_key = MethodType(get_by_natural_key, user_model.objects)
 
-    # add shortcut for chechking non-app-specific lock-outs
+    # add shortcut for checking non-app-specific lock-outs
     user_model.is_locked_out = property(lambda u: FailedLoginAttempt.objects.is_locked_out(user=u))
 
     # update default error messages
