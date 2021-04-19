@@ -1,4 +1,5 @@
 from django.conf import settings
+from mtp_common.security.checks import human_readable_check_rejection_reasons
 
 from core.dump import Serialiser
 from credit.constants import CREDIT_RESOLUTION, CREDIT_STATUS
@@ -79,7 +80,9 @@ class CreditSerialiser(Serialiser):
             security_check_actioned_by = security_check.actioned_by.username if security_check.actioned_by else ''
             if len(security_check.rules) > 0:
                 security_check_rules = security_check.rules
-                security_check_rejection_reasons = security_check.rejection_reasons
+                security_check_rejection_reasons = '; '.join(
+                    human_readable_check_rejection_reasons(security_check.rejection_reasons)
+                )
             else:
                 security_check_rules = None
                 security_check_rejection_reasons = None
