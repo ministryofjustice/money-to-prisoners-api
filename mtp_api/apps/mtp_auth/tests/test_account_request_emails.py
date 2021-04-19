@@ -99,8 +99,8 @@ class AccountRequestEmailTestCase(TestCase):
             # ('test_name', 'role_name', 'prison_id', 'expected_admins')
             ('prison-clerk-prison-1', 'prison-clerk', 'IXB', ['test-prison-1-ua']),
             ('prison-clerk-prison-2', 'prison-clerk', 'INP', ['test-prison-2-ua']),
-            ('security-prison-1', 'security', 'IXB', ['security-user-admin', 'prison-security-ua']),
-            ('security-no-prison', 'security', None, ['security-user-admin', 'prison-security-ua']),
+            ('security-prison-1', 'security', 'IXB', ['security-fiu-0', 'security-fiu-100', 'security-fiu-101']),
+            ('security-no-prison', 'security', None, ['security-fiu-0', 'security-fiu-100', 'security-fiu-101']),
         ]
         for test_name, role_name, prison_id, expected_admins in cases:
             with self.subTest(test_name):
