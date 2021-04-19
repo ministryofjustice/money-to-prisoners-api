@@ -2,6 +2,7 @@ import functools
 
 from django.utils import timezone
 from django.utils.module_loading import autodiscover_modules
+from model_utils.models import TimeStampedModel
 
 
 class Serialiser:
@@ -38,10 +39,16 @@ class Serialiser:
         return self.get_queryset().filter(**filters).order_by('pk').iterator(chunk_size=1000)
 
     def get_headers(self):
-        return ['Exported at', 'Internal ID']
+        return [
+            'Created at', 'Modified at',
+            'Exported at',
+            'Internal ID',
+        ]
 
-    def serialise(self, record):
+    def serialise(self, record: TimeStampedModel):
         return {
+            'Created at': record.created,
+            'Modified at': record.modified,
             'Exported at': self.exported_at_local_time,
             'Internal ID': record.id,
         }
