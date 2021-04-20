@@ -136,7 +136,7 @@ class SenderProfileManager(models.Manager):
         elif hasattr(credit, 'payment'):
             sender_profile = self._create_or_update_for_debit_card(credit)
         else:
-            logger.error('Credit does not have a payment nor transaction', {'credit_id': credit.pk})
+            logger.error('Credit %(credit_id)s does not have a payment nor transaction', {'credit_id': credit.pk})
             sender_profile = self.get_or_create_anonymous_sender()
 
         # Annoyingly we still have to add this resolution clause for test setup, due to the fact that our test setup

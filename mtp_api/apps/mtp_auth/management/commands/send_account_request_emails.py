@@ -46,7 +46,8 @@ class Command(BaseCommand):
                 self.email_admins(admins, role, names)
             else:
                 logger.error(
-                    'No active user admins for role in prison', {'role_name': role.name, 'prison_name': prison.name}
+                    'No active user admins for role in prison for %(role_name)s in %(prison_name)s',
+                    {'role_name': role.name, 'prison_name': prison.name}
                 )
 
     def find_admins(self, role, prison):

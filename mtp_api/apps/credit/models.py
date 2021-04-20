@@ -157,13 +157,14 @@ class Credit(TimeStampedModel):
 
         if not self.prisoner_profile:
             logger.info(
-                'Could not create PrisonerProfile for credit because Credit lacked either a prison or '
-                'prisoner name',
+                'Could not create PrisonerProfile for credit %(credit_instance)s '
+                'because Credit lacked either a prison or prisoner name',
                 {'credit_instance': self}
             )
         if not self.sender_profile:
             logger.info(
-                'Could not create SenderProfile for credit because Credit lacked necessary information',
+                'Could not create SenderProfile for credit %(credit_instance)s '
+                'because Credit lacked necessary information',
                 {'credit_instance': self}
             )
 
@@ -484,8 +485,9 @@ def update_prison_for_credit(instance, created, **kwargs):
             instance.prison = location.prison
             instance.save()
         except PrisonerLocation.MultipleObjectsReturned:
-            logger.error('Prisoner location is not unique', {
-                'prisoner_number': instance.prisoner_number, 'prisoner_dob': instance.prisoner_dob
+            logger.error('Prisoner location is not unique for %(prisoner_number)s %(prisoner_dob)s', {
+                'prisoner_number': instance.prisoner_number,
+                'prisoner_dob': instance.prisoner_dob,
             })
         except PrisonerLocation.DoesNotExist:
             pass

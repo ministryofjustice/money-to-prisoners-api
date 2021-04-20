@@ -75,7 +75,7 @@ class TransactionView(
             return self.partial_update(request, *args, **kwargs)
         except InvalidCreditStateException as e:
             logger.warning(
-                'Some transactions failed to update',
+                'Some transactions failed to update: %(transaction_id_list)r',
                 {'transaction_id_list': e.conflict_ids}
             )
             return Response(

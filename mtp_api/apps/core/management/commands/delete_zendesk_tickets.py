@@ -38,7 +38,10 @@ class Command(BaseCommand):
                                     auth=auth, timeout=15)
                     run_again = True
             else:
-                logger.error('Delete old zendesk tickets failed', {'response_body': response.text})
+                logger.error(
+                    'Delete old zendesk tickets failed: %(response_body)s',
+                    {'response_body': response.text}
+                )
 
             if not run_again:
                 break

@@ -37,7 +37,7 @@ class ApplicationRequestValidator(OAuth2Validator):
             user = None
 
         if user and FailedLoginAttempt.objects.is_locked_out(user, client):
-            logger.info('User "%s" is locked out' % username)
+            logger.info('User "%s" is locked out', username)
             raise LockedOutError(request=request)
 
         valid = super().validate_user(
@@ -51,7 +51,7 @@ class ApplicationRequestValidator(OAuth2Validator):
             user_logged_in.send(sender=user.__class__, request=request, user=user)
             return True
         elif user:
-            logger.info('User "%s" failed login' % username)
+            logger.info('User "%s" failed login', username)
             FailedLoginAttempt.objects.add_failed_attempt(user, client)
             if FailedLoginAttempt.objects.is_lockout_imminent(user, client):
                 raise LockoutImminentError(request=request)

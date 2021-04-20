@@ -107,9 +107,9 @@ def train_curve(key, x, y):
     old_params = curve.params.copy()
     curve.optimise(curve.params, x, y)
     if np.array_equal(old_params, curve.params):
-        logger.info(f'Curve {key} already optimised')
+        logger.info('Curve %(key)s already optimised', {'key': key})
     else:
-        logger.info(f'Optimised {key} curve: {curve}')
+        logger.info('Optimised %(key)s curve: %(curve)s', {'key': key, 'curve': curve})
     curve.save_params(key)
     return curve
 

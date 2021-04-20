@@ -59,7 +59,7 @@ class BaseUpdater:
 
     def run(self):
         if self._skip():
-            logger.warning('Performance platform update skipped', {'resource': self.resource})
+            logger.warning('Performance platform update skipped for %(resource)s', {'resource': self.resource})
             return
         govuk_timestamp = self.timestamp.replace(tzinfo=timezone.utc).isoformat()
         self.data.update(
@@ -80,7 +80,7 @@ class BaseUpdater:
         )
         if response.status_code != 200:
             logger.error(
-                'Performance platform update failed',
+                'Performance platform update failed for %(resource)s: %(response_payload)r',
                 {'resource': self.resource, 'response_payload': response.json()}
             )
 

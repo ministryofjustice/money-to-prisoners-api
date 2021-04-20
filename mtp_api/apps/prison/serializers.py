@@ -128,10 +128,10 @@ class PrisonerAccountBalanceSerializer(serializers.Serializer):
             ), 'not all response values are natural ints'
         except AssertionError as e:
             logger.exception(
-                'NOMIS balances for prisoner is malformed',
+                'NOMIS balances for %(prisoner_number)s is malformed: %(exception)s',
                 {
                     'prisoner_number': prisoner_location.prisoner_number,
-                    'exception': e
+                    'exception': e,
                 }
             )
             raise ValidationError(f'NOMIS balances for {prisoner_location.prisoner_number} is malformed: {e}')
@@ -142,11 +142,11 @@ class PrisonerAccountBalanceSerializer(serializers.Serializer):
                 and update_location_on_not_found
             ):
                 logger.warning(
-                    'Cannot lookup NOMIS balances for prisoner in given prison',
+                    'Cannot lookup NOMIS balances for %(prisoner_number)s in %(prison_nomis_id)s',
                     {
                         'prisoner_number': prisoner_location.prisoner_number,
                         'prison_nomis_id': prisoner_location.prison.nomis_id,
-                        'exception': e
+                        'exception': e,
                     }
                 )
                 new_location = fetch_prisoner_location_from_nomis(prisoner_location)
@@ -162,25 +162,26 @@ class PrisonerAccountBalanceSerializer(serializers.Serializer):
             ):
                 # We want to explicitly allow through in the case of a NOMIS outage
                 logger.warning(
-                    'Tried to contact nomis to fetch balance for prisoner but received '
-                    f'HTTP error code {e.response.status_code}. Allowing payment to continue without balance check',
-                    {'prisoner_number': prisoner_location.prisoner_number}
+                    'Tried to contact NOMIS to fetch balance for %(prisoner_number)s but received '
+                    'HTTP error code %(http_error_status)s. Allowing payment to continue without balance check',
+                    {
+                        'prisoner_number': prisoner_location.prisoner_number,
+                        'http_error_status': e.response.status_code,
+                    }
                 )
                 return 0
             else:
                 logger.exception(
-                    'Cannot lookup NOMIS balances for prisoner in given prison',
+                    'Cannot lookup NOMIS balances for %(prisoner_number)s in %(prison_nomis_id)s',
                     {
                         'prisoner_number': prisoner_location.prisoner_number,
                         'prison_nomis_id': prisoner_location.prison.nomis_id,
-                        'exception': e
+                        'exception': e,
                     }
                 )
                 raise ValidationError(
-                    (
-                        f'Cannot lookup NOMIS balances for {prisoner_location.prisoner_number} in '
-                        f'{prisoner_location.prison.nomis_id}'
-                    )
+                    f'Cannot lookup NOMIS balances for {prisoner_location.prisoner_number} in '
+                    f'{prisoner_location.prison.nomis_id}'
                 )
         else:
             return sum(nomis_account_balances[account] for account in self.NOMIS_ACCOUNTS)
