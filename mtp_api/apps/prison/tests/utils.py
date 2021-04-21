@@ -36,19 +36,50 @@ def random_prisoner_name():
     return name.upper()
 
 
+def generate_distinct_list(n: int, generator: callable) -> list:
+    """
+    Generate a list without repeated items
+
+    Parameters
+    ----------
+    n : int
+        Number of items in the list
+    generator : callable
+        Function used to generate items in the list
+
+    Returns
+    -------
+    list
+        List of generated items, without duplications
+    """
+
+    result = set()
+    while len(result) < n:
+        item = generator()
+        result.add(item)
+
+    return list(result)
+
+
 def load_random_prisoner_locations(number_of_prisoners=50):
     prisons = cycle(Prison.objects.all())
     prisoner_locations = generate_predefined_prisoner_locations()
+
+    random_prisoner_numbers = generate_distinct_list(
+        number_of_prisoners - len(prisoner_locations),
+        random_prisoner_number,
+    )
     prisoner_locations += [
         {
             'created_by': get_user_model().objects.first(),
             'prisoner_name': random_prisoner_name(),
-            'prisoner_number': random_prisoner_number(),
+            'prisoner_number': prisoner_number,
             'prisoner_dob': random_prisoner_dob(),
             'prison': next(prisons),
             'active': True,
-        } for _ in range(number_of_prisoners - 2)
+        } for prisoner_number in random_prisoner_numbers
     ]
+
     return PrisonerLocation.objects.bulk_create(
         map(lambda data: PrisonerLocation(**data), prisoner_locations)
     )
