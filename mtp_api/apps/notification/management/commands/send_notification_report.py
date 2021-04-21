@@ -36,7 +36,7 @@ class Command(BaseCommand):
             try:
                 validate_email(email)
             except ValidationError:
-                raise CommandError(f'"{email}" is not valid email address')
+                raise CommandError('Email is not valid email address', {'email': email})
 
         codes = options['rules'] or RULES.keys()
         rules = [RULES[code] for code in codes]

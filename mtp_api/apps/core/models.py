@@ -41,12 +41,12 @@ class ScheduledCommand(models.Model):
         return self.arg_string.split(' ') if self.arg_string else []
 
     def run(self):
-        logger.info('Running scheduled command "%s"' % (self))
+        logger.info('Running scheduled command "%s"', self)
         self.update_next_execution()
         self.save()
         start = pc()
         call_command(self.name, *self.get_args())
-        logger.info('Completed scheduled command "%s" in %ss' % (self, pc() - start))
+        logger.info('Completed scheduled command "%s" in %ss', self, pc() - start)
         if self.delete_after_next:
             self.delete()
 

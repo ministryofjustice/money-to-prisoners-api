@@ -33,7 +33,7 @@ def get_zero(value):
         return datetime.timedelta()
     if isinstance(value, (int, float)):
         return 0.0
-    raise ValueError('Cannot determine zero value for a %s' % type(value))
+    raise ValueError('Cannot determine zero value', {'type': type(value)})
 
 
 @register.inclusion_tag('core/tick-chart.html')

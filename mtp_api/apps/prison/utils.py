@@ -10,24 +10,35 @@ logger = logging.getLogger('mtp')
 
 
 def fetch_prisoner_location_from_nomis(prisoner_location: PrisonerLocation) -> Optional[PrisonerLocation]:
+    new_location = None
     try:
         new_location = nomis.get_location(prisoner_location.prisoner_number)
         if not new_location:
             logger.error(
-                'Malformed response from nomis when looking up prisoner location for '
-                f'{prisoner_location.prisoner_number}'
+                'Malformed response from NOMIS when looking up prisoner location for %(prisoner_number)s',
+                {'prisoner_number': prisoner_location.prisoner_number}
             )
             return None
         new_prison = Prison.objects.get(nomis_id=new_location['nomis_id'])
     except requests.RequestException:
-        logger.error(f'Cannot look up prisoner location for {prisoner_location.prisoner_number} in NOMIS')
+        logger.error(
+            'Cannot look up prisoner location for %(prisoner_number)s in NOMIS',
+            {'prisoner_number': prisoner_location.prisoner_number}
+        )
         return None
     except Prison.DoesNotExist:
-        logger.error(f'Cannot find prison matching {new_location["nomis_id"]} in Prison table')
+        logger.error(
+            'Cannot find %(nomis_id)s in Prison table',
+            {'nomis_id': new_location['nomis_id']}
+        )
         return None
     else:
         logger.info(
-            f'Location fetched from nomis of {prisoner_location.prisoner_number} is {new_prison.nomis_id}'
+            'Location fetched from nomis of %(prisoner_number)s is %(prison_nomis_id)s',
+            {
+                'prisoner_number': prisoner_location.prisoner_number,
+                'prison_nomis_id': new_prison.nomis_id,
+            }
         )
         # This update will only persist in python space. It is NOT committed to the database
         # This is because we should be calling credit_prisons_need_updating on any update to PrisonerLocation and that

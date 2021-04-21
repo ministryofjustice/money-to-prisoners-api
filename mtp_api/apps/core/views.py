@@ -255,7 +255,7 @@ class RecreateTestDataView(AdminViewMixin, FormView):
             },
             action_flag=CHANGE_LOG_ENTRY,
         )
-        logger.info('User "%(username)s" reset data for testing using "%(scenario)s" scenario' % {
+        logger.info('User "%(username)s" reset data for testing using "%(scenario)s" scenario', {
             'username': self.request.user.username,
             'scenario': scenario,
         })

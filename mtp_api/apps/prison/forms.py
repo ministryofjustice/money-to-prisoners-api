@@ -40,9 +40,9 @@ class PrisonerBalanceUploadForm(forms.Form):
             # and has no decimal places (indicates malformed file)
             numerator, denomiator = amount_pence.as_integer_ratio()
             if numerator <= 0:
-                raise ValueError(f'Negative balance {amount}')
+                raise ValueError('Negative balance', {'amount': amount})
             if denomiator != 1:
-                raise ValueError(f'Cannot turn {amount} into pence')
+                raise ValueError('Cannot turn amount into pence', {'amount': amount})
             balances.append({
                 'prisoner_number': prisoner_number,
                 'amount': int(amount_pence),
