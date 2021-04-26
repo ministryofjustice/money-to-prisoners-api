@@ -403,7 +403,8 @@ class CreditCheckTestCase(TestCase):
         description = '\n'.join(check.description)
         self.assertIn('FIU prisoners', description)
         self.assertIn('FIU payment sources', description)
-        self.assertListEqual(sorted(check.rules), ['FIUMONP', 'FIUMONS'], FLAKY_TEST_WARNING)
+        self.assertIn('FIUMONP', check.rules)
+        self.assertIn('FIUMONS', check.rules)
 
     def test_credit_with_profiles_checked_with_matched_rules(self):
         credit = self._make_candidate_credit()
@@ -424,7 +425,8 @@ class CreditCheckTestCase(TestCase):
         description = '\n'.join(check.description)
         self.assertIn('FIU prisoners', description)
         self.assertIn('FIU payment sources', description)
-        self.assertListEqual(sorted(check.rules), ['FIUMONP', 'FIUMONS'], FLAKY_TEST_WARNING)
+        self.assertIn('FIUMONP', check.rules)
+        self.assertIn('FIUMONS', check.rules)
 
     def test_credit_with_matched_csfreq_rule(self):
         rule = RULES['CSFREQ']
@@ -432,7 +434,7 @@ class CreditCheckTestCase(TestCase):
         credit_list = make_csfreq_credits(timezone.now(), make_sender(), count)
         credit = credit_list[0]
         check = Check.objects.create_for_credit(credit)
-        self.assertListEqual(check.rules, ['CSFREQ'])
+        self.assertIn('CSFREQ', check.rules)
 
     def test_credit_with_matched_csnum_rule(self):
         rule = RULES['CSNUM']
@@ -440,7 +442,7 @@ class CreditCheckTestCase(TestCase):
         credit_list = make_csnum_credits(timezone.now(), make_prisoner(), count)
         credit = credit_list[0]
         check = Check.objects.create_for_credit(credit)
-        self.assertListEqual(check.rules, ['CSNUM'])
+        self.assertIn('CSNUM', check.rules)
 
     def test_credit_with_matched_cpnum_rule(self):
         rule = RULES['CPNUM']
@@ -449,7 +451,8 @@ class CreditCheckTestCase(TestCase):
         credit = credit_list[0]
         check = Check.objects.create_for_credit(credit)
         # credits matching CPNUM will always CSFREQ currently
-        self.assertListEqual(sorted(check.rules), ['CPNUM', 'CSFREQ'])
+        self.assertIn('CPNUM', check.rules)
+        self.assertIn('CSFREQ', check.rules)
 
 
 class AutomaticCreditCheckTestCase(APITestCase, AuthTestCaseMixin):
@@ -612,7 +615,8 @@ class AutoAcceptRuleTestCase(APITestCase, AuthTestCaseMixin):
 
         # Assert
         self.assertEqual(check.auto_accept_rule_state, self.auto_accept_rule.get_latest_state())
-        self.assertEqual(check.rules, ['FIUMONP', 'FIUMONS'])
+        self.assertIn('FIUMONP', check.rules)
+        self.assertIn('FIUMONS', check.rules)
         self.assertEqual(check.status, CHECK_STATUS.ACCEPTED)
 
     def test_payment_for_pair_with_inactive_auto_accept_caught_by_delayed_capture(self):
@@ -648,7 +652,8 @@ class AutoAcceptRuleTestCase(APITestCase, AuthTestCaseMixin):
 
         # Assert
         self.assertEqual(check.auto_accept_rule_state, None)
-        self.assertEqual(check.rules, ['FIUMONP', 'FIUMONS'])
+        self.assertIn('FIUMONP', check.rules)
+        self.assertIn('FIUMONS', check.rules)
         self.assertEqual(check.status, CHECK_STATUS.PENDING)
 
     def test_payment_where_sender_not_on_auto_accept_caught_by_delayed_capture(self):
@@ -671,7 +676,7 @@ class AutoAcceptRuleTestCase(APITestCase, AuthTestCaseMixin):
 
         # Assert
         self.assertEqual(check.auto_accept_rule_state, None)
-        self.assertEqual(check.rules, ['FIUMONP'])
+        self.assertIn('FIUMONP', check.rules)
         self.assertEqual(check.status, CHECK_STATUS.PENDING)
 
     def test_payment_where_prisoner_not_on_auto_accept_caught_by_delayed_capture(self):
@@ -694,5 +699,5 @@ class AutoAcceptRuleTestCase(APITestCase, AuthTestCaseMixin):
 
         # Assert
         self.assertEqual(check.auto_accept_rule_state, None)
-        self.assertEqual(check.rules, ['FIUMONS'])
+        self.assertIn('FIUMONS', check.rules)
         self.assertEqual(check.status, CHECK_STATUS.PENDING)
