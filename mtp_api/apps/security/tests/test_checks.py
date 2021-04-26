@@ -11,7 +11,7 @@ from django.utils import timezone
 from model_mommy import mommy
 from rest_framework.test import APITestCase
 
-from core.tests.utils import make_test_users
+from core.tests.utils import make_test_users, FLAKY_TEST_WARNING
 from credit.models import Credit, CREDIT_RESOLUTION, LOG_ACTIONS as CREDIT_LOG_ACTIONS
 from mtp_auth.tests.mommy_recipes import basic_user
 from mtp_auth.tests.utils import AuthTestCaseMixin
@@ -395,33 +395,36 @@ class CreditCheckTestCase(TestCase):
         fiu_user = fiu_group.user_set.first()
         prisoner_profile.monitoring_users.add(fiu_user)
         sender_profile.debit_card_details.first().monitoring_users.add(fiu_user)
+
         self.assertTrue(credit.should_check())
         check = Check.objects.create_for_credit(credit)
         self.assertEqual(check.status, CHECK_STATUS.PENDING)
-        self.assertEqual(len(check.description), 2)
+        self.assertEqual(len(check.description), 2, FLAKY_TEST_WARNING)
         description = '\n'.join(check.description)
         self.assertIn('FIU prisoners', description)
         self.assertIn('FIU payment sources', description)
-        self.assertListEqual(sorted(check.rules), ['FIUMONP', 'FIUMONS'])
+        self.assertListEqual(sorted(check.rules), ['FIUMONP', 'FIUMONS'], FLAKY_TEST_WARNING)
 
     def test_credit_with_profiles_checked_with_matched_rules(self):
         credit = self._make_candidate_credit()
         prisoner_profile = PrisonerProfile.objects.get_for_credit(credit)
         sender_profile = SenderProfile.objects.get_for_credit(credit)
-        credit.prisoner_profile = prisoner_profile
-        credit.sender_profile = sender_profile
         fiu_group = Group.objects.get(name='FIU')
         fiu_user = fiu_group.user_set.first()
         prisoner_profile.monitoring_users.add(fiu_user)
         sender_profile.debit_card_details.first().monitoring_users.add(fiu_user)
+
+        credit.prisoner_profile = prisoner_profile
+        credit.sender_profile = sender_profile
+
         self.assertTrue(credit.should_check())
         check = Check.objects.create_for_credit(credit)
         self.assertEqual(check.status, CHECK_STATUS.PENDING)
-        self.assertEqual(len(check.description), 2)
+        self.assertEqual(len(check.description), 2, FLAKY_TEST_WARNING)
         description = '\n'.join(check.description)
         self.assertIn('FIU prisoners', description)
         self.assertIn('FIU payment sources', description)
-        self.assertListEqual(sorted(check.rules), ['FIUMONP', 'FIUMONS'])
+        self.assertListEqual(sorted(check.rules), ['FIUMONP', 'FIUMONS'], FLAKY_TEST_WARNING)
 
     def test_credit_with_matched_csfreq_rule(self):
         rule = RULES['CSFREQ']

@@ -10,7 +10,7 @@ from parameterized import parameterized
 from rest_framework import status as http_status
 from rest_framework.test import APITestCase
 
-from core.tests.utils import format_date_or_datetime, make_test_users, create_security_fiu_user
+from core.tests.utils import format_date_or_datetime, make_test_users, create_security_fiu_user, FLAKY_TEST_WARNING
 from credit.models import Credit
 from credit.constants import CREDIT_RESOLUTION
 from mtp_auth.tests.utils import AuthTestCaseMixin
@@ -283,37 +283,41 @@ class CheckListTestCase(BaseCheckTestCase):
 
         auth = self.get_http_authorization_for_user(self._get_authorised_user())
 
-        def assertCheckCount(filters, expected_count):  # noqa: N802
+        def assertCheckCount(filters, expected_count, msg=None):  # noqa: N802
             response = self.client.get(
                 reverse('security-check-list'),
                 filters,
                 format='json',
                 HTTP_AUTHORIZATION=auth,
             )
-            self.assertEqual(response.status_code, http_status.HTTP_200_OK)
+            self.assertEqual(response.status_code, http_status.HTTP_200_OK, msg)
             response_data = response.json()
             self.assertEqual(
                 response_data['count'],
                 expected_count,
+                msg,
             )
 
         assertCheckCount(
             {
                 'started_at__lt': earliest_check,
             },
-            0
+            0,
+            FLAKY_TEST_WARNING,
         )
         assertCheckCount(
             {
                 'started_at__gte': earliest_check,
             },
-            check_count
+            check_count,
+            FLAKY_TEST_WARNING,
         )
         assertCheckCount(
             {
                 'started_at__lt': latest_check,
             },
-            check_count - 1
+            check_count - 1,
+            FLAKY_TEST_WARNING,
         )
 
     def test_check_filtering_by_credit_resolution(self):
