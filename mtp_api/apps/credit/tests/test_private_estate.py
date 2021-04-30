@@ -8,7 +8,7 @@ from model_mommy import mommy
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from core.tests.utils import make_test_users
+from core.tests.utils import make_test_users, FLAKY_TEST_WARNING
 from credit.constants import CREDIT_RESOLUTION, CREDIT_STATUS
 from credit.models import Credit, PrivateEstateBatch
 from mtp_auth.tests.utils import AuthTestCaseMixin
@@ -60,6 +60,24 @@ class PrivateEstateBatchTestCase(AuthTestCaseMixin, APITestCase):
             PrivateEstateBatch.objects.create_batches(date, end_of_date)
             date = end_of_date
 
+    def _raise_flaky_test_warning(self):
+        """
+        Raise an exception to warn about the flaky nature of this test
+
+        Message includes information about the credits, useful to debug this
+        """
+
+        all_credits = Credit.objects.count()
+        credited = Credit.objects.credited().count()
+        private_estate = Credit.objects.credited().filter(prison__private_estate=True).count()
+
+        raise Exception(
+            f'{FLAKY_TEST_WARNING}'
+            f'\n\nCredit.objects.count() = {all_credits}'
+            f'\nCredit.objects.credited().count() = {credited}'
+            f'\nCredit.objects.credited().filter(prison__private_estate=True).count() = {private_estate}'
+        )
+
     def test_reconciliation_creates_batch(self):
         for batch in PrivateEstateBatch.objects.all():
             self.assertTrue(all(
@@ -94,7 +112,10 @@ class PrivateEstateBatchTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(len(private_estate_credit_ids), 0)
 
     def test_bank_admin_can_get_batches(self):
-        date_with_batch = Credit.objects.credited().filter(prison__private_estate=True).earliest().received_at.date()
+        try:
+            date_with_batch = Credit.objects.credited().filter(prison__private_estate=True).earliest().received_at.date()  # noqa: E501
+        except Credit.DoesNotExist:
+            self._raise_flaky_test_warning()
         expected_batch = PrivateEstateBatch.objects.filter(date=date_with_batch).first()
 
         user = self.bank_admins[0]
@@ -113,7 +134,10 @@ class PrivateEstateBatchTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(batch['bank_account']['account_number'], self.private_bank_account.account_number)
 
     def test_others_cannot_get_batches(self):
-        date_with_batch = Credit.objects.credited().filter(prison__private_estate=True).earliest().received_at.date()
+        try:
+            date_with_batch = Credit.objects.credited().filter(prison__private_estate=True).earliest().received_at.date()  # noqa: E501
+        except Credit.DoesNotExist:
+            self._raise_flaky_test_warning()
 
         user = self.prison_clerks[0]
         url = reverse('privateestatebatch-list')
@@ -124,7 +148,10 @@ class PrivateEstateBatchTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_bank_admin_can_list_credits_in_batch(self):
-        date_with_batch = Credit.objects.credited().filter(prison__private_estate=True).earliest().received_at.date()
+        try:
+            date_with_batch = Credit.objects.credited().filter(prison__private_estate=True).earliest().received_at.date()  # noqa: E501
+        except Credit.DoesNotExist:
+            self._raise_flaky_test_warning()
         expected_batch = PrivateEstateBatch.objects.filter(date=date_with_batch).first()
 
         user = self.bank_admins[0]
@@ -153,7 +180,11 @@ class PrivateEstateBatchTestCase(AuthTestCaseMixin, APITestCase):
         )
 
     def test_others_cannot_list_credits_in_batch(self):
-        date_with_batch = Credit.objects.credited().filter(prison__private_estate=True).earliest().received_at.date()
+        try:
+            date_with_batch = Credit.objects.credited().filter(prison__private_estate=True).earliest().received_at.date()  # noqa: E501
+        except Credit.DoesNotExist:
+            self._raise_flaky_test_warning()
+
         expected_batch = PrivateEstateBatch.objects.filter(date=date_with_batch).first()
 
         user = self.prison_clerks[0]
@@ -170,7 +201,11 @@ class PrivateEstateBatchTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_special_bank_admin_can_credit_batch(self):
-        date_with_batch = Credit.objects.credited().filter(prison__private_estate=True).earliest().received_at.date()
+        try:
+            date_with_batch = Credit.objects.credited().filter(prison__private_estate=True).earliest().received_at.date()  # noqa: E501
+        except Credit.DoesNotExist:
+            self._raise_flaky_test_warning()
+
         expected_batch = PrivateEstateBatch.objects.filter(date=date_with_batch).first()
         some_credit = expected_batch.credit_set.first()
         some_credit.resolution = CREDIT_RESOLUTION.PENDING
@@ -195,7 +230,10 @@ class PrivateEstateBatchTestCase(AuthTestCaseMixin, APITestCase):
         ))
 
     def test_normal_bank_admin_cannot_credit_batch(self):
-        date_with_batch = Credit.objects.credited().filter(prison__private_estate=True).earliest().received_at.date()
+        try:
+            date_with_batch = Credit.objects.credited().filter(prison__private_estate=True).earliest().received_at.date()  # noqa: E501
+        except Credit.DoesNotExist:
+            self._raise_flaky_test_warning()
         expected_batch = PrivateEstateBatch.objects.filter(date=date_with_batch).first()
 
         user = self.bank_admins[0]
@@ -212,7 +250,10 @@ class PrivateEstateBatchTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_others_cannot_credit_batch(self):
-        date_with_batch = Credit.objects.credited().filter(prison__private_estate=True).earliest().received_at.date()
+        try:
+            date_with_batch = Credit.objects.credited().filter(prison__private_estate=True).earliest().received_at.date()  # noqa: E501
+        except Credit.DoesNotExist:
+            self._raise_flaky_test_warning()
         expected_batch = PrivateEstateBatch.objects.filter(date=date_with_batch).first()
 
         user = self.prison_clerks[0]

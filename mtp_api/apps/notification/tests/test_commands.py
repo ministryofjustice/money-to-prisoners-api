@@ -10,7 +10,7 @@ from model_mommy import mommy
 import openpyxl
 from openpyxl.utils import coordinate_to_tuple
 
-from core.tests.utils import make_test_users
+from core.tests.utils import make_test_users, FLAKY_TEST_WARNING
 from credit.constants import CREDIT_RESOLUTION
 from credit.models import Credit
 from disbursement.models import Disbursement
@@ -301,7 +301,7 @@ class SendNotificationReportTestCase(NotificationBaseTestCase):
         )
         for worksheet in workbook.sheetnames:
             worksheet = workbook[worksheet]
-            self.assertEqual(worksheet['B2'].value, 'No notifications')
+            self.assertEqual(worksheet['B2'].value, 'No notifications', FLAKY_TEST_WARNING)
 
     def test_reports_generated(self):
         self.make_2days_of_random_models()
@@ -337,7 +337,7 @@ class SendNotificationReportTestCase(NotificationBaseTestCase):
             dimensions = worksheet.calculate_dimension()
             rows, _columns = coordinate_to_tuple(dimensions.split(':')[1])
             self.assertEqual(rows, 2)
-            self.assertEqual(worksheet['F2'].value, '£125.01')
+            self.assertEqual(worksheet['F2'].value, '£125.01', FLAKY_TEST_WARNING)
             self.assertEqual(worksheet['H2'].value, credit.prisoner_name)
             self.assertIn(f'/credits/{credit.id}/', worksheet['B2'].hyperlink.target)
         for worksheet in disbursement_sheets:
@@ -386,9 +386,9 @@ class SendNotificationReportTestCase(NotificationBaseTestCase):
                 prisoner_number = row[prisoner_number_col].value
                 monitored_by = row[1].value
                 if prisoner_number == prisoner_number_with_2_monitors:
-                    self.assertEqual(monitored_by, 2)
+                    self.assertEqual(monitored_by, 2, FLAKY_TEST_WARNING)
                 else:
-                    self.assertEqual(monitored_by, 1)
+                    self.assertEqual(monitored_by, 1, FLAKY_TEST_WARNING)
 
     def test_reports_generated_for_counting_rules(self):
         # make just enough credits to trigger CSFREQ rule with latest credit

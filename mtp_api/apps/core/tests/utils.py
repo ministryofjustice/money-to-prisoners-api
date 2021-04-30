@@ -26,6 +26,13 @@ from prison.models import Prison
 
 User = get_user_model()
 
+FLAKY_TEST_WARNING = (
+    'WARNING: This test has been flaky in the past. '
+    'It may fail even when nothing is broken. '
+    'Rerun the tests if that happens. '
+    'See: https://dsdmoj.atlassian.net/browse/MTP-1370'
+)
+
 
 class MockModelTimestamps:
     """
