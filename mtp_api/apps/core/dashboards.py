@@ -1,5 +1,6 @@
 import json
 import itertools
+import logging
 
 from django.conf import settings
 from django.contrib import messages
@@ -11,6 +12,9 @@ from django.utils.translation import gettext, gettext_lazy as _
 import requests
 
 from core.views import DashboardView
+
+
+logger = logging.getLogger('mtp')
 
 
 class DashboardModule(metaclass=MediaDefiningClass):
@@ -111,18 +115,30 @@ class SatisfactionDashboard(DashboardModule):
                 url_prefix = 'https://restapi.surveygizmo.com/v4/survey/%s' % survey['id']
                 questions = []
                 for question_id in survey['question_ids']:
-                    question_response = requests.get('%(url_prefix)s/surveyquestion/%(question)s' % {
-                        'url_prefix': url_prefix,
-                        'question': question_id,
-                    }, params={
-                        'api_token': settings.SURVEY_GIZMO_API_KEY,
-                    }).json()['data']
-                    statistics_response = requests.get('%(url_prefix)s/surveystatistic' % {
-                        'url_prefix': url_prefix,
-                    }, params={
-                        'api_token': settings.SURVEY_GIZMO_API_KEY,
-                        'surveyquestion': question_id,
-                    }).json()['data']
+                    try:
+                        url = f'{url_prefix}/surveyquestion/{question_id}'
+                        question_response = requests.get(url, params={
+                            'api_token': settings.SURVEY_GIZMO_API_KEY,
+                        })
+                        question_response.raise_for_status()
+                        question_response = question_response.json()['data']
+
+                        url = f'{url_prefix}/surveystatistic'
+                        statistics_response = requests.get(url, params={
+                            'api_token': settings.SURVEY_GIZMO_API_KEY,
+                            'surveyquestion': question_id,
+                        })
+                        statistics_response.raise_for_status()
+                        statistics_response = statistics_response.json()['data']
+                    except requests.RequestException as e:
+                        logger.warning(f'Failed to get Survey response/statistics for question {question_id}: {e}', {
+                            'url': url,
+                            'question_id': question_id,
+                            'exception': e,
+                        })
+                        question_response = None
+                        statistics_response = None
+
                     questions.append({
                         'question_id': question_id,
                         'question': question_response,
@@ -165,6 +181,10 @@ class SatisfactionDashboard(DashboardModule):
 
             question = source_data_item['question']
             statistic = source_data_item['statistics']
+
+            # API didn't respond for this question
+            if not question or not statistic:
+                continue
 
             value_index = survey_index * 2 + 1
             mean_response = 0
