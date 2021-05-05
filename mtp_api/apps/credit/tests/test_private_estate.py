@@ -53,8 +53,10 @@ class PrivateEstateBatchTestCase(AuthTestCaseMixin, APITestCase):
             public_estate_credits = Credit.objects.filter(prison__private_estate=False).filter(creditable)
             public_estate_credits[public_estate_credits.count() // 2:].update(prison=self.private_prison)
 
-        self.latest_date = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        date = Credit.objects.earliest().received_at.replace(hour=0, minute=0, second=0, microsecond=0)
+        self.latest_date = timezone.localtime().replace(hour=0, minute=0, second=0, microsecond=0)
+
+        date = timezone.localtime(Credit.objects.earliest().received_at)
+        date = date.replace(hour=0, minute=0, second=0, microsecond=0)
         while date < self.latest_date:
             end_of_date = date + datetime.timedelta(days=1)
             PrivateEstateBatch.objects.create_batches(date, end_of_date)
