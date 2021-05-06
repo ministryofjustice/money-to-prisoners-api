@@ -36,6 +36,11 @@ urlpatterns = [
 
     url(r'^favicon.ico$', RedirectView.as_view(url=settings.STATIC_URL + 'images/favicon.ico', permanent=True)),
     url(r'^robots.txt$', lambda request: HttpResponse('User-agent: *\nDisallow: /', content_type='text/plain')),
+    url(r'^\.well-known/security\.txt$', RedirectView.as_view(
+        url='https://raw.githubusercontent.com/ministryofjustice/security-guidance'
+            '/main/contact/vulnerability-disclosure-security.txt',
+        permanent=True,
+    )),
 
     url(r'^404.html$', lambda request: HttpResponse(
         _('Page not found'),
