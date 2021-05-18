@@ -65,14 +65,15 @@ class Payment(TimeStampedModel):
     recipient_name = models.CharField(max_length=250, null=True, blank=True,
                                       help_text=_('As specified by the sender'))
     email = models.EmailField(null=True, blank=True,
-                              help_text=_('Specified by sender for confirmation emails'))
+                              help_text=_('Specified by sender for confirmation emails'),
+                              db_index=True)
     credit = models.OneToOneField(Credit, on_delete=models.CASCADE)
     batch = models.ForeignKey(Batch, on_delete=models.SET_NULL, null=True, blank=True)
 
-    cardholder_name = models.CharField(max_length=250, blank=True, null=True)
-    card_number_first_digits = models.CharField(max_length=6, blank=True, null=True)
-    card_number_last_digits = models.CharField(max_length=4, blank=True, null=True)
-    card_expiry_date = models.CharField(max_length=5, blank=True, null=True)
+    cardholder_name = models.CharField(max_length=250, blank=True, null=True, db_index=True)
+    card_number_first_digits = models.CharField(max_length=6, blank=True, null=True, db_index=True)
+    card_number_last_digits = models.CharField(max_length=4, blank=True, null=True, db_index=True)
+    card_expiry_date = models.CharField(max_length=5, blank=True, null=True, db_index=True)
     card_brand = models.CharField(max_length=250, blank=True, null=True)
 
     ip_address = models.GenericIPAddressField(blank=True, null=True, db_index=True)
