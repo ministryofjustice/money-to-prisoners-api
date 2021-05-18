@@ -17,12 +17,12 @@ class Transaction(TimeStampedModel):
     source = models.CharField(max_length=50, choices=TRANSACTION_SOURCE, db_index=True)
 
     processor_type_code = models.CharField(max_length=12, blank=True, null=True)
-    sender_sort_code = models.CharField(max_length=50, blank=True)
-    sender_account_number = models.CharField(max_length=50, blank=True)
-    sender_name = models.CharField(max_length=250, blank=True)
+    sender_sort_code = models.CharField(max_length=50, blank=True, db_index=True)
+    sender_account_number = models.CharField(max_length=50, blank=True, db_index=True)
+    sender_name = models.CharField(max_length=250, blank=True, db_index=True)
 
     # used by building societies to identify the account nr
-    sender_roll_number = models.CharField(blank=True, max_length=50)
+    sender_roll_number = models.CharField(blank=True, max_length=50, db_index=True)
 
     # original reference
     reference = models.TextField(blank=True)
