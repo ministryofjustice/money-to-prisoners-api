@@ -41,7 +41,7 @@ class BillingAddress(models.Model):
     line2 = models.CharField(max_length=250, blank=True, null=True)
     city = models.CharField(max_length=250, blank=True, null=True)
     country = models.CharField(max_length=250, blank=True, null=True)
-    postcode = models.CharField(max_length=250, blank=True, null=True)
+    postcode = models.CharField(max_length=250, blank=True, null=True, db_index=True)
     debit_card_sender_details = models.ForeignKey(
         'security.DebitCardSenderDetails', related_name='billing_addresses',
         blank=True, null=True, on_delete=models.SET_NULL
