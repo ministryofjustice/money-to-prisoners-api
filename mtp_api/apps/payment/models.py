@@ -63,7 +63,7 @@ class Payment(TimeStampedModel):
     amount = models.PositiveIntegerField()
     service_charge = models.PositiveIntegerField(default=0)
     recipient_name = models.CharField(max_length=250, null=True, blank=True,
-                                      help_text=_('As specified by the sender'))
+                                      help_text=_('As specified by the sender'), db_index=True)
     email = models.EmailField(null=True, blank=True,
                               help_text=_('Specified by sender for confirmation emails'),
                               db_index=True)
