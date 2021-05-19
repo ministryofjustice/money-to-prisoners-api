@@ -40,7 +40,7 @@ class Credit(TimeStampedModel):
 
     prisoner_number = models.CharField(max_length=250, blank=True, null=True, db_index=True)
     prisoner_dob = models.DateField(blank=True, null=True)
-    prisoner_name = models.CharField(blank=True, null=True, max_length=250)
+    prisoner_name = models.CharField(blank=True, null=True, max_length=250, db_index=True)
     prison = models.ForeignKey(Prison, blank=True, null=True, on_delete=models.SET_NULL)
 
     resolution = models.CharField(max_length=50, choices=CREDIT_RESOLUTION, default=CREDIT_RESOLUTION.PENDING,
