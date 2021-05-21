@@ -268,7 +268,8 @@ if os.environ.get('SENTRY_DSN'):
         integrations=[DjangoIntegration()],
         environment=ENVIRONMENT,
         release=APP_GIT_COMMIT or 'unknown',
-        send_default_pii=DEBUG,  # TODO: decide if prod apps should report user details
+        send_default_pii=DEBUG,
+        traces_sample_rate=0.2 if ENVIRONMENT == 'prod' else 1.0,
     )
 
 REST_FRAMEWORK = {
