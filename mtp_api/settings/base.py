@@ -13,10 +13,11 @@ APP_GIT_COMMIT = os.environ.get('APP_GIT_COMMIT')
 
 TEAM_EMAIL = os.environ.get('TEAM_EMAIL', 'mtp@localhost')
 
-
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-SECRET_KEY = 'CHANGE_ME'
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY') or 'CHANGE_ME'
+
 if ENVIRONMENT == 'local':
     ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'api']
 else:
