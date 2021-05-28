@@ -3,14 +3,11 @@ Docker settings
 """
 from mtp_common.stack import get_current_pod
 
-from mtp_api.settings.base import *  # noqa
-from mtp_api.settings.base import ENVIRONMENT, os
+from .base import *  # noqa
+from .base import DEBUG, ENVIRONMENT, SECRET_KEY
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG') == 'True'
+if ENVIRONMENT == 'prod':
+    assert not DEBUG, 'Cannot run in DEBUG mode on prod'
 
 ALLOWED_HOSTS = [
     'localhost',
@@ -24,6 +21,8 @@ if current_pod and current_pod.status.pod_ip:
 
 # security tightening
 if ENVIRONMENT != 'local':
+    assert SECRET_KEY != 'CHANGE_ME', 'SECRET_KEY must be set up'
+
     # ssl redirect done at nginx and kubernetes level
     # SECURE_SSL_REDIRECT = True
     # strict-transport set at nginx level

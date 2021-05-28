@@ -13,10 +13,11 @@ APP_GIT_COMMIT = os.environ.get('APP_GIT_COMMIT')
 
 TEAM_EMAIL = os.environ.get('TEAM_EMAIL', 'mtp@localhost')
 
-
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-SECRET_KEY = 'CHANGE_ME'
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY') or 'CHANGE_ME'
+
 if ENVIRONMENT == 'local':
     ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'api']
 else:
@@ -269,7 +270,8 @@ if os.environ.get('SENTRY_DSN'):
         environment=ENVIRONMENT,
         release=APP_GIT_COMMIT or 'unknown',
         send_default_pii=DEBUG,
-        traces_sample_rate=0.2 if ENVIRONMENT == 'prod' else 1.0,
+        request_bodies='medium' if DEBUG else 'never',
+        traces_sample_rate=1.0 if DEBUG else 0.2,
     )
 
 REST_FRAMEWORK = {
