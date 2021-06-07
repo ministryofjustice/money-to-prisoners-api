@@ -349,5 +349,12 @@ class DigitalTakeupReportForm(BasePeriodAdminReportForm):
                 yield date
 
 
+class UserSatisfactionReportForm(BasePeriodAdminReportForm):
+    display = forms.ChoiceField(label=_('Display'), choices=(
+        ('count', _('Absolute numbers')),
+        ('percentage', _('Percentages')),
+    ), initial='count')
+
+
 class ZendeskAdminReportForm(BasePeriodAdminReportForm):
     pass

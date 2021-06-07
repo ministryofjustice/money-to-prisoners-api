@@ -208,6 +208,7 @@ class UserSatisfaction(models.Model):
     rated_3 = models.PositiveIntegerField(verbose_name=_('Neither satisfied or dissatisfied'))
     rated_4 = models.PositiveIntegerField(verbose_name=_('Satisfied'))
     rated_5 = models.PositiveIntegerField(verbose_name=_('Very satisfied'))
+    rating_field_names = [f'rated_{rating}' for rating in range(1, 6)]
 
     objects = models.Manager.from_queryset(UserSatisfactionQueryset)()
 

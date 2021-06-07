@@ -20,6 +20,6 @@ class DigitalTakeupAdmin(ModelAdmin):
 
 @admin.register(UserSatisfaction)
 class UserSatisfactionAdmin(ModelAdmin):
-    list_display = ('date', 'rated_1', 'rated_2', 'rated_3', 'rated_4', 'rated_5')
+    list_display = ('date', *UserSatisfaction.rating_field_names)
     ordering = ('-date',)
     date_hierarchy = 'date'
