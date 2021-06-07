@@ -1,3 +1,4 @@
+import collections
 import datetime
 import logging
 import re
@@ -7,6 +8,8 @@ from django.conf import settings
 from django.contrib.admin.widgets import AdminFileWidget
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 
@@ -145,4 +148,74 @@ class DigitalTakeupUploadForm(forms.Form):
                 defaults=credit_by_prison,
                 date=self.date,
                 prison_id=nomis_id,
+            )
+
+
+class UserSatisfactionUploadForm(forms.Form):
+    csv_file = forms.FileField(label=_('CSV file'), widget=AdminFileWidget)
+    error_messages = {
+        'cannot_read': _('Please upload a .csv file'),
+        'invalid': _('The CSV file does not contain the expected structure'),
+    }
+    _rating_prefix = 'Rating of '
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.records = collections.defaultdict(lambda: collections.defaultdict(int))
+
+    def parse_record(self, record):
+        try:
+            # filter out only aggregated daily ratings
+            if record['type'] != 'aggregated-service-feedback':
+                return None
+
+            # get local date
+            date = parse_datetime(record['creation date'])
+            if not date:
+                raise ValueError('Cannot parse creation date')
+            date = timezone.make_aware(date).date()
+
+            # get rating and count
+            feedback = record['feedback']
+            assert feedback.startswith(self._rating_prefix)
+            feedback = feedback[len(self._rating_prefix):]
+            rating, count = feedback.split(':', 1)
+            rating = int(rating.strip())
+            assert rating in range(1, 6)
+            count = int(count.strip())
+            assert count >= 0
+        except (KeyError, IndexError, ValueError, AssertionError):
+            raise ValidationError(self.error_messages['invalid'], 'invalid')
+
+        return date, rating, count
+
+    def clean_csv_file(self):
+        csv_file = self.cleaned_data.get('csv_file')
+        if csv_file:
+            import csv
+            import io
+
+            reader = csv.DictReader(io.TextIOWrapper(csv_file))
+            try:
+                for record in reader:
+                    parsed = self.parse_record(record)
+                    if not parsed:
+                        continue
+                    date, rating, count = parsed
+                    self.records[date][rating] = count
+            except ValueError:
+                raise ValidationError(self.error_messages['cannot_read'], code='cannot_read')
+        return None
+
+    @transaction.atomic
+    def save(self):
+        from performance.models import UserSatisfaction
+
+        for date, record in self.records.items():
+            UserSatisfaction.objects.update_or_create(
+                defaults={
+                    f'rated_{rating}': record[rating]
+                    for rating in range(1, 6)
+                },
+                date=date,
             )

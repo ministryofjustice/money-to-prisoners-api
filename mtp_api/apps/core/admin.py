@@ -25,7 +25,8 @@ class AdminSite(admin.AdminSite):
         from payment.views import PaymentSearchView
         from performance.view_dashboard import PerformanceDashboardView
         from performance.views import (
-            DigitalTakeupUploadView, DigitalTakeupReport, PrisonDigitalTakeupView, ZendeskReportAdminView,
+            DigitalTakeupUploadView, UserSatisfactionUploadView,
+            DigitalTakeupReport, PrisonDigitalTakeupView, ZendeskReportAdminView,
         )
         from prison.views import PrisonerBalanceUploadView
         from security.views_admin import CheckReportAdminView
@@ -54,6 +55,8 @@ class AdminSite(admin.AdminSite):
                 name='digital_takeup_report'),
             url(r'^performance/digitaltakeup/prisons/$', PrisonDigitalTakeupView.as_view(),
                 name='digital_takeup_prisons'),
+            url(r'^performance/usersatisfaction/upload/$', UserSatisfactionUploadView.as_view(),
+                name='user_satisfaction_upload'),
             url(r'^performance/zendesk-report/$', ZendeskReportAdminView.as_view(),
                 name='zendesk_report'),
             url(r'^security/check/report/$', CheckReportAdminView.as_view(),

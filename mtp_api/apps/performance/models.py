@@ -166,3 +166,25 @@ class DigitalTakeup(models.Model):
         if digital_takeup is None:
             return '–'
         return '%0.0f%%' % (digital_takeup * 100)
+
+
+class UserSatisfaction(models.Model):
+    """
+    The number of responses for each rating per day as provided by the Feedback Explorer export on GOV.UK publishing
+    """
+    date = models.DateField(primary_key=True)
+    rated_1 = models.PositiveIntegerField(verbose_name=_('Very dissatisfied'))
+    rated_2 = models.PositiveIntegerField(verbose_name=_('Dissatisfied'))
+    rated_3 = models.PositiveIntegerField(verbose_name=_('Neither satisfied or dissatisfied'))
+    rated_4 = models.PositiveIntegerField(verbose_name=_('Satisfied'))
+    rated_5 = models.PositiveIntegerField(verbose_name=_('Very satisfied'))
+
+    reports_start = datetime.date(2016, 11, 15)
+
+    class Meta:
+        ordering = ('date',)
+        get_latest_by = 'date'
+
+    @property
+    def all_ratings(self):
+        return self.rated_1, self.rated_2, self.rated_3, self.rated_4, self.rated_5

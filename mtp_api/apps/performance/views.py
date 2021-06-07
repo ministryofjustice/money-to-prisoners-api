@@ -16,8 +16,8 @@ import requests
 from core.forms import DigitalTakeupReportForm, PrisonDigitalTakeupForm, ZendeskAdminReportForm
 from core.views import AdminViewMixin, BaseAdminReportView
 from oauth2_provider.models import Application
-from performance.forms import DigitalTakeupUploadForm
-from performance.models import DigitalTakeup
+from performance.forms import DigitalTakeupUploadForm, UserSatisfactionUploadForm
+from performance.models import DigitalTakeup, UserSatisfaction
 from prison.models import Prison
 
 
@@ -92,6 +92,36 @@ class DigitalTakeupUploadView(AdminViewMixin, FormView):
             messages.warning(self.request,
                              _('Credits received do not match those in the spreadsheet:') +
                              '\n' + ', '.join(common_prison_credit_differences))
+
+
+class UserSatisfactionUploadView(AdminViewMixin, FormView):
+    """
+    Django admin view for uploading user satisfaction exported from GOV.UK Feedback Explorer
+    """
+    title = _('User satisfaction')
+    form_class = UserSatisfactionUploadForm
+    template_name = 'admin/performance/usersatisfaction/upload.html'
+    success_url = reverse_lazy('admin:performance_usersatisfaction_changelist')
+    required_permissions = ['performance.add_usersatisfaction', 'performance.change_usersatisfaction']
+
+    def get_context_data(self, **kwargs):
+        context_data = super().get_context_data(**kwargs)
+        context_data['opts'] = UserSatisfaction._meta
+        return context_data
+
+    def form_valid(self, form):
+        form.save()
+        message = _('Saved user satisfaction records for %(count)d days') % {
+            'count': len(form.records),
+        }
+        LogEntry.objects.log_action(
+            user_id=self.request.user.pk,
+            content_type_id=None, object_id=None,
+            object_repr=message,
+            action_flag=ADDITION_LOG_ENTRY,
+        )
+        messages.success(self.request, message)
+        return super().form_valid(form)
 
 
 class PrisonDigitalTakeupView(BaseAdminReportView):
