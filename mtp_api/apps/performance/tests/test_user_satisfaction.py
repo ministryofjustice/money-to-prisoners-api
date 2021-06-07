@@ -8,6 +8,52 @@ from performance.forms import UserSatisfactionUploadForm
 from performance.models import UserSatisfaction
 
 
+class UserSatisfactionTestCase(TestCase):
+    fixtures = ['initial_types']
+
+    def test_calculate_takeup(self):
+        self.assertIsNone(UserSatisfaction.objects.mean_percentage_satisfied())
+
+        test_data = [
+            (datetime.date(2021, 4, 29), [0, 0, 1, 2, 3]),
+            (datetime.date(2021, 4, 30), [1, 1, 0, 2, 10]),
+            (datetime.date(2021, 5, 1), [0, 0, 0, 4, 5]),
+            (datetime.date(2021, 5, 2), [0, 0, 5, 10, 3]),
+        ]
+        for date, ratings in test_data:
+            UserSatisfaction.objects.create(date=date, **{
+                f'rated_{i + 1}': rating
+                for i, rating in enumerate(ratings)
+            })
+
+        # test queryset aggregate method
+        self.assertAlmostEqual(
+            UserSatisfaction.objects.mean_percentage_satisfied(),
+            (2 + 3 + 2 + 10 + 4 + 5 + 10 + 3) / (1 + 2 + 3 + 1 + 1 + 2 + 10 + 4 + 5 + 5 + 10 + 3)
+        )
+        self.assertAlmostEqual(
+            UserSatisfaction.objects.filter(date__gte=datetime.date(2021, 5, 1)).mean_percentage_satisfied(),
+            (4 + 5 + 10 + 3) / (4 + 5 + 5 + 10 + 3)
+        )
+        # test model method
+        self.assertAlmostEqual(
+            UserSatisfaction.objects.get(date=datetime.date(2021, 4, 30)).percentage_satisfied,
+            (2 + 10) / (1 + 1 + 2 + 10)
+        )
+        # test queryset annotation method
+        precalculated_queryset = UserSatisfaction.objects \
+            .filter(date__lt=datetime.date(2021, 5, 1)) \
+            .percentage_satisfied() \
+            .values_list('percentage_satisfied', flat=True)
+        self.assertSequenceEqual(
+            precalculated_queryset,
+            [
+                (2 + 3) / (1 + 2 + 3),
+                (2 + 10) / (1 + 1 + 2 + 10),
+            ]
+        )
+
+
 class UserSatisfactionUploadTestCase(TestCase):
     fixtures = ['initial_types']
     path = pathlib.Path(__file__).parent / 'files'
