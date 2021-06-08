@@ -45,13 +45,13 @@ class UserSatisfactionTestCase(TestCase):
             .filter(date__lt=datetime.date(2021, 5, 1)) \
             .percentage_satisfied() \
             .values_list('percentage_satisfied', flat=True)
-        self.assertSequenceEqual(
-            precalculated_queryset,
-            [
-                (2 + 3) / (1 + 2 + 3),
-                (2 + 10) / (1 + 1 + 2 + 10),
-            ]
-        )
+        expected_values = [
+            (2 + 3) / (1 + 2 + 3),
+            (2 + 10) / (1 + 1 + 2 + 10),
+        ]
+        self.assertEqual(len(precalculated_queryset), len(expected_values))
+        for test_value, expected_value in zip(precalculated_queryset, expected_values):
+            self.assertAlmostEqual(test_value, expected_value)
 
 
 class UserSatisfactionUploadTestCase(TestCase):
