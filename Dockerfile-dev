@@ -1,0 +1,42 @@
+# This image is used for local development only
+# see `docker compose` documentation in money-to-prisoners-common
+# vim: ft=dockerfile
+
+ARG ECR_ENDPOINT
+FROM ${ECR_ENDPOINT}/prisoner-money/money-to-prisoners:api
+
+# Need to escalate to root to move virtual environment outside codebase
+USER root
+
+# Having a text editor in a dev container is super useful
+# Also sudo is needed to install anything further as mtp user
+RUN apt-get update && apt-get install -y \
+  wait-for-it \
+  vim \
+  sudo
+
+# avoid trashing venv
+RUN cp -r --preserve=ownership /app/venv /venv
+RUN sed -i 's:/app/venv:/venv:g' /venv/bin/[!_]**
+
+COPY --chown=mtp:mtp . /app/
+
+# Revert back to settings under which the app should run
+USER mtp
+ENV DJANGO_SETTINGS_MODULE=mtp_api.settings
+
+# Always activate the venv, even when exec-ing in
+# These environment variables are equivilent to venv activation
+# For more info: https://pythonspeed.com/articles/activate-virtualenv-dockerfile/
+ENV VIRTUAL_ENV=/venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+# This is necessary as a seperate explicit command because we want to account for the case where we need to upgrade money-to-prisoners-common to
+# the version specified in the requirements before running run.py build
+# as run.py build may fail with import errors if it's being run against the old money-to-prisoners-common that is installed againt the new code
+# TODO Fix this in a nicer way
+RUN /venv/bin/pip install --upgrade pip
+RUN /venv/bin/pip install -r /app/requirements/dev.txt
+RUN /venv/bin/python /app/run.py build
+
+CMD ["wait-for-it", "db:5432", "--", "/venv/bin/python", "/app/run.py", "serve"]

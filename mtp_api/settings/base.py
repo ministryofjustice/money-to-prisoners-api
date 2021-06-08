@@ -17,11 +17,7 @@ TEAM_EMAIL = os.environ.get('TEAM_EMAIL', 'mtp@localhost')
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY') or 'CHANGE_ME'
-
-if ENVIRONMENT == 'local':
-    ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'api']
-else:
-    ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 START_PAGE_URL = os.environ.get('START_PAGE_URL', 'https://www.gov.uk/send-prisoner-money')
 API_URL = (
@@ -122,7 +118,7 @@ CSRF_COOKIE_SECURE = False
 # Database
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.environ.get('DB_NAME', 'mtp_api'),
         'USER': os.environ.get('DB_USERNAME', 'postgres'),
         'PASSWORD': os.environ.get('DB_PASSWORD', ''),
