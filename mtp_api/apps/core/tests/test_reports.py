@@ -17,6 +17,7 @@ class AdminReportTestCase(TestCase):
         'credit-report', 'credit-prison-report',
         'disbursement-report', 'disbursement-prison-report',
         'digital_takeup_report', 'digital_takeup_prisons',
+        'user_satisfaction_report',
         'login-stats',
     ]
 

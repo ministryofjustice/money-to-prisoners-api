@@ -1,0 +1,8 @@
+creation date,path or service name,feedback,service satisfaction rating,browser name,browser version,browser platform,user agent,referrer,type,primary organisation,all organisations
+2021-05-01 08:31:22,send-prisoner-money,"That was quite easy ",4,Chrome Mobile,91.0.4472.88,Android 10,"Mozilla/5.0 (Linux; Android 10; SM-A205U) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.88 Mobile Safari/537.36",unknown,service-feedback,"",""
+2021-05-01 00:00:00,/done/send-prisoner-money,Rating of 1: 2,1,Other,"",Other ,,,aggregated-service-feedback,"",""
+2021-05-01 00:00:00,/done/send-prisoner-money,Rating of 2: 1,2,Other,"",Other ,,,aggregated-service-feedback,"",""
+2021-05-01 00:00:00,/done/send-prisoner-money,Rating of 5: 75,5,Other,"",Other ,,,aggregated-service-feedback,"",""
+2021-05-01 00:00:00,/done/send-prisoner-money,Rating of 4: 11,4,Other,"",Other ,,,aggregated-service-feedback,"",""
+2021-05-01 00:00:00,/done/send-prisoner-money,Rating of 3: 2,3,Other,"",Other ,,,aggregated-service-feedback,"",""
+2021-05-02 01:57:05,send-prisoner-money,Thank you,5,Firefox,89.0,Windows 10,Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0,unknown,service-feedback,"",""

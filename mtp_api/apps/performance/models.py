@@ -166,3 +166,74 @@ class DigitalTakeup(models.Model):
         if digital_takeup is None:
             return '–'
         return '%0.0f%%' % (digital_takeup * 100)
+
+
+class UserSatisfactionQueryset(models.QuerySet):
+    def percentage_satisfied(self):
+        """
+        Add a pre-calculated per-day percentage of responses that were satisfied or very satisfied
+        :return: UserSatisfactionQueryset
+        """
+        return self.annotate(percentage_satisfied=RawSQL("""
+            CASE WHEN (rated_1 + rated_2 + rated_3 + rated_4 + rated_5) > 0
+            THEN (rated_4 + rated_5) / (rated_1 + rated_2 + rated_3 + rated_4 + rated_5)::real
+            ELSE NULL END
+        """, ()))
+
+    def mean_percentage_satisfied(self):
+        """
+        Get averaged percentage of responses that were satisfied or very satisfied from whole queryset range
+        :return: float
+        """
+        aggregates = self.aggregate(
+            sum_rated_1=models.Sum('rated_1'),
+            sum_rated_2=models.Sum('rated_2'),
+            sum_rated_3=models.Sum('rated_3'),
+            sum_rated_4=models.Sum('rated_4'),
+            sum_rated_5=models.Sum('rated_5'),
+        )
+        try:
+            return (aggregates['sum_rated_4'] + aggregates['sum_rated_5']) / sum(aggregates.values())
+        except (ZeroDivisionError, TypeError):
+            return None
+
+
+class UserSatisfaction(models.Model):
+    """
+    The number of responses for each rating per day as provided by the Feedback Explorer export on GOV.UK publishing
+    """
+    date = models.DateField(primary_key=True)
+    rated_1 = models.PositiveIntegerField(verbose_name=_('Very dissatisfied'))
+    rated_2 = models.PositiveIntegerField(verbose_name=_('Dissatisfied'))
+    rated_3 = models.PositiveIntegerField(verbose_name=_('Neither satisfied or dissatisfied'))
+    rated_4 = models.PositiveIntegerField(verbose_name=_('Satisfied'))
+    rated_5 = models.PositiveIntegerField(verbose_name=_('Very satisfied'))
+    rating_field_names = [f'rated_{rating}' for rating in range(1, 6)]
+
+    objects = models.Manager.from_queryset(UserSatisfactionQueryset)()
+
+    reports_start = datetime.date(2016, 11, 15)
+
+    class Meta:
+        ordering = ('date',)
+        get_latest_by = 'date'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._percentage_satisfied = NotImplemented
+
+    @property
+    def all_ratings(self):
+        return self.rated_1, self.rated_2, self.rated_3, self.rated_4, self.rated_5
+
+    @property
+    def percentage_satisfied(self):
+        if self._percentage_satisfied is NotImplemented:
+            count = sum(self.all_ratings)
+            self._percentage_satisfied = (self.rated_4 + self.rated_5) / count if count > 0 else None
+        return self._percentage_satisfied
+
+    @percentage_satisfied.setter
+    def percentage_satisfied(self, value):
+        # to support pre-calculating percentage on the queryset
+        self._percentage_satisfied = value

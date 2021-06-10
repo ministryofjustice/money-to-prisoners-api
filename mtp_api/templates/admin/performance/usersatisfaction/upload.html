@@ -28,9 +28,14 @@
       {% endif %}
       <fieldset class="module aligned">
         {{ form.as_p }}
-        <p>{% trans 'This report spreadsheet is emailed to the team daily by MoJ finance.' %}</p>
         <p>
-          <img src="{% static 'images/digital-uptake-spreadsheet.jpg' %}" class="upload-spreadsheet-sample" alt="{{ title }}">
+          {% blocktrans trimmed with link='https://support.publishing.service.gov.uk/anonymous_feedback' search='/done/send-prisoner-money' %}
+            This file is exported from <a href="{{ link }}">GOV.UK Publishing › Support › Feedback Explorer</a>.
+            Search by URL using <code>{{ search }}</code> then filter by date range.
+          {% endblocktrans %}
+        </p>
+        <p>
+          <img src="{% static 'images/user-satisfaction-spreadsheet.jpg' %}" class="upload-spreadsheet-sample" alt="{{ title }}">
         </p>
       </fieldset>
 

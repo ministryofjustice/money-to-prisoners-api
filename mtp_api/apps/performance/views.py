@@ -1,4 +1,5 @@
 import collections
+import datetime
 import json
 
 from django.conf import settings
@@ -6,18 +7,22 @@ from django.contrib import messages
 from django.contrib.admin.models import LogEntry, ADDITION as ADDITION_LOG_ENTRY
 from django.core.cache import cache
 from django.db import models
+from django.db.models.functions import TruncMonth
 from django.urls import reverse_lazy
+from django.utils import timezone
 from django.utils.formats import date_format
-from django.utils.timezone import localtime
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import FormView
 import requests
 
-from core.forms import DigitalTakeupReportForm, PrisonDigitalTakeupForm, ZendeskAdminReportForm
+from core.forms import (
+    DigitalTakeupReportForm, PrisonDigitalTakeupForm,
+    UserSatisfactionReportForm, ZendeskAdminReportForm,
+)
 from core.views import AdminViewMixin, BaseAdminReportView
 from oauth2_provider.models import Application
-from performance.forms import DigitalTakeupUploadForm
-from performance.models import DigitalTakeup
+from performance.forms import DigitalTakeupUploadForm, UserSatisfactionUploadForm
+from performance.models import DigitalTakeup, UserSatisfaction
 from prison.models import Prison
 
 
@@ -92,6 +97,36 @@ class DigitalTakeupUploadView(AdminViewMixin, FormView):
             messages.warning(self.request,
                              _('Credits received do not match those in the spreadsheet:') +
                              '\n' + ', '.join(common_prison_credit_differences))
+
+
+class UserSatisfactionUploadView(AdminViewMixin, FormView):
+    """
+    Django admin view for uploading user satisfaction exported from GOV.UK Feedback Explorer
+    """
+    title = _('User satisfaction')
+    form_class = UserSatisfactionUploadForm
+    template_name = 'admin/performance/usersatisfaction/upload.html'
+    success_url = reverse_lazy('admin:performance_usersatisfaction_changelist')
+    required_permissions = ['performance.add_usersatisfaction', 'performance.change_usersatisfaction']
+
+    def get_context_data(self, **kwargs):
+        context_data = super().get_context_data(**kwargs)
+        context_data['opts'] = UserSatisfaction._meta
+        return context_data
+
+    def form_valid(self, form):
+        form.save()
+        message = _('Saved user satisfaction records for %(count)d days') % {
+            'count': len(form.records),
+        }
+        LogEntry.objects.log_action(
+            user_id=self.request.user.pk,
+            content_type_id=None, object_id=None,
+            object_repr=message,
+            action_flag=ADDITION_LOG_ENTRY,
+        )
+        messages.success(self.request, message)
+        return super().form_valid(form)
 
 
 class PrisonDigitalTakeupView(BaseAdminReportView):
@@ -271,6 +306,70 @@ class DigitalTakeupReport(BaseAdminReportView):
         ], separators=(',', ':'))
 
 
+class UserSatisfactionReport(BaseAdminReportView):
+    """
+    Django admin report view for showing user satisfaction exported from GOV.UK Feedback Explorer
+    """
+    title = _('User satisfaction report')
+    template_name = 'admin/performance/usersatisfaction/report.html'
+    form_class = UserSatisfactionReportForm
+
+    def get_context_data(self, **kwargs):
+        context_data = super().get_context_data(**kwargs)
+        form = context_data['form']
+
+        show_percentage = form.cleaned_data['display'] == 'percentage'
+
+        current_period = form.current_period
+        format_date = form.period_formatter
+
+        rows = form.group_months_into_periods(self.get_monthly_rows())
+        rows = filter(lambda r: r['date'] < current_period, rows)
+        if show_percentage:
+            def calc_percentage(r):
+                total_count = sum(
+                    rating_count
+                    for rating_field, rating_count in r.items()
+                    if rating_field in UserSatisfaction.rating_field_names
+                )
+                for rating_field in UserSatisfaction.rating_field_names:
+                    if total_count:
+                        r[rating_field] = r[rating_field] / total_count
+                    else:
+                        r[rating_field] = None
+                return r
+
+            rows = map(calc_percentage, rows)
+        rows = list(rows)
+        for row in rows:
+            row['date_label'] = format_date(row['date'])
+        context_data['rows'] = rows
+        context_data['show_percentage'] = show_percentage
+
+        context_data['opts'] = UserSatisfaction._meta
+        context_data['form'] = form
+        return context_data
+
+    @classmethod
+    def get_monthly_rows(cls):
+        queryset = UserSatisfaction.objects \
+            .order_by() \
+            .annotate(month=TruncMonth('date')) \
+            .values('month') \
+            .annotate(**{
+                field: models.Sum(field)
+                for field in UserSatisfaction.rating_field_names
+            }) \
+            .values('month', *UserSatisfaction.rating_field_names) \
+            .order_by('month')
+        for row in queryset:
+            row['date'] = timezone.make_aware(datetime.datetime.combine(
+                row.pop('month'),
+                datetime.time.min,
+            ))
+            yield row
+
+
 class ZendeskReportAdminView(BaseAdminReportView):
     title = _('Zendesk report')
     template_name = 'performance/zendesk-report.html'
@@ -306,7 +405,7 @@ class ZendeskReportAdminView(BaseAdminReportView):
         """
         env_tag = settings.ENVIRONMENT
 
-        end_date = localtime().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        end_date = timezone.localtime().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         for _m in range(end_date.month + 23):
             if end_date.month == 1:
                 start_date = end_date.replace(year=end_date.year - 1, month=12)
