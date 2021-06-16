@@ -267,7 +267,6 @@ if os.environ.get('SENTRY_DSN'):
         release=APP_GIT_COMMIT or 'unknown',
         send_default_pii=DEBUG,
         request_bodies='medium' if DEBUG else 'never',
-        traces_sample_rate=1.0 if DEBUG else 0.2,
     )
 
 REST_FRAMEWORK = {
