@@ -5,9 +5,10 @@ from django.contrib.auth.models import Permission
 from django.core.files.base import File
 from django.test import TestCase
 from django.urls import reverse_lazy
+from model_mommy import mommy
 
 from prison.forms import PrisonerBalanceUploadForm
-from prison.models import Prison, PrisonerBalance
+from prison.models import Prison, PrisonerBalance, PrisonerLocation
 
 User = get_user_model()
 
@@ -196,16 +197,42 @@ class PrisonerBalanceUploadViewTestCase(PrisonerBalanceUploadBaseTestCase):
         response = self.client.get(self.url)
         self.assertContains(response, 'Prisoner balance upload')
 
+    def upload_file(self, file_name, prison):
+        self.login_as_granted_user()
+        file_path = self.path_test_csv_folder / file_name
+        with file_path.open('rb') as csv_file:
+            return self.client.post(self.url, data={
+                'prison': prison.nomis_id,
+                'csv_file': csv_file,
+            }, follow=True)
+
     def test_can_upload_valid_file(self):
-        file_path = self.path_test_csv_folder / 'sample-balances.csv'
+        # select a prison
         chosen_prison = Prison.objects.last()
         chosen_prison.use_nomis_for_balances = False
         chosen_prison.save()
-        self.login_as_granted_user()
-        with file_path.open('rb') as csv_file:
-            response = self.client.post(self.url, data={
-                'prison': chosen_prison.nomis_id,
-                'csv_file': csv_file,
-            }, follow=True)
+        response = self.upload_file('sample-balances.csv', chosen_prison)
+        # expect for balances to be saved and no error should show
         self.assertContains(response, 'Saved 2 balances.')
         self.assertEqual(PrisonerBalance.objects.filter(prison=chosen_prison).count(), 2)
+        self.assertNotContains(response, 'Was the right prison selected?')
+
+    def test_error_message_if_wrong_prison_likely_selected(self):
+        # select a prison
+        chosen_prison = Prison.objects.last()
+        chosen_prison.use_nomis_for_balances = False
+        chosen_prison.save()
+        different_prison = Prison.objects.exclude(pk=chosen_prison.pk).first()
+        # put all prisoners in sample file into a different prison
+        for prisoner_number in ('A1409AE', 'A1401AE'):
+            mommy.make(
+                PrisonerLocation,
+                prison=different_prison,
+                prisoner_number=prisoner_number,
+                active=True,
+            )
+        response = self.upload_file('sample-balances.csv', chosen_prison)
+        # expect for balances to be saved, but an error should show
+        self.assertContains(response, 'Saved 2 balances.')
+        self.assertEqual(PrisonerBalance.objects.filter(prison=chosen_prison).count(), 2)
+        self.assertContains(response, f'database suggests that most prisoners are likely at {different_prison}')
