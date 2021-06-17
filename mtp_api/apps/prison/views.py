@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.db import transaction
 from django.urls import reverse_lazy
 from django.utils.dateparse import parse_date
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext, gettext_lazy as _
 from django.views.generic import FormView
 from rest_framework import generics, mixins, viewsets, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -192,5 +192,8 @@ class PrisonerBalanceUploadView(AdminViewMixin, FormView):
 
     def form_valid(self, form):
         result = form.save()
-        messages.success(self.request, f'Deleted {result["deleted"]} balances. Saved {result["created"]} balances.')
+        messages.success(self.request, (
+            gettext('Deleted %(count)d balances.') % {'count': result['deleted']} + ' ' +
+            gettext('Saved %(count)d balances.') % {'count': result['created']}
+        ))
         return super().form_valid(form)
