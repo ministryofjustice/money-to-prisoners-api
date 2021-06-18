@@ -73,26 +73,6 @@ class CreditSerialiser(Serialiser):
         else:
             status = 'Anonymous'
 
-        if hasattr(record, 'security_check'):
-            security_check = record.security_check
-            security_check_description = '; '.join(security_check.description)
-            security_check_status = CHECK_STATUS.for_value(security_check.status).display
-            security_check_actioned_by = security_check.actioned_by.username if security_check.actioned_by else ''
-            if len(security_check.rules) > 0:
-                security_check_rules = security_check.rules
-                security_check_rejection_reasons = '; '.join(
-                    human_readable_check_rejection_reasons(security_check.rejection_reasons)
-                )
-            else:
-                security_check_rules = None
-                security_check_rejection_reasons = None
-        else:
-            security_check_description = None
-            security_check_status = None
-            security_check_actioned_by = None
-            security_check_rules = None
-            security_check_rejection_reasons = None
-
         row = super().serialise(record)
         row.update({
             'URL': f'{settings.NOMS_OPS_URL}/security/credits/{record.id}/',
@@ -111,13 +91,9 @@ class CreditSerialiser(Serialiser):
             'Blocked': record.blocked,
             'Status': status,
             'NOMIS transaction': record.nomis_transaction_id,
-            'Security check codes': security_check_rules,
-            'Security check description': security_check_description,
-            'Security check status': security_check_status,
-            'Security check actioned by': security_check_actioned_by,
-            'Security check rejection reasons': security_check_rejection_reasons,
         })
         row.update(self.serialise_sender(record))
+        row.update(self.serialise_security_check(record))
         return row
 
     def serialise_sender(self, record: Credit):
@@ -157,3 +133,27 @@ class CreditSerialiser(Serialiser):
             'Payment method': 'Unknown',
             'Sender name': '(Unknown sender)',
         }
+
+    def serialise_security_check(self, record: Credit):
+        if hasattr(record, 'security_check'):
+            security_check = record.security_check
+            security_check_description = '; '.join(security_check.description)
+            security_check_status = CHECK_STATUS.for_value(security_check.status).display
+            security_check_actioned_by = security_check.actioned_by.username if security_check.actioned_by else ''
+            if len(security_check.rules) > 0:
+                security_check_rules = security_check.rules
+                security_check_rejection_reasons = '; '.join(
+                    human_readable_check_rejection_reasons(security_check.rejection_reasons)
+                )
+            else:
+                security_check_rules = None
+                security_check_rejection_reasons = None
+            return {
+                'Security check codes': security_check_rules,
+                'Security check description': security_check_description,
+                'Security check status': security_check_status,
+                'Security check actioned by': security_check_actioned_by,
+                'Security check rejection reasons': security_check_rejection_reasons,
+            }
+
+        return {}
