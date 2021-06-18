@@ -70,8 +70,8 @@ class PrisonerBalanceUploadForm(forms.Form):
         ).delete()
         deleted += delete_result[0]
         # save new balances
-        create_result = PrisonerBalance.objects.bulk_create(balances)
-        created = len(create_result)
+        balances = PrisonerBalance.objects.bulk_create(balances)
+        created = len(balances)
         return {
             'deleted': deleted,
             'created': created,

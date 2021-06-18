@@ -1,10 +1,10 @@
 import logging
 
 from django.contrib import messages
-from django.db import transaction
+from django.db import models, transaction
 from django.urls import reverse_lazy
 from django.utils.dateparse import parse_date
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext, gettext_lazy as _
 from django.views.generic import FormView
 from rest_framework import generics, mixins, viewsets, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -192,5 +192,39 @@ class PrisonerBalanceUploadView(AdminViewMixin, FormView):
 
     def form_valid(self, form):
         result = form.save()
-        messages.success(self.request, f'Deleted {result["deleted"]} balances. Saved {result["created"]} balances.')
+        messages.success(self.request, (
+            gettext('Deleted %(count)d balances.') % {'count': result['deleted']} + ' ' +
+            gettext('Saved %(count)d balances.') % {'count': result['created']}
+        ))
+        # prisoner balances are tied to prisoners by number AND prison
+        # either prisoner balances OR prisoner locations can be stale (depends on when files are generated and imported)
+        # so both need to link to prison and we should not automatically choose the prison being uploaded
+        chosen_prison = form.cleaned_data['prison']
+        # but since the wrong prison can be accidentally chosen, an error should show if this might have happened
+        likely_prison = self.prison_based_on_known_locations(chosen_prison)
+        if likely_prison and likely_prison != chosen_prison:
+            messages.error(self.request, gettext(
+                'File was uploaded for %(chosen_prison)s, '
+                'but database suggests that most prisoners are likely at %(likely_prison)s.'
+            ) % {
+                'chosen_prison': chosen_prison,
+                'likely_prison': likely_prison,
+            } + ' ' + gettext('Was the right prison selected?'))
         return super().form_valid(form)
+
+    @classmethod
+    def prison_based_on_known_locations(cls, chosen_prison):
+        # prisoner numbers that were just uploaded
+        uploaded_prisoner_numbers = PrisonerBalance.objects.filter(prison=chosen_prison) \
+            .values('prisoner_number')
+        # their prisons as determined by known locations
+        likely_prisons = PrisonerLocation.objects.filter(prisoner_number__in=uploaded_prisoner_numbers) \
+            .order_by() \
+            .values('prison') \
+            .annotate(count=models.Count('*')) \
+            .values('prison', 'count') \
+            .order_by('-count')
+        # prison that most uploaded prisoners are in
+        likely_prison = likely_prisons.first()
+        if likely_prison:
+            return Prison.objects.get(pk=likely_prison['prison'])
