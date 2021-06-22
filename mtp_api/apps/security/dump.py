@@ -13,6 +13,11 @@ class FIUMonitoredDebitCardsSerialiser(Serialiser):
     def get_queryset(self):
         return DebitCardSenderDetails.objects.filter(monitoring_users__groups__name='FIU').distinct()
 
+    def get_modified_records(self, after, before):
+        # NB: the activity of monitoring (and unmonitoring) does not have an associated timestamp
+        # so all _currently_ monitored records should be returned
+        return self.get_queryset().order_by('pk').iterator(chunk_size=1000)
+
     def get_headers(self):
         return super().get_headers() + [
             'URL',
@@ -43,6 +48,11 @@ class FIUMonitoredPrisonerSerialiser(Serialiser):
 
     def get_queryset(self):
         return PrisonerProfile.objects.filter(monitoring_users__groups__name='FIU').distinct()
+
+    def get_modified_records(self, after, before):
+        # NB: the activity of monitoring (and unmonitoring) does not have an associated timestamp
+        # so all _currently_ monitored records should be returned
+        return self.get_queryset().order_by('pk').iterator(chunk_size=1000)
 
     def get_headers(self):
         return super().get_headers() + [
