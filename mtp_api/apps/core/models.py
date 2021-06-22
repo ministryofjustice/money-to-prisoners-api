@@ -1,3 +1,4 @@
+import datetime
 import logging
 from datetime import timedelta
 from time import perf_counter as pc
@@ -28,6 +29,16 @@ def validate_cron_entry(value):
         raise ValidationError(_('"%(entry)s" is not a valid cron entry: %(error)s') % {
             'entry': value, 'error': e
         })
+
+
+def validate_monday(date: datetime.date):
+    """
+    Validates that date is a Monday
+    """
+
+    # 1 = Monday
+    if date.isoweekday() != 1:
+        raise ValidationError(_('"%s" is not a Monday') % date.strftime('%d %b %Y').lstrip('0'))
 
 
 class ScheduledCommand(models.Model):

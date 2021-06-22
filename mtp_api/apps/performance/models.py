@@ -2,12 +2,14 @@ import datetime
 import itertools
 
 from django.conf import settings
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import connection, models
 from django.db.models.expressions import RawSQL
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from core import dictfetchall, mean
+from core.models import validate_monday
 
 
 class DigitalTakeupManager(models.Manager):
@@ -237,3 +239,46 @@ class UserSatisfaction(models.Model):
     def percentage_satisfied(self, value):
         # to support pre-calculating percentage on the queryset
         self._percentage_satisfied = value
+
+
+class PerformanceData(models.Model):
+    """
+    Weekly performance data
+    """
+
+    # Monday of that week
+    week = models.DateField(primary_key=True, verbose_name='Week commencing', validators=[validate_monday])
+
+    # Digital Take-up data
+    credits_total = models.PositiveIntegerField(verbose_name='Transactions – total', null=True, blank=True)
+    credits_by_mtp = models.PositiveIntegerField(verbose_name='Transactions – online', null=True, blank=True)
+    digital_takeup = models.FloatField(
+        verbose_name='Digital take-up',
+        null=True, blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(1)],
+    )
+
+    # Completion rate, taken from Google Analytics/Google Data Studio
+    completion_rate = models.FloatField(
+        verbose_name='Completion rate',
+        null=True, blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(1)],
+    )
+
+    # User satisfaction data, weekly aggregation from UserSatisfaction model
+    user_satisfaction = models.FloatField(
+        verbose_name=_('User satisfaction'),
+        null=True, blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(1)],
+    )
+    rated_1 = models.PositiveIntegerField(verbose_name=_('Very dissatisfied'), null=True, blank=True)
+    rated_2 = models.PositiveIntegerField(verbose_name=_('Dissatisfied'), null=True, blank=True)
+    rated_3 = models.PositiveIntegerField(verbose_name=_('Neither satisfied or dissatisfied'), null=True, blank=True)
+    rated_4 = models.PositiveIntegerField(verbose_name=_('Satisfied'), null=True, blank=True)
+    rated_5 = models.PositiveIntegerField(verbose_name=_('Very satisfied'), null=True, blank=True)
+    rating_field_names = [f'rated_{rating}' for rating in range(1, 6)]
+
+    class Meta:
+        ordering = ('week',)
+        get_latest_by = 'week'
+        verbose_name = verbose_name_plural = _('Performance data')
