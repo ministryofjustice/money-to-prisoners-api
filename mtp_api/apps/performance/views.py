@@ -16,6 +16,7 @@ from django.views.generic import FormView
 import requests
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from core.forms import (
     DigitalTakeupReportForm, PrisonDigitalTakeupForm,
@@ -468,3 +469,15 @@ class PerformanceDataView(ListAPIView):
         }
 
         return PerformanceData.objects.filter(**filters)
+
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+
+        response = {
+            'headers': PerformanceData.headers(),
+            'results': serializer.data,
+        }
+
+        return Response(response)
