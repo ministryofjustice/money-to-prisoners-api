@@ -14,15 +14,19 @@ from django.utils.formats import date_format
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import FormView
 import requests
+from rest_framework.generics import ListAPIView
+from rest_framework.permissions import IsAuthenticated
 
 from core.forms import (
     DigitalTakeupReportForm, PrisonDigitalTakeupForm,
     UserSatisfactionReportForm, ZendeskAdminReportForm,
 )
 from core.views import AdminViewMixin, BaseAdminReportView
+from mtp_auth.permissions import SendMoneyClientIDPermissions
 from oauth2_provider.models import Application
 from performance.forms import DigitalTakeupUploadForm, UserSatisfactionUploadForm
-from performance.models import DigitalTakeup, UserSatisfaction
+from performance.models import DigitalTakeup, UserSatisfaction, PerformanceData
+from performance.serializers import PerformanceDataSerializer
 from prison.models import Prison
 
 
@@ -444,3 +448,12 @@ class ZendeskReportAdminView(BaseAdminReportView):
             return count
         except requests.RequestException:
             return 0
+
+
+class PerformanceDataView(ListAPIView):
+    queryset = PerformanceData.objects.all()
+    serializer_class = PerformanceDataSerializer
+
+    permission_classes = (
+        IsAuthenticated, SendMoneyClientIDPermissions,
+    )
