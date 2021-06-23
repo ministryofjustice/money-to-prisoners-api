@@ -452,6 +452,7 @@ class ZendeskReportAdminView(BaseAdminReportView):
 
 class PerformanceDataView(ListAPIView):
     serializer_class = PerformanceDataSerializer
+    pagination_class = None
 
     permission_classes = (
         IsAuthenticated, SendMoneyClientIDPermissions,
