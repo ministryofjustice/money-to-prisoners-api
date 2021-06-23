@@ -451,9 +451,19 @@ class ZendeskReportAdminView(BaseAdminReportView):
 
 
 class PerformanceDataView(ListAPIView):
-    queryset = PerformanceData.objects.all()
     serializer_class = PerformanceDataSerializer
 
     permission_classes = (
         IsAuthenticated, SendMoneyClientIDPermissions,
     )
+
+    def get_queryset(self):
+        today = timezone.localdate()
+        a_year_ago = today - datetime.timedelta(weeks=52)
+
+        filters = {
+            'week__gte': self.request.query_params.get('week__gte', a_year_ago),
+            'week__lt': self.request.query_params.get('week__lt', today),
+        }
+
+        return PerformanceData.objects.filter(**filters)
