@@ -39,12 +39,15 @@ class PerformanceDataAdmin(ModelAdmin):
     ordering = ('-week',)
     date_hierarchy = 'week'
 
+    @add_short_description(_('Digital take-up'))
     def view_digital_takeup(self, obj):
         return self._as_percentage(obj.digital_takeup)
 
+    @add_short_description(_('Completion rate'))
     def view_completion_rate(self, obj):
         return self._as_percentage(obj.completion_rate)
 
+    @add_short_description(_('User satisfaction'))
     def view_user_satisfaction(self, obj):
         return self._as_percentage(obj.user_satisfaction)
 
