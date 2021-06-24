@@ -276,7 +276,9 @@ class PerformanceData(models.Model):
     rated_3 = models.PositiveIntegerField(verbose_name=_('Neither satisfied or dissatisfied'), null=True, blank=True)
     rated_4 = models.PositiveIntegerField(verbose_name=_('Satisfied'), null=True, blank=True)
     rated_5 = models.PositiveIntegerField(verbose_name=_('Very satisfied'), null=True, blank=True)
+
     rating_field_names = [f'rated_{rating}' for rating in range(1, 6)]
+    percentage_field_names = ('digital_takeup', 'completion_rate', 'user_satisfaction')
 
     class Meta:
         ordering = ('week',)

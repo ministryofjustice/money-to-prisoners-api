@@ -29,6 +29,7 @@ from performance.forms import DigitalTakeupUploadForm, UserSatisfactionUploadFor
 from performance.models import DigitalTakeup, UserSatisfaction, PerformanceData
 from performance.serializers import PerformanceDataSerializer
 from prison.models import Prison
+from transaction.utils import format_percentage
 
 
 class DigitalTakeupUploadView(AdminViewMixin, FormView):
@@ -470,17 +471,37 @@ class PerformanceDataView(ListAPIView):
 
         return PerformanceData.objects.filter(**filters)
 
-
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
         serializer = self.get_serializer(queryset, many=True)
 
         response = {
             'headers': self._headers(),
-            'results': serializer.data,
+            'results': self._format_percentages(serializer.data),
         }
 
         return Response(response)
+
+
+    def _format_percentages(self, records):
+        """
+        Format percentage values
+
+        Percentage values are stored as [0, 1] floats, this method converts
+        all these values to formatted percentage strings, e.g. 0.6666 becomes
+        '67%'
+
+        This is so that client can use this data without additional processing
+        """
+
+        percentage_field_names = PerformanceData.percentage_field_names
+
+        for record in records:
+            for field_name in percentage_field_names:
+                if record[field_name]:
+                    record[field_name] = format_percentage(record[field_name])
+
+        return records
 
     def _headers(self):
         """
