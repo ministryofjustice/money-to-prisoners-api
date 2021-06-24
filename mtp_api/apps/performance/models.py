@@ -282,20 +282,3 @@ class PerformanceData(models.Model):
         ordering = ('week',)
         get_latest_by = 'week'
         verbose_name = verbose_name_plural = _('Performance data')
-
-    @classmethod
-    def headers(cls):
-        """
-        Return a dictionary with the Performance Data headers
-
-        This can be served by the API and can be used by the client to populate the
-        headers of the generated CSV file
-
-        The dictionary has the field name as key and the corresponding 'verbose_name' as value.
-        """
-
-        result = {}
-        for field in cls._meta.get_fields():
-            result[field.name] = field.verbose_name
-
-        return result

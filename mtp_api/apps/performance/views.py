@@ -476,8 +476,23 @@ class PerformanceDataView(ListAPIView):
         serializer = self.get_serializer(queryset, many=True)
 
         response = {
-            'headers': PerformanceData.headers(),
+            'headers': self._headers(),
             'results': serializer.data,
         }
 
         return Response(response)
+
+    def _headers(self):
+        """
+        Return a dictionary with the Performance Data headers
+
+        This can be served by the API and can be used by the client to populate the
+        headers of the generated CSV file
+
+        The dictionary has the field name as key and the corresponding 'verbose_name' as value.
+        """
+
+        return {
+            field.name: field.verbose_name
+            for field in PerformanceData._meta.get_fields()
+        }
