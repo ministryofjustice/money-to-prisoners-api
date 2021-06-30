@@ -6,6 +6,7 @@ from core.admin import add_short_description
 from performance.models import DigitalTakeup, PerformanceData, UserSatisfaction
 from transaction.utils import format_percentage
 
+
 @admin.register(DigitalTakeup)
 class DigitalTakeupAdmin(ModelAdmin):
     list_display = ('date', 'prison', 'digital_takeup')

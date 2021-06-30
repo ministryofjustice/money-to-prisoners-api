@@ -482,7 +482,6 @@ class PerformanceDataView(ListAPIView):
 
         return Response(response)
 
-
     def _format_percentages(self, records):
         """
         Format percentage values
