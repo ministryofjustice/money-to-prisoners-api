@@ -1,6 +1,7 @@
 import datetime
 
 from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.test import TestCase
 from django.utils import timezone
 
@@ -202,3 +203,40 @@ class UpdatePerformanceDataTestTestCase(TestCase):
         total_ratings = sum_rated_1+sum_rated_2+sum_rated_3+sum_rated_4+sum_rated_5
         expected_user_satisfaction = (sum_rated_4+sum_rated_5) / total_ratings
         self.assertAlmostEqual(record.user_satisfaction, expected_user_satisfaction)
+
+    def test_default_range(self):
+        # Create some records in the last month
+        day = timezone.localdate() - datetime.timedelta(days=30)
+        while day <= timezone.localdate():
+            UserSatisfaction.objects.create(date=day, **{
+                f'rated_{i + 1}': rating
+                for i, rating in enumerate([1, 2, 3, 4, 5])
+            })
+
+            day = day + datetime.timedelta(days=1)
+
+        self.assertEqual(PerformanceData.objects.count(), 0)
+
+        call_command('update_performance_data')
+
+        # Check only record for the correct week was created
+        self.assertEqual(PerformanceData.objects.count(), 1)
+
+        today = timezone.localdate()
+        year, week, _ = today.isocalendar()
+        monday = datetime.date.fromisocalendar(year, week, 1)  # 1 = Monday
+        monday_two_weeks_ago = monday - datetime.timedelta(weeks=2)
+        self.assertTrue(PerformanceData.objects.filter(week=monday_two_weeks_ago).exists())
+
+    def test_invalid_arguments(self):
+        with self.assertRaises(CommandError, msg='Cannot parse date'):
+            call_command('update_performance_data', week_from='foo', week_to='2021-12-31')
+
+        with self.assertRaises(CommandError, msg='Must provide both --week-from/--week-to or not provide them'):
+            call_command('update_performance_data', week_from='2021-01-01')
+
+        with self.assertRaises(CommandError, msg='Must provide both --week-from/--week-to or not provide them'):
+            call_command('update_performance_data', week_to='2021-12-31')
+
+        with self.assertRaises(CommandError, msg='"--week-from" must be before "--week-to"'):
+            call_command('update_performance_data', week_from='2021-01-10', week_to='2021-01-01')

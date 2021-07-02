@@ -7,6 +7,7 @@ import datetime
 from django.core.management import BaseCommand, CommandError
 from django.db import models
 from django.db.models.functions import TruncWeek
+from django.utils import timezone
 from django.utils.dateparse import parse_date
 
 from credit.models import Credit
@@ -24,24 +25,41 @@ class Command(BaseCommand):
         parser.add_argument(
             '--week-from',
             help='Performance data from this week (inclusive) will be updated',
-            required=True,
         )
         parser.add_argument(
             '--week-to',
             help='Performance data up to this week (exclusive) will be updated',
-            required=True,
         )
 
     def handle(self, *args, **options):
-        self.week_from = week_argument(options['week_from'])
-        self.week_to = week_argument(options['week_to'])
-        if self.week_from >= self.week_to:
-            raise CommandError('"--week-from" must be before "--week-to"')
+        self._parse_options(options)
 
         self._update_credits_by_mtp()
         self._update_digital_takeup()
         self._update_credits_total()
         self._update_user_satisfaction_values()
+
+    def _parse_options(self, options):
+        # Only one of the dates passed
+        if (options['week_from'] and not options['week_to']) or \
+           (not options['week_from'] and options['week_to']):
+            raise CommandError('Must provide both --week-from/--week-to or not provide them')
+
+        # Both dates passed
+        if options['week_from'] and options['week_to']:
+            self.week_from = _week_argument(options['week_from'])
+            self.week_to = _week_argument(options['week_to'])
+
+            if self.week_from >= self.week_to:
+                raise CommandError('"--week-from" must be before "--week-to"')
+        else:
+            # No dates passed, defaults to update record for 2 weeks ago.
+            #
+            # The assumption is that data needed to populate PerformancePlatform
+            # records may be delayed but we'd expect this delay to be less than 2 weeks
+            this_monday = _monday_of_week(timezone.localdate())
+            self.week_from = this_monday - datetime.timedelta(weeks=2)
+            self.week_to = this_monday - datetime.timedelta(weeks=1)
 
     def _update_credits_by_mtp(self):
         """
@@ -139,7 +157,7 @@ class Command(BaseCommand):
             )
 
 
-def week_argument(argument):
+def _week_argument(argument: str) -> datetime.date:
     """
     Parse the date argument and returns the Monday of the same week
 
@@ -148,13 +166,17 @@ def week_argument(argument):
       '2021-06-28' (Monday) => datetime.date(2021, 6, 28) (Monday)
     """
 
-    if not argument:
-        raise CommandError('Dates required')
-
     date = parse_date(argument)
     if not date:
         raise CommandError('Cannot parse date')
 
+    return _monday_of_week(date)
+
+
+def _monday_of_week(date: datetime.date) -> datetime.date:
+    """
+    Returns the Monday of same week as passed date
+    """
     year, week, _ = date.isocalendar()
     monday = datetime.date.fromisocalendar(year, week, 1)  # 1 = Monday
     return monday
