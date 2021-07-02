@@ -10,6 +10,7 @@ from django.db.models.functions import TruncWeek
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 
+from core.utils import monday_of_same_week
 from credit.models import Credit
 from performance.models import DigitalTakeup, PerformanceData, UserSatisfaction
 
@@ -57,7 +58,7 @@ class Command(BaseCommand):
             #
             # The assumption is that data needed to populate PerformancePlatform
             # records may be delayed but we'd expect this delay to be less than 2 weeks
-            this_monday = _monday_of_week(timezone.localdate())
+            this_monday = monday_of_same_week(timezone.localdate())
             self.week_from = this_monday - datetime.timedelta(weeks=2)
             self.week_to = this_monday - datetime.timedelta(weeks=1)
 
@@ -170,13 +171,4 @@ def _week_argument(argument: str) -> datetime.date:
     if not date:
         raise CommandError('Cannot parse date')
 
-    return _monday_of_week(date)
-
-
-def _monday_of_week(date: datetime.date) -> datetime.date:
-    """
-    Returns the Monday of same week as passed date
-    """
-    year, week, _ = date.isocalendar()
-    monday = datetime.date.fromisocalendar(year, week, 1)  # 1 = Monday
-    return monday
+    return monday_of_same_week(date)

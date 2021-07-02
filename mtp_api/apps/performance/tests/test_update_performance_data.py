@@ -5,6 +5,7 @@ from django.core.management.base import CommandError
 from django.test import TestCase
 from django.utils import timezone
 
+from core.utils import monday_of_same_week
 from credit.constants import CREDIT_RESOLUTION
 from credit.models import Credit
 from model_mommy import mommy
@@ -222,9 +223,7 @@ class UpdatePerformanceDataTestTestCase(TestCase):
         # Check only record for the correct week was created
         self.assertEqual(PerformanceData.objects.count(), 1)
 
-        today = timezone.localdate()
-        year, week, _ = today.isocalendar()
-        monday = datetime.date.fromisocalendar(year, week, 1)  # 1 = Monday
+        monday = monday_of_same_week(timezone.localdate())
         monday_two_weeks_ago = monday - datetime.timedelta(weeks=2)
         self.assertTrue(PerformanceData.objects.filter(week=monday_two_weeks_ago).exists())
 

@@ -7,6 +7,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from core.tests.utils import make_test_users
+from core.utils import monday_of_same_week
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from performance.models import PerformanceData
 
@@ -117,6 +118,5 @@ class PerformanceDataViewTestCase(AuthTestCaseMixin, APITestCase):
         Returns the Monday of 'weeks_ago' weeks ago
         """
 
-        year, week, _ = timezone.localdate().isocalendar()
-        monday = datetime.date.fromisocalendar(year, week, 1)  # 1 = Monday
+        monday = monday_of_same_week(timezone.localdate())
         return monday - datetime.timedelta(weeks=weeks_ago)
