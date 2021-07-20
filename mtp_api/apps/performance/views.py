@@ -13,6 +13,7 @@ from django.utils import timezone
 from django.utils.formats import date_format
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import FormView
+import django_filters
 import requests
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
@@ -452,24 +453,25 @@ class ZendeskReportAdminView(BaseAdminReportView):
             return 0
 
 
+class PerformanceDataFilter(django_filters.FilterSet):
+    week__gte = django_filters.filters.DateFilter(
+        field_name='week', lookup_expr='gte',
+    )
+    week__lt = django_filters.filters.DateFilter(
+        field_name='week', lookup_expr='lt',
+    )
+
+
 class PerformanceDataView(ListAPIView):
+    queryset = PerformanceData.objects.all()
     serializer_class = PerformanceDataSerializer
+    filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
+    filter_class = PerformanceDataFilter
     pagination_class = None
 
     permission_classes = (
         IsAuthenticated, SendMoneyClientIDPermissions,
     )
-
-    def get_queryset(self):
-        today = timezone.localdate()
-        a_year_ago = today - datetime.timedelta(weeks=52)
-
-        filters = {
-            'week__gte': self.request.query_params.get('week__gte', a_year_ago),
-            'week__lt': self.request.query_params.get('week__lt', today),
-        }
-
-        return PerformanceData.objects.filter(**filters)
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
@@ -481,6 +483,30 @@ class PerformanceDataView(ListAPIView):
         }
 
         return Response(response)
+
+    def filter_queryset(self, queryset):
+        """
+        By default return last year data
+
+        But give precedence to user input in query parameters when passed.
+        """
+
+        # Filtering is applied first
+        queryset = super().filter_queryset(queryset)
+
+        # Defaults are then used if user didn't provide any values
+        filters = {}
+
+        today = timezone.localdate()
+        a_year_ago = today - datetime.timedelta(weeks=52)
+
+        if not self.request.query_params.get('week__gte', ''):
+            filters['week__gte'] = a_year_ago
+
+        if not self.request.query_params.get('week__lt', ''):
+            filters['week__lt'] = today
+
+        return queryset.filter(**filters)
 
     def _format_percentages(self, records):
         """

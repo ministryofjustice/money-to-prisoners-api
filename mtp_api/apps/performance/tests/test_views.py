@@ -108,6 +108,8 @@ class PerformanceDataViewTestCase(AuthTestCaseMixin, APITestCase):
             self.performance_data_url, data={}, format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.send_money_user),
         )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         results = response.json()['results']
         self.assertEqual(len(results), 2)
         self.assertEqual(results[0]['week'], str(records[1].week))  # 50 weeks old
@@ -122,9 +124,40 @@ class PerformanceDataViewTestCase(AuthTestCaseMixin, APITestCase):
             self.performance_data_url, params, format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.send_money_user),
         )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         results = response.json()['results']
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0]['week'], str(records[1].week))  # 50 weeks old
+
+    def test_filtering_invalid_input(self):
+        # One date valid, the other not valid
+        params = {
+            'week__gte': self._monday_n_weeks_ago(60),
+            'week__lt': 'to boo 2031',
+        }
+        response = self.client.get(
+            self.performance_data_url, params, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.send_money_user),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('Enter a valid date', response.json()['week__lt'])
+
+        # Both "dates" not valid
+        params = {
+            'week__gte': '2021/10/01',
+            'week__lt': 'to boo 2031',
+        }
+        response = self.client.get(
+            self.performance_data_url, params, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.send_money_user),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        body = response.json()
+        self.assertIn('Enter a valid date', body['week__gte'])
+        self.assertIn('Enter a valid date', body['week__lt'])
 
     def _monday_n_weeks_ago(self, weeks_ago):
         """
