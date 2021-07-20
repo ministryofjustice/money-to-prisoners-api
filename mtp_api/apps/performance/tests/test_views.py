@@ -72,16 +72,29 @@ class PerformanceDataViewTestCase(AuthTestCaseMixin, APITestCase):
             completion_rate=0.8111,
             user_satisfaction=0.96666666,
         )
+        mommy.make(
+            PerformanceData,
+            week=self._monday_n_weeks_ago(3),
+            digital_takeup=0.0,
+            completion_rate=0.85,
+            user_satisfaction=None,
+        )
 
         response = self.client.get(
             self.performance_data_url, data={}, format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.send_money_user),
         )
 
-        first_result = response.json()['results'][0]
-        self.assertEqual(first_result['digital_takeup'], '95%')
-        self.assertEqual(first_result['completion_rate'], '81%')
-        self.assertEqual(first_result['user_satisfaction'], '97%')
+        older_week = response.json()['results'][0]
+        self.assertEqual(older_week['digital_takeup'], '95%')
+        self.assertEqual(older_week['completion_rate'], '81%')
+        self.assertEqual(older_week['user_satisfaction'], '97%')
+
+        # Testing difference between None and 0.0 (formatted as 0%)
+        newer_week = response.json()['results'][1]
+        self.assertEqual(newer_week['digital_takeup'], '0%')
+        self.assertEqual(newer_week['completion_rate'], '85%')
+        self.assertEqual(newer_week['user_satisfaction'], None)
 
     def test_filtering_by_week(self):
         records = []

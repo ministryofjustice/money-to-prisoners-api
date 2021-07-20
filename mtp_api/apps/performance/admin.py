@@ -53,5 +53,5 @@ class PerformanceDataAdmin(ModelAdmin):
         return self._as_percentage(obj.user_satisfaction)
 
     def _as_percentage(self, value):
-        if value:
+        if value is not None:
             return format_percentage(value)

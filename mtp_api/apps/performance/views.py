@@ -497,7 +497,7 @@ class PerformanceDataView(ListAPIView):
 
         for record in records:
             for field_name in percentage_field_names:
-                if record[field_name]:
+                if record[field_name] is not None:
                     record[field_name] = format_percentage(record[field_name])
 
         return records
