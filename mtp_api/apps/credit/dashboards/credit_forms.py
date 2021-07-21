@@ -9,6 +9,7 @@ from django.utils.dateformat import format as format_date
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 
+from core.utils import monday_of_same_week
 from core.dashboards import DashboardChangeForm
 from credit.models import Credit
 from prison.models import Prison
@@ -95,7 +96,7 @@ class CreditForm(DashboardChangeForm):
 
     @cached_property
     def today(self):
-        return timezone.localtime(timezone.now()).date()
+        return timezone.localdate()
 
     @cached_property
     def yesterday(self):
@@ -117,13 +118,14 @@ class CreditForm(DashboardChangeForm):
 
     @cached_property
     def this_week(self):
-        monday = self.today - datetime.timedelta(days=self.today.weekday())
+        monday = monday_of_same_week(self.today)
         return monday, monday + datetime.timedelta(days=6)
 
     @cached_property
     def last_week(self):
-        monday = self.today - datetime.timedelta(days=self.today.weekday() + 7)
-        return monday, monday + datetime.timedelta(days=6)
+        this_monday = monday_of_same_week(self.today)
+        last_monday = this_monday - datetime.timedelta(days=7)
+        return last_monday, last_monday + datetime.timedelta(days=6)
 
     @cached_property
     def four_weeks(self):

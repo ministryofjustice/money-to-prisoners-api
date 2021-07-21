@@ -13,17 +13,24 @@ from django.utils import timezone
 from django.utils.formats import date_format
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import FormView
+import django_filters
 import requests
+from rest_framework.generics import ListAPIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from core.forms import (
     DigitalTakeupReportForm, PrisonDigitalTakeupForm,
     UserSatisfactionReportForm, ZendeskAdminReportForm,
 )
 from core.views import AdminViewMixin, BaseAdminReportView
+from mtp_auth.permissions import SendMoneyClientIDPermissions
 from oauth2_provider.models import Application
 from performance.forms import DigitalTakeupUploadForm, UserSatisfactionUploadForm
-from performance.models import DigitalTakeup, UserSatisfaction
+from performance.models import DigitalTakeup, UserSatisfaction, PerformanceData
+from performance.serializers import PerformanceDataSerializer
 from prison.models import Prison
+from transaction.utils import format_percentage
 
 
 class DigitalTakeupUploadView(AdminViewMixin, FormView):
@@ -444,3 +451,94 @@ class ZendeskReportAdminView(BaseAdminReportView):
             return count
         except requests.RequestException:
             return 0
+
+
+class PerformanceDataFilter(django_filters.FilterSet):
+    week__gte = django_filters.filters.DateFilter(
+        field_name='week', lookup_expr='gte',
+    )
+    week__lt = django_filters.filters.DateFilter(
+        field_name='week', lookup_expr='lt',
+    )
+
+
+class PerformanceDataView(ListAPIView):
+    queryset = PerformanceData.objects.all()
+    serializer_class = PerformanceDataSerializer
+    filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
+    filter_class = PerformanceDataFilter
+    pagination_class = None
+
+    permission_classes = (
+        IsAuthenticated, SendMoneyClientIDPermissions,
+    )
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+
+        response = {
+            'headers': self._headers(),
+            'results': self._format_percentages(serializer.data),
+        }
+
+        return Response(response)
+
+    def filter_queryset(self, queryset):
+        """
+        By default return last year data
+
+        But give precedence to user input in query parameters when passed.
+        """
+
+        # Filtering is applied first
+        queryset = super().filter_queryset(queryset)
+
+        # Defaults are then used if user didn't provide any values
+        filters = {}
+
+        today = timezone.localdate()
+        a_year_ago = today - datetime.timedelta(weeks=52)
+
+        if not self.request.query_params.get('week__gte', ''):
+            filters['week__gte'] = a_year_ago
+
+        if not self.request.query_params.get('week__lt', ''):
+            filters['week__lt'] = today
+
+        return queryset.filter(**filters)
+
+    def _format_percentages(self, records):
+        """
+        Format percentage values
+
+        Percentage values are stored as [0, 1] floats, this method converts
+        all these values to formatted percentage strings, e.g. 0.6666 becomes
+        '67%'
+
+        This is so that client can use this data without additional processing
+        """
+
+        percentage_field_names = PerformanceData.percentage_field_names
+
+        for record in records:
+            for field_name in percentage_field_names:
+                if record[field_name] is not None:
+                    record[field_name] = format_percentage(record[field_name])
+
+        return records
+
+    def _headers(self):
+        """
+        Return a dictionary with the Performance Data headers
+
+        This can be served by the API and can be used by the client to populate the
+        headers of the generated CSV file
+
+        The dictionary has the field name as key and the corresponding 'verbose_name' as value.
+        """
+
+        return {
+            field.name: field.verbose_name
+            for field in PerformanceData._meta.get_fields()
+        }
