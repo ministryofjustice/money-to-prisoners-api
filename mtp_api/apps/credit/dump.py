@@ -57,7 +57,7 @@ class CreditSerialiser(Serialiser):
             'Debit card billing address postcode', 'Debit card billing address country',
             'Sender email', 'Sender IP address',
 
-            'Owner username', 'Blocked',  # TODO: these might be removed, see below
+            'Owner username',  # TODO: these might be removed, see below
 
             'NOMIS transaction', 'WorldPay order code',
 
@@ -85,10 +85,6 @@ class CreditSerialiser(Serialiser):
             # TODO: check with analytical platform and fiu whether this is needed and
             #   then rename to something like "Processed by":
             'Owner username': record.owner.username if record.owner else 'Unknown',
-            # TODO: this field is not useful and misleading.
-            #  it applies ONLY to bank transfers that did not have sufficient sender details (no longer possible).
-            #  check with analytical platform and fiu before removing:
-            'Blocked': record.blocked,
             'Status': status,
             'NOMIS transaction': record.nomis_transaction_id,
         })
