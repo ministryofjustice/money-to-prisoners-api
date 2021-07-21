@@ -57,7 +57,7 @@ class CreditSerialiser(Serialiser):
             'Debit card billing address postcode', 'Debit card billing address country',
             'Sender email', 'Sender IP address',
 
-            'Owner username',  # TODO: these might be removed, see below
+            'Processed by',
 
             'NOMIS transaction', 'WorldPay order code',
 
@@ -82,9 +82,7 @@ class CreditSerialiser(Serialiser):
             'Prisoner number': record.prisoner_number or 'Unknown',
             'Prisoner name': record.prisoner_name or 'Unknown',
             'Prison': record.prison.short_name if record.prison else 'Unknown',
-            # TODO: check with analytical platform and fiu whether this is needed and
-            #   then rename to something like "Processed by":
-            'Owner username': record.owner.username if record.owner else 'Unknown',
+            'Processed by': record.owner.username if record.owner else 'Unknown',
             'Status': status,
             'NOMIS transaction': record.nomis_transaction_id,
         })
