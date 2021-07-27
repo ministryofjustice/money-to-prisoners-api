@@ -23,6 +23,7 @@ from core.forms import (
     DigitalTakeupReportForm, PrisonDigitalTakeupForm,
     UserSatisfactionReportForm, ZendeskAdminReportForm,
 )
+from core.models import ScheduledCommand
 from core.views import AdminViewMixin, BaseAdminReportView
 from mtp_auth.permissions import SendMoneyClientIDPermissions
 from oauth2_provider.models import Application
@@ -123,6 +124,10 @@ class UserSatisfactionUploadView(AdminViewMixin, FormView):
 
     def form_valid(self, form):
         form.save()
+
+        # Also trigger update of Performance Data for date range
+        self.update_performance_data(form.date_min, form.date_max)
+
         message = _('Saved user satisfaction records for %(count)d days') % {
             'count': len(form.records),
         }
@@ -134,6 +139,34 @@ class UserSatisfactionUploadView(AdminViewMixin, FormView):
         )
         messages.success(self.request, message)
         return super().form_valid(form)
+
+    def update_performance_data(self, date_min, date_max):
+        """
+        Updates the performance data for the given range
+
+        NOTE: 'update_performance_data' command updates records Monday-to-Monday
+        (week_to not included).
+
+        As we're currently uploading this data on a monthly basis the last uploaded week may
+        not be a completed week.
+
+        Only update last week' performance_data record if full week worth of data is available (
+        e.g. last uploaded day was a Sunday)
+        """
+
+        # If max uploaded date was a Sunday, update that week
+        if date_max.isoweekday() == 7:
+            week_to = date_max + datetime.timedelta(days=1)
+        else:
+            week_to = date_max
+
+        job = ScheduledCommand(
+            name='update_performance_data',
+            arg_string=f'--week-from={date_min} --week-to={week_to}',
+            cron_entry='*/10 * * * *',
+            delete_after_next=True
+        )
+        job.save()
 
 
 class PrisonDigitalTakeupView(BaseAdminReportView):

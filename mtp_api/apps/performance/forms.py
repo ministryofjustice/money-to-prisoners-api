@@ -162,6 +162,9 @@ class UserSatisfactionUploadForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.records = collections.defaultdict(lambda: collections.defaultdict(int))
+        # record date range in uploaded file
+        self.date_min = None
+        self.date_max = None
 
     def parse_record(self, record):
         try:
@@ -211,6 +214,9 @@ class UserSatisfactionUploadForm(forms.Form):
     def save(self):
         from performance.models import UserSatisfaction
 
+        self.date_min = list(self.records)[0]
+        self.date_max = self.date_min
+
         for date, record in self.records.items():
             UserSatisfaction.objects.update_or_create(
                 defaults={
@@ -219,3 +225,9 @@ class UserSatisfactionUploadForm(forms.Form):
                 },
                 date=date,
             )
+
+            # Keep track of records date range
+            if date < self.date_min:
+                self.date_min = date
+            if date > self.date_max:
+                self.date_max = date

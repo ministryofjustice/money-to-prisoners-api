@@ -1,4 +1,5 @@
 import datetime
+from io import StringIO
 
 from django.urls import reverse
 from django.utils import timezone
@@ -6,7 +7,8 @@ from model_mommy import mommy
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from core.tests.utils import make_test_users
+from core.models import ScheduledCommand
+from core.tests.utils import create_super_admin, make_test_users
 from core.utils import monday_of_same_week
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from performance.models import PerformanceData
@@ -166,3 +168,46 @@ class PerformanceDataViewTestCase(AuthTestCaseMixin, APITestCase):
 
         monday = monday_of_same_week(timezone.localdate())
         return monday - datetime.timedelta(weeks=weeks_ago)
+
+
+class UserSatisfactionUploadViewTestCase(AuthTestCaseMixin, APITestCase):
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
+
+    def setUp(self):
+        super().setUp()
+        create_super_admin()
+
+        self.upload_url = reverse('admin:user_satisfaction_upload')
+
+    def test_triggers_update_performance_data(self):
+        test_data = [
+            # +------------+----------+------------------+
+            # | start date | end date | expected week_to |
+            # +------------+----------+------------------+
+            ('2021-01-01', '2021-01-31', '2021-02-01'),  # last week is complete (Sunday)
+            ('2021-07-01', '2021-07-31', '2021-07-31'),  # last week is incomplete
+        ]
+        for (start_date, end_date, expected_week_to) in test_data:
+            test_csv = self.fake_csv(start_date, end_date)
+
+            self.client.login(username='admin', password='adminadmin')
+            self.client.post(
+                self.upload_url,
+                data={'csv_file': test_csv},
+            )
+
+            # Check 'update_performance_data' is scheduled correctly
+            job = ScheduledCommand.objects.get(name='update_performance_data')
+            self.assertEqual(job.arg_string, f'--week-from={start_date} --week-to={expected_week_to}')
+            self.assertTrue(job.delete_after_next)
+            self.assertEqual(job.cron_entry, '*/10 * * * *')
+            job.delete()
+
+    def fake_csv(self, start_date, end_date):
+        test_csv = StringIO()
+        test_csv.write('creation date,type,feedback\n')
+        test_csv.write(f'{start_date} 00:00:00,aggregated-service-feedback,Rating of 5: 99\n')
+        test_csv.write(f'{end_date} 00:00:00,aggregated-service-feedback,Rating of 5: 99\n')
+        test_csv.seek(0)
+
+        return test_csv
