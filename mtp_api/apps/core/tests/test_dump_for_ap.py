@@ -71,11 +71,10 @@ class DumpForAPTestCase(TestCase):
         completed_payments = Payment.objects.exclude(
             status__in=(
                 PAYMENT_STATUS.PENDING,
-                PAYMENT_STATUS.REJECTED,
                 PAYMENT_STATUS.EXPIRED,
             )
         )
-        expected_credit_ids = sorted(payment.credit_id for payment in completed_payments)
+        expected_credit_ids = sorted(completed_payments.values_list('credit_id', flat=True))
         self.assertListEqual(credit_ids, expected_credit_ids)
 
     def test_disbursements_dump_for_ap(self):
