@@ -1,5 +1,6 @@
 import datetime
 from io import StringIO
+import pathlib
 
 from django.urls import reverse
 from django.utils import timezone
@@ -171,7 +172,6 @@ class PerformanceDataViewTestCase(AuthTestCaseMixin, APITestCase):
 
 
 class UserSatisfactionUploadViewTestCase(AuthTestCaseMixin, APITestCase):
-    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
     def setUp(self):
         super().setUp()
@@ -211,3 +211,46 @@ class UserSatisfactionUploadViewTestCase(AuthTestCaseMixin, APITestCase):
         test_csv.seek(0)
 
         return test_csv
+
+
+class DigitalTakeupUploadViewTestCase(AuthTestCaseMixin, APITestCase):
+    fixtures = ['initial_types.json', 'test_nomis_mtp_prisons']
+
+    def setUp(self):
+        super().setUp()
+        create_super_admin()
+
+        self.upload_url = reverse('admin:digital_takeup_upload')
+        self.fixture_path = pathlib.Path(__file__).parent / 'files'
+        self.fixture_path = self.fixture_path / 'Money_to_Prisoner_Stats - 02.11.16.xls'
+
+        self.test_week = datetime.date(2016, 10, 31)  # Monday of week containing 2nd Nov 2016
+
+    def test_updates_performance_data_when_already_there(self):
+        PerformanceData.objects.create(week=self.test_week)
+
+        with self.fixture_path.open('rb') as f:
+            self.client.login(username='admin', password='adminadmin')
+            self.client.post(
+                self.upload_url,
+                data={'excel_file': f},
+            )
+
+        # Check 'update_performance_data' is scheduled correctly
+        job = ScheduledCommand.objects.get(name='update_performance_data')
+        week_to = self.test_week + datetime.timedelta(weeks=1)
+        self.assertEqual(job.arg_string, f'--week-from={self.test_week} --week-to={week_to}')
+        self.assertTrue(job.delete_after_next)
+        self.assertEqual(job.cron_entry, '*/10 * * * *')
+
+    def test_doesnt_update_performance_data_when_not_generated_yet(self):
+        with self.fixture_path.open('rb') as f:
+            self.client.login(username='admin', password='adminadmin')
+            self.client.post(
+                self.upload_url,
+                data={'excel_file': f},
+            )
+
+        job = ScheduledCommand.objects.filter(name='update_performance_data')
+
+        self.assertFalse(job.exists())

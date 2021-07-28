@@ -24,6 +24,7 @@ from core.forms import (
     UserSatisfactionReportForm, ZendeskAdminReportForm,
 )
 from core.models import ScheduledCommand
+from core.utils import monday_of_same_week
 from core.views import AdminViewMixin, BaseAdminReportView
 from mtp_auth.permissions import SendMoneyClientIDPermissions
 from oauth2_provider.models import Application
@@ -53,6 +54,9 @@ class DigitalTakeupUploadView(AdminViewMixin, FormView):
     def form_valid(self, form):
         self.check_takeup(form.date, form.credits_by_prison)
         form.save()
+
+        self.update_performance_data(form.date)
+
         LogEntry.objects.log_action(
             user_id=self.request.user.pk,
             content_type_id=None, object_id=None,
@@ -67,6 +71,28 @@ class DigitalTakeupUploadView(AdminViewMixin, FormView):
             'prison_count': len(form.credits_by_prison),
         })
         return super().form_valid(form)
+
+    def update_performance_data(self, date):
+        """
+        Updates Performance data when new Digital Take-up data is uploaded
+
+        If Performance data for the week including 'date' already exists
+        it means that week needs updating because more Digital Take-up data
+        was uploaded.
+        """
+
+        week_from = monday_of_same_week(date)
+
+        if PerformanceData.objects.filter(week=week_from).exists():
+            week_to = week_from + datetime.timedelta(weeks=1)
+
+            job = ScheduledCommand(
+                name='update_performance_data',
+                arg_string=f'--week-from={week_from} --week-to={week_to}',
+                cron_entry='*/10 * * * *',
+                delete_after_next=True,
+            )
+            job.save()
 
     def check_takeup(self, date, credits_in_spreadsheet):
         from credit.models import Log, LOG_ACTIONS
