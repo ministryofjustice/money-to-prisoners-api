@@ -1044,14 +1044,14 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
             check_auto_accept_state.created = format_date_or_datetime(auto_accept_state_created)
             check_auto_accept_state.save()
 
-        self.assertIn('id', list(actual_response.keys()))
+        self.assertIn('id', actual_response)
         del actual_response['id']
-        self.assertIn('created', list(actual_response.keys()))
+        self.assertIn('created', actual_response)
         del actual_response['created']
         for state in actual_response['states']:
-            self.assertIn('created', list(state.keys()))
+            self.assertIn('created', state)
             del state['created']
-            self.assertIn('auto_accept_rule', list(state.keys()))
+            self.assertIn('auto_accept_rule', state)
             del state['auto_accept_rule']
 
         return actual_response
@@ -1071,17 +1071,17 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
         actual_response = get_response.json()
 
         for result in actual_response['results']:
-            self.assertIn('id', list(result.keys()))
+            self.assertIn('id', result)
             if strip_id:
                 del result['id']
-            self.assertIn('created', list(result.keys()))
+            self.assertIn('created', result)
             if strip_created:
                 del result['created']
             for state in result['states']:
-                self.assertIn('auto_accept_rule', list(state.keys()))
+                self.assertIn('auto_accept_rule', state)
                 if strip_states_auto_accept_rule:
                     del state['auto_accept_rule']
-                self.assertIn('created', list(state.keys()))
+                self.assertIn('created', state)
                 if strip_states_created:
                     del state['created']
         return actual_response
@@ -1145,13 +1145,13 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
             user=self.added_by_user
         )
 
-        self.assertIn('id', list(actual_response.keys()))
+        self.assertIn('id', actual_response)
         del actual_response['id']
-        self.assertIn('created', list(actual_response.keys()))
+        self.assertIn('created', actual_response)
         del actual_response['created']
-        self.assertIn('created', list(actual_response['states'][0].keys()))
+        self.assertIn('created', actual_response['states'][0])
         del actual_response['states'][0]['created']
-        self.assertIn('auto_accept_rule', list(actual_response['states'][0].keys()))
+        self.assertIn('auto_accept_rule', actual_response['states'][0])
         del actual_response['states'][0]['auto_accept_rule']
         self.assertDictEqual(
             expected_response,
