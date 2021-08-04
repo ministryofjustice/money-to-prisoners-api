@@ -152,9 +152,9 @@ class BaseCheckTestCase(APITestCase, AuthTestCaseMixin):
                 'auto_accept_rule': expected_check.auto_accept_rule_state.auto_accept_rule.pk,
             } if expected_check.auto_accept_rule_state else None
         }
-        assert expected_data_item == actual_check_data, pformat(
+        self.assertEqual(expected_data_item, actual_check_data, msg=pformat(
             list(dictdiffer.diff(expected_data_item, actual_check_data))
-        )
+        ))
 
 
 class CheckListTestCase(BaseCheckTestCase):
@@ -527,8 +527,8 @@ class PatchCheckTestCase(BaseCheckTestCase):
         self.assertEqual(response.status_code, http_status.HTTP_200_OK)
         actual_check_data = response.json()
 
-        assert check.status != CHECK_STATUS.ACCEPTED
-        response = self.client.patch(
+        self.assertNotEqual(check.status, CHECK_STATUS.ACCEPTED)
+        self.client.patch(
             reverse(
                 'security-check-detail',
                 kwargs={'pk': check.pk},
