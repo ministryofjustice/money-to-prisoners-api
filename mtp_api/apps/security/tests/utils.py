@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 import logging
 import random
 from typing import Optional, Tuple
@@ -9,8 +9,8 @@ from django.db import transaction
 from django.db.models import Count
 from django.db.utils import IntegrityError
 from django.contrib.auth.models import Group
+from django.utils import timezone
 from django.utils.crypto import get_random_string
-import pytz
 
 from credit.models import Credit, CREDIT_RESOLUTION, LOG_ACTIONS as CREDIT_LOG_ACTIONS
 from prison.models import Prison
@@ -230,8 +230,8 @@ def generate_checks(
             check = candidate_payment.credit.security_check
             if (not overrides or 'state' not in overrides) and j % 5:
                 check.status = random.choice([CHECK_STATUS.ACCEPTED, CHECK_STATUS.REJECTED])
-                check.actioned_at = datetime.now(tz=pytz.utc)
-                check.actioned_by = random.choice(list(Group.objects.filter(name='FIU').first().user_set.all()))
+                check.actioned_at = timezone.localtime()
+                check.actioned_by = random.choice(Group.objects.filter(name='FIU').first().user_set.all())
                 check.save()
         if overrides:
             for k, v in overrides.items():
@@ -255,7 +255,7 @@ def generate_auto_accept_rules():
         if not i % 2:
             user = random.choice(list(Group.objects.filter(name='FIU').first().user_set.all()))
             # Spread out the creation date to test sorting
-            created_date = datetime.now(tz=pytz.utc) - timedelta(hours=random.randint(0, len(checks)))
+            created_date = timezone.localtime() - timedelta(hours=random.randint(0, len(checks)))
             try:
                 check_auto_accept_rule = CheckAutoAcceptRuleSerializer(
                     context={'request': Mock(user=user)}
