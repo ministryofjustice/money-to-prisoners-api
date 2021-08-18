@@ -7,11 +7,11 @@ from django.utils import timezone
 from django.utils.dateformat import format as format_date
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
+from mtp_common.utils import format_currency
 
 from core.admin import DateRangeFilter, add_short_description
 from transaction.constants import TRANSACTION_CATEGORY, TRANSACTION_STATUS
 from transaction.models import Transaction
-from transaction.utils import format_amount
 
 
 class StatusFilter(admin.SimpleListFilter):
@@ -61,7 +61,7 @@ class TransactionAdmin(admin.ModelAdmin):
             return '–'
         link = reverse('admin:credit_credit_change', args=(instance.credit.pk,))
         description = '%(amount)s %(status)s, %(date)s' % {
-            'amount': format_amount(instance.amount),
+            'amount': format_currency(instance.amount),
             'status': instance.status,
             'date': format_date(timezone.localtime(instance.created), 'd/m/Y'),
         }
@@ -69,7 +69,7 @@ class TransactionAdmin(admin.ModelAdmin):
 
     @add_short_description(_('amount'))
     def formatted_amount(self, instance):
-        return format_amount(instance.amount)
+        return format_currency(instance.amount)
 
     @add_short_description(_('type'))
     def transaction_type(self, instance):
@@ -88,4 +88,4 @@ class TransactionAdmin(admin.ModelAdmin):
     @add_short_description(_('Display total of selected transactions'))
     def display_total_amount(self, request, queryset):
         total = queryset.aggregate(models.Sum('amount'))['amount__sum']
-        self.message_user(request, _('Total: %s') % format_amount(total, True))
+        self.message_user(request, _('Total: %s') % format_currency(total, trim_empty_pence=True))

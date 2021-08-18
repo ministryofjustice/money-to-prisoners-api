@@ -1,4 +1,5 @@
 {% load static %}
+{% load mtp_common %}
 {% load credit %}
 
 <html>
@@ -76,8 +77,8 @@
               <td>{{ this_week.disbursement_count|format_number:1 }} payments</td>
             </tr>
             <tr class="table-spacing">
-              <td>{{ last_week.disbursement_amount|format_amount:100 }}</td>
-              <td>{{ this_week.disbursement_amount|format_amount:100 }}</td>
+              <td>{{ last_week.disbursement_amount|currency_truncated:100 }}</td>
+              <td>{{ this_week.disbursement_amount|currency_truncated:100 }}</td>
             </tr>
 
             <tr>
@@ -89,8 +90,8 @@
               <td>{{ this_month.disbursement_count|format_number:1 }} payments</td>
             </tr>
             <tr class="table-spacing">
-              <td>{{ last_month.disbursement_amount|format_amount:100 }}</td>
-              <td>{{ this_month.disbursement_amount|format_amount:100 }}</td>
+              <td>{{ last_month.disbursement_amount|currency_truncated:100 }}</td>
+              <td>{{ this_month.disbursement_amount|currency_truncated:100 }}</td>
             </tr>
 
             <tr>
@@ -102,8 +103,8 @@
               <td>{{ this_year.disbursement_count|format_number:1 }} payments</td>
             </tr>
             <tr class="table-spacing">
-              <td>{{ last_year.disbursement_amount|format_amount:100 }}</td>
-              <td>{{ this_year.disbursement_amount|format_amount:100 }}</td>
+              <td>{{ last_year.disbursement_amount|currency_truncated:100 }}</td>
+              <td>{{ this_year.disbursement_amount|currency_truncated:100 }}</td>
             </tr>
           </table>
         </td>
@@ -170,8 +171,8 @@
               <td>{{ this_week.credit_count|format_number:1 }} credits</td>
             </tr>
             <tr class="table-spacing">
-              <td>{{ last_week.credit_amount|format_amount:100 }}</td>
-              <td>{{ this_week.credit_amount|format_amount:100 }}</td>
+              <td>{{ last_week.credit_amount|currency_truncated:100 }}</td>
+              <td>{{ this_week.credit_amount|currency_truncated:100 }}</td>
             </tr>
 
             <tr>
@@ -183,8 +184,8 @@
               <td>{{ this_month.credit_count|format_number:1 }} credits</td>
             </tr>
             <tr class="table-spacing">
-              <td>{{ last_month.credit_amount|format_amount:100 }}</td>
-              <td>{{ this_month.credit_amount|format_amount:100 }}</td>
+              <td>{{ last_month.credit_amount|currency_truncated:100 }}</td>
+              <td>{{ this_month.credit_amount|currency_truncated:100 }}</td>
             </tr>
 
             <tr>
@@ -196,8 +197,8 @@
               <td>{{ this_year.credit_count|format_number:1 }} credits</td>
             </tr>
             <tr class="table-spacing">
-              <td>{{ last_year.credit_amount|format_amount:100 }}</td>
-              <td>{{ this_year.credit_amount|format_amount:100 }}</td>
+              <td>{{ last_year.credit_amount|currency_truncated:100 }}</td>
+              <td>{{ this_year.credit_amount|currency_truncated:100 }}</td>
             </tr>
           </table>
 
@@ -208,7 +209,7 @@
 
           <div class="money-saved-box">
             <h2>GOV savings enabled</h2>
-            <h3>{{ savings|format_amount }}</h3>
+            <h3>{{ savings|currency }}</h3>
             <h4>(in current financial year)</h4>
           </div>
         </td>

@@ -6,6 +6,7 @@ from django.contrib.admin.options import IncorrectLookupParameters
 from django.core.exceptions import ValidationError
 from django.db.models import Sum
 from django.utils.translation import gettext_lazy as _
+from mtp_common.utils import format_currency
 
 from core.admin import (
     UtcDateRangeFilter, RelatedAnyFieldListFilter, SearchFilter,
@@ -15,7 +16,6 @@ from credit.constants import CREDIT_SOURCE, CREDIT_STATUS, LOG_ACTIONS
 from credit.models import Credit, Log, Comment, ProcessingBatch, PrivateEstateBatch
 from payment.models import Payment
 from transaction.models import Transaction
-from transaction.utils import format_amount
 
 
 class LogAdminInline(admin.TabularInline):
@@ -143,7 +143,7 @@ class CreditAdmin(admin.ModelAdmin):
 
     @add_short_description(_('amount'))
     def formatted_amount(self, instance):
-        return format_amount(instance.amount)
+        return format_currency(instance.amount)
 
     @add_short_description(_('source'))
     def formatted_source(self, instance):
@@ -162,7 +162,7 @@ class CreditAdmin(admin.ModelAdmin):
     @add_short_description(_('Display total of selected credits'))
     def display_total_amount(self, request, queryset):
         total = queryset.aggregate(Sum('amount'))['amount__sum']
-        self.message_user(request, _('Total: %s') % format_amount(total, True))
+        self.message_user(request, _('Total: %s') % format_currency(total, trim_empty_pence=True))
 
     @add_short_description(_('Display credit validity of selected credits'))
     def display_credit_validity(self, request, queryset):
@@ -231,4 +231,4 @@ class PrivateEstateBatchAdmin(admin.ModelAdmin):
 
     @add_short_description(_('amount'))
     def total_amount(self, instance):
-        return format_amount(instance.total_amount)
+        return format_currency(instance.total_amount)

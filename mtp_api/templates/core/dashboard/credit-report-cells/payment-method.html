@@ -1,4 +1,5 @@
 {% load i18n %}
+{% load mtp_common %}
 {% load credit %}
 
 <td>
@@ -11,7 +12,7 @@
           <td>{{ dashboard_module.received_transaction_count|format_number }}</td>
         </tr>
         <tr>
-          <td colspan="2" class="credit-stat--quiet">{{ dashboard_module.received_transaction_amount|format_amount }}</td>
+          <td colspan="2" class="credit-stat--quiet">{{ dashboard_module.received_transaction_amount|currency }}</td>
         </tr>
 
         <tr>
@@ -19,7 +20,7 @@
           <td>{{ dashboard_module.received_payment_count|format_number }}</td>
         </tr>
         <tr>
-          <td colspan="2" class="credit-stat--quiet">{{ dashboard_module.received_payment_amount|format_amount }}</td>
+          <td colspan="2" class="credit-stat--quiet">{{ dashboard_module.received_payment_amount|currency }}</td>
         </tr>
       </tbody>
     </table>

@@ -5,13 +5,14 @@ from django.utils import timezone
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext, gettext_lazy as _, ngettext
+from mtp_common.utils import format_currency
 
 from core.dashboards import DashboardModule
 from core.views import DashboardView
 from credit.models import Credit, CREDIT_STATUS
 from disbursement.models import Disbursement, DISBURSEMENT_RESOLUTION
 from performance.models import DigitalTakeup
-from transaction.utils import format_amount, format_number, format_percentage
+from transaction.utils import format_currency_truncated, format_number, format_percentage
 
 CREDITABLE_FILTERS = Credit.STATUS_LOOKUP[CREDIT_STATUS.CREDITED] | \
                      Credit.STATUS_LOOKUP[CREDIT_STATUS.CREDIT_PENDING]
@@ -28,7 +29,7 @@ def valid_credit_stats(since, until=None):
     stat['number'] = format_number(stat['count'], truncate_after=1000000)
     return {
         'title': ngettext('%(number)s credit received', '%(number)s credits received', stat['count']) % stat,
-        'value': format_amount(stat['amount'], trim_empty_pence=True, truncate_after=1000000),
+        'value': format_currency_truncated(stat['amount'], truncate_above=1000000),
     }
 
 
@@ -72,7 +73,7 @@ def valid_disbursement_stats(since, until=None):
     stat['number'] = format_number(stat['count'], truncate_after=1000000)
     return {
         'title': ngettext('%(number)s disbursement created', '%(number)s disbursements created', stat['count']) % stat,
-        'value': format_amount(stat['amount'], trim_empty_pence=True, truncate_after=1000000),
+        'value': format_currency_truncated(stat['amount'], truncate_above=1000000),
     }
 
 
@@ -143,7 +144,7 @@ def get_simple_stats():
                 ngettext('%(number)s credit', '%(number)s credits', credited_stats['count']) % {
                     'number': format_number(credited_stats['count'], truncate_after=1000000)
                 },
-                format_amount(credited_stats['amount'], trim_empty_pence=True),
+                format_currency(credited_stats['amount'], trim_empty_pence=True),
             ),
         },
         {
@@ -175,7 +176,7 @@ def get_simple_stats():
                 ngettext('%(number)s disbursement', '%(number)s disbursements', sent_stats['count']) % {
                     'number': format_number(sent_stats['count'], truncate_after=1000000)
                 },
-                format_amount(sent_stats['amount'], trim_empty_pence=True),
+                format_currency(sent_stats['amount'], trim_empty_pence=True),
             ),
         },
         {

@@ -2,6 +2,7 @@ from django.contrib import admin, messages
 from django.contrib.admin import ModelAdmin, RelatedFieldListFilter
 from django.db import models
 from django.utils.translation import gettext, gettext_lazy as _
+from mtp_common.utils import format_currency
 
 from core.admin import DateFilter, add_short_description
 from prison.models import (
@@ -10,7 +11,6 @@ from prison.models import (
     PrisonerLocation, PrisonerCreditNoticeEmail,
     PrisonerBalance,
 )
-from transaction.utils import format_amount
 
 
 @admin.register(Population)
@@ -82,4 +82,4 @@ class PrisonerBalanceAdmin(ModelAdmin):
 
     @add_short_description(_('amount'))
     def formatted_amount(self, instance):
-        return format_amount(instance.amount)
+        return format_currency(instance.amount)

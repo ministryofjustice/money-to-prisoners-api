@@ -1,9 +1,9 @@
 from django.conf import settings
+from mtp_common.utils import format_currency
 
 from core.dump import Serialiser
 from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION
 from disbursement.models import Disbursement, LOG_ACTIONS as DISBURSEMENT_LOG_ACTIONS
-from transaction.utils import format_amount
 
 
 class DisbursementSerialiser(Serialiser):
@@ -17,7 +17,7 @@ class DisbursementSerialiser(Serialiser):
         if serialise_amount_as_int:
             self.format_amount = lambda amount: amount
         else:
-            self.format_amount = format_amount
+            self.format_amount = format_currency
 
     def get_queryset(self):
         return Disbursement.objects.all()

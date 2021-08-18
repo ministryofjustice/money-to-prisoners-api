@@ -3,10 +3,10 @@ import collections
 import re
 
 from django.utils.translation import gettext as _
+from mtp_common.utils import format_currency
 
 from credit.notices import NoticeBundle, get_asset_path
 from credit.notices.utils import render_security_box
-from transaction.utils import format_amount
 
 western_european = codecs.lookup('cp1252')  # characters supported by NTA font
 re_invalid_name = re.compile(r'(\d{6})')
@@ -70,7 +70,7 @@ class PrisonerCreditNoticeBundle(NoticeBundle):
                 _('You’ve been sent money online.') + ' ' + _('It’s gone into your private cash account.'),
                 [
                     {
-                        'label': format_amount(credit.amount, trim_empty_pence=False),
+                        'label': format_currency(credit.amount),
                         'message': _('from %(name)s') % {
                             'name': format_name(credit.sender_name,  fallback=_('unknown sender')),
                         }
@@ -85,7 +85,7 @@ class PrisonerCreditNoticeBundle(NoticeBundle):
                 _('These disbursement requests have been sent.') + ' ' + _('It takes about 7 working days.'),
                 [
                     {
-                        'label': format_amount(disbursement.amount, trim_empty_pence=False),
+                        'label': format_currency(disbursement.amount),
                         'message': _('to %(name)s by %(method)s') % {
                             'name': format_name('%s %s' % (disbursement.recipient_first_name,
                                                            disbursement.recipient_last_name),

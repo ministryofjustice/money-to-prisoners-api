@@ -2,13 +2,13 @@ from django.db import models
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from model_utils.models import TimeStampedModel
+from mtp_common.utils import format_currency
 
 from credit.models import Credit
 from transaction.constants import (
     TRANSACTION_STATUS, TRANSACTION_CATEGORY, TRANSACTION_SOURCE
 )
 from transaction.managers import TransactionManager
-from transaction.utils import format_amount
 
 
 class Transaction(TimeStampedModel):
@@ -91,7 +91,7 @@ class Transaction(TimeStampedModel):
     def __str__(self):
         return 'Transaction {id}, {amount} {sender_name} > {prisoner_name}, {status}'.format(
             id=self.pk,
-            amount=format_amount(self.amount, True),
+            amount=format_currency(self.amount, trim_empty_pence=True),
             sender_name=self.sender_name,
             prisoner_name=self.prisoner_name,
             status=self.status

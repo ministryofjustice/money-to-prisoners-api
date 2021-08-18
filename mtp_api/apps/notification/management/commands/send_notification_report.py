@@ -10,6 +10,7 @@ from django.core.validators import validate_email
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from mtp_common.tasks import default_from_address
+from mtp_common.utils import format_currency
 import openpyxl
 from openpyxl.cell import WriteOnlyCell
 from openpyxl.utils import get_column_letter
@@ -19,7 +20,6 @@ from credit.models import Credit, LOG_ACTIONS as CREDIT_LOG_ACTIONS
 from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION
 from disbursement.models import Disbursement, LOG_ACTIONS as DISBURSEMENT_LOG_ACTIONS
 from notification.rules import RULES, CountingRule, MonitoredRule, Triggered
-from transaction.utils import format_amount
 
 
 class Command(BaseCommand):
@@ -254,7 +254,7 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
         row.update({
             'Date received': local_datetime_for_xlsx(record.received_at),
             'Date credited': local_datetime_for_xlsx(record.log_set.get_action_date(CREDIT_LOG_ACTIONS.CREDITED)),
-            'Amount': format_amount(record.amount),
+            'Amount': format_currency(record.amount),
             'Prisoner number': record.prisoner_number or 'Unknown',
             'Prisoner name': record.prisoner_name or 'Unknown',
             'Prison': record.prison.short_name if record.prison else 'Unknown',
@@ -324,7 +324,7 @@ class DisbursementSerialiser(Serialiser, serialised_model=Disbursement):
                 record.log_set.get_action_date(DISBURSEMENT_LOG_ACTIONS.CONFIRMED)
             ),
             'Date sent': local_datetime_for_xlsx(record.log_set.get_action_date(DISBURSEMENT_LOG_ACTIONS.SENT)),
-            'Amount': format_amount(record.amount),
+            'Amount': format_currency(record.amount),
             'Prisoner number': record.prisoner_number,
             'Prisoner name': record.prisoner_name,
             'Prison': record.prison.short_name,
