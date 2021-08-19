@@ -2685,7 +2685,8 @@ class AccountRequestTestCase(AuthBaseTestCase):
         self.assertFalse(AccountRequest.objects.exists())
         self.assertEqual(User.objects.count(), user_count + 1)
 
-    def test_confirm_requests_with_existing_user(self):
+    @mock.patch('mtp_auth.views.send_email')
+    def test_confirm_requests_with_existing_user(self, mock_send_email):
         admin = self.users['prison_clerk_uas'][0]
         role = Role.objects.get(name='prison-clerk')
         prison = admin.prisonusermapping.prisons.first()
@@ -2756,7 +2757,7 @@ class AccountRequestTestCase(AuthBaseTestCase):
                 'user_admin': False,
             },
         ]
-        for scenario in scenarios:
+        for scenarion_num, scenario in enumerate(scenarios):
             user = basic_user.make(is_active=random.random() > 0.2)
             if scenario['previous_role']:
                 Role.objects.get(name=scenario['previous_role']).assign_to_user(user)
@@ -2801,18 +2802,19 @@ class AccountRequestTestCase(AuthBaseTestCase):
                 [prison.nomis_id]
             )
 
-            latest_email = mail.outbox[-1]
-            self.assertSequenceEqual(latest_email.to, [request.email])
-            self.assertIn(role.application.name.lower(), latest_email.subject)
-            self.assertIn(role.application.name.lower(), latest_email.body)
-            self.assertIn(role.login_url, latest_email.body)
-            self.assertIn(refreshed_user.username, latest_email.body)
-            self.assertNotIn('Password', latest_email.body)
+            self.assertEqual(mock_send_email.call_count, scenarion_num + 1)
+            send_email_kwargs = mock_send_email.call_args_list[-1].kwargs
+            self.assertEqual(send_email_kwargs['to'], request.email)
+            self.assertEqual(send_email_kwargs['personalisation']['username'], refreshed_user.username)
+            self.assertEqual(send_email_kwargs['personalisation']['service_name'], role.application.name.lower())
+            self.assertEqual(send_email_kwargs['personalisation']['login_url'], role.login_url)
+            self.assertNotIn('password', send_email_kwargs['personalisation'])
 
         self.assertFalse(AccountRequest.objects.exists())
         self.assertEqual(User.objects.count(), user_count + len(scenarios))
 
-    def test_confirm_requests_with_existing_user_with_multiple_prisons(self):
+    @mock.patch('mtp_auth.views.send_email')
+    def test_confirm_requests_with_existing_user_with_multiple_prisons(self, mock_send_email):
         admin = self.users['prison_clerk_uas'][0]
         role = Role.objects.get(name='prison-clerk')
         prison = admin.prisonusermapping.prisons.first()
@@ -2835,6 +2837,8 @@ class AccountRequestTestCase(AuthBaseTestCase):
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(admin, client_id=CASHBOOK_OAUTH_CLIENT_ID)
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK, msg=response.content)
+        self.assertEqual(mock_send_email.call_count, 1)
+        self.assertEqual(mock_send_email.call_args_list[-1].kwargs['template_name'], 'api-user-moved')
 
         user = User.objects.get(username=request.username)
         self.assertSetEqual(

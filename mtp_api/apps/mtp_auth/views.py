@@ -483,17 +483,16 @@ class AccountRequestViewSet(viewsets.ModelViewSet):
         user_serializer.is_valid()
         user = user_serializer.save()
 
-        context = {
-            'username': user.username,
-            'service_name': instance.role.application.name.lower(),
-            'login_url': instance.role.login_url,
-        }
         if user_existed:
             send_email(
-                user.email, 'mtp_auth/user_moved.txt',
-                capfirst(gettext('Your new %(service_name)s account is ready to use') % context),
-                context=context, html_template='mtp_auth/user_moved.html',
-                anymail_tags=['user-moved'],
+                template_name='api-user-moved',
+                to=user.email,
+                personalisation={
+                    'username': user.username,
+                    'service_name': instance.role.application.name.lower(),
+                    'login_url': instance.role.login_url,
+                },
+                staff_email=True,
             )
 
         LogEntry.objects.log_action(

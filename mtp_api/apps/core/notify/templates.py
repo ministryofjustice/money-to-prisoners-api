@@ -238,4 +238,23 @@ class ApiNotifyTemplates(NotifyTemplateRegistry):
                 'service_name',
             ],
         },
+        'api-user-moved': {
+            'subject': 'Your new ((service_name)) account is ready to use',
+            'body': textwrap.dedent("""
+                Your account can now be used with the ((service_name)) service.
+
+                Username: ((username))
+
+                Your password remains the same.
+                You can reset it from the login page if you need to.
+                You can now sign in at: ((login_url))
+
+                Kind regards,
+                Prisoner money team
+            """).strip(),
+            'personalisation': [
+                'username',
+                'service_name', 'login_url',
+            ],
+        },
     }
