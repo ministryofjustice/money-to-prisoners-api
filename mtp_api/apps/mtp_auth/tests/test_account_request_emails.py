@@ -4,7 +4,6 @@ from unittest import mock
 
 from django.core.management import call_command
 from django.test import TestCase
-from django.utils.text import slugify
 from django.utils.timezone import now, localtime
 from faker import Faker
 from model_mommy import mommy
@@ -36,7 +35,8 @@ class AccountRequestEmailTestCase(TestCase):
             email=fake.safe_email(),
         )
 
-    def test_emails_correctly_grouped(self):
+    @mock.patch('mtp_auth.management.commands.send_account_request_emails.send_email')
+    def test_emails_correctly_grouped(self, mock_send_email):
         today = localtime(now()).replace(hour=0, minute=0, second=0, microsecond=0)
 
         def yesterday_sometime():
@@ -44,19 +44,14 @@ class AccountRequestEmailTestCase(TestCase):
 
         prison_clerk_role = Role.objects.get(name='prison-clerk')
         prisons = list(Prison.objects.all())
-        expected_names = {}
         for prison in prisons:
-
-            key = 'test-%s-ua' % slugify(prison.name)
-            expected_names[key] = set()
             for _ in range(3):
                 # Request triggering email
-                request = self._make_account_request(
+                self._make_account_request(
                     role=prison_clerk_role,
                     prison=prison,
                     created=yesterday_sometime(),
                 )
-                expected_names[key].add('%s %s' % (request.first_name, request.last_name))
                 # Requests *not* triggering emails
                 self._make_account_request(
                     role=prison_clerk_role,
@@ -71,26 +66,17 @@ class AccountRequestEmailTestCase(TestCase):
 
         # Account Requests for 'security' role have no prison
         security_role = Role.objects.get(name='security')
-        security_request = self._make_account_request(
-            role=security_role,
-            prison=None,
-            created=yesterday_sometime(),
-        )
-        expected_names['security'] = set()
-        expected_names['security'].add('%s %s' % (security_request.first_name, security_request.last_name))
+        for _ in range(3):
+            self._make_account_request(
+                role=security_role,
+                prison=None,
+                created=yesterday_sometime(),
+            )
 
-        with mock.patch.object(Command, 'email_admins') as method:
-            call_command('send_account_request_emails')
-        self.assertEqual(method.call_count, 3)
-        for call in method.call_args_list:
-            admins, role, names = call[0]
-
-            if role.name == 'security':
-                key = 'security'
-            else:
-                key = admins[0].username
-
-            self.assertSetEqual(set(names), expected_names[key])
+        call_command('send_account_request_emails')
+        self.assertEqual(mock_send_email.call_count, len(prisons) + 1)
+        for call in mock_send_email.call_args_list:
+            self.assertEqual(call.kwargs['personalisation']['count'], 3)
 
     def test_find_admins(self):
         command = Command()

@@ -1,9 +1,0 @@
-{% load i18n %}
-{% if names|length == 1 %}
-{% blocktrans trimmed with name=names.0 %}{{ name }} has requested access to the {{ service_name }}.{% endblocktrans %}
-{% else %}
-{% blocktrans trimmed with number=names|length %}{{ number }} users have requested access to the {{ service_name }}.{% endblocktrans %}
-{% endif %}
-{% blocktrans trimmed %}Log into the {{ service_name }} to approve or reject them{% endblocktrans %}:
-
-{{ login_url }}

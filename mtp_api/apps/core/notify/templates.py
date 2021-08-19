@@ -150,4 +150,22 @@ class ApiNotifyTemplates(NotifyTemplateRegistry):
                 'attachment',
             ],
         },
+
+        'api-new-account-requests': {
+            'subject': 'You have new ((service_name)) users to approve',
+            'body': textwrap.dedent("""
+                Dear staff member,
+
+                There are ((count)) users who have requested access to the ((service_name)).
+                Log in to approve or reject them:
+                ((login_url))
+
+                Kind regards,
+                Prisoner money team
+            """).strip(),
+            'personalisation': [
+                'count',
+                'service_name', 'login_url',
+            ],
+        },
     }
