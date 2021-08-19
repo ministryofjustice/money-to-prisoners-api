@@ -1,8 +1,0 @@
-{% load i18n %}
-{% blocktrans trimmed %}Your {{ service_name }} password has been entered incorrectly too many times so your account is temporarily locked.{% endblocktrans %}
-{% if login_url %}
-{% blocktrans trimmed %}After {{ lockout_period }} minutes, you can reset your password by going to the log-in page ({{ login_url }}) and clicking ‘Forgotten your password?’.{% endblocktrans %}
-{% else %}
-{% blocktrans trimmed %}After {{ lockout_period }} minutes, you can reset your password by going to the log-in page and clicking ‘Forgotten your password?’.{% endblocktrans %}
-{% endif %}
-{% trans 'If urgent, your business hub manager can unlock your account.' %}

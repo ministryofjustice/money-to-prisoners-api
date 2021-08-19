@@ -1757,6 +1757,7 @@ class UserApplicationValidationTestCase(AuthBaseTestCase):
         self.assertEqual(logins, Login.objects.count(), 'Login should not have been counted')
 
 
+@mock.patch('mtp_auth.models.send_email')
 class AccountLockoutTestCase(AuthBaseTestCase):
     def setUp(self):
         super().setUp()
@@ -1790,7 +1791,7 @@ class AccountLockoutTestCase(AuthBaseTestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         return response
 
-    def test_account_lockout_on_too_many_attempts(self):
+    def test_account_lockout_on_too_many_attempts(self, mock_send_email):
         prison_clerk = self.prison_clerks[0]
         cashbook_client = Application.objects.get(client_id=CASHBOOK_OAUTH_CLIENT_ID)
 
@@ -1803,8 +1804,9 @@ class AccountLockoutTestCase(AuthBaseTestCase):
         self.assertTrue(FailedLoginAttempt.objects.is_locked_out(prison_clerk, cashbook_client))
         response = self.fail_login(prison_clerk, cashbook_client)
         self.assertEqual(response.content, b'{"error": "locked_out"}')
+        self.assertEqual(mock_send_email.call_count, 1)
 
-    def test_account_lockout_on_too_many_attempts_without_case_sensitivity(self):
+    def test_account_lockout_on_too_many_attempts_without_case_sensitivity(self, mock_send_email):
         prison_clerk = self.prison_clerks[0]
         cashbook_client = Application.objects.get(client_id=CASHBOOK_OAUTH_CLIENT_ID)
 
@@ -1820,8 +1822,9 @@ class AccountLockoutTestCase(AuthBaseTestCase):
 
         self.assertTrue(FailedLoginAttempt.objects.is_locked_out(prison_clerk, cashbook_client))
         self.fail_login(prison_clerk, cashbook_client)
+        self.assertEqual(mock_send_email.call_count, 1)
 
-    def test_account_lockout_only_applies_for_a_period_of_time(self):
+    def test_account_lockout_only_applies_for_a_period_of_time(self, mock_send_email):
         prison_clerk = self.prison_clerks[0]
         cashbook_client = Application.objects.get(client_id=CASHBOOK_OAUTH_CLIENT_ID)
 
@@ -1836,8 +1839,9 @@ class AccountLockoutTestCase(AuthBaseTestCase):
             mocked_now.return_value = future
             self.assertFalse(FailedLoginAttempt.objects.is_locked_out(prison_clerk, cashbook_client))
             self.pass_login(prison_clerk, cashbook_client)
+        self.assertEqual(mock_send_email.call_count, 1)
 
-    def test_account_lockout_removed_on_successful_login(self):
+    def test_account_lockout_removed_on_successful_login(self, mock_send_email):
         if not settings.MTP_AUTH_LOCKOUT_COUNT:
             return
 
@@ -1855,8 +1859,9 @@ class AccountLockoutTestCase(AuthBaseTestCase):
             user=prison_clerk,
             application=cashbook_client,
         ).count(), 0)
+        self.assertEqual(mock_send_email.call_count, 0)
 
-    def test_account_lockout_only_applies_to_current_application(self):
+    def test_account_lockout_only_applies_to_current_application(self, mock_send_email):
         prison_clerk = self.prison_clerks[0]
         cashbook_client = Application.objects.get(client_id=CASHBOOK_OAUTH_CLIENT_ID)
         bank_admin_client = Application.objects.get(client_id=BANK_ADMIN_OAUTH_CLIENT_ID)
@@ -1870,8 +1875,9 @@ class AccountLockoutTestCase(AuthBaseTestCase):
         self.assertTrue(FailedLoginAttempt.objects.is_locked_out(prison_clerk, cashbook_client))
         self.assertTrue(FailedLoginAttempt.objects.is_locked_out(prison_clerk, bank_admin_client))
         self.assertFalse(FailedLoginAttempt.objects.is_locked_out(prison_clerk, prisoner_location_admin_client))
+        self.assertEqual(mock_send_email.call_count, 2)
 
-    def test_account_lockout_remains_if_successful_login_in_other_application(self):
+    def test_account_lockout_remains_if_successful_login_in_other_application(self, mock_send_email):
         prison_clerk = self.prison_clerks[0]
         cashbook_client = Application.objects.get(client_id=CASHBOOK_OAUTH_CLIENT_ID)
         bank_admin_client = Application.objects.get(client_id=BANK_ADMIN_OAUTH_CLIENT_ID)
@@ -1883,23 +1889,24 @@ class AccountLockoutTestCase(AuthBaseTestCase):
 
         self.assertTrue(FailedLoginAttempt.objects.is_locked_out(prison_clerk, bank_admin_client))
         self.assertFalse(FailedLoginAttempt.objects.is_locked_out(prison_clerk, cashbook_client))
+        self.assertEqual(mock_send_email.call_count, 1)
 
     @override_settings(ENVIRONMENT='prod')
-    def test_email_sent_when_account_locked(self):
+    def test_email_sent_when_account_locked(self, mock_send_email):
         prison_clerk = self.prison_clerks[0]
         cashbook_client = Application.objects.get(client_id=CASHBOOK_OAUTH_CLIENT_ID)
 
         for _ in range(settings.MTP_AUTH_LOCKOUT_COUNT - 1):
             self.fail_login(prison_clerk, cashbook_client)
-        self.assertEqual(len(mail.outbox), 0, msg='Email should not be sent')
+        self.assertEqual(mock_send_email.call_count, 0, msg='Email should not be sent')
         self.fail_login(prison_clerk, cashbook_client)
-        self.assertEqual(len(mail.outbox), 1, msg='Email should be sent')
+        self.assertEqual(mock_send_email.call_count, 1, msg='Email should be sent')
         for _ in range(settings.MTP_AUTH_LOCKOUT_COUNT):
             self.fail_login(prison_clerk, cashbook_client)
-        self.assertEqual(len(mail.outbox), 1, msg='Only one email should be sent')
+        self.assertEqual(mock_send_email.call_count, 1, msg='Only one email should be sent')
 
-        latest_email = mail.outbox[-1]
-        self.assertIn(cashbook_client.name.lower(), latest_email.body)
+        send_email_kwargs = mock_send_email.call_args_list[-1].kwargs
+        self.assertEqual(send_email_kwargs['personalisation']['service_name'], cashbook_client.name.lower())
 
 
 class ChangePasswordTestCase(AuthBaseTestCase):
@@ -1941,7 +1948,8 @@ class ChangePasswordTestCase(AuthBaseTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertTrue(self.user.check_password(self.current_password))
 
-    def test_account_lockout_on_too_many_attempts(self):
+    @mock.patch('mtp_auth.models.send_email')
+    def test_account_lockout_on_too_many_attempts(self, mock_send_email):
         cashbook_client = Application.objects.get(client_id=CASHBOOK_OAUTH_CLIENT_ID)
 
         for _ in range(settings.MTP_AUTH_LOCKOUT_COUNT):
@@ -1949,6 +1957,8 @@ class ChangePasswordTestCase(AuthBaseTestCase):
             self.incorrect_password_attempt()
 
         self.assertTrue(FailedLoginAttempt.objects.is_locked_out(self.user, cashbook_client))
+        self.assertEqual(mock_send_email.call_count, 1)
+
         response = self.correct_password_change('new_password')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertTrue(self.user.check_password(self.current_password))

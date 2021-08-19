@@ -168,4 +168,26 @@ class ApiNotifyTemplates(NotifyTemplateRegistry):
                 'service_name', 'login_url',
             ],
         },
+        'api-account-locked': {
+            'subject': 'Your ((service_name)) account is temporarily locked',
+            'body': textwrap.dedent("""
+                Dear ((name)),
+
+                Your ((service_name)) password has been entered incorrectly
+                too many times so your account is temporarily locked.
+
+                After ((lockout_period)) minutes, you can reset your password by
+                going to the log-in page and clicking ‘Forgotten your password?’.
+                ((login_url))
+
+                If urgent, your business hub manager can unlock your account.
+
+                Kind regards,
+                Prisoner money team
+            """).strip(),
+            'personalisation': [
+                'name', 'lockout_period',
+                'service_name', 'login_url',
+            ],
+        },
     }
