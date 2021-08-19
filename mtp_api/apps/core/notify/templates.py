@@ -190,4 +190,23 @@ class ApiNotifyTemplates(NotifyTemplateRegistry):
                 'service_name', 'login_url',
             ],
         },
+        'api-new-user': {
+            'subject': 'Your new ((service_name)) account is ready to use',
+            'body': textwrap.dedent("""
+                Dear ((name)),
+
+                Your new ((service_name)) account has been created for you.
+
+                Username: ((username))
+                Password: ((password))
+                You can now sign in at: ((login_url))
+
+                Kind regards,
+                Prisoner money team
+            """).strip(),
+            'personalisation': [
+                'name', 'username', 'password',
+                'service_name', 'login_url',
+            ],
+        },
     }
