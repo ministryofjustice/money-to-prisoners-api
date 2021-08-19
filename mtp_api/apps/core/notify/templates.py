@@ -103,4 +103,32 @@ class ApiNotifyTemplates(NotifyTemplateRegistry):
                 'settings_url', 'feedback_url',
             ],
         },
+
+        'api-notifications-report': {
+            'subject': 'Prisoner money notifications for ((period_description))',
+            'body': textwrap.dedent("""
+                OFFICIAL SENSITIVE
+
+                Use this link to download the prisoner money notifications report for ((period_description)).
+
+                ((attachment))
+
+                There is a separate sheet for each notification rule for credits and disbursements.
+
+                The ‘Monitored by’ column that appears in some sheets is the number of
+                users who are monitoring that prisoner or payment source.
+
+                The ‘How many?’ column that appears in some sheets is the
+                number that triggered the rule in column A. For example,
+                if the ‘How many?’ column says 4 for the rule ‘More than 2 credits
+                from the same debit card or bank account to any prisoner in a week’,
+                then this means that a specific debit card or bank account
+                sent 4 credits in a week up to when that credit was sent.
+
+                If you have any queries, contact the team at ((team_email)).
+            """).strip(),
+            'personalisation': [
+                'period_description', 'attachment', 'team_email',
+            ],
+        },
     }

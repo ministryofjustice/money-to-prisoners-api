@@ -2,14 +2,13 @@ import datetime
 import pathlib
 import tempfile
 
-from anymail.message import AnymailMessage
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.management import BaseCommand, CommandError
 from django.core.validators import validate_email
 from django.utils import timezone
 from django.utils.dateparse import parse_date
-from mtp_common.tasks import default_from_address
+from mtp_common.tasks import send_email
 from mtp_common.utils import format_currency
 import openpyxl
 from openpyxl.cell import WriteOnlyCell
@@ -154,32 +153,16 @@ def generate_sheet(worksheet, serialiser, rule, record_set):
 
 
 def send_report(period_description, report_path, emails):
-    email = AnymailMessage(
-        subject=f'Prisoner money notifications for {period_description}',
-        body=f"""
-OFFICIAL SENSITIVE
-
-Please find attached, the prisoner money notifications report for {period_description}.
-
-There is a separate sheet for each notification rule for credits and disbursements.
-
-The ‘Monitored by’ column that appears in some sheets is the number of users
-who are monitoring that prisoner or payment source.
-
-The ‘How many?’ column that appears in some sheets is the number that triggered
-the rule in column A. For example, if the ‘How many?’ column says 4 for the rule
-‘More than 2 credits from the same debit card or bank account to any prisoner in a week’,
-then this means that a specific debit card or bank account sent 4 credits in a week
-up to when that credit was sent.
-
-If you have any queries, contact the team at {settings.TEAM_EMAIL}.
-        """.strip(),
-        from_email=default_from_address(),
+    send_email(
+        template_name='api-notifications-report',
         to=emails,
-        tags=['notifications-report'],
+        personalisation={
+            'period_description': period_description,
+            'attachment': report_path.read_bytes(),
+            'team_email': settings.TEAM_EMAIL,
+        },
+        staff_email=True,
     )
-    email.attach_file(str(report_path), mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    email.send()
 
 
 class Serialiser:
