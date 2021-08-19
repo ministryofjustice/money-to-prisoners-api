@@ -3,14 +3,12 @@ import datetime
 import json
 import logging
 import random
-import re
 from unittest import mock
 from urllib.parse import urlencode
 
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.models import Group
-from django.core import mail
 from django.urls import reverse, reverse_lazy
 from django.test import override_settings
 from django.utils.timezone import now
@@ -2582,7 +2580,8 @@ class AccountRequestTestCase(AuthBaseTestCase):
             )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND, msg=response.content)
 
-    def test_decline_requests(self):
+    @mock.patch('mtp_auth.views.send_email')
+    def test_decline_requests(self, mock_send_email):
         admin = self.users['prison_clerk_uas'][0]
         role = Role.objects.get(name='prison-clerk')
         prison = admin.prisonusermapping.prisons.first()
@@ -2601,10 +2600,11 @@ class AccountRequestTestCase(AuthBaseTestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT, msg=response.content)
 
-        latest_email = mail.outbox[-1]
-        self.assertSequenceEqual(latest_email.to, ['mark@example.com'])
-        self.assertIn(role.application.name.lower(), latest_email.subject)
-        self.assertIn(role.application.name.lower(), latest_email.body)
+        self.assertEqual(mock_send_email.call_count, 1)
+        send_email_kwargs = mock_send_email.call_args_list[0].kwargs
+        self.assertEqual(send_email_kwargs['template_name'], 'api-account-request-denied')
+        self.assertEqual(send_email_kwargs['to'], 'mark@example.com')
+        self.assertEqual(send_email_kwargs['personalisation']['service_name'], role.application.name.lower())
 
         self.assertFalse(AccountRequest.objects.exists())
         self.assertEqual(User.objects.count(), user_count)

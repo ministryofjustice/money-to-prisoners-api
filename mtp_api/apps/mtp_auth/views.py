@@ -15,7 +15,6 @@ from django.http import Http404
 from django.utils import timezone
 from django.utils.dateformat import format as date_format
 from django.utils.decorators import method_decorator
-from django.utils.text import capfirst
 from django.utils.translation import gettext, gettext_lazy as _
 from django.views.decorators.debug import sensitive_post_parameters, sensitive_variables
 import django_filters
@@ -509,15 +508,13 @@ class AccountRequestViewSet(viewsets.ModelViewSet):
         return Response({})
 
     def perform_destroy(self, instance):
-        context = {
-            'service_name': instance.role.application.name.lower(),
-        }
         send_email(
-            instance.email, 'mtp_auth/account_request_denied.txt',
-            capfirst(gettext('Account access for %(service_name)s was denied') % context),
-            context=context,
-            html_template='mtp_auth/account_request_denied.html',
-            anymail_tags=['account-request-denied'],
+            template_name='api-account-request-denied',
+            to=instance.email,
+            personalisation={
+                'service_name': instance.role.application.name.lower(),
+            },
+            staff_email=True,
         )
         LogEntry.objects.log_action(
             user_id=self.request.user.pk,

@@ -257,4 +257,13 @@ class ApiNotifyTemplates(NotifyTemplateRegistry):
                 'service_name', 'login_url',
             ],
         },
+        'api-account-request-denied': {
+            'subject': 'Account access for ((service_name)) was denied',
+            'body': textwrap.dedent("""
+                Your request to access ((service_name)) was denied.
+            """).strip(),
+            'personalisation': [
+                'service_name',
+            ],
+        },
     }
