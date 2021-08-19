@@ -1,11 +1,10 @@
-from urllib.parse import urlencode
-
 from django.conf import settings
 from django.core.management import BaseCommand
-from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
+from django.utils.dateformat import format as format_date
 from mtp_common.tasks import send_email
 
+from core.notify.templates import ApiNotifyTemplates
 from notification.constants import EMAIL_FREQUENCY
 from notification.models import Event, EmailNotificationPreferences
 from notification.rules import ENABLED_RULE_CODES
@@ -21,19 +20,11 @@ class Command(BaseCommand):
         period_start, period_end = get_notification_period(frequency)
         events = get_events(period_start, period_end)
 
-        campaign_qs = urlencode({
-            'utm_source': 'notifications',
-            'utm_medium': 'email',
-            'utm_campaign': 'notifications',
-        })
         base_email_context = {
-            'campaign_qs': campaign_qs,
-            'period_start': period_start,
+            'date': format_date(period_start, 'd/m/Y'),
             'notifications_url': (
                 f'{settings.NOMS_OPS_URL}/security/notifications/#date-{period_start.date().isoformat()}'
             ),
-            'sender_url': f'{settings.NOMS_OPS_URL}/security/senders/',
-            'prisoner_url': f'{settings.NOMS_OPS_URL}/security/prisoners/',
             'settings_url': f'{settings.NOMS_OPS_URL}/settings/',
             'feedback_url': f'{settings.NOMS_OPS_URL}/feedback/',
             'staff_email': True,
@@ -56,18 +47,20 @@ class Command(BaseCommand):
                 base_email_context,
                 user=user,
                 event_group=event_group,
+                name=user.get_full_name(),
+                count=event_group['transaction_count'],
             )
             email_sent = False
             if emails_started and has_notifications:
-                send_email_with_events(email_context)
+                send_email_with_events('api-intel-notification-daily', email_context)
                 email_sent = True
             elif not emails_started:
                 if has_notifications:
-                    send_first_email_with_events(email_context)
+                    send_email_with_events('api-intel-notification-first', email_context)
                     user.flags.create(name=EMAILS_STARTED_FLAG)
                     email_sent = True
                 elif not is_monitoring:
-                    send_first_email_not_monitoring(email_context)
+                    send_email_with_events('api-intel-notification-not-monitoring', email_context)
                     user.flags.create(name=EMAILS_STARTED_FLAG)
                     email_sent = True
             if email_sent:
@@ -171,31 +164,27 @@ def summarise_group(event_group):
     }
 
 
-def send_email_with_events(email_context):
+def send_email_with_events(template_name, email_context):
+    notifications_text = ''
+    if email_context['event_group'].get('senders'):
+        senders = email_context['event_group']['senders']
+        notifications_text += '\n* Payment sources *\n'
+        for profile in senders:
+            notifications_text += f"{profile['description']} – {profile['transaction_count']} transactions\n"
+    if email_context['event_group'].get('prisoners'):
+        prisoners = email_context['event_group']['prisoners']
+        notifications_text += '\n* Prisoners *\n'
+        for profile in prisoners:
+            notifications_text += f"{profile['description']} – {profile['transaction_count']} transactions\n"
+    email_context['notifications_text'] = notifications_text.strip()
+
+    personalisation = {
+        field: email_context[field]
+        for field in ApiNotifyTemplates.templates[template_name]['personalisation']
+    }
     send_email(
-        email_context['user'].email, 'notification/notifications.txt',
-        _('Your new intelligence tool notifications'),
-        context=email_context,
-        html_template='notification/notifications.html',
-        anymail_tags=['intel-notification', 'intel-notification-daily'],
-    )
-
-
-def send_first_email_with_events(email_context):
-    send_email(
-        email_context['user'].email, 'notification/notifications-first.txt',
-        _('New notification feature added to intelligence tool'),
-        context=email_context,
-        html_template='notification/notifications-first.html',
-        anymail_tags=['intel-notification', 'intel-notification-first'],
-    )
-
-
-def send_first_email_not_monitoring(email_context):
-    send_email(
-        email_context['user'].email, 'notification/not-monitoring.txt',
-        _('New helpful ways to get the best from the intelligence tool'),
-        context=email_context,
-        html_template='notification/not-monitoring.html',
-        anymail_tags=['intel-notification', 'intel-notification-not-monitoring'],
+        template_name=template_name,
+        to=email_context['user'].email,
+        personalisation=personalisation,
+        staff_email=True,
     )
