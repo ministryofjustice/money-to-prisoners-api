@@ -7,7 +7,6 @@ import os
 import unittest
 from unittest import mock
 
-from django.core import mail
 from django.core.management import call_command
 from faker import Faker
 
@@ -294,25 +293,24 @@ class CreatePrisonerNoticesTestCase(NoticesCommandTestCase):
         )
 
 
+@mock.patch('credit.management.commands.send_prisoner_credit_notices.send_email')
+@mock.patch('credit.management.commands.create_prisoner_credit_notices.nomis_get_location')
 class SendPrisonerCreditNoticeTestCase(NoticesCommandTestCase):
-    @mock.patch('credit.management.commands.create_prisoner_credit_notices.nomis_get_location')
-    def test_no_emails_sent_if_prisons_have_addresses(self, nomis_get_location):
+    def test_no_emails_sent_if_prisons_have_addresses(self, nomis_get_location, mock_send_email):
         nomis_get_location.side_effect = NotImplementedError
         with open(os.devnull, 'w') as devnull, contextlib.redirect_stderr(devnull):
             call_command('send_prisoner_credit_notices', verbosity=0)
-        self.assertEqual(len(mail.outbox), 0)
+        mock_send_email.assert_not_called()
 
-    @mock.patch('credit.management.commands.create_prisoner_credit_notices.nomis_get_location')
-    def test_nothing_credited_sends_no_email(self, nomis_get_location):
+    def test_nothing_credited_sends_no_email(self, nomis_get_location, mock_send_email):
         nomis_get_location.side_effect = NotImplementedError
         self.assign_email_addresses()
         Credit.objects.credited().delete()
         Disbursement.objects.sent().delete()
         call_command('send_prisoner_credit_notices', verbosity=0)
-        self.assertEqual(len(mail.outbox), 0)
+        mock_send_email.assert_not_called()
 
-    @mock.patch('credit.management.commands.create_prisoner_credit_notices.nomis_get_location')
-    def test_one_email_per_prison(self, nomis_get_location):
+    def test_one_email_per_prison(self, nomis_get_location, mock_send_email):
         nomis_get_location.return_value = None
         self.assign_email_addresses()
         Disbursement.objects.sent().delete()
@@ -324,4 +322,4 @@ class SendPrisonerCreditNoticeTestCase(NoticesCommandTestCase):
         )
         prison_set = {credited_log.credit.prison_id for credited_log in credited_logs}
         call_command('send_prisoner_credit_notices', date=latest.strftime('%Y-%m-%d'), verbosity=0)
-        self.assertEqual(len(mail.outbox), len(prison_set))
+        self.assertEqual(len(mock_send_email.call_args_list), len(prison_set))

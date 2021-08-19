@@ -131,4 +131,23 @@ class ApiNotifyTemplates(NotifyTemplateRegistry):
                 'period_description', 'attachment', 'team_email',
             ],
         },
+
+        'api-prisoner-notice-email': {
+            'subject': 'These prisoners’ accounts have been credited',
+            'body': textwrap.dedent("""
+                Dear staff member,
+
+                Use this link to download the credit slips for prisoners whose accounts
+                have recently been digitally credited.
+                ((attachment))
+
+                Please print them out and deliver them confidentially to individuals’ cells.
+
+                Kind regards,
+                Prisoner money team
+            """).strip(),
+            'personalisation': [
+                'attachment',
+            ],
+        },
     }
