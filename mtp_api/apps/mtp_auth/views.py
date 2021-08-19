@@ -313,7 +313,7 @@ class ResetPasswordView(generics.GenericAPIView):
             if not user.email:
                 return self.failure_response('no_email', field='username')
 
-            service_name = gettext('Prisoner Money').lower()
+            service_name = 'prisoner money'
             if serializer.validated_data.get('create_password'):
                 change_request, _ = PasswordChangeRequest.objects.get_or_create(user=user)
                 change_password_url = urlsplit(
@@ -327,16 +327,13 @@ class ResetPasswordView(generics.GenericAPIView):
                 change_password_url[3] = urlencode(query)
                 change_password_url = urlunsplit(change_password_url)
                 send_email(
-                    user.email, 'mtp_auth/create_new_password.txt',
-                    capfirst(gettext('Create a new %(service_name)s password') % {
-                        'service_name': service_name,
-                    }),
-                    context={
+                    template_name='api-new-password',
+                    to=user.email,
+                    personalisation={
                         'service_name': service_name,
                         'change_password_url': change_password_url,
                     },
-                    html_template='mtp_auth/create_new_password.html',
-                    anymail_tags=['new-password'],
+                    staff_email=True,
                 )
                 return Response(status=status.HTTP_204_NO_CONTENT)
             else:
@@ -349,17 +346,14 @@ class ResetPasswordView(generics.GenericAPIView):
                 user.save()
 
                 send_email(
-                    user.email, 'mtp_auth/reset_password.txt',
-                    capfirst(gettext('Your new %(service_name)s password') % {
-                        'service_name': service_name,
-                    }),
-                    context={
+                    template_name='api-reset-password',
+                    to=user.email,
+                    personalisation={
                         'service_name': service_name,
                         'username': user.username,
                         'password': password,
                     },
-                    html_template='mtp_auth/reset_password.html',
-                    anymail_tags=['reset-password'],
+                    staff_email=True,
                 )
 
                 return Response(status=status.HTTP_204_NO_CONTENT)

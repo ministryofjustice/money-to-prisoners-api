@@ -209,4 +209,33 @@ class ApiNotifyTemplates(NotifyTemplateRegistry):
                 'service_name', 'login_url',
             ],
         },
+        'api-new-password': {
+            'subject': 'Create a new ((service_name)) password',
+            'body': textwrap.dedent("""
+                Open the link below into your browser address bar to create your new ((service_name)) password.
+                ((change_password_url))
+
+                Kind regards,
+                Prisoner money team
+            """).strip(),
+            'personalisation': [
+                'service_name', 'change_password_url',
+            ],
+        },
+        'api-reset-password': {
+            'subject': 'Your new ((service_name)) password',
+            'body': textwrap.dedent("""
+                Your new ((service_name)) password has been created for you.
+
+                Username: ((username))
+                Password: ((password))
+
+                Kind regards,
+                Prisoner money team
+            """).strip(),
+            'personalisation': [
+                'username', 'password',
+                'service_name',
+            ],
+        },
     }

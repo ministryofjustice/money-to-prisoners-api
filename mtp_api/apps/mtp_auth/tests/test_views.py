@@ -1994,6 +1994,7 @@ class ChangePasswordTestCase(AuthBaseTestCase):
         ).count(), 0)
 
 
+@mock.patch('mtp_auth.views.send_email')
 class ResetPasswordTestCase(AuthBaseTestCase):
     reset_url = reverse_lazy('user-reset-password')
 
@@ -2004,7 +2005,7 @@ class ResetPasswordTestCase(AuthBaseTestCase):
         self.user.set_password(self.current_password)
         self.user.save()
 
-    def assertErrorResponse(self, response, error_dict):  # noqa: N802
+    def assertErrorResponse(self, mock_send_email, response, error_dict):  # noqa: N802
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         error = json.loads(response.content.decode('utf-8')).get('errors', {})
         for key, value in error_dict.items():
@@ -2015,14 +2016,15 @@ class ResetPasswordTestCase(AuthBaseTestCase):
                          msg='Cannot log in with old password')
         self.assertEqual(PasswordChangeRequest.objects.all().count(), 0,
                          msg='Password change request should not be created')
+        mock_send_email.assert_not_called()
 
-    def test_unknown_user(self):
+    def test_unknown_user(self, mock_send_email):
         response = self.client.post(self.reset_url, {'username': 'unknown'})
-        self.assertErrorResponse(response, {
+        self.assertErrorResponse(mock_send_email, response, {
             'username': [ResetPasswordView.error_messages['not_found']],
         })
 
-    def test_incorrect_username(self):
+    def test_incorrect_username(self, mock_send_email):
         username = self.user.username
         if '-' in username:
             username = username.replace('-', '_')
@@ -2031,49 +2033,49 @@ class ResetPasswordTestCase(AuthBaseTestCase):
         else:
             username += '_'
         response = self.client.post(self.reset_url, {'username': username})
-        self.assertErrorResponse(response, {
+        self.assertErrorResponse(mock_send_email, response, {
             'username': [ResetPasswordView.error_messages['not_found']],
         })
 
-    def test_unable_to_reset_immutable_user(self):
+    def test_unable_to_reset_immutable_user(self, mock_send_email):
         username = 'send-money'
         try:
             User.objects.get(username=username)
         except User.DoesNotExist:
             self.fail()
         response = self.client.post(self.reset_url, {'username': username})
-        self.assertErrorResponse(response, {
+        self.assertErrorResponse(mock_send_email, response, {
             'username': [ResetPasswordView.error_messages['not_found']],
         })
 
-    def test_user_with_no_email(self):
+    def test_user_with_no_email(self, mock_send_email):
         self.user.email = ''
         self.user.save()
         response = self.client.post(self.reset_url, {'username': self.user.username})
-        self.assertErrorResponse(response, {
+        self.assertErrorResponse(mock_send_email, response, {
             'username': [ResetPasswordView.error_messages['no_email']],
         })
 
-    def test_user_with_non_unique_email(self):
+    def test_user_with_non_unique_email(self, mock_send_email):
         other_user = User.objects.exclude(pk=self.user.pk).first()
         self.user.email = other_user.email.title()
         self.user.save()
         response = self.client.post(self.reset_url, {'username': self.user.email})
-        self.assertErrorResponse(response, {
+        self.assertErrorResponse(mock_send_email, response, {
             'username': [ResetPasswordView.error_messages['multiple_found']],
         })
 
-    def test_locked_user(self):
+    def test_locked_user(self, mock_send_email):
         app = Application.objects.first()
         for _ in range(settings.MTP_AUTH_LOCKOUT_COUNT):
             FailedLoginAttempt.objects.create(user=self.user, application=app)
         response = self.client.post(self.reset_url, {'username': self.user.username})
-        self.assertErrorResponse(response, {
+        self.assertErrorResponse(mock_send_email, response, {
             'username': [ResetPasswordView.error_messages['locked_out']],
         })
 
     @override_settings(ENVIRONMENT='prod')
-    def assertPasswordReset(self, username):  # noqa: N802
+    def assertPasswordReset(self, mock_send_email, username):  # noqa: N802
         response = self.client.post(self.reset_url, {'username': username})
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         user = authenticate(username=self.user.username, password=self.current_password)
@@ -2082,30 +2084,29 @@ class ResetPasswordTestCase(AuthBaseTestCase):
         self.assertEqual(PasswordChangeRequest.objects.all().count(), 0,
                          msg='Password change request should not be created')
 
-        latest_email = mail.outbox[-1]
-        self.assertIn(self.user.username, latest_email.body)
-        self.assertNotIn(self.current_password, latest_email.body)
-        password_match = re.search(r'Password: (?P<password>[^\n]+)', latest_email.body)
-        self.assertTrue(password_match, msg='Cannot find new password in email')
-        user = authenticate(username=self.user.username,
-                            password=password_match.group('password'))
+        self.assertEqual(mock_send_email.call_count, 1)
+        send_email_kwargs = mock_send_email.call_args_list[0].kwargs
+        self.assertEqual(send_email_kwargs['personalisation']['username'], self.user.username)
+        self.assertNotIn(self.current_password, send_email_kwargs['personalisation'].values())
+        password = send_email_kwargs['personalisation']['password']
+        user = authenticate(username=self.user.username, password=password)
         self.assertEqual(self.user.username, getattr(user, 'username', None),
                          msg='Cannot log in with new password')
 
-    def test_password_reset_by_username(self):
-        self.assertPasswordReset(self.user.username)
+    def test_password_reset_by_username(self, mock_send_email):
+        self.assertPasswordReset(mock_send_email, self.user.username)
 
-    def test_password_reset_by_username_case_insensitive(self):
-        self.assertPasswordReset(self.user.username.swapcase())
+    def test_password_reset_by_username_case_insensitive(self, mock_send_email):
+        self.assertPasswordReset(mock_send_email, self.user.username.swapcase())
 
-    def test_password_reset_by_email(self):
-        self.assertPasswordReset(self.user.email)
+    def test_password_reset_by_email(self, mock_send_email):
+        self.assertPasswordReset(mock_send_email, self.user.email)
 
-    def test_password_reset_by_email_case_insensitive(self):
-        self.assertPasswordReset(self.user.email.title())
+    def test_password_reset_by_email_case_insensitive(self, mock_send_email):
+        self.assertPasswordReset(mock_send_email, self.user.email.title())
 
     @override_settings(ENVIRONMENT='prod')
-    def test_create_password_change_request(self):
+    def test_create_password_change_request(self, mock_send_email):
         response = self.client.post(self.reset_url, {
             'username': self.user.username,
             'create_password': {
@@ -2119,11 +2120,11 @@ class ResetPasswordTestCase(AuthBaseTestCase):
                          msg='Cannot log in with old password')
 
         self.assertEqual(PasswordChangeRequest.objects.all().count(), 1)
-        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mock_send_email.call_count, 1)
         change_request = PasswordChangeRequest.objects.all().first()
-        self.assertTrue(
-            'http://localhost/path?reset_code=%s' % str(change_request.code) in
-            mail.outbox[-1].body
+        self.assertEqual(
+            mock_send_email.call_args_list[0].kwargs['personalisation']['change_password_url'],
+            f'http://localhost/path?reset_code={change_request.code}',
         )
 
 
@@ -2142,7 +2143,8 @@ class ChangePasswordWithCodeTestCase(AuthBaseTestCase):
     def get_change_url(self, code):
         return reverse_lazy('user-change-password-with-code', kwargs={'code': code})
 
-    def test_password_change_with_code(self):
+    @mock.patch('mtp_auth.views.send_email')
+    def test_password_change_with_code(self, mock_send_email):
         response = self.client.post(self.reset_url, {
             'username': self.user.username,
             'create_password': {
@@ -2151,6 +2153,7 @@ class ChangePasswordWithCodeTestCase(AuthBaseTestCase):
             }
         }, format='json')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(mock_send_email.call_count, 1)
 
         code = PasswordChangeRequest.objects.all().first().code
         response = self.client.post(
@@ -2165,7 +2168,8 @@ class ChangePasswordWithCodeTestCase(AuthBaseTestCase):
         self.assertEqual(self.user.username, getattr(user, 'username', None),
                          msg='Cannot log in with new password')
 
-    def test_password_change_fails_with_incorrect_code(self):
+    @mock.patch('mtp_auth.views.send_email')
+    def test_password_change_fails_with_incorrect_code(self, mock_send_email):
         self.client.post(self.reset_url, {
             'username': self.user.username,
             'create_password': {
@@ -2178,6 +2182,7 @@ class ChangePasswordWithCodeTestCase(AuthBaseTestCase):
             {'new_password': self.new_password}
         )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(mock_send_email.call_count, 1)
 
         user = authenticate(username=self.user.username, password=self.current_password)
         self.assertEqual(self.user.username, getattr(user, 'username', None),
