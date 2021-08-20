@@ -38,12 +38,7 @@ class Command(BaseCommand):
             prison = Prison.objects.get(pk=prison)
         except Prison.DoesNotExist:
             raise CommandError('Prison does not exist', {'prison_nomis_id', prison})
-        if date:
-            date = parse_date(date)
-            if not date:
-                raise CommandError('Date cannot be parsed, use YYYY-MM-DD format', {'date_string': date})
-        else:
-            date = now().date() - datetime.timedelta(days=1)
+        date = parsed_date_or_yesterday(date)
         date_range = (make_aware(datetime.datetime.combine(date, datetime.time.min)),
                       make_aware(datetime.datetime.combine(date, datetime.time.max)))
 
@@ -83,7 +78,7 @@ class Command(BaseCommand):
             disbursements_list = prisoner_updates[prisoner_number]['disbursements']
             disbursements_list = sorted(disbursements_list, key=lambda disbursement: disbursement.modified)
             prisoner_name = (credits_list or disbursements_list)[0].prisoner_name
-            location = self.get_housing(prisoner_number)
+            location = get_housing(prisoner_number)
             prisoners.append((
                 prisoner_name,
                 prisoner_number,
@@ -97,10 +92,21 @@ class Command(BaseCommand):
         bundle = PrisonerCreditNoticeBundle(prison.name, prisoners, date)
         bundle.render(str(path))
 
-    def get_housing(self, prisoner_number):
-        if not can_access_nomis():
-            return
-        try:
-            return nomis_get_location(prisoner_number, retries=2)['housing_location']
-        except (TypeError, KeyError, ValueError, requests.RequestException):
-            return
+
+def parsed_date_or_yesterday(date) -> datetime.date:
+    if date:
+        date = parse_date(date)
+        if not date:
+            raise CommandError('Date cannot be parsed, use YYYY-MM-DD format', {'date_string': date})
+    else:
+        date = now().date() - datetime.timedelta(days=1)
+    return date
+
+
+def get_housing(prisoner_number):
+    if not can_access_nomis():
+        return
+    try:
+        return nomis_get_location(prisoner_number, retries=2)['housing_location']
+    except (TypeError, KeyError, ValueError, requests.RequestException):
+        return

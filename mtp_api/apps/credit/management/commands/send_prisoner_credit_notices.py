@@ -5,6 +5,7 @@ import tempfile
 from django.core.management import BaseCommand, call_command
 from mtp_common.tasks import send_email
 
+from credit.management.commands.create_prisoner_credit_notices import parsed_date_or_yesterday
 from prison.models import PrisonerCreditNoticeEmail
 
 
@@ -52,6 +53,7 @@ class Command(BaseCommand):
             path, credit_notice_email.prison.nomis_id,
             date=date, **options
         )
+        date_reference = parsed_date_or_yesterday(date).strftime('%Y-%m-%d')
         if not path.exists():
             if self.verbosity:
                 self.stdout.write('Nothing to send to %s' % credit_notice_email)
@@ -65,5 +67,6 @@ class Command(BaseCommand):
             personalisation={
                 'attachment': path.read_bytes(),
             },
+            reference=f'credit-notices-{date_reference}-{credit_notice_email.prison.nomis_id}',
             staff_email=True,
         )

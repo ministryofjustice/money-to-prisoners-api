@@ -322,4 +322,11 @@ class SendPrisonerCreditNoticeTestCase(NoticesCommandTestCase):
         )
         prison_set = {credited_log.credit.prison_id for credited_log in credited_logs}
         call_command('send_prisoner_credit_notices', date=latest.strftime('%Y-%m-%d'), verbosity=0)
-        self.assertEqual(len(mock_send_email.call_args_list), len(prison_set))
+        self.assertEqual(mock_send_email.call_count, len(prison_set))
+        self.assertSetEqual(
+            {
+                call.kwargs['reference'].rsplit('-')[-1]
+                for call in mock_send_email.call_args_list
+            },
+            prison_set,
+        )
