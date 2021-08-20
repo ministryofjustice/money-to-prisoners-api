@@ -3,7 +3,7 @@ import io
 from unittest import mock
 
 from django.core.management import CommandError, call_command
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from django.utils import timezone
 from model_mommy import mommy
 import openpyxl
@@ -56,7 +56,6 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
         )
         generate_disbursements(disbursement_batch=20, days_of_history=1)
 
-    @override_settings(ENVIRONMENT='prod')
     def test_does_not_send_email_notifications_for_no_events(self, mock_send_email):
         user = self.security_staff[0]
         user.flags.create(name=EMAILS_STARTED_FLAG)
@@ -67,7 +66,6 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
         mock_send_email.assert_not_called()
         self.assertIsNone(EmailNotificationPreferences.objects.get(user=user).last_sent_at)
 
-    @override_settings(ENVIRONMENT='prod')
     def test_does_not_send_email_notifications_for_no_monitoring(self, mock_send_email):
         user = self.security_staff[0]
         user.flags.create(name=EMAILS_STARTED_FLAG)
@@ -79,7 +77,6 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
         mock_send_email.assert_not_called()
         self.assertIsNone(EmailNotificationPreferences.objects.get(user=user).last_sent_at)
 
-    @override_settings(ENVIRONMENT='prod')
     def test_sends_first_email_not_monitoring(self, mock_send_email):
         user = self.security_staff[0]
         EmailNotificationPreferences(user=user, frequency=EMAIL_FREQUENCY.DAILY).save()
@@ -92,7 +89,6 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
         self.assertTrue(user.flags.filter(name=EMAILS_STARTED_FLAG).exists())
         self.assertIsNotNone(EmailNotificationPreferences.objects.get(user=user).last_sent_at)
 
-    @override_settings(ENVIRONMENT='prod')
     def test_sends_first_email_with_events(self, mock_send_email):
         user = self.security_staff[0]
         EmailNotificationPreferences(user=user, frequency=EMAIL_FREQUENCY.DAILY).save()
@@ -112,7 +108,6 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
         self.assertEqual(send_email_kwargs['personalisation']['count'], transaction_count)
         self.assertIsNotNone(EmailNotificationPreferences.objects.get(user=user).last_sent_at)
 
-    @override_settings(ENVIRONMENT='prod')
     def test_sends_subsequent_email_with_events(self, mock_send_email):
         user = self.security_staff[0]
         user.flags.create(name=EMAILS_STARTED_FLAG)
@@ -196,7 +191,6 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
 
         mock_send_email.assert_not_called()
 
-    @override_settings(ENVIRONMENT='prod')
     @mock.patch('notification.management.commands.send_notification_emails.timezone')
     def test_does_not_send_email_if_already_sent_today(self, mock_timezone, mock_send_email):
         today_now = timezone.now()
@@ -233,7 +227,6 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
         self.assertEqual(len(mock_send_email.call_args_list), 2)
 
 
-@override_settings(ENVIRONMENT='prod')
 @mock.patch('notification.management.commands.send_notification_report.send_email')
 class SendNotificationReportTestCase(NotificationBaseTestCase):
     def make_2days_of_random_models(self):

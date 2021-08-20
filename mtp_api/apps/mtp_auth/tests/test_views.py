@@ -10,7 +10,6 @@ from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.models import Group
 from django.urls import reverse, reverse_lazy
-from django.test import override_settings
 from django.utils.timezone import now
 from model_mommy import mommy
 from mtp_common.test_utils import silence_logger
@@ -793,7 +792,6 @@ class CreateUserTestCase(AuthBaseTestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(User.objects.filter(username=user_data['username']).count(), 0)
 
-    @override_settings(ENVIRONMENT='prod')
     def assertUserCreated(  # noqa: N802
         self, mock_send_email,
         requester, user_data, client_id, groups, target_client_id=None, expected_login_link=None,
@@ -1901,7 +1899,6 @@ class AccountLockoutTestCase(AuthBaseTestCase):
         self.assertFalse(FailedLoginAttempt.objects.is_locked_out(prison_clerk, cashbook_client))
         self.assertEqual(mock_send_email.call_count, 1)
 
-    @override_settings(ENVIRONMENT='prod')
     def test_email_sent_when_account_locked(self, mock_send_email):
         prison_clerk = self.prison_clerks[0]
         cashbook_client = Application.objects.get(client_id=CASHBOOK_OAUTH_CLIENT_ID)
@@ -2072,7 +2069,6 @@ class ResetPasswordTestCase(AuthBaseTestCase):
             'username': [ResetPasswordView.error_messages['locked_out']],
         })
 
-    @override_settings(ENVIRONMENT='prod')
     def assertPasswordReset(self, mock_send_email, username):  # noqa: N802
         response = self.client.post(self.reset_url, {'username': username})
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
@@ -2103,7 +2099,6 @@ class ResetPasswordTestCase(AuthBaseTestCase):
     def test_password_reset_by_email_case_insensitive(self, mock_send_email):
         self.assertPasswordReset(mock_send_email, self.user.email.title())
 
-    @override_settings(ENVIRONMENT='prod')
     def test_create_password_change_request(self, mock_send_email):
         response = self.client.post(self.reset_url, {
             'username': self.user.username,
