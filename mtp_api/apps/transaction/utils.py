@@ -16,7 +16,7 @@ def format_currency_truncated(amount_pence, truncate_above):
     if pounds >= truncate_above:
         if pounds >= 1000000:
             text_amount = '{:0,.1f}m'.format(pounds / 1000000)
-        if pounds >= 1000:
+        elif pounds >= 1000:
             text_amount = '{:0,.1f}k'.format(pounds / 1000)
     else:
         text_amount = '{:0,.2f}'.format(pounds)
@@ -37,9 +37,9 @@ def format_number(value, truncate_after=None):
     """
     if truncate_after is not None and value > truncate_after:
         if value >= 1000000:
-            return '{:,}m'.format(value / 1000000)
+            return '{:0,.1f}m'.format(value / 1000000)
         if value >= 1000:
-            return '{:,}k'.format(value / 1000)
+            return '{:0,.1f}k'.format(value / 1000)
     return '{:,}'.format(value)
 
 
