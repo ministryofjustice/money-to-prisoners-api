@@ -193,10 +193,8 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
 
     @mock.patch('notification.management.commands.send_notification_emails.timezone')
     def test_does_not_send_email_if_already_sent_today(self, mock_timezone, mock_send_email):
-        today_now = timezone.now()
-        today_date = today_now.date()
-        yesterday_now = today_now - datetime.timedelta(days=1)
-        yesterday_date = yesterday_now.date()
+        today_date = timezone.localdate()
+        yesterday_date = today_date - datetime.timedelta(days=1)
 
         user = self.security_staff[0]
         user.flags.create(name=EMAILS_STARTED_FLAG)
@@ -209,7 +207,7 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
         self.assertTrue(Event.objects.filter(triggered_at__date=today_date).exists())
 
         # pretend it's yesterday
-        mock_timezone.now.return_value = yesterday_now
+        mock_timezone.localdate.return_value = yesterday_date
         call_command('send_notification_emails')
         self.assertEqual(len(mock_send_email.call_args_list), 1)
         self.assertEqual(EmailNotificationPreferences.objects.get(user=user).last_sent_at, yesterday_date)
@@ -218,7 +216,7 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
         self.assertEqual(len(mock_send_email.call_args_list), 1)
 
         # now check today
-        mock_timezone.now.return_value = today_now
+        mock_timezone.localdate.return_value = today_date
         call_command('send_notification_emails')
         self.assertEqual(len(mock_send_email.call_args_list), 2)
         self.assertEqual(EmailNotificationPreferences.objects.get(user=user).last_sent_at, today_date)

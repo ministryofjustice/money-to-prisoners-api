@@ -4,7 +4,7 @@ import pathlib
 
 from django.core.management import BaseCommand, CommandError
 from django.utils.dateparse import parse_date
-from django.utils.timezone import make_aware, now
+from django.utils.timezone import localdate, make_aware
 from mtp_common.nomis import can_access_nomis, get_location as nomis_get_location
 import requests
 
@@ -99,7 +99,7 @@ def parsed_date_or_yesterday(date) -> datetime.date:
         if not date:
             raise CommandError('Date cannot be parsed, use YYYY-MM-DD format', {'date_string': date})
     else:
-        date = now().date() - datetime.timedelta(days=1)
+        date = localdate() - datetime.timedelta(days=1)
     return date
 
 

@@ -76,7 +76,7 @@ def report_period(period_start, period_end):
             raise CommandError('Cannot parse `--until`')
         period_end = make_local_datetime(period_end)
 
-    today = make_local_datetime(timezone.now())
+    today = make_local_datetime(timezone.localtime())
     if not period_start and not period_end:
         # default is "last week"
         period_end = today - datetime.timedelta(days=today.weekday())

@@ -30,7 +30,7 @@ class Command(BaseCommand):
             'staff_email': True,
         }
 
-        today = timezone.now().date()
+        today = timezone.localdate()
         preferences = EmailNotificationPreferences.objects.filter(frequency=frequency).exclude(last_sent_at=today)
         for preference in preferences:
             user = preference.user

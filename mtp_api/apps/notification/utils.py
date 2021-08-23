@@ -11,7 +11,7 @@ def get_notification_period(email_frequency):
     NB: only DAILY is currently supported in noms-ops and email-sending management command
     """
     today = timezone.make_aware(
-        datetime.combine(timezone.now(), time.min)
+        datetime.combine(timezone.localdate(), time.min)
     )
     if email_frequency == EMAIL_FREQUENCY.DAILY:
         return today - timedelta(days=1), today
