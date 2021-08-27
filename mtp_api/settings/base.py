@@ -197,6 +197,7 @@ CACHES = {
 GOVUK_NOTIFY_API_KEY = os.environ.get('GOVUK_NOTIFY_API_KEY', '')
 GOVUK_NOTIFY_REPLY_TO_PUBLIC = os.environ.get('GOVUK_NOTIFY_REPLY_TO_PUBLIC', '')
 GOVUK_NOTIFY_REPLY_TO_STAFF = os.environ.get('GOVUK_NOTIFY_REPLY_TO_STAFF', '')
+GOVUK_NOTIFY_BLOCKED_DOMAINS = set(os.environ.get('GOVUK_NOTIFY_BLOCKED_DOMAINS', '').split())
 # install GOV.UK Notify fallback for emails accidentally sent using Django's email functionality:
 EMAIL_BACKEND = 'mtp_common.notify.email_backend.NotifyEmailBackend'
 
