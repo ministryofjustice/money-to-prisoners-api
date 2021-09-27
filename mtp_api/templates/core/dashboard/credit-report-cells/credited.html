@@ -1,4 +1,5 @@
 {% load i18n %}
+{% load mtp_common %}
 {% load credit %}
 
 <td>
@@ -7,7 +8,7 @@
       <strong>
         <span class="credit-stat--valign">
           {{ dashboard_module.creditable_count|format_number }}
-          <sub class="credit-stat--quiet">{{ dashboard_module.creditable_amount|format_amount }}</sub>
+          <sub class="credit-stat--quiet">{{ dashboard_module.creditable_amount|currency }}</sub>
         </span>
       </strong>
       {% trans 'Credited' %}
@@ -17,7 +18,7 @@
         ／
         <span class="credit-stat--valign">
           {{ dashboard_module.creditable_count|format_number }}
-          <sub class="credit-stat--quiet">{{ dashboard_module.creditable_amount|format_amount }}</sub>
+          <sub class="credit-stat--quiet">{{ dashboard_module.creditable_amount|currency }}</sub>
         </span>
       </strong>
       {% trans 'Credited' %} / {% trans 'Creditable' %}

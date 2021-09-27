@@ -1,14 +1,14 @@
 from django import template
 from django.utils.translation import gettext
 
-from transaction.utils import format_amount, format_number, format_percentage
+from transaction.utils import format_currency_truncated, format_number, format_percentage
 
 register = template.Library()
 
 
-@register.filter(name='format_amount')
-def format_amount_filter(value, truncate_after=None):
-    return format_amount(value, trim_empty_pence=True, truncate_after=truncate_after) or '—'
+@register.filter(name='currency_truncated')
+def currency_truncated_filter(value, truncate_above):
+    return format_currency_truncated(value, truncate_above=truncate_above) or '—'
 
 
 @register.filter(name='format_number')

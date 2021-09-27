@@ -3,7 +3,6 @@ from django.contrib.auth.models import Group
 from django.contrib.auth.password_validation import get_default_password_validators
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.transaction import atomic
-from django.utils.text import capfirst
 from django.utils.translation import gettext, gettext_lazy as _
 from mtp_common.tasks import send_email
 from rest_framework import serializers
@@ -207,17 +206,17 @@ class UserSerializer(serializers.ModelSerializer):
             if self.context.get('from_account_request'):
                 PrisonUserMapping.objects.assign_prisons_to_user(new_user, prisons)
 
-        context = {
-            'username': new_user.username,
-            'password': password,
-            'service_name': role.application.name.lower(),
-            'login_url': role.login_url,
-        }
         send_email(
-            new_user.email, 'mtp_auth/new_user.txt',
-            capfirst(gettext('Your new %(service_name)s account is ready to use') % context),
-            context=context, html_template='mtp_auth/new_user.html',
-            anymail_tags=['new-user'],
+            template_name='api-new-user',
+            to=new_user.email,
+            personalisation={
+                'name': new_user.get_full_name(),
+                'username': new_user.username,
+                'password': password,
+                'service_name': role.application.name.lower(),
+                'login_url': role.login_url,
+            },
+            staff_email=True,
         )
 
         return new_user

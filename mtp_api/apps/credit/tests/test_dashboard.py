@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from django.db import models
 from django.urls import reverse_lazy
 from django.utils.timezone import now
+from mtp_common.utils import format_currency
 
 from core.views import DashboardView
 from core.tests.test_dashboard import DashboardTestCase
@@ -13,7 +14,6 @@ from credit.dashboards.credit_report import CreditReport, CREDITABLE_FILTERS
 from credit.models import Credit
 from prison.tests.utils import load_random_prisoner_locations
 from transaction.tests.utils import generate_transactions
-from transaction.utils import format_amount
 
 User = get_user_model()
 
@@ -32,7 +32,7 @@ class TransactionDashboardTestCase(DashboardTestCase):
 
     def assertAmountInContent(self, amount, response):  # noqa: N802
         if amount:
-            creditable_amount = format_amount(amount, trim_empty_pence=True)
+            creditable_amount = format_currency(amount, trim_empty_pence=True)
         else:
             creditable_amount = '—'
         response_content = response.content.decode(response.charset)

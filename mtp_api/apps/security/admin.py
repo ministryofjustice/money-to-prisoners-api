@@ -4,6 +4,7 @@ from django.utils import timezone
 from django.utils.dateformat import format as format_date
 from django.utils.html import format_html
 from django.utils.translation import gettext, gettext_lazy as _
+from mtp_common.utils import format_currency
 
 from core.admin import add_short_description
 from security.models import (
@@ -17,7 +18,6 @@ from security.models import (
     SearchFilter,
     SenderProfile,
 )
-from transaction.utils import format_amount
 
 
 class BankTransferSenderDetailsAdminInline(admin.StackedInline):
@@ -68,7 +68,7 @@ class SenderProfileAdmin(admin.ModelAdmin):
 
     @add_short_description(_('credit total'))
     def formatted_credit_total(self, instance):
-        return format_amount(instance.credit_total)
+        return format_currency(instance.credit_total)
 
 
 class BankTransferRecipientDetailsAdminInline(admin.StackedInline):
@@ -91,7 +91,7 @@ class RecipientProfileAdmin(admin.ModelAdmin):
 
     @add_short_description(_('disbursement total'))
     def formatted_disbursement_total(self, instance):
-        return format_amount(instance.disbursement_total)
+        return format_currency(instance.disbursement_total)
 
     @add_short_description(_('sort code'))
     def sort_code(self, instance):
@@ -123,11 +123,11 @@ class PrisonerProfileAdmin(admin.ModelAdmin):
 
     @add_short_description(_('credit total'))
     def formatted_credit_total(self, instance):
-        return format_amount(instance.credit_total)
+        return format_currency(instance.credit_total)
 
     @add_short_description(_('disbursement total'))
     def formatted_disbursement_total(self, instance):
-        return format_amount(instance.disbursement_total)
+        return format_currency(instance.disbursement_total)
 
     @add_short_description(_('names specified by senders'))
     def provided_names(self, instance):
@@ -187,7 +187,7 @@ class CheckAdmin(admin.ModelAdmin):
         credit = instance.credit
         link = reverse('admin:credit_credit_change', args=(credit.pk,))
         description = '%(amount)s %(status)s, %(date)s' % {
-            'amount': format_amount(credit.amount),
+            'amount': format_currency(credit.amount),
             'status': credit.resolution,
             'date': format_date(timezone.localtime(credit.created), 'd/m/Y'),
         }

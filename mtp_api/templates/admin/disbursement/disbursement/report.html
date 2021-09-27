@@ -1,5 +1,6 @@
 {% extends 'core/report.html' %}
 {% load i18n %}
+{% load mtp_common %}
 {% load admin_urls %}
 {% load credit %}
 {% load simple_admin %}
@@ -45,7 +46,7 @@
                 <tr class="{% cycle 'row1' 'row2' %}">
                   <td>{{ row.date_label }}</td>
                   <td>{{ row.count|format_number }}</td>
-                  <td>{{ row.amount|format_amount }}</td>
+                  <td>{{ row.amount|currency }}</td>
                 </tr>
               {% endfor %}
             </tbody>

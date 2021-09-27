@@ -6,9 +6,8 @@ from django.conf import settings
 from django.contrib.auth import get_user_model, user_logged_in
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-from django.utils.text import capfirst
 from django.utils.timezone import now
-from django.utils.translation import gettext, gettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from model_utils.models import TimeStampedModel
 from mtp_common.tasks import send_email
 
@@ -170,18 +169,18 @@ class FailedLoginAttemptManager(models.Manager):
                 service_name = client.name.lower()
                 login_url = roles[0].login_url
             else:
-                service_name = gettext('Prisoner Money').lower()
-                login_url = None
-            email_context = {
-                'service_name': service_name,
-                'lockout_period': settings.MTP_AUTH_LOCKOUT_LOCKOUT_PERIOD // 60,
-                'login_url': login_url,
-            }
+                service_name = 'prisoner money'
+                login_url = ''
             send_email(
-                user.email, 'mtp_auth/account_locked.txt',
-                capfirst(gettext('Your %(service_name)s account is temporarily locked') % email_context),
-                context=email_context, html_template='mtp_auth/account_locked.html',
-                anymail_tags=['account-locked'],
+                template_name='api-account-locked',
+                to=user.email,
+                personalisation={
+                    'service_name': service_name,
+                    'name': user.get_full_name(),
+                    'lockout_period': settings.MTP_AUTH_LOCKOUT_LOCKOUT_PERIOD // 60,
+                    'login_url': login_url,
+                },
+                staff_email=True,
             )
 
 

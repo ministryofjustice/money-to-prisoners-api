@@ -2,6 +2,7 @@ from django.conf import settings
 from django.db import models
 from django.dispatch import receiver
 from model_utils.models import TimeStampedModel
+from mtp_common.utils import format_currency
 
 from disbursement import InvalidDisbursementStateException
 from disbursement.constants import LOG_ACTIONS, DISBURSEMENT_RESOLUTION, DISBURSEMENT_METHOD
@@ -11,7 +12,6 @@ from disbursement.signals import (
     disbursement_sent, disbursement_edited
 )
 from prison.models import Prison
-from transaction.utils import format_amount
 
 
 class Disbursement(TimeStampedModel):
@@ -84,7 +84,7 @@ class Disbursement(TimeStampedModel):
     def __str__(self):
         return 'Disbursement {id}, {amount} {prisoner} > {recipient}, {status}'.format(
             id=self.pk,
-            amount=format_amount(self.amount, True),
+            amount=format_currency(self.amount, trim_empty_pence=True),
             prisoner=self.prisoner_number,
             recipient=self.recipient_name,
             status=self.resolution

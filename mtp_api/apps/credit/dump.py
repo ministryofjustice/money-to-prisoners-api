@@ -1,12 +1,12 @@
 from django.conf import settings
 from mtp_common.security.checks import human_readable_check_rejection_reasons
+from mtp_common.utils import format_currency
 
 from core.dump import Serialiser
 from credit.constants import CREDIT_RESOLUTION, CREDIT_STATUS
 from credit.models import Credit, LOG_ACTIONS as CREDIT_LOG_ACTIONS
 from payment.models import PAYMENT_STATUS, BillingAddress
 from security.models import CHECK_STATUS
-from transaction.utils import format_amount
 
 
 class CreditSerialiser(Serialiser):
@@ -21,7 +21,7 @@ class CreditSerialiser(Serialiser):
         if serialise_amount_as_int:
             self.format_amount = lambda amount: amount
         else:
-            self.format_amount = format_amount
+            self.format_amount = format_currency
         self.only_with_triggered_rules = only_with_triggered_rules
 
     def get_queryset(self):

@@ -2,9 +2,8 @@ import datetime
 import io
 from unittest import mock
 
-from django.core import mail
 from django.core.management import CommandError, call_command
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from django.utils import timezone
 from model_mommy import mommy
 import openpyxl
@@ -44,6 +43,7 @@ class NotificationBaseTestCase(TestCase):
         # NB: profiles will have incorrect counts and totals
 
 
+@mock.patch('notification.management.commands.send_notification_emails.send_email')
 class SendNotificationEmailsTestCase(NotificationBaseTestCase):
     def setUp(self):
         super().setUp()
@@ -56,19 +56,17 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
         )
         generate_disbursements(disbursement_batch=20, days_of_history=1)
 
-    @override_settings(ENVIRONMENT='prod')
-    def test_does_not_send_email_notifications_for_no_events(self):
+    def test_does_not_send_email_notifications_for_no_events(self, mock_send_email):
         user = self.security_staff[0]
         user.flags.create(name=EMAILS_STARTED_FLAG)
         EmailNotificationPreferences(user=user, frequency=EMAIL_FREQUENCY.DAILY).save()
         call_command('send_notification_emails')
 
         self.assertFalse(Event.objects.exists())
-        self.assertEqual(len(mail.outbox), 0)
+        mock_send_email.assert_not_called()
         self.assertIsNone(EmailNotificationPreferences.objects.get(user=user).last_sent_at)
 
-    @override_settings(ENVIRONMENT='prod')
-    def test_does_not_send_email_notifications_for_no_monitoring(self):
+    def test_does_not_send_email_notifications_for_no_monitoring(self, mock_send_email):
         user = self.security_staff[0]
         user.flags.create(name=EMAILS_STARTED_FLAG)
         EmailNotificationPreferences(user=user, frequency=EMAIL_FREQUENCY.DAILY).save()
@@ -76,23 +74,22 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
         call_command('send_notification_emails')
 
         self.assertFalse(Event.objects.exists())
-        self.assertEqual(len(mail.outbox), 0)
+        mock_send_email.assert_not_called()
         self.assertIsNone(EmailNotificationPreferences.objects.get(user=user).last_sent_at)
 
-    @override_settings(ENVIRONMENT='prod')
-    def test_sends_first_email_not_monitoring(self):
+    def test_sends_first_email_not_monitoring(self, mock_send_email):
         user = self.security_staff[0]
         EmailNotificationPreferences(user=user, frequency=EMAIL_FREQUENCY.DAILY).save()
         call_command('update_security_profiles')
         call_command('send_notification_emails')
 
-        self.assertEqual(len(mail.outbox), 1)
-        self.assertEqual(mail.outbox[-1].subject, 'New helpful ways to get the best from the intelligence tool')
+        self.assertEqual(len(mock_send_email.call_args_list), 1)
+        send_email_kwargs = mock_send_email.call_args_list[0].kwargs
+        self.assertEqual(send_email_kwargs['template_name'], 'api-intel-notification-not-monitoring')
         self.assertTrue(user.flags.filter(name=EMAILS_STARTED_FLAG).exists())
         self.assertIsNotNone(EmailNotificationPreferences.objects.get(user=user).last_sent_at)
 
-    @override_settings(ENVIRONMENT='prod')
-    def test_sends_first_email_with_events(self):
+    def test_sends_first_email_with_events(self, mock_send_email):
         user = self.security_staff[0]
         EmailNotificationPreferences(user=user, frequency=EMAIL_FREQUENCY.DAILY).save()
         self.create_profiles_but_unlink_objects()
@@ -101,17 +98,17 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
         call_command('update_security_profiles')
         call_command('send_notification_emails')
 
-        self.assertEqual(len(mail.outbox), 1)
-        self.assertEqual(mail.outbox[-1].subject, 'New notification feature added to intelligence tool')
+        self.assertEqual(len(mock_send_email.call_args_list), 1)
+        send_email_kwargs = mock_send_email.call_args_list[0].kwargs
+        self.assertEqual(send_email_kwargs['template_name'], 'api-intel-notification-first')
         self.assertTrue(user.flags.filter(name=EMAILS_STARTED_FLAG).exists())
         yesterday = timezone.now() - datetime.timedelta(days=1)
         yesterday = yesterday.date()
         transaction_count = Event.objects.filter(triggered_at__date=yesterday, user=user).count()
-        self.assertIn(f'You have {transaction_count} notification', mail.outbox[-1].body)
+        self.assertEqual(send_email_kwargs['personalisation']['count'], transaction_count)
         self.assertIsNotNone(EmailNotificationPreferences.objects.get(user=user).last_sent_at)
 
-    @override_settings(ENVIRONMENT='prod')
-    def test_sends_subsequent_email_with_events(self):
+    def test_sends_subsequent_email_with_events(self, mock_send_email):
         user = self.security_staff[0]
         user.flags.create(name=EMAILS_STARTED_FLAG)
         EmailNotificationPreferences(user=user, frequency=EMAIL_FREQUENCY.DAILY).save()
@@ -121,16 +118,17 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
         call_command('update_security_profiles')
         call_command('send_notification_emails')
 
-        self.assertEqual(len(mail.outbox), 1)
-        self.assertEqual(mail.outbox[-1].subject, 'Your new intelligence tool notifications')
+        self.assertEqual(len(mock_send_email.call_args_list), 1)
+        send_email_kwargs = mock_send_email.call_args_list[0].kwargs
+        self.assertEqual(send_email_kwargs['template_name'], 'api-intel-notification-daily')
         self.assertTrue(user.flags.filter(name=EMAILS_STARTED_FLAG).exists())
         yesterday = timezone.now() - datetime.timedelta(days=1)
         yesterday = yesterday.date()
         transaction_count = Event.objects.filter(triggered_at__date=yesterday, user=user).count()
-        self.assertIn(f'You have {transaction_count} notification', mail.outbox[-1].body)
+        self.assertEqual(send_email_kwargs['personalisation']['count'], transaction_count)
         self.assertIsNotNone(EmailNotificationPreferences.objects.get(user=user).last_sent_at)
 
-    def test_profile_grouping(self):
+    def test_profile_grouping(self, mock_send_email):
         user = self.security_staff[0]
         call_command('update_security_profiles')
         for profile in PrisonerProfile.objects.all():
@@ -191,13 +189,12 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
         self.assertEqual(len(event_group['senders']), 2)
         self.assertEqual(len(event_group['prisoners']), 2)
 
-    @override_settings(ENVIRONMENT='prod')
+        mock_send_email.assert_not_called()
+
     @mock.patch('notification.management.commands.send_notification_emails.timezone')
-    def test_does_not_send_email_if_already_sent_today(self, mock_timezone):
-        today_now = timezone.now()
-        today_date = today_now.date()
-        yesterday_now = today_now - datetime.timedelta(days=1)
-        yesterday_date = yesterday_now.date()
+    def test_does_not_send_email_if_already_sent_today(self, mock_timezone, mock_send_email):
+        today_date = timezone.localdate()
+        yesterday_date = today_date - datetime.timedelta(days=1)
 
         user = self.security_staff[0]
         user.flags.create(name=EMAILS_STARTED_FLAG)
@@ -210,25 +207,25 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
         self.assertTrue(Event.objects.filter(triggered_at__date=today_date).exists())
 
         # pretend it's yesterday
-        mock_timezone.now.return_value = yesterday_now
+        mock_timezone.localdate.return_value = yesterday_date
         call_command('send_notification_emails')
-        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(len(mock_send_email.call_args_list), 1)
         self.assertEqual(EmailNotificationPreferences.objects.get(user=user).last_sent_at, yesterday_date)
 
         call_command('send_notification_emails')
-        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(len(mock_send_email.call_args_list), 1)
 
         # now check today
-        mock_timezone.now.return_value = today_now
+        mock_timezone.localdate.return_value = today_date
         call_command('send_notification_emails')
-        self.assertEqual(len(mail.outbox), 2)
+        self.assertEqual(len(mock_send_email.call_args_list), 2)
         self.assertEqual(EmailNotificationPreferences.objects.get(user=user).last_sent_at, today_date)
 
         call_command('send_notification_emails')
-        self.assertEqual(len(mail.outbox), 2)
+        self.assertEqual(len(mock_send_email.call_args_list), 2)
 
 
-@override_settings(ENVIRONMENT='prod')
+@mock.patch('notification.management.commands.send_notification_report.send_email')
 class SendNotificationReportTestCase(NotificationBaseTestCase):
     def make_2days_of_random_models(self):
         test_users = make_test_users()
@@ -238,7 +235,7 @@ class SendNotificationReportTestCase(NotificationBaseTestCase):
             generate_disbursements(disbursement_batch=20, days_of_history=2)
         return test_users['security_staff']
 
-    def test_invalid_parameters(self):
+    def test_invalid_parameters(self, mock_send_email):
         with self.assertRaises(CommandError, msg='Email address should be invalid'):
             call_command('send_notification_report', 'admin')
         with self.assertRaises(CommandError, msg='Email address should be invalid'):
@@ -253,11 +250,10 @@ class SendNotificationReportTestCase(NotificationBaseTestCase):
             call_command('send_notification_report', 'admin@mtp.local', since='2019-07-01', until='2019-08-01')
         with self.assertRaises((CommandError, KeyError), msg='Rules should be invalid'):
             call_command('send_notification_report', 'admin@mtp.local', rules=['abc'])
-        self.assertEqual(len(mail.outbox), 0)
+        mock_send_email.assert_not_called()
 
-    @mock.patch('notification.management.commands.send_notification_report.send_report')
     @mock.patch('notification.management.commands.send_notification_report.generate_report')
-    def test_date_ranges(self, mock_generate_report, _mock_send_report):
+    def test_date_ranges(self, mock_generate_report, _mock_send_email):
         call_command('send_notification_report', 'admin@mtp.local', since='2019-08-01', until='2019-08-02')
         _workbook, period_start, period_end, _rules = mock_generate_report.call_args[0]
         self.assertEqual(period_start.date(), datetime.date(2019, 8, 1))
@@ -280,18 +276,16 @@ class SendNotificationReportTestCase(NotificationBaseTestCase):
         _workbook, period_start, period_end, _rules = mock_generate_report.call_args[0]
         self.assertEqual(period_end.date() - datetime.timedelta(days=7), period_start.date())
 
-    def assertHasExcelAttachment(self):  # noqa: N802
-        self.assertEqual(len(mail.outbox), 1)
-        email = mail.outbox[0]
-        self.assertEqual(len(email.attachments), 1)
-        _, contents, *_ = email.attachments[0]
-        workbook = openpyxl.load_workbook(io.BytesIO(contents))
-        return email, workbook
+    def assertHasExcelAttachment(self, mock_send_email):  # noqa: N802
+        self.assertEqual(len(mock_send_email.call_args_list), 1)
+        send_email_kwargs = mock_send_email.call_args_list[0].kwargs
+        workbook = openpyxl.load_workbook(io.BytesIO(send_email_kwargs['personalisation']['attachment']))
+        return send_email_kwargs, workbook
 
-    def test_empty_report(self):
+    def test_empty_report(self, mock_send_email):
         call_command('send_notification_report', 'admin@mtp.local', since='2019-08-01', until='2019-08-02')
-        email, workbook = self.assertHasExcelAttachment()
-        self.assertIn('01 Aug 2019', email.body)
+        send_email_kwargs, workbook = self.assertHasExcelAttachment(mock_send_email)
+        self.assertIn('01 Aug 2019', send_email_kwargs['personalisation']['period_description'])
         self.assertEqual(
             len(workbook.sheetnames),
             sum(
@@ -303,7 +297,7 @@ class SendNotificationReportTestCase(NotificationBaseTestCase):
             worksheet = workbook[worksheet]
             self.assertEqual(worksheet['B2'].value, 'No notifications', FLAKY_TEST_WARNING)
 
-    def test_reports_generated(self):
+    def test_reports_generated(self, mock_send_email):
         self.make_2days_of_random_models()
 
         # move 1 credit and 1 disbursement to a past date and make them appear in HA and NWN sheets
@@ -324,8 +318,8 @@ class SendNotificationReportTestCase(NotificationBaseTestCase):
         until = (report_date + datetime.timedelta(days=1)).strftime('%Y-%m-%d')
         call_command('send_notification_report', 'admin@mtp.local', since=since, until=until)
 
-        email, workbook = self.assertHasExcelAttachment()
-        self.assertIn(report_date.strftime('%d %b %Y'), email.body)
+        send_email_kwargs, workbook = self.assertHasExcelAttachment(mock_send_email)
+        self.assertIn(report_date.strftime('%d %b %Y'), send_email_kwargs['personalisation']['period_description'])
 
         credit_sheets = {'cred-high amount', 'cred-not whole'}
         disbursement_sheets = {'disb-high amount', 'disb-not whole'}
@@ -349,7 +343,7 @@ class SendNotificationReportTestCase(NotificationBaseTestCase):
             self.assertEqual(worksheet['O2'].value, disbursement.recipient_address)
             self.assertIn(f'/disbursements/{disbursement.id}/', worksheet['B2'].hyperlink.target)
 
-    def test_reports_generated_for_monitored_prisoners(self):
+    def test_reports_generated_for_monitored_prisoners(self, mock_send_email):
         security_staff = self.make_2days_of_random_models()
         self.create_profiles_but_unlink_objects()
 
@@ -368,8 +362,8 @@ class SendNotificationReportTestCase(NotificationBaseTestCase):
         since = report_date.strftime('%Y-%m-%d')
         call_command('send_notification_report', 'admin@mtp.local', since=since)
 
-        email, workbook = self.assertHasExcelAttachment()
-        self.assertIn(report_date.strftime('%d %b %Y'), email.body)
+        send_email_kwargs, workbook = self.assertHasExcelAttachment(mock_send_email)
+        self.assertIn(report_date.strftime('%d %b %Y'), send_email_kwargs['personalisation']['period_description'])
 
         expected_sheets = {'cred-mon. prisoners', 'disb-mon. prisoners'}
         self.assertTrue(expected_sheets.issubset(set(workbook.sheetnames)))
@@ -390,7 +384,7 @@ class SendNotificationReportTestCase(NotificationBaseTestCase):
                 else:
                     self.assertEqual(monitored_by, 1, FLAKY_TEST_WARNING)
 
-    def test_reports_generated_for_counting_rules(self):
+    def test_reports_generated_for_counting_rules(self, mock_send_email):
         # make just enough credits to trigger CSFREQ rule with latest credit
         rule = RULES['CSFREQ']
         count = rule.kwargs['limit'] + 1
@@ -409,7 +403,7 @@ class SendNotificationReportTestCase(NotificationBaseTestCase):
             since=since.strftime('%Y-%m-%d'), until=until.strftime('%Y-%m-%d'),
             rules=['CSFREQ'],
         )
-        _email, workbook = self.assertHasExcelAttachment()
+        _send_email_kwargs, workbook = self.assertHasExcelAttachment(mock_send_email)
 
         worksheet = workbook['cred-freq. source']
         dimensions = worksheet.calculate_dimension()

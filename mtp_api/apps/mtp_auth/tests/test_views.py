@@ -3,16 +3,13 @@ import datetime
 import json
 import logging
 import random
-import re
 from unittest import mock
 from urllib.parse import urlencode
 
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.models import Group
-from django.core import mail
 from django.urls import reverse, reverse_lazy
-from django.test import override_settings
 from django.utils.timezone import now
 from model_mommy import mommy
 from mtp_common.test_utils import silence_logger
@@ -411,7 +408,8 @@ class GetUserTestCase(AuthBaseTestCase):
             )
             self.assertListEqual(sorted(response.json()['flags']), flags)
 
-    def test_all_valid_usernames_retrievable(self):
+    @mock.patch('mtp_auth.serializers.send_email')
+    def test_all_valid_usernames_retrievable(self, mock_send_email):
         username = 'dotted.name'
         user_data = {
             'username': username,
@@ -427,6 +425,8 @@ class GetUserTestCase(AuthBaseTestCase):
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.bank_uas[0])
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(mock_send_email.call_count, 1)
+
         response = self.client.get(
             self._get_url(username),
             format='json',
@@ -760,6 +760,7 @@ class ListUserTestCase(AuthBaseTestCase):
         self.assertEqual(sum(1 if user['is_locked_out'] else 0 for user in users), 1)
 
 
+@mock.patch('mtp_auth.serializers.send_email')
 class CreateUserTestCase(AuthBaseTestCase):
     def setUp(self):
         super().setUp()
@@ -772,7 +773,7 @@ class CreateUserTestCase(AuthBaseTestCase):
     def get_url(self):
         return reverse('user-list')
 
-    def test_normal_user_cannot_create_user(self):
+    def test_normal_user_cannot_create_user(self, mock_send_email):
         test_users = make_test_users(clerks_per_prison=1)
         bank_admins = test_users['bank_admins']
         user_data = {
@@ -791,9 +792,9 @@ class CreateUserTestCase(AuthBaseTestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(User.objects.filter(username=user_data['username']).count(), 0)
 
-    @override_settings(ENVIRONMENT='prod')
     def assertUserCreated(  # noqa: N802
-        self, requester, user_data, client_id, groups, target_client_id=None, expected_login_link=None,
+        self, mock_send_email,
+        requester, user_data, client_id, groups, target_client_id=None, expected_login_link=None,
         assert_prisons_inherited=True
     ):
         response = self.client.post(
@@ -836,19 +837,16 @@ class CreateUserTestCase(AuthBaseTestCase):
         else:
             self.assertNotIn('UserAdmin', new_user.groups.values_list('name', flat=True))
 
-        latest_email = mail.outbox[-1]
-        self.assertIn(user_data['username'], latest_email.body)
-        if expected_login_link:
-            self.assertIn('sign in at', latest_email.body)
-            self.assertIn(expected_login_link, latest_email.body)
-        else:
-            self.assertNotIn('sign in at', latest_email.body)
+        self.assertEqual(mock_send_email.call_count, 1)
+        send_email_kwargs = mock_send_email.call_args_list[0].kwargs
+        self.assertEqual(send_email_kwargs['personalisation']['username'], user_data['username'])
+        self.assertEqual(send_email_kwargs['personalisation']['login_url'], expected_login_link)
         self.assertEqual(
-            'Your new %s account is ready to use' % Application.objects.get(client_id=target_client_id).name.lower(),
-            latest_email.subject
+            send_email_kwargs['personalisation']['service_name'],
+            Application.objects.get(client_id=target_client_id).name.lower(),
         )
 
-    def test_create_bank_admin(self):
+    def test_create_bank_admin(self, mock_send_email):
         user_data = {
             'username': 'new-bank-admin',
             'first_name': 'New',
@@ -857,6 +855,7 @@ class CreateUserTestCase(AuthBaseTestCase):
             'role': 'bank-admin',
         }
         self.assertUserCreated(
+            mock_send_email,
             self.bank_uas[0],
             user_data,
             'bank-admin',
@@ -865,7 +864,7 @@ class CreateUserTestCase(AuthBaseTestCase):
             expected_login_link='http://localhost/bank-admin/',
         )
 
-    def test_create_prisoner_location_admin(self):
+    def test_create_prisoner_location_admin(self, mock_send_email):
         user_data = {
             'username': 'new-location-admin',
             'first_name': 'New',
@@ -874,6 +873,7 @@ class CreateUserTestCase(AuthBaseTestCase):
             'role': 'prisoner-location-admin',
         }
         self.assertUserCreated(
+            mock_send_email,
             self.pla_uas[0],
             user_data,
             'noms-ops',
@@ -881,7 +881,7 @@ class CreateUserTestCase(AuthBaseTestCase):
             expected_login_link='http://localhost/noms-ops/',
         )
 
-    def test_create_security_staff(self):
+    def test_create_security_staff(self, mock_send_email):
         user_data = {
             'username': 'new-security-staff',
             'first_name': 'New',
@@ -890,6 +890,7 @@ class CreateUserTestCase(AuthBaseTestCase):
             'role': 'security',
         }
         self.assertUserCreated(
+            mock_send_email,
             self.security_uas[0],
             user_data,
             'noms-ops',
@@ -897,7 +898,7 @@ class CreateUserTestCase(AuthBaseTestCase):
             expected_login_link='http://localhost/noms-ops/',
         )
 
-    def test_create_prison_clerk(self):
+    def test_create_prison_clerk(self, mock_send_email):
         user_data = {
             'username': 'new-prison-clerk',
             'first_name': 'New',
@@ -906,6 +907,7 @@ class CreateUserTestCase(AuthBaseTestCase):
             'role': 'prison-clerk',
         }
         self.assertUserCreated(
+            mock_send_email,
             self.cashbook_uas[0],
             user_data,
             'cashbook',
@@ -913,7 +915,7 @@ class CreateUserTestCase(AuthBaseTestCase):
             expected_login_link='http://localhost/cashbook/',
         )
 
-    def test_create_cashbook_user_admin(self):
+    def test_create_cashbook_user_admin(self, mock_send_email):
         user_data = {
             'username': 'new-cashbook-ua',
             'first_name': 'New',
@@ -923,6 +925,7 @@ class CreateUserTestCase(AuthBaseTestCase):
             'role': 'prison-clerk',
         }
         self.assertUserCreated(
+            mock_send_email,
             self.cashbook_uas[0],
             user_data,
             'cashbook',
@@ -931,7 +934,7 @@ class CreateUserTestCase(AuthBaseTestCase):
             expected_login_link='http://localhost/cashbook/',
         )
 
-    def assertUserNotCreated(self, requester, data):  # noqa: N802
+    def assertUserNotCreated(self, mock_send_email, requester, data):  # noqa: N802
         response = self.client.post(
             self.get_url(),
             format='json',
@@ -939,9 +942,10 @@ class CreateUserTestCase(AuthBaseTestCase):
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(requester)
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        mock_send_email.assert_not_called()
         return response
 
-    def test_cannot_create_non_unique_username(self):
+    def test_cannot_create_non_unique_username(self, mock_send_email):
         user_data = {
             'username': self.cashbook_uas[0].username,
             'first_name': 'New',
@@ -950,10 +954,10 @@ class CreateUserTestCase(AuthBaseTestCase):
             'user_admin': True,
             'role': 'prison-clerk',
         }
-        self.assertUserNotCreated(self.cashbook_uas[0], user_data)
+        self.assertUserNotCreated(mock_send_email, self.cashbook_uas[0], user_data)
         self.assertEqual(User.objects.filter(username=self.cashbook_uas[0].username).count(), 1)
 
-    def test_username_case_sensitivity(self):
+    def test_username_case_sensitivity(self, mock_send_email):
         requester = self.cashbook_uas[0]
         username = 'A-User'
         user_data = {
@@ -972,6 +976,8 @@ class CreateUserTestCase(AuthBaseTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.json()['username'], username)
         self.assertEqual(User.objects.filter(username__exact=username).count(), 1)
+        self.assertEqual(mock_send_email.call_count, 1)
+        mock_send_email.reset_mock()
 
         username = 'a-user'
         user_data = {
@@ -981,12 +987,12 @@ class CreateUserTestCase(AuthBaseTestCase):
             'email': 'lower-case@mtp.local',
             'role': 'prison-clerk',
         }
-        response = self.assertUserNotCreated(requester, user_data)
+        response = self.assertUserNotCreated(mock_send_email, requester, user_data)
         self.assertIn('username', response.json())
         self.assertEqual(User.objects.filter(username__exact=username).count(), 0)
         self.assertEqual(User.objects.filter(username__iexact=username).count(), 1)
 
-    def test_cannot_create_non_unique_email(self):
+    def test_cannot_create_non_unique_email(self, mock_send_email):
         user_data = {
             'username': 'new-cashbook-ua',
             'first_name': 'New',
@@ -995,10 +1001,10 @@ class CreateUserTestCase(AuthBaseTestCase):
             'user_admin': True,
             'role': 'prison-clerk',
         }
-        self.assertUserNotCreated(self.cashbook_uas[0], user_data)
+        self.assertUserNotCreated(mock_send_email, self.cashbook_uas[0], user_data)
         self.assertEqual(User.objects.filter(username=user_data['username']).count(), 0)
 
-    def test_cannot_create_with_missing_fields(self):
+    def test_cannot_create_with_missing_fields(self, mock_send_email):
         user_data = {
             'username': 'new-cashbook-ua',
             'first_name': 'New',
@@ -1010,10 +1016,10 @@ class CreateUserTestCase(AuthBaseTestCase):
         for field in ['first_name', 'last_name', 'email']:
             data = user_data.copy()
             del data[field]
-            self.assertUserNotCreated(self.cashbook_uas[0], data)
+            self.assertUserNotCreated(mock_send_email, self.cashbook_uas[0], data)
             self.assertEqual(User.objects.filter(username=data['username']).count(), 0)
 
-    def test_cannot_create_with_missing_role(self):
+    def test_cannot_create_with_missing_role(self, mock_send_email):
         user_data = {
             'username': 'new-user',
             'first_name': 'New',
@@ -1021,12 +1027,12 @@ class CreateUserTestCase(AuthBaseTestCase):
             'email': 'user@mtp.local',
             'role': None,
         }
-        response = self.assertUserNotCreated(self.cashbook_uas[0], user_data)
+        response = self.assertUserNotCreated(mock_send_email, self.cashbook_uas[0], user_data)
         self.assertIn('role', response.data)
         self.assertIn('Role must be specified', response.data['role'])
         self.assertEqual(User.objects.filter(username=user_data['username']).count(), 0)
 
-    def test_cannot_create_with_unknown_role(self):
+    def test_cannot_create_with_unknown_role(self, mock_send_email):
         user_data = {
             'username': 'new-user',
             'first_name': 'New',
@@ -1034,12 +1040,12 @@ class CreateUserTestCase(AuthBaseTestCase):
             'email': 'user@mtp.local',
             'role': 'unknown',
         }
-        response = self.assertUserNotCreated(self.cashbook_uas[0], user_data)
+        response = self.assertUserNotCreated(mock_send_email, self.cashbook_uas[0], user_data)
         self.assertIn('role', response.data)
         self.assertIn('Invalid role: unknown', response.data['role'])
         self.assertEqual(User.objects.filter(username=user_data['username']).count(), 0)
 
-    def test_cannot_create_with_unmanaged_role(self):
+    def test_cannot_create_with_unmanaged_role(self, mock_send_email):
         user_data = {
             'username': 'new-user',
             'first_name': 'New',
@@ -1047,12 +1053,12 @@ class CreateUserTestCase(AuthBaseTestCase):
             'email': 'user@mtp.local',
             'role': 'bank-admin',
         }
-        response = self.assertUserNotCreated(self.cashbook_uas[0], user_data)
+        response = self.assertUserNotCreated(mock_send_email, self.cashbook_uas[0], user_data)
         self.assertIn('role', response.data)
         self.assertIn('Invalid role: bank-admin', response.data['role'])
         self.assertEqual(User.objects.filter(username=user_data['username']).count(), 0)
 
-    def test_fiu_created_user_does_not_inherit_prisons(self):
+    def test_fiu_created_user_does_not_inherit_prisons(self, mock_send_email):
         """
         Test any Prison instances assigned by FIU aren't inherited by the new user
 
@@ -1066,6 +1072,7 @@ class CreateUserTestCase(AuthBaseTestCase):
             'role': 'security',
         }
         self.assertUserCreated(
+            mock_send_email,
             self.security_uas[0],
             user_data,
             'noms-ops',
@@ -1074,7 +1081,7 @@ class CreateUserTestCase(AuthBaseTestCase):
             assert_prisons_inherited=False
         )
 
-    def test_created_fiu_user_has_user_admin_group(self):
+    def test_created_fiu_user_has_user_admin_group(self, mock_send_email):
         """
         Test new FIU instances have correct groups
 
@@ -1089,6 +1096,7 @@ class CreateUserTestCase(AuthBaseTestCase):
             'user_admin': True
         }
         self.assertUserCreated(
+            mock_send_email,
             self.security_uas[0],
             user_data,
             'noms-ops',
@@ -1757,6 +1765,7 @@ class UserApplicationValidationTestCase(AuthBaseTestCase):
         self.assertEqual(logins, Login.objects.count(), 'Login should not have been counted')
 
 
+@mock.patch('mtp_auth.models.send_email')
 class AccountLockoutTestCase(AuthBaseTestCase):
     def setUp(self):
         super().setUp()
@@ -1790,7 +1799,7 @@ class AccountLockoutTestCase(AuthBaseTestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         return response
 
-    def test_account_lockout_on_too_many_attempts(self):
+    def test_account_lockout_on_too_many_attempts(self, mock_send_email):
         prison_clerk = self.prison_clerks[0]
         cashbook_client = Application.objects.get(client_id=CASHBOOK_OAUTH_CLIENT_ID)
 
@@ -1803,8 +1812,9 @@ class AccountLockoutTestCase(AuthBaseTestCase):
         self.assertTrue(FailedLoginAttempt.objects.is_locked_out(prison_clerk, cashbook_client))
         response = self.fail_login(prison_clerk, cashbook_client)
         self.assertEqual(response.content, b'{"error": "locked_out"}')
+        self.assertEqual(mock_send_email.call_count, 1)
 
-    def test_account_lockout_on_too_many_attempts_without_case_sensitivity(self):
+    def test_account_lockout_on_too_many_attempts_without_case_sensitivity(self, mock_send_email):
         prison_clerk = self.prison_clerks[0]
         cashbook_client = Application.objects.get(client_id=CASHBOOK_OAUTH_CLIENT_ID)
 
@@ -1820,8 +1830,9 @@ class AccountLockoutTestCase(AuthBaseTestCase):
 
         self.assertTrue(FailedLoginAttempt.objects.is_locked_out(prison_clerk, cashbook_client))
         self.fail_login(prison_clerk, cashbook_client)
+        self.assertEqual(mock_send_email.call_count, 1)
 
-    def test_account_lockout_only_applies_for_a_period_of_time(self):
+    def test_account_lockout_only_applies_for_a_period_of_time(self, mock_send_email):
         prison_clerk = self.prison_clerks[0]
         cashbook_client = Application.objects.get(client_id=CASHBOOK_OAUTH_CLIENT_ID)
 
@@ -1836,8 +1847,9 @@ class AccountLockoutTestCase(AuthBaseTestCase):
             mocked_now.return_value = future
             self.assertFalse(FailedLoginAttempt.objects.is_locked_out(prison_clerk, cashbook_client))
             self.pass_login(prison_clerk, cashbook_client)
+        self.assertEqual(mock_send_email.call_count, 1)
 
-    def test_account_lockout_removed_on_successful_login(self):
+    def test_account_lockout_removed_on_successful_login(self, mock_send_email):
         if not settings.MTP_AUTH_LOCKOUT_COUNT:
             return
 
@@ -1855,8 +1867,9 @@ class AccountLockoutTestCase(AuthBaseTestCase):
             user=prison_clerk,
             application=cashbook_client,
         ).count(), 0)
+        self.assertEqual(mock_send_email.call_count, 0)
 
-    def test_account_lockout_only_applies_to_current_application(self):
+    def test_account_lockout_only_applies_to_current_application(self, mock_send_email):
         prison_clerk = self.prison_clerks[0]
         cashbook_client = Application.objects.get(client_id=CASHBOOK_OAUTH_CLIENT_ID)
         bank_admin_client = Application.objects.get(client_id=BANK_ADMIN_OAUTH_CLIENT_ID)
@@ -1870,8 +1883,9 @@ class AccountLockoutTestCase(AuthBaseTestCase):
         self.assertTrue(FailedLoginAttempt.objects.is_locked_out(prison_clerk, cashbook_client))
         self.assertTrue(FailedLoginAttempt.objects.is_locked_out(prison_clerk, bank_admin_client))
         self.assertFalse(FailedLoginAttempt.objects.is_locked_out(prison_clerk, prisoner_location_admin_client))
+        self.assertEqual(mock_send_email.call_count, 2)
 
-    def test_account_lockout_remains_if_successful_login_in_other_application(self):
+    def test_account_lockout_remains_if_successful_login_in_other_application(self, mock_send_email):
         prison_clerk = self.prison_clerks[0]
         cashbook_client = Application.objects.get(client_id=CASHBOOK_OAUTH_CLIENT_ID)
         bank_admin_client = Application.objects.get(client_id=BANK_ADMIN_OAUTH_CLIENT_ID)
@@ -1883,23 +1897,23 @@ class AccountLockoutTestCase(AuthBaseTestCase):
 
         self.assertTrue(FailedLoginAttempt.objects.is_locked_out(prison_clerk, bank_admin_client))
         self.assertFalse(FailedLoginAttempt.objects.is_locked_out(prison_clerk, cashbook_client))
+        self.assertEqual(mock_send_email.call_count, 1)
 
-    @override_settings(ENVIRONMENT='prod')
-    def test_email_sent_when_account_locked(self):
+    def test_email_sent_when_account_locked(self, mock_send_email):
         prison_clerk = self.prison_clerks[0]
         cashbook_client = Application.objects.get(client_id=CASHBOOK_OAUTH_CLIENT_ID)
 
         for _ in range(settings.MTP_AUTH_LOCKOUT_COUNT - 1):
             self.fail_login(prison_clerk, cashbook_client)
-        self.assertEqual(len(mail.outbox), 0, msg='Email should not be sent')
+        self.assertEqual(mock_send_email.call_count, 0, msg='Email should not be sent')
         self.fail_login(prison_clerk, cashbook_client)
-        self.assertEqual(len(mail.outbox), 1, msg='Email should be sent')
+        self.assertEqual(mock_send_email.call_count, 1, msg='Email should be sent')
         for _ in range(settings.MTP_AUTH_LOCKOUT_COUNT):
             self.fail_login(prison_clerk, cashbook_client)
-        self.assertEqual(len(mail.outbox), 1, msg='Only one email should be sent')
+        self.assertEqual(mock_send_email.call_count, 1, msg='Only one email should be sent')
 
-        latest_email = mail.outbox[-1]
-        self.assertIn(cashbook_client.name.lower(), latest_email.body)
+        send_email_kwargs = mock_send_email.call_args_list[-1].kwargs
+        self.assertEqual(send_email_kwargs['personalisation']['service_name'], cashbook_client.name.lower())
 
 
 class ChangePasswordTestCase(AuthBaseTestCase):
@@ -1941,7 +1955,8 @@ class ChangePasswordTestCase(AuthBaseTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertTrue(self.user.check_password(self.current_password))
 
-    def test_account_lockout_on_too_many_attempts(self):
+    @mock.patch('mtp_auth.models.send_email')
+    def test_account_lockout_on_too_many_attempts(self, mock_send_email):
         cashbook_client = Application.objects.get(client_id=CASHBOOK_OAUTH_CLIENT_ID)
 
         for _ in range(settings.MTP_AUTH_LOCKOUT_COUNT):
@@ -1949,6 +1964,8 @@ class ChangePasswordTestCase(AuthBaseTestCase):
             self.incorrect_password_attempt()
 
         self.assertTrue(FailedLoginAttempt.objects.is_locked_out(self.user, cashbook_client))
+        self.assertEqual(mock_send_email.call_count, 1)
+
         response = self.correct_password_change('new_password')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertTrue(self.user.check_password(self.current_password))
@@ -1972,6 +1989,7 @@ class ChangePasswordTestCase(AuthBaseTestCase):
         ).count(), 0)
 
 
+@mock.patch('mtp_auth.views.send_email')
 class ResetPasswordTestCase(AuthBaseTestCase):
     reset_url = reverse_lazy('user-reset-password')
 
@@ -1982,7 +2000,7 @@ class ResetPasswordTestCase(AuthBaseTestCase):
         self.user.set_password(self.current_password)
         self.user.save()
 
-    def assertErrorResponse(self, response, error_dict):  # noqa: N802
+    def assertErrorResponse(self, mock_send_email, response, error_dict):  # noqa: N802
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         error = json.loads(response.content.decode('utf-8')).get('errors', {})
         for key, value in error_dict.items():
@@ -1993,14 +2011,15 @@ class ResetPasswordTestCase(AuthBaseTestCase):
                          msg='Cannot log in with old password')
         self.assertEqual(PasswordChangeRequest.objects.all().count(), 0,
                          msg='Password change request should not be created')
+        mock_send_email.assert_not_called()
 
-    def test_unknown_user(self):
+    def test_unknown_user(self, mock_send_email):
         response = self.client.post(self.reset_url, {'username': 'unknown'})
-        self.assertErrorResponse(response, {
+        self.assertErrorResponse(mock_send_email, response, {
             'username': [ResetPasswordView.error_messages['not_found']],
         })
 
-    def test_incorrect_username(self):
+    def test_incorrect_username(self, mock_send_email):
         username = self.user.username
         if '-' in username:
             username = username.replace('-', '_')
@@ -2009,49 +2028,48 @@ class ResetPasswordTestCase(AuthBaseTestCase):
         else:
             username += '_'
         response = self.client.post(self.reset_url, {'username': username})
-        self.assertErrorResponse(response, {
+        self.assertErrorResponse(mock_send_email, response, {
             'username': [ResetPasswordView.error_messages['not_found']],
         })
 
-    def test_unable_to_reset_immutable_user(self):
+    def test_unable_to_reset_immutable_user(self, mock_send_email):
         username = 'send-money'
         try:
             User.objects.get(username=username)
         except User.DoesNotExist:
             self.fail()
         response = self.client.post(self.reset_url, {'username': username})
-        self.assertErrorResponse(response, {
+        self.assertErrorResponse(mock_send_email, response, {
             'username': [ResetPasswordView.error_messages['not_found']],
         })
 
-    def test_user_with_no_email(self):
+    def test_user_with_no_email(self, mock_send_email):
         self.user.email = ''
         self.user.save()
         response = self.client.post(self.reset_url, {'username': self.user.username})
-        self.assertErrorResponse(response, {
+        self.assertErrorResponse(mock_send_email, response, {
             'username': [ResetPasswordView.error_messages['no_email']],
         })
 
-    def test_user_with_non_unique_email(self):
+    def test_user_with_non_unique_email(self, mock_send_email):
         other_user = User.objects.exclude(pk=self.user.pk).first()
         self.user.email = other_user.email.title()
         self.user.save()
         response = self.client.post(self.reset_url, {'username': self.user.email})
-        self.assertErrorResponse(response, {
+        self.assertErrorResponse(mock_send_email, response, {
             'username': [ResetPasswordView.error_messages['multiple_found']],
         })
 
-    def test_locked_user(self):
+    def test_locked_user(self, mock_send_email):
         app = Application.objects.first()
         for _ in range(settings.MTP_AUTH_LOCKOUT_COUNT):
             FailedLoginAttempt.objects.create(user=self.user, application=app)
         response = self.client.post(self.reset_url, {'username': self.user.username})
-        self.assertErrorResponse(response, {
+        self.assertErrorResponse(mock_send_email, response, {
             'username': [ResetPasswordView.error_messages['locked_out']],
         })
 
-    @override_settings(ENVIRONMENT='prod')
-    def assertPasswordReset(self, username):  # noqa: N802
+    def assertPasswordReset(self, mock_send_email, username):  # noqa: N802
         response = self.client.post(self.reset_url, {'username': username})
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         user = authenticate(username=self.user.username, password=self.current_password)
@@ -2060,30 +2078,28 @@ class ResetPasswordTestCase(AuthBaseTestCase):
         self.assertEqual(PasswordChangeRequest.objects.all().count(), 0,
                          msg='Password change request should not be created')
 
-        latest_email = mail.outbox[-1]
-        self.assertIn(self.user.username, latest_email.body)
-        self.assertNotIn(self.current_password, latest_email.body)
-        password_match = re.search(r'Password: (?P<password>[^\n]+)', latest_email.body)
-        self.assertTrue(password_match, msg='Cannot find new password in email')
-        user = authenticate(username=self.user.username,
-                            password=password_match.group('password'))
+        self.assertEqual(mock_send_email.call_count, 1)
+        send_email_kwargs = mock_send_email.call_args_list[0].kwargs
+        self.assertEqual(send_email_kwargs['personalisation']['username'], self.user.username)
+        self.assertNotIn(self.current_password, send_email_kwargs['personalisation'].values())
+        password = send_email_kwargs['personalisation']['password']
+        user = authenticate(username=self.user.username, password=password)
         self.assertEqual(self.user.username, getattr(user, 'username', None),
                          msg='Cannot log in with new password')
 
-    def test_password_reset_by_username(self):
-        self.assertPasswordReset(self.user.username)
+    def test_password_reset_by_username(self, mock_send_email):
+        self.assertPasswordReset(mock_send_email, self.user.username)
 
-    def test_password_reset_by_username_case_insensitive(self):
-        self.assertPasswordReset(self.user.username.swapcase())
+    def test_password_reset_by_username_case_insensitive(self, mock_send_email):
+        self.assertPasswordReset(mock_send_email, self.user.username.swapcase())
 
-    def test_password_reset_by_email(self):
-        self.assertPasswordReset(self.user.email)
+    def test_password_reset_by_email(self, mock_send_email):
+        self.assertPasswordReset(mock_send_email, self.user.email)
 
-    def test_password_reset_by_email_case_insensitive(self):
-        self.assertPasswordReset(self.user.email.title())
+    def test_password_reset_by_email_case_insensitive(self, mock_send_email):
+        self.assertPasswordReset(mock_send_email, self.user.email.title())
 
-    @override_settings(ENVIRONMENT='prod')
-    def test_create_password_change_request(self):
+    def test_create_password_change_request(self, mock_send_email):
         response = self.client.post(self.reset_url, {
             'username': self.user.username,
             'create_password': {
@@ -2097,11 +2113,11 @@ class ResetPasswordTestCase(AuthBaseTestCase):
                          msg='Cannot log in with old password')
 
         self.assertEqual(PasswordChangeRequest.objects.all().count(), 1)
-        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mock_send_email.call_count, 1)
         change_request = PasswordChangeRequest.objects.all().first()
-        self.assertTrue(
-            'http://localhost/path?reset_code=%s' % str(change_request.code) in
-            mail.outbox[-1].body
+        self.assertEqual(
+            mock_send_email.call_args_list[0].kwargs['personalisation']['change_password_url'],
+            f'http://localhost/path?reset_code={change_request.code}',
         )
 
 
@@ -2120,7 +2136,8 @@ class ChangePasswordWithCodeTestCase(AuthBaseTestCase):
     def get_change_url(self, code):
         return reverse_lazy('user-change-password-with-code', kwargs={'code': code})
 
-    def test_password_change_with_code(self):
+    @mock.patch('mtp_auth.views.send_email')
+    def test_password_change_with_code(self, mock_send_email):
         response = self.client.post(self.reset_url, {
             'username': self.user.username,
             'create_password': {
@@ -2129,6 +2146,7 @@ class ChangePasswordWithCodeTestCase(AuthBaseTestCase):
             }
         }, format='json')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(mock_send_email.call_count, 1)
 
         code = PasswordChangeRequest.objects.all().first().code
         response = self.client.post(
@@ -2143,7 +2161,8 @@ class ChangePasswordWithCodeTestCase(AuthBaseTestCase):
         self.assertEqual(self.user.username, getattr(user, 'username', None),
                          msg='Cannot log in with new password')
 
-    def test_password_change_fails_with_incorrect_code(self):
+    @mock.patch('mtp_auth.views.send_email')
+    def test_password_change_fails_with_incorrect_code(self, mock_send_email):
         self.client.post(self.reset_url, {
             'username': self.user.username,
             'create_password': {
@@ -2156,6 +2175,7 @@ class ChangePasswordWithCodeTestCase(AuthBaseTestCase):
             {'new_password': self.new_password}
         )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(mock_send_email.call_count, 1)
 
         user = authenticate(username=self.user.username, password=self.current_password)
         self.assertEqual(self.user.username, getattr(user, 'username', None),
@@ -2555,7 +2575,8 @@ class AccountRequestTestCase(AuthBaseTestCase):
             )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND, msg=response.content)
 
-    def test_decline_requests(self):
+    @mock.patch('mtp_auth.views.send_email')
+    def test_decline_requests(self, mock_send_email):
         admin = self.users['prison_clerk_uas'][0]
         role = Role.objects.get(name='prison-clerk')
         prison = admin.prisonusermapping.prisons.first()
@@ -2574,15 +2595,17 @@ class AccountRequestTestCase(AuthBaseTestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT, msg=response.content)
 
-        latest_email = mail.outbox[-1]
-        self.assertSequenceEqual(latest_email.to, ['mark@example.com'])
-        self.assertIn(role.application.name.lower(), latest_email.subject)
-        self.assertIn(role.application.name.lower(), latest_email.body)
+        self.assertEqual(mock_send_email.call_count, 1)
+        send_email_kwargs = mock_send_email.call_args_list[0].kwargs
+        self.assertEqual(send_email_kwargs['template_name'], 'api-account-request-denied')
+        self.assertEqual(send_email_kwargs['to'], 'mark@example.com')
+        self.assertEqual(send_email_kwargs['personalisation']['service_name'], role.application.name.lower())
 
         self.assertFalse(AccountRequest.objects.exists())
         self.assertEqual(User.objects.count(), user_count)
 
-    def test_confirm_new_requests(self):
+    @mock.patch('mtp_auth.serializers.send_email')
+    def test_confirm_new_requests(self, mock_send_email):
         admin = self.users['prison_clerk_uas'][0]
         role = Role.objects.get(name='prison-clerk')
         prison = admin.prisonusermapping.prisons.first()
@@ -2610,13 +2633,13 @@ class AccountRequestTestCase(AuthBaseTestCase):
                 [prison.nomis_id]
             )
 
-            latest_email = mail.outbox[-1]
-            self.assertSequenceEqual(latest_email.to, [request.email])
-            self.assertIn(role.application.name.lower(), latest_email.subject)
-            self.assertIn(role.application.name.lower(), latest_email.body)
-            self.assertIn(role.login_url, latest_email.body)
-            self.assertIn(user.username, latest_email.body)
-            password = re.search(r'Password:\s+(\S+)', latest_email.body).group(1)
+            send_email_kwargs = mock_send_email.call_args_list[-1].kwargs
+            self.assertEqual(send_email_kwargs['template_name'], 'api-new-user')
+            self.assertEqual(send_email_kwargs['to'], request.email)
+            self.assertEqual(send_email_kwargs['personalisation']['username'], user.username)
+            self.assertEqual(send_email_kwargs['personalisation']['service_name'], role.application.name.lower())
+            self.assertEqual(send_email_kwargs['personalisation']['login_url'], role.login_url)
+            password = send_email_kwargs['personalisation']['password']
             self.assertTrue(user.check_password(password))
 
         assert_user_created({}, user_admin=False)
@@ -2627,7 +2650,8 @@ class AccountRequestTestCase(AuthBaseTestCase):
         self.assertFalse(AccountRequest.objects.exists())
         self.assertEqual(User.objects.count(), user_count + 2)
 
-    def test_confirm_new_requests_with_multiple_prisons(self):
+    @mock.patch('mtp_auth.serializers.send_email')
+    def test_confirm_new_requests_with_multiple_prisons(self, mock_send_email):
         admin = self.users['prison_clerk_uas'][0]
         role = Role.objects.get(name='prison-clerk')
         prison = admin.prisonusermapping.prisons.first()
@@ -2643,6 +2667,8 @@ class AccountRequestTestCase(AuthBaseTestCase):
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(admin, client_id=CASHBOOK_OAUTH_CLIENT_ID)
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK, msg=response.content)
+        self.assertEqual(mock_send_email.call_count, 1)
+        self.assertEqual(mock_send_email.call_args_list[-1].kwargs['template_name'], 'api-new-user')
 
         user = User.objects.get(username=request.username)
         self.assertSetEqual(
@@ -2654,7 +2680,8 @@ class AccountRequestTestCase(AuthBaseTestCase):
         self.assertFalse(AccountRequest.objects.exists())
         self.assertEqual(User.objects.count(), user_count + 1)
 
-    def test_confirm_requests_with_existing_user(self):
+    @mock.patch('mtp_auth.views.send_email')
+    def test_confirm_requests_with_existing_user(self, mock_send_email):
         admin = self.users['prison_clerk_uas'][0]
         role = Role.objects.get(name='prison-clerk')
         prison = admin.prisonusermapping.prisons.first()
@@ -2725,7 +2752,7 @@ class AccountRequestTestCase(AuthBaseTestCase):
                 'user_admin': False,
             },
         ]
-        for scenario in scenarios:
+        for scenarion_num, scenario in enumerate(scenarios):
             user = basic_user.make(is_active=random.random() > 0.2)
             if scenario['previous_role']:
                 Role.objects.get(name=scenario['previous_role']).assign_to_user(user)
@@ -2770,18 +2797,19 @@ class AccountRequestTestCase(AuthBaseTestCase):
                 [prison.nomis_id]
             )
 
-            latest_email = mail.outbox[-1]
-            self.assertSequenceEqual(latest_email.to, [request.email])
-            self.assertIn(role.application.name.lower(), latest_email.subject)
-            self.assertIn(role.application.name.lower(), latest_email.body)
-            self.assertIn(role.login_url, latest_email.body)
-            self.assertIn(refreshed_user.username, latest_email.body)
-            self.assertNotIn('Password', latest_email.body)
+            self.assertEqual(mock_send_email.call_count, scenarion_num + 1)
+            send_email_kwargs = mock_send_email.call_args_list[-1].kwargs
+            self.assertEqual(send_email_kwargs['to'], request.email)
+            self.assertEqual(send_email_kwargs['personalisation']['username'], refreshed_user.username)
+            self.assertEqual(send_email_kwargs['personalisation']['service_name'], role.application.name.lower())
+            self.assertEqual(send_email_kwargs['personalisation']['login_url'], role.login_url)
+            self.assertNotIn('password', send_email_kwargs['personalisation'])
 
         self.assertFalse(AccountRequest.objects.exists())
         self.assertEqual(User.objects.count(), user_count + len(scenarios))
 
-    def test_confirm_requests_with_existing_user_with_multiple_prisons(self):
+    @mock.patch('mtp_auth.views.send_email')
+    def test_confirm_requests_with_existing_user_with_multiple_prisons(self, mock_send_email):
         admin = self.users['prison_clerk_uas'][0]
         role = Role.objects.get(name='prison-clerk')
         prison = admin.prisonusermapping.prisons.first()
@@ -2804,6 +2832,8 @@ class AccountRequestTestCase(AuthBaseTestCase):
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(admin, client_id=CASHBOOK_OAUTH_CLIENT_ID)
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK, msg=response.content)
+        self.assertEqual(mock_send_email.call_count, 1)
+        self.assertEqual(mock_send_email.call_args_list[-1].kwargs['template_name'], 'api-user-moved')
 
         user = User.objects.get(username=request.username)
         self.assertSetEqual(

@@ -8,6 +8,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 from model_utils.models import TimeStampedModel
+from mtp_common.utils import format_currency
 
 from credit.constants import LOG_ACTIONS, CREDIT_RESOLUTION, CREDIT_STATUS, CREDIT_SOURCE
 from credit.managers import (
@@ -29,7 +30,6 @@ from credit.signals import (
     credit_set_manual,
 )
 from prison.models import Prison, PrisonerLocation
-from transaction.utils import format_amount
 
 logger = logging.getLogger('mtp')
 
@@ -113,7 +113,7 @@ class Credit(TimeStampedModel):
     def __str__(self):
         return 'Credit {id}, {amount} {sender_name} > {prisoner_name}, {status}'.format(
             id=self.pk,
-            amount=format_amount(self.amount, True),
+            amount=format_currency(self.amount, trim_empty_pence=True),
             sender_name=self.sender_name,
             prisoner_name=self.prisoner_name,
             status=self.status

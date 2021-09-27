@@ -1,8 +1,0 @@
-{% load i18n %}
-
-{% trans 'Dear staff member,' %}
-
-{% trans 'Attached are the credit slips for prisoners whose accounts have recently been digitally credited.' %}
-{% trans 'Please print them out and deliver them confidentially to individuals’ cells.' %}
-
-{% trans 'Thank you for your co-operation.' %}

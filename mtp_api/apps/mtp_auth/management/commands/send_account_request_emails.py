@@ -1,13 +1,9 @@
 import datetime
 import logging
 
-from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.management import BaseCommand
 from django.db import models
-from django.db.models.functions import Concat
-from django.utils.text import capfirst
 from django.utils.timezone import now
-from django.utils.translation import gettext
 from mtp_common.tasks import send_email
 
 from mtp_auth.models import AccountRequest, Role
@@ -30,9 +26,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         grouped_requests = AccountRequest.objects.filter(
             created__date=now() - datetime.timedelta(days=1)
-        ).order_by().values('role', 'prison').annotate(
-            names=ArrayAgg(Concat('first_name', models.Value(' '), 'last_name'))
-        )
+        ).order_by().values('role', 'prison').annotate(count=models.Count('*'))
         for group in grouped_requests:
             if group['prison']:
                 prison = Prison.objects.get(pk=group['prison'])
@@ -40,10 +34,9 @@ class Command(BaseCommand):
                 prison = None
 
             role = Role.objects.get(pk=group['role'])
-            names = group['names']
             admins = self.find_admins(role, prison)
             if admins:
-                self.email_admins(admins, role, names)
+                self.email_admins(admins, role, group['count'])
             else:
                 logger.error(
                     'No active user admins for role in prison for %(role_name)s in %(prison_name)s',
@@ -61,19 +54,15 @@ class Command(BaseCommand):
 
         return list(admins)
 
-    def email_admins(self, admins, role, names):
+    def email_admins(self, admins, role, count):
         service_name = role.application.name.lower()
         send_email(
-            [admin.email for admin in admins],
-            'mtp_auth/new_account_requests.txt',
-            capfirst(gettext('You have new %(service_name)s users to approve') % {
+            template_name='api-new-account-requests',
+            to=[admin.email for admin in admins],
+            personalisation={
                 'service_name': service_name,
-            }),
-            context={
-                'service_name': service_name,
-                'names': names,
+                'count': count,
                 'login_url': role.login_url,
             },
-            html_template='mtp_auth/new_account_requests.html',
-            anymail_tags=['new-account-requests'],
+            staff_email=True,
         )

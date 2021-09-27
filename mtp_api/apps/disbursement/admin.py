@@ -1,10 +1,10 @@
 from django.contrib import admin
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from mtp_common.utils import format_currency
 
 from core.admin import add_short_description, UtcDateRangeFilter
 from disbursement.models import Disbursement, Log, Comment
-from transaction.utils import format_amount
 
 
 class LogAdminInline(admin.TabularInline):
@@ -62,12 +62,12 @@ class DisbursementAdmin(admin.ModelAdmin):
 
     @add_short_description(_('amount'))
     def formatted_amount(self, instance):
-        return format_amount(instance.amount)
+        return format_currency(instance.amount)
 
     @add_short_description(_('Display total of selected disbursements'))
     def display_total_amount(self, request, queryset):
         total = queryset.aggregate(models.Sum('amount'))['amount__sum']
-        self.message_user(request, _('Total: %s') % format_amount(total, True))
+        self.message_user(request, _('Total: %s') % format_currency(total, trim_empty_pence=True))
 
 
 @admin.register(Comment)

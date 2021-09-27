@@ -1,5 +1,6 @@
 {% extends 'core/report.html' %}
 {% load i18n %}
+{% load mtp_common %}
 {% load admin_urls %}
 {% load credit %}
 {% load simple_admin %}
@@ -167,7 +168,7 @@
                     <td>{{ row.accurate_credits_by_mtp|format_number }}</td>
                     <td>{{ row.extrapolated_credits_by_post|format_number }}</td>
                     {% if show_savings %}
-                      <td>{{ row.savings|format_amount }}</td>
+                      <td>{{ row.savings|currency }}</td>
                     {% endif %}
                   </tr>
                 {% endfor %}
@@ -201,12 +202,12 @@
               {% trans 'The costs per transaction are' %}:
               <ul>
                 <li>
-                  {% blocktrans trimmed with cost=form.cleaned_data.postal_cost|format_amount %}
+                  {% blocktrans trimmed with cost=form.cleaned_data.postal_cost|currency %}
                     {{ cost }} for non-digital
                   {% endblocktrans %}
                 </li>
                 <li>
-                  {% blocktrans trimmed with cost=form.cleaned_data.digital_cost|format_amount %}
+                  {% blocktrans trimmed with cost=form.cleaned_data.digital_cost|currency %}
                     {{ cost }} for digital
                   {% endblocktrans %}
                 </li>

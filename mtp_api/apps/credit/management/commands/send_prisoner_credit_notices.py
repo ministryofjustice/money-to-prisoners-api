@@ -2,13 +2,10 @@ import pathlib
 import shutil
 import tempfile
 
-from anymail.message import AnymailMessage
-from django.conf import settings
 from django.core.management import BaseCommand, call_command
-from django.template import loader as template_loader
-from django.utils.translation import gettext_lazy as _, activate, get_language
-from mtp_common.tasks import default_from_address, prepare_context
+from mtp_common.tasks import send_email
 
+from credit.management.commands.create_prisoner_credit_notices import parsed_date_or_yesterday
 from prison.models import PrisonerCreditNoticeEmail
 
 
@@ -20,8 +17,6 @@ class Command(BaseCommand):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.subject = _('These prisoners’ accounts have been credited')
-        self.from_address = default_from_address()
         self.verbosity = 1
 
     def add_arguments(self, parser):
@@ -43,10 +38,6 @@ class Command(BaseCommand):
                 self.stderr.write('No known email addresses')
             return
 
-        if not get_language():
-            language = getattr(settings, 'LANGUAGE_CODE', 'en')
-            activate(language)
-
         bundle_dir = pathlib.Path(tempfile.mkdtemp())
         try:
             for credit_notice_email in credit_notice_emails:
@@ -62,24 +53,20 @@ class Command(BaseCommand):
             path, credit_notice_email.prison.nomis_id,
             date=date, **options
         )
+        date_reference = parsed_date_or_yesterday(date).strftime('%Y-%m-%d')
         if not path.exists():
             if self.verbosity:
                 self.stdout.write('Nothing to send to %s' % credit_notice_email)
             return
 
-        template_context = prepare_context()
-        text_body = template_loader.get_template('credit/prisoner-notice-email.txt').render(template_context)
-        html_body = template_loader.get_template('credit/prisoner-notice-email.html').render(template_context)
-        email = AnymailMessage(
-            subject=str(self.subject),
-            body=text_body.strip('\n'),
-            from_email=self.from_address,
-            to=[credit_notice_email.email],
-            tags=['prisoner-notice'],
-        )
-        email.attach_alternative(html_body, 'text/html')
-        email.attach_file(str(path), mimetype='application/pdf')
-
         if self.verbosity:
             self.stdout.write('Sending prisoner notice email to %s' % credit_notice_email)
-        email.send()
+        send_email(
+            template_name='api-prisoner-notice-email',
+            to=credit_notice_email.email,
+            personalisation={
+                'attachment': path.read_bytes(),
+            },
+            reference=f'credit-notices-{date_reference}-{credit_notice_email.prison.nomis_id}',
+            staff_email=True,
+        )

@@ -1,7 +1,6 @@
 from django.db import models
 from model_utils.models import TimeStampedModel
-
-from transaction.utils import format_amount
+from mtp_common.utils import format_currency
 
 
 class Balance(TimeStampedModel):
@@ -12,4 +11,4 @@ class Balance(TimeStampedModel):
         ordering = ('-date',)
 
     def __str__(self):
-        return '%s %s' % (self.date.isoformat(), format_amount(self.closing_balance))
+        return f'{self.date.isoformat()} {format_currency(self.closing_balance)}'

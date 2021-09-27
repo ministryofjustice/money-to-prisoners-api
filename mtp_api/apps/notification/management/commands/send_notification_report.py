@@ -2,14 +2,14 @@ import datetime
 import pathlib
 import tempfile
 
-from anymail.message import AnymailMessage
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.management import BaseCommand, CommandError
 from django.core.validators import validate_email
 from django.utils import timezone
 from django.utils.dateparse import parse_date
-from mtp_common.tasks import default_from_address
+from mtp_common.tasks import send_email
+from mtp_common.utils import format_currency
 import openpyxl
 from openpyxl.cell import WriteOnlyCell
 from openpyxl.utils import get_column_letter
@@ -19,7 +19,6 @@ from credit.models import Credit, LOG_ACTIONS as CREDIT_LOG_ACTIONS
 from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION
 from disbursement.models import Disbursement, LOG_ACTIONS as DISBURSEMENT_LOG_ACTIONS
 from notification.rules import RULES, CountingRule, MonitoredRule, Triggered
-from transaction.utils import format_amount
 
 
 class Command(BaseCommand):
@@ -77,7 +76,7 @@ def report_period(period_start, period_end):
             raise CommandError('Cannot parse `--until`')
         period_end = make_local_datetime(period_end)
 
-    today = make_local_datetime(timezone.now())
+    today = make_local_datetime(timezone.localtime())
     if not period_start and not period_end:
         # default is "last week"
         period_end = today - datetime.timedelta(days=today.weekday())
@@ -154,32 +153,16 @@ def generate_sheet(worksheet, serialiser, rule, record_set):
 
 
 def send_report(period_description, report_path, emails):
-    email = AnymailMessage(
-        subject=f'Prisoner money notifications for {period_description}',
-        body=f"""
-OFFICIAL SENSITIVE
-
-Please find attached, the prisoner money notifications report for {period_description}.
-
-There is a separate sheet for each notification rule for credits and disbursements.
-
-The ‘Monitored by’ column that appears in some sheets is the number of users
-who are monitoring that prisoner or payment source.
-
-The ‘How many?’ column that appears in some sheets is the number that triggered
-the rule in column A. For example, if the ‘How many?’ column says 4 for the rule
-‘More than 2 credits from the same debit card or bank account to any prisoner in a week’,
-then this means that a specific debit card or bank account sent 4 credits in a week
-up to when that credit was sent.
-
-If you have any queries, contact the team at {settings.TEAM_EMAIL}.
-        """.strip(),
-        from_email=default_from_address(),
+    send_email(
+        template_name='api-notifications-report',
         to=emails,
-        tags=['notifications-report'],
+        personalisation={
+            'period_description': period_description,
+            'attachment': report_path.read_bytes(),
+            'team_email': settings.TEAM_EMAIL,
+        },
+        staff_email=True,
     )
-    email.attach_file(str(report_path), mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    email.send()
 
 
 class Serialiser:
@@ -254,7 +237,7 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
         row.update({
             'Date received': local_datetime_for_xlsx(record.received_at),
             'Date credited': local_datetime_for_xlsx(record.log_set.get_action_date(CREDIT_LOG_ACTIONS.CREDITED)),
-            'Amount': format_amount(record.amount),
+            'Amount': format_currency(record.amount),
             'Prisoner number': record.prisoner_number or 'Unknown',
             'Prisoner name': record.prisoner_name or 'Unknown',
             'Prison': record.prison.short_name if record.prison else 'Unknown',
@@ -324,7 +307,7 @@ class DisbursementSerialiser(Serialiser, serialised_model=Disbursement):
                 record.log_set.get_action_date(DISBURSEMENT_LOG_ACTIONS.CONFIRMED)
             ),
             'Date sent': local_datetime_for_xlsx(record.log_set.get_action_date(DISBURSEMENT_LOG_ACTIONS.SENT)),
-            'Amount': format_amount(record.amount),
+            'Amount': format_currency(record.amount),
             'Prisoner number': record.prisoner_number,
             'Prisoner name': record.prisoner_name,
             'Prison': record.prison.short_name,

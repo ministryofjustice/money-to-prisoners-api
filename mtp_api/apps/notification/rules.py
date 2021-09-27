@@ -4,6 +4,7 @@ import unicodedata
 from django.db.transaction import atomic
 from django.utils import timezone
 from django.utils.functional import cached_property
+from mtp_common.utils import format_currency
 
 from core import getattr_path
 from credit.models import Credit
@@ -13,7 +14,6 @@ from notification.models import (
     SenderProfileEvent, RecipientProfileEvent, PrisonerProfileEvent,
 )
 from security.models import SenderProfile, RecipientProfile, PrisonerProfile
-from transaction.utils import format_amount
 
 ENABLED_RULE_CODES = {'MONP', 'MONS'}
 
@@ -101,7 +101,7 @@ class HighAmountRule(BaseRule):
         kwargs['limit'] = limit
         super().__init__(*args, **kwargs)
         self.description = self.description.format(
-            display_limit=format_amount(limit, trim_empty_pence=True, pound_sign=True)
+            display_limit=format_currency(limit, trim_empty_pence=True)
         )
 
     def triggered(self, record) -> Triggered:

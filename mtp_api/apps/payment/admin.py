@@ -5,10 +5,10 @@ from django.utils import timezone
 from django.utils.dateformat import format as format_date
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
+from mtp_common.utils import format_currency
 
 from core.admin import add_short_description
 from payment.models import Batch, BillingAddress, Payment
-from transaction.utils import format_amount
 
 
 @admin.register(Batch)
@@ -36,7 +36,7 @@ class BatchAdmin(admin.ModelAdmin):
 
     @add_short_description(_('payment amount'))
     def formatted_payment_amount(self, instance):
-        return format_amount(instance.payment_amount)
+        return format_currency(instance.payment_amount)
 
     @add_short_description(_('settled?'))
     def settled(self, instance):
@@ -49,7 +49,7 @@ class BatchAdmin(admin.ModelAdmin):
             return '–'
         link = reverse('admin:transaction_transaction_change', args=(settlement.pk,))
         description = '%(amount)s, %(date)s' % {
-            'amount': format_amount(settlement.amount),
+            'amount': format_currency(settlement.amount),
             'date': format_date(timezone.localtime(settlement.received_at), 'd/m/Y'),
         }
         return format_html('<a href="{}">{}</a>', link, description)
@@ -76,7 +76,7 @@ class PaymentAdmin(admin.ModelAdmin):
     def credit_link(self, instance):
         link = reverse('admin:credit_credit_change', args=(instance.credit.pk,))
         description = '%(amount)s %(status)s, %(date)s' % {
-            'amount': format_amount(instance.amount),
+            'amount': format_currency(instance.amount),
             'status': instance.credit.resolution,
             'date': format_date(timezone.localtime(instance.credit.created), 'd/m/Y'),
         }
@@ -89,13 +89,13 @@ class PaymentAdmin(admin.ModelAdmin):
 
     @add_short_description(_('amount'))
     def formatted_amount(self, instance):
-        return format_amount(instance.amount)
+        return format_currency(instance.amount)
 
     @add_short_description(_('service charge'))
     def formatted_service_charge(self, instance):
-        return format_amount(instance.service_charge)
+        return format_currency(instance.service_charge)
 
     @add_short_description(_('Display total of selected payments'))
     def display_total_amount(self, request, queryset):
         total = queryset.aggregate(models.Sum('amount'))['amount__sum']
-        self.message_user(request, _('Total: %s') % format_amount(total, True))
+        self.message_user(request, _('Total: %s') % format_currency(total, trim_empty_pence=True))
