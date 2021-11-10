@@ -9,7 +9,7 @@ sender_router = routers.NestedSimpleRouter(router, r'senders', lookup='sender')
 sender_router.register(
     r'credits',
     views.SenderProfileCreditsView,
-    base_name='sender-credits'
+    basename='sender-credits',
 )
 
 router.register(r'recipients', views.RecipientProfileView)
@@ -17,7 +17,7 @@ recipient_router = routers.NestedSimpleRouter(router, r'recipients', lookup='rec
 recipient_router.register(
     r'disbursements',
     views.RecipientProfileDisbursementsView,
-    base_name='recipient-disbursements'
+    basename='recipient-disbursements',
 )
 
 router.register(r'prisoners', views.PrisonerProfileView)
@@ -25,12 +25,12 @@ prisoner_router = routers.NestedSimpleRouter(router, r'prisoners', lookup='priso
 prisoner_router.register(
     r'credits',
     views.PrisonerProfileCreditsView,
-    base_name='prisoner-credits'
+    basename='prisoner-credits',
 )
 prisoner_router.register(
     r'disbursements',
     views.PrisonerProfileDisbursementsView,
-    base_name='prisoner-disbursements'
+    basename='prisoner-disbursements',
 )
 
 router.register(r'searches', views.SavedSearchView)

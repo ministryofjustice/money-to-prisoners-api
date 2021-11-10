@@ -11,7 +11,7 @@ router.register(r'batches', views.ProcessingBatchView)
 batch_router = routers.SimpleRouter()
 batch_router.register(r'private-estate-batches', views.PrivateEstateBatchView)
 batch_credits_router = routers.NestedSimpleRouter(batch_router, r'private-estate-batches', lookup='batch')
-batch_credits_router.register(r'credits', views.PrivateEstateBatchCreditsView, base_name='privateestatebatch-credit')
+batch_credits_router.register(r'credits', views.PrivateEstateBatchCreditsView, basename='privateestatebatch-credit')
 
 urlpatterns = [
     url(r'^credits/$', csrf_exempt(views.GetCredits.as_view({'get': 'list'}, suffix='List')), name='credit-list'),
