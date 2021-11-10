@@ -2,4 +2,4 @@
 
 -r dev.txt
 
-unittest-xml-reporting>=2.5,<3
+unittest-xml-reporting>=2.5,<4
