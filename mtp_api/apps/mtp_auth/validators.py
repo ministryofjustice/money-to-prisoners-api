@@ -61,6 +61,6 @@ class ApplicationRequestValidator(OAuth2Validator):
 
 
 class CaseInsensitiveUniqueValidator(UniqueValidator):
-    def filter_queryset(self, value, queryset):
-        filter_kwargs = {'%s__iexact' % self.field_name: value}
+    def filter_queryset(self, value, queryset, field_name):
+        filter_kwargs = {f'{field_name}__iexact': value}
         return queryset.filter(**filter_kwargs)
