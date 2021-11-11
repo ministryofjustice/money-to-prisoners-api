@@ -7,7 +7,10 @@ from django.views.generic import RedirectView
 from moj_irat.views import HealthcheckView, PingJsonView
 from mtp_common.metrics.views import metrics_view
 
+from mtp_auth.patches import patch_oauth2_provider_token_view
 from .views import schema_view
+
+patch_oauth2_provider_token_view()
 
 
 urlpatterns = [

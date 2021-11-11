@@ -2,6 +2,11 @@ version: 2
 updates:
   - package-ecosystem: pip
     directory: /requirements/
+    ignore:
+      - dependency-name: psycopg2-binary
+        update-types:
+          - version-update:semver-major
+          - version-update:semver-minor
     schedule:
       interval: weekly
     pull-request-branch-name:
