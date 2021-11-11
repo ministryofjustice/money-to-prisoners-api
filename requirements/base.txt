@@ -17,3 +17,7 @@ reportlab>=3.6,<4
 numpy>=1.21,<2
 scipy>=1.7,<2
 openpyxl~=3.0
+
+# these are used mainly in tests, but are required to load random data in test environments
+Faker~=9.8
+model-mommy~=2.0.0
