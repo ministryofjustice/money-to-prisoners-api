@@ -78,18 +78,27 @@ class AccountRequestPermissions(BasePermission):
         if action == 'list' and not request.user.is_authenticated:
             return True
         if action in ('list', 'retrieve', 'partial_update', 'destroy'):
-            return self.is_user_admin(request) and self.supported_app(request)
+            return IsUserAdmin.is_user_admin(request) and self.supported_app(request)
         return False
-
-    def is_user_admin(self, request):
-        return (
-            request.user and
-            request.user.is_authenticated and
-            request.user.groups.filter(name='UserAdmin').exists()
-        )
 
     def supported_app(self, request):
         return request.auth.application.client_id in self.supported_clients
 
     def has_object_permission(self, request, view, obj):
         return obj.role.application == request.auth.application
+
+
+class IsUserAdmin(BasePermission):
+    @classmethod
+    def is_user_admin(cls, request):
+        return (
+            request.user and
+            request.user.is_authenticated and
+            request.user.groups.filter(name='UserAdmin').exists()
+        )
+
+    def has_permission(self, request, view):
+        return self.is_user_admin(request)
+
+    def has_object_permission(self, request, view, obj):
+        return self.is_user_admin(request)

@@ -1,11 +1,15 @@
 import os
 from unittest import mock
 
-from django.contrib.auth.models import Group, Permission
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AnonymousUser, Group, Permission
 from django.core.management import call_command
 from django.test import TestCase
 
-from mtp_auth.permissions import ClientIDPermissions
+from core.tests.utils import make_test_users
+from mtp_auth.permissions import ClientIDPermissions, IsUserAdmin
+
+User = get_user_model()
 
 
 class TestClientIDPermissions(ClientIDPermissions):
@@ -41,6 +45,37 @@ class ClientIDPermissionsTestCase(TestCase):
     def test_has_permissions(self):
         self.request.auth.application.client_id = TestClientIDPermissions.client_id
 
+        self.assertTrue(
+            self.permissions.has_permission(self.request, self.view)
+        )
+
+
+class IsUserAdminTestCase(TestCase):
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
+
+    def setUp(self):
+        super().setUp()
+        self.test_user = make_test_users(clerks_per_prison=1, num_security_fiu_users=0)['prison_clerks'][0]
+        self.permissions = IsUserAdmin()
+        self.request = mock.MagicMock()
+        self.view = mock.MagicMock()
+
+    def test_no_permissions_without_auth(self):
+        self.request.user = AnonymousUser()
+        self.assertFalse(
+            self.permissions.has_permission(self.request, self.view)
+        )
+
+    def test_no_permissions_with_auth_but_missing_group(self):
+        self.request.user = self.test_user
+        self.assertFalse(
+            self.permissions.has_permission(self.request, self.view)
+        )
+
+    def test_has_permissions_with_auth_and_correct_group(self):
+        admin_group = Group.objects.get(name='UserAdmin')
+        self.test_user.groups.add(admin_group)
+        self.request.user = self.test_user
         self.assertTrue(
             self.permissions.has_permission(self.request, self.view)
         )
