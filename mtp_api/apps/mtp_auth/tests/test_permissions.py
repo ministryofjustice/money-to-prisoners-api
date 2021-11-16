@@ -7,7 +7,7 @@ from django.core.management import call_command
 from django.test import TestCase
 
 from core.tests.utils import make_test_users
-from mtp_auth.permissions import ClientIDPermissions, IsUserAdmin
+from mtp_auth.permissions import ClientIDPermissions, IsUserAdmin, UserMappedToPrison
 
 User = get_user_model()
 
@@ -79,6 +79,93 @@ class IsUserAdminTestCase(TestCase):
         self.assertTrue(
             self.permissions.has_permission(self.request, self.view)
         )
+
+
+class UserMappedToPrisonTestCase(TestCase):
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
+
+    def setUp(self):
+        super().setUp()
+
+        # test data creates 2 prisons each with 1 user
+        self.allowed_user, self.disallowed_user = make_test_users(
+            clerks_per_prison=1, num_security_fiu_users=0,
+        )['prison_clerks']
+        self.test_prison = self.allowed_user.prisonusermapping.prisons.first()
+
+        self.permissions = UserMappedToPrison('prison')
+        self.view = mock.MagicMock()
+        self.request = mock.MagicMock()
+        self.request.data = {}
+        self.obj = mock.MagicMock()
+
+    def test_list_permissions(self):
+        # listing is always allowed
+        self.view.action = 'list'
+
+        self.request.user = self.allowed_user
+        self.assertTrue(
+            self.permissions.has_permission(self.request, self.view)
+        )
+
+        self.request.user = self.disallowed_user
+        self.assertTrue(
+            self.permissions.has_permission(self.request, self.view)
+        )
+
+    def test_simple_object_permissions(self):
+        # retrieving and destroying can only be checked on the object
+        self.obj.prison = self.test_prison
+        for action in ('retrieve', 'destroy'):
+            self.view.action = action
+
+            self.request.user = self.allowed_user
+            self.assertTrue(
+                self.permissions.has_permission(self.request, self.view)
+            )
+            self.assertTrue(
+                self.permissions.has_object_permission(self.request, self.view, self.obj)
+            )
+
+            self.request.user = self.disallowed_user
+            self.assertTrue(
+                self.permissions.has_permission(self.request, self.view)
+            )
+            self.assertFalse(
+                self.permissions.has_object_permission(self.request, self.view, self.obj)
+            )
+
+    def test_results_in_allowed_prison_permissions(self):
+        # create/update/partial_update only permitted if _results_ in prison which user is mapped to
+        self.request.data = {'prison': self.test_prison.nomis_id}
+        for action in ('create', 'update', 'partial_update'):
+            self.view.action = action
+
+            self.request.user = self.allowed_user
+            self.assertTrue(
+                self.permissions.has_permission(self.request, self.view)
+            )
+
+            self.request.user = self.disallowed_user
+            self.assertFalse(
+                self.permissions.has_permission(self.request, self.view)
+            )
+
+    def test_modifying_from_allowed_prison_permissions(self):
+        # update and partial_update only permitted if _starting_ from prison which user is mapped to
+        self.obj.prison = self.test_prison
+        for action in ('update', 'partial_update'):
+            self.view.action = action
+
+            self.request.user = self.allowed_user
+            self.assertTrue(
+                self.permissions.has_object_permission(self.request, self.view, self.obj)
+            )
+
+            self.request.user = self.disallowed_user
+            self.assertFalse(
+                self.permissions.has_object_permission(self.request, self.view, self.obj)
+            )
 
 
 class SynchroniseGroupsTestCase(TestCase):
