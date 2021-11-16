@@ -16,16 +16,18 @@ from core.views import AdminViewMixin
 from credit.signals import credit_prisons_need_updating
 from mtp_auth.models import PrisonUserMapping
 from mtp_auth.permissions import (
-    NomsOpsClientIDPermissions, SendMoneyClientIDPermissions,
-    NOMS_OPS_OAUTH_CLIENT_ID, CASHBOOK_OAUTH_CLIENT_ID,
-    get_client_permissions_class
+    CashbookClientIDPermissions, NomsOpsClientIDPermissions, SendMoneyClientIDPermissions,
+    IsUserAdmin, UserMappedToPrison,
+    CASHBOOK_OAUTH_CLIENT_ID, NOMS_OPS_OAUTH_CLIENT_ID,
+    get_client_permissions_class,
 )
 from prison.forms import PrisonerBalanceUploadForm
-from prison.models import PrisonerLocation, Category, Population, Prison, PrisonerBalance
+from prison.models import PrisonerLocation, Category, Population, Prison, PrisonerBalance, PrisonerCreditNoticeEmail
 from prison.serializers import (
     PrisonerLocationSerializer,
     PrisonerValiditySerializer,
     PrisonerAccountBalanceSerializer,
+    PrisonerCreditNoticeEmailSerializer,
     PrisonSerializer, PopulationSerializer, CategorySerializer,
 )
 from security.signals import prisoner_profile_current_prisons_need_updating
@@ -228,3 +230,23 @@ class PrisonerBalanceUploadView(AdminViewMixin, FormView):
         likely_prison = likely_prisons.first()
         if likely_prison:
             return Prison.objects.get(pk=likely_prison['prison'])
+
+
+class PrisonerCreditNoticeEmailView(
+    mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet,
+):
+    permission_classes = (
+        IsAuthenticated, CashbookClientIDPermissions, IsUserAdmin, UserMappedToPrison.with_field('prison'),
+    )
+    queryset = PrisonerCreditNoticeEmail.objects.all()
+    pagination_class = None
+    serializer_class = PrisonerCreditNoticeEmailSerializer
+    lookup_field = 'prison'
+    lookup_url_kwarg = 'prison'
+
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+        if not self.detail:
+            # only filter list view so access to detail objects are controlled by permissions instead
+            queryset = queryset.filter(prison__in=PrisonUserMapping.objects.get_prison_set_for_user(self.request.user))
+        return queryset

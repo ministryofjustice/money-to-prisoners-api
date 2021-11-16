@@ -10,6 +10,9 @@ router.register(r'prisoner_account_balances', views.PrisonerAccountBalanceView, 
 router.register(r'prisons', views.PrisonView, basename='prison')
 router.register(r'prison_populations', views.PopulationView, basename='prison_population')
 router.register(r'prison_categories', views.CategoryView, basename='prison_category')
+router.register(
+    r'prisoner_credit_notice_email', views.PrisonerCreditNoticeEmailView, basename='prisoner_credit_notice_email'
+)
 
 urlpatterns = [
     url(r'^', include(router.urls)),

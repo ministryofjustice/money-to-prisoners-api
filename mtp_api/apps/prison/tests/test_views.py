@@ -16,15 +16,15 @@ import responses
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from core.tests.utils import make_test_users
+from core.tests.utils import make_test_users, make_test_user_admins
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from mtp_auth.constants import CASHBOOK_OAUTH_CLIENT_ID
 from mtp_auth.models import PrisonUserMapping
-from prison.models import Prison, PrisonerLocation, Population, Category, PrisonerBalance
+from prison.models import Prison, PrisonerLocation, Population, Category, PrisonerBalance, PrisonerCreditNoticeEmail
 from prison.serializers import TOLERATED_NOMIS_ERROR_CODES
 from prison.tests.utils import (
     random_prisoner_name, random_prisoner_number, random_prisoner_dob,
-    load_random_prisoner_locations
+    load_random_prisoner_locations,
 )
 
 
@@ -836,3 +836,161 @@ class PrisonCategoryViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(len(Category.objects.all()), response.data['count'])
         for prison_category in response.data['results']:
             self.assertTrue(prison_category['name'] in Category.objects.all().values_list('name', flat=True))
+
+
+class PrisonerCreditNoticeEmailViewTestCase(AuthTestCaseMixin, APITestCase):
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
+
+    def setUp(self):
+        super().setUp()
+        test_users = make_test_users(clerks_per_prison=1, num_security_fiu_users=0)
+        self.prison_clerks = test_users.pop('prison_clerks')
+
+        test_admin_users = make_test_user_admins()
+        self.cashbook_uas = test_admin_users.pop('prison_clerk_uas')
+
+        self.other_users = (
+            list(itertools.chain.from_iterable(test_users.values())) +
+            list(itertools.chain.from_iterable(test_admin_users.values()))
+        )
+
+        self.prisons = Prison.objects.all()
+        for prison in self.prisons:
+            mommy.make(PrisonerCreditNoticeEmail, prison=prison)
+
+    @property
+    def list_url(self):
+        return reverse('prisoner_credit_notice_email-list')
+
+    @classmethod
+    def patch_url(cls, prison):
+        return reverse('prisoner_credit_notice_email-detail', kwargs={'prison': prison})
+
+    def test_cashbook_uas_can_list_emails_in_own_prison(self):
+        for user in self.cashbook_uas:
+            user_prison_ids = set(PrisonUserMapping.objects.get_prison_set_for_user(user).values_list(
+                'nomis_id', flat=True
+            ))
+            response = self.client.get(
+                self.list_url, format='json',
+                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user),
+            )
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertIsInstance(response.data, list)
+            response_prison_ids = set(credit_notice_email['prison'] for credit_notice_email in response.data)
+            self.assertSetEqual(response_prison_ids, user_prison_ids)
+
+    def test_cashbook_uas_can_change_emails_in_own_prison(self):
+        for user in self.cashbook_uas:
+            user_prison_ids = set(PrisonUserMapping.objects.get_prison_set_for_user(user).values_list(
+                'nomis_id', flat=True
+            ))
+            for prison_id in user_prison_ids:
+                response = self.client.patch(
+                    self.patch_url(prison_id), format='json',
+                    data={'email': 'change-allowed@mtp.local'},
+                    HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user),
+                )
+                # able to change email for own prison
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+            other_prison_ids = set(Prison.objects.exclude(nomis_id__in=user_prison_ids).values_list(
+                'nomis_id', flat=True
+            ))
+            for prison_id in other_prison_ids:
+                with silence_logger('django.request'):
+                    response = self.client.patch(
+                        self.patch_url(prison_id), format='json',
+                        data={'email': 'change-NOT-allowed@mtp.local'},
+                        HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user),
+                    )
+                # unable to change email for other prison
+                self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        # ensure for no disallowed patches
+        self.assertFalse(PrisonerCreditNoticeEmail.objects.filter(email='change-NOT-allowed@mtp.local').exists())
+
+    def test_cashbook_uas_can_create_emails_in_own_prison(self):
+        for user in self.cashbook_uas:
+            PrisonerCreditNoticeEmail.objects.all().delete()
+
+            user_prison_ids = set(PrisonUserMapping.objects.get_prison_set_for_user(user).values_list(
+                'nomis_id', flat=True
+            ))
+            for prison_id in user_prison_ids:
+                response = self.client.post(
+                    self.list_url, format='json',
+                    data={'email': 'create-allowed@mtp.local', 'prison': prison_id},
+                    HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user),
+                )
+                # able to create email for own prison
+                self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+            other_prison_ids = set(Prison.objects.exclude(nomis_id__in=user_prison_ids).values_list(
+                'nomis_id', flat=True
+            ))
+            for prison_id in other_prison_ids:
+                with silence_logger('django.request'):
+                    response = self.client.post(
+                        self.list_url, format='json',
+                        data={'email': 'create-NOT-allowed@mtp.local', 'prison': prison_id},
+                        HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user),
+                    )
+                # unable to create email for other prison
+                self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+            # ensure no disallowed posts
+            self.assertFalse(PrisonerCreditNoticeEmail.objects.filter(email='create-NOT-allowed@mtp.local').exists())
+
+    def assertListAndChangeFails(self, user):  # noqa: N802
+        with silence_logger('django.request'):
+            response = self.client.get(
+                self.list_url, format='json',
+                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user),
+            )
+        # cannot list emails for any prisons
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertNotIsInstance(response.data, list)
+
+        for prison in self.prisons:
+            with silence_logger('django.request'):
+                response = self.client.patch(
+                    self.patch_url(prison.nomis_id), format='json',
+                    data={'email': 'will-not-exist@mtp.local'},
+                    HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user),
+                )
+            # cannot patch emails for any prisons
+            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+            self.assertNotIsInstance(response.data, list)
+            self.assertIn(b'You do not have permission to perform this action', response.content)
+
+        # ensure for no disallowed patches
+        self.assertFalse(PrisonerCreditNoticeEmail.objects.filter(email='will-not-exist@mtp.local').exists())
+
+        # clear all emails so creation is possible
+        PrisonerCreditNoticeEmail.objects.all().delete()
+
+        for prison in self.prisons:
+            with silence_logger('django.request'):
+                response = self.client.post(
+                    self.list_url, format='json',
+                    data={'email': 'will-not-exist@mtp.local', 'prison': prison.nomis_id},
+                    HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user),
+                )
+            # cannot post emails for any prisons
+            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+            self.assertNotIsInstance(response.data, list)
+            self.assertIn(b'You do not have permission to perform this action', response.content)
+
+        # ensure for no disallowed posts
+        self.assertFalse(PrisonerCreditNoticeEmail.objects.filter(email='will-not-exist@mtp.local').exists())
+
+    def test_prison_clerks_cannot_list_or_change_emails(self):
+        # these users are not UserAdmins
+        for user in self.prison_clerks:
+            self.assertListAndChangeFails(user)
+
+    def test_other_users_cannot_list_or_change_emails(self):
+        # these users do not have cashbook application client permissions
+        for user in self.other_users:
+            self.assertListAndChangeFails(user)
