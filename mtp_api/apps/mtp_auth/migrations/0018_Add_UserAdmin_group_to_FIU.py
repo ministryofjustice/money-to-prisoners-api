@@ -11,6 +11,7 @@ def add_UserAdmin_group_to_FIU(apps, schema_editor):
         print(f'Adding UserAdmin group from user with id {fiu_user.pk}')
         fiu_user.groups.add(group_model.objects.get(name='UserAdmin'))
 
+
 def remove_UserAdmin_group_from_FIU(apps, schema_editor):
     user_model = apps.get_model('auth', 'user')
     group_model = apps.get_model('auth', 'group')

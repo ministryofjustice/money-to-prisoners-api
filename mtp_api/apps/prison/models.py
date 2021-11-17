@@ -127,7 +127,7 @@ class PrisonerCreditNoticeEmail(models.Model):
         ordering = ('prison',)
 
     def __str__(self):
-        return '%s <%s>' % (self.prison.name, self.email)
+        return f'{self.prison.name} <{self.email}>'
 
 
 class PrisonerBalance(TimeStampedModel):

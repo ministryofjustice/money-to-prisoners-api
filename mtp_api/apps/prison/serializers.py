@@ -7,7 +7,10 @@ import requests
 from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
 
-from prison.models import PrisonerLocation, Prison, Category, Population, PrisonBankAccount, PrisonerBalance
+from prison.models import (
+    PrisonerLocation, Prison, Category, Population, PrisonBankAccount, PrisonerBalance,
+    PrisonerCreditNoticeEmail,
+)
 from prison.utils import fetch_prisoner_location_from_nomis
 
 logger = logging.getLogger('mtp')
@@ -191,3 +194,15 @@ class PrisonBankAccountSerializer(serializers.ModelSerializer):
     class Meta:
         model = PrisonBankAccount
         fields = '__all__'
+
+
+class PrisonerCreditNoticeEmailSerializer(serializers.ModelSerializer):
+    prison_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PrisonerCreditNoticeEmail
+        fields = ('prison', 'prison_name', 'email')
+
+    @classmethod
+    def get_prison_name(cls, model: PrisonerCreditNoticeEmail):
+        return model.prison.name

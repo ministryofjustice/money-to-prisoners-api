@@ -1,10 +1,12 @@
 from rest_framework.permissions import BasePermission
+from rest_framework.request import Request
 
 from core.permissions import ActionsBasedPermissions
 from mtp_auth.constants import (
     CASHBOOK_OAUTH_CLIENT_ID, BANK_ADMIN_OAUTH_CLIENT_ID,
     NOMS_OPS_OAUTH_CLIENT_ID, SEND_MONEY_CLIENT_ID,
 )
+from mtp_auth.models import PrisonUserMapping
 
 
 class UserPermissions(ActionsBasedPermissions):
@@ -78,18 +80,58 @@ class AccountRequestPermissions(BasePermission):
         if action == 'list' and not request.user.is_authenticated:
             return True
         if action in ('list', 'retrieve', 'partial_update', 'destroy'):
-            return self.is_user_admin(request) and self.supported_app(request)
+            return IsUserAdmin.is_user_admin(request) and self.supported_app(request)
         return False
-
-    def is_user_admin(self, request):
-        return (
-            request.user and
-            request.user.is_authenticated and
-            request.user.groups.filter(name='UserAdmin').exists()
-        )
 
     def supported_app(self, request):
         return request.auth.application.client_id in self.supported_clients
 
     def has_object_permission(self, request, view, obj):
         return obj.role.application == request.auth.application
+
+
+class IsUserAdmin(BasePermission):
+    @classmethod
+    def is_user_admin(cls, request):
+        return (
+            request.user and
+            request.user.is_authenticated and
+            request.user.groups.filter(name='UserAdmin').exists()
+        )
+
+    def has_permission(self, request, view):
+        return self.is_user_admin(request)
+
+    def has_object_permission(self, request, view, obj):
+        return self.is_user_admin(request)
+
+
+class UserMappedToPrison(BasePermission):
+    @classmethod
+    def with_field(cls, field_name):
+        return lambda: cls(field_name)
+
+    def __init__(self, field_name):
+        self.field_name = field_name
+
+    def has_permission(self, request: Request, view):
+        if not super().has_permission(request, view):
+            return False
+
+        if view.action in ('create', 'update', 'partial_update') and self.field_name in request.data:
+            prison_id = request.data[self.field_name]
+            user_prisons = PrisonUserMapping.objects.get_prison_set_for_user(request.user)
+            return user_prisons.filter(nomis_id=prison_id).exists()
+
+        # retrieve and destroy are checked by has_object_permission
+        # list action is always permitted
+        return True
+
+    def has_object_permission(self, request: Request, view, obj):
+        if not super().has_object_permission(request, view, obj):
+            return False
+
+        # retrieve, update, partial_update, destroy
+        prison_id = getattr(obj, self.field_name).nomis_id
+        user_prisons = PrisonUserMapping.objects.get_prison_set_for_user(request.user)
+        return user_prisons.filter(nomis_id=prison_id).exists()
