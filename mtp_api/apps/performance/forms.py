@@ -13,7 +13,7 @@ from django.utils.dateparse import parse_datetime
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 
-from core.excel import ExcelWorkbook
+from core.excel import ExcelWorkbook, ExcelWorksheet
 
 logger = logging.getLogger('mtp')
 
@@ -69,11 +69,19 @@ class DigitalTakeupUploadForm(forms.Form):
         prison_str = self.re_whitespace.sub('', prison_str).upper()
         return self.prison_name_map[prison_str]
 
+    @classmethod
+    def find_worksheet_start(cls, sheet: ExcelWorksheet):
+        # find beginning of spreadsheet as blank rows/columns has appeared over the years
+        for row in range(3):
+            for col in range(3):
+                if (sheet.cell_value(row, col) or '').strip() == 'Parameters':
+                    return row, col
+
     def parse_workbook(self, workbook: ExcelWorkbook):
         sheet = workbook.get_sheet(0)
+        start_row, start_col = self.find_worksheet_start(sheet)
 
         date_formats = ['%d/%m/%Y'] + list(settings.DATE_INPUT_FORMATS)
-        data_start_row = 6
 
         def parse_date(date_str, alt_date_str):
             date_str = date_str.split(':', 1)[1].strip().lstrip('0') or alt_date_str.strip().lstrip('0')
@@ -84,15 +92,21 @@ class DigitalTakeupUploadForm(forms.Form):
                     continue
             raise ValueError('Cannot parse date header %s' % date_str)
 
-        start_date = parse_date(sheet.cell_value(2, 0), sheet.cell_value(2, 1))
-        end_date = parse_date(sheet.cell_value(3, 0), sheet.cell_value(3, 1))
+        start_date = parse_date(
+            sheet.cell_value(start_row + 1, start_col),
+            sheet.cell_value(start_row + 1, start_col + 1),
+        )
+        end_date = parse_date(
+            sheet.cell_value(start_row + 2, start_col),
+            sheet.cell_value(start_row + 2, start_col + 1),
+        )
         if start_date != end_date:
             raise ValidationError(self.error_messages['invalid_date'], code='invalid_date')
         self.date = start_date
 
-        row = data_start_row
+        row = start_row + 5
         while row < sheet.row_count:
-            prison_name = sheet.cell_value(row, 0)
+            prison_name = sheet.cell_value(row, start_col)
             if not prison_name:
                 break
             try:
@@ -107,14 +121,14 @@ class DigitalTakeupUploadForm(forms.Form):
                     'amount_by_post': 0,
                     'amount_by_mtp': 0,
                 }
-            if sheet.cell_value(row, 1):
-                credit_type = sheet.cell_value(row, 1).upper()
-                count = sheet.cell_value(row, 2)
-                amount = sheet.cell_value(row, 4)
+            if sheet.cell_value(row, start_col + 1):
+                credit_type = sheet.cell_value(row, start_col + 1).upper()
+                count = sheet.cell_value(row, start_col + 2)
+                amount = sheet.cell_value(row, start_col + 4)
             else:
-                credit_type = sheet.cell_value(row, 2).upper()
-                count = sheet.cell_value(row, 3)
-                amount = sheet.cell_value(row, 5)
+                credit_type = sheet.cell_value(row, start_col + 2).upper()
+                count = sheet.cell_value(row, start_col + 3)
+                amount = sheet.cell_value(row, start_col + 5)
             if credit_type == 'CHEQ':
                 row += 1
                 continue
