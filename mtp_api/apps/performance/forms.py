@@ -13,13 +13,15 @@ from django.utils.dateparse import parse_datetime
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 
+from core.excel import ExcelWorkbook
+
 logger = logging.getLogger('mtp')
 
 
 class DigitalTakeupUploadForm(forms.Form):
     excel_file = forms.FileField(label=_('Excel file'), widget=AdminFileWidget)
     error_messages = {
-        'cannot_read': _('Please upload a Microsoft Excel 97-2003 .xls file'),
+        'cannot_read': _('Please upload a Microsoft Excel .xls or .xlsx file'),
         'invalid': _('The spreadsheet does not contain the expected structure'),
         'invalid_date': _('The report data should be for one day only'),
         'unknown_prison': _('Cannot look up prison ‘%(prison_name)s’'),
@@ -67,7 +69,9 @@ class DigitalTakeupUploadForm(forms.Form):
         prison_str = self.re_whitespace.sub('', prison_str).upper()
         return self.prison_name_map[prison_str]
 
-    def parse_excel_sheet(self, sheet):
+    def parse_workbook(self, workbook: ExcelWorkbook):
+        sheet = workbook.get_sheet(0)
+
         date_formats = ['%d/%m/%Y'] + list(settings.DATE_INPUT_FORMATS)
         data_start_row = 6
 
@@ -87,7 +91,7 @@ class DigitalTakeupUploadForm(forms.Form):
         self.date = start_date
 
         row = data_start_row
-        while row < sheet.nrows:
+        while row < sheet.row_count:
             prison_name = sheet.cell_value(row, 0)
             if not prison_name:
                 break
@@ -124,17 +128,14 @@ class DigitalTakeupUploadForm(forms.Form):
     def clean_excel_file(self):
         excel_file = self.cleaned_data.get('excel_file')
         if excel_file:
-            from xlrd import open_workbook, XLRDError
-            from xlrd.compdoc import CompDocError
-
             try:
-                with open_workbook(filename=excel_file.name, file_contents=excel_file.read(),
-                                   on_demand=True) as work_book:
-                    sheet = work_book.get_sheet(0)
-                    self.parse_excel_sheet(sheet)
-            except (IndexError, CompDocError, XLRDError):
+                with ExcelWorkbook.open_workbook(excel_file) as workbook:
+                    self.parse_workbook(workbook)
+            except TypeError:
+                # raised when file cannot be read
                 raise ValidationError(self.error_messages['cannot_read'], code='cannot_read')
-            except ValueError:
+            except (ValueError, IndexError):
+                # raised when file can be read but has unexpected structure/contents
                 logger.warning('Cannot parse spreadsheet', exc_info=True)
                 raise ValidationError(self.error_messages['invalid'], code='invalid')
         return None
