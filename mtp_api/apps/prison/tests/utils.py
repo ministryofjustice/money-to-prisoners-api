@@ -95,7 +95,7 @@ def load_prisoner_locations_from_file(filename):
         csv_reader = csv.DictReader(f)
         prisoner_locations = list(csv_reader)
     for prisoner_location in prisoner_locations:
-        prisoner_location['created_by'] = get_user_model().objects.first(),
+        prisoner_location['created_by'] = get_user_model().objects.first()
         prisoner_location['prison'] = Prison.objects.get(nomis_id=prisoner_location['prison'])
         prisoner_location['prisoner_dob'] = parse_date(prisoner_location['prisoner_dob'])
         prisoner_location['active'] = True
