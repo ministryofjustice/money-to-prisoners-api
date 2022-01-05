@@ -22,10 +22,9 @@ class ModifiedTokenView(TokenView):
         response = super().post(request, *args, **kwargs)
         if response.status_code == 400:
             response_content = json.loads(response.content)
-            if (
-                response_content.get('error') == 'invalid_grant' and
-                'Invalid credentials given' in response_content.get('error_description')
-            ):
+            error = response_content.get('error')
+            error_description = response_content.get('error_description') or ''
+            if error == 'invalid_grant' and 'Invalid credentials given' in error_description:
                 response.status_code = 401
         return response
 
