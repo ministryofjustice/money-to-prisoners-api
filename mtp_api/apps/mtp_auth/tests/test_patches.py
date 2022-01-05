@@ -4,7 +4,7 @@ from unittest import mock
 from django.urls import reverse
 from mtp_common.test_utils import silence_logger
 from oauth2_provider.models import Application
-from oauthlib.oauth2 import InvalidRequestError, UnsupportedGrantTypeError
+from oauthlib.oauth2 import InvalidRequestError, InvalidGrantError, UnsupportedGrantTypeError
 
 from core.tests.utils import make_test_users
 from mtp_auth.constants import CASHBOOK_OAUTH_CLIENT_ID
@@ -47,6 +47,10 @@ class OauthTokenRequestPatchTestCase(AuthBaseTestCase):
         # pretends that request was malformed: status code should NOT be modified remaining 400
 
         mocked_token_request.side_effect = UnsupportedGrantTypeError()
+        response = self.try_login()
+        self.assertEqual(response.status_code, 400)
+
+        mocked_token_request.side_effect = InvalidGrantError()
         response = self.try_login()
         self.assertEqual(response.status_code, 400)
 
