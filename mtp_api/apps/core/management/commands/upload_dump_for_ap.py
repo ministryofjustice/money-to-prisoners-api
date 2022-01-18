@@ -18,7 +18,6 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         if not all([settings.ANALYTICAL_PLATFORM_BUCKET,
-                    settings.AWS_IAM_ROLE_ARN,
                     settings.ANALYTICAL_PLATFORM_BUCKET_PATH]):
             self.stderr.write(self.style.WARNING('Cannot upload dump to Analytical Platform'))
             return
