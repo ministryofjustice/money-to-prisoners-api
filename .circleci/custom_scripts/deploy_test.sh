@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 . ${CIRCLE_WORKING_DIRECTORY}/.circleci/custom_scripts/common.sh
-if [[ "${CIRCLE_BRANCH}" == "master" ]]; then
+if [[ "${CIRCLE_BRANCH}" == "main" ]]; then
   echo "Deploying to test"
 
   echo -n ${K8S_CLUSTER_CERT} | base64 -d > /tmp/mtp-k8s-ca.crt

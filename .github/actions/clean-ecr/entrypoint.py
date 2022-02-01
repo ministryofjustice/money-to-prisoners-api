@@ -43,7 +43,7 @@ def get_pull_request_branch():
     head_branch = pull_request.get('head', {}).get('ref')
     assert head_branch, 'Cannot determine branch'
     default_branch = pull_request.get('repository', {}).get('default_branch')
-    protected_branches = {'master', default_branch}
+    protected_branches = {'main', default_branch}
     assert head_branch not in protected_branches, f'Branch {head_branch} is protected'
     return head_branch
 
