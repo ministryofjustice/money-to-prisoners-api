@@ -19,5 +19,5 @@ scipy>=1.7,<2
 openpyxl~=3.0
 
 # these are used mainly in tests, but are required to load random data in test environments
-Faker~=10.0
+Faker~=12.1
 model-mommy~=2.0.0
