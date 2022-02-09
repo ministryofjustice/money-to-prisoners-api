@@ -1,3 +1,4 @@
+import datetime
 import itertools
 import random
 from unittest import mock
@@ -6,6 +7,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.test import override_settings
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.dateformat import format as format_date
 from model_mommy import mommy
 from mtp_common.nomis import Connector
@@ -55,6 +57,10 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
     @property
     def delete_inactive_url(self):
         return reverse('prisonerlocation-delete-inactive')
+
+    @property
+    def can_upload_url(self):
+        return reverse('prisonerlocation-can_upload')
 
     def test_fails_without_application_permissions(self):
         """
@@ -260,6 +266,59 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_cannot_check_if_upload_allowed_without_permission(self):
+        user = self.prison_clerks[0]
+        response = self.client.get(
+            self.can_upload_url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_can_upload_when_none_inactive(self):
+        # recent active locations exist, but do not matter
+        mommy.make(PrisonerLocation,
+                   prisoner_number=random_prisoner_number(), prison=self.prisons[0],
+                   active=True,
+                   created=timezone.now() - datetime.timedelta(minutes=1))
+
+        user = self.prisoner_location_admins[0]
+        response = self.client.get(
+            self.can_upload_url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertDictEqual(response.json(), {'can_upload': True})
+
+    def test_can_upload_when_old_inactive(self):
+        # inactive locations exist, but are not recent so do not matter
+        mommy.make(PrisonerLocation,
+                   prisoner_number=random_prisoner_number(), prison=self.prisons[0],
+                   active=False,
+                   created=timezone.now() - datetime.timedelta(minutes=17))
+
+        user = self.prisoner_location_admins[0]
+        response = self.client.get(
+            self.can_upload_url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertDictEqual(response.json(), {'can_upload': True})
+
+    def test_cannot_upload_when_recent_inactive(self):
+        # recent inactive locations exist, so cannot upload now
+        mommy.make(PrisonerLocation,
+                   prisoner_number=random_prisoner_number(), prison=self.prisons[0],
+                   active=False,
+                   created=timezone.now() - datetime.timedelta(minutes=1, seconds=4))
+
+        user = self.prisoner_location_admins[0]
+        response = self.client.get(
+            self.can_upload_url, format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertDictEqual(response.json(), {'can_upload': False})
 
 
 class DeleteOldPrisonerLocationsViewTestCase(AuthTestCaseMixin, APITestCase):

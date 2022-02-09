@@ -1,12 +1,14 @@
+import datetime
 import logging
 
 from django.contrib import messages
 from django.db import models, transaction
 from django.urls import reverse_lazy
+from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.utils.translation import gettext, gettext_lazy as _
 from django.views.generic import FormView
-from rest_framework import generics, mixins, viewsets, status
+from rest_framework import decorators, generics, mixins, viewsets, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
@@ -35,15 +37,22 @@ from security.signals import prisoner_profile_current_prisons_need_updating
 logger = logging.getLogger('mtp')
 
 
+class PrisonerLocationPermissions(ActionsBasedViewPermissions):
+    actions_perms_map = ActionsBasedViewPermissions.actions_perms_map.copy()
+    actions_perms_map.update({
+        'can_upload': ['%(app_label)s.add_prisonerlocation'],
+    })
+
+
 class PrisonerLocationView(
     mixins.CreateModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
 ):
     queryset = PrisonerLocation.objects.all().filter(active=True)
 
     permission_classes = (
-        IsAuthenticated, ActionsBasedViewPermissions,
-        get_client_permissions_class(
-            NOMS_OPS_OAUTH_CLIENT_ID, CASHBOOK_OAUTH_CLIENT_ID)
+        IsAuthenticated,
+        get_client_permissions_class(NOMS_OPS_OAUTH_CLIENT_ID, CASHBOOK_OAUTH_CLIENT_ID),
+        PrisonerLocationPermissions,
     )
     serializer_class = PrisonerLocationSerializer
     lookup_field = 'prisoner_number'
@@ -75,6 +84,18 @@ class PrisonerLocationView(
                     'in a prison that you manage.'
                 )
             )
+
+    @decorators.action(detail=False, url_path='can-upload', url_name='can_upload')
+    def can_upload(self, request):
+        # inactive locations are created as batches are uploaded from noms-ops
+        # i.e. either an upload is in progress or was interrupted in the past
+        # concurrent uploads interfere so only one should happen at a time
+        inactive = PrisonerLocation.objects.filter(active=False)
+        # ignore inactive locations that are older than 10min (an upload typically takes ~3min)
+        recent_inactive = inactive.exclude(created__lt=timezone.now() - datetime.timedelta(minutes=10))
+        return Response(data={
+            'can_upload': not recent_inactive.exists(),
+        })
 
 
 class DeleteOldPrisonerLocationsView(generics.GenericAPIView):
