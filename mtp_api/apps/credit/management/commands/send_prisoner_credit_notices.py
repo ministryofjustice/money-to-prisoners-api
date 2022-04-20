@@ -1,12 +1,16 @@
+import logging
 import pathlib
 import shutil
 import tempfile
 
 from django.core.management import BaseCommand, call_command
 from mtp_common.tasks import send_email
+from notifications_python_client.utils import DOCUMENT_UPLOAD_SIZE_LIMIT as NOTIFY_UPLOAD_LIMIT
 
 from credit.management.commands.create_prisoner_credit_notices import parsed_date_or_yesterday
 from prison.models import PrisonerCreditNoticeEmail
+
+logger = logging.getLogger('mtp')
 
 
 class Command(BaseCommand):
@@ -33,7 +37,7 @@ class Command(BaseCommand):
             credit_notice_emails = PrisonerCreditNoticeEmail.objects.filter(prison=prison)
         if not credit_notice_emails.exists():
             if prison:
-                self.stderr.write('No email address found for %s' % prison)
+                self.stderr.write(f'No email address found for {prison}')
             else:
                 self.stderr.write('No known email addresses')
             return
@@ -41,7 +45,7 @@ class Command(BaseCommand):
         bundle_dir = pathlib.Path(tempfile.mkdtemp())
         try:
             for credit_notice_email in credit_notice_emails:
-                path = bundle_dir / ('prison-credits-%s.pdf' % credit_notice_email.prison.nomis_id)
+                path = bundle_dir / f'prison-credits-{credit_notice_email.prison.nomis_id}.pdf'
                 self.handle_prison(credit_notice_email, path, date, **options)
         finally:
             if bundle_dir.exists():
@@ -56,11 +60,18 @@ class Command(BaseCommand):
         date_reference = parsed_date_or_yesterday(date).strftime('%Y-%m-%d')
         if not path.exists():
             if self.verbosity:
-                self.stdout.write('Nothing to send to %s' % credit_notice_email)
+                self.stdout.write(f'Nothing to send to {credit_notice_email}')
+            return
+        if path.stat().st_size >= NOTIFY_UPLOAD_LIMIT:
+            error_message = (
+                f'Cannot send prisoner notice email to {credit_notice_email} because the attachment is too big'
+            )
+            logger.error(error_message)
+            self.stdout.write(error_message)
             return
 
         if self.verbosity:
-            self.stdout.write('Sending prisoner notice email to %s' % credit_notice_email)
+            self.stdout.write(f'Sending prisoner notice email to {credit_notice_email}')
         send_email(
             template_name='api-prisoner-notice-email',
             to=credit_notice_email.email,

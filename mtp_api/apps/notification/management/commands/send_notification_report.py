@@ -1,4 +1,5 @@
 import datetime
+import logging
 import pathlib
 import tempfile
 
@@ -10,6 +11,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date
 from mtp_common.tasks import send_email
 from mtp_common.utils import format_currency
+from notifications_python_client.utils import DOCUMENT_UPLOAD_SIZE_LIMIT as NOTIFY_UPLOAD_LIMIT
 import openpyxl
 from openpyxl.cell import WriteOnlyCell
 from openpyxl.utils import get_column_letter
@@ -19,6 +21,8 @@ from credit.models import Credit, LOG_ACTIONS as CREDIT_LOG_ACTIONS
 from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION
 from disbursement.models import Disbursement, LOG_ACTIONS as DISBURSEMENT_LOG_ACTIONS
 from notification.rules import RULES, CountingRule, MonitoredRule, Triggered
+
+logger = logging.getLogger('mtp')
 
 
 class Command(BaseCommand):
@@ -153,6 +157,9 @@ def generate_sheet(worksheet, serialiser, rule, record_set):
 
 
 def send_report(period_description, report_path, emails):
+    if report_path.stat().st_size >= NOTIFY_UPLOAD_LIMIT:
+        logger.error('Cannot send notification report email because the attachment is too big')
+        return
     send_email(
         template_name='api-notifications-report',
         to=emails,
