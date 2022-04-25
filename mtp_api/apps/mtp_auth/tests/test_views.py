@@ -289,6 +289,13 @@ class GetUserTestCase(AuthBaseTestCase):
             self.prison_clerks + self.prisoner_location_admins +
             self.bank_admins + self.refund_bank_admins + self.security_users
         )
+        self.test_user_roles = (
+            [['prison-clerk']] * len(self.prison_clerks) +
+            [['prisoner-location-admin']] * len(self.prisoner_location_admins) +
+            [[]] * len(self.bank_admins) +
+            [['bank-admin']] * len(self.refund_bank_admins) +
+            [['security']] * len(self.security_users)
+        )
         self.bank_uas = make_test_user_admins()['bank_admin_uas']
 
     def _get_url(self, username):
@@ -354,9 +361,7 @@ class GetUserTestCase(AuthBaseTestCase):
             self.assertEqual(response.data['permissions'], user.get_all_permissions())
 
     def test_correct_roles_returned(self):
-        roles = [['prison-clerk'], ['prison-clerk'], ['prison-clerk'], ['prison-clerk'],
-                 ['prisoner-location-admin'], [], ['bank-admin'], ['security']]
-        for user, roles in zip(self.test_users, roles):
+        for user, roles in zip(self.test_users, self.test_user_roles):
             url = self._get_url(user.username)
             response = self.client.get(
                 url, format='json',
@@ -399,8 +404,8 @@ class GetUserTestCase(AuthBaseTestCase):
         Flag.objects.create(user=user_1, name='abc')
         Flag.objects.create(user=user_2, name='abc')
         Flag.objects.create(user=user_2, name='123')
-        flags = [['abc', 'hmpps-employee'], ['123', 'abc', 'hmpps-employee']]
-        for user, flags in zip(self.security_users[:2], flags):
+        user_flags = [['abc', 'hmpps-employee'], ['123', 'abc', 'hmpps-employee']]
+        for user, flags in zip(self.security_users[:2], user_flags):
             url = self._get_url(user.username)
             response = self.client.get(
                 url, format='json',

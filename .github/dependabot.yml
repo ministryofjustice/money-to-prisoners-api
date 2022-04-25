@@ -4,10 +4,9 @@ updates:
     directory: /requirements/
     ignore:
       - dependency-name: psycopg2-binary
-        update-types:
-          - version-update:semver-major
-          - version-update:semver-minor
+        versions:
+          - ">=2.9"
     schedule:
-      interval: weekly
+      interval: monthly
     pull-request-branch-name:
       separator: '-'
