@@ -38,7 +38,7 @@ class SenderProfile(TimeStampedModel):
         ]
 
     def __str__(self):
-        return 'Sender %s' % self.id
+        return f'Sender {self.id}'
 
     def get_sender_names(self):
         yield from (details.sender_name for details in self.bank_transfer_details.all())
@@ -229,7 +229,7 @@ class PrisonerProfile(TimeStampedModel):
         ]
 
     def __str__(self):
-        return self.prisoner_number
+        return f'Prisoner {self.id} ({self.prisoner_number})'
 
     def get_monitoring_users(self):
         return self.monitoring_users
