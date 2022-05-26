@@ -96,6 +96,9 @@ class UserAdmin(DjangoUserAdmin):
     form = RestrictedUserChangeForm
     inlines = DjangoUserAdmin.inlines + [FlagInline]
 
+    def has_delete_permission(self, request, obj=None):
+        return False
+
     def remove_account_lockouts(self, request, instances):
         accounts = []
         for instance in instances:
