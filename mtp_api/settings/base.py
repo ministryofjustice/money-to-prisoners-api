@@ -94,6 +94,7 @@ INSTALLED_APPS = (
 WSGI_APPLICATION = 'mtp_api.wsgi.application'
 ROOT_URLCONF = 'mtp_api.urls'
 MIDDLEWARE = (
+    'mtp_common.metrics.middleware.RequestMetricsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
