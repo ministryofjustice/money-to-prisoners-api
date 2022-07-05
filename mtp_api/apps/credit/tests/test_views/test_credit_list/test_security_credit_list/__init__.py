@@ -1,8 +1,5 @@
 from credit.models import Credit
-from credit.tests.test_views.test_credit_list import (
-    CreditListTestCase
-
-)
+from credit.tests.test_views.test_credit_list import CreditListTestCase
 
 
 class SecurityCreditListTestCase(CreditListTestCase):
