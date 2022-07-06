@@ -76,39 +76,39 @@ class CreditTextSearchFilter(django_filters.CharFilter):
 
         re_amount = re.compile(r'^£?(\d+(?:\.\d\d)?)$')
 
-        for word in value.split():
-            def get_field_filter(field):
-                if field == 'amount':
-                    # for amount fields, only do a search if the input looks
-                    # like a currency value (£n.nn), this is reformatted by
-                    # stripping the £ and . to turn it into integer pence
-                    matches = re_amount.match(word)
-                    if not matches:
-                        return None
-                    search_term = matches.group(1)
-                    amount = search_term.replace('.', '')
-                    # exact match if amount fully specified e.g. £5.00,
-                    # startswith if not e.g. £5
-                    if '.' in search_term:
-                        return models.Q(**{'%s' % field: amount})
-                    else:
-                        return models.Q(**{'%s__startswith' % field: amount})
-                elif field == 'sender_name':
-                    return (
-                        models.Q(**{'transaction__sender_name__icontains': word})
-                        | models.Q(**{'payment__cardholder_name__icontains': word})
-                    )
-                elif field == 'payment__uuid':
-                    if len(word) == 8:
-                        return models.Q(**{'%s__startswith' % field: word})
+        def get_field_filter(field, word):
+            if field == 'amount':
+                # for amount fields, only do a search if the input looks
+                # like a currency value (£n.nn), this is reformatted by
+                # stripping the £ and . to turn it into integer pence
+                matches = re_amount.match(word)
+                if not matches:
                     return None
+                search_term = matches.group(1)
+                amount = search_term.replace('.', '')
+                # exact match if amount fully specified e.g. £5.00,
+                # startswith if not e.g. £5
+                if '.' in search_term:
+                    return models.Q(**{'%s' % field: amount})
+                else:
+                    return models.Q(**{'%s__startswith' % field: amount})
+            elif field == 'sender_name':
+                return (
+                    models.Q(**{'transaction__sender_name__icontains': word})
+                    | models.Q(**{'payment__cardholder_name__icontains': word})
+                )
+            elif field == 'payment__uuid':
+                if len(word) == 8:
+                    return models.Q(**{'%s__startswith' % field: word})
+                return None
 
-                return models.Q(**{'%s__icontains' % field: word})
+            return models.Q(**{'%s__icontains' % field: word})
 
+        for value_word in value.split():
             qs = qs.filter(
                 reduce(
                     lambda a, b: a | b,
-                    filter(bool, map(get_field_filter, self.fields))
+                    filter(bool, [get_field_filter(field, value_word) for field in self.fields])
                 )
             )
         return qs

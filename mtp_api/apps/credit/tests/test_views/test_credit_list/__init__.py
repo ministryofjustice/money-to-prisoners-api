@@ -227,25 +227,19 @@ class CreditListTestCase(
     def _get_amount_pattern_checker(self, filters, noop_checker):
         checkers = [noop_checker]
         if 'exclude_amount__endswith' in filters:
-            excluded_ends = filters['exclude_amount__endswith']
-            if type(excluded_ends) is not list:
-                excluded_ends = [excluded_ends]
-            for ending in excluded_ends:
-                checkers.append(
-                    lambda c: not str(c.amount).endswith(ending)
-                )
+            excluded_ending = filters['exclude_amount__endswith']
+            checkers.append(
+                lambda c: not str(c.amount).endswith(excluded_ending)
+            )
         if 'exclude_amount__regex' in filters:
             checkers.append(lambda c: not re.match(
                 filters['exclude_amount__regex'], str(c.amount))
             )
         if 'amount__endswith' in filters:
-            endings = filters['amount__endswith']
-            if type(endings) is not list:
-                endings = [endings]
-            for ending in endings:
-                checkers.append(
-                    lambda c: str(c.amount).endswith(ending)
-                )
+            ending = filters['amount__endswith']
+            checkers.append(
+                lambda c: str(c.amount).endswith(ending)
+            )
         if 'amount__regex' in filters:
             checkers.append(lambda c: re.match(
                 filters['amount__regex'], str(c.amount))
@@ -256,7 +250,7 @@ class CreditListTestCase(
             checkers.append(lambda c: c.amount >= int(filters['amount__gte']))
         if 'amount' in filters:
             checkers.append(lambda c: c.amount == int(filters['amount']))
-        return lambda c: all([checker(c) for checker in checkers])
+        return lambda c: all(checker(c) for checker in checkers)
 
     def _get_valid_checker(self, filters, noop_checker):
         if 'valid' in filters:

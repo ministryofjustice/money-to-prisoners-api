@@ -1,6 +1,6 @@
 # Dependencies needed for all environments
 
-money-to-prisoners-common~=13.6.0
+money-to-prisoners-common~=13.7.0
 
 psycopg2-binary~=2.8.6
 djangorestframework~=3.13.0
@@ -19,5 +19,5 @@ scipy>=1.7,<2
 openpyxl~=3.0
 
 # these are used mainly in tests, but are required to load random data in test environments
-Faker~=13.12
+Faker~=13.14
 model-mommy~=2.0.0

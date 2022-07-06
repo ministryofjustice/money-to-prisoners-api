@@ -74,10 +74,10 @@ class Command(BaseCommand):
             expected_transaction_description = f'Sent by {credit.sender_name}'
 
             transactions = find_credits_in_nomis(credit.prison_id, credit.prisoner_number, from_date, to_date)
-            transactions = list(filter(
-                lambda t: t['description'] == expected_transaction_description and t['amount'] == credit.amount,
-                transactions
-            ))
+            transactions = [
+                t for t in transactions
+                if t['description'] == expected_transaction_description and t['amount'] == credit.amount
+            ]
             if not transactions:
                 self.stdout.write(self.style.ERROR(
                     f'Cannot find possible transactions in NOMIS for credit {credit.id} '
