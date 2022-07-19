@@ -105,6 +105,15 @@ MIDDLEWARE = (
     'django.middleware.security.SecurityMiddleware',
 )
 
+if os.environ.get('APPLICATIONINSIGHTS_CONNECTION_STRING'):
+    MIDDLEWARE += ('opencensus.ext.django.middleware.OpencensusMiddleware',)
+    OPENCENSUS = {
+        'TRACE': {
+            'SAMPLER': 'opencensus.trace.samplers.ProbabilitySampler(rate=1)',  # TODO: not 1 in prod
+            'EXPORTER': 'opencensus.ext.azure.trace_exporter.AzureExporter()',
+        }
+    }
+
 HEALTHCHECKS = ['moj_irat.healthchecks.database_healthcheck']
 AUTODISCOVER_HEALTHCHECKS = True
 

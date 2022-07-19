@@ -17,6 +17,8 @@ reportlab>=3.6,<4
 numpy>=1.21,<2
 scipy>=1.7,<2
 openpyxl~=3.0
+opencensus-ext-azure~=1.1
+opencensus-ext-django~=0.7
 
 # these are used mainly in tests, but are required to load random data in test environments
 Faker~=13.14
