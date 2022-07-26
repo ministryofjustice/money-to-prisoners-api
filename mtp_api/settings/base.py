@@ -106,11 +106,20 @@ MIDDLEWARE = (
 )
 
 if os.environ.get('APPLICATIONINSIGHTS_CONNECTION_STRING'):
+    from opencensus.ext.azure.trace_exporter import AzureExporter
+    def callback_add_role_name(envelope):
+        """ Callback function for opencensus """
+        """ This configures cloud_RoleName """
+        envelope.tags["ai.cloud.role"] = 'mtp-api'
+        envelope.tags["ai.cloud.roleInstance"] = 'mtp-api'
+        return True
+    azure_exporter = AzureExporter(connection_string=os.environ.get('APPLICATIONINSIGHTS_CONNECTION_STRING'))
+    azure_exporter.add_telemetry_processor(callback_add_role_name)
     MIDDLEWARE += ('opencensus.ext.django.middleware.OpencensusMiddleware',)
     OPENCENSUS = {
         'TRACE': {
             'SAMPLER': 'opencensus.trace.samplers.ProbabilitySampler(rate=1)',  # TODO: not 1 in prod
-            'EXPORTER': 'opencensus.ext.azure.trace_exporter.AzureExporter()',
+            'EXPORTER': azure_exporter,
         }
     }
 
