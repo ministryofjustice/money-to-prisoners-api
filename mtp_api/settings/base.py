@@ -2,6 +2,8 @@ import os
 import sys
 from urllib.parse import urljoin
 
+from . import callback_add_role_name
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
 
@@ -107,13 +109,6 @@ MIDDLEWARE = (
 
 if os.environ.get('APPLICATIONINSIGHTS_CONNECTION_STRING'):
     from opencensus.ext.azure.trace_exporter import AzureExporter
-
-    def callback_add_role_name(envelope):
-        """ Callback function for opencensus """
-        """ This configures cloud_RoleName """
-        envelope.tags['ai.cloud.role'] = 'mtp-api-neil'
-        envelope.tags['ai.cloud.roleInstance'] = 'mtp-api-neil'
-        return True
     azure_exporter = AzureExporter(connection_string=os.environ.get('APPLICATIONINSIGHTS_CONNECTION_STRING'))
     azure_exporter.add_telemetry_processor(callback_add_role_name)
     MIDDLEWARE += ('opencensus.ext.django.middleware.OpencensusMiddleware',)
