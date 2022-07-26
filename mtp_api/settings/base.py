@@ -224,54 +224,99 @@ EMAIL_BACKEND = 'mtp_common.notify.email_backend.NotifyEmailBackend'
 APPLICATIONINSIGHTS_CONNECTION_STRING = os.getenv('APPLICATIONINSIGHTS_CONNECTION_STRING')
 
 # logging settings
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'simple': {
-            'format': '%(asctime)s [%(levelname)s] %(message)s',
-            'datefmt': '%Y-%m-%dT%H:%M:%S',
+if APPLICATIONINSIGHTS_CONNECTION_STRING:
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'formatters': {
+            'simple': {
+                'format': '%(asctime)s [%(levelname)s] %(message)s',
+                'datefmt': '%Y-%m-%dT%H:%M:%S',
+            },
+            'elk': {
+                '()': 'mtp_common.logging.ELKFormatter'
+            },
         },
-        'elk': {
-            '()': 'mtp_common.logging.ELKFormatter'
+        'handlers': {
+            'null': {
+                'level': 'DEBUG',
+                'class': 'logging.NullHandler',
+            },
+            'console': {
+                'level': 'DEBUG',
+                'class': 'logging.StreamHandler',
+                'formatter': 'simple' if ENVIRONMENT == 'local' else 'elk',
+            },
+            'mail_admins': {
+                'level': 'ERROR',
+                'class': 'django.utils.log.AdminEmailHandler',
+            },
+            'azure': {
+                'level': 'INFO',
+                'class': 'core.app_insights_logger.AppLogger',
+                'connection_string': APPLICATIONINSIGHTS_CONNECTION_STRING,
+            },
         },
-    },
-    'handlers': {
-        'null': {
-            'level': 'DEBUG',
-            'class': 'logging.NullHandler',
+        'root': {
+            'level': 'WARNING',
+            'handlers': ['console'],
         },
-        'console': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-            'formatter': 'simple' if ENVIRONMENT == 'local' else 'elk',
+        'loggers': {
+            'django.security.DisallowedHost': {
+                'handlers': ['null'],
+                'propagate': False,
+            },
+            'mtp': {
+                'level': 'INFO',
+                'handlers': ['console', 'azure'],
+                'propagate': False,
+            },
         },
-        'mail_admins': {
-            'level': 'ERROR',
-            'class': 'django.utils.log.AdminEmailHandler',
+    }
+
+else:
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'formatters': {
+            'simple': {
+                'format': '%(asctime)s [%(levelname)s] %(message)s',
+                'datefmt': '%Y-%m-%dT%H:%M:%S',
+            },
+            'elk': {
+                '()': 'mtp_common.logging.ELKFormatter'
+            },
         },
-        'azure': {
-            'level': 'INFO',
-            'class': 'core.app_insights_logger.AppLogger',
-            'connection_string': APPLICATIONINSIGHTS_CONNECTION_STRING,
+        'handlers': {
+            'null': {
+                'level': 'DEBUG',
+                'class': 'logging.NullHandler',
+            },
+            'console': {
+                'level': 'DEBUG',
+                'class': 'logging.StreamHandler',
+                'formatter': 'simple' if ENVIRONMENT == 'local' else 'elk',
+            },
+            'mail_admins': {
+                'level': 'ERROR',
+                'class': 'django.utils.log.AdminEmailHandler',
+            },
         },
-    },
-    'root': {
-        'level': 'WARNING',
-        'handlers': ['console'],
-    },
-    'loggers': {
-        'django.security.DisallowedHost': {
-            'handlers': ['null'],
-            'propagate': False,
+        'root': {
+            'level': 'WARNING',
+            'handlers': ['console'],
         },
-        'mtp': {
-            'level': 'INFO',
-            'handlers': ['console', 'azure'],
-            'propagate': False,
+        'loggers': {
+            'django.security.DisallowedHost': {
+                'handlers': ['null'],
+                'propagate': False,
+            },
+            'mtp': {
+                'level': 'INFO',
+                'propagate': False,
+            },
         },
-    },
-}
+    }
 
 TEST_RUNNER = 'mtp_common.test_utils.runner.TestRunner'
 
