@@ -2,7 +2,7 @@ import os
 import sys
 from urllib.parse import urljoin
 
-from . import callback_add_role_name
+from ..apps.core.app_insights_logger import callback_add_role_name
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
