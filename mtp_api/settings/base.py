@@ -111,8 +111,8 @@ if os.environ.get('APPLICATIONINSIGHTS_CONNECTION_STRING'):
     def callback_add_role_name(envelope):
         """ Callback function for opencensus """
         """ This configures cloud_RoleName """
-        envelope.tags['ai.cloud.role'] = 'mtp-api'
-        envelope.tags['ai.cloud.roleInstance'] = 'mtp-api'
+        envelope.tags['ai.cloud.role'] = 'mtp-api-neil'
+        envelope.tags['ai.cloud.roleInstance'] = 'mtp-api-neil'
         return True
     azure_exporter = AzureExporter(connection_string=os.environ.get('APPLICATIONINSIGHTS_CONNECTION_STRING'))
     azure_exporter.add_telemetry_processor(callback_add_role_name)
@@ -253,6 +253,10 @@ LOGGING = {
             'level': 'ERROR',
             'class': 'django.utils.log.AdminEmailHandler',
         },
+        'azure': {
+            'level': 'INFO',
+            'class': 'core.app_insights_logger.AppLogger',
+        },
     },
     'root': {
         'level': 'WARNING',
@@ -265,7 +269,7 @@ LOGGING = {
         },
         'mtp': {
             'level': 'INFO',
-            'handlers': ['console'],
+            'handlers': ['console', 'azure'],
             'propagate': False,
         },
     },
