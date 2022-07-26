@@ -221,6 +221,8 @@ GOVUK_NOTIFY_BLOCKED_DOMAINS = set(os.environ.get('GOVUK_NOTIFY_BLOCKED_DOMAINS'
 # install GOV.UK Notify fallback for emails accidentally sent using Django's email functionality:
 EMAIL_BACKEND = 'mtp_common.notify.email_backend.NotifyEmailBackend'
 
+APPLICATIONINSIGHTS_CONNECTION_STRING = os.getenv('APPLICATIONINSIGHTS_CONNECTION_STRING')
+
 # logging settings
 LOGGING = {
     'version': 1,
@@ -250,8 +252,8 @@ LOGGING = {
         },
         'azure': {
             'level': 'INFO',
-            'connection_string': os.environ.get('APPLICATIONINSIGHTS_CONNECTION_STRING'),
             'class': 'core.app_insights_logger.AppLogger',
+            'connection_string': APPLICATIONINSIGHTS_CONNECTION_STRING,
         },
     },
     'root': {
