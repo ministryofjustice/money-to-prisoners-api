@@ -250,6 +250,7 @@ LOGGING = {
         },
         'azure': {
             'level': 'INFO',
+            'connection_string': os.environ.get('APPLICATIONINSIGHTS_CONNECTION_STRING'),
             'class': 'core.app_insights_logger.AppLogger',
         },
     },
