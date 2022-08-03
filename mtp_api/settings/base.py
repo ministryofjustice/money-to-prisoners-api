@@ -265,6 +265,13 @@ LOGGING = {
         },
     },
 }
+if APPLICATIONINSIGHTS_CONNECTION_STRING:
+    # Sends messages from `mtp` logger to Azure Application Insights
+    LOGGING['handlers']['azure'] = {
+        'level': 'INFO',
+        'class': 'mtp_common.application_insights.AppInsightsLogHandler',
+    }
+    LOGGING['loggers']['mtp']['handlers'].append('azure')
 
 TEST_RUNNER = 'mtp_common.test_utils.runner.TestRunner'
 
