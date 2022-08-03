@@ -272,6 +272,7 @@ if APPLICATIONINSIGHTS_CONNECTION_STRING:
         'class': 'mtp_common.application_insights.AppInsightsLogHandler',
     }
     LOGGING['loggers']['mtp']['handlers'].append('azure')
+    LOGGING['root']['handlers'].append('azure')
 
 TEST_RUNNER = 'mtp_common.test_utils.runner.TestRunner'
 
