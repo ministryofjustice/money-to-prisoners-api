@@ -1,6 +1,6 @@
 # Dependencies needed for all environments
 
-money-to-prisoners-common~=13.9.1
+money-to-prisoners-common~=13.10.0
 
 psycopg2-binary~=2.8.6
 djangorestframework~=3.13.0
@@ -17,8 +17,6 @@ reportlab>=3.6,<4
 numpy>=1.21,<2
 scipy>=1.7,<2
 openpyxl~=3.0
-opencensus-ext-azure~=1.1
-opencensus-ext-django~=0.7
 
 # these are used mainly in tests, but are required to load random data in test environments
 Faker~=13.14
