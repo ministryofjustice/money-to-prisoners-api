@@ -33,23 +33,21 @@ class UpdateSecurityProfilesTestCase(TestCase):
 
     def setUp(self):
         super().setUp()
-        test_users = make_test_users()
-        self.prison_clerks = test_users['prison_clerks']
-        self.security_staff = test_users['security_staff']
+        make_test_users()
         load_random_prisoner_locations()
 
     def _assert_counts(self):
         for sender_profile in SenderProfile.objects.all():
             self.assertEqual(
-                len(sender_profile.credits.filter(
+                sender_profile.credits.filter(
                     resolution=CREDIT_RESOLUTION.CREDITED
-                )),
+                ).count(),
                 sender_profile.credit_count
             )
             self.assertEqual(
-                sum([credit.amount for credit in sender_profile.credits.filter(
+                sum(credit.amount for credit in sender_profile.credits.filter(
                     resolution=CREDIT_RESOLUTION.CREDITED
-                )]),
+                )),
                 sender_profile.credit_total
             )
 
@@ -65,34 +63,34 @@ class UpdateSecurityProfilesTestCase(TestCase):
             bank_transfer_details__isnull=False
         ):
             self.assertEqual(
-                sum([disbursement.amount for disbursement in recipient_profile.disbursements.all()]),
+                sum(disbursement.amount for disbursement in recipient_profile.disbursements.all()),
                 recipient_profile.disbursement_total
             )
             self.assertEqual(
-                len(recipient_profile.disbursements.all()),
+                recipient_profile.disbursements.all().count(),
                 recipient_profile.disbursement_count
             )
 
         for prisoner_profile in PrisonerProfile.objects.all():
             self.assertEqual(
-                sum([credit.amount for credit in prisoner_profile.credits.filter(
+                sum(credit.amount for credit in prisoner_profile.credits.filter(
                     resolution=CREDIT_RESOLUTION.CREDITED
-                )]),
+                )),
                 prisoner_profile.credit_total
             )
             self.assertEqual(
-                len(prisoner_profile.credits.filter(
+                prisoner_profile.credits.filter(
                     resolution=CREDIT_RESOLUTION.CREDITED
-                )),
+                ).count(),
                 prisoner_profile.credit_count
             )
 
             self.assertEqual(
-                sum([disbursement.amount for disbursement in prisoner_profile.disbursements.all()]),
+                sum(disbursement.amount for disbursement in prisoner_profile.disbursements.all()),
                 prisoner_profile.disbursement_total
             )
             self.assertEqual(
-                len(prisoner_profile.disbursements.all()),
+                prisoner_profile.disbursements.all().count(),
                 prisoner_profile.disbursement_count
             )
         self.assertEqual(
@@ -340,37 +338,37 @@ class UpdateSecurityProfilesTestCase(TestCase):
 
         delete_non_related_nullable_fields(
             Payment.objects.all(),
-            null_fields_to_leave_populated=set([
+            null_fields_to_leave_populated={
                 'email',
                 'cardholder_name',
                 'card_number_first_digits',
                 'card_number_last_digits',
                 'card_expiry_date',
                 'billing_address',
-            ])
+            }
         )
         delete_non_related_nullable_fields(
             Transaction.objects.all(),
-            null_fields_to_leave_populated=set([
+            null_fields_to_leave_populated={
                 'sender_name',
                 'sender_sort_code',
                 'sender_account_number'
-            ])
+            }
         )
         delete_non_related_nullable_fields(
             Credit.objects.all(),
-            null_fields_to_leave_populated=set([
+            null_fields_to_leave_populated={
                 'prison',
                 'prisoner_name',
                 'prisoner_number',  # Needed to populate PrisonerProfile
-            ])
+            }
         )
         delete_non_related_nullable_fields(
             Disbursement.objects.all(),
-            null_fields_to_leave_populated=set([
+            null_fields_to_leave_populated={
                 'sort_code',  # Needed to populate BankAccount
                 'account_number'  # Needed to populate BankAccount
-            ])
+            }
         )
 
         call_command('update_security_profiles', verbosity=0)
@@ -383,9 +381,7 @@ class UpdateCurrentPrisonsTestCase(TestCase):
 
     def setUp(self):
         super().setUp()
-        test_users = make_test_users()
-        self.prison_clerks = test_users['prison_clerks']
-        self.security_staff = test_users['security_staff']
+        make_test_users()
         load_random_prisoner_locations()
 
     @captured_stdout()
