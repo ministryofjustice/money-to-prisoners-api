@@ -5,7 +5,7 @@ from unittest import mock
 from django.core.management import CommandError, call_command
 from django.test import TestCase
 from django.utils import timezone
-from model_mommy import mommy
+from model_bakery import baker
 import openpyxl
 from openpyxl.utils import coordinate_to_tuple
 
@@ -146,7 +146,7 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
         sender_profile_1, sender_profile_2 = SenderProfile.objects.filter(debit_card_details__isnull=False)[:2]
         debit_card_1 = sender_profile_1.debit_card_details.first()
         debit_card_2 = sender_profile_2.debit_card_details.first()
-        credit = mommy.make(
+        credit = baker.make(
             Credit,
             received_at=period_start, amount=100,
             prisoner_number=prisoner_profile_1.prisoner_number, prisoner_name=prisoner_profile_1.prisoner_name,
@@ -156,14 +156,14 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
             is_counted_in_prisoner_profile_total=False,
             is_counted_in_sender_profile_total=False
         )
-        mommy.make(
+        baker.make(
             Payment,
             credit=credit,
             card_number_last_digits=debit_card_1.card_number_last_digits,
             card_expiry_date=debit_card_1.card_expiry_date,
             billing_address=debit_card_1.billing_addresses.first(),
         )
-        credit = mommy.make(
+        credit = baker.make(
             Credit,
             received_at=period_start, amount=200,
             prisoner_number=prisoner_profile_2.prisoner_number, prisoner_name=prisoner_profile_2.prisoner_name,
@@ -173,7 +173,7 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
             is_counted_in_prisoner_profile_total=False,
             is_counted_in_sender_profile_total=False
         )
-        mommy.make(
+        baker.make(
             Payment,
             credit=credit,
             card_number_last_digits=debit_card_2.card_number_last_digits,

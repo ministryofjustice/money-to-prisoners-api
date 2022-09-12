@@ -6,7 +6,7 @@ from django.core.management import call_command
 from django.test import TestCase
 from django.utils.timezone import now, localtime
 from faker import Faker
-from model_mommy import mommy
+from model_bakery import baker
 
 from core.tests.utils import make_test_users, make_test_user_admins
 from mtp_auth.management.commands.send_account_request_emails import Command
@@ -25,7 +25,7 @@ class AccountRequestEmailTestCase(TestCase):
         make_test_user_admins()
 
     def _make_account_request(self, role, prison, created):
-        return mommy.make(
+        return baker.make(
             AccountRequest,
             role=role,
             prison=prison,

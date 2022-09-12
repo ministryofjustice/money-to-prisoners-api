@@ -3,11 +3,11 @@ import string
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
+from django.utils import timezone
 from django.utils.text import slugify
 from faker import Faker
-from model_mommy import timezone
-from model_mommy.mommy import make
-from model_mommy.recipe import Recipe
+from model_bakery.baker import make
+from model_bakery.recipe import Recipe
 
 User = get_user_model()
 

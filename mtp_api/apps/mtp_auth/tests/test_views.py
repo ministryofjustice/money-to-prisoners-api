@@ -11,7 +11,7 @@ from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.models import Group
 from django.urls import reverse, reverse_lazy
 from django.utils.timezone import now
-from model_mommy import mommy
+from model_bakery import baker
 from mtp_common.test_utils import silence_logger
 from oauth2_provider.models import AccessToken, Application, RefreshToken
 from rest_framework import status
@@ -2465,7 +2465,7 @@ class AccountRequestTestCase(AuthBaseTestCase):
         admin = self.users['prison_clerk_uas'][0]
         role = Role.objects.get(name='prison-clerk')
         prison = admin.prisonusermapping.prisons.first()
-        request = mommy.make(AccountRequest, role=role, prison=prison)
+        request = baker.make(AccountRequest, role=role, prison=prison)
         url_detail = reverse('accountrequest-detail', kwargs={'pk': request.pk})
         response = self.client.get(
             url_detail,
@@ -2485,10 +2485,10 @@ class AccountRequestTestCase(AuthBaseTestCase):
         prison = admin.prisonusermapping.prisons.first()
         url_list = reverse('accountrequest-list')
 
-        visible_requests = mommy.make(AccountRequest, 3, role=role, prison=prison)
+        visible_requests = baker.make(AccountRequest, 3, role=role, prison=prison)
         invisible_requests = []
         for another_role in Role.objects.exclude(name='prison-clerk'):
-            invisible_requests.append(mommy.make(AccountRequest, role=another_role, prison=prison))
+            invisible_requests.append(baker.make(AccountRequest, role=another_role, prison=prison))
 
         response = self.client.get(
             url_list,
@@ -2530,7 +2530,7 @@ class AccountRequestTestCase(AuthBaseTestCase):
         Role.objects.get(name='bank-admin').assign_to_user(admin)
         url_list = reverse('accountrequest-list')
 
-        mommy.make(AccountRequest, 3, role=cashbook_role, prison=prison)
+        baker.make(AccountRequest, 3, role=cashbook_role, prison=prison)
         response = self.client.get(
             url_list,
             format='json',
@@ -2545,8 +2545,8 @@ class AccountRequestTestCase(AuthBaseTestCase):
         url_list = reverse('accountrequest-list')
 
         another_prison = Prison.objects.exclude(nomis_id=prison.nomis_id).first()
-        visible_requests = mommy.make(AccountRequest, 3, role=role, prison=prison)
-        invisible_requests = mommy.make(AccountRequest, 5, role=role, prison=another_prison)
+        visible_requests = baker.make(AccountRequest, 3, role=role, prison=prison)
+        invisible_requests = baker.make(AccountRequest, 5, role=role, prison=another_prison)
 
         response = self.client.get(
             url_list,
@@ -2617,7 +2617,7 @@ class AccountRequestTestCase(AuthBaseTestCase):
         user_count = User.objects.count()
 
         def assert_user_created(payload, user_admin):
-            request = mommy.make(AccountRequest, role=role, prison=prison)
+            request = baker.make(AccountRequest, role=role, prison=prison)
             url_detail = reverse('accountrequest-detail', kwargs={'pk': request.pk})
             response = self.client.patch(
                 url_detail,
@@ -2663,7 +2663,7 @@ class AccountRequestTestCase(AuthBaseTestCase):
         PrisonUserMapping.objects.assign_prisons_to_user(admin, Prison.objects.all())
         user_count = User.objects.count()
 
-        request = mommy.make(AccountRequest, role=role, prison=prison)
+        request = baker.make(AccountRequest, role=role, prison=prison)
         url_detail = reverse('accountrequest-detail', kwargs={'pk': request.pk})
         response = self.client.patch(
             url_detail,
@@ -2769,7 +2769,7 @@ class AccountRequestTestCase(AuthBaseTestCase):
             for group in scenario['previous_extra_groups']:
                 user.groups.add(Group.objects.get(name=group))
 
-            request = mommy.make(
+            request = baker.make(
                 AccountRequest,
                 first_name=user.first_name, last_name=user.last_name,
                 email=user.email, username=user.username,
@@ -2823,7 +2823,7 @@ class AccountRequestTestCase(AuthBaseTestCase):
 
         user = basic_user.make(is_active=random.random() > 0.2)
         Role.objects.get(name='security').assign_to_user(user)
-        request = mommy.make(
+        request = baker.make(
             AccountRequest,
             first_name=user.first_name, last_name=user.last_name,
             email=user.email, username=user.username,
@@ -2862,7 +2862,7 @@ class AccountRequestTestCase(AuthBaseTestCase):
         PrisonUserMapping.objects.create(user=user).prisons.set([prison])
 
         # request to move to cashbook in same prison, change email and make user admin
-        request = mommy.make(
+        request = baker.make(
             AccountRequest,
             first_name=user.first_name, last_name=user.last_name,
             username=user.username,
@@ -2897,7 +2897,7 @@ class AccountRequestTestCase(AuthBaseTestCase):
         previous_email = user.email
 
         # request to move to cashbook in same prison, change email and make user admin
-        request = mommy.make(
+        request = baker.make(
             AccountRequest,
             first_name=user.first_name, last_name=user.last_name,
             username=user.username,
@@ -2933,8 +2933,8 @@ class AccountRequestTestCase(AuthBaseTestCase):
         self.assertNotIn(another_role, Role.objects.get_roles_for_user(admin))
         another_prison = Prison.objects.exclude(nomis_id=prison.nomis_id).first()
         invisible_requests = [
-            mommy.make(AccountRequest, role=role, prison=another_prison),
-            mommy.make(AccountRequest, role=another_role, prison=prison),
+            baker.make(AccountRequest, role=role, prison=another_prison),
+            baker.make(AccountRequest, role=another_role, prison=prison),
         ]
         for request in invisible_requests:
             url_detail = reverse('accountrequest-detail', kwargs={'pk': request.pk})
@@ -2966,7 +2966,7 @@ class AccountRequestTestCase(AuthBaseTestCase):
 
         user = basic_user.make(is_active=True)
         role.assign_to_user(user)
-        mommy.make(
+        baker.make(
             AccountRequest,
             first_name=user.first_name, last_name=user.last_name,
             email=user.email, username=user.username,
@@ -3001,7 +3001,7 @@ class AccountRequestTestCase(AuthBaseTestCase):
 
         user = basic_user.make(is_active=True)
         role.assign_to_user(user)
-        mommy.make(
+        baker.make(
             AccountRequest,
             first_name=user.first_name, last_name=user.last_name,
             email=user.email, username=user.username,

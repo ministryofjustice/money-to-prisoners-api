@@ -2,7 +2,7 @@ import datetime
 
 from django.utils.crypto import get_random_string
 from faker import Faker
-from model_mommy import mommy
+from model_bakery import baker
 
 from credit.models import Credit, CREDIT_RESOLUTION
 from credit.tests.utils import random_amount
@@ -20,7 +20,7 @@ fake = Faker(locale='en_GB')
 
 def make_sender():
     sender = SenderProfile.objects.create()
-    mommy.make(
+    baker.make(
         DebitCardSenderDetails,
         sender=sender,
         card_number_last_digits=fake.credit_card_number()[-4:],
@@ -32,17 +32,17 @@ def make_sender():
 
 def make_recipient():
     recipient = RecipientProfile.objects.create()
-    bank_account = mommy.make(
+    bank_account = baker.make(
         BankAccount,
         sort_code=get_random_string(6, '1234567890'),
         account_number=get_random_string(8, '1234567890'),
     )
-    mommy.make(BankTransferRecipientDetails, recipient=recipient, recipient_bank_account=bank_account)
+    baker.make(BankTransferRecipientDetails, recipient=recipient, recipient_bank_account=bank_account)
     return recipient
 
 
 def make_prisoner():
-    return mommy.make(
+    return baker.make(
         PrisonerProfile,
         prisoner_name=random_prisoner_name(),
         prisoner_number=random_prisoner_number(),
@@ -55,7 +55,7 @@ def make_csfreq_credits(today, sender, count):
     debit_card = sender.debit_card_details.first()
     credit_list = []
     for day in range(count):
-        credit = mommy.make(
+        credit = baker.make(
             Credit,
             amount=random_amount(),
             sender_profile=sender,
@@ -63,7 +63,7 @@ def make_csfreq_credits(today, sender, count):
             resolution=CREDIT_RESOLUTION.CREDITED, reconciled=True, private_estate_batch=None,
         )
         if debit_card:
-            payment = mommy.make(
+            payment = baker.make(
                 Payment,
                 amount=credit.amount,
                 card_number_last_digits=debit_card.card_number_last_digits,
@@ -78,7 +78,7 @@ def make_csfreq_credits(today, sender, count):
 def make_drfreq_disbursements(today, recipient, count):
     disbursement_list = []
     for day in range(count):
-        disbursement = mommy.make(
+        disbursement = baker.make(
             Disbursement,
             amount=random_amount(),
             recipient_profile=recipient,
@@ -94,7 +94,7 @@ def make_csnum_credits(today, prisoner, count, sender_profile=None):
     for day in range(count):
         sender = sender_profile or make_sender()
         debit_card = sender.debit_card_details.first()
-        credit = mommy.make(
+        credit = baker.make(
             Credit,
             amount=random_amount(),
             sender_profile=sender,
@@ -103,7 +103,7 @@ def make_csnum_credits(today, prisoner, count, sender_profile=None):
             resolution=CREDIT_RESOLUTION.CREDITED, reconciled=True, private_estate_batch=None,
         )
         if debit_card:
-            payment = mommy.make(
+            payment = baker.make(
                 Payment,
                 amount=credit.amount,
                 card_number_last_digits=debit_card.card_number_last_digits,
@@ -119,7 +119,7 @@ def make_drnum_disbursements(today, prisoner, count, recipient_profile=None):
     disbursement_list = []
     for day in range(count):
         recipient = recipient_profile or make_recipient()
-        disbursement = mommy.make(
+        disbursement = baker.make(
             Disbursement,
             amount=random_amount(),
             recipient_profile=recipient,
@@ -136,7 +136,7 @@ def make_cpnum_credits(today, sender, count, prisoner_profile=None):
     credit_list = []
     for day in range(count):
         prisoner = prisoner_profile or make_prisoner()
-        credit = mommy.make(
+        credit = baker.make(
             Credit,
             amount=random_amount(),
             sender_profile=sender,
@@ -145,7 +145,7 @@ def make_cpnum_credits(today, sender, count, prisoner_profile=None):
             resolution=CREDIT_RESOLUTION.CREDITED, reconciled=True, private_estate_batch=None,
         )
         if debit_card:
-            payment = mommy.make(
+            payment = baker.make(
                 Payment,
                 amount=credit.amount,
                 card_number_last_digits=debit_card.card_number_last_digits,
@@ -161,7 +161,7 @@ def make_dpnum_disbursements(today, recipient, count, prisoner_profile=None):
     disbursement_list = []
     for day in range(count):
         prisoner = prisoner_profile or make_prisoner()
-        disbursement = mommy.make(
+        disbursement = baker.make(
             Disbursement,
             amount=random_amount(),
             recipient_profile=recipient,

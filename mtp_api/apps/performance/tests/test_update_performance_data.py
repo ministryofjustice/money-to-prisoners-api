@@ -8,7 +8,7 @@ from django.utils import timezone
 from core.utils import monday_of_same_week
 from credit.constants import CREDIT_RESOLUTION
 from credit.models import Credit
-from model_mommy import mommy
+from model_bakery import baker
 from performance.models import DigitalTakeup, PerformanceData, UserSatisfaction
 from prison.models import Prison
 
@@ -35,14 +35,14 @@ class UpdatePerformanceDataTestTestCase(TestCase):
             day_with_time = datetime.datetime.combine(day, datetime.time.min)
             day_with_time = timezone.make_aware(day_with_time)
 
-            mommy.make(
+            baker.make(
                 Credit,
                 received_at=day_with_time,
                 resolution=CREDIT_RESOLUTION.CREDITED,
                 _quantity=credits_count,
             )
             # Also create a PENDING credit per day (to test ignored credits)
-            mommy.make(
+            baker.make(
                 Credit,
                 received_at=day_with_time,
                 resolution=CREDIT_RESOLUTION.PENDING,
@@ -69,8 +69,8 @@ class UpdatePerformanceDataTestTestCase(TestCase):
         self.assertEqual(record.credits_by_mtp, expected_credits_by_mtp)
 
     def test_update_digital_takeup(self):
-        prison_1 = mommy.make(Prison, name='Prison 1')
-        prison_2 = mommy.make(Prison, name='Prison 2')
+        prison_1 = baker.make(Prison, name='Prison 1')
+        prison_2 = baker.make(Prison, name='Prison 2')
 
         test_data = [
             # +-----+--------+----------------+-----------------+
@@ -92,7 +92,7 @@ class UpdatePerformanceDataTestTestCase(TestCase):
             (datetime.date(2021, 1, 3),   prison_2, 2345, 128),  # Sunday
         ]
         for day, prison, by_mtp, by_post in test_data:
-            mommy.make(
+            baker.make(
                 DigitalTakeup,
                 date=day,
                 prison=prison,
@@ -137,7 +137,7 @@ class UpdatePerformanceDataTestTestCase(TestCase):
             (datetime.date(2021, 2, 1), 92, 0.97, 95),    # Round up
         ]
         for (week, by_mtp, takeup, _) in test_data:
-            mommy.make(
+            baker.make(
                 PerformanceData,
                 week=week,
                 credits_by_mtp=by_mtp,

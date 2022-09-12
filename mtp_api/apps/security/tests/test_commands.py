@@ -4,7 +4,7 @@ from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.test.utils import captured_stdout
 from faker import Faker
-from model_mommy import mommy
+from model_bakery import baker
 
 from mtp_common.test_utils import silence_logger
 
@@ -420,27 +420,27 @@ class BulkUnmonitorCommandTestCase(TestCase):
     def test_bulk_unmonitor(self):
         fake = Faker(locale='en_GB')
         for user in self.security_staff:
-            mommy.make(
+            baker.make(
                 BankTransferSenderDetails,
-                sender=mommy.make(SenderProfile),
-                sender_bank_account=mommy.make(
+                sender=baker.make(SenderProfile),
+                sender_bank_account=baker.make(
                     BankAccount,
                     sort_code=get_random_string(6, '0123456789'),
                     account_number=get_random_string(8, '0123456789'),
                     monitoring_users=[user],
                 ),
             )
-            mommy.make(
+            baker.make(
                 DebitCardSenderDetails,
-                sender=mommy.make(SenderProfile),
+                sender=baker.make(SenderProfile),
                 card_number_last_digits=fake.credit_card_number()[-4:],
                 card_expiry_date=fake.credit_card_expire(),
                 postcode=fake.postcode(),
                 monitoring_users=[user],
             )
-            mommy.make(PrisonerProfile, monitoring_users=[user])
+            baker.make(PrisonerProfile, monitoring_users=[user])
             for _ in range(3):
-                mommy.make(SearchFilter, saved_search=mommy.make(SavedSearch, user=user))
+                baker.make(SearchFilter, saved_search=baker.make(SavedSearch, user=user))
 
         bank_account_count = BankAccount.objects.count()
         debit_card_sender_count = DebitCardSenderDetails.objects.count()

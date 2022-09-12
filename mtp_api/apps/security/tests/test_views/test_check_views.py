@@ -5,7 +5,7 @@ from pprint import pformat
 import dictdiffer
 from django.urls import reverse
 from django.utils.timezone import make_aware, now
-from model_mommy import mommy
+from model_bakery import baker
 from parameterized import parameterized
 from rest_framework import status as http_status
 from rest_framework.test import APITestCase
@@ -48,7 +48,7 @@ class BaseCheckTestCase(APITestCase, AuthTestCaseMixin):
     def generate_checks(self):
         # create a pending check for each credit in initial state
         for credit in Credit.objects_all.filter(resolution=CREDIT_RESOLUTION.INITIAL):
-            mommy.make(
+            baker.make(
                 Check,
                 credit=credit,
                 status=CHECK_STATUS.PENDING,
@@ -57,7 +57,7 @@ class BaseCheckTestCase(APITestCase, AuthTestCaseMixin):
             )
 
         for credit in Credit.objects_all.filter(resolution=CREDIT_RESOLUTION.FAILED):
-            mommy.make(
+            baker.make(
                 Check,
                 credit=credit,
                 status=CHECK_STATUS.REJECTED,
@@ -70,7 +70,7 @@ class BaseCheckTestCase(APITestCase, AuthTestCaseMixin):
             )
 
         for credit in Credit.objects.all():
-            mommy.make(
+            baker.make(
                 Check,
                 credit=credit,
                 status=CHECK_STATUS.ACCEPTED,

@@ -4,7 +4,7 @@ import pathlib
 
 from django.urls import reverse
 from django.utils import timezone
-from model_mommy import mommy
+from model_bakery import baker
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -68,14 +68,14 @@ class PerformanceDataViewTestCase(AuthTestCaseMixin, APITestCase):
         )
 
     def test_percentages_are_formatted(self):
-        mommy.make(
+        baker.make(
             PerformanceData,
             week=self._monday_n_weeks_ago(4),
             digital_takeup=0.95,
             completion_rate=0.8111,
             user_satisfaction=0.96666666,
         )
-        mommy.make(
+        baker.make(
             PerformanceData,
             week=self._monday_n_weeks_ago(3),
             digital_takeup=0.0,
@@ -103,7 +103,7 @@ class PerformanceDataViewTestCase(AuthTestCaseMixin, APITestCase):
         records = []
         for age_weeks in [100, 50, 10]:
             records.append(
-                mommy.make(PerformanceData, week=self._monday_n_weeks_ago(age_weeks))
+                baker.make(PerformanceData, week=self._monday_n_weeks_ago(age_weeks))
             )
 
         # By default only last 52 weeks records are returned
