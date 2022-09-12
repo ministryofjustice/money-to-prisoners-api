@@ -423,8 +423,8 @@ msgid "These prisoners’ accounts have been credited"
 msgstr "Mae cyfrifon y carcharorion hyn wedi cael eu credydu"
 
 #: apps/credit/notices/__init__.py:35
-msgid "Her Majesty’s Prison and Probation Service"
-msgstr "Gwasanaeth Carchardai a Phrawf Ei Mawrhydi"
+msgid "His Majesty’s Prison and Probation Service"
+msgstr "Gwasanaeth Carchardai a Phrawf Ei Fawrhydi"
 
 #: apps/credit/notices/prisoner_credits.py:15
 #: apps/credit/notices/prisoner_credits.py:18

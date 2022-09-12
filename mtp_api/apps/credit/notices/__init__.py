@@ -33,7 +33,7 @@ class NoticeBundle:
 
     @property
     def author(self):
-        return _('Her Majesty’s Prison and Probation Service')
+        return _('His Majesty’s Prison and Probation Service')
 
     @property
     def creator(self):
