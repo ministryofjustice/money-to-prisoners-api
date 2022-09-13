@@ -4,7 +4,7 @@ from datetime import timedelta
 from django.urls import reverse
 from django.utils import timezone
 from faker import Faker
-from model_mommy import mommy
+from model_bakery import baker
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -75,7 +75,7 @@ class ListEventPagesTestCase(AuthTestCaseMixin, APITestCase):
         One event returns one date
         """
         yesterday = timezone.now() - timedelta(days=1)
-        mommy.make(Event, user=self.user, triggered_at=yesterday)
+        baker.make(Event, user=self.user, triggered_at=yesterday)
         self.assertEqual(Event.objects.count(), 1)
         yesterday = yesterday.date()
 
@@ -92,7 +92,7 @@ class ListEventPagesTestCase(AuthTestCaseMixin, APITestCase):
         some_date = timezone.now() - timedelta(days=5)
         some_date = some_date.replace(hour=12, minute=0, second=0)
         for hour in range(0, 5):
-            mommy.make(Event, user=self.user, triggered_at=some_date + timedelta(hours=hour))
+            baker.make(Event, user=self.user, triggered_at=some_date + timedelta(hours=hour))
         self.assertEqual(Event.objects.count(), 5)
         some_date = some_date.date()
 
@@ -108,7 +108,7 @@ class ListEventPagesTestCase(AuthTestCaseMixin, APITestCase):
         """
         dates = set()
         for _ in range(0, 25):
-            event = mommy.make(
+            event = baker.make(
                 Event, user=self.user,
                 triggered_at=timezone.make_aware(fake.date_time_between(start_date='-10w', end_date='-1d')),
             )
@@ -129,7 +129,7 @@ class ListEventPagesTestCase(AuthTestCaseMixin, APITestCase):
         yesterday = timezone.now() - timedelta(days=1)
         date = yesterday
         for _ in range(0, 30):
-            mommy.make(Event, user=self.user, triggered_at=date)
+            baker.make(Event, user=self.user, triggered_at=date)
             date -= timedelta(days=1)
         self.assertEqual(Event.objects.count(), 30)
         yesterday = yesterday.date()
@@ -152,7 +152,7 @@ class ListEventPagesTestCase(AuthTestCaseMixin, APITestCase):
         yesterday = timezone.now() - timedelta(days=1)
         date = yesterday
         for rule in itertools.islice(itertools.cycle(['MONP', 'MONS']), 100):
-            mommy.make(Event, rule=rule, user=self.user, triggered_at=date)
+            baker.make(Event, rule=rule, user=self.user, triggered_at=date)
             date -= timedelta(days=1)
         self.assertEqual(Event.objects.count(), 100)
         self.assertEqual(Event.objects.filter(rule='MONP').count(), 50)
@@ -218,15 +218,15 @@ class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):
         user = self.security_staff[0]
 
         # visible events, not linked to user
-        mommy.make(Event, rule='HA')
-        mommy.make(Event, rule='NWN')
+        baker.make(Event, rule='HA')
+        baker.make(Event, rule='NWN')
 
         # visible events, linked to user
-        mommy.make(Event, user=user, rule='MONP')
-        mommy.make(Event, user=user, rule='MONS')
+        baker.make(Event, user=user, rule='MONP')
+        baker.make(Event, user=user, rule='MONS')
 
         # this event is not seen as it's linked to a different user
-        mommy.make(Event, user=self.security_staff[1], rule='MONP')
+        baker.make(Event, user=self.security_staff[1], rule='MONP')
 
         response = self.client.get(
             reverse('event-list'), {'limit': 1000}, format='json',
@@ -243,12 +243,12 @@ class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):
         user = self.security_staff[0]
 
         # visible events, not linked to user
-        mommy.make(Event, rule='HA')
-        mommy.make(Event, rule='NWN')
+        baker.make(Event, rule='HA')
+        baker.make(Event, rule='NWN')
 
         # visible events, linked to user
-        mommy.make(Event, user=user, rule='MONP')
-        mommy.make(Event, user=user, rule='MONS')
+        baker.make(Event, user=user, rule='MONP')
+        baker.make(Event, user=user, rule='MONS')
 
         response = self.client.get(
             reverse('event-list'),
@@ -271,12 +271,12 @@ class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):
             triggered_at = now - timedelta(days=days_into_past)
 
             # visible events, not linked to user
-            mommy.make(Event, rule='HA', triggered_at=triggered_at)
-            mommy.make(Event, rule='NWN', triggered_at=triggered_at)
+            baker.make(Event, rule='HA', triggered_at=triggered_at)
+            baker.make(Event, rule='NWN', triggered_at=triggered_at)
 
             # visible events, linked to user
-            mommy.make(Event, user=user, rule='MONP', triggered_at=triggered_at)
-            mommy.make(Event, user=user, rule='MONS', triggered_at=triggered_at)
+            baker.make(Event, user=user, rule='MONP', triggered_at=triggered_at)
+            baker.make(Event, user=user, rule='MONS', triggered_at=triggered_at)
 
         response = self.client.get(
             reverse('event-list'),
@@ -306,12 +306,12 @@ class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):
     def test_get_prisoner_monitoring_events_for_user(self):
         user = self.security_staff[0]
 
-        prisoner_profile = mommy.make(PrisonerProfile, prisoner_number='A1409AE')
+        prisoner_profile = baker.make(PrisonerProfile, prisoner_number='A1409AE')
         prisoner_profile.monitoring_users.add(user)
 
         for _ in range(2):
-            event = mommy.make(Event, user=user, rule='MONP')
-            mommy.make(PrisonerProfileEvent, event=event, prisoner_profile=prisoner_profile)
+            event = baker.make(Event, user=user, rule='MONP')
+            baker.make(PrisonerProfileEvent, event=event, prisoner_profile=prisoner_profile)
 
         response = self.client.get(
             reverse('event-list'), {'limit': 1000}, format='json',
@@ -327,12 +327,12 @@ class ListEventsViewTestCase(AuthTestCaseMixin, APITestCase):
     def test_get_sender_monitoring_events_for_user(self):
         user = self.security_staff[0]
 
-        sender_profile = mommy.make(SenderProfile)
-        mommy.make(DebitCardSenderDetails, postcode='SW1H 9AJ', sender=sender_profile)
+        sender_profile = baker.make(SenderProfile)
+        baker.make(DebitCardSenderDetails, postcode='SW1H 9AJ', sender=sender_profile)
 
         for _ in range(2):
-            event = mommy.make(Event, user=user, rule='MONS')
-            mommy.make(SenderProfileEvent, event=event, sender_profile=sender_profile)
+            event = baker.make(Event, user=user, rule='MONS')
+            baker.make(SenderProfileEvent, event=event, sender_profile=sender_profile)
 
         response = self.client.get(
             reverse('event-list'), {'limit': 1000}, format='json',

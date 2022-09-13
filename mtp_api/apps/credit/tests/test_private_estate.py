@@ -4,7 +4,7 @@ from django.contrib.auth.models import Permission
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
-from model_mommy import mommy
+from model_bakery import baker
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -28,8 +28,8 @@ class PrivateEstateBatchTestCase(AuthTestCaseMixin, APITestCase):
     def setUp(self):
         super().setUp()
 
-        self.private_prison = mommy.make(Prison, name='Private', private_estate=True)
-        self.private_bank_account = mommy.make(PrisonBankAccount, prison=self.private_prison)
+        self.private_prison = baker.make(Prison, name='Private', private_estate=True)
+        self.private_bank_account = baker.make(PrisonBankAccount, prison=self.private_prison)
 
         test_users = make_test_users(clerks_per_prison=2)
         self.prison_clerks = test_users['prison_clerks']

@@ -1,7 +1,10 @@
 from django.core.management import call_command
 from django.test import TestCase
 from django.utils import timezone
+from django.utils.crypto import get_random_string
 from django.test.utils import captured_stdout
+from faker import Faker
+from model_bakery import baker
 
 from mtp_common.test_utils import silence_logger
 
@@ -10,21 +13,18 @@ from credit.models import Credit
 from core.tests.utils import make_test_users, delete_non_related_nullable_fields
 from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION
 from disbursement.models import Disbursement
-from disbursement.tests.utils import (
-    generate_disbursements, generate_initial_disbursement_data,
-    create_disbursements
-)
+from disbursement.tests.utils import generate_disbursements, generate_initial_disbursement_data, create_disbursements
 
 from payment.models import Payment
-from payment.tests.utils import (
-    create_payments, generate_payments, generate_initial_payment_data
-)
+from payment.tests.utils import create_payments, generate_payments, generate_initial_payment_data
 from prison.models import PrisonerLocation, Prison
 from prison.tests.utils import load_random_prisoner_locations
-from security.models import SenderProfile, PrisonerProfile, RecipientProfile
-from transaction.tests.utils import (
-    create_transactions, generate_initial_transactions_data, generate_transactions
+from security.models import (
+    SenderProfile, PrisonerProfile, RecipientProfile,
+    BankAccount, BankTransferSenderDetails, DebitCardSenderDetails,
+    SavedSearch, SearchFilter,
 )
+from transaction.tests.utils import create_transactions, generate_initial_transactions_data, generate_transactions
 from transaction.models import Transaction
 
 
@@ -33,23 +33,21 @@ class UpdateSecurityProfilesTestCase(TestCase):
 
     def setUp(self):
         super().setUp()
-        test_users = make_test_users()
-        self.prison_clerks = test_users['prison_clerks']
-        self.security_staff = test_users['security_staff']
+        make_test_users()
         load_random_prisoner_locations()
 
     def _assert_counts(self):
         for sender_profile in SenderProfile.objects.all():
             self.assertEqual(
-                len(sender_profile.credits.filter(
+                sender_profile.credits.filter(
                     resolution=CREDIT_RESOLUTION.CREDITED
-                )),
+                ).count(),
                 sender_profile.credit_count
             )
             self.assertEqual(
-                sum([credit.amount for credit in sender_profile.credits.filter(
+                sum(credit.amount for credit in sender_profile.credits.filter(
                     resolution=CREDIT_RESOLUTION.CREDITED
-                )]),
+                )),
                 sender_profile.credit_total
             )
 
@@ -65,34 +63,34 @@ class UpdateSecurityProfilesTestCase(TestCase):
             bank_transfer_details__isnull=False
         ):
             self.assertEqual(
-                sum([disbursement.amount for disbursement in recipient_profile.disbursements.all()]),
+                sum(disbursement.amount for disbursement in recipient_profile.disbursements.all()),
                 recipient_profile.disbursement_total
             )
             self.assertEqual(
-                len(recipient_profile.disbursements.all()),
+                recipient_profile.disbursements.all().count(),
                 recipient_profile.disbursement_count
             )
 
         for prisoner_profile in PrisonerProfile.objects.all():
             self.assertEqual(
-                sum([credit.amount for credit in prisoner_profile.credits.filter(
+                sum(credit.amount for credit in prisoner_profile.credits.filter(
                     resolution=CREDIT_RESOLUTION.CREDITED
-                )]),
+                )),
                 prisoner_profile.credit_total
             )
             self.assertEqual(
-                len(prisoner_profile.credits.filter(
+                prisoner_profile.credits.filter(
                     resolution=CREDIT_RESOLUTION.CREDITED
-                )),
+                ).count(),
                 prisoner_profile.credit_count
             )
 
             self.assertEqual(
-                sum([disbursement.amount for disbursement in prisoner_profile.disbursements.all()]),
+                sum(disbursement.amount for disbursement in prisoner_profile.disbursements.all()),
                 prisoner_profile.disbursement_total
             )
             self.assertEqual(
-                len(prisoner_profile.disbursements.all()),
+                prisoner_profile.disbursements.all().count(),
                 prisoner_profile.disbursement_count
             )
         self.assertEqual(
@@ -340,37 +338,37 @@ class UpdateSecurityProfilesTestCase(TestCase):
 
         delete_non_related_nullable_fields(
             Payment.objects.all(),
-            null_fields_to_leave_populated=set([
+            null_fields_to_leave_populated={
                 'email',
                 'cardholder_name',
                 'card_number_first_digits',
                 'card_number_last_digits',
                 'card_expiry_date',
                 'billing_address',
-            ])
+            }
         )
         delete_non_related_nullable_fields(
             Transaction.objects.all(),
-            null_fields_to_leave_populated=set([
+            null_fields_to_leave_populated={
                 'sender_name',
                 'sender_sort_code',
                 'sender_account_number'
-            ])
+            }
         )
         delete_non_related_nullable_fields(
             Credit.objects.all(),
-            null_fields_to_leave_populated=set([
+            null_fields_to_leave_populated={
                 'prison',
                 'prisoner_name',
                 'prisoner_number',  # Needed to populate PrisonerProfile
-            ])
+            }
         )
         delete_non_related_nullable_fields(
             Disbursement.objects.all(),
-            null_fields_to_leave_populated=set([
+            null_fields_to_leave_populated={
                 'sort_code',  # Needed to populate BankAccount
                 'account_number'  # Needed to populate BankAccount
-            ])
+            }
         )
 
         call_command('update_security_profiles', verbosity=0)
@@ -383,9 +381,7 @@ class UpdateCurrentPrisonsTestCase(TestCase):
 
     def setUp(self):
         super().setUp()
-        test_users = make_test_users()
-        self.prison_clerks = test_users['prison_clerks']
-        self.security_staff = test_users['security_staff']
+        make_test_users()
         load_random_prisoner_locations()
 
     @captured_stdout()
@@ -410,3 +406,67 @@ class UpdateCurrentPrisonsTestCase(TestCase):
 
         call_command('update_current_prisons')
         check_locations()
+
+
+class BulkUnmonitorCommandTestCase(TestCase):
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
+
+    def setUp(self):
+        super().setUp()
+        test_users = make_test_users(clerks_per_prison=0, num_security_fiu_users=1)
+        self.security_staff = test_users['security_staff']
+
+    @captured_stdout()
+    def test_bulk_unmonitor(self):
+        fake = Faker(locale='en_GB')
+        for user in self.security_staff:
+            baker.make(
+                BankTransferSenderDetails,
+                sender=baker.make(SenderProfile),
+                sender_bank_account=baker.make(
+                    BankAccount,
+                    sort_code=get_random_string(6, '0123456789'),
+                    account_number=get_random_string(8, '0123456789'),
+                    monitoring_users=[user],
+                ),
+            )
+            baker.make(
+                DebitCardSenderDetails,
+                sender=baker.make(SenderProfile),
+                card_number_last_digits=fake.credit_card_number()[-4:],
+                card_expiry_date=fake.credit_card_expire(),
+                postcode=fake.postcode(),
+                monitoring_users=[user],
+            )
+            baker.make(PrisonerProfile, monitoring_users=[user])
+            for _ in range(3):
+                baker.make(SearchFilter, saved_search=baker.make(SavedSearch, user=user))
+
+        bank_account_count = BankAccount.objects.count()
+        debit_card_sender_count = DebitCardSenderDetails.objects.count()
+        prisoner_profile_count = PrisonerProfile.objects.count()
+
+        chosen_user, other_users = self.security_staff[0], self.security_staff[1:]
+        # ensure chosen user actually monitored 1 of each model
+        self.assertEqual(BankAccount.objects.filter(monitoring_users=chosen_user).count(), 1)
+        self.assertEqual(DebitCardSenderDetails.objects.filter(monitoring_users=chosen_user).count(), 1)
+        self.assertEqual(PrisonerProfile.objects.filter(monitoring_users=chosen_user).count(), 1)
+        # ensure that chosen user had 3 saved searches
+        self.assertEqual(SavedSearch.objects.filter(user=chosen_user).count(), 3)
+        call_command('bulk_unmonitor', chosen_user.username)
+        # assert that chosen user no longer monitors anything
+        self.assertEqual(BankAccount.objects.filter(monitoring_users=chosen_user).count(), 0)
+        self.assertEqual(DebitCardSenderDetails.objects.filter(monitoring_users=chosen_user).count(), 0)
+        self.assertEqual(PrisonerProfile.objects.filter(monitoring_users=chosen_user).count(), 0)
+        # assert that chosen user has no saved searches
+        self.assertEqual(SavedSearch.objects.filter(user=chosen_user).count(), 0)
+        # assert that security profiles are not deleted (only unmonitored)
+        self.assertEqual(BankAccount.objects.count(), bank_account_count)
+        self.assertEqual(DebitCardSenderDetails.objects.count(), debit_card_sender_count)
+        self.assertEqual(PrisonerProfile.objects.count(), prisoner_profile_count)
+        # assert that other users still monitor each model and have saved searcges
+        for user in other_users:
+            self.assertEqual(BankAccount.objects.filter(monitoring_users=user).count(), 1)
+            self.assertEqual(DebitCardSenderDetails.objects.filter(monitoring_users=user).count(), 1)
+            self.assertEqual(PrisonerProfile.objects.filter(monitoring_users=user).count(), 1)
+            self.assertEqual(SavedSearch.objects.filter(user=user).count(), 3)

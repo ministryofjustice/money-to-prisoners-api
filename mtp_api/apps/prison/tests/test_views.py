@@ -9,7 +9,7 @@ from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateformat import format as format_date
-from model_mommy import mommy
+from model_bakery import baker
 from mtp_common.nomis import Connector
 from mtp_common.test_utils import silence_logger
 from parameterized import parameterized
@@ -120,9 +120,9 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
         repeated_p_num_1 = random_prisoner_number()
         repeated_p_num_2 = random_prisoner_number()
         # create two pre-existing PrisonerLocations so that we test the overwrite
-        mommy.make(PrisonerLocation, prisoner_number=repeated_p_num_1,
+        baker.make(PrisonerLocation, prisoner_number=repeated_p_num_1,
                    prison=self.prisons[0], active=True)
-        mommy.make(PrisonerLocation, prisoner_number=repeated_p_num_2,
+        baker.make(PrisonerLocation, prisoner_number=repeated_p_num_2,
                    prison=self.prisons[0], active=True)
         self.assertEqual(PrisonerLocation.objects.filter(active=True).count(), 2)
         self.assertEqual(PrisonerLocation.objects.filter(active=False).count(), 0)
@@ -277,7 +277,7 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
 
     def test_can_upload_when_none_inactive(self):
         # recent active locations exist, but do not matter
-        mommy.make(PrisonerLocation,
+        baker.make(PrisonerLocation,
                    prisoner_number=random_prisoner_number(), prison=self.prisons[0],
                    active=True,
                    created=timezone.now() - datetime.timedelta(minutes=1))
@@ -292,7 +292,7 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
 
     def test_can_upload_when_old_inactive(self):
         # inactive locations exist, but are not recent so do not matter
-        mommy.make(PrisonerLocation,
+        baker.make(PrisonerLocation,
                    prisoner_number=random_prisoner_number(), prison=self.prisons[0],
                    active=False,
                    created=timezone.now() - datetime.timedelta(minutes=17))
@@ -307,7 +307,7 @@ class PrisonerLocationViewTestCase(AuthTestCaseMixin, APITestCase):
 
     def test_cannot_upload_when_recent_inactive(self):
         # recent inactive locations exist, so cannot upload now
-        mommy.make(PrisonerLocation,
+        baker.make(PrisonerLocation,
                    prisoner_number=random_prisoner_number(), prison=self.prisons[0],
                    active=False,
                    created=timezone.now() - datetime.timedelta(minutes=1, seconds=4))
@@ -841,7 +841,7 @@ class PrisonViewTestCase(AuthTestCaseMixin, APITestCase):
 
     def test_exclude_empty_prisons(self):
         url = reverse('prison-list')
-        empty_prison = mommy.make(Prison, name='Empty')
+        empty_prison = baker.make(Prison, name='Empty')
         response = self.client.get(url + '?exclude_empty_prisons=True',
                                    HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.send_money_user),
                                    format='json')
@@ -915,7 +915,7 @@ class PrisonerCreditNoticeEmailViewTestCase(AuthTestCaseMixin, APITestCase):
 
         self.prisons = Prison.objects.all()
         for prison in self.prisons:
-            mommy.make(PrisonerCreditNoticeEmail, prison=prison)
+            baker.make(PrisonerCreditNoticeEmail, prison=prison)
 
     @property
     def list_url(self):

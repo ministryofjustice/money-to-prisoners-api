@@ -8,7 +8,7 @@ from django.core.management import call_command
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
-from model_mommy import mommy
+from model_bakery import baker
 from rest_framework.test import APITestCase
 
 from core.tests.utils import make_test_users, FLAKY_TEST_WARNING
@@ -55,7 +55,7 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
         mocked_now.return_value = timezone.make_aware(datetime.datetime(2019, 1, 1))
 
         user = basic_user.make()
-        check = mommy.make(
+        check = baker.make(
             Check,
             status=CHECK_STATUS.PENDING,
             actioned_at=None,
@@ -77,7 +77,7 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
         mocked_now.return_value = timezone.make_aware(datetime.datetime(2019, 1, 1))
 
         user = basic_user.make()
-        check = mommy.make(
+        check = baker.make(
             Check,
             status=CHECK_STATUS.PENDING,
             actioned_at=None,
@@ -99,7 +99,7 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
         mocked_now.return_value = timezone.make_aware(datetime.datetime(2019, 1, 1))
 
         existing_check_user, user = basic_user.make(_quantity=2)
-        check = mommy.make(
+        check = baker.make(
             Check,
             status=CHECK_STATUS.ACCEPTED,
             actioned_at=mocked_now() - datetime.timedelta(days=1),
@@ -121,7 +121,7 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
         mocked_now.return_value = timezone.make_aware(datetime.datetime(2019, 1, 1))
 
         existing_check_user, user = basic_user.make(_quantity=2)
-        check = mommy.make(
+        check = baker.make(
             Check,
             status=CHECK_STATUS.REJECTED,
             actioned_at=mocked_now() - datetime.timedelta(days=1),
@@ -145,7 +145,7 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
         mocked_now.return_value = timezone.make_aware(datetime.datetime(2019, 1, 1))
 
         user = basic_user.make()
-        check = mommy.make(
+        check = baker.make(
             Check,
             status=CHECK_STATUS.PENDING,
             actioned_at=None,
@@ -170,7 +170,7 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
         mocked_now.return_value = timezone.make_aware(datetime.datetime(2019, 1, 1))
 
         existing_check_user, user = basic_user.make(_quantity=2)
-        check = mommy.make(
+        check = baker.make(
             Check,
             status=CHECK_STATUS.REJECTED,
             actioned_at=mocked_now() - datetime.timedelta(days=1),
@@ -194,7 +194,7 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
         Test that rejecting a check without reason raises ValidationError.
         """
         users = make_test_users(clerks_per_prison=1)
-        check = mommy.make(
+        check = baker.make(
             Check,
             status=CHECK_STATUS.PENDING,
             actioned_at=None,
@@ -226,7 +226,7 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
         mocked_now.return_value = timezone.make_aware(datetime.datetime(2019, 1, 1))
 
         existing_check_user, user = basic_user.make(_quantity=2)
-        check = mommy.make(
+        check = baker.make(
             Check,
             status=CHECK_STATUS.ACCEPTED,
             actioned_at=mocked_now() - datetime.timedelta(days=1),

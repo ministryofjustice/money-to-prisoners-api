@@ -5,7 +5,7 @@ from django.contrib.auth.models import Permission
 from django.core.files.base import File
 from django.test import TestCase
 from django.urls import reverse_lazy
-from model_mommy import mommy
+from model_bakery import baker
 
 from prison.forms import PrisonerBalanceUploadForm
 from prison.models import Prison, PrisonerBalance, PrisonerLocation
@@ -225,7 +225,7 @@ class PrisonerBalanceUploadViewTestCase(PrisonerBalanceUploadBaseTestCase):
         different_prison = Prison.objects.exclude(pk=chosen_prison.pk).first()
         # put all prisoners in sample file into a different prison
         for prisoner_number in ('A1409AE', 'A1401AE'):
-            mommy.make(
+            baker.make(
                 PrisonerLocation,
                 prison=different_prison,
                 prisoner_number=prisoner_number,

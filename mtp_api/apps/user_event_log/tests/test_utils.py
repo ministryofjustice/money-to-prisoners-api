@@ -4,7 +4,7 @@ from unittest.mock import Mock
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.utils.timezone import make_aware
-from model_mommy import mommy
+from model_bakery import baker
 
 from user_event_log.constants import USER_EVENT_KINDS
 from user_event_log.utils import record_user_event
@@ -48,7 +48,7 @@ class RecordUserEventTestCase(TestCase):
             ),
         ]
 
-        user = mommy.make(User)
+        user = baker.make(User)
 
         request = Mock(user=user, path='test-path')
         for data, expected_data in scenarios:

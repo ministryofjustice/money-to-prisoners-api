@@ -7,7 +7,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from faker import Faker
-from model_mommy.recipe import Recipe, seq
+from model_bakery.recipe import Recipe, seq
 
 from core.tests.utils import MockModelTimestamps
 from credit.tests.utils import random_amount, build_sender_prisoner_pairs

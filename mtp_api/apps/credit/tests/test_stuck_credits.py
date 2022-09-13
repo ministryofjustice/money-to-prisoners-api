@@ -6,7 +6,7 @@ from django.core.cache import cache
 from django.core.management import CommandError, call_command
 from django.test import TestCase, override_settings
 from django.utils import timezone
-from model_mommy import mommy
+from model_bakery import baker
 from parameterized import parameterized
 import responses
 
@@ -68,7 +68,7 @@ class FixStuckCreditsTestCase(TestCase):
         nomis_transaction_already_linked.cache_clear()
 
     def mock_uncredited_credits(self):
-        credit: Credit = mommy.make(
+        credit: Credit = baker.make(
             Credit,
             prisoner_number=self.sample_prisoner_number,
             prisoner_name='JAMES HALLS',
@@ -77,7 +77,7 @@ class FixStuckCreditsTestCase(TestCase):
             received_at=timezone.make_aware(datetime.datetime(2021, 10, 10, 9)),
             resolution=CREDIT_RESOLUTION.PENDING,
         )
-        mommy.make(
+        baker.make(
             Payment,
             credit=credit,
             amount=credit.amount,

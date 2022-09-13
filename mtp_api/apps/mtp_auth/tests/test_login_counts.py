@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.utils.dateformat import format as date_format
 from django.utils.timezone import make_aware
-from model_mommy import mommy
+from model_bakery import baker
 from oauth2_provider.models import Application
 
 from mtp_auth.models import Login, PrisonUserMapping
@@ -31,14 +31,14 @@ class LoginCountTestCase(TestCase):
             client_type='confidential',
             authorization_grant_type='password',
             name='Test App',
-            user=mommy.make(User),
+            user=baker.make(User),
         )
-        prison = mommy.make(Prison, nomis_id='ABC')
-        user_in_prison = mommy.make(User)
-        another_user_in_prison = mommy.make(User)
-        mommy.make(PrisonUserMapping, user=user_in_prison, prisons=[prison])
-        mommy.make(PrisonUserMapping, user=another_user_in_prison, prisons=[prison])
-        user_not_in_prison = mommy.make(User)
+        prison = baker.make(Prison, nomis_id='ABC')
+        user_in_prison = baker.make(User)
+        another_user_in_prison = baker.make(User)
+        baker.make(PrisonUserMapping, user=user_in_prison, prisons=[prison])
+        baker.make(PrisonUserMapping, user=another_user_in_prison, prisons=[prison])
+        user_not_in_prison = baker.make(User)
 
         # last month: 3 login in prison
         self.login(user_in_prison, application, (2018, 3, 10))

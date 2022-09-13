@@ -1,5 +1,3 @@
-import logging
-
 from django.db.transaction import atomic
 from django.core.management import BaseCommand, CommandError
 
@@ -9,8 +7,6 @@ from disbursement.constants import DISBURSEMENT_RESOLUTION
 from disbursement.models import Disbursement
 from notification.tasks import create_notification_events
 from security.models import PrisonerProfile, SenderProfile, RecipientProfile
-
-logger = logging.getLogger('mtp')
 
 
 class Command(BaseCommand):
