@@ -7,7 +7,7 @@ djangorestframework~=3.13.0
 drf-yasg~=1.20.0
 django-model-utils~=4.2.0
 django-filter~=21.1.0
-oauthlib~=3.1.1
+oauthlib~=3.2.1
 django-oauth-toolkit~=1.5.0
 drf-extensions~=0.7.1
 drf-nested-routers~=0.93.4
@@ -19,5 +19,5 @@ scipy>=1.7,<2
 openpyxl~=3.0
 
 # these are used mainly in tests, but are required to load random data in test environments
-Faker~=13.14
-model-mommy~=2.0.0
+Faker~=14.2
+model-bakery~=1.5
