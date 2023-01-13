@@ -187,7 +187,7 @@ class CreditAdmin(admin.ModelAdmin):
     def display_resolution_time(self, request, queryset):
         until_credited_times = []
         for credit in queryset.prefetch_related('log_set'):
-            logs = sorted(credit.log_set.all(), key=lambda l: l.created)
+            logs = sorted(credit.log_set.all(), key=lambda log: log.created)
             for log in logs:
                 if log.action == LOG_ACTIONS.CREDITED:
                     until_credited_times.append(log.created - credit.received_at)
