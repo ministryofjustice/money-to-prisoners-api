@@ -1,7 +1,7 @@
 from collections import defaultdict
 from copy import copy
-import re
 import json
+import re
 
 from django.conf import settings
 from django.test import override_settings, TestCase
@@ -17,7 +17,6 @@ from prison.tests.utils import (
 
 
 class LoadPrisonerLocationsFromDevPrisonAPITestCase(TestCase):
-
     fixtures = [
         'initial_types.json',
         'initial_groups.json',
@@ -60,7 +59,8 @@ class LoadPrisonerLocationsFromDevPrisonAPITestCase(TestCase):
         # another 2 prisoners from WLI
         self.expected_prisoner_ids = self.expected_prisoner_ids + self.api_live_roll['WLI']
 
-    def random_prisoner(self):
+    @classmethod
+    def random_prisoner(cls):
         full_name = random_prisoner_name()
         first_name = full_name.split(' ')[0]
         last_name = full_name.split(' ')[1]
@@ -79,14 +79,14 @@ class LoadPrisonerLocationsFromDevPrisonAPITestCase(TestCase):
             'noms_ids': self.api_live_roll[prison_id],
         }
 
-        return (200, {}, json.dumps(live_roll))
+        return 200, {}, json.dumps(live_roll)
 
     def get_offender_info_callback(self, request):
         # Mock for `GET offenders/PRISONER_ID`
         prisoner_id = request.path_url.split('/')[-1]
         prisoner_info = self.api_offenders_info[prisoner_id]
 
-        return (200, {}, json.dumps(prisoner_info))
+        return 200, {}, json.dumps(prisoner_info)
 
     @override_settings(
         HMPPS_CLIENT_SECRET='test-secret',
@@ -118,24 +118,24 @@ class LoadPrisonerLocationsFromDevPrisonAPITestCase(TestCase):
 
             load_prisoner_locations_from_dev_prison_api(self.n_prisoners_desired)
 
-        n_prisoner_locations_after = PrisonerLocation.objects.count()
-        n_prisoner_locations_created = n_prisoner_locations_after - n_prisoner_locations_before
+            n_prisoner_locations_after = PrisonerLocation.objects.count()
+            n_prisoner_locations_created = n_prisoner_locations_after - n_prisoner_locations_before
 
-        self.assertEqual(self.n_prisoners_desired, n_prisoner_locations_created)
+            self.assertEqual(self.n_prisoners_desired, n_prisoner_locations_created)
 
-        for prisoner_id in self.expected_prisoner_ids:
-            prisoner_info = self.api_offenders_info[prisoner_id]
-            prison_id = self.prisoner_location[prisoner_id]
+            for prisoner_id in self.expected_prisoner_ids:
+                prisoner_info = self.api_offenders_info[prisoner_id]
+                prison_id = self.prisoner_location[prisoner_id]
 
-            location = PrisonerLocation.objects.filter(
-                prisoner_number=prisoner_id,
-                prison_id=prison_id,
-            )
+                location = PrisonerLocation.objects.filter(
+                    prisoner_number=prisoner_id,
+                    prison_id=prison_id,
+                )
 
-            self.assertTrue(location.exists())
+                self.assertTrue(location.exists())
 
-            location = location.first()
-            self.assertEqual(location.prisoner_number, prisoner_id)
-            expected_name = prisoner_info['given_name'] + ' ' + prisoner_info['surname']
-            self.assertEqual(location.prisoner_name, expected_name)
-            self.assertEqual(str(location.prisoner_dob), prisoner_info['date_of_birth'])
+                location = location.first()
+                self.assertEqual(location.prisoner_number, prisoner_id)
+                expected_name = prisoner_info['given_name'] + ' ' + prisoner_info['surname']
+                self.assertEqual(location.prisoner_name, expected_name)
+                self.assertEqual(str(location.prisoner_dob), prisoner_info['date_of_birth'])
