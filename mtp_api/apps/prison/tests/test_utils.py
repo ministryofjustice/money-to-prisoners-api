@@ -4,6 +4,7 @@ import json
 import re
 
 from django.conf import settings
+from django.core.cache import cache
 from django.test import override_settings, TestCase
 import responses
 
@@ -24,6 +25,7 @@ class LoadPrisonerLocationsFromDevPrisonAPITestCase(TestCase):
     ]
 
     def setUp(self):
+        cache.clear()
         self.prison_ids = [
             'BWI',  # HMP Berwyn
             'NMI',  # HMP Nottingham
@@ -118,24 +120,24 @@ class LoadPrisonerLocationsFromDevPrisonAPITestCase(TestCase):
 
             load_prisoner_locations_from_dev_prison_api(self.n_prisoners_desired)
 
-            n_prisoner_locations_after = PrisonerLocation.objects.count()
-            n_prisoner_locations_created = n_prisoner_locations_after - n_prisoner_locations_before
+        n_prisoner_locations_after = PrisonerLocation.objects.count()
+        n_prisoner_locations_created = n_prisoner_locations_after - n_prisoner_locations_before
 
-            self.assertEqual(self.n_prisoners_desired, n_prisoner_locations_created)
+        self.assertEqual(self.n_prisoners_desired, n_prisoner_locations_created)
 
-            for prisoner_id in self.expected_prisoner_ids:
-                prisoner_info = self.api_offenders_info[prisoner_id]
-                prison_id = self.prisoner_location[prisoner_id]
+        for prisoner_id in self.expected_prisoner_ids:
+            prisoner_info = self.api_offenders_info[prisoner_id]
+            prison_id = self.prisoner_location[prisoner_id]
 
-                location = PrisonerLocation.objects.filter(
-                    prisoner_number=prisoner_id,
-                    prison_id=prison_id,
-                )
+            location = PrisonerLocation.objects.filter(
+                prisoner_number=prisoner_id,
+                prison_id=prison_id,
+            )
 
-                self.assertTrue(location.exists())
+            self.assertTrue(location.exists())
 
-                location = location.first()
-                self.assertEqual(location.prisoner_number, prisoner_id)
-                expected_name = prisoner_info['given_name'] + ' ' + prisoner_info['surname']
-                self.assertEqual(location.prisoner_name, expected_name)
-                self.assertEqual(str(location.prisoner_dob), prisoner_info['date_of_birth'])
+            location = location.first()
+            self.assertEqual(location.prisoner_number, prisoner_id)
+            expected_name = prisoner_info['given_name'] + ' ' + prisoner_info['surname']
+            self.assertEqual(location.prisoner_name, expected_name)
+            self.assertEqual(str(location.prisoner_dob), prisoner_info['date_of_birth'])
