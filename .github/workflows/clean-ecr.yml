@@ -7,10 +7,10 @@ on:
 jobs:
   clean-ecr:
     name: Clean ECR
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           ref: main
       - name: Delete branch images from ECR

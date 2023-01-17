@@ -1,9 +1,10 @@
 from collections import defaultdict
 from copy import copy
-import re
 import json
+import re
 
 from django.conf import settings
+from django.core.cache import cache
 from django.test import override_settings, TestCase
 import responses
 
@@ -17,7 +18,6 @@ from prison.tests.utils import (
 
 
 class LoadPrisonerLocationsFromDevPrisonAPITestCase(TestCase):
-
     fixtures = [
         'initial_types.json',
         'initial_groups.json',
@@ -25,6 +25,7 @@ class LoadPrisonerLocationsFromDevPrisonAPITestCase(TestCase):
     ]
 
     def setUp(self):
+        cache.clear()
         self.prison_ids = [
             'BWI',  # HMP Berwyn
             'NMI',  # HMP Nottingham
@@ -60,7 +61,8 @@ class LoadPrisonerLocationsFromDevPrisonAPITestCase(TestCase):
         # another 2 prisoners from WLI
         self.expected_prisoner_ids = self.expected_prisoner_ids + self.api_live_roll['WLI']
 
-    def random_prisoner(self):
+    @classmethod
+    def random_prisoner(cls):
         full_name = random_prisoner_name()
         first_name = full_name.split(' ')[0]
         last_name = full_name.split(' ')[1]
@@ -79,14 +81,14 @@ class LoadPrisonerLocationsFromDevPrisonAPITestCase(TestCase):
             'noms_ids': self.api_live_roll[prison_id],
         }
 
-        return (200, {}, json.dumps(live_roll))
+        return 200, {}, json.dumps(live_roll)
 
     def get_offender_info_callback(self, request):
         # Mock for `GET offenders/PRISONER_ID`
         prisoner_id = request.path_url.split('/')[-1]
         prisoner_info = self.api_offenders_info[prisoner_id]
 
-        return (200, {}, json.dumps(prisoner_info))
+        return 200, {}, json.dumps(prisoner_info)
 
     @override_settings(
         HMPPS_CLIENT_SECRET='test-secret',
