@@ -87,7 +87,7 @@ class Command(BaseDumpCommand):
             'Debit card billing address line 2': 'debit_card_billing_address_line_2',
             'Debit card billing address postcode': 'debit_card_billing_address_postcode',
             'Debit card expiry': 'debit_card_expiry',
-            'Debit card first six digits': 'debit_card_last_6_digits',
+            'Debit card first six digits': 'debit_card_first_6_digits',
             'Debit card last four digits': 'debit_card_last_4_digits',
             'NOMIS transaction': 'nomis_transaction',
             'Payment method': 'payment_method',
