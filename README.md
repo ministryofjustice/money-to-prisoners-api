@@ -1,11 +1,11 @@
-# API and Django admin
+# Prisoner Money API and admin tool
 
 Backend and internal admin site for [Prisoner Money suite of apps](https://github.com/ministryofjustice/money-to-prisoners).
 
 ## Requirements
 
-- Unix-like platform with Python 3.8+ and NodeJS 16 (e.g. via [nvm](https://github.com/nvm-sh/nvm#nvmrc))
-- PostgreSQL
+- Unix-like platform with Python 3.10 and NodeJS 18 (e.g. via [nvm](https://github.com/nvm-sh/nvm#installing-and-updating) or [fnm](https://github.com/Schniz/fnm#installation))
+- PostgreSQL 14 (though the version is not a strict requirement as no special features are used)
 
 ## Developing
 
@@ -15,7 +15,7 @@ It's recommended that you use a python virtual environment to isolate each appli
 
 The simplest way to do this is using:
 
-```shell script
+```shell
 python3 -m venv venv    # creates a virtual environment for dependencies; only needed the first time
 . venv/bin/activate     # activates the virtual environment; needed every time you use this app
 ```
