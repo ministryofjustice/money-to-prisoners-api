@@ -11,7 +11,7 @@ Backend and internal admin site for [Prisoner Money suite of apps](https://githu
 
 [![CircleCI](https://circleci.com/gh/ministryofjustice/money-to-prisoners-api.svg?style=svg)](https://circleci.com/gh/ministryofjustice/money-to-prisoners-api)
 
-It's recommended that you use a python virtual environment to isolate each application.
+It’s recommended that you use a python virtual environment to isolate each application.
 
 The simplest way to do this is using:
 
@@ -23,7 +23,7 @@ python3 -m venv venv    # creates a virtual environment for dependencies; only n
 Some build tasks expect the active virtual environment to be at `/venv/`, but should generally work regardless of
 its location.
 
-You can copy `mtp_api/settings/local.py.sample` to `local.py` to overlay local settings that won't be committed,
+You can copy `mtp_api/settings/local.py.sample` to `local.py` to overlay local settings that won’t be committed,
 for example DB name, but it’s not required for a standard setup.
 
 Create a PostgreSQL database called `mtp_api` (to use a different name, edit your local settings appropriately).
@@ -43,7 +43,7 @@ but this does not run uWSGI like the deployed version does.
 
 As well as the management command (`./manage.py load_test_data`), the entire data set can also be regenerated
 from [Django admin](http://localhost:8000/admin/recreate-test-data/).
-It's also reset when using `./run.py start --test-mode`.
+It’s also reset when using `./run.py start --test-mode`.
 
 These scenarios create a different set of test users for the client applications – see the user list in Django admin.
 
@@ -51,8 +51,10 @@ These scenarios create a different set of test users for the client applications
 
 Update translation files with `./run.py make_messages` – you need to do this every time any translatable text is updated.
 
+Requires [transifex cli tool](https://github.com/transifex/cli#installation) for synchronisation:
+
 Pull updates from Transifex with `./run.py translations --pull`.
-You'll need to update translation files afterwards and manually check that the merges occurred correctly.
+You’ll need to update translation files afterwards and manually check that the merges occurred correctly.
 
 Push latest English to Transifex with `./run.py translations --push`.
 NB: you should pull updates before pushing to merge correctly.
