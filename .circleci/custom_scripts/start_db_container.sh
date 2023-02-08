@@ -6,6 +6,6 @@ docker run \
   -e POSTGRES_USER=postgres \
   -e POSTGRES_PASSWORD=postgres \
   -e POSTGRES_DB=mtp_api \
-  circleci/postgres:10.10-alpine
+  cimg/postgres:14.3
 
 sleep 10
