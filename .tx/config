@@ -1,8 +1,8 @@
 [main]
 host = https://www.transifex.com
 
-[mtp.api]
+[o:ministry-of-justice:p:mtp:r:api]
 file_filter = mtp_api/translations/<lang>/LC_MESSAGES/django.po
 source_file = mtp_api/translations/django.pot
 source_lang = en_GB
-type = PO
+type        = PO

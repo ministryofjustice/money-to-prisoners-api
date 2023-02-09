@@ -3,8 +3,8 @@ if __name__ == '__main__':
     import os
     import sys
 
-    if sys.version_info[0:2] < (3, 8):
-        raise SystemExit('Python 3.8+ is required')
+    if sys.version_info[0:2] < (3, 10):
+        raise SystemExit('Python 3.10+ is required')
 
     root_path = os.path.abspath(os.path.dirname(__file__))
 
