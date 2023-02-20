@@ -187,8 +187,10 @@ def generate_predetermined_transactions_data():
             prisoner_number=prisoner_number
         )
     except PrisonerLocation.DoesNotExist:
-        warnings.warn('Could not find prisoner %s, '
-                      'was test NOMIS data loaded?' % prisoner_number)
+        warnings.warn(
+            'Could not find prisoner %s, was test NOMIS data loaded?' % prisoner_number,
+            stacklevel=1,
+        )
         return []
 
     now = timezone.now().replace(microsecond=0)
