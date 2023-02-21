@@ -14,10 +14,7 @@ class Command(BaseDumpCommand):
 
     def add_arguments(self, parser):
         super().add_arguments(parser)
-        record_types = ['credits', 'fiu_senders_debit_cards', 'fiu_prisoners', 'auto_accepts']
         parser.add_argument('--format', choices=['csv', 'json'], default='csv', help='File format to use for dump')
-        parser.add_argument('type', choices=record_types, help='Type of object to dump')
-        parser.add_argument('path', help='Path to dump data to')
 
     def handle(self, *args, **options):
         after, before = self.get_modified_range(**options)

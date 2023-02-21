@@ -18,6 +18,8 @@ class BaseDumpCommand(BaseCommand):
         super().add_arguments(parser)
         parser.add_argument('--after', help='Modified after date (inclusive)')
         parser.add_argument('--before', help='Modified before date (exclusive)')
+        parser.add_argument('type', choices=list(Serialiser.get_serialisers()), help='Type of object to dump')
+        parser.add_argument('path', help='Path to dump data to')
 
     @classmethod
     def get_modified_range(cls, **options):
@@ -42,11 +44,6 @@ class Command(BaseDumpCommand):
     Dump data for Analytical Platform
     """
     help = textwrap.dedent(__doc__).strip()
-
-    def add_arguments(self, parser):
-        super().add_arguments(parser)
-        parser.add_argument('type', choices=list(Serialiser.get_serialisers()), help='Type of object to dump')
-        parser.add_argument('path', help='Path to dump data to')
 
     def handle(self, *args, **options):
         after, before = self.get_modified_range(**options)
