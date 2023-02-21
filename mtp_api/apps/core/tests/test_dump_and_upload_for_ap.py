@@ -31,6 +31,7 @@ class TestDumpAndUploadForAp(TestCase):
         call_command('dump_and_upload_for_ap')
 
         expected_record_types = set(Serialiser.get_serialisers())
+        expected_record_types.remove('noms_ops_users')
 
         record_types = set()
         for call in mocked_dump_for_ap.call_args_list:

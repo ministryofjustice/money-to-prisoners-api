@@ -6,16 +6,23 @@ import textwrap
 from django.core.management import BaseCommand, call_command
 from django.utils import timezone
 
-from core.dump import Serialiser
-
 
 class Command(BaseCommand):
     """
-    Dump credits, disbursements, FIU-monitored prisoners, FIU-monitored debit cards and auto accept rules
-    which were updated "yesterday" and upload them to an S3 bucket in Analytical Platform.
+    Dump credits, FIU-monitored prisoners, FIU-monitored debit cards and auto accept rules
+    which were updated "yesterday" and upload them to LinkSpace.
+    Additionally, all non super-users of the Prisoner Money Intelligence website are exported, whether active or not.
     This command is expected to be scheduled to run once per day (using core.ScheduledCommand model).
     """
     help = textwrap.dedent(__doc__).strip()
+
+    linkspace_tables = {
+        'credits': 'fiucredits',
+        'fiu_senders_debit_cards': 'fiudebit',
+        'fiu_prisoners': 'fiuprisoner',
+        'auto_accepts': 'fiuauto',
+        'noms_ops_users': 'fiuusers',
+    }
 
     def handle(self, *args, **options):
         today = timezone.localtime().date()
@@ -29,10 +36,7 @@ class Command(BaseCommand):
         }
 
         with tempfile.TemporaryDirectory() as temp_path:
-            for record_type in Serialiser.get_serialisers():
-                if record_type == 'noms_ops_users':
-                    # explicitly ignore user export
-                    continue
+            for record_type, table_name in self.linkspace_tables.items():
                 file_path = os.path.join(temp_path, record_type)
-                call_command('dump_for_ap', record_type, file_path, **date_range)
-                call_command('upload_dump_for_ap', file_path, f'{today}_{record_type}')
+                call_command('dump_for_linkspace', record_type, file_path, format='json', **date_range)
+                call_command('upload_dump_for_linkspace', file_path, table_name)
