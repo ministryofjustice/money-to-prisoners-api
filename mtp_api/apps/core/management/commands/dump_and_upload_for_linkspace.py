@@ -11,6 +11,7 @@ class Command(BaseCommand):
     """
     Dump credits, FIU-monitored prisoners, FIU-monitored debit cards and auto accept rules
     which were updated "yesterday" and upload them to LinkSpace.
+    Additionally, all non super-users of the Prisoner Money Intelligence website are exported, whether active or not.
     This command is expected to be scheduled to run once per day (using core.ScheduledCommand model).
     """
     help = textwrap.dedent(__doc__).strip()
@@ -20,6 +21,7 @@ class Command(BaseCommand):
         'fiu_senders_debit_cards': 'fiudebit',
         'fiu_prisoners': 'fiuprisoner',
         'auto_accepts': 'fiuauto',
+        'noms_ops_users': 'fiuusers',
     }
 
     def handle(self, *args, **options):

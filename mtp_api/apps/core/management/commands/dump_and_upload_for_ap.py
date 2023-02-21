@@ -30,6 +30,9 @@ class Command(BaseCommand):
 
         with tempfile.TemporaryDirectory() as temp_path:
             for record_type in Serialiser.get_serialisers():
+                if record_type == 'noms_ops_users':
+                    # explicitly ignore user export
+                    continue
                 file_path = os.path.join(temp_path, record_type)
                 call_command('dump_for_ap', record_type, file_path, **date_range)
                 call_command('upload_dump_for_ap', file_path, f'{today}_{record_type}')
