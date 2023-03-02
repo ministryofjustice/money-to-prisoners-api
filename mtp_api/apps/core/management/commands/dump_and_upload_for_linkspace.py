@@ -24,6 +24,10 @@ class Command(BaseCommand):
         'noms_ops_users': 'fiuusers',
     }
 
+    def add_arguments(self, parser):
+        super().add_arguments(parser)
+        # NB: all options are propagated to `dump_for_linkspace` and `upload_dump_for_linkspace`
+
     def handle(self, *args, **options):
         today = timezone.localtime().date()
         yesterday = today - datetime.timedelta(days=1)
@@ -38,5 +42,5 @@ class Command(BaseCommand):
         with tempfile.TemporaryDirectory() as temp_path:
             for record_type, table_name in self.linkspace_tables.items():
                 file_path = os.path.join(temp_path, record_type)
-                call_command('dump_for_linkspace', record_type, file_path, format='json', **date_range)
-                call_command('upload_dump_for_linkspace', file_path, table_name)
+                call_command('dump_for_linkspace', record_type, file_path, format='json', **date_range, **options)
+                call_command('upload_dump_for_linkspace', file_path, table_name, **options)

@@ -39,7 +39,7 @@ class Command(BaseCommand):
                 'Content-Type': 'application/json',
                 'Authorization': f'Bearer {token}',
             },
-            timeout=30,
+            timeout=60,
         )
         is_error = response.status_code != 200
         import_id = 'unknown ID'
