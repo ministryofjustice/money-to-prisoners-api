@@ -21,14 +21,14 @@ import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from mtp_common.tasks import send_email
 from oauth2_provider.models import Application
-from rest_framework import viewsets, generics, status
+from rest_framework import viewsets, generics, status, filters
 from rest_framework.exceptions import ValidationError as RestValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.settings import api_settings
 
 from core.views import BaseAdminReportView
-from core.filters import BaseFilterSet
+from core.filters import BaseFilterSet, SplitTextInMultipleFieldsFilter
 from mtp_auth.forms import LoginStatsForm
 from mtp_auth.models import (
     PrisonUserMapping, Role, Flag,
@@ -98,6 +98,17 @@ def get_managed_user_queryset(user):
     return queryset
 
 
+class UserFilterset(BaseFilterSet):
+    simple_search = SplitTextInMultipleFieldsFilter(
+        field_names=('username', 'first_name', 'last_name', 'email'),
+        lookup_expr='icontains',
+    )
+
+    class Meta:
+        model = User
+        fields = ('username', 'email')
+
+
 class UserViewSet(viewsets.ModelViewSet):
     lookup_field = 'username__iexact'
     lookup_url_kwarg = 'username'
@@ -105,6 +116,8 @@ class UserViewSet(viewsets.ModelViewSet):
 
     queryset = User.objects.none()
     permission_classes = (IsAuthenticated, UserPermissions)
+    filter_backends = (DjangoFilterBackend, filters.OrderingFilter,)
+    filter_class = UserFilterset
     serializer_class = UserSerializer
 
     def get_queryset(self):
