@@ -45,7 +45,7 @@ class Command(BaseCommand):
             timeout=60,
         )
         is_error = response.status_code != 200
-        import_id = 'unknown ID'
+        import_result = 'but import undetermined'
         try:
             response_data = response.json()
         except ValueError:
@@ -57,11 +57,14 @@ class Command(BaseCommand):
             message = response_data.get('message') or ''
             matches = re.search(r'processing as import ID (?P<import_id>\d+)', message)
             if matches:
-                import_id = matches.group('import_id')
-                import_id = f'ID {import_id}'
+                import_result = matches.group('import_id')
+                import_result = f'will be processed with ID {import_result}'
+            elif message == 'No data received, skipping':
+                import_result = 'is empty, ignored'
             else:
                 logger.warning(f'Linkspace response not parsed: {message}')
+
         if is_error:
             logger.error(f'Could not upload data to Linkspace:\n{response.content}')
         else:
-            self.stdout.write(f'Successful upload to Linkspace will be processed with {import_id}')
+            self.stdout.write(f'Successful upload to Linkspace {import_result}')
