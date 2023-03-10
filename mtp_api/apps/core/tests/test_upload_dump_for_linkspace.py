@@ -1,6 +1,7 @@
 import os
 import pathlib
 import tempfile
+from unittest import mock
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
@@ -70,11 +71,14 @@ class TestUploadDumpForLinkspace(TestCase):
         LINKSPACE_ENDPOINT='https://linkspace.local/upload/',
         LINKSPACE_PRIVATE_KEY_PATH=TEST_PRIVATE_KEY,
     )
-    def test_failed_upload(self):
-        with self.assertRaises(CommandError), responses.RequestsMock() as rsps:
+    @mock.patch('core.management.commands.upload_dump_for_linkspace.logger')
+    def test_failed_upload(self, mocked_logger):
+        with responses.RequestsMock() as rsps:
             rsps.add(
                 responses.PUT,
                 'https://linkspace.local/upload/',
                 json={'message': 'Table not found: fiumissing', 'is_error': True},
             )
             call_command('upload_dump_for_linkspace', self.temp_file.name, 'fiumissing')
+        mocked_logger.error.assert_called_once()
+        self.assertIn('Could not upload data to Linkspace', mocked_logger.error.call_args_list[-1].args[0])

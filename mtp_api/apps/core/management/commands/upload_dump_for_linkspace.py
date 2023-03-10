@@ -1,4 +1,5 @@
 import argparse
+import logging
 import pathlib
 import re
 import textwrap
@@ -7,6 +8,8 @@ from django.conf import settings
 from django.core.management import BaseCommand, CommandError
 import jwt
 import requests
+
+logger = logging.getLogger('mtp')
 
 
 class Command(BaseCommand):
@@ -56,7 +59,9 @@ class Command(BaseCommand):
             if matches:
                 import_id = matches.group('import_id')
                 import_id = f'ID {import_id}'
+            else:
+                logger.warning(f'Linkspace response not parsed: {message}')
         if is_error:
-            raise CommandError(f'Could not upload data to Linkspace:\n{response.content}')
+            logger.error(f'Could not upload data to Linkspace:\n{response.content}')
         else:
             self.stdout.write(f'Successful upload to Linkspace will be processed with {import_id}')
