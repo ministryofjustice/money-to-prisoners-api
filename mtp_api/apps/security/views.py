@@ -420,7 +420,7 @@ class RecipientProfileView(
     ).prefetch_related(
         'bank_transfer_details'
     )
-    filter_backends = (DjangoFilterBackend, filters.OrderingFilter,)
+    filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
     filter_class = RecipientProfileListFilter
     serializer_class = RecipientProfileSerializer
     ordering_param = api_settings.ORDERING_PARAM
