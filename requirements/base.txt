@@ -4,7 +4,7 @@ money-to-prisoners-common~=14.2.0
 
 psycopg2-binary~=2.8.6  # 2.9+ does not work with django 2.2
 djangorestframework~=3.13.0
-drf-yasg~=1.20.0
+drf-yasg~=1.21.5
 django-model-utils~=4.2.0
 django-filter~=21.1.0
 oauthlib~=3.1.1
