@@ -3,7 +3,7 @@ version: 2.1
 executors:
   build-test-push:
     docker:
-      - image: ${ECR_ENDPOINT}/prisoner-money/money-to-prisoners:deploy-tools
+      - image: ${ECR_ENDPOINT}/prisoner-money/money-to-prisoners:tools
     environment:
       app: api
     working_directory: /tmp/repo
