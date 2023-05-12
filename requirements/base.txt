@@ -2,9 +2,7 @@
 
 money-to-prisoners-common~=15.0.0
 
-# psycopg2 2.9+ does not work with django 2.2
-psycopg2~=2.8.6; sys_platform == 'darwin'
-psycopg2-binary~=2.8.6; sys_platform == 'linux'
+psycopg2~=2.9.6
 
 djangorestframework~=3.13.0
 drf-yasg~=1.20.0
