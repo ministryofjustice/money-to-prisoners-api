@@ -4,7 +4,6 @@ from operator import or_
 
 from django import forms
 from django.db.models import Q
-from django.utils import six
 from django.utils.dateparse import parse_datetime
 from django.utils.formats import get_format
 from django.utils.functional import lazy
@@ -14,6 +13,7 @@ from rest_framework.filters import OrderingFilter
 import django_filters
 import django_filters.fields
 import django_filters.utils
+import six
 
 from mtp_auth.permissions import NomsOpsClientIDPermissions
 
