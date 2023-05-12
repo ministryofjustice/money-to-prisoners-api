@@ -21,10 +21,10 @@ class Disbursement(TimeStampedModel):
     prison = models.ForeignKey(Prison, on_delete=models.PROTECT)
     resolution = models.CharField(
         max_length=50,
-        choices=DISBURSEMENT_RESOLUTION, default=DISBURSEMENT_RESOLUTION.PENDING,
+        choices=DISBURSEMENT_RESOLUTION.choices, default=DISBURSEMENT_RESOLUTION.PENDING,
         db_index=True
     )
-    method = models.CharField(max_length=50, choices=DISBURSEMENT_METHOD, db_index=True)
+    method = models.CharField(max_length=50, choices=DISBURSEMENT_METHOD.choices, db_index=True)
     remittance_description = models.CharField(max_length=250, blank=True)
 
     # recipient details
@@ -166,7 +166,7 @@ class Log(TimeStampedModel):
         settings.AUTH_USER_MODEL, null=True, blank=True,
         on_delete=models.SET_NULL, related_name='disbursement_log'
     )
-    action = models.CharField(max_length=50, choices=LOG_ACTIONS)
+    action = models.CharField(max_length=50, choices=LOG_ACTIONS.choices)
 
     objects = LogManager()
 

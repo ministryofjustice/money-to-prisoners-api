@@ -13,8 +13,8 @@ from transaction.managers import TransactionManager
 
 class Transaction(TimeStampedModel):
     amount = models.BigIntegerField()
-    category = models.CharField(max_length=50, choices=TRANSACTION_CATEGORY, db_index=True)
-    source = models.CharField(max_length=50, choices=TRANSACTION_SOURCE, db_index=True)
+    category = models.CharField(max_length=50, choices=TRANSACTION_CATEGORY.choices, db_index=True)
+    source = models.CharField(max_length=50, choices=TRANSACTION_SOURCE.choices, db_index=True)
 
     processor_type_code = models.CharField(max_length=12, blank=True, null=True)
     sender_sort_code = models.CharField(max_length=50, blank=True)

@@ -294,7 +294,7 @@ class Check(TimeStampedModel):
     )
     status = models.CharField(
         max_length=50,
-        choices=CHECK_STATUS,
+        choices=CHECK_STATUS.choices,
         db_index=True,
     )
     description = ArrayField(

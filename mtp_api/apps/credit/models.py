@@ -43,7 +43,7 @@ class Credit(TimeStampedModel):
     prisoner_name = models.CharField(blank=True, null=True, max_length=250)
     prison = models.ForeignKey(Prison, blank=True, null=True, on_delete=models.SET_NULL)
 
-    resolution = models.CharField(max_length=50, choices=CREDIT_RESOLUTION, default=CREDIT_RESOLUTION.PENDING,
+    resolution = models.CharField(max_length=50, choices=CREDIT_RESOLUTION.choices, default=CREDIT_RESOLUTION.PENDING,
                                   db_index=True)
     reconciled = models.BooleanField(default=False)
     reviewed = models.BooleanField(default=False)
@@ -379,7 +379,7 @@ class Log(TimeStampedModel):
         settings.AUTH_USER_MODEL, null=True, blank=True,
         on_delete=models.SET_NULL, related_name='credit_log'
     )
-    action = models.CharField(max_length=50, choices=LOG_ACTIONS)
+    action = models.CharField(max_length=50, choices=LOG_ACTIONS.choices)
 
     objects = LogManager()
 

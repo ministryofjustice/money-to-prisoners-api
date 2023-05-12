@@ -67,7 +67,7 @@ class StatusFilter(admin.SimpleListFilter):
     title = _('status')
 
     def lookups(self, request, model_admin):
-        return CREDIT_STATUS
+        return CREDIT_STATUS.choices
 
     def queryset(self, request, queryset):
         status = self.used_parameters.get(self.parameter_name)
@@ -83,7 +83,7 @@ class SourceFilter(admin.SimpleListFilter):
     title = _('source')
 
     def lookups(self, request, model_admin):
-        return CREDIT_SOURCE
+        return CREDIT_SOURCE.choices
 
     def queryset(self, request, queryset):
         source = self.used_parameters.get(self.parameter_name)
@@ -148,15 +148,15 @@ class CreditAdmin(admin.ModelAdmin):
     @add_short_description(_('source'))
     def formatted_source(self, instance):
         value = instance.source
-        if CREDIT_SOURCE.has_value(value):
-            return CREDIT_SOURCE.for_value(value).display
+        if value in CREDIT_SOURCE.values:
+            return dict(CREDIT_SOURCE.choices)[value]
         return value
 
     @add_short_description(_('status'))
     def formatted_status(self, instance):
         value = instance.status
-        if CREDIT_STATUS.has_value(value):
-            return CREDIT_STATUS.for_value(value).display
+        if value in CREDIT_STATUS.values:
+            return dict(CREDIT_STATUS.choices)[value]
         return value
 
     @add_short_description(_('Display total of selected credits'))

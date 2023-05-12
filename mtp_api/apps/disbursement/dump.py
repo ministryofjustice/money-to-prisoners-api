@@ -51,7 +51,7 @@ class DisbursementSerialiser(Serialiser):
             'Prison': record.prison.short_name,
             'Recipient first name': record.recipient_first_name,
             'Recipient last name': record.recipient_last_name,
-            'Payment method': DISBURSEMENT_METHOD.for_value(record.method).display,
+            'Payment method': dict(DISBURSEMENT_METHOD.choices).get(record.method),
             'Bank transfer sort code': record.sort_code,
             'Bank transfer account': record.account_number,
             'Bank transfer roll number': record.roll_number,
@@ -61,7 +61,7 @@ class DisbursementSerialiser(Serialiser):
             'Recipient address postcode': record.postcode,
             'Recipient address country': record.country,
             'Recipient email': record.recipient_email,
-            'Status': DISBURSEMENT_RESOLUTION.for_value(record.resolution).display,
+            'Status': dict(DISBURSEMENT_RESOLUTION.choices).get(record.resolution),
             'NOMIS transaction': record.nomis_transaction_id,
             'SOP invoice number': record.invoice_number,
         })

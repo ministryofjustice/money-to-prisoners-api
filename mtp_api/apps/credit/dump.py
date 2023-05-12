@@ -69,7 +69,7 @@ class CreditSerialiser(Serialiser):
     def serialise(self, record: Credit):
         status = record.status
         if status:
-            status = CREDIT_STATUS.for_value(status).display
+            status = dict(CREDIT_STATUS.choices).get(status)
         else:
             status = 'Anonymous'
 
@@ -132,7 +132,7 @@ class CreditSerialiser(Serialiser):
         if hasattr(record, 'security_check'):
             security_check = record.security_check
             security_check_description = '; '.join(security_check.description)
-            security_check_status = CHECK_STATUS.for_value(security_check.status).display
+            security_check_status = dict(CHECK_STATUS.choices).get(security_check.status)
             security_check_actioned_by = security_check.actioned_by.username if security_check.actioned_by else ''
             if len(security_check.rules) > 0:
                 security_check_rules = security_check.rules

@@ -100,5 +100,5 @@ class EmailNotificationPreferences(models.Model):
     NB: only DAILY is currently supported in noms-ops and email-sending management command
     """
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    frequency = models.CharField(max_length=50, choices=EMAIL_FREQUENCY)
+    frequency = models.CharField(max_length=50, choices=EMAIL_FREQUENCY.choices)
     last_sent_at = models.DateField(blank=True, null=True)

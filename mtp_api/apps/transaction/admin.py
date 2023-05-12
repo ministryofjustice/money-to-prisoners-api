@@ -19,7 +19,7 @@ class StatusFilter(admin.SimpleListFilter):
     title = _('status')
 
     def lookups(self, request, model_admin):
-        return TRANSACTION_STATUS
+        return TRANSACTION_STATUS.choices
 
     def queryset(self, request, queryset):
         status = self.used_parameters.get(self.parameter_name)
@@ -74,15 +74,15 @@ class TransactionAdmin(admin.ModelAdmin):
     @add_short_description(_('type'))
     def transaction_type(self, instance):
         category = instance.category
-        if TRANSACTION_CATEGORY.has_value(category):
-            category = TRANSACTION_CATEGORY.for_value(category).display
+        if category in TRANSACTION_CATEGORY.values:
+            category = dict(TRANSACTION_CATEGORY.choices)[category]
         return '%s/%s' % (instance.processor_type_code, category)
 
     @add_short_description(_('status'))
     def formatted_status(self, instance):
         value = instance.status
-        if TRANSACTION_STATUS.has_value(value):
-            return TRANSACTION_STATUS.for_value(value).display
+        if value in TRANSACTION_STATUS.values:
+            return dict(TRANSACTION_STATUS.choices)[value]
         return value
 
     @add_short_description(_('Display total of selected transactions'))

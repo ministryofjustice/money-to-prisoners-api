@@ -238,7 +238,7 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
         row = super().serialise(worksheet, record, triggered)
         status = record.status
         if status:
-            status = str(CREDIT_STATUS.for_value(status).display)
+            status = str(dict(CREDIT_STATUS.choices).get(status))
         else:
             status = 'Anonymous'
         row.update({
@@ -308,6 +308,8 @@ class DisbursementSerialiser(Serialiser, serialised_model=Disbursement):
 
     def serialise(self, worksheet, record: Disbursement, triggered: Triggered):
         row = super().serialise(worksheet, record, triggered)
+        payment_method = dict(DISBURSEMENT_METHOD.choices).get(record.method)
+        payment_status = dict(DISBURSEMENT_RESOLUTION.choices).get(record.resolution)
         row.update({
             'Date entered': local_datetime_for_xlsx(record.created),
             'Date confirmed': local_datetime_for_xlsx(
@@ -319,13 +321,13 @@ class DisbursementSerialiser(Serialiser, serialised_model=Disbursement):
             'Prisoner name': record.prisoner_name,
             'Prison': record.prison.short_name,
             'Recipient name': record.recipient_name,
-            'Payment method': str(DISBURSEMENT_METHOD.for_value(record.method).display),
+            'Payment method': str(payment_method),
             'Bank transfer sort code': record.sort_code,
             'Bank transfer account': record.account_number,
             'Bank transfer roll number': record.roll_number,
             'Recipient address': record.recipient_address,
             'Recipient email': record.recipient_email,
-            'Status': str(DISBURSEMENT_RESOLUTION.for_value(record.resolution).display),
+            'Status': str(payment_status),
             'NOMIS transaction': record.nomis_transaction_id,
             'SOP invoice number': record.invoice_number,
         })

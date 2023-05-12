@@ -2,11 +2,9 @@ from django.contrib import messages
 from django.db import models
 from django.utils import timezone
 from django.utils.text import capfirst
-from extended_choices import Choices
 
-SERVICES = Choices(
-    ('GOV_UK_PAY', 'gov_uk_pay', 'GOV.UK Pay'),
-)
+class SERVICES(models.TextChoices):
+    GOV_UK_PAY = 'gov_uk_pay', 'GOV.UK Pay'
 
 
 class DowntimeManager(models.Manager):
@@ -20,7 +18,7 @@ class DowntimeManager(models.Manager):
 
 
 class Downtime(models.Model):
-    service = models.CharField(max_length=50, choices=SERVICES)
+    service = models.CharField(max_length=50, choices=SERVICES.choices)
     start = models.DateTimeField()
     end = models.DateTimeField(null=True, blank=True)
     message_to_users = models.CharField(max_length=255, blank=True)
@@ -34,23 +32,23 @@ class Downtime(models.Model):
         return '%s, %s -> %s' % (self.service, self.start, self.end)
 
 
-NOTIFICATION_TARGETS = Choices(
-    ('BANKADMIN_LOGIN', 'bankadmin_login', 'Bank admin: before login'),
-    ('BANKADMIN_DASHBOARD', 'bankadmin_dashboard', 'Bank admin: dashboard'),
-    ('CASHBOOK_LOGIN', 'cashbook_login', 'Cashbook: before login'),
-    ('CASHBOOK_DASHBOARD', 'cashbook_dashboard', 'Cashbook: dashboard'),
-    ('CASHBOOK_ALL', 'cashbook_all', 'Cashbook: all apps'),
-    ('CASHBOOK_CASHBOOK', 'cashbook_cashbook', 'Cashbook: cashbook app'),
-    ('CASHBOOK_DISBURSEMENTS', 'cashbook_disbursements', 'Cashbook: disbursements app'),
-    ('NOMS_OPS_LOGIN', 'noms_ops_login', 'Noms Ops: before login'),
-    ('NOMS_OPS_SECURITY_DASHBOARD', 'noms_ops_security_dashboard', 'Noms Ops: security dashboard'),
-    ('SEND_MONEY_LANDING', 'send_money_landing', 'Send Money: landing page'),
-)
+class NOTIFICATION_TARGETS(models.TextChoices):
+    BANKADMIN_LOGIN = 'bankadmin_login', 'Bank admin: before login'
+    BANKADMIN_DASHBOARD = 'bankadmin_dashboard', 'Bank admin: dashboard'
+    CASHBOOK_LOGIN = 'cashbook_login', 'Cashbook: before login'
+    CASHBOOK_DASHBOARD = 'cashbook_dashboard', 'Cashbook: dashboard'
+    CASHBOOK_ALL = 'cashbook_all', 'Cashbook: all apps'
+    CASHBOOK_CASHBOOK = 'cashbook_cashbook', 'Cashbook: cashbook app'
+    CASHBOOK_DISBURSEMENTS = 'cashbook_disbursements', 'Cashbook: disbursements app'
+    NOMS_OPS_LOGIN = 'noms_ops_login', 'Noms Ops: before login'
+    NOMS_OPS_SECURITY_DASHBOARD = 'noms_ops_security_dashboard', 'Noms Ops: security dashboard'
+    SEND_MONEY_LANDING = 'send_money_landing', 'Send Money: landing page'
+
 
 
 class Notification(models.Model):
     public = models.BooleanField(default=False, help_text='Notifications must be public to be seen before login')
-    target = models.CharField(max_length=30, choices=NOTIFICATION_TARGETS)
+    target = models.CharField(max_length=30, choices=NOTIFICATION_TARGETS.choices)
     level = models.SmallIntegerField(choices=sorted(
         (level, capfirst(name))
         for level, name in messages.DEFAULT_TAGS.items()
