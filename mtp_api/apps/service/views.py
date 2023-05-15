@@ -20,7 +20,7 @@ def service_availability_view(_):
             status['message_to_users'] = downtime.message_to_users
         return service, status
 
-    response = dict(map(service_availability, (service for service, _ in SERVICES)))
+    response = dict(map(service_availability, (service for service, _ in SERVICES.choices)))
     response['*'] = {'status': all(status['status'] for status in response.values())}
     return JsonResponse(response)
 
