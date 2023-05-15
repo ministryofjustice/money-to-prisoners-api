@@ -13,7 +13,6 @@ from rest_framework.filters import OrderingFilter
 import django_filters
 import django_filters.fields
 import django_filters.utils
-import six
 
 from mtp_auth.permissions import NomsOpsClientIDPermissions
 
@@ -51,7 +50,7 @@ class MultipleFieldCharFilter(django_filters.CharFilter):
 
     def filter(self, qs, value):
         if isinstance(value, django_filters.fields.Lookup):
-            lookup = six.text_type(value.lookup_type)
+            lookup = str(value.lookup_type)
             value = value.value
         else:
             lookup = self.lookup_expr
@@ -137,7 +136,7 @@ def get_all_format(format_type, lang=None, use_l10n=None):
     return ['iso8601'] + get_format(format_type, lang, use_l10n)
 
 
-get_all_format_lazy = lazy(get_all_format, six.text_type, list, tuple)
+get_all_format_lazy = lazy(get_all_format, str, list, tuple)
 
 
 class IsoDateTimeField(forms.DateTimeField):
