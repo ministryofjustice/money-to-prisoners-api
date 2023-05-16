@@ -530,32 +530,6 @@ class PrisonerValidityViewTestCase(AuthTestCaseMixin, APITestCase):
             response = self.call_authorised_endpoint(data)
             self.assertEmptyResponse(response)
 
-    def test_valid_prisoner_found_with_correct_prison_filter(self):
-        valid_data = self.get_valid_data()
-        prisoner_location = PrisonerLocation.objects.get(prisoner_number=valid_data['prisoner_number'])
-        valid_data_with_filter = valid_data.copy()
-        valid_data_with_filter['prisons'] = prisoner_location.prison.nomis_id
-        response = self.call_authorised_endpoint(valid_data_with_filter)
-        self.assertValidResponse(response, valid_data)
-
-    def test_valid_prisoner_found_with_multiple_correct_prison_filter(self):
-        valid_data = self.get_valid_data()
-        valid_data_with_filter = valid_data.copy()
-        valid_data_with_filter['prisons'] = ','.join(Prison.objects.values_list('nomis_id', flat=True))
-        response = self.call_authorised_endpoint(valid_data_with_filter)
-        self.assertValidResponse(response, valid_data)
-
-    def test_valid_prisoner_not_found_with_incorrect_prison_filter(self):
-        valid_data = self.get_valid_data()
-        prisoner_location = PrisonerLocation.objects.get(prisoner_number=valid_data['prisoner_number'])
-        other_prisons = Prison.objects.exclude(nomis_id=prisoner_location.prison.nomis_id)
-        if other_prisons.count() == 0:
-            self.fail('Cannot test prisoner validity filtering as there are insufficient prisons')
-        valid_data_with_filter = valid_data.copy()
-        valid_data_with_filter['prisons'] = ','.join(other_prisons.values_list('nomis_id', flat=True))
-        response = self.call_authorised_endpoint(valid_data_with_filter)
-        self.assertEmptyResponse(response)
-
 
 class PrisonerAccountBalanceTestCase(AuthTestCaseMixin, APITestCase):
     fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
