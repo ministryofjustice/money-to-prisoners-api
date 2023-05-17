@@ -148,7 +148,7 @@ class PrisonerValidityView(mixins.ListModelMixin, viewsets.GenericViewSet):
 
         # HMP Altcourse will temporarily not accept money
         no_altcourse_start = datetime.datetime(2023, 5, 29, 23, tzinfo=timezone.utc)
-        no_altcourse_end = datetime.datetime(2023, 6, 1, 1, tzinfo=timezone.utc)
+        no_altcourse_end = datetime.datetime(2023, 5, 31, 1, tzinfo=timezone.utc)
         if no_altcourse_start <= timezone.now() <= no_altcourse_end:
             queryset = queryset.exclude(prison__nomis_id='ACI')
 
