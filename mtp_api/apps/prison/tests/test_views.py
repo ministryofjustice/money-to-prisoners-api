@@ -848,6 +848,15 @@ class PrisonViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(response.data['count'], Prison.objects.count() - 1)
         self.assertNotIn(bytes(empty_prison.nomis_id, encoding='utf-8'), response.content)
 
+    def test_exclude_prisons_with_only_inactive_locations(self):
+        url = reverse('prison-list')
+        PrisonerLocation.objects.filter(prison='INP').update(active=False)
+        response = self.client.get(url + '?exclude_empty_prisons=True',
+                                   HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.send_money_user),
+                                   format='json')
+        self.assertEqual(response.data['count'], 1)
+        self.assertNotIn(bytes('INP', encoding='utf-8'), response.content)
+
 
 class PrisonPopulationViewTestCase(AuthTestCaseMixin, APITestCase):
     fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
