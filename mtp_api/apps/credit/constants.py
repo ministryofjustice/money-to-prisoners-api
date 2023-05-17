@@ -1,7 +1,8 @@
 from django.utils.translation import gettext_lazy as _
 from django.db import models
 
-class CREDIT_RESOLUTION(models.TextChoices):
+
+class CREDIT_RESOLUTION(models.TextChoices):  # noqa: N801
     INITIAL = 'initial', _('Initial')
     PENDING = 'pending', _('Pending')
     MANUAL = 'manual', _('Requires manual processing')
@@ -9,21 +10,25 @@ class CREDIT_RESOLUTION(models.TextChoices):
     REFUNDED = 'refunded', _('Refunded')
     FAILED = 'failed', _('Failed')
 
-class CREDIT_STATUS(models.TextChoices):
+
+class CREDIT_STATUS(models.TextChoices):  # noqa: N801
     CREDIT_PENDING = 'credit_pending', _('Credit pending')
     CREDITED = 'credited', _('Credited')
     REFUNDED = 'refunded', _('Refunded')
     REFUND_PENDING = 'refund_pending', _('Refund pending')
     FAILED = 'failed', _('Failed')
 
-class CREDIT_SOURCE(models.TextChoices):
+
+class CREDIT_SOURCE(models.TextChoices):  # noqa: N801
     BANK_TRANSFER = 'bank_transfer', _('Bank transfer')
     ONLINE = 'online', _('Online')
     UNKNOWN = 'unknown', _('Unknown')
 
+
 LOCK_LIMIT = 20
 
-class LOG_ACTIONS(models.TextChoices):
+
+class LOG_ACTIONS(models.TextChoices):  # noqa: N801
     CREATED = 'created', _('Created')
     LOCKED = 'locked', _('Locked')  # legacy
     UNLOCKED = 'unlocked', _('Unlocked')  # legacy

@@ -3,7 +3,8 @@ from django.db import models
 from django.utils import timezone
 from django.utils.text import capfirst
 
-class SERVICES(models.TextChoices):
+
+class SERVICES(models.TextChoices):  # noqa: N801
     GOV_UK_PAY = 'gov_uk_pay', 'GOV.UK Pay'
 
 
@@ -32,7 +33,7 @@ class Downtime(models.Model):
         return '%s, %s -> %s' % (self.service, self.start, self.end)
 
 
-class NOTIFICATION_TARGETS(models.TextChoices):
+class NOTIFICATION_TARGETS(models.TextChoices):  # noqa: N801
     BANKADMIN_LOGIN = 'bankadmin_login', 'Bank admin: before login'
     BANKADMIN_DASHBOARD = 'bankadmin_dashboard', 'Bank admin: dashboard'
     CASHBOOK_LOGIN = 'cashbook_login', 'Cashbook: before login'
@@ -43,7 +44,6 @@ class NOTIFICATION_TARGETS(models.TextChoices):
     NOMS_OPS_LOGIN = 'noms_ops_login', 'Noms Ops: before login'
     NOMS_OPS_SECURITY_DASHBOARD = 'noms_ops_security_dashboard', 'Noms Ops: security dashboard'
     SEND_MONEY_LANDING = 'send_money_landing', 'Send Money: landing page'
-
 
 
 class Notification(models.Model):
