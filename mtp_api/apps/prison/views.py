@@ -183,7 +183,7 @@ class PrisonView(mixins.ListModelMixin, viewsets.GenericViewSet):
     def filter_queryset(self, queryset):
         queryset = super().filter_queryset(queryset)
         if self.request.GET.get('exclude_empty_prisons', '').lower() == 'true':
-            queryset = queryset.filter(nomis_id__in=PrisonerLocation.objects.values('prison'))
+            queryset = queryset.filter(nomis_id__in=PrisonerLocation.objects.filter(active=True).values('prison'))
         return queryset
 
 
