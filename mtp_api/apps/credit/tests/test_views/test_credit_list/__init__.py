@@ -189,7 +189,7 @@ class CreditListTestCase(
             parsed_date = parse_datetime(date)
             if parsed_date is not None:
                 return parsed_date
-            for date_format in settings.DATETIME_INPUT_FORMATS:
+            for date_format in settings.DATE_INPUT_FORMATS + settings.DATETIME_INPUT_FORMATS:
                 try:
                     return datetime.datetime.strptime(date, date_format)
                 except (ValueError, TypeError):
