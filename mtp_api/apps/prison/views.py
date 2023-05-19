@@ -141,14 +141,18 @@ class PrisonerValidityView(mixins.ListModelMixin, viewsets.GenericViewSet):
 
     def filter_queryset(self, queryset):
         queryset = super().filter_queryset(queryset)
-        filters = {
-            'prisoner_number': self.request.GET['prisoner_number'],
-            'prisoner_dob': self.request.GET['prisoner_dob'],
-        }
-        prisons = set(filter(None, self.request.GET.get('prisons', '').split(',')))
-        if prisons:
-            filters['prison__nomis_id__in'] = prisons
-        return queryset.filter(**filters)
+        queryset = queryset.filter(
+            prisoner_number=self.request.GET['prisoner_number'],
+            prisoner_dob=self.request.GET['prisoner_dob'],
+        )
+
+        # HMP Altcourse will temporarily not accept money
+        no_altcourse_start = datetime.datetime(2023, 5, 29, 23, tzinfo=timezone.utc)
+        no_altcourse_end = datetime.datetime(2023, 5, 31, 1, tzinfo=timezone.utc)
+        if no_altcourse_start <= timezone.now() <= no_altcourse_end:
+            queryset = queryset.exclude(prison__nomis_id='ACI')
+
+        return queryset
 
     def list(self, request, *args, **kwargs):
         prisoner_number = self.request.GET.get('prisoner_number', '')
