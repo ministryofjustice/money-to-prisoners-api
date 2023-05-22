@@ -43,7 +43,7 @@
           </thead>
           <tbody>
             {% for login_stat in login_stats %}
-              <tr class="{% cycle 'row1' 'row2' %}">
+              <tr>
                 <td>{{ login_stat.prison_name }}</td>
                 {% for login_count in login_stat.monthly_counts %}
                   <td>{{ login_count|format_number }}</td>
