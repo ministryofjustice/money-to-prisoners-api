@@ -310,7 +310,7 @@ class DigitalTakeupReport(BaseAdminReportView):
                 date_label=format_date(row['date']),
                 predicted=False,
             )
-            total_reported = row['reported_credits_by_post'] + row['reported_credits_by_mtp']
+            total_reported = (row['reported_credits_by_post'] or 0) + (row['reported_credits_by_mtp'] or 0)
             if total_reported:
                 row['digital_takeup'] = row['reported_credits_by_mtp'] / total_reported
                 row['extrapolated_credits_by_post'] = round(
