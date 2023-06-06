@@ -1,6 +1,6 @@
 # Dependencies needed for all environments
 
-money-to-prisoners-common~=15.0.0
+money-to-prisoners-common~=16.0.0
 
 psycopg2~=2.9.6
 
