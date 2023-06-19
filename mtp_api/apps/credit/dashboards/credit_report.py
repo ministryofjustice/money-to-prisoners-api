@@ -4,7 +4,6 @@ import json
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.encoding import force_text
 from django.utils.html import escapejs
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext, gettext_lazy as _
@@ -70,7 +69,7 @@ class CreditReportChart:
         )
         return mark_safe('{columns: %s, rows: %s, weekends: %s, max: %d, title: "%s"}' % (
             json.dumps(self.columns), rows, weekends,
-            self.max_sum, force_text(escapejs(self.title)),
+            self.max_sum, str(escapejs(self.title)),
         ))
 
     @property
