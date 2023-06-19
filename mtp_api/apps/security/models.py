@@ -2,7 +2,7 @@ import logging
 
 from django.conf import settings
 from django.contrib.auth.models import User
-from django.contrib.postgres.fields import ArrayField, JSONField
+from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.dispatch import receiver
@@ -323,7 +323,7 @@ class Check(TimeStampedModel):
         blank=True,
         related_name='security_check_assigned_to'
     )
-    rejection_reasons = JSONField(
+    rejection_reasons = models.JSONField(
         name='rejection_reasons',
         default=dict
     )
