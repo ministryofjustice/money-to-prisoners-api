@@ -91,6 +91,7 @@ class AdminSite(admin.AdminSite):
 
 
 site = AdminSite()
+site.enable_nav_sidebar = False
 
 
 def add_short_description(short_description):
