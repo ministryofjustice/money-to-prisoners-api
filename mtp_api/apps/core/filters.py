@@ -1,6 +1,6 @@
-import re
 from functools import reduce
 from operator import or_
+import re
 
 from django import forms
 from django.db.models import Q
@@ -15,9 +15,8 @@ import django_filters.fields
 import django_filters.utils
 
 from mtp_auth.permissions import NomsOpsClientIDPermissions
-
-from user_event_log.utils import record_user_event
 from user_event_log.constants import USER_EVENT_KINDS
+from user_event_log.utils import record_user_event
 
 
 class ParamsOnlyFilterSetForm(forms.Form):
@@ -136,7 +135,7 @@ def get_all_format(format_type, lang=None, use_l10n=None):
     return ['iso8601'] + get_format(format_type, lang, use_l10n)
 
 
-get_all_format_lazy = lazy(get_all_format, str, list, tuple)
+get_all_format_lazy = lazy(get_all_format, list)
 
 
 class IsoDateTimeField(forms.DateTimeField):
