@@ -387,3 +387,7 @@ try:
     from .local import *  # noqa
 except ImportError:
     pass
+
+
+# TODO: remove after upgrade to django 3.2
+DEFAULT_HASHING_ALGORITHM = 'sha1'
