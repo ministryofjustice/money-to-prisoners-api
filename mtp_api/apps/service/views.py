@@ -2,25 +2,27 @@ from django.http import JsonResponse
 from django.utils import timezone
 from rest_framework import mixins, viewsets
 
-from service.models import Downtime, SERVICES, Notification
+from service.constants import Service
+from service.models import Downtime, Notification
 from service.serializers import NotificationSerializer
 
 
 def service_availability_view(_):
-    def service_availability(service):
+    def service_availability(service: str):
         downtime = Downtime.objects.active_downtime(service)
         if not downtime:
-            return service, {'status': True}
-        status = {
-            'status': False,
-        }
+            return {'status': True}
+        status = {'status': False}
         if downtime.end:
             status['downtime_end'] = downtime.end.isoformat()
         if downtime.message_to_users:
             status['message_to_users'] = downtime.message_to_users
-        return service, status
+        return status
 
-    response = dict(map(service_availability, (service for service, _ in SERVICES.choices)))
+    response = {
+        service: service_availability(service)
+        for service in Service.values
+    }
     response['*'] = {'status': all(status['status'] for status in response.values())}
     return JsonResponse(response)
 

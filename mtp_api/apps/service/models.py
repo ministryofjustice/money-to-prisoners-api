@@ -3,9 +3,7 @@ from django.db import models
 from django.utils import timezone
 from django.utils.text import capfirst
 
-
-class SERVICES(models.TextChoices):  # noqa: N801
-    GOV_UK_PAY = 'gov_uk_pay', 'GOV.UK Pay'
+from service.constants import Service
 
 
 class DowntimeManager(models.Manager):
@@ -14,12 +12,12 @@ class DowntimeManager(models.Manager):
         return self.filter(
             models.Q(start__lte=now, end__gt=now) |
             models.Q(start__lte=now, end=None),
-            service=service
+            service=service,
         ).order_by('-end').first()
 
 
 class Downtime(models.Model):
-    service = models.CharField(max_length=50, choices=SERVICES.choices)
+    service = models.CharField(max_length=50, choices=Service.choices)
     start = models.DateTimeField()
     end = models.DateTimeField(null=True, blank=True)
     message_to_users = models.CharField(max_length=255, blank=True)
