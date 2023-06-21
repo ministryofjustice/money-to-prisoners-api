@@ -1,17 +1,13 @@
 from datetime import timedelta
 
-from django.contrib import admin
-from django.contrib import messages
+from django.contrib import admin, messages
 from django.contrib.admin.options import IncorrectLookupParameters
 from django.core.exceptions import ValidationError
 from django.db.models import Sum
 from django.utils.translation import gettext_lazy as _
 from mtp_common.utils import format_currency
 
-from core.admin import (
-    UtcDateRangeFilter, RelatedAnyFieldListFilter, SearchFilter,
-    add_short_description
-)
+from core.admin import UtcDateRangeFilter, RelatedAnyFieldListFilter, SearchFilter, add_short_description
 from credit.constants import CREDIT_SOURCE, CREDIT_STATUS, LogAction
 from credit.models import Credit, Log, Comment, ProcessingBatch, PrivateEstateBatch
 from payment.models import Payment
@@ -193,9 +189,7 @@ class CreditAdmin(admin.ModelAdmin):
                     until_credited_times.append(log.created - credit.received_at)
 
         if until_credited_times:
-            avg_credit_time = (sum(until_credited_times, timedelta(0)) /
-                               len(until_credited_times))
-
+            avg_credit_time = sum(until_credited_times, timedelta(0)) / len(until_credited_times)
             self.message_user(
                 request,
                 _('Time until credit after being received: average %(avg)s, maximum %(max)s, minimum %(min)s') % {
@@ -205,8 +199,7 @@ class CreditAdmin(admin.ModelAdmin):
                 }
             )
         else:
-            self.message_user(request, _('No credits have been credited yet.'),
-                              messages.WARNING)
+            self.message_user(request, _('No credits have been credited yet.'), messages.WARNING)
 
 
 @admin.register(Comment)
