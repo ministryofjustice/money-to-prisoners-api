@@ -10,13 +10,13 @@ from transaction.constants import TransactionStatus
 class TransactionManager(models.Manager):
     @atomic
     def reconcile(self, start_date, end_date, user):
-        with connection.cursor() as c:
-            c.execute(
-                'update transaction_transaction t '
-                'set ref_code=b.ref_code '
-                'from payment_batch b '
-                'where t.id=b.settlement_transaction_id and '
-                'received_at>=%s and received_at<%s',
+        with connection.cursor() as cursor:
+            cursor.execute(
+                'UPDATE transaction_transaction t '
+                'SET ref_code=b.ref_code '
+                'FROM payment_batch b '
+                'WHERE t.id=b.settlement_transaction_id AND '
+                'received_at >= %s and received_at < %s',
                 [start_date, end_date]
             )
 
@@ -35,15 +35,17 @@ class TransactionManager(models.Manager):
             ref_code += 1
 
         if ref_codes:
-            with connection.cursor() as c:
-                c.execute('DROP TABLE IF EXISTS refids;')
-                c.execute('CREATE TEMP TABLE refids (id integer, ref_code integer)')
+            with connection.cursor() as cursor:
+                cursor.execute('DROP TABLE IF EXISTS refids;')
+                cursor.execute('CREATE TEMP TABLE refids (id integer, ref_code integer);')
                 insert_query = 'INSERT INTO refids (id, ref_code) VALUES '
-                insert_query += ', '.join(['%s' for _ in ref_codes])
+                insert_query += ', '.join('%s' for _ in ref_codes)
                 insert_query += ';'
-                c.execute(insert_query, ref_codes)
-                c.execute('UPDATE transaction_transaction t SET '
-                          'ref_code=r.ref_code FROM refids r WHERE '
-                          't.id=r.id;')
+                cursor.execute(insert_query, ref_codes)
+                cursor.execute(
+                    'UPDATE transaction_transaction t '
+                    'SET ref_code = r.ref_code FROM refids r '
+                    'WHERE t.id = r.id;'
+                )
 
         Credit.objects.reconcile(start_date, end_date, user, transaction__isnull=False)
