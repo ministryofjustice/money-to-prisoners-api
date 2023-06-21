@@ -21,7 +21,7 @@ class LogAdminInline(admin.TabularInline):
     readonly_fields = ('action', 'created', 'user')
     ordering = ('-created',)
 
-    def has_add_permission(self, request):
+    def has_add_permission(self, request, obj=None):
         return False
 
     def has_delete_permission(self, request, obj=None):
@@ -39,7 +39,7 @@ class TransactionAdminInline(admin.StackedInline):
     extra = 0
     readonly_fields = ('incomplete_sender_info', 'reference_in_sender_field')
 
-    def has_add_permission(self, request):
+    def has_add_permission(self, request, obj=None):
         return False
 
     def has_delete_permission(self, request, obj=None):
@@ -51,7 +51,7 @@ class PaymentAdminInline(admin.StackedInline):
     extra = 0
     readonly_fields = ('uuid', 'status', 'batch', 'billing_address',)
 
-    def has_add_permission(self, request):
+    def has_add_permission(self, request, obj=None):
         return False
 
     def has_delete_permission(self, request, obj=None):

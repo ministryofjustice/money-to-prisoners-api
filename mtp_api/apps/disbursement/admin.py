@@ -14,7 +14,7 @@ class LogAdminInline(admin.TabularInline):
     readonly_fields = ('action', 'created', 'user')
     ordering = ('-created',)
 
-    def has_add_permission(self, request):
+    def has_add_permission(self, request, obj=None):
         return False
 
     def has_delete_permission(self, request, obj=None):
