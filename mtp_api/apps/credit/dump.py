@@ -3,8 +3,8 @@ from mtp_common.security.checks import human_readable_check_rejection_reasons
 from mtp_common.utils import format_currency
 
 from core.dump import Serialiser
-from credit.constants import CREDIT_RESOLUTION, CREDIT_STATUS
-from credit.models import Credit, LOG_ACTIONS as CREDIT_LOG_ACTIONS
+from credit.constants import CREDIT_RESOLUTION, CREDIT_STATUS, LogAction
+from credit.models import Credit
 from payment.models import PAYMENT_STATUS, BillingAddress
 from security.models import CHECK_STATUS
 
@@ -77,7 +77,7 @@ class CreditSerialiser(Serialiser):
         row.update({
             'URL': f'{settings.NOMS_OPS_URL}/security/credits/{record.id}/',
             'Date received': record.received_at,
-            'Date credited': record.log_set.get_action_date(CREDIT_LOG_ACTIONS.CREDITED),
+            'Date credited': record.log_set.get_action_date(LogAction.credited),
             'Amount': self.format_amount(record.amount),
             'Prisoner number': record.prisoner_number or 'Unknown',
             'Prisoner name': record.prisoner_name or 'Unknown',

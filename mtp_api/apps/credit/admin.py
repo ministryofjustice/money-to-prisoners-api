@@ -12,7 +12,7 @@ from core.admin import (
     UtcDateRangeFilter, RelatedAnyFieldListFilter, SearchFilter,
     add_short_description
 )
-from credit.constants import CREDIT_SOURCE, CREDIT_STATUS, LOG_ACTIONS
+from credit.constants import CREDIT_SOURCE, CREDIT_STATUS, LogAction
 from credit.models import Credit, Log, Comment, ProcessingBatch, PrivateEstateBatch
 from payment.models import Payment
 from transaction.models import Transaction
@@ -189,7 +189,7 @@ class CreditAdmin(admin.ModelAdmin):
         for credit in queryset.prefetch_related('log_set'):
             logs = sorted(credit.log_set.all(), key=lambda log: log.created)
             for log in logs:
-                if log.action == LOG_ACTIONS.CREDITED:
+                if log.action == LogAction.credited.value:
                     until_credited_times.append(log.created - credit.received_at)
 
         if until_credited_times:

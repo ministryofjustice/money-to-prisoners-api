@@ -7,7 +7,7 @@ from django.utils.dateparse import parse_datetime
 from mtp_common.test_utils import silence_logger
 from rest_framework import status as http_status
 
-from credit.constants import LOG_ACTIONS
+from credit.constants import LogAction
 from credit.models import Credit, Log
 from payment.models import Batch
 from transaction.models import Transaction
@@ -82,7 +82,7 @@ class CreateTransactionsTestCase(
         self.assertEqual(
             Log.objects.filter(
                 user=user,
-                action=LOG_ACTIONS.CREATED
+                action=LogAction.created,
             ).count(),
             len([data for data in data_list if
                  data['category'] == TRANSACTION_CATEGORY.CREDIT and
@@ -307,7 +307,7 @@ class UpdateRefundTransactionsTestCase(
         self.assertEqual(
             Log.objects.filter(
                 user=user,
-                action=LOG_ACTIONS.REFUNDED
+                action=LogAction.refunded,
             ).count(),
             len(refunded_data_list)
         )
@@ -668,7 +668,7 @@ class ReconcileTransactionsTestCase(
         self.assertEqual(
             Log.objects.filter(
                 user=user,
-                action=LOG_ACTIONS.RECONCILED,
+                action=LogAction.reconciled,
             ).count(),
             len(credits_yesterday)
         )
@@ -686,7 +686,7 @@ class ReconcileTransactionsTestCase(
         self.assertEqual(
             Log.objects.filter(
                 user=user,
-                action=LOG_ACTIONS.RECONCILED,
+                action=LogAction.reconciled,
             ).count(),
             len(credits_yesterday)
         )

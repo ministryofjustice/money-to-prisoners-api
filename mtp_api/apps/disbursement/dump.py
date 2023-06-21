@@ -2,8 +2,8 @@ from django.conf import settings
 from mtp_common.utils import format_currency
 
 from core.dump import Serialiser
-from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION
-from disbursement.models import Disbursement, LOG_ACTIONS as DISBURSEMENT_LOG_ACTIONS
+from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION, LogAction
+from disbursement.models import Disbursement
 
 
 class DisbursementSerialiser(Serialiser):
@@ -43,8 +43,8 @@ class DisbursementSerialiser(Serialiser):
         row.update({
             'URL': f'{settings.NOMS_OPS_URL}/security/disbursements/{record.id}/',
             'Date entered': record.created,
-            'Date confirmed': record.log_set.get_action_date(DISBURSEMENT_LOG_ACTIONS.CONFIRMED),
-            'Date sent': record.log_set.get_action_date(DISBURSEMENT_LOG_ACTIONS.SENT),
+            'Date confirmed': record.log_set.get_action_date(LogAction.confirmed),
+            'Date sent': record.log_set.get_action_date(LogAction.sent),
             'Amount': self.format_amount(record.amount),
             'Prisoner number': record.prisoner_number,
             'Prisoner name': record.prisoner_name,

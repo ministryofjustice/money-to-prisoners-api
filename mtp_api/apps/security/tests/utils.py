@@ -12,7 +12,8 @@ from django.contrib.auth.models import Group
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 
-from credit.models import Credit, CREDIT_RESOLUTION, LOG_ACTIONS as CREDIT_LOG_ACTIONS
+from credit.constants import LogAction
+from credit.models import Credit, CREDIT_RESOLUTION
 from prison.models import Prison
 from payment.models import Payment, PAYMENT_STATUS
 from payment.tests.utils import create_fake_sender_data, generate_payments
@@ -221,7 +222,7 @@ def generate_checks(
                 )
             candidate_payment.save()
 
-        candidate_payment.credit.log_set.filter(action=CREDIT_LOG_ACTIONS.CREDITED).delete()
+        candidate_payment.credit.log_set.filter(action=LogAction.credited).delete()
         # Checks already get created in the payment saving process for applicable credits
         # (see payment/models.py::create_security_check_if_needed_and_attach_profiles
         if not hasattr(candidate_payment.credit, 'security_check'):

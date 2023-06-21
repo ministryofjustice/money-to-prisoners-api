@@ -16,10 +16,10 @@ import openpyxl
 from openpyxl.cell import WriteOnlyCell
 from openpyxl.utils import get_column_letter
 
-from credit.constants import CREDIT_STATUS
-from credit.models import Credit, LOG_ACTIONS as CREDIT_LOG_ACTIONS
-from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION
-from disbursement.models import Disbursement, LOG_ACTIONS as DISBURSEMENT_LOG_ACTIONS
+from credit.constants import CREDIT_STATUS, LogAction as CreditLogAction
+from credit.models import Credit
+from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION, LogAction as DisbursementLogAction
+from disbursement.models import Disbursement
 from notification.rules import RULES, CountingRule, MonitoredRule, Triggered
 
 logger = logging.getLogger('mtp')
@@ -243,7 +243,7 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
             status = 'Anonymous'
         row.update({
             'Date received': local_datetime_for_xlsx(record.received_at),
-            'Date credited': local_datetime_for_xlsx(record.log_set.get_action_date(CREDIT_LOG_ACTIONS.CREDITED)),
+            'Date credited': local_datetime_for_xlsx(record.log_set.get_action_date(CreditLogAction.credited)),
             'Amount': format_currency(record.amount),
             'Prisoner number': record.prisoner_number or 'Unknown',
             'Prisoner name': record.prisoner_name or 'Unknown',
@@ -312,10 +312,8 @@ class DisbursementSerialiser(Serialiser, serialised_model=Disbursement):
         payment_status = dict(DISBURSEMENT_RESOLUTION.choices).get(record.resolution)
         row.update({
             'Date entered': local_datetime_for_xlsx(record.created),
-            'Date confirmed': local_datetime_for_xlsx(
-                record.log_set.get_action_date(DISBURSEMENT_LOG_ACTIONS.CONFIRMED)
-            ),
-            'Date sent': local_datetime_for_xlsx(record.log_set.get_action_date(DISBURSEMENT_LOG_ACTIONS.SENT)),
+            'Date confirmed': local_datetime_for_xlsx(record.log_set.get_action_date(DisbursementLogAction.confirmed)),
+            'Date sent': local_datetime_for_xlsx(record.log_set.get_action_date(DisbursementLogAction.sent)),
             'Amount': format_currency(record.amount),
             'Prisoner number': record.prisoner_number,
             'Prisoner name': record.prisoner_name,

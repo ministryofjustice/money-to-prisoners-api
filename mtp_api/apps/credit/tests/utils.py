@@ -5,7 +5,7 @@ import random
 from django.contrib.auth import get_user_model
 
 from core.tests.utils import MockModelTimestamps
-from credit.constants import CREDIT_STATUS, LOG_ACTIONS
+from credit.constants import CREDIT_STATUS, LogAction
 from credit.models import Log
 from prison.models import Prison
 
@@ -39,12 +39,11 @@ def create_credit_log(credit, created, modified):
             'credit': credit,
             'user': credit.owner,
         }
-
         if credit.credited:
-            log_data['action'] = LOG_ACTIONS.CREDITED
+            log_data['action'] = LogAction.credited.value
             Log.objects.create(**log_data)
         elif credit.refunded:
-            log_data['action'] = LOG_ACTIONS.REFUNDED
+            log_data['action'] = LogAction.refunded.value
             Log.objects.create(**log_data)
 
 

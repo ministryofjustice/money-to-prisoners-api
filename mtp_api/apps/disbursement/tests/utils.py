@@ -11,9 +11,7 @@ from model_bakery.recipe import Recipe, seq
 
 from core.tests.utils import MockModelTimestamps
 from credit.tests.utils import random_amount, build_sender_prisoner_pairs
-from disbursement.constants import (
-    DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION, LOG_ACTIONS
-)
+from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION, LogAction
 from disbursement.models import Disbursement, Log
 from prison.models import PrisonerLocation
 from prison.tests.utils import random_prisoner_number
@@ -166,7 +164,7 @@ def create_disbursement_logs(disbursement):
     creating_user = prison_clerks.first()
 
     with MockModelTimestamps(disbursement.created, disbursement.created):
-        log_data['action'] = LOG_ACTIONS.CREATED
+        log_data['action'] = LogAction.created.value
         log_data['user'] = creating_user
         Log.objects.create(**log_data)
 
@@ -176,21 +174,21 @@ def create_disbursement_logs(disbursement):
         sending_user = bank_admins.first()
         confirmed = disbursement.created + timedelta(hours=3)
         with MockModelTimestamps(confirmed, confirmed):
-            log_data['action'] = LOG_ACTIONS.CONFIRMED
+            log_data['action'] = LogAction.confirmed.value
             log_data['user'] = confirming_user
             Log.objects.create(**log_data)
         with MockModelTimestamps(disbursement.modified, disbursement.modified):
-            log_data['action'] = LOG_ACTIONS.SENT
+            log_data['action'] = LogAction.sent.value
             log_data['user'] = sending_user
             Log.objects.create(**log_data)
     else:
         with MockModelTimestamps(disbursement.modified, disbursement.modified):
             if disbursement.resolution == DISBURSEMENT_RESOLUTION.CONFIRMED:
-                log_data['action'] = LOG_ACTIONS.CONFIRMED
+                log_data['action'] = LogAction.confirmed.value
                 log_data['user'] = confirming_user
                 Log.objects.create(**log_data)
             elif disbursement.resolution == DISBURSEMENT_RESOLUTION.REJECTED:
-                log_data['action'] = LOG_ACTIONS.REJECTED
+                log_data['action'] = LogAction.rejected.value
                 log_data['user'] = confirming_user
                 Log.objects.create(**log_data)
 

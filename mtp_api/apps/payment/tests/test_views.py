@@ -8,7 +8,7 @@ from rest_framework import status as http_status
 from rest_framework.test import APITestCase
 
 from core.tests.utils import make_test_users
-from credit.constants import CREDIT_RESOLUTION, LOG_ACTIONS
+from credit.constants import CREDIT_RESOLUTION, LogAction
 from credit.models import Credit, Log
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from payment.models import Batch, BillingAddress, Payment
@@ -259,7 +259,7 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
 
         self.assertEqual(Log.objects.count(), 1)
         log = Log.objects.first()
-        self.assertEqual(log.action, LOG_ACTIONS.FAILED)
+        self.assertEqual(log.action, LogAction.failed.value)
 
     def test_update_status_to_expired_succeeds(self):
         response = self._test_update_payment(status=PAYMENT_STATUS.EXPIRED)
@@ -281,7 +281,7 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
 
         self.assertEqual(Log.objects.count(), 1)
         log = Log.objects.first()
-        self.assertEqual(log.action, LOG_ACTIONS.FAILED)
+        self.assertEqual(log.action, LogAction.failed.value)
 
     def test_update_received_at_succeeds(self):
         received_at = datetime(2016, 9, 22, 23, 12, tzinfo=timezone.utc)

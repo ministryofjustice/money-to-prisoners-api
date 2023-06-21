@@ -3,7 +3,7 @@ from django.db.models import Q
 from django.db.transaction import atomic
 
 from credit import InvalidCreditStateException
-from credit.constants import LOG_ACTIONS, CREDIT_STATUS, CREDIT_RESOLUTION
+from credit.constants import CREDIT_STATUS, CREDIT_RESOLUTION, LogAction
 
 
 class CreditQuerySet(models.QuerySet):
@@ -142,26 +142,26 @@ class LogManager(models.Manager):
         self.bulk_create(logs)
 
     def credits_created(self, credits, by_user=None):
-        self._log_action(LOG_ACTIONS.CREATED, credits, by_user)
+        self._log_action(LogAction.created, credits, by_user)
 
     def credits_credited(self, credits, by_user, credited=True):
-        action = LOG_ACTIONS.CREDITED if credited else LOG_ACTIONS.UNCREDITED
+        action = LogAction.credited if credited else LogAction.uncredited
         self._log_action(action, credits, by_user)
 
     def credits_refunded(self, credits, by_user):
-        self._log_action(LOG_ACTIONS.REFUNDED, credits, by_user)
+        self._log_action(LogAction.refunded, credits, by_user)
 
     def credits_reconciled(self, credits, by_user):
-        self._log_action(LOG_ACTIONS.RECONCILED, credits, by_user)
+        self._log_action(LogAction.reconciled, credits, by_user)
 
     def credits_reviewed(self, credits, by_user):
-        self._log_action(LOG_ACTIONS.REVIEWED, credits, by_user)
+        self._log_action(LogAction.reviewed, credits, by_user)
 
     def credits_set_manual(self, credits, by_user):
-        self._log_action(LOG_ACTIONS.MANUAL, credits, by_user)
+        self._log_action(LogAction.manual, credits, by_user)
 
     def credits_failed(self, credits):
-        self._log_action(LOG_ACTIONS.FAILED, credits)
+        self._log_action(LogAction.failed, credits)
 
     def get_action_date(self, action):
         log = self.filter(action=action).order_by('-created').first()
@@ -192,7 +192,7 @@ class CreditingTimeManager(models.Manager):
                 FROM credited_log
                 JOIN credit_credit ON credit_credit.id = credited_log.credit_id
                 JOIN adjustments ON adjustments.day_of_week = EXTRACT(ISODOW FROM credit_credit.received_at);
-            """, (LOG_ACTIONS.CREDITED,))
+            """, (LogAction.credited.value,))
             return cursor.rowcount
 
 

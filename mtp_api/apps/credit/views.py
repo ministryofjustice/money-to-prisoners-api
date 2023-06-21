@@ -28,7 +28,7 @@ from core.filters import (
 )
 from core.models import TruncUtcDate
 from core.permissions import ActionsBasedPermissions
-from credit.constants import CREDIT_RESOLUTION, CREDIT_STATUS, CREDIT_SOURCE, LOG_ACTIONS
+from credit.constants import CREDIT_RESOLUTION, CREDIT_STATUS, CREDIT_SOURCE, LogAction
 from credit.models import Credit, Comment, ProcessingBatch, PrivateEstateBatch
 from credit.permissions import CreditPermissions, PrivateEstateBatchPermissions
 from credit.serializers import (
@@ -319,7 +319,7 @@ class CreditsGroupedByCreditedList(CreditViewMixin, generics.ListAPIView):
     def get_queryset(self):
         return super().get_queryset().filter(
             Credit.STATUS_LOOKUP[CREDIT_STATUS.CREDITED],
-            log__action=LOG_ACTIONS.CREDITED
+            log__action=LogAction.credited,
         )
 
     def filter_queryset(self, queryset):

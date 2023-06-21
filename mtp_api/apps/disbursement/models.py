@@ -5,7 +5,7 @@ from model_utils.models import TimeStampedModel
 from mtp_common.utils import format_currency
 
 from disbursement import InvalidDisbursementStateException
-from disbursement.constants import LOG_ACTIONS, DISBURSEMENT_RESOLUTION, DISBURSEMENT_METHOD
+from disbursement.constants import DISBURSEMENT_RESOLUTION, DISBURSEMENT_METHOD, LogAction
 from disbursement.managers import DisbursementManager, DisbursementQuerySet, LogManager
 from disbursement.signals import (
     disbursement_confirmed, disbursement_created, disbursement_rejected,
@@ -166,7 +166,7 @@ class Log(TimeStampedModel):
         settings.AUTH_USER_MODEL, null=True, blank=True,
         on_delete=models.SET_NULL, related_name='disbursement_log'
     )
-    action = models.CharField(max_length=50, choices=LOG_ACTIONS.choices)
+    action = models.CharField(max_length=50, choices=LogAction.choices)
 
     objects = LogManager()
 

@@ -9,9 +9,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from core.tests.utils import make_test_users
-from disbursement.constants import (
-    DISBURSEMENT_RESOLUTION, DISBURSEMENT_METHOD, LOG_ACTIONS
-)
+from disbursement.constants import DISBURSEMENT_RESOLUTION, DISBURSEMENT_METHOD, LogAction
 from disbursement.models import Disbursement, Log
 from disbursement.tests.utils import fake_disbursement, generate_disbursements
 from mtp_auth.models import PrisonUserMapping
@@ -82,7 +80,7 @@ class CreateDisbursementTestCase(AuthTestCaseMixin, APITestCase):
         logs = Log.objects.all()
         self.assertEqual(logs[0].disbursement, disbursements[0])
         self.assertEqual(logs[0].user, user)
-        self.assertEqual(logs[0].action, LOG_ACTIONS.CREATED)
+        self.assertEqual(logs[0].action, LogAction.created.value)
 
     def test_create_disbursement_to_company(self):
         user = self.prison_clerks[0]
@@ -117,7 +115,7 @@ class CreateDisbursementTestCase(AuthTestCaseMixin, APITestCase):
         log = Log.objects.first()
         self.assertEqual(log.disbursement, disbursement)
         self.assertEqual(log.user, user)
-        self.assertEqual(log.action, LOG_ACTIONS.CREATED)
+        self.assertEqual(log.action, LogAction.created.value)
 
     def test_create_disbursement_fails_for_non_permitted_prison(self):
         user = self.prison_clerks[0]
@@ -468,7 +466,7 @@ class UpdateDisbursementsTestCase(AuthTestCaseMixin, APITestCase):
         logs = Log.objects.all()
         self.assertEqual(logs[0].disbursement, disbursement)
         self.assertEqual(logs[0].user, user)
-        self.assertEqual(logs[0].action, LOG_ACTIONS.EDITED)
+        self.assertEqual(logs[0].action, LogAction.edited.value)
 
     def test_cannot_update_resolution(self):
         user = self.prison_clerks[0]
@@ -586,7 +584,7 @@ class UpdateDisbursementResolutionTestCase(AuthTestCaseMixin, APITestCase):
         logs = Log.objects.all()
         self.assertEqual(logs[0].disbursement, disbursements[0])
         self.assertEqual(logs[0].user, user)
-        self.assertEqual(logs[0].action, LOG_ACTIONS.REJECTED)
+        self.assertEqual(logs[0].action, LogAction.rejected.value)
 
     def test_can_only_confirm_preconfirmed_disbursement(self):
         user = self.prison_clerks[0]
@@ -658,7 +656,7 @@ class UpdateDisbursementResolutionTestCase(AuthTestCaseMixin, APITestCase):
         logs = Log.objects.all()
         self.assertEqual(logs[0].disbursement, confirmed_disbursement)
         self.assertEqual(logs[0].user, user)
-        self.assertEqual(logs[0].action, LOG_ACTIONS.CONFIRMED)
+        self.assertEqual(logs[0].action, LogAction.confirmed.value)
 
     def test_cannot_reject_disbursement_for_non_permitted_prison(self):
         user = self.prison_clerks[0]
@@ -727,10 +725,10 @@ class UpdateDisbursementResolutionTestCase(AuthTestCaseMixin, APITestCase):
         logs = Log.objects.all()
         self.assertEqual(logs[0].disbursement, disbursements[0])
         self.assertEqual(logs[0].user, user)
-        self.assertEqual(logs[0].action, LOG_ACTIONS.SENT)
+        self.assertEqual(logs[0].action, LogAction.sent.value)
         self.assertEqual(logs[1].disbursement, disbursements[1])
         self.assertEqual(logs[1].user, user)
-        self.assertEqual(logs[1].action, LOG_ACTIONS.SENT)
+        self.assertEqual(logs[1].action, LogAction.sent.value)
 
     def test_cannot_send_unconfirmed_disbursement(self):
         user = self.bank_admins[0]

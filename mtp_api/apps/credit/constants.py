@@ -1,5 +1,5 @@
-from django.utils.translation import gettext_lazy as _
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 
 class CREDIT_RESOLUTION(models.TextChoices):  # noqa: N801
@@ -25,14 +25,14 @@ class CREDIT_SOURCE(models.TextChoices):  # noqa: N801
     UNKNOWN = 'unknown', _('Unknown')
 
 
-class LOG_ACTIONS(models.TextChoices):  # noqa: N801
-    CREATED = 'created', _('Created')
-    LOCKED = 'locked', _('Locked')  # legacy
-    UNLOCKED = 'unlocked', _('Unlocked')  # legacy
-    CREDITED = 'credited', _('Credited')
-    UNCREDITED = 'uncredited', _('Uncredited')  # never happens
-    REFUNDED = 'refunded', _('Refunded')
-    RECONCILED = 'reconciled', _('Reconciled')
-    REVIEWED = 'reviewed', _('Reviewed')
-    MANUAL = 'manual', _('Marked for manual processing')
-    FAILED = 'failed', _('Failed')
+class LogAction(models.TextChoices):
+    created = 'created', _('Created')
+    locked = 'locked', _('Locked')  # legacy
+    unlocked = 'unlocked', _('Unlocked')  # legacy
+    credited = 'credited', _('Credited')
+    uncredited = 'uncredited', _('Uncredited')  # never happens
+    refunded = 'refunded', _('Refunded')
+    reconciled = 'reconciled', _('Reconciled')
+    reviewed = 'reviewed', _('Reviewed')
+    manual = 'manual', _('Marked for manual processing')
+    failed = 'failed', _('Failed')

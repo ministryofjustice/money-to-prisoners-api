@@ -12,7 +12,8 @@ from model_bakery import baker
 from rest_framework.test import APITestCase
 
 from core.tests.utils import make_test_users, FLAKY_TEST_WARNING
-from credit.models import Credit, CREDIT_RESOLUTION, LOG_ACTIONS as CREDIT_LOG_ACTIONS
+from credit.constants import LogAction
+from credit.models import Credit, CREDIT_RESOLUTION
 from mtp_auth.tests.mommy_recipes import basic_user
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from notification.rules import RULES
@@ -365,7 +366,7 @@ class CreditCheckTestCase(TestCase):
         credit.resolution = CREDIT_RESOLUTION.INITIAL
         payment = credit.payment
         payment.status = PAYMENT_STATUS.PENDING
-        credit.log_set.filter(action=CREDIT_LOG_ACTIONS.CREDITED).delete()
+        credit.log_set.filter(action=LogAction.credited).delete()
         return credit
 
     def test_will_not_check_credits_with_incomplete_details(self):

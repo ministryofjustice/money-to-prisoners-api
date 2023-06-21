@@ -10,7 +10,7 @@ from django.utils import timezone
 from model_utils.models import TimeStampedModel
 from mtp_common.utils import format_currency
 
-from credit.constants import LOG_ACTIONS, CREDIT_RESOLUTION, CREDIT_STATUS, CREDIT_SOURCE
+from credit.constants import CREDIT_RESOLUTION, CREDIT_STATUS, CREDIT_SOURCE, LogAction
 from credit.managers import (
     CompletedCreditManager,
     CreditingTimeManager,
@@ -347,23 +347,23 @@ class Credit(TimeStampedModel):
     def credited_at(self):
         if not self.resolution == CREDIT_RESOLUTION.CREDITED:
             return None
-        return self.log_set.get_action_date(LOG_ACTIONS.CREDITED)
+        return self.log_set.get_action_date(LogAction.credited)
 
     @property
     def refunded_at(self):
         if not self.resolution == CREDIT_RESOLUTION.REFUNDED:
             return None
-        return self.log_set.get_action_date(LOG_ACTIONS.REFUNDED)
+        return self.log_set.get_action_date(LogAction.refunded)
 
     @property
     def set_manual_at(self):
-        return self.log_set.get_action_date(LOG_ACTIONS.MANUAL)
+        return self.log_set.get_action_date(LogAction.manual)
 
     @property
     def reconciled_at(self):
         if not self.reconciled:
             return None
-        return self.log_set.get_action_date(LOG_ACTIONS.RECONCILED)
+        return self.log_set.get_action_date(LogAction.reconciled)
 
     @property
     def crediting_time(self):
@@ -379,7 +379,7 @@ class Log(TimeStampedModel):
         settings.AUTH_USER_MODEL, null=True, blank=True,
         on_delete=models.SET_NULL, related_name='credit_log'
     )
-    action = models.CharField(max_length=50, choices=LOG_ACTIONS.choices)
+    action = models.CharField(max_length=50, choices=LogAction.choices)
 
     objects = LogManager()
 

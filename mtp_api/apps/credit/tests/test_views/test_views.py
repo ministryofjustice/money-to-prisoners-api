@@ -5,15 +5,9 @@ from django.utils.dateparse import parse_date
 from rest_framework import status
 
 from credit.models import Credit, Log
-from credit.constants import (
-    LOG_ACTIONS, CREDIT_RESOLUTION
-)
-from credit.tests.test_base import (
-    BaseCreditViewTestCase
-)
-from credit.tests.test_views.test_credit_list import (
-    CashbookCreditRejectsRequestsWithoutPermissionTestMixin
-)
+from credit.constants import CREDIT_RESOLUTION, LogAction
+from credit.tests.test_base import BaseCreditViewTestCase
+from credit.tests.test_views.test_credit_list import CashbookCreditRejectsRequestsWithoutPermissionTestMixin
 from mtp_auth.models import PrisonUserMapping
 
 
@@ -59,7 +53,7 @@ class CreditCreditsTestCase(
         self.assertEqual(
             Log.objects.filter(
                 user=logged_in_user,
-                action=LOG_ACTIONS.CREDITED,
+                action=LogAction.credited,
                 credit__id__in=to_credit
             ).count(),
             len(to_credit)
@@ -131,8 +125,8 @@ class SetManualCreditsTestCase(
         self.assertEqual(
             Log.objects.filter(
                 user=logged_in_user,
-                action=LOG_ACTIONS.MANUAL,
-                credit__id__in=to_set_manual
+                action=LogAction.manual,
+                credit__id__in=to_set_manual,
             ).count(),
             len(to_set_manual)
         )
@@ -194,7 +188,7 @@ class ReviewCreditTestCase(
 
         reviewed_logs = Log.objects.filter(
             user=logged_in_user,
-            action=LOG_ACTIONS.REVIEWED,
+            action=LogAction.reviewed,
         )
         self.assertEqual(len(reviewed_logs), len(reviewed))
         for log in reviewed_logs:
@@ -237,7 +231,7 @@ class CreditsGroupedByCreditedListTestCase(
             count = 0
             for credit in credits:
                 for log in Log.objects.filter(credit=credit):
-                    if (log.action == LOG_ACTIONS.CREDITED and
+                    if (log.action == LogAction.credited.value and
                             log.created.date() == parse_date(group['logged_at']) and
                             log.user.id == group['owner']):
                         total += credit.amount

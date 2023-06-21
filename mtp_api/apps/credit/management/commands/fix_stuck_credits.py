@@ -9,7 +9,8 @@ from django.utils.dateparse import parse_datetime, parse_date
 from mtp_common import nomis
 from mtp_common.utils import format_currency
 
-from credit.models import Credit, CREDIT_RESOLUTION, Log, LOG_ACTIONS
+from credit.constants import LogAction
+from credit.models import Credit, CREDIT_RESOLUTION, Log
 from prison.models import Prison
 
 User = get_user_model()
@@ -186,6 +187,6 @@ def mark_credited(credit: Credit, transaction: dict, owner: User):
         created=credited_date,
         modified=credited_date,
         credit=credit,
-        action=LOG_ACTIONS.CREDITED,
+        action=LogAction.credited,
         user=owner,
     )

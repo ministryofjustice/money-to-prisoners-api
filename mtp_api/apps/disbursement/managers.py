@@ -5,7 +5,7 @@ from django.db.models.functions import Cast, Concat
 from django.db.transaction import atomic
 
 from disbursement import InvalidDisbursementStateException
-from disbursement.constants import LOG_ACTIONS, DISBURSEMENT_RESOLUTION
+from disbursement.constants import DISBURSEMENT_RESOLUTION, LogAction
 
 
 class DisbursementQuerySet(models.QuerySet):
@@ -97,19 +97,19 @@ class LogManager(models.Manager):
         self.bulk_create(logs)
 
     def disbursements_created(self, disbursements, by_user):
-        self._log_action(LOG_ACTIONS.CREATED, disbursements, by_user)
+        self._log_action(LogAction.created, disbursements, by_user)
 
     def disbursements_edited(self, disbursements, by_user):
-        self._log_action(LOG_ACTIONS.EDITED, disbursements, by_user)
+        self._log_action(LogAction.edited, disbursements, by_user)
 
     def disbursements_rejected(self, disbursements, by_user):
-        self._log_action(LOG_ACTIONS.REJECTED, disbursements, by_user)
+        self._log_action(LogAction.rejected, disbursements, by_user)
 
     def disbursements_confirmed(self, disbursements, by_user):
-        self._log_action(LOG_ACTIONS.CONFIRMED, disbursements, by_user)
+        self._log_action(LogAction.confirmed, disbursements, by_user)
 
     def disbursements_sent(self, disbursements, by_user):
-        self._log_action(LOG_ACTIONS.SENT, disbursements, by_user)
+        self._log_action(LogAction.sent, disbursements, by_user)
 
     def get_action_date(self, action):
         log = self.filter(action=action).order_by('-created').first()
