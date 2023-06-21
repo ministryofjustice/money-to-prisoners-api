@@ -4,7 +4,6 @@ from performance.models import PerformanceData
 
 
 class PerformanceDataSerializer(ModelSerializer):
-
     class Meta:
         model = PerformanceData
         fields = '__all__'

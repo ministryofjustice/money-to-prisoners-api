@@ -115,8 +115,8 @@ class SatisfactionDashboard(DashboardModule):
                 url_prefix = 'https://restapi.surveygizmo.com/v4/survey/%s' % survey['id']
                 questions = []
                 for question_id in survey['question_ids']:
+                    url = f'{url_prefix}/surveyquestion/{question_id}'
                     try:
-                        url = f'{url_prefix}/surveyquestion/{question_id}'
                         question_response = requests.get(url, params={
                             'api_token': settings.SURVEY_GIZMO_API_KEY,
                         })

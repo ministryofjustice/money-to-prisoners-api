@@ -88,12 +88,12 @@ def get_sender_prisoner_pairs():
 
 
 def generate_initial_transactions_data(
-        tot=100,
-        prisoner_location_generator=None,
-        include_debits=True,
-        include_administrative_credits=True,
-        include_unidentified_credits=True,
-        days_of_history=7):
+    tot=100,
+    include_debits=True,
+    include_administrative_credits=True,
+    include_unidentified_credits=True,
+    days_of_history=7,
+):
     data_list = []
     sender_prisoner_pairs = get_sender_prisoner_pairs()
 
@@ -259,12 +259,12 @@ def create_transactions(data_list, consistent_history=False, overrides=None):
         create_transaction = partial(
             setup_historical_transaction,
             owner_status_chooser,
-            latest_transaction_date()
+            latest_transaction_date(),
         )
     else:
         create_transaction = partial(
             setup_transaction,
-            owner_status_chooser
+            owner_status_chooser,
         )
     for transaction_counter, data in enumerate(data_list, start=1):
         new_transaction = create_transaction(transaction_counter, data, overrides)
@@ -274,7 +274,10 @@ def create_transactions(data_list, consistent_history=False, overrides=None):
 
 
 def setup_historical_transaction(
-    owner_status_chooser, end_date, transaction_counter, data, overrides=None
+    # injected when setting up partial in create_transactions
+    owner_status_chooser, end_date,
+    # parameters provided in transaction-creating loop
+    transaction_counter, data, overrides=None,
 ):
     if (data['category'] == TransactionCategory.credit.value and
             data['source'] == TransactionSource.bank_transfer.value):
@@ -307,7 +310,10 @@ def setup_historical_transaction(
 
 
 def setup_transaction(
-    owner_status_chooser, transaction_counter, data, overrides=None
+    # injected when setting up partial in create_transactions
+    owner_status_chooser,
+    # parameters provided in transaction-creating loop
+    transaction_counter, data, overrides=None,
 ):
     if data['category'] == TransactionCategory.credit.value:
         is_valid = data.get('prison', None) and not data.get('incomplete_sender_info')

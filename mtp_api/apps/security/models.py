@@ -15,7 +15,7 @@ from prison.models import Prison
 from security.constants import CheckStatus
 from security.managers import (
     PrisonerProfileManager, SenderProfileManager, RecipientProfileManager,
-    CheckManager, CheckAutoAcceptRuleManager
+    CheckManager, CheckAutoAcceptRuleManager,
 )
 from security.signals import prisoner_profile_current_prisons_need_updating
 

@@ -29,7 +29,7 @@ def create_fake_sender_data(number_of_senders):
     """
     Generate data needed for Payment/BillingAddress using Faker
 
-    :param number_of_senders int: Number of data entries to generate
+    :param int number_of_senders: Number of data entries to generate
     """
     senders = []
     for _ in range(number_of_senders):
@@ -113,14 +113,14 @@ def generate_payments(
     """
     Generate fake payment objects either for automated tests or test/development environment.
 
-    :param payment_batch int: Number of payments to generate
-    :param consistent_history bool: Doesn't actually seem to do anything in this context
-    :param days_of_history int: Number of days of history to generate
-    :param overrides dict: Dict of attributes to apply to all payments. overrides['credit'] will be applied to credit
-    :param attach_profiles_to_individual_credits bool: Whether to run credit.attach_profiles on individual credits
-    :param number_of_senders int/None: If not None, specifies how many senders to generate.
+    :param int payment_batch: Number of payments to generate
+    :param bool consistent_history: Doesn't actually seem to do anything in this context
+    :param int days_of_history: Number of days of history to generate
+    :param dict overrides: Dict of attributes to apply to all payments. overrides['credit'] will be applied to credit
+    :param bool attach_profiles_to_individual_credits: Whether to run credit.attach_profiles on individual credits
+    :param int/None number_of_senders: If not None, specifies how many senders to generate.
                                        If None, number of existing PrisonerLocation entries used
-    :param reconcile_payments bool: Whether to run Payment.objects.reconcile, given that the list of models returned
+    :param bool reconcile_payments: Whether to run Payment.objects.reconcile, given that the list of models returned
                                     are NOT updated with the reconciliation data causing potential mismatch with
                                     future queries
     :rtype list<payment.models.Payment>

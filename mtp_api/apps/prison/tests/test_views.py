@@ -561,8 +561,7 @@ class PrisonerAccountBalanceTestCase(AuthTestCaseMixin, APITestCase):
         self.send_money_user = send_money_users[0]
         self.other_users = itertools.chain.from_iterable(test_users.values())
 
-    @staticmethod
-    def tearDown():
+    def tearDown(self):
         cache.clear()
 
     def make_api_call(self, prisoner_location, user=None):

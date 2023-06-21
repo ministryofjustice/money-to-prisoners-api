@@ -10,7 +10,7 @@ urlpatterns = [
     url(
         r'^file-downloads/missing/$',
         views.MissingFileDownloadView.as_view(),
-        name='filedownload-missing'
+        name='filedownload-missing',
     ),
     url(r'^', include(router.urls)),
 ]

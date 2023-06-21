@@ -10,9 +10,7 @@ from rest_framework import status
 
 from core import getattr_path
 from credit.constants import CreditResolution, CreditStatus
-from credit.tests.test_base import (
-    BaseCreditViewTestCase, CreditRejectsRequestsWithoutPermissionTestMixin
-)
+from credit.tests.test_base import BaseCreditViewTestCase, CreditRejectsRequestsWithoutPermissionTestMixin
 
 
 class CashbookCreditRejectsRequestsWithoutPermissionTestMixin(

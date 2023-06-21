@@ -36,7 +36,7 @@ class CreateTransactionListSerializer(serializers.ListSerializer):
                 credit_created.send(
                     sender=Credit,
                     credit=new_credit,
-                    by_user=user
+                    by_user=user,
                 )
 
             transaction = Transaction.objects.create(**data)

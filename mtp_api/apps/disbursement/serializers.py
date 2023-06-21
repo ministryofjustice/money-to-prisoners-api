@@ -28,7 +28,7 @@ class PrisonerInPrisonValidator:
                 )
 
 
-class PrisonPermittedValidator():
+class PrisonPermittedValidator:
     def set_context(self, serializer):
         self.user = serializer.context['request'].user
 

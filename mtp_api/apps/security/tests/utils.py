@@ -26,7 +26,7 @@ from security.models import (
     CheckAutoAcceptRule,
     DebitCardSenderDetails,
     PrisonerProfile,
-    SenderProfile
+    SenderProfile,
 )
 from security.serializers import CheckAutoAcceptRuleSerializer
 

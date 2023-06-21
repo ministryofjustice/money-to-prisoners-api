@@ -10,15 +10,13 @@ from rest_framework import status as http_status
 from credit.constants import LogAction
 from credit.models import Credit, Log
 from payment.models import Batch
-from transaction.models import Transaction
 from transaction.constants import TransactionCategory, TransactionSource
+from transaction.models import Transaction
 from transaction.serializers import CreateTransactionSerializer
-from transaction.tests.utils import (
-    generate_initial_transactions_data, generate_transactions, filters_from_api_data,
-)
 from transaction.tests.test_base import (
     BaseTransactionViewTestCase, TransactionRejectsRequestsWithoutPermissionTestMixin,
 )
+from transaction.tests.utils import generate_initial_transactions_data, generate_transactions, filters_from_api_data
 
 
 class CreateTransactionsTestCase(
