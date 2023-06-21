@@ -25,9 +25,6 @@ class CREDIT_SOURCE(models.TextChoices):  # noqa: N801
     UNKNOWN = 'unknown', _('Unknown')
 
 
-LOCK_LIMIT = 20
-
-
 class LOG_ACTIONS(models.TextChoices):  # noqa: N801
     CREATED = 'created', _('Created')
     LOCKED = 'locked', _('Locked')  # legacy
