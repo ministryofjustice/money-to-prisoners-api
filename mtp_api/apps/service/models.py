@@ -3,7 +3,7 @@ from django.db import models
 from django.utils import timezone
 from django.utils.text import capfirst
 
-from service.constants import Service
+from service.constants import NotificationTarget, Service
 
 
 class DowntimeManager(models.Manager):
@@ -31,22 +31,9 @@ class Downtime(models.Model):
         return '%s, %s -> %s' % (self.service, self.start, self.end)
 
 
-class NOTIFICATION_TARGETS(models.TextChoices):  # noqa: N801
-    BANKADMIN_LOGIN = 'bankadmin_login', 'Bank admin: before login'
-    BANKADMIN_DASHBOARD = 'bankadmin_dashboard', 'Bank admin: dashboard'
-    CASHBOOK_LOGIN = 'cashbook_login', 'Cashbook: before login'
-    CASHBOOK_DASHBOARD = 'cashbook_dashboard', 'Cashbook: dashboard'
-    CASHBOOK_ALL = 'cashbook_all', 'Cashbook: all apps'
-    CASHBOOK_CASHBOOK = 'cashbook_cashbook', 'Cashbook: cashbook app'
-    CASHBOOK_DISBURSEMENTS = 'cashbook_disbursements', 'Cashbook: disbursements app'
-    NOMS_OPS_LOGIN = 'noms_ops_login', 'Noms Ops: before login'
-    NOMS_OPS_SECURITY_DASHBOARD = 'noms_ops_security_dashboard', 'Noms Ops: security dashboard'
-    SEND_MONEY_LANDING = 'send_money_landing', 'Send Money: landing page'
-
-
 class Notification(models.Model):
     public = models.BooleanField(default=False, help_text='Notifications must be public to be seen before login')
-    target = models.CharField(max_length=30, choices=NOTIFICATION_TARGETS.choices)
+    target = models.CharField(max_length=30, choices=NotificationTarget.choices)
     level = models.SmallIntegerField(choices=sorted(
         (level, capfirst(name))
         for level, name in messages.DEFAULT_TAGS.items()
