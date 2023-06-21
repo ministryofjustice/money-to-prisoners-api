@@ -4,7 +4,7 @@ from django.db import models
 from django.db.transaction import atomic
 
 from credit.models import Credit
-from transaction.constants import TRANSACTION_STATUS
+from transaction.constants import TransactionStatus
 
 
 class TransactionManager(models.Manager):
@@ -21,7 +21,7 @@ class TransactionManager(models.Manager):
             )
 
         update_set = self.get_queryset().filter(
-            self.model.STATUS_LOOKUP[TRANSACTION_STATUS.RECONCILABLE],
+            self.model.STATUS_LOOKUP[TransactionStatus.reconcilable.value],
             received_at__gte=start_date,
             received_at__lt=end_date,
             credit__isnull=False,

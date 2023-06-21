@@ -11,7 +11,7 @@ from performance import updaters
 from performance.models import DigitalTakeup
 from prison.models import Prison
 from prison.tests.utils import load_random_prisoner_locations
-from transaction.constants import TRANSACTION_CATEGORY, TRANSACTION_SOURCE, TRANSACTION_STATUS
+from transaction.constants import TransactionStatus, TransactionCategory, TransactionSource
 from transaction.models import Transaction
 from transaction.tests.utils import generate_transactions
 
@@ -42,8 +42,8 @@ class CompletionRateTestCase(TestCase):
             *q_filters,
             received_at__date__gte=last_week_start.date(),
             received_at__date__lt=(last_week_start.date() + timedelta(days=7)),
-            category=TRANSACTION_CATEGORY.CREDIT,
-            source=TRANSACTION_SOURCE.BANK_TRANSFER,
+            category=TransactionCategory.credit,
+            source=TransactionSource.bank_transfer.value,
             **kw_filters
         ).count()
 
@@ -61,14 +61,14 @@ class CompletionRateTestCase(TestCase):
         updater = updaters.ValidCompletionRateUpdater()
         self._test_count_correct(
             updater._count(),
-            Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.CREDITABLE]
+            Transaction.STATUS_LOOKUP[TransactionStatus.creditable.value]
         )
 
     def test_invalid_credits_correct(self):
         updater = updaters.InvalidCompletionRateUpdater()
         self._test_count_correct(
             updater._count(),
-            ~Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.CREDITABLE]
+            ~Transaction.STATUS_LOOKUP[TransactionStatus.creditable.value]
         )
 
     @mock.patch('performance.updaters.timezone.now')

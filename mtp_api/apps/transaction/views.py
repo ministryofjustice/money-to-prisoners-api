@@ -17,7 +17,7 @@ from credit import InvalidCreditStateException
 from credit.models import PrivateEstateBatch
 from mtp_auth.permissions import BankAdminClientIDPermissions
 from payment.models import Payment
-from transaction.constants import TRANSACTION_STATUS
+from transaction.constants import TransactionStatus
 from transaction.models import Transaction
 from transaction.permissions import TransactionPermissions
 from transaction.serializers import (
@@ -29,7 +29,7 @@ logger = logging.getLogger('mtp')
 
 
 class TransactionListFilter(BaseFilterSet):
-    status = StatusChoiceFilter(choices=TRANSACTION_STATUS.choices)
+    status = StatusChoiceFilter(choices=TransactionStatus.choices)
     received_at__lt = IsoDateTimeFilter(
         field_name='received_at', lookup_expr='lt'
     )

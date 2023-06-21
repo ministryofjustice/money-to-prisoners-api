@@ -13,7 +13,7 @@ from django.utils import timezone
 import requests
 
 from performance.models import DigitalTakeup
-from transaction.constants import TRANSACTION_CATEGORY, TRANSACTION_SOURCE, TRANSACTION_STATUS
+from transaction.constants import TransactionStatus, TransactionCategory, TransactionSource
 from transaction.models import Transaction
 
 logger = logging.getLogger('mtp')
@@ -101,8 +101,8 @@ class CompletionRateUpdater(BaseUpdater):
         return Transaction.objects.filter(
             received_at__date__gte=self.timestamp.date(),
             received_at__date__lt=end_date.date(),
-            category=TRANSACTION_CATEGORY.CREDIT,
-            source=TRANSACTION_SOURCE.BANK_TRANSFER
+            category=TransactionCategory.credit,
+            source=TransactionSource.bank_transfer,
         )
 
 
@@ -118,7 +118,7 @@ class ValidCompletionRateUpdater(CompletionRateUpdater):
 
     def _count(self):
         return self._get_queryset().filter(
-            Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.CREDITABLE]
+            Transaction.STATUS_LOOKUP[TransactionStatus.creditable.value]
         ).count()
 
 
@@ -128,7 +128,7 @@ class InvalidCompletionRateUpdater(CompletionRateUpdater):
     def _count(self):
         queryset = self._get_queryset()
         return queryset.filter(
-            ~Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.CREDITABLE]
+            ~Transaction.STATUS_LOOKUP[TransactionStatus.creditable.value]
         ).count()
 
 

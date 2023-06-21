@@ -12,7 +12,8 @@ from core.dashboards import DashboardModule
 from core.views import DashboardView
 from credit.dashboards.credit_forms import CreditForm
 from credit.models import Credit, CREDIT_RESOLUTION, CREDIT_STATUS
-from transaction.models import Transaction, TRANSACTION_CATEGORY, TRANSACTION_SOURCE, TRANSACTION_STATUS
+from transaction.constants import TransactionStatus, TransactionCategory, TransactionSource
+from transaction.models import Transaction
 
 # credit-specific
 CREDITABLE_FILTERS = Credit.STATUS_LOOKUP[CREDIT_STATUS.CREDITED] | \
@@ -23,17 +24,17 @@ REFUNDABLE_FILTERS = Credit.STATUS_LOOKUP[CREDIT_STATUS.REFUNDED] | \
 # NB: refundable does not consider debit card payments since refunds there have not been worked out
 REFUNDED_FILTERS = Credit.STATUS_LOOKUP[CREDIT_STATUS.REFUNDED]
 TRANSACTION_ERROR_FILTERS = (
-    models.Q(transaction__source=TRANSACTION_SOURCE.BANK_TRANSFER,
+    models.Q(transaction__source=TransactionSource.bank_transfer,
              prison__isnull=True) |
-    models.Q(transaction__source=TRANSACTION_SOURCE.BANK_TRANSFER,
+    models.Q(transaction__source=TransactionSource.bank_transfer,
              blocked=True)
 )
 
 # transaction-specific
-BANK_TRANSFER_CREDIT_FILTERS = models.Q(category=TRANSACTION_CATEGORY.CREDIT, source=TRANSACTION_SOURCE.BANK_TRANSFER)
-ANONYMOUS_FILTERS = Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.ANONYMOUS]
-UNIDENTIFIED_FILTERS = Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.UNIDENTIFIED]
-ANOMALOUS_FILTERS = Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.ANOMALOUS]
+BANK_TRANSFER_CREDIT_FILTERS = models.Q(category=TransactionCategory.credit, source=TransactionSource.bank_transfer)
+ANONYMOUS_FILTERS = Transaction.STATUS_LOOKUP[TransactionStatus.anonymous]
+UNIDENTIFIED_FILTERS = Transaction.STATUS_LOOKUP[TransactionStatus.unidentified]
+ANOMALOUS_FILTERS = Transaction.STATUS_LOOKUP[TransactionStatus.anomalous]
 
 
 class CreditReportChart:
