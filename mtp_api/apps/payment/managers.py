@@ -2,7 +2,7 @@ from django.conf import settings
 from django.db import models
 from django.db.transaction import atomic
 
-from credit.constants import CREDIT_RESOLUTION
+from credit.constants import CreditResolution
 from credit.models import Credit
 from payment.constants import PaymentStatus
 
@@ -12,7 +12,7 @@ class PaymentManager(models.Manager):
         return self.get_queryset().filter(
             created__lt=created_before,
             status=PaymentStatus.failed,
-            credit__resolution=CREDIT_RESOLUTION.INITIAL,
+            credit__resolution=CreditResolution.initial,
         )
 
     @atomic

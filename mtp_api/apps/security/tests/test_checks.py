@@ -13,7 +13,8 @@ from rest_framework.test import APITestCase
 
 from core.tests.utils import make_test_users, FLAKY_TEST_WARNING
 from credit.constants import LogAction
-from credit.models import Credit, CREDIT_RESOLUTION
+from credit.constants import CreditResolution
+from credit.models import Credit
 from mtp_auth.tests.mommy_recipes import basic_user
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from notification.rules import RULES
@@ -350,7 +351,7 @@ class CreditCheckTestCase(TestCase):
         generate_payments(10)
         credit = Credit.objects.credited().first()
         credit.owner = None
-        credit.resolution = CREDIT_RESOLUTION.INITIAL
+        credit.resolution = CreditResolution.initial.value
         credit.payment.status = PaymentStatus.failed.value
         credit.save()
         self.assertFalse(credit.should_check())
@@ -362,7 +363,7 @@ class CreditCheckTestCase(TestCase):
         call_command('update_security_profiles')
         credit = Credit.objects.credited().first()
         credit.owner = None
-        credit.resolution = CREDIT_RESOLUTION.INITIAL
+        credit.resolution = CreditResolution.initial.value
         payment = credit.payment
         payment.status = PaymentStatus.pending.value
         credit.log_set.filter(action=LogAction.credited).delete()
@@ -507,7 +508,7 @@ class AutomaticCreditCheckTestCase(APITestCase, AuthTestCaseMixin):
         payment = response.json()
         payment = Payment.objects.get(uuid=payment['uuid'])
         self.assertEqual(payment.status, PaymentStatus.pending.value)
-        self.assertEqual(payment.credit.resolution, CREDIT_RESOLUTION.INITIAL)
+        self.assertEqual(payment.credit.resolution, CreditResolution.initial.value)
         self.assertTrue(hasattr(payment.credit, 'security_check'))
         self.assertEqual(payment.credit.security_check.status, CheckStatus.accepted.value)
 
@@ -560,7 +561,7 @@ class AutomaticCreditCheckTestCase(APITestCase, AuthTestCaseMixin):
         payment = response.json()
         payment = Payment.objects.get(uuid=payment['uuid'])
         self.assertEqual(payment.status, PaymentStatus.pending.value)
-        self.assertEqual(payment.credit.resolution, CREDIT_RESOLUTION.INITIAL)
+        self.assertEqual(payment.credit.resolution, CreditResolution.initial.value)
         self.assertTrue(hasattr(payment.credit, 'security_check'))
         self.assertEqual(payment.credit.security_check.status, CheckStatus.pending.value)
 

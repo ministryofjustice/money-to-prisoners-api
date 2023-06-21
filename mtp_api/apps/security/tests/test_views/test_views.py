@@ -11,7 +11,7 @@ from rest_framework.test import APITestCase
 
 from core.tests.utils import make_test_users
 from credit.models import Credit
-from credit.constants import CREDIT_RESOLUTION
+from credit.constants import CreditResolution
 from disbursement.constants import DisbursementResolution, DisbursementMethod
 from disbursement.models import Disbursement
 from disbursement.tests.utils import generate_disbursements
@@ -280,7 +280,12 @@ class SenderCreditListTestCase(SecurityViewTestCase):
         for credit in sender.credits.all():
             self.assertTrue(credit.id in [d['id'] for d in data])
 
-        self.assertFalse(any([d['resolution'] in (CREDIT_RESOLUTION.FAILED, CREDIT_RESOLUTION.INITIAL) for d in data]))
+        self.assertFalse(
+            any(
+                d['resolution'] in (CreditResolution.failed.value, CreditResolution.initial.value)
+                for d in data
+            )
+        )
 
     def test_list_credits_for_sender_includes_not_completed(self):
         payments = generate_payments(10, days_of_history=1, overrides={'status': PaymentStatus.rejected.value})
@@ -299,7 +304,12 @@ class SenderCreditListTestCase(SecurityViewTestCase):
         for credit in credits:
             self.assertTrue(credit.id in [d['id'] for d in data])
 
-        self.assertTrue(any([d['resolution'] in (CREDIT_RESOLUTION.FAILED, CREDIT_RESOLUTION.INITIAL) for d in data]))
+        self.assertTrue(
+            any(
+                d['resolution'] in (CreditResolution.failed.value, CreditResolution.initial.value)
+                for d in data
+            )
+        )
 
     def test_list_credits_for_sender_include_checks(self):
         # Setup
@@ -671,7 +681,12 @@ class PrisonerCreditListTestCase(SecurityViewTestCase):
         for credit in prisoner.credits.all():
             self.assertTrue(credit.id in [d['id'] for d in data])
 
-        self.assertFalse(any([d['resolution'] in (CREDIT_RESOLUTION.FAILED, CREDIT_RESOLUTION.INITIAL) for d in data]))
+        self.assertFalse(
+            any(
+                d['resolution'] in (CreditResolution.failed.value, CreditResolution.initial.value)
+                for d in data
+            )
+        )
 
     def test_list_credits_for_prisoner_includes_not_completed(self):
         payments = generate_payments(10, days_of_history=1, overrides={'status': PaymentStatus.rejected.value})
@@ -692,7 +707,12 @@ class PrisonerCreditListTestCase(SecurityViewTestCase):
         for credit in credits:
             self.assertTrue(credit.id in [d['id'] for d in data])
 
-        self.assertTrue(any([d['resolution'] in (CREDIT_RESOLUTION.FAILED, CREDIT_RESOLUTION.INITIAL) for d in data]))
+        self.assertTrue(
+            any(
+                d['resolution'] in (CreditResolution.failed.value, CreditResolution.initial.value)
+                for d in data
+            )
+        )
 
     def test_list_credits_for_prisoner_include_checks(self):
         # Setup

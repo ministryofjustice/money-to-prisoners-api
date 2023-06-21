@@ -11,7 +11,7 @@ from django.utils.crypto import get_random_string
 from faker import Faker
 
 from core.tests.utils import MockModelTimestamps
-from credit.constants import CREDIT_RESOLUTION, CREDIT_STATUS
+from credit.constants import CreditResolution, CreditStatus
 from credit.models import Credit
 from credit.tests.utils import (
     get_owner_and_status_chooser, create_credit_log, random_amount,
@@ -314,12 +314,12 @@ def setup_transaction(
 
         if is_valid:
             owner, status = owner_status_chooser(data['prison'])
-            if status == CREDIT_STATUS.CREDIT_PENDING:
+            if status == CreditStatus.credit_pending.value:
                 data.update({
                     'owner': None,
                     'credited': False
                 })
-            elif status == CREDIT_STATUS.CREDITED:
+            elif status == CreditStatus.credited.value:
                 data.update({
                     'owner': owner,
                     'credited': True
@@ -339,11 +339,11 @@ def setup_transaction(
 
 
 def save_transaction(data):
-    resolution = CREDIT_RESOLUTION.PENDING
+    resolution = CreditResolution.pending.value
     if data.pop('credited', False):
-        resolution = CREDIT_RESOLUTION.CREDITED
+        resolution = CreditResolution.credited.value
     if data.pop('refunded', False):
-        resolution = CREDIT_RESOLUTION.REFUNDED
+        resolution = CreditResolution.refunded.value
 
     prisoner_dob = data.pop('prisoner_dob', None)
     prisoner_number = data.pop('prisoner_number', None)

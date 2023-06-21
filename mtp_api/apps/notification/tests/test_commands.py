@@ -10,7 +10,7 @@ import openpyxl
 from openpyxl.utils import coordinate_to_tuple
 
 from core.tests.utils import make_test_users, FLAKY_TEST_WARNING
-from credit.constants import CREDIT_RESOLUTION
+from credit.constants import CreditResolution
 from credit.models import Credit
 from disbursement.models import Disbursement
 from disbursement.tests.utils import generate_disbursements
@@ -151,7 +151,7 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
             received_at=period_start, amount=100,
             prisoner_number=prisoner_profile_1.prisoner_number, prisoner_name=prisoner_profile_1.prisoner_name,
             prison=PrisonerLocation.objects.get(prisoner_number=prisoner_profile_1.prisoner_number).prison,
-            resolution=CREDIT_RESOLUTION.CREDITED, reconciled=True, private_estate_batch=None,
+            resolution=CreditResolution.credited, reconciled=True, private_estate_batch=None,
             prisoner_profile=prisoner_profile_1, sender_profile=sender_profile_1,
             is_counted_in_prisoner_profile_total=False,
             is_counted_in_sender_profile_total=False
@@ -168,7 +168,7 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
             received_at=period_start, amount=200,
             prisoner_number=prisoner_profile_2.prisoner_number, prisoner_name=prisoner_profile_2.prisoner_name,
             prison=PrisonerLocation.objects.get(prisoner_number=prisoner_profile_2.prisoner_number).prison,
-            resolution=CREDIT_RESOLUTION.CREDITED, reconciled=True, private_estate_batch=None,
+            resolution=CreditResolution.credited, reconciled=True, private_estate_batch=None,
             prisoner_profile=prisoner_profile_2, sender_profile=sender_profile_2,
             is_counted_in_prisoner_profile_total=False,
             is_counted_in_sender_profile_total=False

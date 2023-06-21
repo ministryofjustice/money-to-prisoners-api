@@ -12,8 +12,8 @@ from django.contrib.auth.models import Group
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 
-from credit.constants import LogAction
-from credit.models import Credit, CREDIT_RESOLUTION
+from credit.constants import CreditResolution, LogAction
+from credit.models import Credit
 from prison.models import Prison
 from payment.constants import PaymentStatus
 from payment.models import Payment
@@ -38,7 +38,7 @@ PAYMENT_FILTERS_FOR_INVALID_CHECK = dict(
     status=PaymentStatus.pending,
     credit=dict(
         security_check__isnull=True,
-        resolution=CREDIT_RESOLUTION.INITIAL,
+        resolution=CreditResolution.initial.value,
         owner_id=None,
         sender_profile_id=None,
         prisoner_profile_id=None,
@@ -57,7 +57,7 @@ PAYMENT_FILTERS_FOR_VALID_CHECK = dict(
     billing_address__debit_card_sender_details__isnull=False,
     credit__isnull=False,
     credit=dict(
-        resolution=CREDIT_RESOLUTION.INITIAL,
+        resolution=CreditResolution.initial.value,
         security_check__isnull=True,
         # This only works because get_or_create ignores values with __ in any call to create()
         # these values must be included in the defaults if NOT NULL

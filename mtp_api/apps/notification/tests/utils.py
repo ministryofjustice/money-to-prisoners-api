@@ -4,7 +4,8 @@ from django.utils.crypto import get_random_string
 from faker import Faker
 from model_bakery import baker
 
-from credit.models import Credit, CREDIT_RESOLUTION
+from credit.constants import CreditResolution
+from credit.models import Credit
 from credit.tests.utils import random_amount
 from disbursement.models import Disbursement, DisbursementResolution
 from payment.models import Payment
@@ -60,7 +61,7 @@ def make_csfreq_credits(today, sender, count):
             amount=random_amount(),
             sender_profile=sender,
             received_at=today - datetime.timedelta(day),
-            resolution=CREDIT_RESOLUTION.CREDITED, reconciled=True, private_estate_batch=None,
+            resolution=CreditResolution.credited, reconciled=True, private_estate_batch=None,
         )
         if debit_card:
             payment = baker.make(
@@ -100,7 +101,7 @@ def make_csnum_credits(today, prisoner, count, sender_profile=None):
             sender_profile=sender,
             prisoner_profile=prisoner,
             received_at=today - datetime.timedelta(day),
-            resolution=CREDIT_RESOLUTION.CREDITED, reconciled=True, private_estate_batch=None,
+            resolution=CreditResolution.credited, reconciled=True, private_estate_batch=None,
         )
         if debit_card:
             payment = baker.make(
@@ -142,7 +143,7 @@ def make_cpnum_credits(today, sender, count, prisoner_profile=None):
             sender_profile=sender,
             prisoner_profile=prisoner,
             received_at=today - datetime.timedelta(day),
-            resolution=CREDIT_RESOLUTION.CREDITED, reconciled=True, private_estate_batch=None,
+            resolution=CreditResolution.credited, reconciled=True, private_estate_batch=None,
         )
         if debit_card:
             payment = baker.make(

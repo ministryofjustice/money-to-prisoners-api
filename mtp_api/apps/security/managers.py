@@ -4,6 +4,7 @@ from django.db import connection, models, transaction
 from django.db.models import Count, Sum, Subquery, OuterRef, Q
 from django.db.models.functions import Coalesce
 
+from credit.constants import CreditResolution
 from credit.models import Credit
 
 logger = logging.getLogger('mtp')
@@ -130,7 +131,6 @@ class SenderProfileManager(models.Manager):
         )
 
     def create_or_update_for_credit(self, credit):
-        from credit.constants import CREDIT_RESOLUTION
         if hasattr(credit, 'transaction'):
             sender_profile = self._create_or_update_for_bank_transfer(credit)
         elif hasattr(credit, 'payment'):
@@ -143,7 +143,7 @@ class SenderProfileManager(models.Manager):
         # does not go through the realistic state mutation properly, simply creating entities in their final state
         if (
             credit.prison
-            and credit.resolution != CREDIT_RESOLUTION.FAILED
+            and credit.resolution != CreditResolution.failed.value
             and credit.prison not in sender_profile.prisons.all()
         ):
             sender_profile.add_prison(credit.prison)
@@ -260,8 +260,6 @@ class PrisonerProfileQuerySet(models.QuerySet):
         self.recalculate_disbursement_totals()
 
     def recalculate_credit_totals(self):
-        from credit.constants import CREDIT_RESOLUTION
-        from credit.models import Credit
         from security.models import PrisonerProfile
 
         self.update(
@@ -272,7 +270,7 @@ class PrisonerProfileQuerySet(models.QuerySet):
                     calculated=Count(
                         'credits',
                         distinct=True,
-                        filter=Q(credits__resolution=CREDIT_RESOLUTION.CREDITED)
+                        filter=Q(credits__resolution=CreditResolution.credited),
                     )
                 ).values('calculated')[:1]
             ), 0),
@@ -282,14 +280,14 @@ class PrisonerProfileQuerySet(models.QuerySet):
                 ).annotate(
                     calculated=Sum(
                         'credits__amount',
-                        filter=Q(credits__resolution=CREDIT_RESOLUTION.CREDITED)
+                        filter=Q(credits__resolution=CreditResolution.credited),
                     )
                 ).values('calculated')[:1]
             ), 0),
         )
         new_credits = Credit.objects.filter(
             prisoner_profile__in=self,
-            resolution=CREDIT_RESOLUTION.CREDITED,
+            resolution=CreditResolution.credited,
             is_counted_in_prisoner_profile_total=False
         )
         new_credits_ids = [c.id for c in new_credits]
@@ -306,14 +304,14 @@ class PrisonerProfileQuerySet(models.QuerySet):
                 PrisonerProfile.objects.filter(
                     id=OuterRef('id'),
                 ).annotate(
-                    calculated=Count('disbursements', distinct=True)
+                    calculated=Count('disbursements', distinct=True),
                 ).values('calculated')[:1]
             ), 0),
             disbursement_total=Coalesce(Subquery(
                 PrisonerProfile.objects.filter(
                     id=OuterRef('id'),
                 ).annotate(
-                    calculated=Sum('disbursements__amount')
+                    calculated=Sum('disbursements__amount'),
                 ).values('calculated')[:1]
             ), 0),
         )
@@ -324,8 +322,6 @@ class SenderProfileQuerySet(models.QuerySet):
         self.recalculate_credit_totals()
 
     def recalculate_credit_totals(self):
-        from credit.constants import CREDIT_RESOLUTION
-        from credit.models import Credit
         from security.models import SenderProfile
 
         self.update(
@@ -336,7 +332,7 @@ class SenderProfileQuerySet(models.QuerySet):
                     calculated=Count(
                         'credits',
                         distinct=True,
-                        filter=Q(credits__resolution=CREDIT_RESOLUTION.CREDITED)
+                        filter=Q(credits__resolution=CreditResolution.credited),
                     )
                 ).values('calculated')[:1]
             ), 0),
@@ -346,15 +342,15 @@ class SenderProfileQuerySet(models.QuerySet):
                 ).annotate(
                     calculated=Sum(
                         'credits__amount',
-                        filter=Q(credits__resolution=CREDIT_RESOLUTION.CREDITED)
+                        filter=Q(credits__resolution=CreditResolution.credited),
                     )
                 ).values('calculated')[:1]
             ), 0),
         )
         new_credits = Credit.objects.filter(
             sender_profile__in=self,
-            resolution=CREDIT_RESOLUTION.CREDITED,
-            is_counted_in_sender_profile_total=False
+            resolution=CreditResolution.credited,
+            is_counted_in_sender_profile_total=False,
         )
         new_credits_ids = [c.id for c in new_credits]
         new_credits.update(is_counted_in_sender_profile_total=True)
@@ -375,14 +371,14 @@ class RecipientProfileQuerySet(models.QuerySet):
                 RecipientProfile.objects.filter(
                     id=OuterRef('id'),
                 ).annotate(
-                    calculated=Count('disbursements', distinct=True)
+                    calculated=Count('disbursements', distinct=True),
                 ).values('calculated')[:1]
             ), 0),
             disbursement_total=Coalesce(Subquery(
                 RecipientProfile.objects.filter(
                     id=OuterRef('id'),
                 ).annotate(
-                    calculated=Sum('disbursements__amount')
+                    calculated=Sum('disbursements__amount'),
                 ).values('calculated')[:1]
             ), 0),
         )
@@ -440,7 +436,7 @@ class CheckAutoAcceptRuleManager(models.Manager):
     def get_active_auto_accept_for_credit(self, credit: Credit):
         auto_accept_rule = self.filter(
             debit_card_sender_details=credit.sender_profile.debit_card_details.first(),
-            prisoner_profile=credit.prisoner_profile
+            prisoner_profile=credit.prisoner_profile,
         ).first()
         if auto_accept_rule and auto_accept_rule.is_active():
             return auto_accept_rule

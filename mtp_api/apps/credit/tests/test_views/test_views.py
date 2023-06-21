@@ -5,7 +5,7 @@ from django.utils.dateparse import parse_date
 from rest_framework import status
 
 from credit.models import Credit, Log
-from credit.constants import CREDIT_RESOLUTION, LogAction
+from credit.constants import CreditResolution, LogAction
 from credit.tests.test_base import BaseCreditViewTestCase
 from credit.tests.test_views.test_credit_list import CashbookCreditRejectsRequestsWithoutPermissionTestMixin
 from mtp_auth.models import PrisonUserMapping
@@ -98,7 +98,7 @@ class SetManualCreditsTestCase(
         available_qs = self._get_credit_pending_credits_qs(managing_prisons, logged_in_user)
         manual_qs = self._get_queryset(logged_in_user, managing_prisons).filter(
             owner=logged_in_user,
-            resolution=CREDIT_RESOLUTION.MANUAL,
+            resolution=CreditResolution.manual,
             prison__in=managing_prisons
         )
 
@@ -223,8 +223,8 @@ class CreditsGroupedByCreditedListTestCase(
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         credits = [
-            c for c in self._get_managed_prison_credits()
-            if c.resolution == CREDIT_RESOLUTION.CREDITED
+            credit for credit in self._get_managed_prison_credits()
+            if credit.resolution == CreditResolution.credited.value
         ]
         for group in response.data['results']:
             total = 0

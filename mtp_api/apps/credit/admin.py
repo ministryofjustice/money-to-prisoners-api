@@ -8,7 +8,7 @@ from django.utils.translation import gettext_lazy as _
 from mtp_common.utils import format_currency
 
 from core.admin import UtcDateRangeFilter, RelatedAnyFieldListFilter, SearchFilter, add_short_description
-from credit.constants import CREDIT_SOURCE, CREDIT_STATUS, LogAction
+from credit.constants import CreditStatus, CreditSource, LogAction
 from credit.models import Credit, Log, Comment, ProcessingBatch, PrivateEstateBatch
 from payment.models import Payment
 from transaction.models import Transaction
@@ -63,7 +63,7 @@ class StatusFilter(admin.SimpleListFilter):
     title = _('status')
 
     def lookups(self, request, model_admin):
-        return CREDIT_STATUS.choices
+        return CreditStatus.choices
 
     def queryset(self, request, queryset):
         status = self.used_parameters.get(self.parameter_name)
@@ -79,15 +79,15 @@ class SourceFilter(admin.SimpleListFilter):
     title = _('source')
 
     def lookups(self, request, model_admin):
-        return CREDIT_SOURCE.choices
+        return CreditSource.choices
 
     def queryset(self, request, queryset):
         source = self.used_parameters.get(self.parameter_name)
-        if source in CREDIT_SOURCE:
+        if source in CreditSource:
             try:
-                if source == CREDIT_SOURCE.BANK_TRANSFER:
+                if source == CreditSource.bank_transfer.value:
                     return queryset.filter(transaction__isnull=False)
-                elif source == CREDIT_SOURCE.ONLINE:
+                elif source == CreditSource.online.value:
                     return queryset.filter(payment__isnull=False)
                 else:
                     return queryset.filter(payment__isnull=True, transaction__isnull=True)
@@ -144,15 +144,15 @@ class CreditAdmin(admin.ModelAdmin):
     @add_short_description(_('source'))
     def formatted_source(self, instance):
         value = instance.source
-        if value in CREDIT_SOURCE.values:
-            return dict(CREDIT_SOURCE.choices)[value]
+        if value in CreditSource:
+            return CreditSource[value].label
         return value
 
     @add_short_description(_('status'))
     def formatted_status(self, instance):
         value = instance.status
-        if value in CREDIT_STATUS.values:
-            return dict(CREDIT_STATUS.choices)[value]
+        if value in CreditStatus:
+            return CreditStatus[value].label
         return value
 
     @add_short_description(_('Display total of selected credits'))

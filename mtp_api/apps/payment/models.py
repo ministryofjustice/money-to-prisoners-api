@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from model_utils.models import TimeStampedModel
 
-from credit.constants import CREDIT_RESOLUTION
+from credit.constants import CreditResolution
 from credit.models import Credit
 from credit.signals import credit_failed
 from payment.constants import PaymentStatus
@@ -124,18 +124,18 @@ class Payment(TimeStampedModel):
 def update_credit_for_payment(instance, **kwargs):
     if (
         instance.status == PaymentStatus.taken.value and
-        instance.credit.resolution == CREDIT_RESOLUTION.INITIAL
+        instance.credit.resolution == CreditResolution.initial.value
     ):
         if instance.credit.received_at is None:
             instance.credit.received_at = timezone.now()
-        instance.credit.resolution = CREDIT_RESOLUTION.PENDING
+        instance.credit.resolution = CreditResolution.pending.value
         instance.credit.save()
 
     if (
         instance.status in (PaymentStatus.rejected.value, PaymentStatus.expired.value) and
-        instance.credit.resolution == CREDIT_RESOLUTION.INITIAL
+        instance.credit.resolution == CreditResolution.initial.value
     ):
-        instance.credit.resolution = CREDIT_RESOLUTION.FAILED
+        instance.credit.resolution = CreditResolution.failed.value
         instance.credit.save()
 
         credit_failed.send(
@@ -148,7 +148,7 @@ def update_credit_for_payment(instance, **kwargs):
 def create_security_check_if_needed_and_attach_profiles(instance: Payment, **kwargs):
     credit = instance.credit
     if (
-        credit.resolution == CREDIT_RESOLUTION.INITIAL
+        credit.resolution == CreditResolution.initial.value
         and instance.status == PaymentStatus.pending.value
         and credit.has_enough_detail_for_sender_profile()
     ):

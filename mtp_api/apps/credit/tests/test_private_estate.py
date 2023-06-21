@@ -9,7 +9,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from core.tests.utils import make_test_users, FLAKY_TEST_WARNING
-from credit.constants import CREDIT_RESOLUTION, CREDIT_STATUS
+from credit.constants import CreditResolution, CreditStatus
 from credit.models import Credit, PrivateEstateBatch
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from payment.tests.utils import generate_payments
@@ -47,7 +47,10 @@ class PrivateEstateBatchTestCase(AuthTestCaseMixin, APITestCase):
         self.credits = transaction_credits + payment_credits
         self.prisons = Prison.objects.all()
 
-        creditable = Credit.STATUS_LOOKUP[CREDIT_STATUS.CREDITED] | Credit.STATUS_LOOKUP[CREDIT_STATUS.CREDIT_PENDING]
+        creditable = (
+            Credit.STATUS_LOOKUP[CreditStatus.credited.value] |
+            Credit.STATUS_LOOKUP[CreditStatus.credit_pending.value]
+        )
         private_estate_credit_set = Credit.objects.filter(prison__private_estate=True).filter(creditable)
         if not private_estate_credit_set.exists():
             public_estate_credits = Credit.objects.filter(prison__private_estate=False).filter(creditable)
@@ -109,7 +112,10 @@ class PrivateEstateBatchTestCase(AuthTestCaseMixin, APITestCase):
         ))
 
     def test_batches_only_contain_private_estate_credits(self):
-        creditable = Credit.STATUS_LOOKUP[CREDIT_STATUS.CREDITED] | Credit.STATUS_LOOKUP[CREDIT_STATUS.CREDIT_PENDING]
+        creditable = (
+            Credit.STATUS_LOOKUP[CreditStatus.credited.value] |
+            Credit.STATUS_LOOKUP[CreditStatus.credit_pending.value]
+        )
         private_estate_credit_ids = set(
             Credit.objects.filter(
                 prison__private_estate=True, received_at__lt=self.latest_date,
@@ -194,7 +200,7 @@ class PrivateEstateBatchTestCase(AuthTestCaseMixin, APITestCase):
     def test_special_bank_admin_can_credit_batch(self):
         expected_batch = PrivateEstateBatch.objects.filter(date=self.date_with_batch).first()
         some_credit = expected_batch.credit_set.first()
-        some_credit.resolution = CREDIT_RESOLUTION.PENDING
+        some_credit.resolution = CreditResolution.pending.value
         some_credit.save()
 
         user = self.bank_admins[0]

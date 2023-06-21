@@ -8,7 +8,7 @@ from rest_framework import status as http_status
 from rest_framework.test import APITestCase
 
 from core.tests.utils import make_test_users
-from credit.constants import CREDIT_RESOLUTION, LogAction
+from credit.constants import CreditResolution, LogAction
 from credit.models import Credit, Log
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from payment.models import Batch, BillingAddress, Payment
@@ -123,7 +123,7 @@ class CreatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(credit.amount, expected_credit['amount'])
         self.assertEqual(credit.prisoner_number, expected_credit['prisoner_number'])
         self.assertEqual(credit.prisoner_dob, expected_credit['prisoner_dob'])
-        self.assertEqual(credit.resolution, CREDIT_RESOLUTION.INITIAL)
+        self.assertEqual(credit.resolution, CreditResolution.initial.value)
         self.assertIsNotNone(credit.prison)
         self.assertIsNotNone(credit.prisoner_name)
         self.assertEqual(Credit.objects.all().count(), 0)
@@ -207,7 +207,7 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         credit = payment.credit
 
         self.assertEqual(payment.status, PaymentStatus.taken.value)
-        self.assertEqual(credit.resolution, CREDIT_RESOLUTION.PENDING)
+        self.assertEqual(credit.resolution, CreditResolution.pending.value)
         self.assertIsNotNone(credit.prison)
         self.assertIsNotNone(credit.prisoner_name)
         self.assertIsNotNone(credit.received_at)
@@ -250,7 +250,7 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(Payment.objects.count(), 1)
 
         self.assertEqual(payment.status, PaymentStatus.rejected.value)
-        self.assertEqual(credit.resolution, CREDIT_RESOLUTION.FAILED)
+        self.assertEqual(credit.resolution, CreditResolution.failed.value)
         self.assertQuerysetEqual(credit.prisoner_profile.senders.all(), [])
         self.assertQuerysetEqual(credit.sender_profile.prisons.all(), [])
         self.assertIsNotNone(credit.prison)
@@ -274,7 +274,7 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         credit = payment.credit
 
         self.assertEqual(payment.status, PaymentStatus.expired.value)
-        self.assertEqual(credit.resolution, CREDIT_RESOLUTION.FAILED)
+        self.assertEqual(credit.resolution, CreditResolution.failed.value)
         self.assertIsNotNone(credit.prison)
         self.assertIsNotNone(credit.prisoner_name)
         self.assertIsNone(credit.received_at)
@@ -300,7 +300,7 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         credit = payment.credit
 
         self.assertEqual(payment.status, PaymentStatus.taken.value)
-        self.assertEqual(credit.resolution, CREDIT_RESOLUTION.PENDING)
+        self.assertEqual(credit.resolution, CreditResolution.pending.value)
         self.assertIsNotNone(credit.prison)
         self.assertIsNotNone(credit.prisoner_name)
         self.assertEqual(credit.received_at, received_at)
@@ -318,7 +318,7 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         credit = payment.credit
 
         self.assertEqual(payment.status, PaymentStatus.failed.value)
-        self.assertEqual(credit.resolution, CREDIT_RESOLUTION.INITIAL)
+        self.assertEqual(credit.resolution, CreditResolution.initial.value)
         self.assertIsNone(credit.received_at)
         self.assertEqual(Credit.objects.count(), 0)
 
@@ -350,7 +350,7 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         credit = payment.credit
 
         self.assertEqual(payment.status, PaymentStatus.taken.value)
-        self.assertEqual(credit.resolution, CREDIT_RESOLUTION.PENDING)
+        self.assertEqual(credit.resolution, CreditResolution.pending.value)
 
     def test_update_with_billing_address(self):
         billing_address = {

@@ -3,24 +3,24 @@ from django.db.models import Q
 from django.db.transaction import atomic
 
 from credit import InvalidCreditStateException
-from credit.constants import CREDIT_STATUS, CREDIT_RESOLUTION, LogAction
+from credit.constants import CreditResolution, CreditStatus, LogAction
 
 
 class CreditQuerySet(models.QuerySet):
     def credit_pending(self):
-        return self.filter(self.model.STATUS_LOOKUP[CREDIT_STATUS.CREDIT_PENDING])
+        return self.filter(self.model.STATUS_LOOKUP[CreditStatus.credit_pending.value])
 
     def credited(self):
-        return self.filter(self.model.STATUS_LOOKUP[CREDIT_STATUS.CREDITED])
+        return self.filter(self.model.STATUS_LOOKUP[CreditStatus.credited.value])
 
     def refunded(self):
-        return self.filter(self.model.STATUS_LOOKUP[CREDIT_STATUS.REFUNDED])
+        return self.filter(self.model.STATUS_LOOKUP[CreditStatus.refunded.value])
 
     def refund_pending(self):
-        return self.filter(self.model.STATUS_LOOKUP[CREDIT_STATUS.REFUND_PENDING])
+        return self.filter(self.model.STATUS_LOOKUP[CreditStatus.refund_pending.value])
 
     def failed(self):
-        return self.filter(self.model.STATUS_LOOKUP[CREDIT_STATUS.FAILED])
+        return self.filter(self.model.STATUS_LOOKUP[CreditStatus.failed.value])
 
     def counts_per_day(self):
         return self.exclude(received_at__isnull=True) \
@@ -61,7 +61,7 @@ class CreditManager(models.Manager):
                 -- don't remove a match from a debit card payment
                 AND NOT (pl.prison_id IS NULL AND p.uuid IS NOT NULL)
                 """,
-                (CREDIT_RESOLUTION.PENDING,)
+                (CreditResolution.pending.value,)
             )
 
     @atomic
@@ -82,14 +82,14 @@ class CreditManager(models.Manager):
         from credit.models import Log
 
         to_update = queryset.filter(
-            resolution=CREDIT_RESOLUTION.PENDING,
+            resolution=CreditResolution.pending,
             pk__in=credit_ids
         ).select_for_update()
         ids_to_update = [c.id for c in to_update]
         conflict_ids = set(credit_ids) - set(ids_to_update)
 
         Log.objects.credits_set_manual(to_update, user)
-        to_update.update(resolution=CREDIT_RESOLUTION.MANUAL, owner=user)
+        to_update.update(resolution=CreditResolution.manual, owner=user)
         return sorted(conflict_ids)
 
     @atomic
@@ -104,7 +104,7 @@ class CreditManager(models.Manager):
             raise InvalidCreditStateException(sorted(conflict_ids))
 
         Log.objects.credits_refunded(update_set, user)
-        update_set.update(resolution=CREDIT_RESOLUTION.REFUNDED)
+        update_set.update(resolution=CreditResolution.refunded)
 
     @atomic
     def review(self, credit_ids, user):
@@ -123,8 +123,8 @@ class CompletedCreditManager(CreditManager):
     def get_queryset(self):
         return super().get_queryset().exclude(
             resolution__in=(
-                CREDIT_RESOLUTION.INITIAL,
-                CREDIT_RESOLUTION.FAILED,
+                CreditResolution.initial,
+                CreditResolution.failed,
             )
         )
 
@@ -211,8 +211,8 @@ class PrivateEstateBatchManager(models.Manager):
                 prison__private_estate=True,
             ) \
             .filter(
-                Credit.STATUS_LOOKUP[CREDIT_STATUS.CREDIT_PENDING] |
-                Credit.STATUS_LOOKUP[CREDIT_STATUS.CREDITED]
+                Credit.STATUS_LOOKUP[CreditStatus.credit_pending.value] |
+                Credit.STATUS_LOOKUP[CreditStatus.credited.value]
             )
         for prison in Prison.objects.filter(private_estate=True):
             batch, _ = self.get_or_create(prison=prison, date=batch_date)

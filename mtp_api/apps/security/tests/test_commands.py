@@ -8,7 +8,7 @@ from model_bakery import baker
 
 from mtp_common.test_utils import silence_logger
 
-from credit.constants import CREDIT_RESOLUTION
+from credit.constants import CreditResolution
 from credit.models import Credit
 from core.tests.utils import make_test_users, delete_non_related_nullable_fields
 from disbursement.constants import DisbursementResolution, DisbursementMethod
@@ -40,13 +40,13 @@ class UpdateSecurityProfilesTestCase(TestCase):
         for sender_profile in SenderProfile.objects.all():
             self.assertEqual(
                 sender_profile.credits.filter(
-                    resolution=CREDIT_RESOLUTION.CREDITED
+                    resolution=CreditResolution.credited,
                 ).count(),
                 sender_profile.credit_count
             )
             self.assertEqual(
                 sum(credit.amount for credit in sender_profile.credits.filter(
-                    resolution=CREDIT_RESOLUTION.CREDITED
+                    resolution=CreditResolution.credited,
                 )),
                 sender_profile.credit_total
             )
@@ -54,7 +54,7 @@ class UpdateSecurityProfilesTestCase(TestCase):
         self.assertEqual(
             Credit.objects.filter(
                 is_counted_in_sender_profile_total=False,
-                resolution=CREDIT_RESOLUTION.CREDITED
+                resolution=CreditResolution.credited,
             ).count(),
             0
         )
@@ -74,13 +74,13 @@ class UpdateSecurityProfilesTestCase(TestCase):
         for prisoner_profile in PrisonerProfile.objects.all():
             self.assertEqual(
                 sum(credit.amount for credit in prisoner_profile.credits.filter(
-                    resolution=CREDIT_RESOLUTION.CREDITED
+                    resolution=CreditResolution.credited,
                 )),
                 prisoner_profile.credit_total
             )
             self.assertEqual(
                 prisoner_profile.credits.filter(
-                    resolution=CREDIT_RESOLUTION.CREDITED
+                    resolution=CreditResolution.credited,
                 ).count(),
                 prisoner_profile.credit_count
             )
@@ -96,7 +96,7 @@ class UpdateSecurityProfilesTestCase(TestCase):
         self.assertEqual(
             Credit.objects.filter(
                 is_counted_in_prisoner_profile_total=False,
-                resolution=CREDIT_RESOLUTION.CREDITED
+                resolution=CreditResolution.credited,
             ).count(),
             0
         )

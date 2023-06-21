@@ -5,7 +5,7 @@ import random
 from django.contrib.auth import get_user_model
 
 from core.tests.utils import MockModelTimestamps
-from credit.constants import CREDIT_STATUS, LogAction
+from credit.constants import CreditStatus, LogAction
 from credit.models import Log
 from prison.models import Prison
 
@@ -21,8 +21,8 @@ def get_owner_and_status_chooser():
         clerks_per_prison[p.pk] = (
             cycle(list(User.objects.filter(id__in=user_ids))),
             cycle([
-                CREDIT_STATUS.CREDIT_PENDING,
-                CREDIT_STATUS.CREDITED
+                CreditStatus.credit_pending.value,
+                CreditStatus.credited.value,
             ])
         )
 

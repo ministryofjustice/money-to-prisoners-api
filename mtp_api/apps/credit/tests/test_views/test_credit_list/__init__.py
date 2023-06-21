@@ -9,9 +9,7 @@ from django.utils.dateparse import parse_datetime
 from rest_framework import status
 
 from core import getattr_path
-from credit.constants import (
-    CREDIT_STATUS, CREDIT_RESOLUTION
-)
+from credit.constants import CreditResolution, CreditStatus
 from credit.tests.test_base import (
     BaseCreditViewTestCase, CreditRejectsRequestsWithoutPermissionTestMixin
 )
@@ -114,8 +112,8 @@ class CreditListTestCase(
             c.pk
             for c in credits
             if c.resolution not in (
-                CREDIT_RESOLUTION.INITIAL,
-                CREDIT_RESOLUTION.FAILED,
+                CreditResolution.initial.value,
+                CreditResolution.failed.value,
             ) and
             status_checker(c) and
             prison_checker(c) and
@@ -256,8 +254,8 @@ class CreditListTestCase(
         if 'valid' in filters:
             def valid_checker(c):
                 return (
-                    self.STATUS_FILTERS[CREDIT_STATUS.CREDIT_PENDING](c) or
-                    self.STATUS_FILTERS[CREDIT_STATUS.CREDITED](c)
+                    self.STATUS_FILTERS[CreditStatus.credit_pending.value](c) or
+                    self.STATUS_FILTERS[CreditStatus.credited.value](c)
                 )
             if filters['valid'] in ('true', 'True', 1, True):
                 return valid_checker

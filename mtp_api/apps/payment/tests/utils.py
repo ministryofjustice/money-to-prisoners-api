@@ -8,7 +8,7 @@ from django.utils.crypto import get_random_string
 from faker import Faker
 
 from core.tests.utils import MockModelTimestamps
-from credit.constants import CREDIT_RESOLUTION
+from credit.constants import CreditResolution
 from credit.models import Credit
 from credit.tests.utils import (
     get_owner_and_status_chooser, create_credit_log, random_amount,
@@ -226,13 +226,13 @@ def save_payment(data, overrides=None, attach_profiles_to_individual_credits=Tru
     is_taken = data['status'] == PaymentStatus.taken.value
     if is_taken:
         if data.pop('credited', False):
-            resolution = CREDIT_RESOLUTION.CREDITED
+            resolution = CreditResolution.credited.value
         else:
-            resolution = CREDIT_RESOLUTION.PENDING
+            resolution = CreditResolution.pending.value
     elif data['status'] in (PaymentStatus.rejected.value, PaymentStatus.expired.value):
-        resolution = CREDIT_RESOLUTION.FAILED
+        resolution = CreditResolution.failed.value
     else:
-        resolution = CREDIT_RESOLUTION.INITIAL
+        resolution = CreditResolution.initial.value
 
     prisoner_dob = data.pop('prisoner_dob', None)
     prisoner_number = data.pop('prisoner_number', None)

@@ -3,7 +3,7 @@ from mtp_common.security.checks import human_readable_check_rejection_reasons
 from mtp_common.utils import format_currency
 
 from core.dump import Serialiser
-from credit.constants import CREDIT_RESOLUTION, CREDIT_STATUS, LogAction
+from credit.constants import CreditResolution, CreditStatus, LogAction
 from credit.models import Credit
 from payment.constants import PaymentStatus
 from payment.models import BillingAddress
@@ -27,7 +27,7 @@ class CreditSerialiser(Serialiser):
 
     def get_queryset(self):
         queryset = Credit.objects_all \
-            .exclude(resolution=CREDIT_RESOLUTION.INITIAL) \
+            .exclude(resolution=CreditResolution.initial) \
             .exclude(payment__status=PaymentStatus.expired)
         if self.only_with_triggered_rules:
             queryset = queryset \
@@ -70,7 +70,7 @@ class CreditSerialiser(Serialiser):
     def serialise(self, record: Credit):
         status = record.status
         if status:
-            status = dict(CREDIT_STATUS.choices).get(status)
+            status = CreditStatus[status].label
         else:
             status = 'Anonymous'
 

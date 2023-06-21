@@ -10,7 +10,7 @@ from django.utils import timezone
 from model_utils.models import TimeStampedModel
 from mtp_common.utils import format_currency
 
-from credit.constants import CREDIT_RESOLUTION, CREDIT_STATUS, CREDIT_SOURCE, LogAction
+from credit.constants import CreditResolution, CreditStatus, CreditSource, LogAction
 from credit.managers import (
     CompletedCreditManager,
     CreditingTimeManager,
@@ -29,6 +29,7 @@ from credit.signals import (
     credit_reviewed,
     credit_set_manual,
 )
+from payment.constants import PaymentStatus
 from prison.models import Prison, PrisonerLocation
 
 logger = logging.getLogger('mtp')
@@ -43,7 +44,8 @@ class Credit(TimeStampedModel):
     prisoner_name = models.CharField(blank=True, null=True, max_length=250)
     prison = models.ForeignKey(Prison, blank=True, null=True, on_delete=models.SET_NULL)
 
-    resolution = models.CharField(max_length=50, choices=CREDIT_RESOLUTION.choices, default=CREDIT_RESOLUTION.PENDING,
+    resolution = models.CharField(max_length=50,
+                                  choices=CreditResolution.choices, default=CreditResolution.pending.value,
                                   db_index=True)
     reconciled = models.BooleanField(default=False)
     reviewed = models.BooleanField(default=False)
@@ -67,27 +69,27 @@ class Credit(TimeStampedModel):
 
     # NB: there are matching boolean fields or properties on the model instance for each
     STATUS_LOOKUP = {
-        CREDIT_STATUS.CREDIT_PENDING: (
+        CreditStatus.credit_pending.value: (
             Q(blocked=False) &
             Q(prison__isnull=False) &
-            (Q(resolution=CREDIT_RESOLUTION.PENDING) | Q(resolution=CREDIT_RESOLUTION.MANUAL))
+            (Q(resolution=CreditResolution.pending) | Q(resolution=CreditResolution.manual))
         ),
-        CREDIT_STATUS.CREDITED: (
-            Q(resolution=CREDIT_RESOLUTION.CREDITED)
+        CreditStatus.credited.value: (
+            Q(resolution=CreditResolution.credited)
         ),
-        CREDIT_STATUS.REFUNDED: (
-            Q(resolution=CREDIT_RESOLUTION.REFUNDED)
+        CreditStatus.refunded.value: (
+            Q(resolution=CreditResolution.refunded)
         ),
-        CREDIT_STATUS.REFUND_PENDING: (
+        CreditStatus.refund_pending.value: (
             (Q(prison__isnull=True) | Q(blocked=True)) &
-            Q(resolution=CREDIT_RESOLUTION.PENDING) &
+            Q(resolution=CreditResolution.pending) &
             (
                 Q(transaction__isnull=True) |
                 Q(transaction__incomplete_sender_info=False)
             )
         ),
-        CREDIT_STATUS.FAILED: (
-            Q(resolution=CREDIT_RESOLUTION.FAILED)
+        CreditStatus.failed.value: (
+            Q(resolution=CreditResolution.failed)
         ),
     }
 
@@ -120,7 +122,7 @@ class Credit(TimeStampedModel):
         )
 
     def credit_prisoner(self, by_user, nomis_transaction_id=None):
-        self.resolution = CREDIT_RESOLUTION.CREDITED
+        self.resolution = CreditResolution.credited.value
         self.owner = by_user
         if nomis_transaction_id:
             self.nomis_transaction_id = nomis_transaction_id
@@ -143,14 +145,15 @@ class Credit(TimeStampedModel):
 
     def attach_profiles(self, ignore_credit_resolution=False):
         from security.models import PrisonerProfile, SenderProfile
-        assert ignore_credit_resolution or self.resolution != CREDIT_RESOLUTION.FAILED, \
+
+        assert ignore_credit_resolution or self.resolution != CreditResolution.failed.value, \
             'Do not attach profiles for failed credits outside of test setup'
 
         if not self.prisoner_profile and self.prison and self.prisoner_name:
             self.prisoner_profile = PrisonerProfile.objects.create_or_update_for_credit(self)
         if not self.sender_profile and self.has_enough_detail_for_sender_profile():
             self.sender_profile = SenderProfile.objects.create_or_update_for_credit(self)
-        if self.resolution != CREDIT_RESOLUTION.FAILED and self.prisoner_profile and self.sender_profile:
+        if self.resolution != CreditResolution.failed.value and self.prisoner_profile and self.sender_profile:
             # Annoyingly we still have to add this resolution clause for test setup, due to the fact that our test setup
             # does not go through the realistic state mutation properly, simply creating entities in their final state
             self.prisoner_profile.add_sender(self.sender_profile)
@@ -194,13 +197,10 @@ class Credit(TimeStampedModel):
                 self.sender_profile.remove_prison(self.prison)
 
     def should_check(self):
-        from credit.constants import CREDIT_RESOLUTION
-        from payment.constants import PaymentStatus
-
-        if self.resolution != CREDIT_RESOLUTION.INITIAL:
+        if self.resolution != CreditResolution.initial.value:
             # it's too late once credits reach any other resolution
             return False
-        if self.source != CREDIT_SOURCE.ONLINE:
+        if self.source != CreditSource.online.value:
             # checks only apply to debit card payments
             return False
         if self.payment.status != PaymentStatus.pending.value:
@@ -210,7 +210,7 @@ class Credit(TimeStampedModel):
         return self.has_enough_detail_for_sender_profile()
 
     def has_enough_detail_for_sender_profile(self):
-        if self.source == CREDIT_SOURCE.ONLINE:
+        if self.source == CreditSource.online.value:
             return all(
                 getattr(self.payment, field)
                 for field in (
@@ -219,7 +219,7 @@ class Credit(TimeStampedModel):
                     'billing_address',
                 )
             )
-        elif self.source == CREDIT_SOURCE.BANK_TRANSFER:
+        elif self.source == CreditSource.bank_transfer.value:
             return all(
                 getattr(self.transaction, field)
                 for field in (
@@ -230,11 +230,11 @@ class Credit(TimeStampedModel):
     @property
     def source(self):
         if hasattr(self, 'transaction'):
-            return CREDIT_SOURCE.BANK_TRANSFER
+            return CreditSource.bank_transfer.value
         elif hasattr(self, 'payment'):
-            return CREDIT_SOURCE.ONLINE
+            return CreditSource.online.value
         else:
-            return CREDIT_SOURCE.UNKNOWN
+            return CreditSource.unknown.value
 
     @property
     def intended_recipient(self):
@@ -245,28 +245,28 @@ class Credit(TimeStampedModel):
     def credit_pending(self):
         return (
             self.prison is not None and
-            (self.resolution == CREDIT_RESOLUTION.PENDING or
-             self.resolution == CREDIT_RESOLUTION.MANUAL) and
+            (self.resolution == CreditResolution.pending.value or
+             self.resolution == CreditResolution.manual.value) and
             not self.blocked
         )
 
     @property
     def credited(self):
-        return self.resolution == CREDIT_RESOLUTION.CREDITED
+        return self.resolution == CreditResolution.credited.value
 
     @property
     def refunded(self):
-        return self.resolution == CREDIT_RESOLUTION.REFUNDED
+        return self.resolution == CreditResolution.refunded.value
 
     @property
     def failed(self):
-        return self.resolution == CREDIT_RESOLUTION.FAILED
+        return self.resolution == CreditResolution.failed.value
 
     @property
     def refund_pending(self):
         return (
             (self.prison is None or self.blocked) and
-            self.resolution == CREDIT_RESOLUTION.PENDING and
+            self.resolution == CreditResolution.pending.value and
             (
                 not hasattr(self, 'transaction') or
                 not self.transaction.incomplete_sender_info
@@ -276,15 +276,15 @@ class Credit(TimeStampedModel):
     @property
     def status(self):
         if self.credit_pending:
-            return CREDIT_STATUS.CREDIT_PENDING
+            return CreditStatus.credit_pending.value
         elif self.credited:
-            return CREDIT_STATUS.CREDITED
+            return CreditStatus.credited.value
         elif self.refund_pending:
-            return CREDIT_STATUS.REFUND_PENDING
+            return CreditStatus.refund_pending.value
         elif self.refunded:
-            return CREDIT_STATUS.REFUNDED
+            return CreditStatus.refunded.value
         elif self.failed:
-            return CREDIT_STATUS.FAILED
+            return CreditStatus.failed.value
 
     @property
     def owner_name(self):
@@ -345,13 +345,13 @@ class Credit(TimeStampedModel):
 
     @property
     def credited_at(self):
-        if not self.resolution == CREDIT_RESOLUTION.CREDITED:
+        if not self.resolution == CreditResolution.credited.value:
             return None
         return self.log_set.get_action_date(LogAction.credited)
 
     @property
     def refunded_at(self):
-        if not self.resolution == CREDIT_RESOLUTION.REFUNDED:
+        if not self.resolution == CreditResolution.refunded.value:
             return None
         return self.log_set.get_action_date(LogAction.refunded)
 
@@ -472,8 +472,8 @@ class PrivateEstateBatch(TimeStampedModel):
 def update_prison_for_credit(instance, created, **kwargs):
     if (created and
             instance.reconciled is False and
-            (instance.resolution is CREDIT_RESOLUTION.INITIAL or
-             instance.resolution is CREDIT_RESOLUTION.PENDING) and
+            (instance.resolution is CreditResolution.initial.value or
+             instance.resolution is CreditResolution.pending.value) and
             instance.owner is None):
         try:
             location = PrisonerLocation.objects.get(

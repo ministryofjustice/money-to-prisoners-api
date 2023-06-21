@@ -16,7 +16,7 @@ import openpyxl
 from openpyxl.cell import WriteOnlyCell
 from openpyxl.utils import get_column_letter
 
-from credit.constants import CREDIT_STATUS, LogAction as CreditLogAction
+from credit.constants import CreditStatus, LogAction as CreditLogAction
 from credit.models import Credit
 from disbursement.constants import DisbursementResolution, DisbursementMethod, LogAction as DisbursementLogAction
 from disbursement.models import Disbursement
@@ -238,7 +238,7 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
         row = super().serialise(worksheet, record, triggered)
         status = record.status
         if status:
-            status = str(dict(CREDIT_STATUS.choices).get(status))
+            status = str(CreditStatus[status].label)
         else:
             status = 'Anonymous'
         row.update({

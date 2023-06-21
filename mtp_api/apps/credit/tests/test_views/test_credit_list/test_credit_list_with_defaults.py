@@ -18,7 +18,7 @@ class CreditListWithDefaultsTestCase(CreditListTestCase):
             if credit.sender_name:
                 search = credit.sender_name[:-4].strip()
         self._test_response_with_filters({
-            'sender_name': search
+            'sender_name': search,
         })
 
     def test_filter_by_prisoner_name(self):
@@ -28,7 +28,7 @@ class CreditListWithDefaultsTestCase(CreditListTestCase):
             if credit.prisoner_name:
                 search = credit.prisoner_name[:-4].strip()
         self._test_response_with_filters({
-            'prisoner_name': search
+            'prisoner_name': search,
         })
 
     def test_filter_by_prison_region(self):
@@ -38,7 +38,7 @@ class CreditListWithDefaultsTestCase(CreditListTestCase):
             if credit.prison:
                 search = credit.prison.region
         self._test_response_with_filters({
-            'prison_region': search
+            'prison_region': search,
         })
 
     def test_filter_by_prison_population(self):
@@ -48,7 +48,7 @@ class CreditListWithDefaultsTestCase(CreditListTestCase):
             if credit.prison:
                 search = credit.prison.populations.first().name
         self._test_response_with_filters({
-            'prison_population': search
+            'prison_population': search,
         })
 
     def test_filter_by_prison_category(self):
@@ -58,7 +58,7 @@ class CreditListWithDefaultsTestCase(CreditListTestCase):
             if credit.prison:
                 search = credit.prison.categories.first().name
         self._test_response_with_filters({
-            'prison_category': search
+            'prison_category': search,
         })
 
     def test_filter_by_multiple_prison_categories(self):
@@ -68,7 +68,7 @@ class CreditListWithDefaultsTestCase(CreditListTestCase):
             if credit.prison and credit.prison.categories.first().name not in search:
                 search.append(credit.prison.categories.first().name)
         self._test_response_with_filters({
-            'prison_category': search
+            'prison_category': search,
         })
 
     def test_filter_by_pks(self):
@@ -78,12 +78,12 @@ class CreditListWithDefaultsTestCase(CreditListTestCase):
             if credit.pk not in search:
                 search.append(credit.pk)
         self._test_response_with_filters({
-            'pk': search
+            'pk': search,
         })
 
     def test_exclude_credit__in(self):
         credits = self.credits.copy()
         credit_to_exclude = credits.pop(0)
         self._test_response_with_filters({
-            'exclude_credit__in': [credit_to_exclude.id]
+            'exclude_credit__in': [credit_to_exclude.id],
         })

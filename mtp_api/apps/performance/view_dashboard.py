@@ -5,7 +5,8 @@ from django.utils import timezone
 from django.views.generic import TemplateView
 import requests
 
-from credit.models import Credit, CREDIT_RESOLUTION
+from credit.constants import CreditResolution
+from credit.models import Credit
 from core.views import AdminViewMixin
 from disbursement.constants import DisbursementResolution, DisbursementMethod
 from disbursement.models import Disbursement
@@ -52,7 +53,7 @@ def get_overall_stats(start_date, end_date):
 
 def get_stats_by_method(start_date, end_date):
     credit_queryset = Credit.objects.filter(received_at__range=(start_date, end_date),
-                                            resolution=CREDIT_RESOLUTION.CREDITED)
+                                            resolution=CreditResolution.credited)
     credit_bank_transfer_count = credit_queryset.filter(transaction__isnull=False).count()
     credit_debit_card_count = credit_queryset.filter(payment__isnull=False).count()
 
@@ -103,7 +104,7 @@ def savings_for_financial_year(today):
     digital_takeup = queryset_digital_takeup.mean_digital_takeup()
 
     post = post_count(digital_takeup, digital_count)
-    digital = queryset_digital.filter(resolution=CREDIT_RESOLUTION.CREDITED).count()
+    digital = queryset_digital.filter(resolution=CreditResolution.credited).count()
 
     total_cost_post = post * COST_PER_TRANSACTION_BY_POST
     total_cost_digital = digital * COST_PER_TRANSACTION_BY_DIGITAL

@@ -7,5 +7,5 @@ class CreditListWithDefaultStatusAndPrisonTestCase(CreditListTestCase):
         Returns all credits managed by the passed-in user
         """
         self._test_response_with_filters({
-            'user': self.prison_clerks[1].pk
+            'user': self.prison_clerks[1].pk,
         })

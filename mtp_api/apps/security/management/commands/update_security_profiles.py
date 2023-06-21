@@ -1,7 +1,7 @@
 from django.db.transaction import atomic
 from django.core.management import BaseCommand, CommandError
 
-from credit.constants import CREDIT_RESOLUTION
+from credit.constants import CreditResolution
 from credit.models import Credit
 from disbursement.constants import DisbursementResolution
 from disbursement.models import Disbursement
@@ -65,7 +65,7 @@ class Command(BaseCommand):
         # to be associated, therefore if the sender profile is not associated we know it also needs a prisoner profile
         prisoner_profiles = PrisonerProfile.objects.filter(
             credits__is_counted_in_prisoner_profile_total=False,
-            credits__resolution=CREDIT_RESOLUTION.CREDITED
+            credits__resolution=CreditResolution.credited,
         ).order_by('pk').values_list('pk', flat=True)
         self.batch_and_execute_entity_calculation(
             prisoner_profiles, 'prisoner profiles', self.calculate_credit_totals_for_prisoner_profiles, batch_size,
@@ -77,7 +77,7 @@ class Command(BaseCommand):
         # this job once per sender/sender profile instead of once per credit
         sender_profiles = SenderProfile.objects.filter(
             credits__is_counted_in_sender_profile_total=False,
-            credits__resolution=CREDIT_RESOLUTION.CREDITED
+            credits__resolution=CreditResolution.credited,
         ).order_by('pk').values_list('pk', flat=True)
         self.batch_and_execute_entity_calculation(
             sender_profiles, 'sender profiles', self.calculate_credit_totals_for_sender_profiles, batch_size,

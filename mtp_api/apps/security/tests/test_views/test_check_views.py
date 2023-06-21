@@ -12,7 +12,7 @@ from rest_framework.test import APITestCase
 
 from core.tests.utils import format_date_or_datetime, make_test_users, create_security_fiu_user, FLAKY_TEST_WARNING
 from credit.models import Credit
-from credit.constants import CREDIT_RESOLUTION
+from credit.constants import CreditResolution
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from payment.tests.utils import generate_payments
 from prison.tests.utils import load_random_prisoner_locations
@@ -47,7 +47,7 @@ class BaseCheckTestCase(APITestCase, AuthTestCaseMixin):
 
     def generate_checks(self):
         # create a pending check for each credit in initial state
-        for credit in Credit.objects_all.filter(resolution=CREDIT_RESOLUTION.INITIAL):
+        for credit in Credit.objects_all.filter(resolution=CreditResolution.initial):
             baker.make(
                 Check,
                 credit=credit,
@@ -56,7 +56,7 @@ class BaseCheckTestCase(APITestCase, AuthTestCaseMixin):
                 description=['Failed rules'],
             )
 
-        for credit in Credit.objects_all.filter(resolution=CREDIT_RESOLUTION.FAILED):
+        for credit in Credit.objects_all.filter(resolution=CreditResolution.failed):
             baker.make(
                 Check,
                 credit=credit,
@@ -326,14 +326,14 @@ class CheckListTestCase(BaseCheckTestCase):
         """
         # change one check.credit to test that it shouldn't get included in the response
         check = Check.objects.filter(status=CheckStatus.pending).first()
-        check.credit.resolution = CREDIT_RESOLUTION.FAILED
+        check.credit.resolution = CreditResolution.failed.value
         check.credit.save()
 
         auth = self.get_http_authorization_for_user(self._get_authorised_user())
         response = self.client.get(
             reverse('security-check-list'),
             {
-                'credit_resolution': CREDIT_RESOLUTION.INITIAL,
+                'credit_resolution': CreditResolution.initial.value,
             },
             format='json',
             HTTP_AUTHORIZATION=auth,

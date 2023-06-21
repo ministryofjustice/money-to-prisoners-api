@@ -9,13 +9,16 @@ from mtp_common.utils import format_currency
 
 from core.dashboards import DashboardModule
 from core.views import DashboardView
-from credit.models import Credit, CREDIT_STATUS
+from credit.constants import CreditStatus
+from credit.models import Credit
 from disbursement.models import Disbursement, DisbursementResolution
 from performance.models import DigitalTakeup
 from transaction.utils import format_currency_truncated, format_number, format_percentage
 
-CREDITABLE_FILTERS = Credit.STATUS_LOOKUP[CREDIT_STATUS.CREDITED] | \
-                     Credit.STATUS_LOOKUP[CREDIT_STATUS.CREDIT_PENDING]
+CREDITABLE_FILTERS = (
+    Credit.STATUS_LOOKUP[CreditStatus.credited.value] |
+    Credit.STATUS_LOOKUP[CreditStatus.credit_pending.value]
+)
 
 
 def valid_credit_stats(since, until=None):

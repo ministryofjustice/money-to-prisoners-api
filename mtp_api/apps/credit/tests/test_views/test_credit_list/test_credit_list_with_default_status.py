@@ -8,5 +8,5 @@ class CreditListWithDefaultStatusTestCase(CreditListTestCase):
         """
         self._test_response_with_filters({
             'prison': self.prisons[0].pk,
-            'user': self.prison_clerks[1].pk
+            'user': self.prison_clerks[1].pk,
         })
