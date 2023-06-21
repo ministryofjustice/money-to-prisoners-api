@@ -14,7 +14,7 @@ from credit.constants import CREDIT_RESOLUTION
 from credit.models import Credit
 from disbursement.models import Disbursement
 from disbursement.tests.utils import generate_disbursements
-from notification.constants import EMAIL_FREQUENCY
+from notification.constants import EmailFrequency
 from notification.management.commands.send_notification_emails import (
     EMAILS_STARTED_FLAG,
     get_events, group_events, summarise_group,
@@ -59,7 +59,7 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
     def test_does_not_send_email_notifications_for_no_events(self, mock_send_email):
         user = self.security_staff[0]
         user.flags.create(name=EMAILS_STARTED_FLAG)
-        EmailNotificationPreferences(user=user, frequency=EMAIL_FREQUENCY.DAILY).save()
+        EmailNotificationPreferences(user=user, frequency=EmailFrequency.daily).save()
         call_command('send_notification_emails')
 
         self.assertFalse(Event.objects.exists())
@@ -69,7 +69,7 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
     def test_does_not_send_email_notifications_for_no_monitoring(self, mock_send_email):
         user = self.security_staff[0]
         user.flags.create(name=EMAILS_STARTED_FLAG)
-        EmailNotificationPreferences(user=user, frequency=EMAIL_FREQUENCY.DAILY).save()
+        EmailNotificationPreferences(user=user, frequency=EmailFrequency.daily).save()
         call_command('update_security_profiles')
         call_command('send_notification_emails')
 
@@ -79,7 +79,7 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
 
     def test_sends_first_email_not_monitoring(self, mock_send_email):
         user = self.security_staff[0]
-        EmailNotificationPreferences(user=user, frequency=EMAIL_FREQUENCY.DAILY).save()
+        EmailNotificationPreferences(user=user, frequency=EmailFrequency.daily).save()
         call_command('update_security_profiles')
         call_command('send_notification_emails')
 
@@ -91,7 +91,7 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
 
     def test_sends_first_email_with_events(self, mock_send_email):
         user = self.security_staff[0]
-        EmailNotificationPreferences(user=user, frequency=EMAIL_FREQUENCY.DAILY).save()
+        EmailNotificationPreferences(user=user, frequency=EmailFrequency.daily).save()
         self.create_profiles_but_unlink_objects()
         for profile in PrisonerProfile.objects.all():
             profile.monitoring_users.add(user)
@@ -111,7 +111,7 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
     def test_sends_subsequent_email_with_events(self, mock_send_email):
         user = self.security_staff[0]
         user.flags.create(name=EMAILS_STARTED_FLAG)
-        EmailNotificationPreferences(user=user, frequency=EMAIL_FREQUENCY.DAILY).save()
+        EmailNotificationPreferences(user=user, frequency=EmailFrequency.daily).save()
         self.create_profiles_but_unlink_objects()
         for profile in DebitCardSenderDetails.objects.all():
             profile.monitoring_users.add(user)
@@ -198,7 +198,7 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
 
         user = self.security_staff[0]
         user.flags.create(name=EMAILS_STARTED_FLAG)
-        EmailNotificationPreferences(user=user, frequency=EMAIL_FREQUENCY.DAILY).save()
+        EmailNotificationPreferences(user=user, frequency=EmailFrequency.daily).save()
         self.create_profiles_but_unlink_objects()
         for profile in DebitCardSenderDetails.objects.all():
             profile.monitoring_users.add(user)

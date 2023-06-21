@@ -6,10 +6,8 @@ from django.utils.translation import gettext_lazy as _
 
 from credit.models import Credit
 from disbursement.models import Disbursement
-from notification.constants import EMAIL_FREQUENCY
-from security.models import (
-    SenderProfile, RecipientProfile, PrisonerProfile,
-)
+from notification.constants import EmailFrequency
+from security.models import SenderProfile, RecipientProfile, PrisonerProfile
 
 
 def validate_rule_code(value):
@@ -100,5 +98,5 @@ class EmailNotificationPreferences(models.Model):
     NB: only DAILY is currently supported in noms-ops and email-sending management command
     """
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    frequency = models.CharField(max_length=50, choices=EMAIL_FREQUENCY.choices)
+    frequency = models.CharField(max_length=50, choices=EmailFrequency.choices)
     last_sent_at = models.DateField(blank=True, null=True)

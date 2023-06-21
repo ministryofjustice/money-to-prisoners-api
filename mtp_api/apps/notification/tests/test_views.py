@@ -8,7 +8,7 @@ from model_bakery import baker
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from notification.constants import EMAIL_FREQUENCY
+from notification.constants import EmailFrequency
 from notification.models import Event, EmailNotificationPreferences, PrisonerProfileEvent, SenderProfileEvent
 from notification.rules import RULES, ENABLED_RULE_CODES
 from core.tests.utils import make_test_users
@@ -357,28 +357,28 @@ class EmailPreferencesViewTestCase(AuthTestCaseMixin, APITestCase):
 
     def test_turn_on(self):
         response = self.client.post(
-            self.url, {'frequency': EMAIL_FREQUENCY.DAILY},
+            self.url, {'frequency': EmailFrequency.daily.value},
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.user)
         )
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(
             EmailNotificationPreferences.objects.get(user=self.user).frequency,
-            EMAIL_FREQUENCY.DAILY
+            EmailFrequency.daily.value,
         )
 
     def test_turn_off(self):
         EmailNotificationPreferences.objects.create(
-            user=self.user, frequency=EMAIL_FREQUENCY.DAILY
+            user=self.user, frequency=EmailFrequency.daily,
         )
 
         response = self.client.post(
-            self.url, {'frequency': EMAIL_FREQUENCY.NEVER},
+            self.url, {'frequency': EmailFrequency.never.value},
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.user)
         )
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(
             EmailNotificationPreferences.objects.get(user=self.user).frequency,
-            EMAIL_FREQUENCY.NEVER
+            EmailFrequency.never.value
         )
 
     def test_get_frequency(self):
@@ -388,23 +388,23 @@ class EmailPreferencesViewTestCase(AuthTestCaseMixin, APITestCase):
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.user)
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {'frequency': EMAIL_FREQUENCY.NEVER})
+        self.assertEqual(response.data, {'frequency': EmailFrequency.never.value})
 
         # check with daily frequency set
         EmailNotificationPreferences.objects.create(
-            user=self.user, frequency=EMAIL_FREQUENCY.DAILY
+            user=self.user, frequency=EmailFrequency.daily
         )
         response = self.client.get(
             self.url,
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.user)
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {'frequency': EMAIL_FREQUENCY.DAILY})
+        self.assertEqual(response.data, {'frequency': EmailFrequency.daily.value})
 
     def test_last_sent_maintained_if_turned_on_and_off(self):
         # turn on emails
         response = self.client.post(
-            self.url, {'frequency': EMAIL_FREQUENCY.DAILY},
+            self.url, {'frequency': EmailFrequency.daily.value},
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.user)
         )
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
@@ -418,7 +418,7 @@ class EmailPreferencesViewTestCase(AuthTestCaseMixin, APITestCase):
 
         # turn off emails and ensure last sent datetime was maintained
         response = self.client.post(
-            self.url, {'frequency': EMAIL_FREQUENCY.NEVER},
+            self.url, {'frequency': EmailFrequency.never.value},
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.user)
         )
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
@@ -427,7 +427,7 @@ class EmailPreferencesViewTestCase(AuthTestCaseMixin, APITestCase):
 
         # turn on emails and ensure last sent datetime was maintained
         response = self.client.post(
-            self.url, {'frequency': EMAIL_FREQUENCY.DAILY},
+            self.url, {'frequency': EmailFrequency.daily.value},
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.user)
         )
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
