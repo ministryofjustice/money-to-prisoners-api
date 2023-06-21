@@ -245,7 +245,7 @@ class CreditListFilter(BaseFilterSet):
         }
 
 
-class CreditViewMixin(object):
+class CreditViewMixin:
     root_queryset = Credit.objects
 
     def get_queryset(self):
