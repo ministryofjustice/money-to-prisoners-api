@@ -3,7 +3,7 @@
 
 {% block branding %}
   {% if APP_GIT_COMMIT %}
-    {% blocktrans trimmed with version=APP_GIT_COMMIT|truncatechars:7 asvar version_description %}
+    {% blocktrans asvar version_description trimmed with version=APP_GIT_COMMIT|truncatechars:7 %}
       App version {{ version }}
     {% endblocktrans %}
   {% else %}
