@@ -2,7 +2,7 @@ from django.conf import settings
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 
-from user_event_log.constants import USER_EVENT_KINDS
+from user_event_log.constants import UserEventKind
 
 
 class FlexibleDjangoJSONEncoder(DjangoJSONEncoder):
@@ -39,7 +39,7 @@ class UserEvent(models.Model):
         on_delete=models.CASCADE,
         related_name='user_events',
     )
-    kind = models.CharField(max_length=254, choices=USER_EVENT_KINDS.choices)
+    kind = models.CharField(max_length=254, choices=UserEventKind.choices)
     api_url_path = models.CharField(verbose_name='API URL path', max_length=5000, db_index=True)
     data = models.JSONField(null=True, encoder=FlexibleDjangoJSONEncoder)
 

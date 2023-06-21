@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.utils.timezone import make_aware
 from model_bakery import baker
 
-from user_event_log.constants import USER_EVENT_KINDS
+from user_event_log.constants import UserEventKind
 from user_event_log.utils import record_user_event
 
 User = get_user_model()
@@ -52,10 +52,10 @@ class RecordUserEventTestCase(TestCase):
 
         request = Mock(user=user, path='test-path')
         for data, expected_data in scenarios:
-            event = record_user_event(request, USER_EVENT_KINDS.NOMS_OPS_SEARCH, data=data)
+            event = record_user_event(request, UserEventKind.noms_ops_search, data=data)
             event.refresh_from_db()
 
             self.assertEqual(event.user, user)
-            self.assertEqual(event.kind, USER_EVENT_KINDS.NOMS_OPS_SEARCH)
+            self.assertEqual(event.kind, UserEventKind.noms_ops_search)
             self.assertEqual(event.api_url_path, 'test-path')
             self.assertEqual(event.data, expected_data)

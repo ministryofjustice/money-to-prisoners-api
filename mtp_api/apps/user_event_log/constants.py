@@ -1,6 +1,6 @@
 from django.db import models
-from django.utils.translation import gettext_lazy
+from django.utils.translation import gettext_lazy as _
 
 
-class USER_EVENT_KINDS(models.TextChoices):  # noqa: N801
-    NOMS_OPS_SEARCH = 'noms_ops_search', gettext_lazy('Search in Intelligence Tool')
+class UserEventKind(models.TextChoices):
+    noms_ops_search = 'noms_ops_search', _('Search in Intelligence Tool')

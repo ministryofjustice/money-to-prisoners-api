@@ -15,7 +15,7 @@ import django_filters.fields
 import django_filters.utils
 
 from mtp_auth.permissions import NomsOpsClientIDPermissions
-from user_event_log.constants import USER_EVENT_KINDS
+from user_event_log.constants import UserEventKind
 from user_event_log.utils import record_user_event
 
 
@@ -240,7 +240,7 @@ class LogNomsOpsSearchDjangoFilterBackend(DjangoFilterBackend):
             'filters': filters_used,
             'results': qs.count(),
         }
-        record_user_event(request, USER_EVENT_KINDS.NOMS_OPS_SEARCH, data)
+        record_user_event(request, UserEventKind.noms_ops_search, data)
 
     def filter_queryset(self, request, queryset, view):
         """
