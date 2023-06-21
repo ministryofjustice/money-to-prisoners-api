@@ -16,7 +16,7 @@ from credit.constants import CREDIT_RESOLUTION
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from payment.tests.utils import generate_payments
 from prison.tests.utils import load_random_prisoner_locations
-from security.constants import CHECK_STATUS
+from security.constants import CheckStatus
 from security.models import (
     Check,
     CheckAutoAcceptRule,
@@ -51,7 +51,7 @@ class BaseCheckTestCase(APITestCase, AuthTestCaseMixin):
             baker.make(
                 Check,
                 credit=credit,
-                status=CHECK_STATUS.PENDING,
+                status=CheckStatus.pending,
                 rules=['ABC', 'DEF'],
                 description=['Failed rules'],
             )
@@ -60,7 +60,7 @@ class BaseCheckTestCase(APITestCase, AuthTestCaseMixin):
             baker.make(
                 Check,
                 credit=credit,
-                status=CHECK_STATUS.REJECTED,
+                status=CheckStatus.rejected,
                 rules=['ABC', 'DEF'],
                 description=['Failed rules'],
                 actioned_at=now(),
@@ -73,7 +73,7 @@ class BaseCheckTestCase(APITestCase, AuthTestCaseMixin):
             baker.make(
                 Check,
                 credit=credit,
-                status=CHECK_STATUS.ACCEPTED,
+                status=CheckStatus.accepted,
                 rules=['ABC', 'DEF'],
                 description=['Failed rules'],
                 actioned_at=now(),
@@ -143,7 +143,7 @@ class BaseCheckTestCase(APITestCase, AuthTestCaseMixin):
             'assigned_to_name': actual_check_data['assigned_to_name'],
             'decision_reason': expected_check.decision_reason if expected_check.decision_reason else '',
             'rejection_reasons': (
-                expected_check.rejection_reasons if expected_check.status == CHECK_STATUS.REJECTED else {}
+                expected_check.rejection_reasons if expected_check.status == CheckStatus.rejected.value else {}
             ),
             'auto_accept_rule_state': {
                 'added_by': expected_check.auto_accept_rule_state.added_by,
@@ -204,7 +204,7 @@ class CheckListTestCase(BaseCheckTestCase):
         Test that the list endpoint only returns the checks in pending if a filter is passed in.
         """
         filters = {
-            'status': CHECK_STATUS.PENDING,
+            'status': CheckStatus.pending,
         }
 
         auth = self.get_http_authorization_for_user(self._get_authorised_user())
@@ -220,10 +220,10 @@ class CheckListTestCase(BaseCheckTestCase):
         response_data = response.json()
         self.assertEqual(
             response_data['count'],
-            Check.objects.filter(status=CHECK_STATUS.PENDING).count(),
+            Check.objects.filter(status=CheckStatus.pending.value).count(),
         )
         for item in response_data['results']:
-            self.assertEqual(item['status'], CHECK_STATUS.PENDING)
+            self.assertEqual(item['status'], CheckStatus.pending.value)
 
     def test_get_checks_for_specific_rule(self):
         """
@@ -325,7 +325,7 @@ class CheckListTestCase(BaseCheckTestCase):
         Test that the list endpoint can filter by credit resolution.
         """
         # change one check.credit to test that it shouldn't get included in the response
-        check = Check.objects.filter(status=CHECK_STATUS.PENDING).first()
+        check = Check.objects.filter(status=CheckStatus.pending).first()
         check.credit.resolution = CREDIT_RESOLUTION.FAILED
         check.credit.save()
 
@@ -342,7 +342,7 @@ class CheckListTestCase(BaseCheckTestCase):
         self.assertEqual(response.status_code, http_status.HTTP_200_OK)
         self.assertEqual(
             response.json()['count'],
-            Check.objects.filter(status=CHECK_STATUS.PENDING).count() - 1,
+            Check.objects.filter(status=CheckStatus.pending).count() - 1,
         )
 
     def test_check_filtering_by_actioned_by(self):
@@ -527,14 +527,14 @@ class PatchCheckTestCase(BaseCheckTestCase):
         self.assertEqual(response.status_code, http_status.HTTP_200_OK)
         actual_check_data = response.json()
 
-        self.assertNotEqual(check.status, CHECK_STATUS.ACCEPTED)
+        self.assertNotEqual(check.status, CheckStatus.accepted.value)
         self.client.patch(
             reverse(
                 'security-check-detail',
                 kwargs={'pk': check.pk},
             ),
             data={
-                'status': CHECK_STATUS.ACCEPTED
+                'status': CheckStatus.accepted.value,
             },
             format='json',
             HTTP_AUTHORIZATION=auth,
@@ -656,7 +656,7 @@ class AcceptCheckTestCase(BaseCheckTestCase):
         """
         Test that if the logged-in user doesn't have permissions, the view returns 403.
         """
-        check = Check.objects.filter(status=CHECK_STATUS.PENDING).first()
+        check = Check.objects.filter(status=CheckStatus.pending).first()
 
         auth = self.get_http_authorization_for_user(self._get_unauthorised_application_user())
         response = self.client.post(
@@ -680,7 +680,7 @@ class AcceptCheckTestCase(BaseCheckTestCase):
         """
         mocked_now.return_value = make_aware(datetime.datetime(2019, 4, 1))
 
-        check = Check.objects.filter(status=CHECK_STATUS.PENDING).first()
+        check = Check.objects.filter(status=CheckStatus.pending).first()
 
         authorised_user = self._get_authorised_user()
         auth = self.get_http_authorization_for_user(authorised_user)
@@ -700,7 +700,7 @@ class AcceptCheckTestCase(BaseCheckTestCase):
 
         check.refresh_from_db()
 
-        self.assertEqual(check.status, CHECK_STATUS.ACCEPTED)
+        self.assertEqual(check.status, CheckStatus.accepted.value)
         self.assertEqual(check.actioned_by, authorised_user)
         self.assertEqual(check.actioned_at, mocked_now())
 
@@ -711,7 +711,7 @@ class AcceptCheckTestCase(BaseCheckTestCase):
         """
         mocked_now.return_value = make_aware(datetime.datetime(2019, 4, 1))
 
-        check = Check.objects.filter(status=CHECK_STATUS.PENDING).first()
+        check = Check.objects.filter(status=CheckStatus.pending).first()
 
         authorised_user = self._get_authorised_user()
         auth = self.get_http_authorization_for_user(authorised_user)
@@ -732,7 +732,7 @@ class AcceptCheckTestCase(BaseCheckTestCase):
 
         check.refresh_from_db()
 
-        self.assertEqual(check.status, CHECK_STATUS.ACCEPTED)
+        self.assertEqual(check.status, CheckStatus.accepted.value)
         self.assertEqual(check.actioned_by, authorised_user)
         self.assertEqual(check.actioned_at, mocked_now())
 
@@ -743,7 +743,7 @@ class AcceptCheckTestCase(BaseCheckTestCase):
         """
         mocked_now.return_value = make_aware(datetime.datetime(2019, 1, 1))
 
-        check = Check.objects.filter(status=CHECK_STATUS.ACCEPTED).first()
+        check = Check.objects.filter(status=CheckStatus.accepted).first()
 
         authorised_user = self._get_authorised_user()
         auth = self.get_http_authorization_for_user(authorised_user)
@@ -763,14 +763,14 @@ class AcceptCheckTestCase(BaseCheckTestCase):
 
         check.refresh_from_db()
 
-        self.assertEqual(check.status, CHECK_STATUS.ACCEPTED)
+        self.assertEqual(check.status, CheckStatus.accepted.value)
         self.assertNotEqual(check.actioned_at, mocked_now())
 
     def test_cannot_accept_a_rejected_check(self):
         """
         Test that accepting a rejected check returns status code 400.
         """
-        check = Check.objects.filter(status=CHECK_STATUS.REJECTED).first()
+        check = Check.objects.filter(status=CheckStatus.rejected).first()
 
         authorised_user = self._get_authorised_user()
         auth = self.get_http_authorization_for_user(authorised_user)
@@ -797,7 +797,7 @@ class AcceptCheckTestCase(BaseCheckTestCase):
 
         check.refresh_from_db()
 
-        self.assertEqual(check.status, CHECK_STATUS.REJECTED)
+        self.assertEqual(check.status, CheckStatus.rejected.value)
 
 
 class RejectCheckTestCase(BaseCheckTestCase):
@@ -809,7 +809,7 @@ class RejectCheckTestCase(BaseCheckTestCase):
         """
         Test that if the logged-in user doesn't have permissions, the view returns 403.
         """
-        check = Check.objects.filter(status=CHECK_STATUS.PENDING).first()
+        check = Check.objects.filter(status=CheckStatus.pending).first()
 
         auth = self.get_http_authorization_for_user(self._get_unauthorised_application_user())
         response = self.client.post(
@@ -834,7 +834,7 @@ class RejectCheckTestCase(BaseCheckTestCase):
         """
         mocked_now.return_value = make_aware(datetime.datetime(2019, 4, 1))
 
-        check = Check.objects.filter(status=CHECK_STATUS.PENDING).first()
+        check = Check.objects.filter(status=CheckStatus.pending).first()
 
         authorised_user = self._get_authorised_user()
         auth = self.get_http_authorization_for_user(authorised_user)
@@ -856,7 +856,7 @@ class RejectCheckTestCase(BaseCheckTestCase):
 
         check.refresh_from_db()
 
-        self.assertEqual(check.status, CHECK_STATUS.REJECTED)
+        self.assertEqual(check.status, CheckStatus.rejected.value)
         self.assertEqual(check.actioned_by, authorised_user)
         self.assertEqual(check.actioned_at, mocked_now())
         self.assertEqual(check.decision_reason, reason)
@@ -868,7 +868,7 @@ class RejectCheckTestCase(BaseCheckTestCase):
         """
         mocked_now.return_value = make_aware(datetime.datetime(2019, 1, 1))
 
-        check = Check.objects.filter(status=CHECK_STATUS.REJECTED).first()
+        check = Check.objects.filter(status=CheckStatus.rejected).first()
 
         authorised_user = self._get_authorised_user()
         auth = self.get_http_authorization_for_user(authorised_user)
@@ -890,7 +890,7 @@ class RejectCheckTestCase(BaseCheckTestCase):
 
         check.refresh_from_db()
 
-        self.assertEqual(check.status, CHECK_STATUS.REJECTED)
+        self.assertEqual(check.status, CheckStatus.rejected.value)
         self.assertNotEqual(check.actioned_at, mocked_now())
         self.assertNotEqual(check.decision_reason, reason)
 
@@ -898,7 +898,7 @@ class RejectCheckTestCase(BaseCheckTestCase):
         """
         Test that rejecting a check without rejection_reason returns status code 400.
         """
-        check = Check.objects.filter(status=CHECK_STATUS.PENDING).first()
+        check = Check.objects.filter(status=CheckStatus.pending).first()
 
         authorised_user = self._get_authorised_user()
         auth = self.get_http_authorization_for_user(authorised_user)
@@ -925,13 +925,13 @@ class RejectCheckTestCase(BaseCheckTestCase):
 
         check.refresh_from_db()
 
-        self.assertEqual(check.status, CHECK_STATUS.PENDING)
+        self.assertEqual(check.status, CheckStatus.pending.value)
 
     def test_cannot_reject_an_accepted_check(self):
         """
         Test that rejecting a pending check returns status code 400.
         """
-        check = Check.objects.filter(status=CHECK_STATUS.ACCEPTED).first()
+        check = Check.objects.filter(status=CheckStatus.accepted).first()
 
         authorised_user = self._get_authorised_user()
         auth = self.get_http_authorization_for_user(authorised_user)
@@ -959,7 +959,7 @@ class RejectCheckTestCase(BaseCheckTestCase):
 
         check.refresh_from_db()
 
-        self.assertEqual(check.status, CHECK_STATUS.ACCEPTED)
+        self.assertEqual(check.status, CheckStatus.accepted.value)
 
 
 class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):

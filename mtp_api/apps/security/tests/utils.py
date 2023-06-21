@@ -18,7 +18,7 @@ from prison.models import Prison
 from payment.models import Payment, PAYMENT_STATUS
 from payment.tests.utils import create_fake_sender_data, generate_payments
 from prison.tests.utils import random_prisoner_number
-from security.constants import CHECK_STATUS
+from security.constants import CheckStatus
 from security.models import (
     CardholderName,
     Check,
@@ -230,7 +230,9 @@ def generate_checks(
         else:
             check = candidate_payment.credit.security_check
             if (not overrides or 'state' not in overrides) and j % 5:
-                check.status = random.choice([CHECK_STATUS.ACCEPTED, CHECK_STATUS.REJECTED])
+                check.status = random.choice(
+                    [CheckStatus.accepted.value, CheckStatus.rejected.value]
+                )
                 check.actioned_at = timezone.localtime()
                 check.actioned_by = random.choice(Group.objects.filter(name='FIU').first().user_set.all())
                 check.save()
@@ -245,7 +247,7 @@ def generate_checks(
 def generate_auto_accept_rules():
     # Add auto-accept rules
     checks = Check.objects.filter(
-        status=CHECK_STATUS.ACCEPTED,
+        status=CheckStatus.accepted,
         credit__payment__billing_address__debit_card_sender_details__isnull=False,
         credit__prisoner_profile__isnull=False
     ).distinct(

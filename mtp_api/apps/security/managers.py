@@ -393,7 +393,7 @@ class CheckManager(models.Manager):
 
     def create_for_credit(self, credit):
         from notification.rules import RULES
-        from security.constants import CHECK_STATUS
+        from security.constants import CheckStatus
         from security.models import CheckAutoAcceptRule
 
         matched_rule_codes = self._get_matching_rules(credit)
@@ -405,16 +405,16 @@ class CheckManager(models.Manager):
                 # If active auto_accept rule:
                 # * `auto_accept_rule` will be `CheckAutoAcceptRule()`
                 # * No FIU check required
-                status = CHECK_STATUS.ACCEPTED
+                status = CheckStatus.accepted.value
                 auto_accept_rule_state = auto_accept_rule.get_latest_state()
             else:
                 # If no active auto_accept rule:
                 # * `auto_accept_rule` will be None
                 # * FIU check required
-                status = CHECK_STATUS.PENDING
+                status = CheckStatus.pending.value
         else:
             description = ['Credit matched no rules and was automatically accepted']
-            status = CHECK_STATUS.ACCEPTED
+            status = CheckStatus.accepted.value
 
         return self.create(
             credit=credit,

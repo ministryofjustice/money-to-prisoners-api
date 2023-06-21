@@ -6,7 +6,7 @@ from core.dump import Serialiser
 from credit.constants import CREDIT_RESOLUTION, CREDIT_STATUS, LogAction
 from credit.models import Credit
 from payment.models import PAYMENT_STATUS, BillingAddress
-from security.models import CHECK_STATUS
+from security.constants import CheckStatus
 
 
 class CreditSerialiser(Serialiser):
@@ -132,7 +132,7 @@ class CreditSerialiser(Serialiser):
         if hasattr(record, 'security_check'):
             security_check = record.security_check
             security_check_description = '; '.join(security_check.description)
-            security_check_status = dict(CHECK_STATUS.choices).get(security_check.status)
+            security_check_status = CheckStatus[security_check.status].label
             security_check_actioned_by = security_check.actioned_by.username if security_check.actioned_by else ''
             if len(security_check.rules) > 0:
                 security_check_rules = security_check.rules

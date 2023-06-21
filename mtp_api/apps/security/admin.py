@@ -7,10 +7,11 @@ from django.utils.translation import gettext, gettext_lazy as _
 from mtp_common.utils import format_currency
 
 from core.admin import add_short_description
+from security.constants import CheckStatus
 from security.models import (
     BankTransferRecipientDetails,
     BankTransferSenderDetails,
-    Check, CHECK_STATUS,
+    Check,
     DebitCardSenderDetails,
     PrisonerProfile,
     RecipientProfile,
@@ -205,7 +206,7 @@ class CheckAdmin(admin.ModelAdmin):
             'FIU have accepted %(accepted_count)s and rejected %(rejected_count)s credits, '
             'with %(pending_count)s still pending.'
         ) % {
-            'accepted_count': queryset.filter(status=CHECK_STATUS.ACCEPTED, actioned_by__isnull=False).count(),
-            'rejected_count': queryset.filter(status=CHECK_STATUS.REJECTED).count(),
-            'pending_count': queryset.filter(status=CHECK_STATUS.PENDING).count(),
+            'accepted_count': queryset.filter(status=CheckStatus.accepted, actioned_by__isnull=False).count(),
+            'rejected_count': queryset.filter(status=CheckStatus.rejected).count(),
+            'pending_count': queryset.filter(status=CheckStatus.pending).count(),
         })

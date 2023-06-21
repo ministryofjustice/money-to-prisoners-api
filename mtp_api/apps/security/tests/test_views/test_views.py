@@ -21,7 +21,7 @@ from mtp_common.test_utils import silence_logger
 from payment.constants import PAYMENT_STATUS
 from payment.tests.utils import generate_payments
 from prison.tests.utils import load_random_prisoner_locations
-from security.constants import CHECK_STATUS
+from security.constants import CheckStatus
 from security.models import (
     Check,
     PrisonerProfile,
@@ -309,10 +309,10 @@ class SenderCreditListTestCase(SecurityViewTestCase):
         user = self._get_authorised_user()
         for credit in sender.credits.all():
             check = Check.objects.create_for_credit(credit)
-            if check.status == CHECK_STATUS.PENDING:
+            if check.status == CheckStatus.pending.value:
                 check.reject(user, 'looks dodgy', {'payment_source_linked_other_prisoners': True})
                 rejected_checks.append(credit.id)
-            elif check.status == CHECK_STATUS.ACCEPTED:
+            elif check.status == CheckStatus.accepted.value:
                 accepted_checks.append(credit.id)
 
         # Execute
@@ -702,10 +702,10 @@ class PrisonerCreditListTestCase(SecurityViewTestCase):
         user = self._get_authorised_user()
         for credit in prisoner.credits.all():
             check = Check.objects.create_for_credit(credit)
-            if check.status == CHECK_STATUS.PENDING:
+            if check.status == CheckStatus.pending.value:
                 check.reject(user, 'looks dodgy', {'payment_source_linked_other_prisoners': True})
                 rejected_checks.append(credit.id)
-            elif check.status == CHECK_STATUS.ACCEPTED:
+            elif check.status == CheckStatus.accepted.value:
                 accepted_checks.append(credit.id)
 
         # Execute

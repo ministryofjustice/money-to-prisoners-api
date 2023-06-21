@@ -12,7 +12,7 @@ from model_utils.models import TimeStampedModel
 
 from core.models import ScheduledCommand
 from prison.models import Prison
-from security.constants import CHECK_STATUS
+from security.constants import CheckStatus
 from security.managers import (
     PrisonerProfileManager, SenderProfileManager, RecipientProfileManager,
     CheckManager, CheckAutoAcceptRuleManager
@@ -294,7 +294,7 @@ class Check(TimeStampedModel):
     )
     status = models.CharField(
         max_length=50,
-        choices=CHECK_STATUS.choices,
+        choices=CheckStatus.choices,
         db_index=True,
     )
     description = ArrayField(
@@ -352,15 +352,15 @@ class Check(TimeStampedModel):
 
         :raise: django.core.exceptions.ValidationError if the check is in status 'rejected'.
         """
-        if self.status == CHECK_STATUS.ACCEPTED:
+        if self.status == CheckStatus.accepted.value:
             return
 
-        if self.status == CHECK_STATUS.REJECTED:
+        if self.status == CheckStatus.rejected.value:
             raise ValidationError({
                 'status': ValidationError(_('Cannot accept a rejected check.'), 'conflict'),
             })
 
-        self.status = CHECK_STATUS.ACCEPTED
+        self.status = CheckStatus.accepted.value
         self.actioned_by = by
         self.actioned_at = now()
         self.decision_reason = reason
@@ -372,15 +372,15 @@ class Check(TimeStampedModel):
 
         :raise: django.core.exceptions.ValidationError if the check is in status 'accepted'.
         """
-        if self.status == CHECK_STATUS.REJECTED:
+        if self.status == CheckStatus.rejected.value:
             return
 
-        if self.status == CHECK_STATUS.ACCEPTED:
+        if self.status == CheckStatus.accepted.value:
             raise ValidationError({
                 'status': ValidationError(_('Cannot reject an accepted check.'), 'conflict'),
             })
 
-        self.status = CHECK_STATUS.REJECTED
+        self.status = CheckStatus.rejected.value
         self.actioned_by = by
         self.actioned_at = now()
         self.decision_reason = reason

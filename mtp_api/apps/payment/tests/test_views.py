@@ -15,7 +15,7 @@ from payment.models import Batch, BillingAddress, Payment
 from payment.constants import PAYMENT_STATUS
 from payment.tests.utils import generate_payments
 from prison.tests.utils import load_random_prisoner_locations
-from security.models import CHECK_STATUS
+from security.constants import CheckStatus
 
 User = get_user_model()
 
@@ -512,12 +512,12 @@ class GetPaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         )
         retrieved_payment = response.data
         security_check = retrieved_payment['security_check']
-        self.assertEqual(security_check['status'], CHECK_STATUS.ACCEPTED)
+        self.assertEqual(security_check['status'], CheckStatus.accepted.value)
         self.assertEqual(security_check['user_actioned'], False)
 
         # reset check to pending
         check = payment.credit.security_check
-        check.status = CHECK_STATUS.PENDING
+        check.status = CheckStatus.pending.value
         check.description = ['Credit matched FIU monitoring rules']
         check.rules = ['FIUMONP']
         check.save()
@@ -527,7 +527,7 @@ class GetPaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         )
         retrieved_payment = response.data
         security_check = retrieved_payment['security_check']
-        self.assertEqual(security_check['status'], CHECK_STATUS.PENDING)
+        self.assertEqual(security_check['status'], CheckStatus.pending.value)
         self.assertEqual(security_check['user_actioned'], False)
 
         # mock rejected check
@@ -538,7 +538,7 @@ class GetPaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         )
         retrieved_payment = response.data
         security_check = retrieved_payment['security_check']
-        self.assertEqual(security_check['status'], CHECK_STATUS.REJECTED)
+        self.assertEqual(security_check['status'], CheckStatus.rejected.value)
         self.assertEqual(security_check['user_actioned'], True)
 
 
