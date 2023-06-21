@@ -4,7 +4,7 @@ from rest_framework import serializers
 from credit.constants import CREDIT_RESOLUTION
 from credit.models import Credit
 from payment.models import Batch, BillingAddress, Payment
-from payment.constants import PAYMENT_STATUS
+from payment.constants import PaymentStatus
 from payment.exceptions import InvalidStateForUpdateException
 from security.models import Check
 
@@ -85,7 +85,7 @@ class PaymentSerializer(serializers.ModelSerializer):
 
     @atomic
     def update(self, instance, validated_data):
-        if instance.status != PAYMENT_STATUS.PENDING:
+        if instance.status != PaymentStatus.pending.value:
             raise InvalidStateForUpdateException(
                 'Payment cannot be updated in status "%s"'
                 % instance.status

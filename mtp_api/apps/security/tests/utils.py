@@ -15,7 +15,8 @@ from django.utils.crypto import get_random_string
 from credit.constants import LogAction
 from credit.models import Credit, CREDIT_RESOLUTION
 from prison.models import Prison
-from payment.models import Payment, PAYMENT_STATUS
+from payment.constants import PaymentStatus
+from payment.models import Payment
 from payment.tests.utils import create_fake_sender_data, generate_payments
 from prison.tests.utils import random_prisoner_number
 from security.constants import CheckStatus
@@ -34,7 +35,7 @@ fake = faker.Faker(locale='en_GB')
 logger = logging.getLogger('MTP')
 
 PAYMENT_FILTERS_FOR_INVALID_CHECK = dict(
-    status=PAYMENT_STATUS.PENDING,
+    status=PaymentStatus.pending,
     credit=dict(
         security_check__isnull=True,
         resolution=CREDIT_RESOLUTION.INITIAL,
@@ -46,7 +47,7 @@ PAYMENT_FILTERS_FOR_INVALID_CHECK = dict(
 )
 
 PAYMENT_FILTERS_FOR_VALID_CHECK = dict(
-    status=PAYMENT_STATUS.PENDING,
+    status=PaymentStatus.pending,
     email__isnull=False,
     cardholder_name__isnull=False,
     card_number_first_digits__isnull=False,

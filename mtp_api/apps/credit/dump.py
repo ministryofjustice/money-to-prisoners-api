@@ -5,7 +5,8 @@ from mtp_common.utils import format_currency
 from core.dump import Serialiser
 from credit.constants import CREDIT_RESOLUTION, CREDIT_STATUS, LogAction
 from credit.models import Credit
-from payment.models import PAYMENT_STATUS, BillingAddress
+from payment.constants import PaymentStatus
+from payment.models import BillingAddress
 from security.constants import CheckStatus
 
 
@@ -27,7 +28,7 @@ class CreditSerialiser(Serialiser):
     def get_queryset(self):
         queryset = Credit.objects_all \
             .exclude(resolution=CREDIT_RESOLUTION.INITIAL) \
-            .exclude(payment__status=PAYMENT_STATUS.EXPIRED)
+            .exclude(payment__status=PaymentStatus.expired)
         if self.only_with_triggered_rules:
             queryset = queryset \
                 .exclude(security_check__rules__len=0) \

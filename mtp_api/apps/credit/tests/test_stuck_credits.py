@@ -15,7 +15,8 @@ from credit.management.commands.fix_stuck_credits import (
     find_credits_in_nomis, nomis_transaction_already_linked,
 )
 from credit.models import Credit, CREDIT_RESOLUTION, CREDIT_STATUS
-from payment.models import Payment, PAYMENT_STATUS
+from payment.constants import PaymentStatus
+from payment.models import Payment
 
 
 # silence check for interactive console:
@@ -81,7 +82,7 @@ class FixStuckCreditsTestCase(TestCase):
             Payment,
             credit=credit,
             amount=credit.amount,
-            status=PAYMENT_STATUS.TAKEN,
+            status=PaymentStatus.taken,
             cardholder_name='Mrs. Halls',
         )
         self.credit = credit

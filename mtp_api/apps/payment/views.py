@@ -12,7 +12,7 @@ from core.views import AdminViewMixin
 from mtp_auth.permissions import (
     BankAdminClientIDPermissions, SendMoneyClientIDPermissions,
 )
-from payment.constants import PAYMENT_STATUS
+from payment.constants import PaymentStatus
 from payment.exceptions import InvalidStateForUpdateException
 from payment.forms import PaymentSearchForm
 from payment.models import Batch, Payment
@@ -67,7 +67,7 @@ class PaymentView(
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
-        queryset = queryset.filter(status=PAYMENT_STATUS.PENDING)
+        queryset = queryset.filter(status=PaymentStatus.pending)
 
         page = self.paginate_queryset(queryset)
         if page is not None:

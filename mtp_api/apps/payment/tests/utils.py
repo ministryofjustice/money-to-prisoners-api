@@ -14,7 +14,7 @@ from credit.tests.utils import (
     get_owner_and_status_chooser, create_credit_log, random_amount,
     build_sender_prisoner_pairs,
 )
-from payment.constants import PAYMENT_STATUS
+from payment.constants import PaymentStatus
 from payment.models import Payment, BillingAddress
 from prison.models import PrisonerLocation
 
@@ -182,15 +182,15 @@ def setup_payment(
     if overrides and overrides.get('status'):
         data['status'] = overrides['status']
     elif not bool(payment_counter % 11):  # 1 in 11 is expired
-        data['status'] = PAYMENT_STATUS.EXPIRED
+        data['status'] = PaymentStatus.expired.value
     elif not bool(payment_counter % 10):  # 1 in 10 is rejected
-        data['status'] = PAYMENT_STATUS.REJECTED
+        data['status'] = PaymentStatus.rejected.value
     elif not bool(payment_counter % 4):  # 1 in 4ish is pending
-        data['status'] = PAYMENT_STATUS.PENDING
+        data['status'] = PaymentStatus.pending.value
     else:  # otherwise it's taken
-        data['status'] = PAYMENT_STATUS.TAKEN
+        data['status'] = PaymentStatus.taken.value
 
-    if data['status'] == PAYMENT_STATUS.PENDING:
+    if data['status'] == PaymentStatus.pending.value:
         del data['cardholder_name']
         del data['card_number_first_digits']
         del data['card_number_last_digits']
@@ -198,7 +198,7 @@ def setup_payment(
         del data['card_brand']
         if not bool(payment_counter % 12):  # 2 in 3 of pending checks has a billing_address
             del data['billing_address']
-    elif data['status'] == PAYMENT_STATUS.TAKEN:
+    elif data['status'] == PaymentStatus.taken.value:
         owner, status = owner_status_chooser(data['prison'])
         data['processor_id'] = str(uuid.uuid1())
         # TODO This is a horrible piece of implicit logic, can we please make it explicit
@@ -223,13 +223,13 @@ def setup_payment(
 
 
 def save_payment(data, overrides=None, attach_profiles_to_individual_credits=True):
-    is_taken = data['status'] == PAYMENT_STATUS.TAKEN
+    is_taken = data['status'] == PaymentStatus.taken.value
     if is_taken:
         if data.pop('credited', False):
             resolution = CREDIT_RESOLUTION.CREDITED
         else:
             resolution = CREDIT_RESOLUTION.PENDING
-    elif data['status'] in (PAYMENT_STATUS.REJECTED, PAYMENT_STATUS.EXPIRED):
+    elif data['status'] in (PaymentStatus.rejected.value, PaymentStatus.expired.value):
         resolution = CREDIT_RESOLUTION.FAILED
     else:
         resolution = CREDIT_RESOLUTION.INITIAL

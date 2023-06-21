@@ -12,7 +12,7 @@ from credit.constants import CREDIT_RESOLUTION, LogAction
 from credit.models import Credit, Log
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from payment.models import Batch, BillingAddress, Payment
-from payment.constants import PAYMENT_STATUS
+from payment.constants import PaymentStatus
 from payment.tests.utils import generate_payments
 from prison.tests.utils import load_random_prisoner_locations
 from security.constants import CheckStatus
@@ -195,7 +195,7 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         return response
 
     def test_update_status_to_taken_succeeds(self):
-        response = self._test_update_payment(status=PAYMENT_STATUS.TAKEN)
+        response = self._test_update_payment(status=PaymentStatus.taken.value)
 
         self.assertEqual(response.status_code, http_status.HTTP_200_OK)
         self.assertTrue(response.data['uuid'] is not None)
@@ -206,7 +206,7 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         payment = Payment.objects.first()
         credit = payment.credit
 
-        self.assertEqual(payment.status, PAYMENT_STATUS.TAKEN)
+        self.assertEqual(payment.status, PaymentStatus.taken.value)
         self.assertEqual(credit.resolution, CREDIT_RESOLUTION.PENDING)
         self.assertIsNotNone(credit.prison)
         self.assertIsNotNone(credit.prisoner_name)
@@ -237,7 +237,7 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
             reverse('payment-detail', args=[self.payment_uuid]),
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.user),
-            data=dict(status=PAYMENT_STATUS.REJECTED)
+            data=dict(status=PaymentStatus.rejected.value),
         )
         payment.refresh_from_db()
         # We cannot refresh_from_db because we override the default Manager to exclude the state we're mutating into :(
@@ -249,7 +249,7 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         # check changes in db
         self.assertEqual(Payment.objects.count(), 1)
 
-        self.assertEqual(payment.status, PAYMENT_STATUS.REJECTED)
+        self.assertEqual(payment.status, PaymentStatus.rejected.value)
         self.assertEqual(credit.resolution, CREDIT_RESOLUTION.FAILED)
         self.assertQuerysetEqual(credit.prisoner_profile.senders.all(), [])
         self.assertQuerysetEqual(credit.sender_profile.prisons.all(), [])
@@ -262,7 +262,7 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(log.action, LogAction.failed.value)
 
     def test_update_status_to_expired_succeeds(self):
-        response = self._test_update_payment(status=PAYMENT_STATUS.EXPIRED)
+        response = self._test_update_payment(status=PaymentStatus.expired.value)
 
         self.assertEqual(response.status_code, http_status.HTTP_200_OK)
         self.assertTrue(response.data['uuid'] is not None)
@@ -273,7 +273,7 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         payment = Payment.objects.first()
         credit = payment.credit
 
-        self.assertEqual(payment.status, PAYMENT_STATUS.EXPIRED)
+        self.assertEqual(payment.status, PaymentStatus.expired.value)
         self.assertEqual(credit.resolution, CREDIT_RESOLUTION.FAILED)
         self.assertIsNotNone(credit.prison)
         self.assertIsNotNone(credit.prisoner_name)
@@ -286,7 +286,8 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
     def test_update_received_at_succeeds(self):
         received_at = datetime(2016, 9, 22, 23, 12, tzinfo=timezone.utc)
         response = self._test_update_payment(
-            status=PAYMENT_STATUS.TAKEN, received_at=received_at.isoformat()
+            status=PaymentStatus.taken.value,
+            received_at=received_at.isoformat(),
         )
 
         self.assertEqual(response.status_code, http_status.HTTP_200_OK)
@@ -298,14 +299,14 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         payment = Payment.objects.first()
         credit = payment.credit
 
-        self.assertEqual(payment.status, PAYMENT_STATUS.TAKEN)
+        self.assertEqual(payment.status, PaymentStatus.taken.value)
         self.assertEqual(credit.resolution, CREDIT_RESOLUTION.PENDING)
         self.assertIsNotNone(credit.prison)
         self.assertIsNotNone(credit.prisoner_name)
         self.assertEqual(credit.received_at, received_at)
 
     def test_update_status_to_failed_succeeds(self):
-        response = self._test_update_payment(status=PAYMENT_STATUS.FAILED)
+        response = self._test_update_payment(status=PaymentStatus.failed.value)
 
         self.assertEqual(response.status_code, http_status.HTTP_200_OK)
         self.assertTrue(response.data['uuid'] is not None)
@@ -316,18 +317,18 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         payment = Payment.objects.first()
         credit = payment.credit
 
-        self.assertEqual(payment.status, PAYMENT_STATUS.FAILED)
+        self.assertEqual(payment.status, PaymentStatus.failed.value)
         self.assertEqual(credit.resolution, CREDIT_RESOLUTION.INITIAL)
         self.assertIsNone(credit.received_at)
         self.assertEqual(Credit.objects.count(), 0)
 
     def test_update_status_to_failed_after_taken_fails(self):
-        first_response = self._test_update_payment(status=PAYMENT_STATUS.TAKEN)
+        first_response = self._test_update_payment(status=PaymentStatus.taken.value)
         p_uuid = first_response.data['uuid']
 
         user = self.send_money_users[0]
         update = {
-            'status': PAYMENT_STATUS.FAILED
+            'status': PaymentStatus.failed.value
         }
 
         response = self.client.patch(
@@ -348,7 +349,7 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         payment = Payment.objects.first()
         credit = payment.credit
 
-        self.assertEqual(payment.status, PAYMENT_STATUS.TAKEN)
+        self.assertEqual(payment.status, PaymentStatus.taken.value)
         self.assertEqual(credit.resolution, CREDIT_RESOLUTION.PENDING)
 
     def test_update_with_billing_address(self):
@@ -360,7 +361,7 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
             'postcode': 'SW1H 9EU'
         }
         response = self._test_update_payment(
-            status=PAYMENT_STATUS.TAKEN,
+            status=PaymentStatus.taken.value,
             billing_address=billing_address
         )
 
@@ -370,7 +371,7 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         # check changes in db
         self.assertEqual(Payment.objects.count(), 1)
         payment = Payment.objects.all()[0]
-        self.assertEqual(payment.status, PAYMENT_STATUS.TAKEN)
+        self.assertEqual(payment.status, PaymentStatus.taken.value)
         self.assertIsNotNone(payment.billing_address)
         self.assertEqual(payment.billing_address.line1, billing_address['line1'])
         self.assertEqual(payment.billing_address.postcode, billing_address['postcode'])
@@ -378,7 +379,7 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
     def test_update_fails_with_bad_billing_address(self):
         bad_billing_address = 45
         response = self._test_update_payment(
-            status=PAYMENT_STATUS.TAKEN,
+            status=PaymentStatus.taken.value,
             billing_address=bad_billing_address
         )
 
@@ -387,7 +388,7 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         # check changes in db
         self.assertEqual(Payment.objects.count(), 1)
         payment = Payment.objects.all()[0]
-        self.assertEqual(payment.status, PAYMENT_STATUS.PENDING)
+        self.assertEqual(payment.status, PaymentStatus.pending.value)
         self.assertIsNone(payment.billing_address)
 
     def test_update_with_billing_address_twice_updates_in_place(self):
@@ -567,12 +568,12 @@ class ListPaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(
             len(retrieved_payments),
             Payment.objects.filter(
-                status=PAYMENT_STATUS.PENDING, modified__lt=five_hours_ago
+                status=PaymentStatus.pending, modified__lt=five_hours_ago
             ).count()
         )
 
         for payment in retrieved_payments:
-            Payment.objects.get(pk=payment['uuid'], status=PAYMENT_STATUS.PENDING)
+            Payment.objects.get(pk=payment['uuid'], status=PaymentStatus.pending)
 
 
 class PaymentSearchAdminView(TestCase):

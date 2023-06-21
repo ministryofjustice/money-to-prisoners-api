@@ -18,7 +18,7 @@ from disbursement.tests.utils import generate_disbursements
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from mtp_auth.tests.mommy_recipes import create_security_staff_user
 from mtp_common.test_utils import silence_logger
-from payment.constants import PAYMENT_STATUS
+from payment.constants import PaymentStatus
 from payment.tests.utils import generate_payments
 from prison.tests.utils import load_random_prisoner_locations
 from security.constants import CheckStatus
@@ -283,7 +283,7 @@ class SenderCreditListTestCase(SecurityViewTestCase):
         self.assertFalse(any([d['resolution'] in (CREDIT_RESOLUTION.FAILED, CREDIT_RESOLUTION.INITIAL) for d in data]))
 
     def test_list_credits_for_sender_includes_not_completed(self):
-        payments = generate_payments(10, days_of_history=1, overrides={'status': PAYMENT_STATUS.REJECTED})
+        payments = generate_payments(10, days_of_history=1, overrides={'status': PaymentStatus.rejected.value})
         sender_profile_id = list(filter(lambda p: p.credit.sender_profile_id, payments))[0].credit.sender_profile_id
         credits = Credit.objects_all.filter(
             sender_profile_id=sender_profile_id
@@ -674,7 +674,7 @@ class PrisonerCreditListTestCase(SecurityViewTestCase):
         self.assertFalse(any([d['resolution'] in (CREDIT_RESOLUTION.FAILED, CREDIT_RESOLUTION.INITIAL) for d in data]))
 
     def test_list_credits_for_prisoner_includes_not_completed(self):
-        payments = generate_payments(10, days_of_history=1, overrides={'status': PAYMENT_STATUS.REJECTED})
+        payments = generate_payments(10, days_of_history=1, overrides={'status': PaymentStatus.rejected.value})
         prisoner_profile_id = list(
             filter(lambda p: p.credit.prisoner_profile_id, payments)
         )[0].credit.prisoner_profile_id

@@ -11,7 +11,7 @@ from model_utils.models import TimeStampedModel
 from credit.constants import CREDIT_RESOLUTION
 from credit.models import Credit
 from credit.signals import credit_failed
-from payment.constants import PAYMENT_STATUS
+from payment.constants import PaymentStatus
 from payment.managers import PaymentManager
 from security.models import Check
 
@@ -58,7 +58,7 @@ class BillingAddress(models.Model):
 class Payment(TimeStampedModel):
     uuid = models.UUIDField(default=uuid.uuid4, primary_key=True, editable=False)
     status = models.CharField(
-        max_length=50, choices=PAYMENT_STATUS.choices, default=PAYMENT_STATUS.PENDING, db_index=True
+        max_length=50, choices=PaymentStatus.choices, default=PaymentStatus.pending.value, db_index=True
     )
     processor_id = models.CharField(max_length=250, null=True, blank=True, db_index=True)
     worldpay_id = models.CharField(max_length=250, null=True, blank=True, db_index=True)
@@ -123,7 +123,7 @@ class Payment(TimeStampedModel):
 @receiver(pre_save, sender=Payment, dispatch_uid='update_credit_for_payment')
 def update_credit_for_payment(instance, **kwargs):
     if (
-        instance.status == PAYMENT_STATUS.TAKEN and
+        instance.status == PaymentStatus.taken.value and
         instance.credit.resolution == CREDIT_RESOLUTION.INITIAL
     ):
         if instance.credit.received_at is None:
@@ -132,7 +132,7 @@ def update_credit_for_payment(instance, **kwargs):
         instance.credit.save()
 
     if (
-        instance.status in (PAYMENT_STATUS.REJECTED, PAYMENT_STATUS.EXPIRED) and
+        instance.status in (PaymentStatus.rejected.value, PaymentStatus.expired.value) and
         instance.credit.resolution == CREDIT_RESOLUTION.INITIAL
     ):
         instance.credit.resolution = CREDIT_RESOLUTION.FAILED
@@ -149,7 +149,7 @@ def create_security_check_if_needed_and_attach_profiles(instance: Payment, **kwa
     credit = instance.credit
     if (
         credit.resolution == CREDIT_RESOLUTION.INITIAL
-        and instance.status == PAYMENT_STATUS.PENDING
+        and instance.status == PaymentStatus.pending.value
         and credit.has_enough_detail_for_sender_profile()
     ):
         credit.attach_profiles()

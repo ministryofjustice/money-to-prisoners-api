@@ -21,7 +21,8 @@ from notification.tests.utils import (
     make_sender, make_prisoner,
     make_csfreq_credits, make_csnum_credits, make_cpnum_credits,
 )
-from payment.models import Payment, PAYMENT_STATUS
+from payment.constants import PaymentStatus
+from payment.models import Payment
 from payment.tests.utils import generate_payments
 from prison.tests.utils import load_random_prisoner_locations
 from security.constants import CheckStatus
@@ -350,7 +351,7 @@ class CreditCheckTestCase(TestCase):
         credit = Credit.objects.credited().first()
         credit.owner = None
         credit.resolution = CREDIT_RESOLUTION.INITIAL
-        credit.payment.status = PAYMENT_STATUS.FAILED
+        credit.payment.status = PaymentStatus.failed.value
         credit.save()
         self.assertFalse(credit.should_check())
 
@@ -363,7 +364,7 @@ class CreditCheckTestCase(TestCase):
         credit.owner = None
         credit.resolution = CREDIT_RESOLUTION.INITIAL
         payment = credit.payment
-        payment.status = PAYMENT_STATUS.PENDING
+        payment.status = PaymentStatus.pending.value
         credit.log_set.filter(action=LogAction.credited).delete()
         return credit
 
@@ -505,7 +506,7 @@ class AutomaticCreditCheckTestCase(APITestCase, AuthTestCaseMixin):
         )
         payment = response.json()
         payment = Payment.objects.get(uuid=payment['uuid'])
-        self.assertEqual(payment.status, PAYMENT_STATUS.PENDING)
+        self.assertEqual(payment.status, PaymentStatus.pending.value)
         self.assertEqual(payment.credit.resolution, CREDIT_RESOLUTION.INITIAL)
         self.assertTrue(hasattr(payment.credit, 'security_check'))
         self.assertEqual(payment.credit.security_check.status, CheckStatus.accepted.value)
@@ -558,7 +559,7 @@ class AutomaticCreditCheckTestCase(APITestCase, AuthTestCaseMixin):
         )
         payment = response.json()
         payment = Payment.objects.get(uuid=payment['uuid'])
-        self.assertEqual(payment.status, PAYMENT_STATUS.PENDING)
+        self.assertEqual(payment.status, PaymentStatus.pending.value)
         self.assertEqual(payment.credit.resolution, CREDIT_RESOLUTION.INITIAL)
         self.assertTrue(hasattr(payment.credit, 'security_check'))
         self.assertEqual(payment.credit.security_check.status, CheckStatus.pending.value)

@@ -195,7 +195,7 @@ class Credit(TimeStampedModel):
 
     def should_check(self):
         from credit.constants import CREDIT_RESOLUTION
-        from payment.constants import PAYMENT_STATUS
+        from payment.constants import PaymentStatus
 
         if self.resolution != CREDIT_RESOLUTION.INITIAL:
             # it's too late once credits reach any other resolution
@@ -203,7 +203,7 @@ class Credit(TimeStampedModel):
         if self.source != CREDIT_SOURCE.ONLINE:
             # checks only apply to debit card payments
             return False
-        if self.payment.status != PAYMENT_STATUS.PENDING:
+        if self.payment.status != PaymentStatus.pending.value:
             # payment must be pending for checks to apply
             return False
 
