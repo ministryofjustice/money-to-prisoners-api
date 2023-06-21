@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from django.db import models, transaction
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
+from django_filters.widgets import BooleanWidget
 from django.utils import timezone
 from rest_framework import generics, mixins, status as drf_status, viewsets
 from rest_framework.generics import get_object_or_404
@@ -155,7 +156,7 @@ class NumberInFilter(django_filters.BaseInFilter, django_filters.NumberFilter):
 class CreditListFilter(BaseFilterSet):
     status = StatusChoiceFilter(choices=CREDIT_STATUS.choices)
     user = django_filters.ModelChoiceFilter(field_name='owner', queryset=User.objects.all())
-    valid = ValidCreditFilter(widget=django_filters.widgets.BooleanWidget)
+    valid = ValidCreditFilter(widget=BooleanWidget)
 
     prisoner_name = django_filters.CharFilter(field_name='prisoner_name', lookup_expr='icontains')
     prison = django_filters.ModelMultipleChoiceFilter(queryset=Prison.objects.all())
