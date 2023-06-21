@@ -472,8 +472,8 @@ class PrivateEstateBatch(TimeStampedModel):
 def update_prison_for_credit(instance, created, **kwargs):
     if (created and
             instance.reconciled is False and
-            (instance.resolution is CreditResolution.initial.value or
-             instance.resolution is CreditResolution.pending.value) and
+            (instance.resolution == CreditResolution.initial.value or
+             instance.resolution == CreditResolution.pending.value) and
             instance.owner is None):
         try:
             location = PrisonerLocation.objects.get(
