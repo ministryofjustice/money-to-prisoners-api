@@ -227,12 +227,12 @@ class RecipientProfileManager(models.Manager):
         )
 
     def create_or_update_for_disbursement(self, disbursement):
-        from disbursement.constants import DISBURSEMENT_METHOD
+        from disbursement.constants import DisbursementMethod
         from security.models import BankAccount
 
         assert not disbursement.recipient_profile, 'Recipient profile already linked'
 
-        if disbursement.method == DISBURSEMENT_METHOD.CHEQUE:
+        if disbursement.method == DisbursementMethod.cheque.value:
             recipient_profile = self.get_or_create_cheque_recipient()
         else:
             try:

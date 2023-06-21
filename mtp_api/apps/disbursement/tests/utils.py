@@ -11,7 +11,7 @@ from model_bakery.recipe import Recipe, seq
 
 from core.tests.utils import MockModelTimestamps
 from credit.tests.utils import random_amount, build_sender_prisoner_pairs
-from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION, LogAction
+from disbursement.constants import DisbursementResolution, DisbursementMethod, LogAction
 from disbursement.models import Disbursement, Log
 from prison.models import PrisonerLocation
 from prison.tests.utils import random_prisoner_number
@@ -23,8 +23,8 @@ disbursement_recipe = Recipe(
     Disbursement,
     created=seq(datetime.now() - timedelta(days=1), timedelta(hours=-1, minutes=-5)),
     amount=random_amount,
-    method=DISBURSEMENT_METHOD.BANK_TRANSFER,
-    resolution=DISBURSEMENT_RESOLUTION.CONFIRMED,
+    method=DisbursementMethod.bank_transfer,
+    resolution=DisbursementResolution.confirmed,
     prisoner_number=random_prisoner_number,
     prisoner_name=fake.name,
     recipient_first_name=fake.first_name,
@@ -53,8 +53,8 @@ def get_recipient_prisoner_pairs():
     for i in range(number_of_recipients):
         recipient = {
             'method': (
-                DISBURSEMENT_METHOD.BANK_TRANSFER if i % 4
-                else DISBURSEMENT_METHOD.CHEQUE
+                DisbursementMethod.bank_transfer.value if i % 4
+                else DisbursementMethod.cheque.value
             )
         }
 
@@ -78,7 +78,7 @@ def get_recipient_prisoner_pairs():
         if i % 3:
             recipient['recipient_email'] = '%s.%s@mail.local' % (first_name, last_name)
 
-        if recipient['method'] == DISBURSEMENT_METHOD.BANK_TRANSFER:
+        if recipient['method'] == DisbursementMethod.bank_transfer.value:
             recipient['sort_code'] = sort_codes[i % number_of_sort_codes]
             recipient['account_number'] = get_random_string(8, '1234567890')
         recipients.append(recipient)
@@ -129,20 +129,20 @@ def create_disbursements(data_list):
 
 def setup_disbursement(end_date, disbursement_counter, data):
     if disbursement_counter % 20 == 0:
-        data['resolution'] = DISBURSEMENT_RESOLUTION.REJECTED
+        data['resolution'] = DisbursementResolution.rejected.value
         data['modified'] = data['created'] + timedelta(hours=3)
     elif data['created'].date() < latest_disbursement_date().date() - timedelta(days=1):
-        data['resolution'] = DISBURSEMENT_RESOLUTION.SENT
+        data['resolution'] = DisbursementResolution.sent.value
         data['modified'] = data['created'] + timedelta(days=1)
     elif data['created'].date() < latest_disbursement_date().date() - timedelta(hours=4):
-        data['resolution'] = DISBURSEMENT_RESOLUTION.CONFIRMED
+        data['resolution'] = DisbursementResolution.confirmed.value
         data['modified'] = data['created'] + timedelta(hours=3)
     else:
         data['modified'] = data['created']
 
     with MockModelTimestamps(data['created'], data['modified']):
         new_disbursement = Disbursement.objects.create(**data)
-        if new_disbursement.resolution == DISBURSEMENT_RESOLUTION.CONFIRMED:
+        if new_disbursement.resolution == DisbursementResolution.confirmed.value:
             new_disbursement.invoice_number = new_disbursement._generate_invoice_number()
             new_disbursement.save()
 
@@ -170,7 +170,7 @@ def create_disbursement_logs(disbursement):
 
     confirming_user = prison_clerks.last()
 
-    if disbursement.resolution == DISBURSEMENT_RESOLUTION.SENT:
+    if disbursement.resolution == DisbursementResolution.sent.value:
         sending_user = bank_admins.first()
         confirmed = disbursement.created + timedelta(hours=3)
         with MockModelTimestamps(confirmed, confirmed):
@@ -183,11 +183,11 @@ def create_disbursement_logs(disbursement):
             Log.objects.create(**log_data)
     else:
         with MockModelTimestamps(disbursement.modified, disbursement.modified):
-            if disbursement.resolution == DISBURSEMENT_RESOLUTION.CONFIRMED:
+            if disbursement.resolution == DisbursementResolution.confirmed.value:
                 log_data['action'] = LogAction.confirmed.value
                 log_data['user'] = confirming_user
                 Log.objects.create(**log_data)
-            elif disbursement.resolution == DISBURSEMENT_RESOLUTION.REJECTED:
+            elif disbursement.resolution == DisbursementResolution.rejected.value:
                 log_data['action'] = LogAction.rejected.value
                 log_data['user'] = confirming_user
                 Log.objects.create(**log_data)

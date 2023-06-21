@@ -7,7 +7,8 @@ import requests
 
 from credit.models import Credit, CREDIT_RESOLUTION
 from core.views import AdminViewMixin
-from disbursement.models import Disbursement, DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION
+from disbursement.constants import DisbursementResolution, DisbursementMethod
+from disbursement.models import Disbursement
 from performance.models import DigitalTakeup
 
 COST_PER_TRANSACTION_BY_POST = 5.73
@@ -56,9 +57,9 @@ def get_stats_by_method(start_date, end_date):
     credit_debit_card_count = credit_queryset.filter(payment__isnull=False).count()
 
     disbursement_queryset = Disbursement.objects.filter(created__range=(start_date, end_date),
-                                                        resolution=DISBURSEMENT_RESOLUTION.SENT)
-    disbursement_cheque_count = disbursement_queryset.filter(method=DISBURSEMENT_METHOD.CHEQUE).count()
-    disbursement_bank_transfer_count = disbursement_queryset.filter(method=DISBURSEMENT_METHOD.BANK_TRANSFER).count()
+                                                        resolution=DisbursementResolution.sent)
+    disbursement_cheque_count = disbursement_queryset.filter(method=DisbursementMethod.cheque).count()
+    disbursement_bank_transfer_count = disbursement_queryset.filter(method=DisbursementMethod.bank_transfer).count()
 
     return {
         'credit_debit_card_count': credit_debit_card_count,

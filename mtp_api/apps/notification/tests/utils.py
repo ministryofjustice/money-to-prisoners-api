@@ -6,7 +6,7 @@ from model_bakery import baker
 
 from credit.models import Credit, CREDIT_RESOLUTION
 from credit.tests.utils import random_amount
-from disbursement.models import Disbursement, DISBURSEMENT_RESOLUTION
+from disbursement.models import Disbursement, DisbursementResolution
 from payment.models import Payment
 from prison.models import Prison
 from prison.tests.utils import random_prisoner_name, random_prisoner_number, random_prisoner_dob
@@ -83,7 +83,7 @@ def make_drfreq_disbursements(today, recipient, count):
             amount=random_amount(),
             recipient_profile=recipient,
             created=today - datetime.timedelta(day),
-            resolution=DISBURSEMENT_RESOLUTION.SENT,
+            resolution=DisbursementResolution.sent,
         )
         disbursement_list.append(disbursement)
     return disbursement_list
@@ -125,7 +125,7 @@ def make_drnum_disbursements(today, prisoner, count, recipient_profile=None):
             recipient_profile=recipient,
             prisoner_profile=prisoner,
             created=today - datetime.timedelta(day),
-            resolution=DISBURSEMENT_RESOLUTION.SENT,
+            resolution=DisbursementResolution.sent,
         )
         disbursement_list.append(disbursement)
     return disbursement_list
@@ -167,7 +167,7 @@ def make_dpnum_disbursements(today, recipient, count, prisoner_profile=None):
             recipient_profile=recipient,
             prisoner_profile=prisoner,
             created=today - datetime.timedelta(day),
-            resolution=DISBURSEMENT_RESOLUTION.SENT,
+            resolution=DisbursementResolution.sent,
         )
         disbursement_list.append(disbursement)
     return disbursement_list

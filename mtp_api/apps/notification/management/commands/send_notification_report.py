@@ -18,7 +18,7 @@ from openpyxl.utils import get_column_letter
 
 from credit.constants import CREDIT_STATUS, LogAction as CreditLogAction
 from credit.models import Credit
-from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION, LogAction as DisbursementLogAction
+from disbursement.constants import DisbursementResolution, DisbursementMethod, LogAction as DisbursementLogAction
 from disbursement.models import Disbursement
 from notification.rules import RULES, CountingRule, MonitoredRule, Triggered
 
@@ -111,7 +111,7 @@ def generate_report(workbook, period_start, period_end, rules):
     candidate_disbursements = Disbursement.objects.filter(
         prisoner_profile__isnull=False,
         recipient_profile__isnull=False,
-        resolution=DISBURSEMENT_RESOLUTION.SENT,
+        resolution=DisbursementResolution.sent,
     ).filter(
         created__gte=period_start,
         created__lt=period_end,
@@ -308,8 +308,6 @@ class DisbursementSerialiser(Serialiser, serialised_model=Disbursement):
 
     def serialise(self, worksheet, record: Disbursement, triggered: Triggered):
         row = super().serialise(worksheet, record, triggered)
-        payment_method = dict(DISBURSEMENT_METHOD.choices).get(record.method)
-        payment_status = dict(DISBURSEMENT_RESOLUTION.choices).get(record.resolution)
         row.update({
             'Date entered': local_datetime_for_xlsx(record.created),
             'Date confirmed': local_datetime_for_xlsx(record.log_set.get_action_date(DisbursementLogAction.confirmed)),
@@ -319,13 +317,13 @@ class DisbursementSerialiser(Serialiser, serialised_model=Disbursement):
             'Prisoner name': record.prisoner_name,
             'Prison': record.prison.short_name,
             'Recipient name': record.recipient_name,
-            'Payment method': str(payment_method),
+            'Payment method': str(DisbursementMethod[record.method].label),
             'Bank transfer sort code': record.sort_code,
             'Bank transfer account': record.account_number,
             'Bank transfer roll number': record.roll_number,
             'Recipient address': record.recipient_address,
             'Recipient email': record.recipient_email,
-            'Status': str(payment_status),
+            'Status': str(DisbursementResolution[record.resolution].label),
             'NOMIS transaction': record.nomis_transaction_id,
             'SOP invoice number': record.invoice_number,
         })

@@ -12,7 +12,7 @@ from rest_framework.test import APITestCase
 from core.tests.utils import make_test_users
 from credit.models import Credit
 from credit.constants import CREDIT_RESOLUTION
-from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION
+from disbursement.constants import DisbursementResolution, DisbursementMethod
 from disbursement.models import Disbursement
 from disbursement.tests.utils import generate_disbursements
 from mtp_auth.tests.utils import AuthTestCaseMixin
@@ -359,8 +359,8 @@ class RecipientProfileListTestCase(SecurityViewTestCase):
             prisoner_count__gte=3,
         )['results']
         prisoner_counts = Disbursement.objects.filter(
-            method=DISBURSEMENT_METHOD.BANK_TRANSFER,
-            resolution=DISBURSEMENT_RESOLUTION.SENT
+            method=DisbursementMethod.bank_transfer,
+            resolution=DisbursementResolution.sent,
         ).values(
             'sort_code', 'account_number', 'roll_number',
         ).order_by(

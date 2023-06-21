@@ -10,7 +10,7 @@ from mtp_common.utils import format_currency
 from core.dashboards import DashboardModule
 from core.views import DashboardView
 from credit.models import Credit, CREDIT_STATUS
-from disbursement.models import Disbursement, DISBURSEMENT_RESOLUTION
+from disbursement.models import Disbursement, DisbursementResolution
 from performance.models import DigitalTakeup
 from transaction.utils import format_currency_truncated, format_number, format_percentage
 
@@ -63,7 +63,7 @@ def digital_takeup_stats(since, until=None):
 
 
 def valid_disbursement_stats(since, until=None):
-    queryset = Disbursement.objects.exclude(resolution=DISBURSEMENT_RESOLUTION.REJECTED)
+    queryset = Disbursement.objects.exclude(resolution=DisbursementResolution.rejected)
     if until:
         queryset = queryset.filter(created__range=(since, until))
     else:
@@ -79,8 +79,8 @@ def valid_disbursement_stats(since, until=None):
 
 def pending_disbursements_stats(since, until=None):
     queryset = Disbursement.objects \
-        .exclude(resolution=DISBURSEMENT_RESOLUTION.REJECTED) \
-        .exclude(resolution=DISBURSEMENT_RESOLUTION.SENT)
+        .exclude(resolution=DisbursementResolution.rejected) \
+        .exclude(resolution=DisbursementResolution.sent)
     if until:
         queryset = queryset.filter(created__range=(since, until))
     else:
@@ -164,8 +164,8 @@ def get_simple_stats():
     sent_stats['amount'] = sent_stats['amount'] or 0
 
     pending_disbursements = Disbursement.objects \
-        .exclude(resolution=DISBURSEMENT_RESOLUTION.REJECTED) \
-        .exclude(resolution=DISBURSEMENT_RESOLUTION.SENT) \
+        .exclude(resolution=DisbursementResolution.rejected) \
+        .exclude(resolution=DisbursementResolution.sent) \
         .count()
 
     disbursement_stats = [

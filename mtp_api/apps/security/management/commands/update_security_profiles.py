@@ -3,7 +3,7 @@ from django.core.management import BaseCommand, CommandError
 
 from credit.constants import CREDIT_RESOLUTION
 from credit.models import Credit
-from disbursement.constants import DISBURSEMENT_RESOLUTION
+from disbursement.constants import DisbursementResolution
 from disbursement.models import Disbursement
 from notification.tasks import create_notification_events
 from security.models import PrisonerProfile, SenderProfile, RecipientProfile
@@ -112,7 +112,7 @@ class Command(BaseCommand):
     def handle_disbursement_update(self, batch_size):
         new_disbursements = Disbursement.objects.filter(
             recipient_profile__isnull=True,
-            resolution=DISBURSEMENT_RESOLUTION.SENT,
+            resolution=DisbursementResolution.sent,
         ).order_by('pk')
         self.batch_and_execute_entity_calculation(
             new_disbursements, 'disbursements', self.process_disbursement_batch, batch_size
