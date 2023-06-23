@@ -32,7 +32,8 @@ class NotificationView(mixins.ListModelMixin, viewsets.GenericViewSet):
     permission_classes = ()
 
     def get_queryset(self):
-        return Notification.objects.exclude(end__lt=timezone.now())
+        now = timezone.now()
+        return Notification.objects.exclude(end__lt=now).exclude(start__gt=now)
 
     def filter_queryset(self, queryset):
         queryset = super().filter_queryset(queryset)

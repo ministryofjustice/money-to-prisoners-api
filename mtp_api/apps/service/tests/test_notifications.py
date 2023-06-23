@@ -1,6 +1,8 @@
+import datetime
 import itertools
 
 from django.urls import reverse_lazy
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -80,15 +82,24 @@ class NotificationsTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(response.data['count'], 0)
         self.assertListEqual(response.data['results'], [])
 
+        # notification started, but not ended
         Notification.objects.create(
             target=NotificationTarget.cashbook_all, level=30,
-            headline='Test', message='Body',
+            headline='Test 1', message='Body',
             start='2017-11-29 12:00:00Z',
         )
+        # notification started and ended
         Notification.objects.create(
-            target=NotificationTarget.cashbook_login, level=20, public=True,
-            headline='Login', message='',
-            start='2017-11-29 12:00:00Z', end='2017-11-29 13:00:00Z',
+            target=NotificationTarget.cashbook_all, level=20,
+            headline='Test 2', message='',
+            start='2017-11-29 12:00:00Z',
+            end='2017-11-29 13:00:00Z',
+        )
+        # notification starting in future
+        Notification.objects.create(
+            target=NotificationTarget.cashbook_all, level=20,
+            headline='Test 3', message='',
+            start=timezone.now() + datetime.timedelta(days=1),
         )
         response = self.client.get(
             self.url, format='json',
@@ -99,7 +110,7 @@ class NotificationsTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(len(response.data['results']), 1)
         self.assertDictEqual(response.data['results'][0], {
             'target': NotificationTarget.cashbook_all, 'level': 'warning',
-            'headline': 'Test', 'message': 'Body',
+            'headline': 'Test 1', 'message': 'Body',
             'start': '2017-11-29T12:00:00Z', 'end': None,
         })
 
