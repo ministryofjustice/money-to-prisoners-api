@@ -7,7 +7,7 @@ from service.constants import NotificationTarget, Service
 
 
 class DowntimeManager(models.Manager):
-    def active_downtime(self, service):
+    def active_downtime(self, service: Service):
         now = timezone.now()
         return self.filter(
             models.Q(start__lte=now, end__gt=now) |

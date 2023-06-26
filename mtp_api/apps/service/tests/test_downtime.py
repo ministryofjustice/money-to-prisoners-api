@@ -13,7 +13,7 @@ class DowntimeTestCase(TestCase):
         downtime = Downtime(service=service.value, start=start, end=end)
         downtime.save()
 
-        active_downtime = Downtime.objects.active_downtime(service.value)
+        active_downtime = Downtime.objects.active_downtime(service)
         self.assertIsNotNone(active_downtime)
         return active_downtime
 

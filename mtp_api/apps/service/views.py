@@ -8,7 +8,7 @@ from service.serializers import NotificationSerializer
 
 
 def service_availability_view(_):
-    def service_availability(service: str):
+    def service_availability(service: Service):
         downtime = Downtime.objects.active_downtime(service)
         if not downtime:
             return {'status': True}
@@ -20,8 +20,8 @@ def service_availability_view(_):
         return status
 
     response = {
-        service: service_availability(service)
-        for service in Service.values
+        service.value: service_availability(service)
+        for service in Service
     }
     response['*'] = {'status': all(status['status'] for status in response.values())}
     return JsonResponse(response)
