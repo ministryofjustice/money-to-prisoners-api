@@ -5,8 +5,7 @@ from django.utils import timezone
 from core.tests.utils import make_test_users
 
 from prison.models import Prison, PrisonerLocation
-from prison.tests.utils import random_prisoner_number, random_prisoner_dob,\
-    random_prisoner_name
+from prison.tests.utils import random_prisoner_number, random_prisoner_dob, random_prisoner_name
 
 from credit.constants import CreditResolution
 from credit.signals import credit_prisons_need_updating

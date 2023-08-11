@@ -2,20 +2,29 @@
 name: Clean ECR
 on:
   pull_request:
+    # clean up branch when a PR is closed
     types:
       - closed
 jobs:
   clean-ecr:
     name: Clean ECR
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
           ref: main
+
+      - name: Assume IAM role to access ECR
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-region: ${{ vars.ECR_REGION }}
+          role-to-assume: ${{ secrets.ECR_ROLE_TO_ASSUME }}
+
       - name: Delete branch images from ECR
         uses: ./.github/actions/clean-ecr
         env:
-          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ vars.ECR_REGION }}
