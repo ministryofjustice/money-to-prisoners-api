@@ -2,8 +2,8 @@
 # see `docker compose` documentation in money-to-prisoners-common
 # vim: ft=dockerfile
 
-ARG ECR_ENDPOINT
-FROM ${ECR_ENDPOINT}/prisoner-money/money-to-prisoners:api
+ARG ECR_REGISTRY
+FROM ${ECR_REGISTRY}/prisoner-money/money-to-prisoners:api
 
 # Need to escalate to root to move virtual environment outside codebase
 USER root
