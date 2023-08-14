@@ -1,8 +1,8 @@
 # Place development and testing dependencies here
 
-money-to-prisoners-common[testing]~=16.0.0
+money-to-prisoners-common[testing]~=16.1.0
 
 -r base.txt
 
 dictdiffer~=0.9.0
-parameterized~=0.8.1
+parameterized~=0.9.0
