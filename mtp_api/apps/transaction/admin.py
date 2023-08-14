@@ -10,7 +10,7 @@ from django.utils.translation import gettext_lazy as _
 from mtp_common.utils import format_currency
 
 from core.admin import DateRangeFilter, add_short_description
-from transaction.constants import TRANSACTION_CATEGORY, TRANSACTION_STATUS
+from transaction.constants import TransactionStatus, TransactionCategory
 from transaction.models import Transaction
 
 
@@ -19,7 +19,7 @@ class StatusFilter(admin.SimpleListFilter):
     title = _('status')
 
     def lookups(self, request, model_admin):
-        return TRANSACTION_STATUS
+        return TransactionStatus.choices
 
     def queryset(self, request, queryset):
         status = self.used_parameters.get(self.parameter_name)
@@ -74,15 +74,15 @@ class TransactionAdmin(admin.ModelAdmin):
     @add_short_description(_('type'))
     def transaction_type(self, instance):
         category = instance.category
-        if TRANSACTION_CATEGORY.has_value(category):
-            category = TRANSACTION_CATEGORY.for_value(category).display
-        return '%s/%s' % (instance.processor_type_code, category)
+        if category in TransactionCategory:
+            category = TransactionCategory[category].label
+        return f'{instance.processor_type_code}/{category}'
 
     @add_short_description(_('status'))
     def formatted_status(self, instance):
         value = instance.status
-        if TRANSACTION_STATUS.has_value(value):
-            return TRANSACTION_STATUS.for_value(value).display
+        if value in TransactionStatus:
+            return TransactionStatus[value].label
         return value
 
     @add_short_description(_('Display total of selected transactions'))

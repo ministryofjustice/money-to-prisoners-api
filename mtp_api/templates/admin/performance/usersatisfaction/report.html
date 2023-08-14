@@ -48,7 +48,7 @@
             </thead>
             <tbody>
               {% for row in rows %}
-                <tr class="{% cycle 'row1' 'row2' %}">
+                <tr>
                   <td>{{ row.date_label }}</td>
                   {% if show_percentage %}
                     <td>{{ row.rated_1|format_percentage }}</td>

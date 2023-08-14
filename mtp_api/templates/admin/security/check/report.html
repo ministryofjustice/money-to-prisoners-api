@@ -45,7 +45,7 @@
             </thead>
             <tbody>
               {% for row in rows %}
-                <tr class="{% cycle 'row1' 'row2' %}">
+                <tr>
                   <td>{{ row.date_label }}</td>
 
                   <td>{{ row.auto_accepted_count|format_number }}</td>

@@ -9,12 +9,8 @@ from django.utils.dateparse import parse_datetime
 from rest_framework import status
 
 from core import getattr_path
-from credit.constants import (
-    CREDIT_STATUS, CREDIT_RESOLUTION
-)
-from credit.tests.test_base import (
-    BaseCreditViewTestCase, CreditRejectsRequestsWithoutPermissionTestMixin
-)
+from credit.constants import CreditResolution, CreditStatus
+from credit.tests.test_base import BaseCreditViewTestCase, CreditRejectsRequestsWithoutPermissionTestMixin
 
 
 class CashbookCreditRejectsRequestsWithoutPermissionTestMixin(
@@ -114,8 +110,8 @@ class CreditListTestCase(
             c.pk
             for c in credits
             if c.resolution not in (
-                CREDIT_RESOLUTION.INITIAL,
-                CREDIT_RESOLUTION.FAILED,
+                CreditResolution.initial.value,
+                CreditResolution.failed.value,
             ) and
             status_checker(c) and
             prison_checker(c) and
@@ -189,7 +185,7 @@ class CreditListTestCase(
             parsed_date = parse_datetime(date)
             if parsed_date is not None:
                 return parsed_date
-            for date_format in settings.DATETIME_INPUT_FORMATS:
+            for date_format in settings.DATE_INPUT_FORMATS + settings.DATETIME_INPUT_FORMATS:
                 try:
                     return datetime.datetime.strptime(date, date_format)
                 except (ValueError, TypeError):
@@ -256,8 +252,8 @@ class CreditListTestCase(
         if 'valid' in filters:
             def valid_checker(c):
                 return (
-                    self.STATUS_FILTERS[CREDIT_STATUS.CREDIT_PENDING](c) or
-                    self.STATUS_FILTERS[CREDIT_STATUS.CREDITED](c)
+                    self.STATUS_FILTERS[CreditStatus.credit_pending.value](c) or
+                    self.STATUS_FILTERS[CreditStatus.credited.value](c)
                 )
             if filters['valid'] in ('true', 'True', 1, True):
                 return valid_checker

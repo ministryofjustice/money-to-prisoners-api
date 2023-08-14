@@ -1,9 +1,8 @@
-from django.utils.translation import gettext_lazy
+from django.db import models
+from django.utils.translation import gettext_lazy as _
 
-from extended_choices import Choices
 
-CHECK_STATUS = Choices(
-    ('PENDING', 'pending', gettext_lazy('Pending')),
-    ('ACCEPTED', 'accepted', gettext_lazy('Accepted')),
-    ('REJECTED', 'rejected', gettext_lazy('Rejected')),
-)
+class CheckStatus(models.TextChoices):
+    pending = 'pending', _('Pending')
+    accepted = 'accepted', _('Accepted')
+    rejected = 'rejected', _('Rejected')

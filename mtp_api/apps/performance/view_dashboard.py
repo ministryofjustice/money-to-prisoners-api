@@ -5,9 +5,11 @@ from django.utils import timezone
 from django.views.generic import TemplateView
 import requests
 
-from credit.models import Credit, CREDIT_RESOLUTION
+from credit.constants import CreditResolution
+from credit.models import Credit
 from core.views import AdminViewMixin
-from disbursement.models import Disbursement, DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION
+from disbursement.constants import DisbursementResolution, DisbursementMethod
+from disbursement.models import Disbursement
 from performance.models import DigitalTakeup
 
 COST_PER_TRANSACTION_BY_POST = 5.73
@@ -51,14 +53,14 @@ def get_overall_stats(start_date, end_date):
 
 def get_stats_by_method(start_date, end_date):
     credit_queryset = Credit.objects.filter(received_at__range=(start_date, end_date),
-                                            resolution=CREDIT_RESOLUTION.CREDITED)
+                                            resolution=CreditResolution.credited)
     credit_bank_transfer_count = credit_queryset.filter(transaction__isnull=False).count()
     credit_debit_card_count = credit_queryset.filter(payment__isnull=False).count()
 
     disbursement_queryset = Disbursement.objects.filter(created__range=(start_date, end_date),
-                                                        resolution=DISBURSEMENT_RESOLUTION.SENT)
-    disbursement_cheque_count = disbursement_queryset.filter(method=DISBURSEMENT_METHOD.CHEQUE).count()
-    disbursement_bank_transfer_count = disbursement_queryset.filter(method=DISBURSEMENT_METHOD.BANK_TRANSFER).count()
+                                                        resolution=DisbursementResolution.sent)
+    disbursement_cheque_count = disbursement_queryset.filter(method=DisbursementMethod.cheque).count()
+    disbursement_bank_transfer_count = disbursement_queryset.filter(method=DisbursementMethod.bank_transfer).count()
 
     return {
         'credit_debit_card_count': credit_debit_card_count,
@@ -102,7 +104,7 @@ def savings_for_financial_year(today):
     digital_takeup = queryset_digital_takeup.mean_digital_takeup()
 
     post = post_count(digital_takeup, digital_count)
-    digital = queryset_digital.filter(resolution=CREDIT_RESOLUTION.CREDITED).count()
+    digital = queryset_digital.filter(resolution=CreditResolution.credited).count()
 
     total_cost_post = post * COST_PER_TRANSACTION_BY_POST
     total_cost_digital = digital * COST_PER_TRANSACTION_BY_DIGITAL

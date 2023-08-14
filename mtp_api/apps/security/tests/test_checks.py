@@ -12,7 +12,9 @@ from model_bakery import baker
 from rest_framework.test import APITestCase
 
 from core.tests.utils import make_test_users, FLAKY_TEST_WARNING
-from credit.models import Credit, CREDIT_RESOLUTION, LOG_ACTIONS as CREDIT_LOG_ACTIONS
+from credit.constants import LogAction
+from credit.constants import CreditResolution
+from credit.models import Credit
 from mtp_auth.tests.mommy_recipes import basic_user
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from notification.rules import RULES
@@ -20,13 +22,12 @@ from notification.tests.utils import (
     make_sender, make_prisoner,
     make_csfreq_credits, make_csnum_credits, make_cpnum_credits,
 )
-from payment.models import Payment, PAYMENT_STATUS
+from payment.constants import PaymentStatus
+from payment.models import Payment
 from payment.tests.utils import generate_payments
 from prison.tests.utils import load_random_prisoner_locations
-from security.models import (
-    Check, CHECK_STATUS, CheckAutoAcceptRule,
-    PrisonerProfile, SenderProfile,
-)
+from security.constants import CheckStatus
+from security.models import Check, CheckAutoAcceptRule, PrisonerProfile, SenderProfile
 from security.tests.utils import (
     generate_checks,
     generate_sender_profiles_from_payments,
@@ -57,7 +58,7 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
         user = basic_user.make()
         check = baker.make(
             Check,
-            status=CHECK_STATUS.PENDING,
+            status=CheckStatus.pending,
             actioned_at=None,
             actioned_by=None,
         )
@@ -65,7 +66,7 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
         check.accept(by=user)
         check.refresh_from_db()
 
-        self.assertEqual(check.status, CHECK_STATUS.ACCEPTED)
+        self.assertEqual(check.status, CheckStatus.accepted.value)
         self.assertEqual(check.actioned_at, mocked_now())
         self.assertEqual(check.actioned_by, user)
 
@@ -79,7 +80,7 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
         user = basic_user.make()
         check = baker.make(
             Check,
-            status=CHECK_STATUS.PENDING,
+            status=CheckStatus.pending,
             actioned_at=None,
             actioned_by=None,
         )
@@ -88,7 +89,7 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
         check.accept(by=user, reason=reason)
         check.refresh_from_db()
 
-        self.assertEqual(check.status, CHECK_STATUS.ACCEPTED)
+        self.assertEqual(check.status, CheckStatus.accepted.value)
         self.assertEqual(check.decision_reason, reason)
 
     @mock.patch('security.models.now')
@@ -101,7 +102,7 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
         existing_check_user, user = basic_user.make(_quantity=2)
         check = baker.make(
             Check,
-            status=CHECK_STATUS.ACCEPTED,
+            status=CheckStatus.accepted,
             actioned_at=mocked_now() - datetime.timedelta(days=1),
             actioned_by=existing_check_user,
         )
@@ -109,7 +110,7 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
         check.accept(by=user)
         check.refresh_from_db()
 
-        self.assertEqual(check.status, CHECK_STATUS.ACCEPTED)
+        self.assertEqual(check.status, CheckStatus.accepted.value)
         self.assertEqual(check.actioned_by, existing_check_user)
         self.assertNotEqual(check.actioned_at, mocked_now())
 
@@ -123,7 +124,7 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
         existing_check_user, user = basic_user.make(_quantity=2)
         check = baker.make(
             Check,
-            status=CHECK_STATUS.REJECTED,
+            status=CheckStatus.rejected,
             actioned_at=mocked_now() - datetime.timedelta(days=1),
             actioned_by=existing_check_user,
         )
@@ -133,7 +134,7 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
 
         check.refresh_from_db()
 
-        self.assertEqual(check.status, CHECK_STATUS.REJECTED)
+        self.assertEqual(check.status, CheckStatus.rejected.value)
         self.assertEqual(check.actioned_by, existing_check_user)
         self.assertNotEqual(check.actioned_at, mocked_now())
 
@@ -147,7 +148,7 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
         user = basic_user.make()
         check = baker.make(
             Check,
-            status=CHECK_STATUS.PENDING,
+            status=CheckStatus.pending,
             actioned_at=None,
             actioned_by=None,
             rejection_reasons={'payment_source_linked_other_prisoners': True}
@@ -157,7 +158,7 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
         check.reject(by=user, reason=reason, rejection_reasons={'payment_source_linked_other_prisoners': True})
         check.refresh_from_db()
 
-        self.assertEqual(check.status, CHECK_STATUS.REJECTED)
+        self.assertEqual(check.status, CheckStatus.rejected.value)
         self.assertEqual(check.actioned_at, mocked_now())
         self.assertEqual(check.actioned_by, user)
         self.assertEqual(check.decision_reason, reason)
@@ -172,7 +173,7 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
         existing_check_user, user = basic_user.make(_quantity=2)
         check = baker.make(
             Check,
-            status=CHECK_STATUS.REJECTED,
+            status=CheckStatus.rejected,
             actioned_at=mocked_now() - datetime.timedelta(days=1),
             actioned_by=existing_check_user,
             decision_reason='Some old reason',
@@ -183,7 +184,7 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
         check.reject(by=user, reason=reason, rejection_reasons={'payment_source_multiple_cards': True})
         check.refresh_from_db()
 
-        self.assertEqual(check.status, CHECK_STATUS.REJECTED)
+        self.assertEqual(check.status, CheckStatus.rejected.value)
         self.assertEqual(check.actioned_by, existing_check_user)
         self.assertEqual(check.rejection_reasons, {'payment_source_linked_other_prisoners': True})
         self.assertNotEqual(check.actioned_at, mocked_now())
@@ -196,7 +197,7 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
         users = make_test_users(clerks_per_prison=1)
         check = baker.make(
             Check,
-            status=CHECK_STATUS.PENDING,
+            status=CheckStatus.pending,
             actioned_at=None,
             actioned_by=None,
         )
@@ -228,7 +229,7 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
         existing_check_user, user = basic_user.make(_quantity=2)
         check = baker.make(
             Check,
-            status=CHECK_STATUS.ACCEPTED,
+            status=CheckStatus.accepted,
             actioned_at=mocked_now() - datetime.timedelta(days=1),
             actioned_by=existing_check_user,
         )
@@ -244,7 +245,7 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
 
         check.refresh_from_db()
 
-        self.assertEqual(check.status, CHECK_STATUS.ACCEPTED)
+        self.assertEqual(check.status, CheckStatus.accepted.value)
         self.assertEqual(check.actioned_by, existing_check_user)
         self.assertNotEqual(check.actioned_at, mocked_now())
 
@@ -350,8 +351,8 @@ class CreditCheckTestCase(TestCase):
         generate_payments(10)
         credit = Credit.objects.credited().first()
         credit.owner = None
-        credit.resolution = CREDIT_RESOLUTION.INITIAL
-        credit.payment.status = PAYMENT_STATUS.FAILED
+        credit.resolution = CreditResolution.initial.value
+        credit.payment.status = PaymentStatus.failed.value
         credit.save()
         self.assertFalse(credit.should_check())
 
@@ -362,10 +363,10 @@ class CreditCheckTestCase(TestCase):
         call_command('update_security_profiles')
         credit = Credit.objects.credited().first()
         credit.owner = None
-        credit.resolution = CREDIT_RESOLUTION.INITIAL
+        credit.resolution = CreditResolution.initial.value
         payment = credit.payment
-        payment.status = PAYMENT_STATUS.PENDING
-        credit.log_set.filter(action=CREDIT_LOG_ACTIONS.CREDITED).delete()
+        payment.status = PaymentStatus.pending.value
+        credit.log_set.filter(action=LogAction.credited).delete()
         return credit
 
     def test_will_not_check_credits_with_incomplete_details(self):
@@ -382,7 +383,7 @@ class CreditCheckTestCase(TestCase):
         credit = self._make_candidate_credit()
         self.assertTrue(credit.should_check())
         check = Check.objects.create_for_credit(credit)
-        self.assertEqual(check.status, CHECK_STATUS.ACCEPTED)
+        self.assertEqual(check.status, CheckStatus.accepted.value)
         self.assertEqual(len(check.description), 1)
         self.assertIn('automatically accepted', check.description[0])
         self.assertFalse(check.rules)
@@ -398,7 +399,7 @@ class CreditCheckTestCase(TestCase):
 
         self.assertTrue(credit.should_check())
         check = Check.objects.create_for_credit(credit)
-        self.assertEqual(check.status, CHECK_STATUS.PENDING)
+        self.assertEqual(check.status, CheckStatus.pending.value)
         self.assertEqual(len(check.description), 2, FLAKY_TEST_WARNING)
         description = '\n'.join(check.description)
         self.assertIn('FIU prisoners', description)
@@ -420,7 +421,7 @@ class CreditCheckTestCase(TestCase):
 
         self.assertTrue(credit.should_check())
         check = Check.objects.create_for_credit(credit)
-        self.assertEqual(check.status, CHECK_STATUS.PENDING)
+        self.assertEqual(check.status, CheckStatus.pending.value)
         self.assertEqual(len(check.description), 2, FLAKY_TEST_WARNING)
         description = '\n'.join(check.description)
         self.assertIn('FIU prisoners', description)
@@ -506,10 +507,10 @@ class AutomaticCreditCheckTestCase(APITestCase, AuthTestCaseMixin):
         )
         payment = response.json()
         payment = Payment.objects.get(uuid=payment['uuid'])
-        self.assertEqual(payment.status, PAYMENT_STATUS.PENDING)
-        self.assertEqual(payment.credit.resolution, CREDIT_RESOLUTION.INITIAL)
+        self.assertEqual(payment.status, PaymentStatus.pending.value)
+        self.assertEqual(payment.credit.resolution, CreditResolution.initial.value)
         self.assertTrue(hasattr(payment.credit, 'security_check'))
-        self.assertEqual(payment.credit.security_check.status, CHECK_STATUS.ACCEPTED)
+        self.assertEqual(payment.credit.security_check.status, CheckStatus.accepted.value)
 
     def test_pending_check_created_for_monitored_user(self):
         """
@@ -559,10 +560,10 @@ class AutomaticCreditCheckTestCase(APITestCase, AuthTestCaseMixin):
         )
         payment = response.json()
         payment = Payment.objects.get(uuid=payment['uuid'])
-        self.assertEqual(payment.status, PAYMENT_STATUS.PENDING)
-        self.assertEqual(payment.credit.resolution, CREDIT_RESOLUTION.INITIAL)
+        self.assertEqual(payment.status, PaymentStatus.pending.value)
+        self.assertEqual(payment.credit.resolution, CreditResolution.initial.value)
         self.assertTrue(hasattr(payment.credit, 'security_check'))
-        self.assertEqual(payment.credit.security_check.status, CHECK_STATUS.PENDING)
+        self.assertEqual(payment.credit.security_check.status, CheckStatus.pending.value)
 
 
 class AutoAcceptRuleTestCase(APITestCase, AuthTestCaseMixin):
@@ -617,7 +618,7 @@ class AutoAcceptRuleTestCase(APITestCase, AuthTestCaseMixin):
         self.assertEqual(check.auto_accept_rule_state, self.auto_accept_rule.get_latest_state())
         self.assertIn('FIUMONP', check.rules)
         self.assertIn('FIUMONS', check.rules)
-        self.assertEqual(check.status, CHECK_STATUS.ACCEPTED)
+        self.assertEqual(check.status, CheckStatus.accepted.value)
 
     def test_payment_for_pair_with_inactive_auto_accept_caught_by_delayed_capture(self):
         self.client.patch(
@@ -654,7 +655,7 @@ class AutoAcceptRuleTestCase(APITestCase, AuthTestCaseMixin):
         self.assertEqual(check.auto_accept_rule_state, None)
         self.assertIn('FIUMONP', check.rules)
         self.assertIn('FIUMONS', check.rules)
-        self.assertEqual(check.status, CHECK_STATUS.PENDING)
+        self.assertEqual(check.status, CheckStatus.pending.value)
 
     def test_payment_where_sender_not_on_auto_accept_caught_by_delayed_capture(self):
         sender_profile_id = SenderProfile.objects.exclude(
@@ -677,7 +678,7 @@ class AutoAcceptRuleTestCase(APITestCase, AuthTestCaseMixin):
         # Assert
         self.assertEqual(check.auto_accept_rule_state, None)
         self.assertIn('FIUMONP', check.rules)
-        self.assertEqual(check.status, CHECK_STATUS.PENDING)
+        self.assertEqual(check.status, CheckStatus.pending.value)
 
     def test_payment_where_prisoner_not_on_auto_accept_caught_by_delayed_capture(self):
         prisoner_profile_id = PrisonerProfile.objects.exclude(
@@ -700,4 +701,4 @@ class AutoAcceptRuleTestCase(APITestCase, AuthTestCaseMixin):
         # Assert
         self.assertEqual(check.auto_accept_rule_state, None)
         self.assertIn('FIUMONS', check.rules)
-        self.assertEqual(check.status, CHECK_STATUS.PENDING)
+        self.assertEqual(check.status, CheckStatus.pending.value)

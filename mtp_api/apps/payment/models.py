@@ -8,10 +8,10 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from model_utils.models import TimeStampedModel
 
-from credit.constants import CREDIT_RESOLUTION
+from credit.constants import CreditResolution
 from credit.models import Credit
 from credit.signals import credit_failed
-from payment.constants import PAYMENT_STATUS
+from payment.constants import PaymentStatus
 from payment.managers import PaymentManager
 from security.models import Check
 
@@ -57,7 +57,9 @@ class BillingAddress(models.Model):
 
 class Payment(TimeStampedModel):
     uuid = models.UUIDField(default=uuid.uuid4, primary_key=True, editable=False)
-    status = models.CharField(max_length=50, choices=PAYMENT_STATUS, default=PAYMENT_STATUS.PENDING, db_index=True)
+    status = models.CharField(
+        max_length=50, choices=PaymentStatus.choices, default=PaymentStatus.pending.value, db_index=True
+    )
     processor_id = models.CharField(max_length=250, null=True, blank=True, db_index=True)
     worldpay_id = models.CharField(max_length=250, null=True, blank=True, db_index=True)
     amount = models.PositiveIntegerField()
@@ -121,19 +123,19 @@ class Payment(TimeStampedModel):
 @receiver(pre_save, sender=Payment, dispatch_uid='update_credit_for_payment')
 def update_credit_for_payment(instance, **kwargs):
     if (
-        instance.status == PAYMENT_STATUS.TAKEN and
-        instance.credit.resolution == CREDIT_RESOLUTION.INITIAL
+        instance.status == PaymentStatus.taken.value and
+        instance.credit.resolution == CreditResolution.initial.value
     ):
         if instance.credit.received_at is None:
             instance.credit.received_at = timezone.now()
-        instance.credit.resolution = CREDIT_RESOLUTION.PENDING
+        instance.credit.resolution = CreditResolution.pending.value
         instance.credit.save()
 
     if (
-        instance.status in (PAYMENT_STATUS.REJECTED, PAYMENT_STATUS.EXPIRED) and
-        instance.credit.resolution == CREDIT_RESOLUTION.INITIAL
+        instance.status in (PaymentStatus.rejected.value, PaymentStatus.expired.value) and
+        instance.credit.resolution == CreditResolution.initial.value
     ):
-        instance.credit.resolution = CREDIT_RESOLUTION.FAILED
+        instance.credit.resolution = CreditResolution.failed.value
         instance.credit.save()
 
         credit_failed.send(
@@ -146,8 +148,8 @@ def update_credit_for_payment(instance, **kwargs):
 def create_security_check_if_needed_and_attach_profiles(instance: Payment, **kwargs):
     credit = instance.credit
     if (
-        credit.resolution == CREDIT_RESOLUTION.INITIAL
-        and instance.status == PAYMENT_STATUS.PENDING
+        credit.resolution == CreditResolution.initial.value
+        and instance.status == PaymentStatus.pending.value
         and credit.has_enough_detail_for_sender_profile()
     ):
         credit.attach_profiles()

@@ -5,7 +5,7 @@ from django.utils.dateformat import format as format_date
 from mtp_common.tasks import send_email
 
 from core.notify.templates import ApiNotifyTemplates
-from notification.constants import EMAIL_FREQUENCY
+from notification.constants import EmailFrequency
 from notification.models import Event, EmailNotificationPreferences
 from notification.rules import ENABLED_RULE_CODES
 from notification.utils import get_notification_period
@@ -16,7 +16,7 @@ EMAILS_STARTED_FLAG = 'notifications-started'
 
 class Command(BaseCommand):
     def handle(self, **options):
-        frequency = EMAIL_FREQUENCY.DAILY
+        frequency = EmailFrequency.daily
         period_start, period_end = get_notification_period(frequency)
         events = get_events(period_start, period_end)
 

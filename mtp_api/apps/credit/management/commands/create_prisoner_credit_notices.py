@@ -8,10 +8,10 @@ from django.utils.timezone import localdate, make_aware
 from mtp_common.nomis import can_access_nomis, get_location as nomis_get_location
 import requests
 
-from credit.constants import LOG_ACTIONS as CREDIT_ACTIONS
+from credit.constants import LogAction as CreditLogAction
 from credit.models import Log as CreditLog
 from credit.notices.prisoner_credits import PrisonerCreditNoticeBundle
-from disbursement.constants import LOG_ACTIONS as DISBURSEMENT_ACTIONS
+from disbursement.constants import LogAction as DisbursementLogAction
 from disbursement.models import Log as DisbursementLog
 from prison.models import Prison
 
@@ -43,13 +43,13 @@ class Command(BaseCommand):
                       make_aware(datetime.datetime.combine(date, datetime.time.max)))
 
         credit_logs = CreditLog.objects.filter(
-            action=CREDIT_ACTIONS.CREDITED,
+            action=CreditLogAction.credited,
             created__range=date_range,
             credit__prison=prison.pk,
         )
         credit_count = credit_logs.count()
         disbursement_logs = DisbursementLog.objects.filter(
-            action=DISBURSEMENT_ACTIONS.SENT,
+            action=DisbursementLogAction.sent,
             created__range=date_range,
             disbursement__prison=prison.pk,
         )

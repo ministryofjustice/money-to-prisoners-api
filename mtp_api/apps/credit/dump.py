@@ -3,10 +3,11 @@ from mtp_common.security.checks import human_readable_check_rejection_reasons
 from mtp_common.utils import format_currency
 
 from core.dump import Serialiser
-from credit.constants import CREDIT_RESOLUTION, CREDIT_STATUS
-from credit.models import Credit, LOG_ACTIONS as CREDIT_LOG_ACTIONS
-from payment.models import PAYMENT_STATUS, BillingAddress
-from security.models import CHECK_STATUS
+from credit.constants import CreditResolution, CreditStatus, LogAction
+from credit.models import Credit
+from payment.constants import PaymentStatus
+from payment.models import BillingAddress
+from security.constants import CheckStatus
 
 
 class CreditSerialiser(Serialiser):
@@ -26,8 +27,8 @@ class CreditSerialiser(Serialiser):
 
     def get_queryset(self):
         queryset = Credit.objects_all \
-            .exclude(resolution=CREDIT_RESOLUTION.INITIAL) \
-            .exclude(payment__status=PAYMENT_STATUS.EXPIRED)
+            .exclude(resolution=CreditResolution.initial) \
+            .exclude(payment__status=PaymentStatus.expired)
         if self.only_with_triggered_rules:
             queryset = queryset \
                 .exclude(security_check__rules__len=0) \
@@ -69,7 +70,7 @@ class CreditSerialiser(Serialiser):
     def serialise(self, record: Credit):
         status = record.status
         if status:
-            status = CREDIT_STATUS.for_value(status).display
+            status = CreditStatus[status].label
         else:
             status = 'Anonymous'
 
@@ -77,7 +78,7 @@ class CreditSerialiser(Serialiser):
         row.update({
             'URL': f'{settings.NOMS_OPS_URL}/security/credits/{record.id}/',
             'Date received': record.received_at,
-            'Date credited': record.log_set.get_action_date(CREDIT_LOG_ACTIONS.CREDITED),
+            'Date credited': record.log_set.get_action_date(LogAction.credited),
             'Amount': self.format_amount(record.amount),
             'Prisoner number': record.prisoner_number or 'Unknown',
             'Prisoner name': record.prisoner_name or 'Unknown',
@@ -132,7 +133,7 @@ class CreditSerialiser(Serialiser):
         if hasattr(record, 'security_check'):
             security_check = record.security_check
             security_check_description = '; '.join(security_check.description)
-            security_check_status = CHECK_STATUS.for_value(security_check.status).display
+            security_check_status = CheckStatus[security_check.status].label
             security_check_actioned_by = security_check.actioned_by.username if security_check.actioned_by else ''
             if len(security_check.rules) > 0:
                 security_check_rules = security_check.rules

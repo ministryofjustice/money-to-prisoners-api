@@ -43,7 +43,7 @@
             </thead>
             <tbody>
               {% for row in rows %}
-                <tr class="{% cycle 'row1' 'row2' %}">
+                <tr>
                   <td>{{ row.date_label }}</td>
                   <td>{{ row.count|format_number }}</td>
                   <td>{{ row.amount|currency }}</td>

@@ -7,13 +7,13 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from core.tests.utils import make_test_users
+from credit.constants import CreditResolution, CreditStatus
+from credit.models import Credit
 from mtp_auth.constants import CASHBOOK_OAUTH_CLIENT_ID
 from mtp_auth.models import PrisonUserMapping
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from payment.tests.utils import generate_payments, latest_payment_date
 from prison.models import Prison
-from credit.models import Credit
-from credit.constants import CREDIT_STATUS, CREDIT_RESOLUTION
 from prison.tests.utils import load_random_prisoner_locations
 from transaction.tests.utils import generate_transactions, latest_transaction_date
 
@@ -22,17 +22,17 @@ class BaseCreditViewTestCase(AuthTestCaseMixin, APITestCase):
     fixtures = [
         'initial_groups.json',
         'initial_types.json',
-        'test_prisons.json'
+        'test_prisons.json',
     ]
     STATUS_FILTERS = {
         None: lambda c: True,
-        CREDIT_STATUS.CREDIT_PENDING: lambda c: (
+        CreditStatus.credit_pending.value: lambda c: (
             c.prison and
-            (c.resolution == CREDIT_RESOLUTION.PENDING or
-             c.resolution == CREDIT_RESOLUTION.MANUAL) and
+            (c.resolution == CreditResolution.pending.value or
+             c.resolution == CreditResolution.manual.value) and
             not c.blocked
         ),
-        CREDIT_STATUS.CREDITED: lambda c: c.credited
+        CreditStatus.credited.value: lambda c: c.credited,
     }
     transaction_batch = 100
 
@@ -72,12 +72,12 @@ class BaseCreditViewTestCase(AuthTestCaseMixin, APITestCase):
 
     def _get_credit_pending_credits_qs(self, prisons, user):
         return self._get_queryset(user, prisons).filter(
-            blocked=False, resolution=CREDIT_RESOLUTION.PENDING
+            blocked=False, resolution=CreditResolution.pending,
         )
 
     def _get_credited_credits_qs(self, prisons, user):
         return self._get_queryset(user, prisons).filter(
-            owner=user, resolution=CREDIT_RESOLUTION.CREDITED, prison__in=prisons
+            owner=user, resolution=CreditResolution.credited, prison__in=prisons,
         )
 
     def _get_latest_date(self):

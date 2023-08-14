@@ -95,9 +95,10 @@ class DigitalTakeupUploadView(AdminViewMixin, FormView):
             job.save()
 
     def check_takeup(self, date, credits_in_spreadsheet):
-        from credit.models import Log, LOG_ACTIONS
+        from credit.constants import LogAction
+        from credit.models import Log
 
-        credited = Log.objects.filter(created__date=date, action=LOG_ACTIONS.CREDITED) \
+        credited = Log.objects.filter(created__date=date, action=LogAction.credited) \
             .exclude(credit__prison__private_estate=True) \
             .values('credit__prison__nomis_id') \
             .order_by('credit__prison__nomis_id') \

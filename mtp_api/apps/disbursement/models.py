@@ -5,7 +5,7 @@ from model_utils.models import TimeStampedModel
 from mtp_common.utils import format_currency
 
 from disbursement import InvalidDisbursementStateException
-from disbursement.constants import LOG_ACTIONS, DISBURSEMENT_RESOLUTION, DISBURSEMENT_METHOD
+from disbursement.constants import DisbursementResolution, DisbursementMethod, LogAction
 from disbursement.managers import DisbursementManager, DisbursementQuerySet, LogManager
 from disbursement.signals import (
     disbursement_confirmed, disbursement_created, disbursement_rejected,
@@ -21,10 +21,10 @@ class Disbursement(TimeStampedModel):
     prison = models.ForeignKey(Prison, on_delete=models.PROTECT)
     resolution = models.CharField(
         max_length=50,
-        choices=DISBURSEMENT_RESOLUTION, default=DISBURSEMENT_RESOLUTION.PENDING,
+        choices=DisbursementResolution.choices, default=DisbursementResolution.pending.value,
         db_index=True
     )
-    method = models.CharField(max_length=50, choices=DISBURSEMENT_METHOD, db_index=True)
+    method = models.CharField(max_length=50, choices=DisbursementMethod.choices, db_index=True)
     remittance_description = models.CharField(max_length=250, blank=True)
 
     # recipient details
@@ -72,14 +72,14 @@ class Disbursement(TimeStampedModel):
 
     @staticmethod
     def get_permitted_state(new_resolution):
-        if new_resolution == DISBURSEMENT_RESOLUTION.SENT:
-            return DISBURSEMENT_RESOLUTION.CONFIRMED
-        elif new_resolution == DISBURSEMENT_RESOLUTION.CONFIRMED:
-            return DISBURSEMENT_RESOLUTION.PRECONFIRMED
-        elif new_resolution == DISBURSEMENT_RESOLUTION.PENDING:
-            return DISBURSEMENT_RESOLUTION.PRECONFIRMED
+        if new_resolution == DisbursementResolution.sent.value:
+            return DisbursementResolution.confirmed.value
+        elif new_resolution == DisbursementResolution.confirmed.value:
+            return DisbursementResolution.preconfirmed.value
+        elif new_resolution == DisbursementResolution.pending.value:
+            return DisbursementResolution.preconfirmed.value
         else:
-            return DISBURSEMENT_RESOLUTION.PENDING
+            return DisbursementResolution.pending.value
 
     def __str__(self):
         return 'Disbursement {id}, {amount} {prisoner} > {recipient}, {status}'.format(
@@ -108,37 +108,37 @@ class Disbursement(TimeStampedModel):
         )
 
     def reject(self, by_user):
-        if self.resolution == DISBURSEMENT_RESOLUTION.REJECTED:
+        if self.resolution == DisbursementResolution.rejected.value:
             return
-        if not self.resolution_permitted(DISBURSEMENT_RESOLUTION.REJECTED):
+        if not self.resolution_permitted(DisbursementResolution.rejected.value):
             raise InvalidDisbursementStateException([self.id])
-        self.resolution = DISBURSEMENT_RESOLUTION.REJECTED
+        self.resolution = DisbursementResolution.rejected.value
         self.save()
         disbursement_rejected.send(
             sender=Disbursement, disbursement=self, by_user=by_user)
 
     def preconfirm(self):
-        if self.resolution == DISBURSEMENT_RESOLUTION.PRECONFIRMED:
+        if self.resolution == DisbursementResolution.preconfirmed.value:
             return
-        if not self.resolution_permitted(DISBURSEMENT_RESOLUTION.PRECONFIRMED):
+        if not self.resolution_permitted(DisbursementResolution.preconfirmed.value):
             raise InvalidDisbursementStateException([self.id])
-        self.resolution = DISBURSEMENT_RESOLUTION.PRECONFIRMED
+        self.resolution = DisbursementResolution.preconfirmed.value
         self.save()
 
     def reset(self):
-        if self.resolution == DISBURSEMENT_RESOLUTION.PENDING:
+        if self.resolution == DisbursementResolution.pending.value:
             return
-        if not self.resolution_permitted(DISBURSEMENT_RESOLUTION.PENDING):
+        if not self.resolution_permitted(DisbursementResolution.pending.value):
             raise InvalidDisbursementStateException([self.id])
-        self.resolution = DISBURSEMENT_RESOLUTION.PENDING
+        self.resolution = DisbursementResolution.pending.value
         self.save()
 
     def confirm(self, by_user, nomis_transaction_id=None):
-        if self.resolution == DISBURSEMENT_RESOLUTION.CONFIRMED:
+        if self.resolution == DisbursementResolution.confirmed.value:
             return
-        if not self.resolution_permitted(DISBURSEMENT_RESOLUTION.CONFIRMED):
+        if not self.resolution_permitted(DisbursementResolution.confirmed.value):
             raise InvalidDisbursementStateException([self.id])
-        self.resolution = DISBURSEMENT_RESOLUTION.CONFIRMED
+        self.resolution = DisbursementResolution.confirmed.value
         if nomis_transaction_id:
             self.nomis_transaction_id = nomis_transaction_id
         self.invoice_number = self._generate_invoice_number()
@@ -147,11 +147,11 @@ class Disbursement(TimeStampedModel):
             sender=Disbursement, disbursement=self, by_user=by_user)
 
     def send(self, by_user):
-        if self.resolution == DISBURSEMENT_RESOLUTION.SENT:
+        if self.resolution == DisbursementResolution.sent.value:
             return
-        if not self.resolution_permitted(DISBURSEMENT_RESOLUTION.SENT):
+        if not self.resolution_permitted(DisbursementResolution.sent.value):
             raise InvalidDisbursementStateException([self.id])
-        self.resolution = DISBURSEMENT_RESOLUTION.SENT
+        self.resolution = DisbursementResolution.sent.value
         self.save()
         disbursement_sent.send(
             sender=Disbursement, disbursement=self, by_user=by_user)
@@ -166,7 +166,7 @@ class Log(TimeStampedModel):
         settings.AUTH_USER_MODEL, null=True, blank=True,
         on_delete=models.SET_NULL, related_name='disbursement_log'
     )
-    action = models.CharField(max_length=50, choices=LOG_ACTIONS)
+    action = models.CharField(max_length=50, choices=LogAction.choices)
 
     objects = LogManager()
 

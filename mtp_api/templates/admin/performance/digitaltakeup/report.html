@@ -151,14 +151,14 @@
               {% regroup rows by predicted as grouped_rows %}
               {% for rows in grouped_rows %}
                 {% if rows.grouper %}
-                  <tr class="{% cycle 'row1' 'row2' as row_styles %}">
+                  <tr>
                     <td colspan="{% if show_reported and show_savings %}7{% elif show_reported %}6{% elif show_savings %}5{% else %}4{% endif %}" style="text-align:center">
                       {% trans 'Predictions begin' %}
                     </td>
                   </tr>
                 {% endif %}
                 {% for row in rows.list %}
-                  <tr class="{% cycle row_styles %}">
+                  <tr>
                     <td>{{ row.date_label }}</td>
                     {% if show_reported %}
                       <td class="quiet">{{ row.reported_credits_by_mtp|format_number }}</td>

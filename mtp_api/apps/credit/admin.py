@@ -1,18 +1,14 @@
 from datetime import timedelta
 
-from django.contrib import admin
-from django.contrib import messages
+from django.contrib import admin, messages
 from django.contrib.admin.options import IncorrectLookupParameters
 from django.core.exceptions import ValidationError
 from django.db.models import Sum
 from django.utils.translation import gettext_lazy as _
 from mtp_common.utils import format_currency
 
-from core.admin import (
-    UtcDateRangeFilter, RelatedAnyFieldListFilter, SearchFilter,
-    add_short_description
-)
-from credit.constants import CREDIT_SOURCE, CREDIT_STATUS, LOG_ACTIONS
+from core.admin import UtcDateRangeFilter, RelatedAnyFieldListFilter, SearchFilter, add_short_description
+from credit.constants import CreditStatus, CreditSource, LogAction
 from credit.models import Credit, Log, Comment, ProcessingBatch, PrivateEstateBatch
 from payment.models import Payment
 from transaction.models import Transaction
@@ -25,7 +21,7 @@ class LogAdminInline(admin.TabularInline):
     readonly_fields = ('action', 'created', 'user')
     ordering = ('-created',)
 
-    def has_add_permission(self, request):
+    def has_add_permission(self, request, obj=None):
         return False
 
     def has_delete_permission(self, request, obj=None):
@@ -43,7 +39,7 @@ class TransactionAdminInline(admin.StackedInline):
     extra = 0
     readonly_fields = ('incomplete_sender_info', 'reference_in_sender_field')
 
-    def has_add_permission(self, request):
+    def has_add_permission(self, request, obj=None):
         return False
 
     def has_delete_permission(self, request, obj=None):
@@ -55,7 +51,7 @@ class PaymentAdminInline(admin.StackedInline):
     extra = 0
     readonly_fields = ('uuid', 'status', 'batch', 'billing_address',)
 
-    def has_add_permission(self, request):
+    def has_add_permission(self, request, obj=None):
         return False
 
     def has_delete_permission(self, request, obj=None):
@@ -67,7 +63,7 @@ class StatusFilter(admin.SimpleListFilter):
     title = _('status')
 
     def lookups(self, request, model_admin):
-        return CREDIT_STATUS
+        return CreditStatus.choices
 
     def queryset(self, request, queryset):
         status = self.used_parameters.get(self.parameter_name)
@@ -83,15 +79,15 @@ class SourceFilter(admin.SimpleListFilter):
     title = _('source')
 
     def lookups(self, request, model_admin):
-        return CREDIT_SOURCE
+        return CreditSource.choices
 
     def queryset(self, request, queryset):
         source = self.used_parameters.get(self.parameter_name)
-        if source in CREDIT_SOURCE:
+        if source in CreditSource:
             try:
-                if source == CREDIT_SOURCE.BANK_TRANSFER:
+                if source == CreditSource.bank_transfer.value:
                     return queryset.filter(transaction__isnull=False)
-                elif source == CREDIT_SOURCE.ONLINE:
+                elif source == CreditSource.online.value:
                     return queryset.filter(payment__isnull=False)
                 else:
                     return queryset.filter(payment__isnull=True, transaction__isnull=True)
@@ -148,15 +144,15 @@ class CreditAdmin(admin.ModelAdmin):
     @add_short_description(_('source'))
     def formatted_source(self, instance):
         value = instance.source
-        if CREDIT_SOURCE.has_value(value):
-            return CREDIT_SOURCE.for_value(value).display
+        if value in CreditSource:
+            return CreditSource[value].label
         return value
 
     @add_short_description(_('status'))
     def formatted_status(self, instance):
         value = instance.status
-        if CREDIT_STATUS.has_value(value):
-            return CREDIT_STATUS.for_value(value).display
+        if value in CreditStatus:
+            return CreditStatus[value].label
         return value
 
     @add_short_description(_('Display total of selected credits'))
@@ -189,13 +185,11 @@ class CreditAdmin(admin.ModelAdmin):
         for credit in queryset.prefetch_related('log_set'):
             logs = sorted(credit.log_set.all(), key=lambda log: log.created)
             for log in logs:
-                if log.action == LOG_ACTIONS.CREDITED:
+                if log.action == LogAction.credited.value:
                     until_credited_times.append(log.created - credit.received_at)
 
         if until_credited_times:
-            avg_credit_time = (sum(until_credited_times, timedelta(0)) /
-                               len(until_credited_times))
-
+            avg_credit_time = sum(until_credited_times, timedelta(0)) / len(until_credited_times)
             self.message_user(
                 request,
                 _('Time until credit after being received: average %(avg)s, maximum %(max)s, minimum %(min)s') % {
@@ -205,8 +199,7 @@ class CreditAdmin(admin.ModelAdmin):
                 }
             )
         else:
-            self.message_user(request, _('No credits have been credited yet.'),
-                              messages.WARNING)
+            self.message_user(request, _('No credits have been credited yet.'), messages.WARNING)
 
 
 @admin.register(Comment)

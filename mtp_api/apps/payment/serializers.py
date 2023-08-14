@@ -1,10 +1,10 @@
 from django.db.transaction import atomic
 from rest_framework import serializers
 
-from credit.constants import CREDIT_RESOLUTION
+from credit.constants import CreditResolution
 from credit.models import Credit
 from payment.models import Batch, BillingAddress, Payment
-from payment.constants import PAYMENT_STATUS
+from payment.constants import PaymentStatus
 from payment.exceptions import InvalidStateForUpdateException
 from security.models import Check
 
@@ -77,7 +77,7 @@ class PaymentSerializer(serializers.ModelSerializer):
             amount=validated_data['amount'],
             prisoner_number=validated_data.pop('prisoner_number'),
             prisoner_dob=validated_data.pop('prisoner_dob'),
-            resolution=CREDIT_RESOLUTION.INITIAL
+            resolution=CreditResolution.initial,
         )
         new_credit.save()
         validated_data['credit'] = new_credit
@@ -85,7 +85,7 @@ class PaymentSerializer(serializers.ModelSerializer):
 
     @atomic
     def update(self, instance, validated_data):
-        if instance.status != PAYMENT_STATUS.PENDING:
+        if instance.status != PaymentStatus.pending.value:
             raise InvalidStateForUpdateException(
                 'Payment cannot be updated in status "%s"'
                 % instance.status

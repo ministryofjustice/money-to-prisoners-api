@@ -56,7 +56,7 @@ django.jQuery(function ($) {
         moduleFormCookie[cookieKey] = $form.serialize();
       }
     });
-    Cookies.set(cookieName, moduleFormCookie, {expires: 2});
+    Cookies.set(cookieName, JSON.stringify(moduleFormCookie), {expires: 2});
 
     // reload page
     window.location.reload();

@@ -16,7 +16,7 @@ class CreditListWithSearchTestCase(CreditListTestCase):
             if credit.prisoner_number:
                 search_phrase = credit.prisoner_number
         self._test_response_with_filters({
-            'search': search_phrase
+            'search': search_phrase,
         })
 
     def test_filter_search_for_prisoner_name(self):
@@ -29,7 +29,7 @@ class CreditListWithSearchTestCase(CreditListTestCase):
             if credit.prisoner_name:
                 search_phrase = credit.prisoner_name.split()[0]
         self._test_response_with_filters({
-            'search': search_phrase
+            'search': search_phrase,
         })
 
     def test_filter_search_for_sender_name(self):
@@ -42,7 +42,7 @@ class CreditListWithSearchTestCase(CreditListTestCase):
             if credit.sender_name:
                 search_phrase = credit.sender_name[:2].strip()
         self._test_response_with_filters({
-            'search': search_phrase
+            'search': search_phrase,
         })
 
     def test_filter_search_for_amount(self):
@@ -52,13 +52,13 @@ class CreditListWithSearchTestCase(CreditListTestCase):
         credit = random.choice(self.credits)
         search_phrase = '£%0.2f' % (credit.amount / 100)
         self._test_response_with_filters({
-            'search': search_phrase
+            'search': search_phrase,
         })
 
     def test_filter_search_for_amount_prefix(self):
         search_phrase = '£5'
         self._test_response_with_filters({
-            'search': search_phrase
+            'search': search_phrase,
         })
 
     def test_empty_search(self):
@@ -66,7 +66,7 @@ class CreditListWithSearchTestCase(CreditListTestCase):
         Empty search causes no errors
         """
         self._test_response_with_filters({
-            'search': ''
+            'search': '',
         })
 
     def test_search_with_no_results(self):
@@ -77,6 +77,6 @@ class CreditListWithSearchTestCase(CreditListTestCase):
             'search': get_random_string(
                 length=20,  # too long for generated sender names
                 allowed_chars='§±@£$#{}[];:<>',  # includes characters not used in generation
-            )
+            ),
         })
         self.assertFalse(response.data['results'])

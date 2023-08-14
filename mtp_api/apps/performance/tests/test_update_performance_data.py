@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from core.utils import monday_of_same_week
-from credit.constants import CREDIT_RESOLUTION
+from credit.constants import CreditResolution
 from credit.models import Credit
 from model_bakery import baker
 from performance.models import DigitalTakeup, PerformanceData, UserSatisfaction
@@ -38,14 +38,14 @@ class UpdatePerformanceDataTestTestCase(TestCase):
             baker.make(
                 Credit,
                 received_at=day_with_time,
-                resolution=CREDIT_RESOLUTION.CREDITED,
+                resolution=CreditResolution.credited,
                 _quantity=credits_count,
             )
             # Also create a PENDING credit per day (to test ignored credits)
             baker.make(
                 Credit,
                 received_at=day_with_time,
-                resolution=CREDIT_RESOLUTION.PENDING,
+                resolution=CreditResolution.pending,
                 _quantity=1,
             )
 

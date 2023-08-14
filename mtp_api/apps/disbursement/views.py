@@ -18,7 +18,7 @@ from core.filters import (
 from core.models import TruncUtcDate
 from core.permissions import ActionsBasedViewPermissions
 from disbursement import InvalidDisbursementStateException
-from disbursement.constants import DISBURSEMENT_RESOLUTION
+from disbursement.constants import DisbursementResolution
 from disbursement.models import Disbursement, Comment
 from disbursement.serializers import (
     DisbursementSerializer, DisbursementIdsSerializer,
@@ -141,7 +141,7 @@ class DisbursementView(
 ):
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
-        if instance.resolution == DISBURSEMENT_RESOLUTION.PENDING:
+        if instance.resolution == DisbursementResolution.pending.value:
             return super().update(request, *args, **kwargs)
         else:
             return Response(
@@ -196,19 +196,19 @@ class ResolveDisbursementsView(DisbursementViewMixin, APIView):
 
 
 class RejectDisbursementsView(ResolveDisbursementsView):
-    resolution = DISBURSEMENT_RESOLUTION.REJECTED
+    resolution = DisbursementResolution.rejected.value
 
 
 class PreConfirmDisbursementsView(ResolveDisbursementsView):
-    resolution = DISBURSEMENT_RESOLUTION.PRECONFIRMED
+    resolution = DisbursementResolution.preconfirmed.value
 
 
 class ResetDisbursementsView(ResolveDisbursementsView):
-    resolution = DISBURSEMENT_RESOLUTION.PENDING
+    resolution = DisbursementResolution.pending.value
 
 
 class SendDisbursementsView(ResolveDisbursementsView):
-    resolution = DISBURSEMENT_RESOLUTION.SENT
+    resolution = DisbursementResolution.sent.value
 
     permission_classes = (
         IsAuthenticated, ActionsBasedViewPermissions, BankAdminClientIDPermissions

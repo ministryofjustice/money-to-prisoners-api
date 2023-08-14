@@ -11,11 +11,11 @@ from parameterized import parameterized
 import responses
 
 from core.tests.utils import make_test_users
-from credit.management.commands.fix_stuck_credits import (
-    find_credits_in_nomis, nomis_transaction_already_linked,
-)
-from credit.models import Credit, CREDIT_RESOLUTION, CREDIT_STATUS
-from payment.models import Payment, PAYMENT_STATUS
+from credit.management.commands.fix_stuck_credits import find_credits_in_nomis, nomis_transaction_already_linked
+from credit.constants import CreditResolution, CreditStatus
+from credit.models import Credit
+from payment.constants import PaymentStatus
+from payment.models import Payment
 
 
 # silence check for interactive console:
@@ -75,13 +75,13 @@ class FixStuckCreditsTestCase(TestCase):
             prison_id=self.sample_prison,
             amount=3000,
             received_at=timezone.make_aware(datetime.datetime(2021, 10, 10, 9)),
-            resolution=CREDIT_RESOLUTION.PENDING,
+            resolution=CreditResolution.pending.value,
         )
         baker.make(
             Payment,
             credit=credit,
             amount=credit.amount,
-            status=PAYMENT_STATUS.TAKEN,
+            status=PaymentStatus.taken,
             cardholder_name='Mrs. Halls',
         )
         self.credit = credit
@@ -134,8 +134,8 @@ class FixStuckCreditsTestCase(TestCase):
         credit.refresh_from_db()
 
         # assert that credit is now linked to matching NOMIS transaction
-        self.assertEqual(credit.resolution, CREDIT_RESOLUTION.CREDITED)
-        self.assertEqual(credit.status, CREDIT_STATUS.CREDITED)
+        self.assertEqual(credit.resolution, CreditResolution.credited.value)
+        self.assertEqual(credit.status, CreditStatus.credited.value)
         self.assertEqual(credit.nomis_transaction_id, self.nomis_transaction_matching['id'])
         self.assertEqual(credit.owner.username, self.sample_username)
 
@@ -144,8 +144,8 @@ class FixStuckCreditsTestCase(TestCase):
         credit.refresh_from_db()
 
         # assert that credit is NOT linked to any NOMIS transactions
-        self.assertEqual(credit.resolution, CREDIT_RESOLUTION.PENDING)
-        self.assertEqual(credit.status, CREDIT_STATUS.CREDIT_PENDING)
+        self.assertEqual(credit.resolution, CreditResolution.pending.value)
+        self.assertEqual(credit.status, CreditStatus.credit_pending.value)
         self.assertIsNone(credit.nomis_transaction_id)
         self.assertIsNone(credit.owner)
 

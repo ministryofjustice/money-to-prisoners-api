@@ -8,10 +8,8 @@ from user_event_log.models import UserEvent
 
 @admin.register(UserEvent)
 class UserEventAdmin(admin.ModelAdmin):
-    """Admin configuration for UserEvent."""
-
     list_display = ('timestamp', 'user', 'kind', 'api_url_path')
-    list_filter = ('kind', 'api_url_path')
+    list_filter = ('kind',)
     list_select_related = ('user',)
     fields = (
         'id',

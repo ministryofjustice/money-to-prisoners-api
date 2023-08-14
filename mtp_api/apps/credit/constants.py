@@ -1,40 +1,38 @@
+from django.db import models
 from django.utils.translation import gettext_lazy as _
-from extended_choices import Choices
 
-CREDIT_RESOLUTION = Choices(
-    ('INITIAL', 'initial', _('Initial')),
-    ('PENDING', 'pending', _('Pending')),
-    ('MANUAL', 'manual', _('Requires manual processing')),
-    ('CREDITED', 'credited', _('Credited')),
-    ('REFUNDED', 'refunded', _('Refunded')),
-    ('FAILED', 'failed', _('Failed')),
-)
 
-CREDIT_STATUS = Choices(
-    ('CREDIT_PENDING', 'credit_pending', _('Credit pending')),
-    ('CREDITED', 'credited', _('Credited')),
-    ('REFUNDED', 'refunded', _('Refunded')),
-    ('REFUND_PENDING', 'refund_pending', _('Refund pending')),
-    ('FAILED', 'failed', _('Failed')),
-)
+class CreditResolution(models.TextChoices):
+    initial = 'initial', _('Initial')
+    pending = 'pending', _('Pending')
+    manual = 'manual', _('Requires manual processing')
+    credited = 'credited', _('Credited')
+    refunded = 'refunded', _('Refunded')
+    failed = 'failed', _('Failed')
 
-CREDIT_SOURCE = Choices(
-    ('BANK_TRANSFER', 'bank_transfer', _('Bank transfer')),
-    ('ONLINE', 'online', _('Online')),
-    ('UNKNOWN', 'unknown', _('Unknown')),
-)
 
-LOCK_LIMIT = 20
+class CreditStatus(models.TextChoices):
+    credit_pending = 'credit_pending', _('Credit pending')
+    credited = 'credited', _('Credited')
+    refunded = 'refunded', _('Refunded')
+    refund_pending = 'refund_pending', _('Refund pending')
+    failed = 'failed', _('Failed')
 
-LOG_ACTIONS = Choices(
-    ('CREATED', 'created', _('Created')),
-    ('LOCKED', 'locked', _('Locked')),  # legacy
-    ('UNLOCKED', 'unlocked', _('Unlocked')),  # legacy
-    ('CREDITED', 'credited', _('Credited')),
-    ('UNCREDITED', 'uncredited', _('Uncredited')),  # never happens
-    ('REFUNDED', 'refunded', _('Refunded')),
-    ('RECONCILED', 'reconciled', _('Reconciled')),
-    ('REVIEWED', 'reviewed', _('Reviewed')),
-    ('MANUAL', 'manual', _('Marked for manual processing')),
-    ('FAILED', 'failed', _('Failed')),
-)
+
+class CreditSource(models.TextChoices):
+    bank_transfer = 'bank_transfer', _('Bank transfer')
+    online = 'online', _('Online')
+    unknown = 'unknown', _('Unknown')
+
+
+class LogAction(models.TextChoices):
+    created = 'created', _('Created')
+    locked = 'locked', _('Locked')  # legacy
+    unlocked = 'unlocked', _('Unlocked')  # legacy
+    credited = 'credited', _('Credited')
+    uncredited = 'uncredited', _('Uncredited')  # never happens
+    refunded = 'refunded', _('Refunded')
+    reconciled = 'reconciled', _('Reconciled')
+    reviewed = 'reviewed', _('Reviewed')
+    manual = 'manual', _('Marked for manual processing')
+    failed = 'failed', _('Failed')

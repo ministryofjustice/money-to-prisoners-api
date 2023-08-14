@@ -5,21 +5,21 @@ from django.db.models.functions import Cast, Concat
 from django.db.transaction import atomic
 
 from disbursement import InvalidDisbursementStateException
-from disbursement.constants import LOG_ACTIONS, DISBURSEMENT_RESOLUTION
+from disbursement.constants import DisbursementResolution, LogAction
 
 
 class DisbursementQuerySet(models.QuerySet):
     def rejected(self):
-        return self.filter(resolution=DISBURSEMENT_RESOLUTION.REJECTED)
+        return self.filter(resolution=DisbursementResolution.rejected)
 
     def preconfirmed(self):
-        return self.filter(resolution=DISBURSEMENT_RESOLUTION.PRECONFIRMED)
+        return self.filter(resolution=DisbursementResolution.preconfirmed)
 
     def confirmed(self):
-        return self.filter(resolution=DISBURSEMENT_RESOLUTION.CONFIRMED)
+        return self.filter(resolution=DisbursementResolution.confirmed)
 
     def sent(self):
-        return self.filter(resolution=DISBURSEMENT_RESOLUTION.SENT)
+        return self.filter(resolution=DisbursementResolution.sent)
 
     def counts_per_day(self):
         return self.extra({'created_date': 'disbursement_disbursement.created::date'}) \
@@ -61,14 +61,14 @@ class DisbursementManager(models.Manager):
             raise InvalidDisbursementStateException(sorted(conflict_ids))
         to_update = to_update.exclude(resolution=resolution)
 
-        if resolution == DISBURSEMENT_RESOLUTION.REJECTED:
+        if resolution == DisbursementResolution.rejected.value:
             Log.objects.disbursements_rejected(to_update, user)
-        elif resolution == DISBURSEMENT_RESOLUTION.CONFIRMED:
+        elif resolution == DisbursementResolution.confirmed.value:
             Log.objects.disbursements_confirmed(to_update, user)
-        elif resolution == DISBURSEMENT_RESOLUTION.SENT:
+        elif resolution == DisbursementResolution.sent.value:
             Log.objects.disbursements_sent(to_update, user)
 
-        if resolution == DISBURSEMENT_RESOLUTION.CONFIRMED:
+        if resolution == DisbursementResolution.confirmed.value:
             to_update.update(
                 resolution=resolution,
                 invoice_number=Concat(
@@ -97,19 +97,19 @@ class LogManager(models.Manager):
         self.bulk_create(logs)
 
     def disbursements_created(self, disbursements, by_user):
-        self._log_action(LOG_ACTIONS.CREATED, disbursements, by_user)
+        self._log_action(LogAction.created, disbursements, by_user)
 
     def disbursements_edited(self, disbursements, by_user):
-        self._log_action(LOG_ACTIONS.EDITED, disbursements, by_user)
+        self._log_action(LogAction.edited, disbursements, by_user)
 
     def disbursements_rejected(self, disbursements, by_user):
-        self._log_action(LOG_ACTIONS.REJECTED, disbursements, by_user)
+        self._log_action(LogAction.rejected, disbursements, by_user)
 
     def disbursements_confirmed(self, disbursements, by_user):
-        self._log_action(LOG_ACTIONS.CONFIRMED, disbursements, by_user)
+        self._log_action(LogAction.confirmed, disbursements, by_user)
 
     def disbursements_sent(self, disbursements, by_user):
-        self._log_action(LOG_ACTIONS.SENT, disbursements, by_user)
+        self._log_action(LogAction.sent, disbursements, by_user)
 
     def get_action_date(self, action):
         log = self.filter(action=action).order_by('-created').first()

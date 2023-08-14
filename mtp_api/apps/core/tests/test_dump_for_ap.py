@@ -9,7 +9,7 @@ from django.test import TestCase
 from core.tests.utils import make_test_users
 from disbursement.models import Disbursement
 from disbursement.tests.utils import generate_disbursements
-from payment.constants import PAYMENT_STATUS
+from payment.constants import PaymentStatus
 from payment.models import Payment
 from payment.tests.utils import generate_payments
 from prison.tests.utils import load_random_prisoner_locations
@@ -70,8 +70,8 @@ class DumpForAPTestCase(TestCase):
 
         completed_payments = Payment.objects.exclude(
             status__in=(
-                PAYMENT_STATUS.PENDING,
-                PAYMENT_STATUS.EXPIRED,
+                PaymentStatus.pending,
+                PaymentStatus.expired,
             )
         )
         expected_credit_ids = sorted(completed_payments.values_list('credit_id', flat=True))

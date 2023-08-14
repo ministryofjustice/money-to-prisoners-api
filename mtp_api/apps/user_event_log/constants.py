@@ -1,10 +1,6 @@
-from django.utils.translation import gettext_lazy
-from extended_choices import Choices
+from django.db import models
+from django.utils.translation import gettext_lazy as _
 
-USER_EVENT_KINDS = Choices(
-    (
-        'NOMS_OPS_SEARCH',
-        'noms_ops_search',
-        gettext_lazy('Search in Intelligence Tool')
-    ),
-)
+
+class UserEventKind(models.TextChoices):
+    noms_ops_search = 'noms_ops_search', _('Search in Intelligence Tool')

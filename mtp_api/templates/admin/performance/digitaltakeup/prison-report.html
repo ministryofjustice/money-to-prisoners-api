@@ -41,7 +41,7 @@
     </thead>
     <tbody>
       {% for prison in prisons %}
-        <tr class="{% cycle 'row1' 'row2' %}">
+        <tr>
           <td>{{ prison.name }}</td>
           <td>{{ prison.credits_by_post|format_number }}</td>
           <td>{{ prison.credits_by_mtp|format_number }}</td>

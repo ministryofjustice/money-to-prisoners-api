@@ -8,10 +8,10 @@ from model_bakery import baker
 
 from mtp_common.test_utils import silence_logger
 
-from credit.constants import CREDIT_RESOLUTION
+from credit.constants import CreditResolution
 from credit.models import Credit
 from core.tests.utils import make_test_users, delete_non_related_nullable_fields
-from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION
+from disbursement.constants import DisbursementResolution, DisbursementMethod
 from disbursement.models import Disbursement
 from disbursement.tests.utils import generate_disbursements, generate_initial_disbursement_data, create_disbursements
 
@@ -40,13 +40,13 @@ class UpdateSecurityProfilesTestCase(TestCase):
         for sender_profile in SenderProfile.objects.all():
             self.assertEqual(
                 sender_profile.credits.filter(
-                    resolution=CREDIT_RESOLUTION.CREDITED
+                    resolution=CreditResolution.credited,
                 ).count(),
                 sender_profile.credit_count
             )
             self.assertEqual(
                 sum(credit.amount for credit in sender_profile.credits.filter(
-                    resolution=CREDIT_RESOLUTION.CREDITED
+                    resolution=CreditResolution.credited,
                 )),
                 sender_profile.credit_total
             )
@@ -54,7 +54,7 @@ class UpdateSecurityProfilesTestCase(TestCase):
         self.assertEqual(
             Credit.objects.filter(
                 is_counted_in_sender_profile_total=False,
-                resolution=CREDIT_RESOLUTION.CREDITED
+                resolution=CreditResolution.credited,
             ).count(),
             0
         )
@@ -74,13 +74,13 @@ class UpdateSecurityProfilesTestCase(TestCase):
         for prisoner_profile in PrisonerProfile.objects.all():
             self.assertEqual(
                 sum(credit.amount for credit in prisoner_profile.credits.filter(
-                    resolution=CREDIT_RESOLUTION.CREDITED
+                    resolution=CreditResolution.credited,
                 )),
                 prisoner_profile.credit_total
             )
             self.assertEqual(
                 prisoner_profile.credits.filter(
-                    resolution=CREDIT_RESOLUTION.CREDITED
+                    resolution=CreditResolution.credited,
                 ).count(),
                 prisoner_profile.credit_count
             )
@@ -96,7 +96,7 @@ class UpdateSecurityProfilesTestCase(TestCase):
         self.assertEqual(
             Credit.objects.filter(
                 is_counted_in_prisoner_profile_total=False,
-                resolution=CREDIT_RESOLUTION.CREDITED
+                resolution=CreditResolution.credited,
             ).count(),
             0
         )
@@ -258,14 +258,14 @@ class UpdateSecurityProfilesTestCase(TestCase):
             tot=1, days_of_history=0
         )
 
-        new_disbursements[0]['method'] = DISBURSEMENT_METHOD.BANK_TRANSFER
+        new_disbursements[0]['method'] = DisbursementMethod.bank_transfer.value
         new_disbursements[0]['sort_code'] = bank_details.recipient_bank_account.sort_code
         new_disbursements[0]['account_number'] = bank_details.recipient_bank_account.account_number
         new_disbursements[0]['roll_number'] = bank_details.recipient_bank_account.roll_number
 
         new_disbursements[0]['prisoner_number'] = prisoner_to_update.prisoner_number
         new_disbursements[0]['prisoner_name'] = prisoner_to_update.prisoner_name
-        new_disbursements[0]['resolution'] = DISBURSEMENT_RESOLUTION.SENT
+        new_disbursements[0]['resolution'] = DisbursementResolution.sent.value
 
         create_disbursements(new_disbursements)
         call_command('update_security_profiles', verbosity=0)

@@ -2,16 +2,17 @@ from django.conf import settings
 from django.db import models
 from django.db.transaction import atomic
 
-from credit.constants import CREDIT_RESOLUTION
+from credit.constants import CreditResolution
 from credit.models import Credit
-from payment.constants import PAYMENT_STATUS
+from payment.constants import PaymentStatus
 
 
 class PaymentManager(models.Manager):
     def abandoned(self, created_before):
         return self.get_queryset().filter(
-            created__lt=created_before, status=PAYMENT_STATUS.FAILED,
-            credit__resolution=CREDIT_RESOLUTION.INITIAL,
+            created__lt=created_before,
+            status=PaymentStatus.failed,
+            credit__resolution=CreditResolution.initial,
         )
 
     @atomic
@@ -19,10 +20,10 @@ class PaymentManager(models.Manager):
         from payment.models import Batch
 
         update_set = self.get_queryset().filter(
-            status=PAYMENT_STATUS.TAKEN,
+            status=PaymentStatus.taken,
             credit__received_at__gte=start_date,
             credit__received_at__lt=end_date,
-            credit__reconciled=False
+            credit__reconciled=False,
         ).select_for_update()
 
         # use `len` as `select` is needed to acquire lock

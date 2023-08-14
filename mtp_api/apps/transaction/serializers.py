@@ -6,7 +6,7 @@ from credit.models import Credit
 from credit.signals import credit_created
 from payment.models import Batch
 from prison.serializers import PrisonSerializer
-from transaction.constants import TRANSACTION_CATEGORY, TRANSACTION_SOURCE
+from transaction.constants import TransactionCategory, TransactionSource
 from transaction.models import Transaction
 
 
@@ -21,8 +21,8 @@ class CreateTransactionListSerializer(serializers.ListSerializer):
             prisoner_number = data.pop('prisoner_number', None)
             prisoner_dob = data.pop('prisoner_dob', None)
             blocked = data.pop('blocked', False)
-            if (data['category'] == TRANSACTION_CATEGORY.CREDIT and
-                    data['source'] == TRANSACTION_SOURCE.BANK_TRANSFER):
+            if (data['category'] == TransactionCategory.credit.value and
+                    data['source'] == TransactionSource.bank_transfer.value):
                 new_credit = Credit(
                     amount=data['amount'],
                     prisoner_number=prisoner_number,
@@ -36,7 +36,7 @@ class CreateTransactionListSerializer(serializers.ListSerializer):
                 credit_created.send(
                     sender=Credit,
                     credit=new_credit,
-                    by_user=user
+                    by_user=user,
                 )
 
             transaction = Transaction.objects.create(**data)

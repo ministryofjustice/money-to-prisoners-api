@@ -5,16 +5,14 @@ from model_utils.models import TimeStampedModel
 from mtp_common.utils import format_currency
 
 from credit.models import Credit
-from transaction.constants import (
-    TRANSACTION_STATUS, TRANSACTION_CATEGORY, TRANSACTION_SOURCE
-)
+from transaction.constants import TransactionStatus, TransactionCategory, TransactionSource
 from transaction.managers import TransactionManager
 
 
 class Transaction(TimeStampedModel):
     amount = models.BigIntegerField()
-    category = models.CharField(max_length=50, choices=TRANSACTION_CATEGORY, db_index=True)
-    source = models.CharField(max_length=50, choices=TRANSACTION_SOURCE, db_index=True)
+    category = models.CharField(max_length=50, choices=TransactionCategory.choices, db_index=True)
+    source = models.CharField(max_length=50, choices=TransactionSource.choices, db_index=True)
 
     processor_type_code = models.CharField(max_length=12, blank=True, null=True)
     sender_sort_code = models.CharField(max_length=50, blank=True)
@@ -39,11 +37,11 @@ class Transaction(TimeStampedModel):
 
     # NB: there are matching boolean fields or properties on the model instance for each
     STATUS_LOOKUP = {
-        TRANSACTION_STATUS.CREDITABLE: (
+        TransactionStatus.creditable.value: (
             Q(credit__prison__isnull=False) &
             Q(credit__blocked=False)
         ),
-        TRANSACTION_STATUS.REFUNDABLE: (
+        TransactionStatus.refundable.value: (
             Q(incomplete_sender_info=False) & (
                 Q(credit__isnull=False) & (
                     Q(credit__prison__isnull=True) |
@@ -51,12 +49,12 @@ class Transaction(TimeStampedModel):
                 )
             )
         ),
-        TRANSACTION_STATUS.ANONYMOUS: (
+        TransactionStatus.anonymous.value: (
             Q(incomplete_sender_info=True) &
-            Q(category=TRANSACTION_CATEGORY.CREDIT) &
-            Q(source=TRANSACTION_SOURCE.BANK_TRANSFER)
+            Q(category=TransactionCategory.credit) &
+            Q(source=TransactionSource.bank_transfer)
         ),
-        TRANSACTION_STATUS.UNIDENTIFIED: (
+        TransactionStatus.unidentified.value: (
             Q(incomplete_sender_info=True) &
             (
                 Q(credit__isnull=False) & (
@@ -64,17 +62,17 @@ class Transaction(TimeStampedModel):
                     Q(credit__blocked=True)
                 )
             ) &
-            Q(category=TRANSACTION_CATEGORY.CREDIT) &
-            Q(source=TRANSACTION_SOURCE.BANK_TRANSFER)
+            Q(category=TransactionCategory.credit) &
+            Q(source=TransactionSource.bank_transfer)
         ),
-        TRANSACTION_STATUS.ANOMALOUS: (
-            Q(category=TRANSACTION_CATEGORY.CREDIT) &
-            Q(source=TRANSACTION_SOURCE.ADMINISTRATIVE)
+        TransactionStatus.anomalous.value: (
+            Q(category=TransactionCategory.credit) &
+            Q(source=TransactionSource.administrative)
         )
     }
 
-    STATUS_LOOKUP[TRANSACTION_STATUS.RECONCILABLE] = (
-        ~STATUS_LOOKUP[TRANSACTION_STATUS.ANOMALOUS]
+    STATUS_LOOKUP[TransactionStatus.reconcilable.value] = (
+        ~STATUS_LOOKUP[TransactionStatus.anomalous.value]
     )
 
     objects = TransactionManager()
@@ -145,24 +143,24 @@ class Transaction(TimeStampedModel):
         return (
             self.incomplete_sender_info and
             (self.prison is None or self.blocked) and
-            self.category == TRANSACTION_CATEGORY.CREDIT and
-            self.source == TRANSACTION_SOURCE.BANK_TRANSFER
+            self.category == TransactionCategory.credit.value and
+            self.source == TransactionSource.bank_transfer.value
         )
 
     @property
     def anomalous(self):
-        return (self.category == TRANSACTION_CATEGORY.CREDIT and
-                self.source == TRANSACTION_SOURCE.ADMINISTRATIVE)
+        return (self.category == TransactionCategory.credit.value and
+                self.source == TransactionSource.administrative.value)
 
     @property
     def status(self):
         if self.unidentified:
-            return TRANSACTION_STATUS.UNIDENTIFIED
+            return TransactionStatus.unidentified.value
         elif self.anomalous:
-            return TRANSACTION_STATUS.ANOMALOUS
+            return TransactionStatus.anomalous.value
         elif self.creditable:
-            return TRANSACTION_STATUS.CREDITABLE
+            return TransactionStatus.creditable.value
         elif self.refundable:
-            return TRANSACTION_STATUS.REFUNDABLE
+            return TransactionStatus.refundable.value
         elif self.incomplete_sender_info:
-            return TRANSACTION_STATUS.ANONYMOUS
+            return TransactionStatus.anonymous.value

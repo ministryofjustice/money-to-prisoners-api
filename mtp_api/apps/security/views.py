@@ -17,7 +17,7 @@ from core.filters import (
     SplitTextInMultipleFieldsFilter,
 )
 from core.permissions import ActionsBasedPermissions
-from credit.constants import CREDIT_SOURCE
+from credit.constants import CreditSource
 from credit.models import Credit
 from credit.views import GetCredits
 from disbursement.views import GetDisbursementsView
@@ -51,15 +51,15 @@ User = get_user_model()
 
 class SenderCreditSourceFilter(django_filters.ChoiceFilter):
     def __init__(self, *args, **kwargs):
-        kwargs['choices'] = CREDIT_SOURCE.choices
+        kwargs['choices'] = CreditSource.choices
         super().__init__(*args, **kwargs)
 
     def filter(self, qs, value):
-        if value == CREDIT_SOURCE.BANK_TRANSFER:
+        if value == CreditSource.bank_transfer.value:
             qs = qs.filter(bank_transfer_details__isnull=False)
-        elif value == CREDIT_SOURCE.ONLINE:
+        elif value == CreditSource.online.value:
             qs = qs.filter(debit_card_details__isnull=False)
-        elif value == CREDIT_SOURCE.UNKNOWN:
+        elif value == CreditSource.unknown.value:
             qs = qs.filter(
                 debit_card_details__isnull=True,
                 bank_transfer_details__isnull=True

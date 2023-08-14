@@ -10,11 +10,11 @@ import openpyxl
 from openpyxl.utils import coordinate_to_tuple
 
 from core.tests.utils import make_test_users, FLAKY_TEST_WARNING
-from credit.constants import CREDIT_RESOLUTION
+from credit.constants import CreditResolution
 from credit.models import Credit
 from disbursement.models import Disbursement
 from disbursement.tests.utils import generate_disbursements
-from notification.constants import EMAIL_FREQUENCY
+from notification.constants import EmailFrequency
 from notification.management.commands.send_notification_emails import (
     EMAILS_STARTED_FLAG,
     get_events, group_events, summarise_group,
@@ -22,7 +22,7 @@ from notification.management.commands.send_notification_emails import (
 from notification.models import Event, EmailNotificationPreferences
 from notification.rules import RULES
 from notification.tests.utils import make_sender, make_prisoner, make_csfreq_credits
-from payment.constants import PAYMENT_STATUS
+from payment.constants import PaymentStatus
 from payment.models import Payment
 from payment.tests.utils import generate_payments
 from prison.models import PrisonerLocation
@@ -52,14 +52,14 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
         load_random_prisoner_locations()
         generate_payments(
             payment_batch=20, days_of_history=2,
-            overrides={'status': PAYMENT_STATUS.TAKEN, 'credited': True}
+            overrides={'status': PaymentStatus.taken.value, 'credited': True}
         )
         generate_disbursements(disbursement_batch=20, days_of_history=1)
 
     def test_does_not_send_email_notifications_for_no_events(self, mock_send_email):
         user = self.security_staff[0]
         user.flags.create(name=EMAILS_STARTED_FLAG)
-        EmailNotificationPreferences(user=user, frequency=EMAIL_FREQUENCY.DAILY).save()
+        EmailNotificationPreferences(user=user, frequency=EmailFrequency.daily).save()
         call_command('send_notification_emails')
 
         self.assertFalse(Event.objects.exists())
@@ -69,7 +69,7 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
     def test_does_not_send_email_notifications_for_no_monitoring(self, mock_send_email):
         user = self.security_staff[0]
         user.flags.create(name=EMAILS_STARTED_FLAG)
-        EmailNotificationPreferences(user=user, frequency=EMAIL_FREQUENCY.DAILY).save()
+        EmailNotificationPreferences(user=user, frequency=EmailFrequency.daily).save()
         call_command('update_security_profiles')
         call_command('send_notification_emails')
 
@@ -79,7 +79,7 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
 
     def test_sends_first_email_not_monitoring(self, mock_send_email):
         user = self.security_staff[0]
-        EmailNotificationPreferences(user=user, frequency=EMAIL_FREQUENCY.DAILY).save()
+        EmailNotificationPreferences(user=user, frequency=EmailFrequency.daily).save()
         call_command('update_security_profiles')
         call_command('send_notification_emails')
 
@@ -91,7 +91,7 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
 
     def test_sends_first_email_with_events(self, mock_send_email):
         user = self.security_staff[0]
-        EmailNotificationPreferences(user=user, frequency=EMAIL_FREQUENCY.DAILY).save()
+        EmailNotificationPreferences(user=user, frequency=EmailFrequency.daily).save()
         self.create_profiles_but_unlink_objects()
         for profile in PrisonerProfile.objects.all():
             profile.monitoring_users.add(user)
@@ -111,7 +111,7 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
     def test_sends_subsequent_email_with_events(self, mock_send_email):
         user = self.security_staff[0]
         user.flags.create(name=EMAILS_STARTED_FLAG)
-        EmailNotificationPreferences(user=user, frequency=EMAIL_FREQUENCY.DAILY).save()
+        EmailNotificationPreferences(user=user, frequency=EmailFrequency.daily).save()
         self.create_profiles_but_unlink_objects()
         for profile in DebitCardSenderDetails.objects.all():
             profile.monitoring_users.add(user)
@@ -151,7 +151,7 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
             received_at=period_start, amount=100,
             prisoner_number=prisoner_profile_1.prisoner_number, prisoner_name=prisoner_profile_1.prisoner_name,
             prison=PrisonerLocation.objects.get(prisoner_number=prisoner_profile_1.prisoner_number).prison,
-            resolution=CREDIT_RESOLUTION.CREDITED, reconciled=True, private_estate_batch=None,
+            resolution=CreditResolution.credited, reconciled=True, private_estate_batch=None,
             prisoner_profile=prisoner_profile_1, sender_profile=sender_profile_1,
             is_counted_in_prisoner_profile_total=False,
             is_counted_in_sender_profile_total=False
@@ -168,7 +168,7 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
             received_at=period_start, amount=200,
             prisoner_number=prisoner_profile_2.prisoner_number, prisoner_name=prisoner_profile_2.prisoner_name,
             prison=PrisonerLocation.objects.get(prisoner_number=prisoner_profile_2.prisoner_number).prison,
-            resolution=CREDIT_RESOLUTION.CREDITED, reconciled=True, private_estate_batch=None,
+            resolution=CreditResolution.credited, reconciled=True, private_estate_batch=None,
             prisoner_profile=prisoner_profile_2, sender_profile=sender_profile_2,
             is_counted_in_prisoner_profile_total=False,
             is_counted_in_sender_profile_total=False
@@ -198,7 +198,7 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
 
         user = self.security_staff[0]
         user.flags.create(name=EMAILS_STARTED_FLAG)
-        EmailNotificationPreferences(user=user, frequency=EMAIL_FREQUENCY.DAILY).save()
+        EmailNotificationPreferences(user=user, frequency=EmailFrequency.daily).save()
         self.create_profiles_but_unlink_objects()
         for profile in DebitCardSenderDetails.objects.all():
             profile.monitoring_users.add(user)

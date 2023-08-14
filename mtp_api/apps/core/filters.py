@@ -1,10 +1,9 @@
-import re
 from functools import reduce
 from operator import or_
+import re
 
 from django import forms
 from django.db.models import Q
-from django.utils import six
 from django.utils.dateparse import parse_datetime
 from django.utils.formats import get_format
 from django.utils.functional import lazy
@@ -16,9 +15,8 @@ import django_filters.fields
 import django_filters.utils
 
 from mtp_auth.permissions import NomsOpsClientIDPermissions
-
+from user_event_log.constants import UserEventKind
 from user_event_log.utils import record_user_event
-from user_event_log.constants import USER_EVENT_KINDS
 
 
 class ParamsOnlyFilterSetForm(forms.Form):
@@ -51,7 +49,7 @@ class MultipleFieldCharFilter(django_filters.CharFilter):
 
     def filter(self, qs, value):
         if isinstance(value, django_filters.fields.Lookup):
-            lookup = six.text_type(value.lookup_type)
+            lookup = str(value.lookup_type)
             value = value.value
         else:
             lookup = self.lookup_expr
@@ -137,7 +135,7 @@ def get_all_format(format_type, lang=None, use_l10n=None):
     return ['iso8601'] + get_format(format_type, lang, use_l10n)
 
 
-get_all_format_lazy = lazy(get_all_format, six.text_type, list, tuple)
+get_all_format_lazy = lazy(get_all_format, list)
 
 
 class IsoDateTimeField(forms.DateTimeField):
@@ -242,7 +240,7 @@ class LogNomsOpsSearchDjangoFilterBackend(DjangoFilterBackend):
             'filters': filters_used,
             'results': qs.count(),
         }
-        record_user_event(request, USER_EVENT_KINDS.NOMS_OPS_SEARCH, data)
+        record_user_event(request, UserEventKind.noms_ops_search, data)
 
     def filter_queryset(self, request, queryset, view):
         """

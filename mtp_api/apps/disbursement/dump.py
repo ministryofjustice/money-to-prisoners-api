@@ -2,8 +2,8 @@ from django.conf import settings
 from mtp_common.utils import format_currency
 
 from core.dump import Serialiser
-from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION
-from disbursement.models import Disbursement, LOG_ACTIONS as DISBURSEMENT_LOG_ACTIONS
+from disbursement.constants import DisbursementResolution, DisbursementMethod, LogAction
+from disbursement.models import Disbursement
 
 
 class DisbursementSerialiser(Serialiser):
@@ -43,15 +43,15 @@ class DisbursementSerialiser(Serialiser):
         row.update({
             'URL': f'{settings.NOMS_OPS_URL}/security/disbursements/{record.id}/',
             'Date entered': record.created,
-            'Date confirmed': record.log_set.get_action_date(DISBURSEMENT_LOG_ACTIONS.CONFIRMED),
-            'Date sent': record.log_set.get_action_date(DISBURSEMENT_LOG_ACTIONS.SENT),
+            'Date confirmed': record.log_set.get_action_date(LogAction.confirmed),
+            'Date sent': record.log_set.get_action_date(LogAction.sent),
             'Amount': self.format_amount(record.amount),
             'Prisoner number': record.prisoner_number,
             'Prisoner name': record.prisoner_name,
             'Prison': record.prison.short_name,
             'Recipient first name': record.recipient_first_name,
             'Recipient last name': record.recipient_last_name,
-            'Payment method': DISBURSEMENT_METHOD.for_value(record.method).display,
+            'Payment method': DisbursementMethod[record.method].label,
             'Bank transfer sort code': record.sort_code,
             'Bank transfer account': record.account_number,
             'Bank transfer roll number': record.roll_number,
@@ -61,7 +61,7 @@ class DisbursementSerialiser(Serialiser):
             'Recipient address postcode': record.postcode,
             'Recipient address country': record.country,
             'Recipient email': record.recipient_email,
-            'Status': DISBURSEMENT_RESOLUTION.for_value(record.resolution).display,
+            'Status': DisbursementResolution[record.resolution].label,
             'NOMIS transaction': record.nomis_transaction_id,
             'SOP invoice number': record.invoice_number,
         })

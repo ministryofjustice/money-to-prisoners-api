@@ -10,12 +10,12 @@ from unittest import mock
 from django.core.management import call_command
 from faker import Faker
 
-from credit.constants import LOG_ACTIONS as CREDIT_ACTIONS
+from credit.constants import LogAction as CreditLogAction
 from credit.models import Credit, Log as CreditLog
 from credit.notices import Canvas
 from credit.notices.prisoner_credits import PrisonerCreditNoticeBundle
 from credit.tests.test_base import BaseCreditViewTestCase
-from disbursement.constants import LOG_ACTIONS as DISBURSEMENT_ACTIONS
+from disbursement.constants import LogAction as DisbursementLogAction
 from disbursement.models import Disbursement, Log as DisbursementLog
 from prison.models import Prison, PrisonerCreditNoticeEmail
 
@@ -203,8 +203,8 @@ class CreatePrisonerNoticesTestCase(NoticesCommandTestCase):
     def setUp(self):
         super().setUp()
         self.assign_email_addresses()
-        DisbursementLog.objects.filter(action=DISBURSEMENT_ACTIONS.SENT).delete()
-        credited_logs = CreditLog.objects.filter(action=CREDIT_ACTIONS.CREDITED).order_by('-created')
+        DisbursementLog.objects.filter(action=DisbursementLogAction.sent).delete()
+        credited_logs = CreditLog.objects.filter(action=CreditLogAction.credited).order_by('-created')
         self.latest_log = credited_logs.first()
         credited_logs.exclude(pk=self.latest_log.pk).delete()
         self.latest_credit = self.latest_log.credit
@@ -314,10 +314,10 @@ class SendPrisonerCreditNoticeTestCase(NoticesCommandTestCase):
         nomis_get_location.return_value = None
         self.assign_email_addresses()
         Disbursement.objects.sent().delete()
-        credited_logs = CreditLog.objects.filter(action=CREDIT_ACTIONS.CREDITED).order_by('-created')
+        credited_logs = CreditLog.objects.filter(action=CreditLogAction.credited).order_by('-created')
         latest = credited_logs.first().created.date()
         credited_logs = CreditLog.objects.filter(
-            action=CREDIT_ACTIONS.CREDITED,
+            action=CreditLogAction.credited,
             created__date__range=(latest, latest + datetime.timedelta(days=1))
         )
         prison_set = {credited_log.credit.prison_id for credited_log in credited_logs}

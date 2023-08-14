@@ -146,6 +146,7 @@ DATABASES = {
     }
 }
 
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 # Internationalization
 LANGUAGE_CODE = 'en-gb'
@@ -386,3 +387,7 @@ try:
     from .local import *  # noqa
 except ImportError:
     pass
+
+
+# TODO: remove after upgrade to django 3.2
+DEFAULT_HASHING_ALGORITHM = 'sha1'

@@ -16,10 +16,10 @@ import openpyxl
 from openpyxl.cell import WriteOnlyCell
 from openpyxl.utils import get_column_letter
 
-from credit.constants import CREDIT_STATUS
-from credit.models import Credit, LOG_ACTIONS as CREDIT_LOG_ACTIONS
-from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION
-from disbursement.models import Disbursement, LOG_ACTIONS as DISBURSEMENT_LOG_ACTIONS
+from credit.constants import CreditStatus, LogAction as CreditLogAction
+from credit.models import Credit
+from disbursement.constants import DisbursementResolution, DisbursementMethod, LogAction as DisbursementLogAction
+from disbursement.models import Disbursement
 from notification.rules import RULES, CountingRule, MonitoredRule, Triggered
 
 logger = logging.getLogger('mtp')
@@ -111,7 +111,7 @@ def generate_report(workbook, period_start, period_end, rules):
     candidate_disbursements = Disbursement.objects.filter(
         prisoner_profile__isnull=False,
         recipient_profile__isnull=False,
-        resolution=DISBURSEMENT_RESOLUTION.SENT,
+        resolution=DisbursementResolution.sent,
     ).filter(
         created__gte=period_start,
         created__lt=period_end,
@@ -238,12 +238,12 @@ class CreditSerialiser(Serialiser, serialised_model=Credit):
         row = super().serialise(worksheet, record, triggered)
         status = record.status
         if status:
-            status = str(CREDIT_STATUS.for_value(status).display)
+            status = str(CreditStatus[status].label)
         else:
             status = 'Anonymous'
         row.update({
             'Date received': local_datetime_for_xlsx(record.received_at),
-            'Date credited': local_datetime_for_xlsx(record.log_set.get_action_date(CREDIT_LOG_ACTIONS.CREDITED)),
+            'Date credited': local_datetime_for_xlsx(record.log_set.get_action_date(CreditLogAction.credited)),
             'Amount': format_currency(record.amount),
             'Prisoner number': record.prisoner_number or 'Unknown',
             'Prisoner name': record.prisoner_name or 'Unknown',
@@ -310,22 +310,20 @@ class DisbursementSerialiser(Serialiser, serialised_model=Disbursement):
         row = super().serialise(worksheet, record, triggered)
         row.update({
             'Date entered': local_datetime_for_xlsx(record.created),
-            'Date confirmed': local_datetime_for_xlsx(
-                record.log_set.get_action_date(DISBURSEMENT_LOG_ACTIONS.CONFIRMED)
-            ),
-            'Date sent': local_datetime_for_xlsx(record.log_set.get_action_date(DISBURSEMENT_LOG_ACTIONS.SENT)),
+            'Date confirmed': local_datetime_for_xlsx(record.log_set.get_action_date(DisbursementLogAction.confirmed)),
+            'Date sent': local_datetime_for_xlsx(record.log_set.get_action_date(DisbursementLogAction.sent)),
             'Amount': format_currency(record.amount),
             'Prisoner number': record.prisoner_number,
             'Prisoner name': record.prisoner_name,
             'Prison': record.prison.short_name,
             'Recipient name': record.recipient_name,
-            'Payment method': str(DISBURSEMENT_METHOD.for_value(record.method).display),
+            'Payment method': str(DisbursementMethod[record.method].label),
             'Bank transfer sort code': record.sort_code,
             'Bank transfer account': record.account_number,
             'Bank transfer roll number': record.roll_number,
             'Recipient address': record.recipient_address,
             'Recipient email': record.recipient_email,
-            'Status': str(DISBURSEMENT_RESOLUTION.for_value(record.resolution).display),
+            'Status': str(DisbursementResolution[record.resolution].label),
             'NOMIS transaction': record.nomis_transaction_id,
             'SOP invoice number': record.invoice_number,
         })

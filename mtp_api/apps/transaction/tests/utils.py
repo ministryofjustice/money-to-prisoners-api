@@ -11,7 +11,7 @@ from django.utils.crypto import get_random_string
 from faker import Faker
 
 from core.tests.utils import MockModelTimestamps
-from credit.constants import CREDIT_RESOLUTION, CREDIT_STATUS
+from credit.constants import CreditResolution, CreditStatus
 from credit.models import Credit
 from credit.tests.utils import (
     get_owner_and_status_chooser, create_credit_log, random_amount,
@@ -19,9 +19,7 @@ from credit.tests.utils import (
 )
 from prison.models import PrisonerLocation
 from transaction.models import Transaction
-from transaction.constants import (
-    TRANSACTION_CATEGORY, TRANSACTION_SOURCE
-)
+from transaction.constants import TransactionCategory, TransactionSource
 
 fake = Faker(locale='en_GB')
 
@@ -90,12 +88,12 @@ def get_sender_prisoner_pairs():
 
 
 def generate_initial_transactions_data(
-        tot=100,
-        prisoner_location_generator=None,
-        include_debits=True,
-        include_administrative_credits=True,
-        include_unidentified_credits=True,
-        days_of_history=7):
+    tot=100,
+    include_debits=True,
+    include_administrative_credits=True,
+    include_unidentified_credits=True,
+    days_of_history=7,
+):
     data_list = []
     sender_prisoner_pairs = get_sender_prisoner_pairs()
 
@@ -117,7 +115,7 @@ def generate_initial_transactions_data(
         random_date = timezone.localtime(random_date)
         noon_random_date = get_noon(random_date)
         data = {
-            'category': TRANSACTION_CATEGORY.CREDIT,
+            'category': TransactionCategory.credit.value,
             'amount': random_amount(),
             'received_at': noon_random_date,
             'owner': None,
@@ -131,18 +129,18 @@ def generate_initial_transactions_data(
         data.update(sender)
 
         if make_administrative_credit_transaction:
-            data['source'] = TRANSACTION_SOURCE.ADMINISTRATIVE
+            data['source'] = TransactionSource.administrative.value
             data['incomplete_sender_info'] = True
             data['processor_type_code'] = 'RA'
             del data['sender_sort_code']
             del data['sender_account_number']
         elif make_debit_transaction:
-            data['source'] = TRANSACTION_SOURCE.ADMINISTRATIVE
-            data['category'] = TRANSACTION_CATEGORY.DEBIT
+            data['source'] = TransactionSource.administrative.value
+            data['category'] = TransactionCategory.debit.value
             data['processor_type_code'] = '03'
             data['reference'] = 'Payment refunded'
         else:
-            data['source'] = TRANSACTION_SOURCE.BANK_TRANSFER
+            data['source'] = TransactionSource.bank_transfer.value
             data['processor_type_code'] = '99'
 
             if include_prisoner_info:
@@ -208,8 +206,8 @@ def generate_predetermined_transactions_data():
 
         'sender_name': 'Mary Stevenson',
         'amount': 7230,
-        'category': TRANSACTION_CATEGORY.CREDIT,
-        'source': TRANSACTION_SOURCE.BANK_TRANSFER,
+        'category': TransactionCategory.credit.value,
+        'source': TransactionSource.bank_transfer.value,
         'sender_sort_code': '680966',
         'sender_account_number': '75823963',
 
@@ -261,12 +259,12 @@ def create_transactions(data_list, consistent_history=False, overrides=None):
         create_transaction = partial(
             setup_historical_transaction,
             owner_status_chooser,
-            latest_transaction_date()
+            latest_transaction_date(),
         )
     else:
         create_transaction = partial(
             setup_transaction,
-            owner_status_chooser
+            owner_status_chooser,
         )
     for transaction_counter, data in enumerate(data_list, start=1):
         new_transaction = create_transaction(transaction_counter, data, overrides)
@@ -276,10 +274,13 @@ def create_transactions(data_list, consistent_history=False, overrides=None):
 
 
 def setup_historical_transaction(
-    owner_status_chooser, end_date, transaction_counter, data, overrides=None
+    # injected when setting up partial in create_transactions
+    owner_status_chooser, end_date,
+    # parameters provided in transaction-creating loop
+    transaction_counter, data, overrides=None,
 ):
-    if (data['category'] == TRANSACTION_CATEGORY.CREDIT and
-            data['source'] == TRANSACTION_SOURCE.BANK_TRANSFER):
+    if (data['category'] == TransactionCategory.credit.value and
+            data['source'] == TransactionSource.bank_transfer.value):
         is_valid = data.get('prison', None) and not data.get('incomplete_sender_info')
         is_most_recent = data['received_at'].date() == end_date.date()
         if is_valid:
@@ -309,19 +310,22 @@ def setup_historical_transaction(
 
 
 def setup_transaction(
-    owner_status_chooser, transaction_counter, data, overrides=None
+    # injected when setting up partial in create_transactions
+    owner_status_chooser,
+    # parameters provided in transaction-creating loop
+    transaction_counter, data, overrides=None,
 ):
-    if data['category'] == TRANSACTION_CATEGORY.CREDIT:
+    if data['category'] == TransactionCategory.credit.value:
         is_valid = data.get('prison', None) and not data.get('incomplete_sender_info')
 
         if is_valid:
             owner, status = owner_status_chooser(data['prison'])
-            if status == CREDIT_STATUS.CREDIT_PENDING:
+            if status == CreditStatus.credit_pending.value:
                 data.update({
                     'owner': None,
                     'credited': False
                 })
-            elif status == CREDIT_STATUS.CREDITED:
+            elif status == CreditStatus.credited.value:
                 data.update({
                     'owner': owner,
                     'credited': True
@@ -341,11 +345,11 @@ def setup_transaction(
 
 
 def save_transaction(data):
-    resolution = CREDIT_RESOLUTION.PENDING
+    resolution = CreditResolution.pending.value
     if data.pop('credited', False):
-        resolution = CREDIT_RESOLUTION.CREDITED
+        resolution = CreditResolution.credited.value
     if data.pop('refunded', False):
-        resolution = CREDIT_RESOLUTION.REFUNDED
+        resolution = CreditResolution.refunded.value
 
     prisoner_dob = data.pop('prisoner_dob', None)
     prisoner_number = data.pop('prisoner_number', None)
@@ -355,8 +359,8 @@ def save_transaction(data):
     owner = data.pop('owner', None)
     blocked = data.pop('blocked', False)
 
-    if (data['category'] == TRANSACTION_CATEGORY.CREDIT and
-            data['source'] == TRANSACTION_SOURCE.BANK_TRANSFER):
+    if (data['category'] == TransactionCategory.credit.value and
+            data['source'] == TransactionSource.bank_transfer.value):
         credit = Credit(
             amount=data['amount'],
             prisoner_dob=prisoner_dob,
@@ -389,8 +393,8 @@ def filters_from_api_data(data):
         try:
             Transaction._meta.get_field(field)
             filters[field] = data[field]
-            if (data['category'] == TRANSACTION_CATEGORY.CREDIT and
-                    data['source'] == TRANSACTION_SOURCE.BANK_TRANSFER):
+            if (data['category'] == TransactionCategory.credit.value and
+                    data['source'] == TransactionSource.bank_transfer.value):
                 Credit._meta.get_field(field)
                 filters['credit__%s' % field] = data[field]
         except FieldDoesNotExist:

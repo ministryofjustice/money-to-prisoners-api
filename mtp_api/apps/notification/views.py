@@ -8,7 +8,7 @@ from core.filters import IsoDateTimeFilter, SafeOrderingFilter, MultipleValueFil
 from core.models import TruncLocalDate
 from core.permissions import ActionsBasedPermissions
 from mtp_auth.permissions import NomsOpsClientIDPermissions
-from notification.constants import EMAIL_FREQUENCY
+from notification.constants import EmailFrequency
 from notification.models import Event, EmailNotificationPreferences
 from notification.rules import RULES, ENABLED_RULE_CODES
 from notification.serializers import EventSerializer
@@ -104,14 +104,14 @@ class EmailPreferencesView(views.APIView):
                 user=request.user
             ).frequency
         except EmailNotificationPreferences.DoesNotExist:
-            frequency = EMAIL_FREQUENCY.NEVER
+            frequency = EmailFrequency.never.value
         return Response(
             {'frequency': frequency}
         )
 
     def post(self, request):
         frequency = request.data.get('frequency')
-        if frequency not in EMAIL_FREQUENCY.values:
+        if frequency not in EmailFrequency:
             return Response(
                 {'frequency': ['Must provide a recognized "frequency" value']},
                 status=status.HTTP_400_BAD_REQUEST

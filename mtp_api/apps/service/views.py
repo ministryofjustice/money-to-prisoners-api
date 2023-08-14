@@ -2,25 +2,27 @@ from django.http import JsonResponse
 from django.utils import timezone
 from rest_framework import mixins, viewsets
 
-from service.models import Downtime, SERVICES, Notification
+from service.constants import Service
+from service.models import Downtime, Notification
 from service.serializers import NotificationSerializer
 
 
 def service_availability_view(_):
-    def service_availability(service):
+    def service_availability(service: Service):
         downtime = Downtime.objects.active_downtime(service)
         if not downtime:
-            return service, {'status': True}
-        status = {
-            'status': False,
-        }
+            return {'status': True}
+        status = {'status': False}
         if downtime.end:
             status['downtime_end'] = downtime.end.isoformat()
         if downtime.message_to_users:
             status['message_to_users'] = downtime.message_to_users
-        return service, status
+        return status
 
-    response = dict(map(service_availability, (service for service, _ in SERVICES)))
+    response = {
+        service.value: service_availability(service)
+        for service in Service
+    }
     response['*'] = {'status': all(status['status'] for status in response.values())}
     return JsonResponse(response)
 
@@ -30,7 +32,8 @@ class NotificationView(mixins.ListModelMixin, viewsets.GenericViewSet):
     permission_classes = ()
 
     def get_queryset(self):
-        return Notification.objects.exclude(end__lt=timezone.now())
+        now = timezone.now()
+        return Notification.objects.exclude(end__lt=now).exclude(start__gt=now)
 
     def filter_queryset(self, queryset):
         queryset = super().filter_queryset(queryset)

@@ -1,4 +1,4 @@
-from credit.constants import CREDIT_STATUS
+from credit.constants import CreditStatus
 from credit.tests.test_views.test_credit_list import CreditListTestCase
 
 
@@ -9,7 +9,7 @@ class CreditListWithDefaultPrisonAndUserTestCase(CreditListTestCase):
         that the logged-in user can manage.
         """
         self._test_response_with_filters({
-            'status': CREDIT_STATUS.CREDIT_PENDING
+            'status': CreditStatus.credit_pending.value,
         })
 
     def test_filter_by_status_credited(self):
@@ -18,5 +18,5 @@ class CreditListWithDefaultPrisonAndUserTestCase(CreditListTestCase):
         that the logged-in user can manage.
         """
         self._test_response_with_filters({
-            'status': CREDIT_STATUS.CREDITED
+            'status': CreditStatus.credited.value,
         })

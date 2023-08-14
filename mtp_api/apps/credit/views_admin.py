@@ -5,7 +5,8 @@ from django.utils.translation import gettext_lazy as _
 
 from core.forms import BasePeriodAdminReportForm, BasePrisonAdminReportForm
 from core.views import BaseAdminReportView
-from credit.models import Credit, CREDIT_RESOLUTION
+from credit.constants import CreditResolution
+from credit.models import Credit
 from prison.models import Prison
 
 
@@ -43,7 +44,7 @@ class CreditReportAdminView(BaseAdminReportView):
 
     def get_monthly_rows(self, exclude_private_estate=False):
         queryset = Credit.objects \
-            .filter(resolution=CREDIT_RESOLUTION.CREDITED) \
+            .filter(resolution=CreditResolution.credited) \
             .exclude(prison__in=self.excluded_nomis_ids) \
             .order_by()
         if exclude_private_estate:
@@ -94,7 +95,7 @@ class PrisonCreditReportAdminView(BaseAdminReportView):
 
         queryset = Credit.objects \
             .filter(
-                resolution=CREDIT_RESOLUTION.CREDITED,
+                resolution=CreditResolution.credited,
                 **period_filters
             ) \
             .order_by() \

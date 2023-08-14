@@ -9,13 +9,16 @@ from mtp_common.utils import format_currency
 
 from core.dashboards import DashboardModule
 from core.views import DashboardView
-from credit.models import Credit, CREDIT_STATUS
-from disbursement.models import Disbursement, DISBURSEMENT_RESOLUTION
+from credit.constants import CreditStatus
+from credit.models import Credit
+from disbursement.models import Disbursement, DisbursementResolution
 from performance.models import DigitalTakeup
 from transaction.utils import format_currency_truncated, format_number, format_percentage
 
-CREDITABLE_FILTERS = Credit.STATUS_LOOKUP[CREDIT_STATUS.CREDITED] | \
-                     Credit.STATUS_LOOKUP[CREDIT_STATUS.CREDIT_PENDING]
+CREDITABLE_FILTERS = (
+    Credit.STATUS_LOOKUP[CreditStatus.credited.value] |
+    Credit.STATUS_LOOKUP[CreditStatus.credit_pending.value]
+)
 
 
 def valid_credit_stats(since, until=None):
@@ -63,7 +66,7 @@ def digital_takeup_stats(since, until=None):
 
 
 def valid_disbursement_stats(since, until=None):
-    queryset = Disbursement.objects.exclude(resolution=DISBURSEMENT_RESOLUTION.REJECTED)
+    queryset = Disbursement.objects.exclude(resolution=DisbursementResolution.rejected)
     if until:
         queryset = queryset.filter(created__range=(since, until))
     else:
@@ -79,8 +82,8 @@ def valid_disbursement_stats(since, until=None):
 
 def pending_disbursements_stats(since, until=None):
     queryset = Disbursement.objects \
-        .exclude(resolution=DISBURSEMENT_RESOLUTION.REJECTED) \
-        .exclude(resolution=DISBURSEMENT_RESOLUTION.SENT)
+        .exclude(resolution=DisbursementResolution.rejected) \
+        .exclude(resolution=DisbursementResolution.sent)
     if until:
         queryset = queryset.filter(created__range=(since, until))
     else:
@@ -164,8 +167,8 @@ def get_simple_stats():
     sent_stats['amount'] = sent_stats['amount'] or 0
 
     pending_disbursements = Disbursement.objects \
-        .exclude(resolution=DISBURSEMENT_RESOLUTION.REJECTED) \
-        .exclude(resolution=DISBURSEMENT_RESOLUTION.SENT) \
+        .exclude(resolution=DisbursementResolution.rejected) \
+        .exclude(resolution=DisbursementResolution.sent) \
         .count()
 
     disbursement_stats = [

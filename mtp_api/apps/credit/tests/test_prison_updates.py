@@ -7,7 +7,7 @@ from core.tests.utils import make_test_users
 from prison.models import Prison, PrisonerLocation
 from prison.tests.utils import random_prisoner_number, random_prisoner_dob, random_prisoner_name
 
-from credit.constants import CREDIT_RESOLUTION
+from credit.constants import CreditResolution
 from credit.signals import credit_prisons_need_updating
 from credit.models import Credit
 from transaction.models import Transaction
@@ -20,7 +20,7 @@ class BaseUpdatePrisonsTestCase(TestCase):
     fixtures = [
         'initial_groups.json',
         'initial_types.json',
-        'test_prisons.json'
+        'test_prisons.json',
     ]
 
     def _get_credit_data(self):
@@ -48,7 +48,7 @@ class BaseUpdatePrisonsForTransactionsTestCase(BaseUpdatePrisonsTestCase):
         self.transaction = Transaction.objects.create(
             amount=self.credit.amount,
             received_at=self.credit.received_at,
-            credit=self.credit
+            credit=self.credit,
         )
 
 
@@ -58,7 +58,7 @@ class BaseUpdatePrisonsForPaymentsTestCase(BaseUpdatePrisonsTestCase):
 
         self.payment = Payment.objects.create(
             amount=self.credit.amount,
-            credit=self.credit
+            credit=self.credit,
         )
 
 
@@ -68,7 +68,7 @@ class UpdatePrisonsOnAvailableCreditsTestMixin:
         data.update({
             'prison': Prison.objects.first(),
             'owner': None,
-            'resolution': CREDIT_RESOLUTION.PENDING,
+            'resolution': CreditResolution.pending.value,
         })
         return data
 
@@ -85,7 +85,7 @@ class UpdatePrisonsOnAvailableCreditsTestMixin:
             prisoner_number=self.credit.prisoner_number,
             prisoner_dob=self.credit.prisoner_dob,
             prison=new_prison,
-            active=True
+            active=True,
         )
 
         credit_prisons_need_updating.send(sender=None)
@@ -107,7 +107,7 @@ class UpdatePrisonsOnAvailableCreditsTestMixin:
             prisoner_number=self.credit.prisoner_number,
             prisoner_dob=self.credit.prisoner_dob,
             prison=new_prison,
-            active=False
+            active=False,
         )
         PrisonerLocation.objects.create(
             created_by=User.objects.first(),
@@ -115,7 +115,7 @@ class UpdatePrisonsOnAvailableCreditsTestMixin:
             prisoner_number=self.credit.prisoner_number,
             prisoner_dob=self.credit.prisoner_dob,
             prison=existing_prison,
-            active=True
+            active=True,
         )
 
         credit_prisons_need_updating.send(sender=None)
@@ -149,7 +149,7 @@ class UpdatePrisonsOnAvailableTransactionsTestCase(
             prisoner_number=self.credit.prisoner_number,
             prisoner_dob=self.credit.prisoner_dob,
             prison=new_prison,
-            active=False
+            active=False,
         )
 
         credit_prisons_need_updating.send(sender=None)
@@ -182,7 +182,7 @@ class UpdatePrisonsOnAvailablePaymentsTestCase(
             prisoner_number=self.credit.prisoner_number,
             prisoner_dob=self.credit.prisoner_dob,
             prison=new_prison,
-            active=False
+            active=False,
         )
 
         credit_prisons_need_updating.send(sender=None)
@@ -198,7 +198,7 @@ class UpdatePrisonsOnLockedCreditsTestCase(BaseUpdatePrisonsForPaymentsTestCase)
             'prison': Prison.objects.first(),
             'prisoner_name': random_prisoner_name(),
             'owner': User.objects.first(),
-            'resolution': CREDIT_RESOLUTION.PENDING,
+            'resolution': CreditResolution.pending.value,
         })
         return data
 
@@ -215,7 +215,7 @@ class UpdatePrisonsOnLockedCreditsTestCase(BaseUpdatePrisonsForPaymentsTestCase)
             prisoner_number=self.credit.prisoner_number,
             prisoner_dob=self.credit.prisoner_dob,
             prison=other_prison,
-            active=True
+            active=True,
         )
 
         credit_prisons_need_updating.send(sender=None)
@@ -232,7 +232,7 @@ class UpdatePrisonsOnCreditedCreditsTestcase(BaseUpdatePrisonsForTransactionsTes
             'prison': Prison.objects.first(),
             'prisoner_name': random_prisoner_name(),
             'owner': User.objects.first(),
-            'resolution': CREDIT_RESOLUTION.CREDITED,
+            'resolution': CreditResolution.credited.value,
         })
         return data
 
@@ -249,7 +249,7 @@ class UpdatePrisonsOnCreditedCreditsTestcase(BaseUpdatePrisonsForTransactionsTes
             prisoner_number=self.credit.prisoner_number,
             prisoner_dob=self.credit.prisoner_dob,
             prison=other_prison,
-            active=True
+            active=True,
         )
 
         credit_prisons_need_updating.send(sender=None)
@@ -265,7 +265,7 @@ class UpdatePrisonsOnRefundedCreditsTestcase(BaseUpdatePrisonsForTransactionsTes
         data.update({
             'prison': None,
             'owner': None,
-            'resolution': CREDIT_RESOLUTION.REFUNDED,
+            'resolution': CreditResolution.refunded.value,
         })
         return data
 
@@ -282,7 +282,7 @@ class UpdatePrisonsOnRefundedCreditsTestcase(BaseUpdatePrisonsForTransactionsTes
             prisoner_number=self.credit.prisoner_number,
             prisoner_dob=self.credit.prisoner_dob,
             prison=prison,
-            active=True
+            active=True,
         )
 
         credit_prisons_need_updating.send(sender=None)
@@ -299,7 +299,7 @@ class UpdatePrisonsOnRefundPendingCreditsTestcase(BaseUpdatePrisonsForTransactio
         data.update({
             'prison': None,
             'owner': None,
-            'resolution': CREDIT_RESOLUTION.PENDING,
+            'resolution': CreditResolution.pending.value,
         })
         return data
 
@@ -323,7 +323,7 @@ class UpdatePrisonsOnRefundPendingCreditsTestcase(BaseUpdatePrisonsForTransactio
             prisoner_number=self.credit.prisoner_number,
             prisoner_dob=self.credit.prisoner_dob,
             prison=prison,
-            active=True
+            active=True,
         )
 
         credit_prisons_need_updating.send(sender=None)
@@ -340,8 +340,8 @@ class UpdatePrisonsOnReconciledCreditsTestcase(BaseUpdatePrisonsForTransactionsT
             'prison': Prison.objects.first(),
             'prisoner_name': random_prisoner_name(),
             'owner': None,
-            'resolution': CREDIT_RESOLUTION.PENDING,
-            'reconciled': True
+            'resolution': CreditResolution.pending.value,
+            'reconciled': True,
         })
         return data
 
@@ -356,7 +356,7 @@ class UpdatePrisonsOnReconciledCreditsTestcase(BaseUpdatePrisonsForTransactionsT
             prisoner_number=self.credit.prisoner_number,
             prisoner_dob=self.credit.prisoner_dob,
             prison=other_prison,
-            active=True
+            active=True,
         )
 
         credit_prisons_need_updating.send(sender=None)

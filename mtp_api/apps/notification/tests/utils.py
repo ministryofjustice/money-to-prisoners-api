@@ -4,9 +4,10 @@ from django.utils.crypto import get_random_string
 from faker import Faker
 from model_bakery import baker
 
-from credit.models import Credit, CREDIT_RESOLUTION
+from credit.constants import CreditResolution
+from credit.models import Credit
 from credit.tests.utils import random_amount
-from disbursement.models import Disbursement, DISBURSEMENT_RESOLUTION
+from disbursement.models import Disbursement, DisbursementResolution
 from payment.models import Payment
 from prison.models import Prison
 from prison.tests.utils import random_prisoner_name, random_prisoner_number, random_prisoner_dob
@@ -60,7 +61,7 @@ def make_csfreq_credits(today, sender, count):
             amount=random_amount(),
             sender_profile=sender,
             received_at=today - datetime.timedelta(day),
-            resolution=CREDIT_RESOLUTION.CREDITED, reconciled=True, private_estate_batch=None,
+            resolution=CreditResolution.credited, reconciled=True, private_estate_batch=None,
         )
         if debit_card:
             payment = baker.make(
@@ -83,7 +84,7 @@ def make_drfreq_disbursements(today, recipient, count):
             amount=random_amount(),
             recipient_profile=recipient,
             created=today - datetime.timedelta(day),
-            resolution=DISBURSEMENT_RESOLUTION.SENT,
+            resolution=DisbursementResolution.sent,
         )
         disbursement_list.append(disbursement)
     return disbursement_list
@@ -100,7 +101,7 @@ def make_csnum_credits(today, prisoner, count, sender_profile=None):
             sender_profile=sender,
             prisoner_profile=prisoner,
             received_at=today - datetime.timedelta(day),
-            resolution=CREDIT_RESOLUTION.CREDITED, reconciled=True, private_estate_batch=None,
+            resolution=CreditResolution.credited, reconciled=True, private_estate_batch=None,
         )
         if debit_card:
             payment = baker.make(
@@ -125,7 +126,7 @@ def make_drnum_disbursements(today, prisoner, count, recipient_profile=None):
             recipient_profile=recipient,
             prisoner_profile=prisoner,
             created=today - datetime.timedelta(day),
-            resolution=DISBURSEMENT_RESOLUTION.SENT,
+            resolution=DisbursementResolution.sent,
         )
         disbursement_list.append(disbursement)
     return disbursement_list
@@ -142,7 +143,7 @@ def make_cpnum_credits(today, sender, count, prisoner_profile=None):
             sender_profile=sender,
             prisoner_profile=prisoner,
             received_at=today - datetime.timedelta(day),
-            resolution=CREDIT_RESOLUTION.CREDITED, reconciled=True, private_estate_batch=None,
+            resolution=CreditResolution.credited, reconciled=True, private_estate_batch=None,
         )
         if debit_card:
             payment = baker.make(
@@ -167,7 +168,7 @@ def make_dpnum_disbursements(today, recipient, count, prisoner_profile=None):
             recipient_profile=recipient,
             prisoner_profile=prisoner,
             created=today - datetime.timedelta(day),
-            resolution=DISBURSEMENT_RESOLUTION.SENT,
+            resolution=DisbursementResolution.sent,
         )
         disbursement_list.append(disbursement)
     return disbursement_list

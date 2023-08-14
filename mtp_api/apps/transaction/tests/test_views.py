@@ -7,18 +7,16 @@ from django.utils.dateparse import parse_datetime
 from mtp_common.test_utils import silence_logger
 from rest_framework import status as http_status
 
-from credit.constants import LOG_ACTIONS
+from credit.constants import LogAction
 from credit.models import Credit, Log
 from payment.models import Batch
+from transaction.constants import TransactionCategory, TransactionSource
 from transaction.models import Transaction
-from transaction.constants import TRANSACTION_CATEGORY, TRANSACTION_SOURCE
 from transaction.serializers import CreateTransactionSerializer
-from transaction.tests.utils import (
-    generate_initial_transactions_data, generate_transactions, filters_from_api_data,
-)
 from transaction.tests.test_base import (
     BaseTransactionViewTestCase, TransactionRejectsRequestsWithoutPermissionTestMixin,
 )
+from transaction.tests.utils import generate_initial_transactions_data, generate_transactions, filters_from_api_data
 
 
 class CreateTransactionsTestCase(
@@ -82,17 +80,17 @@ class CreateTransactionsTestCase(
         self.assertEqual(
             Log.objects.filter(
                 user=user,
-                action=LOG_ACTIONS.CREATED
+                action=LogAction.created,
             ).count(),
             len([data for data in data_list if
-                 data['category'] == TRANSACTION_CATEGORY.CREDIT and
-                 data['source'] == TRANSACTION_SOURCE.BANK_TRANSFER])
+                 data['category'] == TransactionCategory.credit.value and
+                 data['source'] == TransactionSource.bank_transfer.value])
         )
 
     def test_create_with_debit_category(self):
         user = self.bank_admins[0]
         data_list = self._get_transactions_data(tot=1)
-        data_list[0]['category'] = TRANSACTION_CATEGORY.DEBIT
+        data_list[0]['category'] = TransactionCategory.debit.value
 
         response = self.client.post(
             self._get_url(), data=data_list, format='json',
@@ -101,13 +99,13 @@ class CreateTransactionsTestCase(
         self.assertEqual(response.status_code, http_status.HTTP_201_CREATED)
 
         self.assertEqual(
-            Transaction.objects.filter(category=TRANSACTION_CATEGORY.DEBIT).count(), 1
+            Transaction.objects.filter(category=TransactionCategory.debit.value).count(), 1
         )
 
     def test_create_with_administrative_source(self):
         user = self.bank_admins[0]
         data_list = self._get_transactions_data(tot=1)
-        data_list[0]['source'] = TRANSACTION_SOURCE.ADMINISTRATIVE
+        data_list[0]['source'] = TransactionSource.administrative.value
 
         response = self.client.post(
             self._get_url(), data=data_list, format='json',
@@ -116,7 +114,7 @@ class CreateTransactionsTestCase(
         self.assertEqual(response.status_code, http_status.HTTP_201_CREATED)
 
         self.assertEqual(
-            Transaction.objects.filter(source=TRANSACTION_SOURCE.ADMINISTRATIVE).count(), 1
+            Transaction.objects.filter(source=TransactionSource.administrative.value).count(), 1
         )
 
     def test_create_with_related_payment_batch(self):
@@ -307,7 +305,7 @@ class UpdateRefundTransactionsTestCase(
         self.assertEqual(
             Log.objects.filter(
                 user=user,
-                action=LOG_ACTIONS.REFUNDED
+                action=LogAction.refunded,
             ).count(),
             len(refunded_data_list)
         )
@@ -668,7 +666,7 @@ class ReconcileTransactionsTestCase(
         self.assertEqual(
             Log.objects.filter(
                 user=user,
-                action=LOG_ACTIONS.RECONCILED,
+                action=LogAction.reconciled,
             ).count(),
             len(credits_yesterday)
         )
@@ -686,7 +684,7 @@ class ReconcileTransactionsTestCase(
         self.assertEqual(
             Log.objects.filter(
                 user=user,
-                action=LOG_ACTIONS.RECONCILED,
+                action=LogAction.reconciled,
             ).count(),
             len(credits_yesterday)
         )
@@ -728,7 +726,7 @@ class ReconcileTransactionsTestCase(
 
         # debits not given ref code
         qs = Transaction.objects.filter(
-            category=TRANSACTION_CATEGORY.DEBIT,
+            category=TransactionCategory.debit,
             received_at__gte=start_date,
             received_at__lt=end_date
         )
@@ -737,7 +735,7 @@ class ReconcileTransactionsTestCase(
 
         # anomalous not given ref code
         qs = Transaction.objects.filter(
-            source=TRANSACTION_SOURCE.ADMINISTRATIVE,
+            source=TransactionSource.administrative,
             received_at__gte=start_date,
             received_at__lt=end_date
         )
@@ -746,8 +744,8 @@ class ReconcileTransactionsTestCase(
 
         # valid credits, refunds and rejects given ref code
         qs = Transaction.objects.filter(
-            category=TRANSACTION_CATEGORY.CREDIT,
-            source=TRANSACTION_SOURCE.BANK_TRANSFER,
+            category=TransactionCategory.credit,
+            source=TransactionSource.bank_transfer,
             received_at__gte=start_date,
             received_at__lt=end_date
         ).order_by('id')
@@ -764,11 +762,11 @@ class ReconcileTransactionsTestCase(
         start_date, end_date = self._get_date_bounds()
 
         administrative_trans = Transaction.objects.filter(
-            category=TRANSACTION_CATEGORY.CREDIT,
+            category=TransactionCategory.credit,
             received_at__gte=start_date,
             received_at__lt=end_date
         ).first()
-        administrative_trans.source = TRANSACTION_SOURCE.ADMINISTRATIVE
+        administrative_trans.source = TransactionSource.administrative.value
         administrative_trans.save()
         batch = Batch(date=self._get_latest_date() - timedelta(days=3),
                       settlement_transaction=administrative_trans,

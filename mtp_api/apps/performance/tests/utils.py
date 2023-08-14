@@ -1,14 +1,15 @@
 import datetime
 import random
 
-from credit.models import Log, LOG_ACTIONS
+from credit.constants import LogAction
+from credit.models import Log
 from performance.models import DigitalTakeup
 from prison.models import Prison
 
 
 def latest_takeup_date():
     date = min(datetime.date.today() - datetime.timedelta(days=1),
-               Log.objects.filter(action=LOG_ACTIONS.CREDITED).latest('created').created.date())
+               Log.objects.filter(action=LogAction.credited).latest('created').created.date())
     if date.weekday() > 4:
         date -= datetime.timedelta(days=date.weekday() - 4)
     return date
@@ -26,7 +27,7 @@ def generate_digital_takeup(days_of_history=7, typical_takeup=0.7):
     date_range = list(date_generator(days_of_history))
     DigitalTakeup.objects.filter(date__range=(date_range[-1], date_range[0])).delete()
     prisons = list(Prison.objects.all())
-    credited_logs = Log.objects.filter(action=LOG_ACTIONS.CREDITED)
+    credited_logs = Log.objects.filter(action=LogAction.credited)
 
     def random_takeup(credits_by_mtp):
         credits_by_post = int(credits_by_mtp * (0.5 - typical_takeup + random.random()))

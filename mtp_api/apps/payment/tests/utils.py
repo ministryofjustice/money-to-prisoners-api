@@ -8,13 +8,13 @@ from django.utils.crypto import get_random_string
 from faker import Faker
 
 from core.tests.utils import MockModelTimestamps
-from credit.constants import CREDIT_RESOLUTION
+from credit.constants import CreditResolution
 from credit.models import Credit
 from credit.tests.utils import (
     get_owner_and_status_chooser, create_credit_log, random_amount,
     build_sender_prisoner_pairs,
 )
-from payment.constants import PAYMENT_STATUS
+from payment.constants import PaymentStatus
 from payment.models import Payment, BillingAddress
 from prison.models import PrisonerLocation
 
@@ -29,7 +29,7 @@ def create_fake_sender_data(number_of_senders):
     """
     Generate data needed for Payment/BillingAddress using Faker
 
-    :param number_of_senders int: Number of data entries to generate
+    :param int number_of_senders: Number of data entries to generate
     """
     senders = []
     for _ in range(number_of_senders):
@@ -113,14 +113,14 @@ def generate_payments(
     """
     Generate fake payment objects either for automated tests or test/development environment.
 
-    :param payment_batch int: Number of payments to generate
-    :param consistent_history bool: Doesn't actually seem to do anything in this context
-    :param days_of_history int: Number of days of history to generate
-    :param overrides dict: Dict of attributes to apply to all payments. overrides['credit'] will be applied to credit
-    :param attach_profiles_to_individual_credits bool: Whether to run credit.attach_profiles on individual credits
-    :param number_of_senders int/None: If not None, specifies how many senders to generate.
+    :param int payment_batch: Number of payments to generate
+    :param bool consistent_history: Doesn't actually seem to do anything in this context
+    :param int days_of_history: Number of days of history to generate
+    :param dict overrides: Dict of attributes to apply to all payments. overrides['credit'] will be applied to credit
+    :param bool attach_profiles_to_individual_credits: Whether to run credit.attach_profiles on individual credits
+    :param int/None number_of_senders: If not None, specifies how many senders to generate.
                                        If None, number of existing PrisonerLocation entries used
-    :param reconcile_payments bool: Whether to run Payment.objects.reconcile, given that the list of models returned
+    :param bool reconcile_payments: Whether to run Payment.objects.reconcile, given that the list of models returned
                                     are NOT updated with the reconciliation data causing potential mismatch with
                                     future queries
     :rtype list<payment.models.Payment>
@@ -182,15 +182,15 @@ def setup_payment(
     if overrides and overrides.get('status'):
         data['status'] = overrides['status']
     elif not bool(payment_counter % 11):  # 1 in 11 is expired
-        data['status'] = PAYMENT_STATUS.EXPIRED
+        data['status'] = PaymentStatus.expired.value
     elif not bool(payment_counter % 10):  # 1 in 10 is rejected
-        data['status'] = PAYMENT_STATUS.REJECTED
+        data['status'] = PaymentStatus.rejected.value
     elif not bool(payment_counter % 4):  # 1 in 4ish is pending
-        data['status'] = PAYMENT_STATUS.PENDING
+        data['status'] = PaymentStatus.pending.value
     else:  # otherwise it's taken
-        data['status'] = PAYMENT_STATUS.TAKEN
+        data['status'] = PaymentStatus.taken.value
 
-    if data['status'] == PAYMENT_STATUS.PENDING:
+    if data['status'] == PaymentStatus.pending.value:
         del data['cardholder_name']
         del data['card_number_first_digits']
         del data['card_number_last_digits']
@@ -198,7 +198,7 @@ def setup_payment(
         del data['card_brand']
         if not bool(payment_counter % 12):  # 2 in 3 of pending checks has a billing_address
             del data['billing_address']
-    elif data['status'] == PAYMENT_STATUS.TAKEN:
+    elif data['status'] == PaymentStatus.taken.value:
         owner, status = owner_status_chooser(data['prison'])
         data['processor_id'] = str(uuid.uuid1())
         # TODO This is a horrible piece of implicit logic, can we please make it explicit
@@ -223,16 +223,16 @@ def setup_payment(
 
 
 def save_payment(data, overrides=None, attach_profiles_to_individual_credits=True):
-    is_taken = data['status'] == PAYMENT_STATUS.TAKEN
+    is_taken = data['status'] == PaymentStatus.taken.value
     if is_taken:
         if data.pop('credited', False):
-            resolution = CREDIT_RESOLUTION.CREDITED
+            resolution = CreditResolution.credited.value
         else:
-            resolution = CREDIT_RESOLUTION.PENDING
-    elif data['status'] in (PAYMENT_STATUS.REJECTED, PAYMENT_STATUS.EXPIRED):
-        resolution = CREDIT_RESOLUTION.FAILED
+            resolution = CreditResolution.pending.value
+    elif data['status'] in (PaymentStatus.rejected.value, PaymentStatus.expired.value):
+        resolution = CreditResolution.failed.value
     else:
-        resolution = CREDIT_RESOLUTION.INITIAL
+        resolution = CreditResolution.initial.value
 
     prisoner_dob = data.pop('prisoner_dob', None)
     prisoner_number = data.pop('prisoner_number', None)

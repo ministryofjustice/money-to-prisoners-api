@@ -9,7 +9,8 @@ from django.utils.dateparse import parse_datetime, parse_date
 from mtp_common import nomis
 from mtp_common.utils import format_currency
 
-from credit.models import Credit, CREDIT_RESOLUTION, Log, LOG_ACTIONS
+from credit.constants import CreditResolution, LogAction
+from credit.models import Credit, Log
 from prison.models import Prison
 
 User = get_user_model()
@@ -130,7 +131,7 @@ def find_uncredited_credits(prison, date):
     query_list = Credit.objects.credit_pending().filter(
         prison_id=prison,
         received_at__date=date,
-        resolution=CREDIT_RESOLUTION.PENDING,  # to exclude "manual" credits just in case
+        resolution=CreditResolution.pending,  # to exclude "manual" credits just in case
         nomis_transaction_id__isnull=True,
     ).order_by('pk')
     return list(query_list)
@@ -178,7 +179,7 @@ def mark_credited(credit: Credit, transaction: dict, owner: User):
     # pretend crediting happened at midday as time-of-day is not known from NOMIS transaction
     credited_date = timezone.make_aware(parse_datetime(transaction['date'] + ' 12:00:00'))
 
-    credit.resolution = CREDIT_RESOLUTION.CREDITED
+    credit.resolution = CreditResolution.credited.value
     credit.nomis_transaction_id = transaction['id']
     credit.owner = owner
     credit.save()
@@ -186,6 +187,6 @@ def mark_credited(credit: Credit, transaction: dict, owner: User):
         created=credited_date,
         modified=credited_date,
         credit=credit,
-        action=LOG_ACTIONS.CREDITED,
+        action=LogAction.credited,
         user=owner,
     )

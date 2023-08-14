@@ -5,7 +5,7 @@ from django.test import TestCase
 from django.utils.timezone import utc
 
 from core.tests.utils import make_test_users
-from payment.constants import PAYMENT_STATUS
+from payment.constants import PaymentStatus
 from payment.models import Batch, Payment
 from payment.tests.utils import generate_payments, latest_payment_date
 from prison.tests.utils import load_random_prisoner_locations
@@ -36,7 +36,7 @@ class ReconcilePaymentsTestCase(TestCase):
 
         initial_batch_count = Batch.objects.all().count()
         for payment in Payment.objects.filter(
-            status=PAYMENT_STATUS.TAKEN,
+            status=PaymentStatus.taken,
             credit__received_at__gte=start_date,
             credit__received_at__lt=end_date
         ):
@@ -50,7 +50,7 @@ class ReconcilePaymentsTestCase(TestCase):
         self.assertEqual(new_batch.date, latest_payment_date().date())
 
         for payment in Payment.objects.filter(
-            status=PAYMENT_STATUS.TAKEN,
+            status=PaymentStatus.taken,
             credit__received_at__gte=start_date,
             credit__received_at__lt=end_date
         ):
@@ -58,13 +58,13 @@ class ReconcilePaymentsTestCase(TestCase):
             self.assertEqual(payment.ref_code, str(settings.CARD_REF_CODE_BASE))
 
         for payment in Payment.objects.filter(
-            status=PAYMENT_STATUS.TAKEN,
+            status=PaymentStatus.taken,
             credit__received_at__lt=start_date,
         ):
             self.assertNotEqual(payment.batch, new_batch)
 
         for payment in Payment.objects.filter(
-            status=PAYMENT_STATUS.TAKEN,
+            status=PaymentStatus.taken,
             credit__received_at__gte=end_date,
         ):
             self.assertNotEqual(payment.batch, new_batch)
@@ -82,7 +82,7 @@ class ReconcilePaymentsTestCase(TestCase):
 
         Payment.objects.reconcile(start_date, end_date, None)
         for payment in Payment.objects.filter(
-            status=PAYMENT_STATUS.TAKEN,
+            status=PaymentStatus.taken,
             credit__received_at__gte=start_date,
             credit__received_at__lt=end_date
         ):

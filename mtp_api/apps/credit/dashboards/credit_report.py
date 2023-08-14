@@ -4,7 +4,6 @@ import json
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.encoding import force_text
 from django.utils.html import escapejs
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext, gettext_lazy as _
@@ -12,29 +11,31 @@ from django.utils.translation import gettext, gettext_lazy as _
 from core.dashboards import DashboardModule
 from core.views import DashboardView
 from credit.dashboards.credit_forms import CreditForm
-from credit.models import Credit, CREDIT_RESOLUTION, CREDIT_STATUS
-from transaction.models import Transaction, TRANSACTION_CATEGORY, TRANSACTION_SOURCE, TRANSACTION_STATUS
+from credit.constants import CreditResolution, CreditStatus
+from credit.models import Credit
+from transaction.constants import TransactionStatus, TransactionCategory, TransactionSource
+from transaction.models import Transaction
 
 # credit-specific
-CREDITABLE_FILTERS = Credit.STATUS_LOOKUP[CREDIT_STATUS.CREDITED] | \
-                     Credit.STATUS_LOOKUP[CREDIT_STATUS.CREDIT_PENDING]
-CREDITED_FILTERS = Credit.STATUS_LOOKUP[CREDIT_STATUS.CREDITED]
-REFUNDABLE_FILTERS = Credit.STATUS_LOOKUP[CREDIT_STATUS.REFUNDED] | \
-                     Credit.STATUS_LOOKUP[CREDIT_STATUS.REFUND_PENDING]
+CREDITABLE_FILTERS = Credit.STATUS_LOOKUP[CreditStatus.credited] | \
+                     Credit.STATUS_LOOKUP[CreditStatus.credit_pending]
+CREDITED_FILTERS = Credit.STATUS_LOOKUP[CreditStatus.credited]
+REFUNDABLE_FILTERS = Credit.STATUS_LOOKUP[CreditStatus.refunded] | \
+                     Credit.STATUS_LOOKUP[CreditStatus.refund_pending]
 # NB: refundable does not consider debit card payments since refunds there have not been worked out
-REFUNDED_FILTERS = Credit.STATUS_LOOKUP[CREDIT_STATUS.REFUNDED]
+REFUNDED_FILTERS = Credit.STATUS_LOOKUP[CreditStatus.refunded]
 TRANSACTION_ERROR_FILTERS = (
-    models.Q(transaction__source=TRANSACTION_SOURCE.BANK_TRANSFER,
+    models.Q(transaction__source=TransactionSource.bank_transfer,
              prison__isnull=True) |
-    models.Q(transaction__source=TRANSACTION_SOURCE.BANK_TRANSFER,
+    models.Q(transaction__source=TransactionSource.bank_transfer,
              blocked=True)
 )
 
 # transaction-specific
-BANK_TRANSFER_CREDIT_FILTERS = models.Q(category=TRANSACTION_CATEGORY.CREDIT, source=TRANSACTION_SOURCE.BANK_TRANSFER)
-ANONYMOUS_FILTERS = Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.ANONYMOUS]
-UNIDENTIFIED_FILTERS = Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.UNIDENTIFIED]
-ANOMALOUS_FILTERS = Transaction.STATUS_LOOKUP[TRANSACTION_STATUS.ANOMALOUS]
+BANK_TRANSFER_CREDIT_FILTERS = models.Q(category=TransactionCategory.credit, source=TransactionSource.bank_transfer)
+ANONYMOUS_FILTERS = Transaction.STATUS_LOOKUP[TransactionStatus.anonymous]
+UNIDENTIFIED_FILTERS = Transaction.STATUS_LOOKUP[TransactionStatus.unidentified]
+ANOMALOUS_FILTERS = Transaction.STATUS_LOOKUP[TransactionStatus.anomalous]
 
 
 class CreditReportChart:
@@ -70,7 +71,7 @@ class CreditReportChart:
         )
         return mark_safe('{columns: %s, rows: %s, weekends: %s, max: %d, title: "%s"}' % (
             json.dumps(self.columns), rows, weekends,
-            self.max_sum, force_text(escapejs(self.title)),
+            self.max_sum, str(escapejs(self.title)),
         ))
 
     @property
@@ -186,7 +187,9 @@ class CreditReport(DashboardModule):
 
     def get_received_queryset(self):
         # NB: includes only non-administrative bank transfers and debit card payments that are in progress or completed
-        return self.credit_queryset.exclude(resolution__in=(CREDIT_RESOLUTION.INITIAL, CREDIT_RESOLUTION.FAILED))
+        return self.credit_queryset.exclude(
+            resolution__in=(CreditResolution.initial.value, CreditResolution.failed.value)
+        )
 
     def get_received_transaction_queryset(self):
         return self.get_received_queryset().filter(transaction__isnull=False)

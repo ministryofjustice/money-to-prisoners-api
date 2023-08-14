@@ -5,7 +5,7 @@ from django.utils.translation import gettext_lazy as _
 
 from core.forms import BasePeriodAdminReportForm, BasePrisonAdminReportForm
 from core.views import BaseAdminReportView
-from disbursement.models import Disbursement, DISBURSEMENT_RESOLUTION
+from disbursement.models import Disbursement, DisbursementResolution
 from prison.models import Prison
 
 
@@ -37,7 +37,7 @@ class DisbursementReportAdminView(BaseAdminReportView):
 
     def get_monthly_rows(self):
         return Disbursement.objects \
-            .filter(resolution=DISBURSEMENT_RESOLUTION.SENT) \
+            .filter(resolution=DisbursementResolution.sent) \
             .exclude(prison__in=self.excluded_nomis_ids) \
             .order_by() \
             .annotate(date=TruncMonth('created')) \
@@ -86,7 +86,7 @@ class PrisonDisbursementReportAdminView(BaseAdminReportView):
 
         queryset = Disbursement.objects \
             .filter(
-                resolution=DISBURSEMENT_RESOLUTION.SENT,
+                resolution=DisbursementResolution.sent,
                 **period_filters
             ) \
             .order_by() \

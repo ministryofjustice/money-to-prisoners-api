@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from django.db import models, transaction
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
+from django_filters.widgets import BooleanWidget
 from django.utils import timezone
 from rest_framework import generics, mixins, status as drf_status, viewsets
 from rest_framework.generics import get_object_or_404
@@ -28,7 +29,7 @@ from core.filters import (
 )
 from core.models import TruncUtcDate
 from core.permissions import ActionsBasedPermissions
-from credit.constants import CREDIT_RESOLUTION, CREDIT_STATUS, CREDIT_SOURCE, LOG_ACTIONS
+from credit.constants import CreditResolution, CreditStatus, CreditSource, LogAction
 from credit.models import Credit, Comment, ProcessingBatch, PrivateEstateBatch
 from credit.permissions import CreditPermissions, PrivateEstateBatchPermissions
 from credit.serializers import (
@@ -117,8 +118,8 @@ class CreditTextSearchFilter(django_filters.CharFilter):
 class ValidCreditFilter(django_filters.BooleanFilter):
     def filter(self, queryset, value):
         valid_query = (
-            Credit.STATUS_LOOKUP[CREDIT_STATUS.CREDIT_PENDING] |
-            Credit.STATUS_LOOKUP[CREDIT_STATUS.CREDITED]
+            Credit.STATUS_LOOKUP[CreditStatus.credit_pending.value] |
+            Credit.STATUS_LOOKUP[CreditStatus.credited.value]
         )
         if value:
             return queryset.filter(valid_query)
@@ -128,15 +129,15 @@ class ValidCreditFilter(django_filters.BooleanFilter):
 
 class CreditSourceFilter(django_filters.ChoiceFilter):
     def __init__(self, *args, **kwargs):
-        kwargs['choices'] = CREDIT_SOURCE.choices
+        kwargs['choices'] = CreditSource.choices
         super().__init__(*args, **kwargs)
 
     def filter(self, qs, value):
-        if value == CREDIT_SOURCE.BANK_TRANSFER:
+        if value == CreditSource.bank_transfer.value:
             qs = qs.filter(transaction__isnull=False)
-        elif value == CREDIT_SOURCE.ONLINE:
+        elif value == CreditSource.online.value:
             qs = qs.filter(payment__isnull=False)
-        elif value == CREDIT_SOURCE.UNKNOWN:
+        elif value == CreditSource.unknown.value:
             qs = qs.filter(payment__isnull=True, transaction__isnull=True)
         return qs
 
@@ -153,9 +154,9 @@ class NumberInFilter(django_filters.BaseInFilter, django_filters.NumberFilter):
 
 
 class CreditListFilter(BaseFilterSet):
-    status = StatusChoiceFilter(choices=CREDIT_STATUS.choices)
+    status = StatusChoiceFilter(choices=CreditStatus.choices)
     user = django_filters.ModelChoiceFilter(field_name='owner', queryset=User.objects.all())
-    valid = ValidCreditFilter(widget=django_filters.widgets.BooleanWidget)
+    valid = ValidCreditFilter(widget=BooleanWidget)
 
     prisoner_name = django_filters.CharFilter(field_name='prisoner_name', lookup_expr='icontains')
     prison = django_filters.ModelMultipleChoiceFilter(queryset=Prison.objects.all())
@@ -245,7 +246,7 @@ class CreditListFilter(BaseFilterSet):
         }
 
 
-class CreditViewMixin(object):
+class CreditViewMixin:
     root_queryset = Credit.objects
 
     def get_queryset(self):
@@ -289,8 +290,8 @@ class GetCredits(CreditViewMixin, mixins.ListModelMixin, viewsets.GenericViewSet
                 logger.warning('only_completed is only meaningful when using Credit.objects_all')
             q = q.exclude(
                 resolution__in=(
-                    CREDIT_RESOLUTION.INITIAL,
-                    CREDIT_RESOLUTION.FAILED,
+                    CreditResolution.initial.value,
+                    CreditResolution.failed.value,
                 )
             )
         return q
@@ -318,8 +319,8 @@ class CreditsGroupedByCreditedList(CreditViewMixin, generics.ListAPIView):
 
     def get_queryset(self):
         return super().get_queryset().filter(
-            Credit.STATUS_LOOKUP[CREDIT_STATUS.CREDITED],
-            log__action=LOG_ACTIONS.CREDITED
+            Credit.STATUS_LOOKUP[CreditStatus.credited.value],
+            log__action=LogAction.credited,
         )
 
     def filter_queryset(self, queryset):

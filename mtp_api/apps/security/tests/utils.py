@@ -12,19 +12,21 @@ from django.contrib.auth.models import Group
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 
-from credit.models import Credit, CREDIT_RESOLUTION, LOG_ACTIONS as CREDIT_LOG_ACTIONS
+from credit.constants import CreditResolution, LogAction
+from credit.models import Credit
 from prison.models import Prison
-from payment.models import Payment, PAYMENT_STATUS
+from payment.constants import PaymentStatus
+from payment.models import Payment
 from payment.tests.utils import create_fake_sender_data, generate_payments
 from prison.tests.utils import random_prisoner_number
-from security.constants import CHECK_STATUS
+from security.constants import CheckStatus
 from security.models import (
     CardholderName,
     Check,
     CheckAutoAcceptRule,
     DebitCardSenderDetails,
     PrisonerProfile,
-    SenderProfile
+    SenderProfile,
 )
 from security.serializers import CheckAutoAcceptRuleSerializer
 
@@ -33,10 +35,10 @@ fake = faker.Faker(locale='en_GB')
 logger = logging.getLogger('MTP')
 
 PAYMENT_FILTERS_FOR_INVALID_CHECK = dict(
-    status=PAYMENT_STATUS.PENDING,
+    status=PaymentStatus.pending,
     credit=dict(
         security_check__isnull=True,
-        resolution=CREDIT_RESOLUTION.INITIAL,
+        resolution=CreditResolution.initial.value,
         owner_id=None,
         sender_profile_id=None,
         prisoner_profile_id=None,
@@ -45,7 +47,7 @@ PAYMENT_FILTERS_FOR_INVALID_CHECK = dict(
 )
 
 PAYMENT_FILTERS_FOR_VALID_CHECK = dict(
-    status=PAYMENT_STATUS.PENDING,
+    status=PaymentStatus.pending,
     email__isnull=False,
     cardholder_name__isnull=False,
     card_number_first_digits__isnull=False,
@@ -55,7 +57,7 @@ PAYMENT_FILTERS_FOR_VALID_CHECK = dict(
     billing_address__debit_card_sender_details__isnull=False,
     credit__isnull=False,
     credit=dict(
-        resolution=CREDIT_RESOLUTION.INITIAL,
+        resolution=CreditResolution.initial.value,
         security_check__isnull=True,
         # This only works because get_or_create ignores values with __ in any call to create()
         # these values must be included in the defaults if NOT NULL
@@ -221,7 +223,7 @@ def generate_checks(
                 )
             candidate_payment.save()
 
-        candidate_payment.credit.log_set.filter(action=CREDIT_LOG_ACTIONS.CREDITED).delete()
+        candidate_payment.credit.log_set.filter(action=LogAction.credited).delete()
         # Checks already get created in the payment saving process for applicable credits
         # (see payment/models.py::create_security_check_if_needed_and_attach_profiles
         if not hasattr(candidate_payment.credit, 'security_check'):
@@ -229,7 +231,9 @@ def generate_checks(
         else:
             check = candidate_payment.credit.security_check
             if (not overrides or 'state' not in overrides) and j % 5:
-                check.status = random.choice([CHECK_STATUS.ACCEPTED, CHECK_STATUS.REJECTED])
+                check.status = random.choice(
+                    [CheckStatus.accepted.value, CheckStatus.rejected.value]
+                )
                 check.actioned_at = timezone.localtime()
                 check.actioned_by = random.choice(Group.objects.filter(name='FIU').first().user_set.all())
                 check.save()
@@ -244,7 +248,7 @@ def generate_checks(
 def generate_auto_accept_rules():
     # Add auto-accept rules
     checks = Check.objects.filter(
-        status=CHECK_STATUS.ACCEPTED,
+        status=CheckStatus.accepted,
         credit__payment__billing_address__debit_card_sender_details__isnull=False,
         credit__prisoner_profile__isnull=False
     ).distinct(

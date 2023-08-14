@@ -11,17 +11,17 @@ from rest_framework.test import APITestCase
 
 from core.tests.utils import make_test_users
 from credit.models import Credit
-from credit.constants import CREDIT_RESOLUTION
-from disbursement.constants import DISBURSEMENT_METHOD, DISBURSEMENT_RESOLUTION
+from credit.constants import CreditResolution
+from disbursement.constants import DisbursementResolution, DisbursementMethod
 from disbursement.models import Disbursement
 from disbursement.tests.utils import generate_disbursements
 from mtp_auth.tests.utils import AuthTestCaseMixin
 from mtp_auth.tests.mommy_recipes import create_security_staff_user
 from mtp_common.test_utils import silence_logger
-from payment.constants import PAYMENT_STATUS
+from payment.constants import PaymentStatus
 from payment.tests.utils import generate_payments
 from prison.tests.utils import load_random_prisoner_locations
-from security.constants import CHECK_STATUS
+from security.constants import CheckStatus
 from security.models import (
     Check,
     PrisonerProfile,
@@ -280,10 +280,15 @@ class SenderCreditListTestCase(SecurityViewTestCase):
         for credit in sender.credits.all():
             self.assertTrue(credit.id in [d['id'] for d in data])
 
-        self.assertFalse(any([d['resolution'] in (CREDIT_RESOLUTION.FAILED, CREDIT_RESOLUTION.INITIAL) for d in data]))
+        self.assertFalse(
+            any(
+                d['resolution'] in (CreditResolution.failed.value, CreditResolution.initial.value)
+                for d in data
+            )
+        )
 
     def test_list_credits_for_sender_includes_not_completed(self):
-        payments = generate_payments(10, days_of_history=1, overrides={'status': PAYMENT_STATUS.REJECTED})
+        payments = generate_payments(10, days_of_history=1, overrides={'status': PaymentStatus.rejected.value})
         sender_profile_id = list(filter(lambda p: p.credit.sender_profile_id, payments))[0].credit.sender_profile_id
         credits = Credit.objects_all.filter(
             sender_profile_id=sender_profile_id
@@ -299,7 +304,12 @@ class SenderCreditListTestCase(SecurityViewTestCase):
         for credit in credits:
             self.assertTrue(credit.id in [d['id'] for d in data])
 
-        self.assertTrue(any([d['resolution'] in (CREDIT_RESOLUTION.FAILED, CREDIT_RESOLUTION.INITIAL) for d in data]))
+        self.assertTrue(
+            any(
+                d['resolution'] in (CreditResolution.failed.value, CreditResolution.initial.value)
+                for d in data
+            )
+        )
 
     def test_list_credits_for_sender_include_checks(self):
         # Setup
@@ -309,10 +319,10 @@ class SenderCreditListTestCase(SecurityViewTestCase):
         user = self._get_authorised_user()
         for credit in sender.credits.all():
             check = Check.objects.create_for_credit(credit)
-            if check.status == CHECK_STATUS.PENDING:
+            if check.status == CheckStatus.pending.value:
                 check.reject(user, 'looks dodgy', {'payment_source_linked_other_prisoners': True})
                 rejected_checks.append(credit.id)
-            elif check.status == CHECK_STATUS.ACCEPTED:
+            elif check.status == CheckStatus.accepted.value:
                 accepted_checks.append(credit.id)
 
         # Execute
@@ -359,8 +369,8 @@ class RecipientProfileListTestCase(SecurityViewTestCase):
             prisoner_count__gte=3,
         )['results']
         prisoner_counts = Disbursement.objects.filter(
-            method=DISBURSEMENT_METHOD.BANK_TRANSFER,
-            resolution=DISBURSEMENT_RESOLUTION.SENT
+            method=DisbursementMethod.bank_transfer,
+            resolution=DisbursementResolution.sent,
         ).values(
             'sort_code', 'account_number', 'roll_number',
         ).order_by(
@@ -671,10 +681,15 @@ class PrisonerCreditListTestCase(SecurityViewTestCase):
         for credit in prisoner.credits.all():
             self.assertTrue(credit.id in [d['id'] for d in data])
 
-        self.assertFalse(any([d['resolution'] in (CREDIT_RESOLUTION.FAILED, CREDIT_RESOLUTION.INITIAL) for d in data]))
+        self.assertFalse(
+            any(
+                d['resolution'] in (CreditResolution.failed.value, CreditResolution.initial.value)
+                for d in data
+            )
+        )
 
     def test_list_credits_for_prisoner_includes_not_completed(self):
-        payments = generate_payments(10, days_of_history=1, overrides={'status': PAYMENT_STATUS.REJECTED})
+        payments = generate_payments(10, days_of_history=1, overrides={'status': PaymentStatus.rejected.value})
         prisoner_profile_id = list(
             filter(lambda p: p.credit.prisoner_profile_id, payments)
         )[0].credit.prisoner_profile_id
@@ -692,7 +707,12 @@ class PrisonerCreditListTestCase(SecurityViewTestCase):
         for credit in credits:
             self.assertTrue(credit.id in [d['id'] for d in data])
 
-        self.assertTrue(any([d['resolution'] in (CREDIT_RESOLUTION.FAILED, CREDIT_RESOLUTION.INITIAL) for d in data]))
+        self.assertTrue(
+            any(
+                d['resolution'] in (CreditResolution.failed.value, CreditResolution.initial.value)
+                for d in data
+            )
+        )
 
     def test_list_credits_for_prisoner_include_checks(self):
         # Setup
@@ -702,10 +722,10 @@ class PrisonerCreditListTestCase(SecurityViewTestCase):
         user = self._get_authorised_user()
         for credit in prisoner.credits.all():
             check = Check.objects.create_for_credit(credit)
-            if check.status == CHECK_STATUS.PENDING:
+            if check.status == CheckStatus.pending.value:
                 check.reject(user, 'looks dodgy', {'payment_source_linked_other_prisoners': True})
                 rejected_checks.append(credit.id)
-            elif check.status == CHECK_STATUS.ACCEPTED:
+            elif check.status == CheckStatus.accepted.value:
                 accepted_checks.append(credit.id)
 
         # Execute
