@@ -20,6 +20,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         today = timezone.localtime().date()
         yesterday = today - datetime.timedelta(days=1)
+        self.stdout.write(f'Dumping and uploading records into Analytical Platform: [{yesterday}, {today})')
 
         today = today.strftime('%Y-%m-%d')
         yesterday = yesterday.strftime('%Y-%m-%d')
@@ -32,6 +33,7 @@ class Command(BaseCommand):
             for record_type in Serialiser.get_serialisers():
                 if record_type == 'noms_ops_users':
                     # explicitly ignore user export
+                    self.stderr.write('Ignoring export of `noms_ops_users` records', style_func=self.style.WARNING)
                     continue
                 file_path = os.path.join(temp_path, record_type)
                 call_command('dump_for_ap', record_type, file_path, **date_range)

@@ -21,7 +21,10 @@ class Command(BaseCommand):
             self.stderr.write(self.style.WARNING('Cannot upload dump to Analytical Platform'))
             return
 
-        upload_file_to_analytical_platform(options['file_path'], options['object_name'])
+        file_path = options['file_path']
+        target_name = options['object_name']
+        self.stdout.write(f'Uploading {target_name} to Analytical Platform')
+        upload_file_to_analytical_platform(file_path, target_name)
 
 
 def upload_file_to_analytical_platform(file_path, target_name):

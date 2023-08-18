@@ -51,6 +51,8 @@ class Command(BaseDumpCommand):
         serialiser: Serialiser = Serialiser.get_serialisers()[record_type]()
         records = serialiser.get_modified_records(after, before)
 
+        self.stdout.write(f'Dumping {record_type} records for Analytical Platform export')
+
         with open(options['path'], 'wt') as jsonl_file:
             for record in records:
                 jsonl_file.write(json.dumps(serialiser.serialise(record), default=str, ensure_ascii=False))
