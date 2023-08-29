@@ -443,7 +443,7 @@ class ProcessingBatch(TimeStampedModel):
         if now - self.created < timedelta(minutes=2):
             return False
         last_updated = self.credits.all().aggregate(Max('modified'))['modified__max']
-        if now - last_updated < timedelta(minutes=2):
+        if last_updated and (now - last_updated < timedelta(minutes=2)):
             return False
         return True
 
