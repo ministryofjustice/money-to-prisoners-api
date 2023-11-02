@@ -31,7 +31,6 @@ class ParamsOnlyFilterSetForm(forms.Form):
 
 
 class BaseFilterSet(django_filters.FilterSet):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._meta.form = ParamsOnlyFilterSetForm

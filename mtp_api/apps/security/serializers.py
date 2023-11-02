@@ -435,7 +435,7 @@ class AcceptCheckSerializer(CheckCreditSerializer):
             'id',
             'credit',
             'description',
-            'rules'
+            'rules',
         )
 
     def validate(self, data):

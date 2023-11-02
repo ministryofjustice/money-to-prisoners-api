@@ -310,6 +310,9 @@ REQUEST_PAGE_DAYS = 5
 SESSION_COOKIE_AGE = 60 * 60  # 1 hour
 SESSION_SAVE_EVERY_REQUEST = True
 
+LOGIN_URL = '/admin/login/'
+LOGIN_REDIRECT_URL = '/admin/'
+
 OAUTH2_PROVIDER = {
     'ACCESS_TOKEN_EXPIRE_SECONDS': SESSION_COOKIE_AGE,
     'SCOPES': {
@@ -386,7 +389,3 @@ try:
     from .local import *  # noqa
 except ImportError:
     pass
-
-
-# TODO: remove after upgrade to django 3.2
-DEFAULT_HASHING_ALGORITHM = 'sha1'

@@ -4,7 +4,7 @@ Backend and internal admin site for [Prisoner Money suite of apps](https://githu
 
 ## Requirements
 
-- Unix-like platform with Python 3.10 and NodeJS 18 (e.g. via [nvm](https://github.com/nvm-sh/nvm#installing-and-updating) or [fnm](https://github.com/Schniz/fnm#installation))
+- Unix-like platform with Python 3.10 and NodeJS 20 (e.g. via [nvm](https://github.com/nvm-sh/nvm#installing-and-updating) or [fnm](https://github.com/Schniz/fnm#installation))
 - PostgreSQL 14 (though the version is not a strict requirement as no special features are used)
 
 ## Developing
