@@ -10,7 +10,7 @@ parameters:
     default: '14.3'
   kubectl-version:
     type: string
-    default: v1.24.16
+    default: v1.24.17
 
 commands:
   setup:
