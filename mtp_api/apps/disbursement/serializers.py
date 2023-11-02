@@ -29,13 +29,13 @@ class PrisonerInPrisonValidator:
 
 
 class PrisonPermittedValidator:
-    def set_context(self, serializer):
-        self.user = serializer.context['request'].user
+    requires_context = True
 
-    def __call__(self, value):
+    def __call__(self, value, serializer_field):
+        user = serializer_field.context['request'].user
         if (
             value not in
-            PrisonUserMapping.objects.get_prison_set_for_user(self.user)
+            PrisonUserMapping.objects.get_prison_set_for_user(user)
         ):
             raise serializers.ValidationError(
                 _('Cannot create a disbursement for this prison')

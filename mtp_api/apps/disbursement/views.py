@@ -124,7 +124,7 @@ class GetDisbursementsView(
 ):
     queryset = Disbursement.objects.all().order_by('-id')
     serializer_class = DisbursementSerializer
-    filter_class = DisbursementFilter
+    filterset_class = DisbursementFilter
     filter_backends = (LogNomsOpsSearchDjangoFilterBackend, SafeOrderingFilter)
     ordering_fields = ('created', 'amount', 'resolution', 'method', 'recipient_name',
                        'prisoner_number', 'prisoner_name')

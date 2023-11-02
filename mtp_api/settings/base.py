@@ -232,7 +232,7 @@ LOGGING = {
             'datefmt': '%Y-%m-%dT%H:%M:%S',
         },
         'elk': {
-            '()': 'mtp_common.logging.ELKFormatter'
+            '()': 'mtp_common.logging.ELKFormatter',
         },
     },
     'handlers': {
@@ -288,7 +288,7 @@ if os.environ.get('SENTRY_DSN'):
         environment=ENVIRONMENT,
         release=APP_GIT_COMMIT or 'unknown',
         send_default_pii=DEBUG,
-        request_bodies='medium' if DEBUG else 'never',
+        max_request_body_size='medium' if DEBUG else 'never',
     )
 
 REST_FRAMEWORK = {
@@ -302,7 +302,7 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer',
     ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
-    'PAGE_SIZE': 20
+    'PAGE_SIZE': 20,
 }
 REQUEST_PAGE_DAYS = 5
 
@@ -314,12 +314,14 @@ LOGIN_URL = '/admin/login/'
 LOGIN_REDIRECT_URL = '/admin/'
 
 OAUTH2_PROVIDER = {
+    'PKCE_REQUIRED': False,
+    'OIDC_ENABLED': False,
     'ACCESS_TOKEN_EXPIRE_SECONDS': SESSION_COOKIE_AGE,
     'SCOPES': {
         'read': 'Read scope',
         'write': 'Write scope',
     },
-    'OAUTH2_VALIDATOR_CLASS': 'mtp_auth.validators.ApplicationRequestValidator'
+    'OAUTH2_VALIDATOR_CLASS': 'mtp_auth.validators.ApplicationRequestValidator',
 }
 OAUTH2_PROVIDER_APPLICATION_MODEL = 'oauth2_provider.Application'
 MTP_AUTH_LOCKOUT_COUNT = 5  # 5 times
@@ -370,19 +372,19 @@ SWAGGER_SETTINGS = {
             'scopes': {
                 'read': 'Read scope',
                 'write': 'Write scope',
-            }
-        }
+            },
+        },
     },
     'SHOW_REQUEST_HEADERS': True,
     'SECURITY': [{
-        'password': ['read', 'write']
+        'password': ['read', 'write'],
     }],
     'REFETCH_SCHEMA_WITH_AUTH': True,
     'OAUTH2_CONFIG': {
         'clientId': os.environ.get('MTP_SWAGGER_CLIENT_ID'),
         'clientSecret': os.environ.get('MTP_SWAGGER_CLIENT_SECRET'),
-        'appName': 'Money To Prisoners'
-    }
+        'appName': 'Money To Prisoners',
+    },
 }
 
 try:

@@ -269,7 +269,7 @@ class CreditViewMixin:
 
 class GetCredits(CreditViewMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
     filter_backends = (LogNomsOpsSearchDjangoFilterBackend, SafeOrderingFilter)
-    filter_class = CreditListFilter
+    filterset_class = CreditListFilter
     ordering_fields = ('created', 'received_at', 'amount',
                        'prisoner_number', 'prisoner_name')
     action = 'list'
@@ -314,7 +314,7 @@ class CreditsGroupedByCreditedList(CreditViewMixin, generics.ListAPIView):
         CreditPermissions
     )
     filter_backends = (DjangoFilterBackend,)
-    filter_class = CreditListFilter
+    filterset_class = CreditListFilter
     action = 'list'
 
     def get_queryset(self):
@@ -509,7 +509,7 @@ class PrivateEstateBatchView(
     queryset = PrivateEstateBatch.objects.all()
     serializer_class = PrivateEstateBatchSerializer
     filter_backends = (DjangoFilterBackend,)
-    filter_class = PrivateEstateBatchFilter
+    filterset_class = PrivateEstateBatchFilter
 
     permission_classes = (
         IsAuthenticated, PrivateEstateBatchPermissions, BankAdminClientIDPermissions,

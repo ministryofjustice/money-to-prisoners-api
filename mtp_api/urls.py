@@ -7,11 +7,7 @@ from django.views.generic import RedirectView
 from moj_irat.views import HealthcheckView, PingJsonView
 from mtp_common.metrics.views import metrics_view
 
-from mtp_auth.patches import patch_oauth2_provider_token_view
 from .views import schema_view
-
-patch_oauth2_provider_token_view()
-
 
 urlpatterns = [
     url(r'^', include('prison.urls')),
@@ -27,9 +23,11 @@ urlpatterns = [
     url(r'^', include('notification.urls')),
     url(r'^', include('performance.urls')),
 
-    url(r'^oauth2/', include(('oauth2_provider.urls', 'oauth2_provider'), namespace='oauth2_provider')),
+    url(r'^oauth2/', include(('mtp_auth.urls_oauth2', 'oauth2_provider'), namespace='oauth2_provider')),
+
     url(r'^admin/', admin.site.urls),
     url(r'^admin/', include('django.conf.urls.i18n')),
+
     url(r'^ping.json$', PingJsonView.as_view(
         build_date_key='APP_BUILD_DATE',
         commit_id_key='APP_GIT_COMMIT',
@@ -56,7 +54,8 @@ urlpatterns = [
 
     url(r'^$', lambda request: HttpResponse(content_type='text/plain', status=204)),
 ]
-if settings.ENVIRONMENT in ('test', 'local'):
+
+if settings.ENVIRONMENT != 'prod':
     urlpatterns.extend([
         url(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
         url(r'^swagger/$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),

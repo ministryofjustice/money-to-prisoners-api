@@ -178,7 +178,7 @@ class SenderProfileView(
         'bank_transfer_details', 'debit_card_details',
     )
     filter_backends = (LogNomsOpsSearchDjangoFilterBackend, filters.OrderingFilter,)
-    filter_class = SenderProfileListFilter
+    filterset_class = SenderProfileListFilter
     serializer_class = SenderProfileSerializer
     ordering_param = api_settings.ORDERING_PARAM
     ordering_fields = (
@@ -295,7 +295,7 @@ class PrisonerProfileView(
         'prisons', 'provided_names'
     )
     filter_backends = (LogNomsOpsSearchDjangoFilterBackend, filters.OrderingFilter,)
-    filter_class = PrisonerProfileListFilter
+    filterset_class = PrisonerProfileListFilter
     serializer_class = PrisonerProfileSerializer
     ordering_fields = (
         'sender_count',
@@ -421,7 +421,7 @@ class RecipientProfileView(
         'bank_transfer_details'
     )
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
-    filter_class = RecipientProfileListFilter
+    filterset_class = RecipientProfileListFilter
     serializer_class = RecipientProfileSerializer
     ordering_param = api_settings.ORDERING_PARAM
     ordering_fields = (
@@ -543,7 +543,7 @@ class CheckView(
 ):
     queryset = Check.objects.all()
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
-    filter_class = CheckListFilter
+    filterset_class = CheckListFilter
     serializer_class = CheckCreditSerializer
     ordering_fields = ('created',)
     ordering = ('created',)
@@ -643,7 +643,7 @@ class CheckAutoAcceptRuleView(
 ):
     queryset = CheckAutoAcceptRule.objects.all()
     filter_backends = (DjangoFilterBackend,)
-    filter_class = CheckAutoAcceptRuleFilter
+    filterset_class = CheckAutoAcceptRuleFilter
     serializer_class = CheckAutoAcceptRuleSerializer
     ordering_fields = (
         'states_created', '-states_created',

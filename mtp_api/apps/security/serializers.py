@@ -280,7 +280,7 @@ class CheckAutoAcceptRuleSerializer(serializers.ModelSerializer):
         write_only=True
     )
 
-    def is_valid(self, raise_exception=False):
+    def is_valid(self, *, raise_exception=False):
         # We override is_valid to make this check before the built-in validators catch it, so we can add our own
         # error message as we want to match against it in logic within noms-ops, therefore want it to be in our control
         if self.instance is None and CheckAutoAcceptRule.objects.filter(
@@ -294,7 +294,7 @@ class CheckAutoAcceptRuleSerializer(serializers.ModelSerializer):
                     'An existing AutoAcceptRule is present for this DebitCardSenderDetails/PrisonerProfile pair'
                 ]
             })
-        return super().is_valid(raise_exception)
+        return super().is_valid(raise_exception=raise_exception)
 
     def validate(self, attrs):
         if len(attrs['states']) != 1:

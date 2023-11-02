@@ -245,10 +245,10 @@ class LogNomsOpsSearchDjangoFilterBackend(DjangoFilterBackend):
         """
         Same as the parent `filter_queryset` but it also logs some calls.
         """
-        filter_class = self.get_filter_class(view, queryset)
+        filterset_class = self.get_filterset_class(view, queryset)
 
-        if filter_class:
-            filterset = filter_class(request.query_params, queryset=queryset, request=request)
+        if filterset_class:
+            filterset = filterset_class(request.query_params, queryset=queryset, request=request)
             qs = filterset.qs
             if filterset.errors:
                 # Previous functionality was to return 0 rows on error, we replicate this here
