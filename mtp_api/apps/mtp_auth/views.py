@@ -117,7 +117,7 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.none()
     permission_classes = (IsAuthenticated, UserPermissions)
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter,)
-    filter_class = UserFilterset
+    filterset_class = UserFilterset
     serializer_class = UserSerializer
 
     def get_queryset(self):
@@ -386,7 +386,7 @@ class AccountRequestFilterset(BaseFilterSet):
 
 class AccountRequestViewSet(viewsets.ModelViewSet):
     queryset = AccountRequest.objects.all()
-    filter_class = AccountRequestFilterset
+    filterset_class = AccountRequestFilterset
     filter_backends = (DjangoFilterBackend,)
     permission_classes = (AccountRequestPermissions,)
     serializer_class = AccountRequestSerializer

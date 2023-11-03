@@ -59,7 +59,7 @@ class TransactionView(
     mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet
 ):
     filter_backends = (DjangoFilterBackendEmptyOnErrors, SafeOrderingFilter)
-    filter_class = TransactionListFilter
+    filterset_class = TransactionListFilter
     ordering_fields = ('received_at',)
     permission_classes = (
         IsAuthenticated, BankAdminClientIDPermissions,

@@ -32,7 +32,7 @@ class BatchView(
     queryset = Batch.objects.all()
     serializer_class = BatchSerializer
     filter_backends = (DjangoFilterBackend,)
-    filter_class = BatchListFilter
+    filterset_class = BatchListFilter
 
     permission_classes = (
         IsAuthenticated, BatchPermissions, BankAdminClientIDPermissions
@@ -56,7 +56,7 @@ class PaymentView(
     queryset = Payment.objects.all()
     serializer_class = PaymentSerializer
     filter_backends = (DjangoFilterBackend,)
-    filter_class = PaymentListFilter
+    filterset_class = PaymentListFilter
 
     permission_classes = (
         IsAuthenticated, PaymentPermissions, SendMoneyClientIDPermissions

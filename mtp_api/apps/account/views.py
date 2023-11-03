@@ -19,7 +19,7 @@ class BalanceView(
 ):
     queryset = Balance.objects.all().order_by('-date')
     filter_backends = (DjangoFilterBackend,)
-    filter_class = BalanceListFilter
+    filterset_class = BalanceListFilter
     serializer_class = BalanceSerializer
 
     permission_classes = (IsAuthenticated, ActionsBasedPermissions)

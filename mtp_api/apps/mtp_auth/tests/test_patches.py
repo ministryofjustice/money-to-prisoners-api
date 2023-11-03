@@ -27,7 +27,7 @@ class OauthTokenRequestPatchTestCase(AuthBaseTestCase):
                     'username': self.user.username,
                     'password': self.user.username,
                     'client_id': self.cashbook_client.client_id,
-                    'client_secret': self.cashbook_client.client_secret,
+                    'client_secret': self.cashbook_client.client_id,  # NB: client_secret is hashed
                 }
             )
 

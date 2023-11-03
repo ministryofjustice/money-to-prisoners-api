@@ -159,7 +159,7 @@ class OauthTokenTestCase(AuthBaseTestCase):
                         'username': username,
                         'password': password,
                         'client_id': client.client_id,
-                        'client_secret': client.client_secret,
+                        'client_secret': client.client_id,  # NB: client_secret is hashed
                     }
                 )
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -185,7 +185,7 @@ class OauthTokenTestCase(AuthBaseTestCase):
                             'username': username,
                             'password': 'incorrect-password',
                             'client_id': client.client_id,
-                            'client_secret': client.client_secret,
+                            'client_secret': client.client_id,  # NB: client_secret is hashed
                         }
                     )
                 self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -1784,7 +1784,7 @@ class AccountLockoutTestCase(AuthBaseTestCase):
                 'username': user.username,
                 'password': user.username,
                 'client_id': client.client_id,
-                'client_secret': client.client_secret,
+                'client_secret': client.client_id,  # NB: client_secret is hashed
             }
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -1798,7 +1798,7 @@ class AccountLockoutTestCase(AuthBaseTestCase):
                     'username': user.username,
                     'password': 'incorrect-password',
                     'client_id': client.client_id,
-                    'client_secret': client.client_secret,
+                    'client_secret': client.client_id,  # NB: client_secret is hashed
                 }
             )
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)

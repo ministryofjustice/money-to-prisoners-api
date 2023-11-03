@@ -68,7 +68,7 @@ class EventView(mixins.ListModelMixin, viewsets.GenericViewSet):
     )
     serializer_class = EventSerializer
     filter_backends = (DjangoFilterBackend, SafeOrderingFilter,)
-    filter_class = EventViewFilter
+    filterset_class = EventViewFilter
 
     permission_classes = (IsAuthenticated, ActionsBasedPermissions, NomsOpsClientIDPermissions)
 

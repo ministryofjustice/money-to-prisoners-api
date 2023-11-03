@@ -526,7 +526,7 @@ class PerformanceDataView(ListAPIView):
     queryset = PerformanceData.objects.all()
     serializer_class = PerformanceDataSerializer
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
-    filter_class = PerformanceDataFilter
+    filterset_class = PerformanceDataFilter
     pagination_class = None
 
     permission_classes = (

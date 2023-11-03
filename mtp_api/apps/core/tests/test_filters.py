@@ -177,7 +177,7 @@ class UserTestView(
     View for the User model to be used in the LogNomsOpsSearchDjangoFilterBackendTestCase tests
     """
     queryset = User.objects.all()
-    filter_class = UserTestFilter
+    filterset_class = UserTestFilter
     filter_backends = (LogNomsOpsSearchDjangoFilterBackend, )
     permission_classes = (IsAuthenticated, )
 
