@@ -11,7 +11,6 @@ from rest_framework.settings import api_settings
 from core.filters import (
     BaseFilterSet,
     IsoDateTimeFilter,
-    LogNomsOpsSearchDjangoFilterBackend,
     MultipleFieldCharFilter,
     MultipleValueFilter,
     SplitTextInMultipleFieldsFilter,
@@ -177,7 +176,7 @@ class SenderProfileView(
     ).prefetch_related(
         'bank_transfer_details', 'debit_card_details',
     )
-    filter_backends = (LogNomsOpsSearchDjangoFilterBackend, filters.OrderingFilter,)
+    filter_backends = (DjangoFilterBackend, filters.OrderingFilter,)
     filterset_class = SenderProfileListFilter
     serializer_class = SenderProfileSerializer
     ordering_param = api_settings.ORDERING_PARAM
@@ -294,7 +293,7 @@ class PrisonerProfileView(
     ).prefetch_related(
         'prisons', 'provided_names'
     )
-    filter_backends = (LogNomsOpsSearchDjangoFilterBackend, filters.OrderingFilter,)
+    filter_backends = (DjangoFilterBackend, filters.OrderingFilter,)
     filterset_class = PrisonerProfileListFilter
     serializer_class = PrisonerProfileSerializer
     ordering_fields = (

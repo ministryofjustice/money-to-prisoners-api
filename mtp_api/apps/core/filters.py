@@ -202,6 +202,8 @@ class PostcodeFilter(django_filters.CharFilter):
 
 class LogNomsOpsSearchDjangoFilterBackend(DjangoFilterBackend):
     """
+    NB: NOT IN USE
+
     DjangoFilterBackend which logs calls to `list` endpoint.
 
     The logged data is available in a UserEvent record with the filters used
