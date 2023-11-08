@@ -469,7 +469,7 @@ class RejectCheckSerializer(CheckCreditSerializer):
             'id',
             'credit',
             'description',
-            'rules'
+            'rules',
         )
 
     def validate_rejection_reasons(self, data):
