@@ -4,6 +4,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
+from django.core.validators import MinLengthValidator
 from django.db import models
 from django.dispatch import receiver
 from django.utils.timezone import now
@@ -15,6 +16,7 @@ from prison.models import Prison
 from security.constants import CheckStatus
 from security.managers import (
     PrisonerProfileManager, SenderProfileManager, RecipientProfileManager,
+    MonitoredPartialEmailAddressManager,
     CheckManager, CheckAutoAcceptRuleManager,
 )
 from security.signals import prisoner_profile_current_prisons_need_updating
@@ -284,6 +286,23 @@ class SearchFilter(models.Model):
 
     def __str__(self):
         return '{field}={value}'.format(field=self.field, value=self.value)
+
+
+class MonitoredPartialEmailAddress(TimeStampedModel):
+    keyword = models.CharField(max_length=255, unique=True, validators=[MinLengthValidator(3)])
+
+    objects = MonitoredPartialEmailAddressManager()
+
+    class Meta:
+        ordering = ('keyword',)
+        verbose_name = 'monitored partial email address'
+        verbose_name_plural = 'monitored partial email addresses'
+
+    def __str__(self):
+        return self.keyword
+
+    def matches(self, email_address: str) -> bool:
+        return self.keyword in email_address.lower()
 
 
 class Check(TimeStampedModel):
