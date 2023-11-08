@@ -30,3 +30,23 @@ class MonitoredPartialEmailAddressTestCase(TestCase):
     def test_non_matching_email_address(self):
         self.assertFalse(self.sample_model.matches('super-good@mail.local'))
         self.assertFalse(MonitoredPartialEmailAddress.objects.is_email_address_monitored('super-good@mail.local'))
+
+    def test_escapes_percent(self):
+        model = MonitoredPartialEmailAddress.objects.create(keyword='23%56')
+        self.assertTrue(MonitoredPartialEmailAddress.objects.is_email_address_monitored('123%56@mail.local'))
+        self.assertTrue(model.matches('123%56@mail.local'))
+
+        self.assertFalse(MonitoredPartialEmailAddress.objects.is_email_address_monitored('12356@mail.local'))
+        self.assertFalse(MonitoredPartialEmailAddress.objects.is_email_address_monitored('123456@mail.local'))
+        self.assertFalse(model.matches('12356@mail.local'))
+        self.assertFalse(model.matches('123456@mail.local'))
+
+    def test_escapes_underscore(self):
+        model = MonitoredPartialEmailAddress.objects.create(keyword='23_56')
+        self.assertTrue(MonitoredPartialEmailAddress.objects.is_email_address_monitored('123_56@mail.local'))
+        self.assertTrue(model.matches('123_56@mail.local'))
+
+        self.assertFalse(MonitoredPartialEmailAddress.objects.is_email_address_monitored('12356@mail.local'))
+        self.assertFalse(MonitoredPartialEmailAddress.objects.is_email_address_monitored('123456@mail.local'))
+        self.assertFalse(model.matches('12356@mail.local'))
+        self.assertFalse(model.matches('123456@mail.local'))

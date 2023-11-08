@@ -391,9 +391,12 @@ class MonitoredPartialEmailAddressManager(models.Manager):
         SELECT EXISTS(
             SELECT 1
             FROM security_monitoredpartialemailaddress
-            WHERE %(email_address)s LIKE '%%' || "keyword" || '%%'
+            WHERE %(email_address)s
+                LIKE '%%' || replace(replace("keyword", '%%', E'\\\\%%'), '_', E'\\\\_') || '%%'
+                ESCAPE E'\\\\'
         );
         """
+        # NB: escaping of % and _ in the keyword is necessary to have LIKE operator ignore them
         with connection.cursor() as cursor:
             cursor.execute(sql, params=dict(email_address=email_address.lower()))
             return cursor.fetchone()[0]
