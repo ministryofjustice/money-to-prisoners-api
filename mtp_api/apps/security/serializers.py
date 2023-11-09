@@ -12,6 +12,7 @@ from security.models import (
     CheckAutoAcceptRule,
     CheckAutoAcceptRuleState,
     DebitCardSenderDetails,
+    MonitoredPartialEmailAddress,
     PrisonerProfile,
     RecipientProfile,
     SavedSearch,
@@ -488,3 +489,16 @@ class RejectCheckSerializer(CheckCreditSerializer):
             raise ValidationError(
                 detail=e.message_dict,
             )
+
+
+class MonitoredPartialEmailAddressSerialiser(serializers.BaseSerializer):
+    def to_representation(self, instance: MonitoredPartialEmailAddress):
+        return instance.keyword
+
+    def to_internal_value(self, data):
+        if not isinstance(data, str):
+            raise serializers.ValidationError('Data must be a string')
+        return dict(keyword=data.lower())
+
+    def create(self, validated_data):
+        return MonitoredPartialEmailAddress.objects.create(**validated_data)

@@ -131,7 +131,10 @@
       ["change_checkautoacceptrule", "security", "checkautoacceptrule"],
       ["add_checkautoacceptrulestate", "security", "checkautoacceptrulestate"],
       ["view_checkautoacceptrulestate", "security", "checkautoacceptrulestate"],
-      ["change_checkautoacceptrulestate", "security", "checkautoacceptrulestate"]
+      ["change_checkautoacceptrulestate", "security", "checkautoacceptrulestate"],
+      ["add_monitoredpartialemailaddress", "security", "monitoredpartialemailaddress"],
+      ["delete_monitoredpartialemailaddress", "security", "monitoredpartialemailaddress"],
+      ["view_monitoredpartialemailaddress", "security", "monitoredpartialemailaddress"]
     ]
   }
 }
