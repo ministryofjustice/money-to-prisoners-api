@@ -28,6 +28,7 @@ from security.models import (
     CheckAutoAcceptRule,
     CheckAutoAcceptRuleState,
     DebitCardSenderDetails,
+    MonitoredPartialEmailAddress,
     PrisonerProfile,
     RecipientProfile,
     SavedSearch,
@@ -38,6 +39,7 @@ from security.serializers import (
     AcceptCheckSerializer,
     CheckCreditSerializer,
     CheckAutoAcceptRuleSerializer,
+    MonitoredPartialEmailAddressSerialiser,
     PrisonerProfileSerializer,
     RecipientProfileSerializer,
     RejectCheckSerializer,
@@ -648,6 +650,22 @@ class CheckAutoAcceptRuleView(
         'states_created', '-states_created',
         'states__added_by__first_name', '-states__added_by__first_name',
     )
+    permission_classes = (
+        IsAuthenticated,
+        SecurityProfilePermissions,
+        NomsOpsClientIDPermissions,
+    )
+
+
+class MonitoredPartialEmailAddressView(
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet,
+):
+    lookup_field = 'keyword'
+    queryset = MonitoredPartialEmailAddress.objects.all()
+    serializer_class = MonitoredPartialEmailAddressSerialiser
     permission_classes = (
         IsAuthenticated,
         SecurityProfilePermissions,

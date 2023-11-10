@@ -13,6 +13,7 @@ from security.models import (
     BankTransferSenderDetails,
     Check,
     DebitCardSenderDetails,
+    MonitoredPartialEmailAddress,
     PrisonerProfile,
     RecipientProfile,
     SavedSearch,
@@ -210,3 +211,9 @@ class CheckAdmin(admin.ModelAdmin):
             'rejected_count': queryset.filter(status=CheckStatus.rejected).count(),
             'pending_count': queryset.filter(status=CheckStatus.pending).count(),
         })
+
+
+@admin.register(MonitoredPartialEmailAddress)
+class MonitoredPartialEmailAddressAdmin(admin.ModelAdmin):
+    list_display = ('keyword',)
+    search_fields = ('keyword',)

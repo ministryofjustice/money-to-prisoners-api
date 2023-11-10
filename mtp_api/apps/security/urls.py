@@ -38,6 +38,12 @@ router.register(r'searches', views.SavedSearchView)
 router.register(r'security/checks/auto-accept', views.CheckAutoAcceptRuleView, basename='security-check-auto-accept')
 router.register(r'security/checks', views.CheckView, basename='security-check')
 
+router.register(
+    r'security/monitored-email-addresses',
+    views.MonitoredPartialEmailAddressView,
+    basename='monitoredemailaddresses',
+)
+
 
 urlpatterns = [
     url(r'^', include(router.urls)),

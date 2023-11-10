@@ -384,6 +384,24 @@ class RecipientProfileQuerySet(models.QuerySet):
         )
 
 
+class MonitoredPartialEmailAddressManager(models.Manager):
+    @classmethod
+    def is_email_address_monitored(cls, email_address: str) -> bool:
+        sql = """
+        SELECT EXISTS(
+            SELECT 1
+            FROM security_monitoredpartialemailaddress
+            WHERE %(email_address)s
+                LIKE '%%' || replace(replace("keyword", '%%', E'\\\\%%'), '_', E'\\\\_') || '%%'
+                ESCAPE E'\\\\'
+        );
+        """
+        # NB: escaping of % and _ in the keyword is necessary to have LIKE operator ignore them
+        with connection.cursor() as cursor:
+            cursor.execute(sql, params=dict(email_address=email_address.lower()))
+            return cursor.fetchone()[0]
+
+
 class CheckManager(models.Manager):
     ENABLED_RULE_CODES = ('FIUMONP', 'FIUMONS', 'CSFREQ', 'CSNUM', 'CPNUM')
 
