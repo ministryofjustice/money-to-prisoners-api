@@ -48,6 +48,28 @@ class MonitoredPartialEmailAddressTestCase(APITestCase, AuthTestCaseMixin):
         MonitoredPartialEmailAddress.objects.get(keyword='mouse')
         self.assertFalse(MonitoredPartialEmailAddress.objects.filter(keyword='Mouse').exists())
 
+    def test_invalid_create(self):
+        response = self.client.post(
+            self.list_url(),
+            data='ab',
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.fiu_user),
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_400_BAD_REQUEST)
+        response_data = response.json()
+        self.assertIn('keyword', response_data)
+
+    def test_nonunique_create(self):
+        response = self.client.post(
+            self.list_url(),
+            data='CAT',
+            format='json',
+            HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.fiu_user),
+        )
+        self.assertEqual(response.status_code, http_status.HTTP_400_BAD_REQUEST)
+        response_data = response.json()
+        self.assertIn('keyword', response_data)
+
     def test_unauthorised_cannot_create(self):
         response = self.client.post(
             self.list_url(),
