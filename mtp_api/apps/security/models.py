@@ -289,7 +289,9 @@ class SearchFilter(models.Model):
 
 
 class MonitoredPartialEmailAddress(TimeStampedModel):
-    keyword = models.CharField(max_length=255, unique=True, validators=[MinLengthValidator(3)])
+    keyword = models.CharField(max_length=255, unique=True, validators=[MinLengthValidator(3)], error_messages={
+        'unique': _('Keyword already exists.'),
+    })
 
     objects = MonitoredPartialEmailAddressManager()
 

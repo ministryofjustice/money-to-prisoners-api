@@ -45,7 +45,7 @@ class MonitoredPartialEmailAddressTestCase(APITestCase, AuthTestCaseMixin):
         )
         self.assertEqual(response.status_code, http_status.HTTP_201_CREATED)
         self.assertEqual(MonitoredPartialEmailAddress.objects.count(), 3)
-        MonitoredPartialEmailAddress.objects.get(keyword='mouse')
+        MonitoredPartialEmailAddress.objects.get(keyword='mouse')  # NB: serialiser lowers case
         self.assertFalse(MonitoredPartialEmailAddress.objects.filter(keyword='Mouse').exists())
 
     def test_invalid_create(self):

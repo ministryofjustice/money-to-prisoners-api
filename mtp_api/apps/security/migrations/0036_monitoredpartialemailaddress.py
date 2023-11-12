@@ -21,7 +21,8 @@ class Migration(migrations.Migration):
                  model_utils.fields.AutoLastModifiedField(default=now, editable=False, verbose_name='modified')),
                 ('keyword',
                  models.CharField(max_length=255, unique=True,
-                                             validators=[django.core.validators.MinLengthValidator(3)])),
+                                  error_messages={'unique': 'Keyword already exists.'},
+                                  validators=[django.core.validators.MinLengthValidator(3)])),
             ],
             options={
                 'ordering': ('keyword',),
