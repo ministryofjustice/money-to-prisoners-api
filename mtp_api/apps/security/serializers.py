@@ -2,6 +2,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from rest_framework.settings import api_settings
 
 from core.serializers import BasicUserSerializer
 from prison.models import Prison
@@ -491,14 +492,19 @@ class RejectCheckSerializer(CheckCreditSerializer):
             )
 
 
-class MonitoredPartialEmailAddressSerialiser(serializers.BaseSerializer):
+class MonitoredPartialEmailAddressSerialiser(serializers.ModelSerializer):
+    class Meta:
+        model = MonitoredPartialEmailAddress
+        fields = ('keyword',)
+
     def to_representation(self, instance: MonitoredPartialEmailAddress):
         return instance.keyword
 
     def to_internal_value(self, data):
         if not isinstance(data, str):
-            raise serializers.ValidationError('Data must be a string')
-        return dict(keyword=data.lower())
+            raise ValidationError({
+                api_settings.NON_FIELD_ERRORS_KEY: ['Invalid data, expected a string']
+            }, code='invalid')
 
-    def create(self, validated_data):
-        return MonitoredPartialEmailAddress.objects.create(**validated_data)
+        data = {'keyword': data.lower()}
+        return super().to_internal_value(data=data)
