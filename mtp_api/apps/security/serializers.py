@@ -497,8 +497,10 @@ class MonitoredPartialEmailAddressSerialiser(serializers.ModelSerializer):
         model = MonitoredPartialEmailAddress
         fields = ('keyword',)
 
-    def to_representation(self, instance: MonitoredPartialEmailAddress):
-        return instance.keyword
+    def to_representation(self, instance):
+        if isinstance(instance, MonitoredPartialEmailAddress):
+            return instance.keyword
+        return instance['keyword']
 
     def to_internal_value(self, data):
         if not isinstance(data, str):
@@ -508,3 +510,10 @@ class MonitoredPartialEmailAddressSerialiser(serializers.ModelSerializer):
 
         data = {'keyword': data.lower()}
         return super().to_internal_value(data=data)
+
+    @property
+    def data(self):
+        if self.instance is not None and not getattr(self, '_errors', None):
+            return self.to_representation(self.instance)
+        elif hasattr(self, '_validated_data') and not getattr(self, '_errors', None):
+            return self.to_representation(self.validated_data)
