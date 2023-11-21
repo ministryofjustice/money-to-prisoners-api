@@ -31,7 +31,7 @@ from security.models import Check, CheckAutoAcceptRule, PrisonerProfile, SenderP
 from security.tests.utils import (
     generate_checks,
     generate_sender_profiles_from_payments,
-    generate_prisoner_profiles_from_prisoner_locations
+    generate_prisoner_profiles_from_prisoner_locations,
 )
 from transaction.tests.utils import generate_transactions
 
@@ -42,11 +42,7 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
     """
     Tests related to the Check model.
     """
-    fixtures = [
-        'initial_groups.json',
-        'initial_types.json',
-        'test_prisons.json'
-    ]
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
     @mock.patch('security.models.now')
     def test_can_accept_a_pending_check(self, mocked_now):
@@ -207,8 +203,7 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
             reverse('security-check-reject', kwargs={'pk': check.id}),
             {
                 'decision_reason': 'thisshouldntmatter',
-                'rejection_reasons': {
-                }
+                'rejection_reasons': {},
             },
             format='json', HTTP_AUTHORIZATION=self.get_http_authorization_for_user(users['security_fiu_users'][0])
         )
@@ -498,7 +493,7 @@ class AutomaticCreditCheckTestCase(APITestCase, AuthTestCaseMixin):
                 'line2': '',
                 'city': 'London',
                 'country': 'UK',
-                'postcode': 'SW1H 9EU'
+                'postcode': 'SW1H 9EU',
             },
         }
         response = self.client.patch(
@@ -551,7 +546,7 @@ class AutomaticCreditCheckTestCase(APITestCase, AuthTestCaseMixin):
                 'line2': '',
                 'city': 'London',
                 'country': 'UK',
-                'postcode': 'SW1H 9EU'
+                'postcode': 'SW1H 9EU',
             },
         }
         response = self.client.patch(
@@ -605,7 +600,7 @@ class AutoAcceptRuleTestCase(APITestCase, AuthTestCaseMixin):
             overrides={
                 'credit': {
                     'prisoner_profile_id': self.auto_accept_rule.prisoner_profile_id,
-                    'sender_profile_id': self.auto_accept_rule.debit_card_sender_details.sender.id
+                    'sender_profile_id': self.auto_accept_rule.debit_card_sender_details.sender.id,
                 }
             }
         )
@@ -642,7 +637,7 @@ class AutoAcceptRuleTestCase(APITestCase, AuthTestCaseMixin):
             overrides={
                 'credit': {
                     'prisoner_profile_id': self.auto_accept_rule.prisoner_profile_id,
-                    'sender_profile_id': self.auto_accept_rule.debit_card_sender_details.sender.id
+                    'sender_profile_id': self.auto_accept_rule.debit_card_sender_details.sender.id,
                 }
             }
         )
@@ -666,7 +661,7 @@ class AutoAcceptRuleTestCase(APITestCase, AuthTestCaseMixin):
             overrides={
                 'credit': {
                     'prisoner_profile_id': self.auto_accept_rule.prisoner_profile_id,
-                    'sender_profile_id': sender_profile_id
+                    'sender_profile_id': sender_profile_id,
                 }
             }
         )
@@ -689,7 +684,7 @@ class AutoAcceptRuleTestCase(APITestCase, AuthTestCaseMixin):
             overrides={
                 'credit': {
                     'prisoner_profile_id': prisoner_profile_id,
-                    'sender_profile_id': self.auto_accept_rule.debit_card_sender_details.sender.id
+                    'sender_profile_id': self.auto_accept_rule.debit_card_sender_details.sender.id,
                 }
             }
         )
