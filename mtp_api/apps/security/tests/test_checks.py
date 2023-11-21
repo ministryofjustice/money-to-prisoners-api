@@ -356,11 +356,9 @@ class CreditCheckTestCase(TestCase):
         load_random_prisoner_locations(number_of_prisoners=1)
         generate_payments(10)
         call_command('update_security_profiles')
-        credit = Credit.objects.credited().first()
-        credit.owner = None
-        credit.resolution = CreditResolution.initial.value
-        payment = credit.payment
-        payment.status = PaymentStatus.pending.value
+        Credit.objects_all.update(owner=None, resolution=CreditResolution.initial)
+        Payment.objects.update(status=PaymentStatus.pending)
+        credit = Credit.objects_all.filter(resolution=CreditResolution.initial).first()
         credit.log_set.filter(action=LogAction.credited).delete()
         return credit
 
