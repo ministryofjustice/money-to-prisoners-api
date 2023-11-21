@@ -27,7 +27,7 @@ from payment.models import Payment
 from payment.tests.utils import generate_payments
 from prison.tests.utils import load_random_prisoner_locations
 from security.constants import CheckStatus
-from security.models import Check, CheckAutoAcceptRule, PrisonerProfile, SenderProfile
+from security.models import Check, CheckAutoAcceptRule, PrisonerProfile, SenderProfile, MonitoredPartialEmailAddress
 from security.tests.utils import (
     generate_checks,
     generate_sender_profiles_from_payments,
@@ -421,6 +421,18 @@ class CreditCheckTestCase(TestCase):
         self.assertIn('FIU payment sources', description)
         self.assertIn('FIUMONP', check.rules)
         self.assertIn('FIUMONS', check.rules)
+
+    def test_credit_with_monitored_partial_email_address(self):
+        MonitoredPartialEmailAddress.objects.create(keyword='john')
+
+        credit = self._make_candidate_credit()
+        credit.payment.email = 'mary.johnson@mtp.local'
+
+        self.assertTrue(credit.should_check())
+        check = Check.objects.create_for_credit(credit)
+        self.assertEqual(check.status, CheckStatus.pending.value)
+        description = '\n'.join(check.description)
+        self.assertIn('Payment source is using a monitored keyword in the email address', description)
 
     def test_credit_with_matched_csfreq_rule(self):
         rule = RULES['CSFREQ']
