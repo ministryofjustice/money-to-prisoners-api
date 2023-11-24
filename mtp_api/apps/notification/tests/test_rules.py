@@ -23,7 +23,7 @@ from notification.tests.utils import (
 from payment.models import Payment
 from payment.tests.utils import generate_payments
 from prison.tests.utils import load_random_prisoner_locations
-from security.models import SenderProfile, RecipientProfile, PrisonerProfile
+from security.models import SenderProfile, RecipientProfile, PrisonerProfile, MonitoredPartialEmailAddress
 from transaction.models import Transaction
 from transaction.tests.utils import generate_transactions
 
@@ -571,12 +571,9 @@ class ContainsSymbolsTestCase(TestCase):
         rule = RULES['CSYM']
 
         name_with_symbols = 'James ❤️ Halls'
-        for transaction in Transaction.objects.all():
-            transaction.sender_name = name_with_symbols
-            transaction.save()
-        for payment in Payment.objects.all():
-            payment.cardholder_name = name_with_symbols
-            payment.save()
+        Transaction.objects.update(sender_name=name_with_symbols)
+        Payment.objects.update(cardholder_name=name_with_symbols)
+
         for credit in Credit.objects.all():
             self.assertTrue(
                 rule.triggered(credit),
@@ -594,4 +591,32 @@ class ContainsSymbolsTestCase(TestCase):
             self.assertFalse(
                 rule.triggered(credit),
                 msg=f'Credit from {credit.sender_name} should not trigger',
+            )
+
+
+class MonitoredPartialEmailAddressRuleTestCase(TestCase):
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
+
+    def setUp(self):
+        super().setUp()
+        make_test_users(clerks_per_prison=1)
+        load_random_prisoner_locations(number_of_prisoners=2)
+        generate_payments(payment_batch=2)
+        Payment.objects.update(email='mary.johnson@mtp.local')
+        self.rule = RULES['FIUMONE']
+
+    def test_triggered(self):
+        MonitoredPartialEmailAddress.objects.create(keyword='john')
+
+        for credit in Credit.objects.all():
+            self.assertTrue(
+                self.rule.triggered(credit),
+                msg=f'Credit from {credit.sender_email} should trigger',
+            )
+
+    def test_not_triggered(self):
+        for credit in Credit.objects.all():
+            self.assertFalse(
+                self.rule.triggered(credit),
+                msg=f'Credit from {credit.sender_email} should not trigger',
             )

@@ -27,11 +27,11 @@ from payment.models import Payment
 from payment.tests.utils import generate_payments
 from prison.tests.utils import load_random_prisoner_locations
 from security.constants import CheckStatus
-from security.models import Check, CheckAutoAcceptRule, PrisonerProfile, SenderProfile
+from security.models import Check, CheckAutoAcceptRule, PrisonerProfile, SenderProfile, MonitoredPartialEmailAddress
 from security.tests.utils import (
     generate_checks,
     generate_sender_profiles_from_payments,
-    generate_prisoner_profiles_from_prisoner_locations
+    generate_prisoner_profiles_from_prisoner_locations,
 )
 from transaction.tests.utils import generate_transactions
 
@@ -42,11 +42,7 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
     """
     Tests related to the Check model.
     """
-    fixtures = [
-        'initial_groups.json',
-        'initial_types.json',
-        'test_prisons.json'
-    ]
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
     @mock.patch('security.models.now')
     def test_can_accept_a_pending_check(self, mocked_now):
@@ -151,7 +147,7 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
             status=CheckStatus.pending,
             actioned_at=None,
             actioned_by=None,
-            rejection_reasons={'payment_source_linked_other_prisoners': True}
+            rejection_reasons={'payment_source_linked_other_prisoners': True},
         )
         reason = 'Some reason'
 
@@ -177,7 +173,7 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
             actioned_at=mocked_now() - datetime.timedelta(days=1),
             actioned_by=existing_check_user,
             decision_reason='Some old reason',
-            rejection_reasons={'payment_source_linked_other_prisoners': True}
+            rejection_reasons={'payment_source_linked_other_prisoners': True},
         )
         reason = 'Some reason'
 
@@ -207,10 +203,9 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
             reverse('security-check-reject', kwargs={'pk': check.id}),
             {
                 'decision_reason': 'thisshouldntmatter',
-                'rejection_reasons': {
-                }
+                'rejection_reasons': {},
             },
-            format='json', HTTP_AUTHORIZATION=self.get_http_authorization_for_user(users['security_fiu_users'][0])
+            format='json', HTTP_AUTHORIZATION=self.get_http_authorization_for_user(users['security_fiu_users'][0]),
         )
 
         self.assertEqual(response.status_code, 400)
@@ -266,9 +261,9 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
                 'decision_reason': 'computer says no',
                 'rejection_reasons': {
                     'payment_source_linked_other_prisoners': True,
-                }
+                },
             },
-            format='json', HTTP_AUTHORIZATION=self.get_http_authorization_for_user(users['security_fiu_users'][0])
+            format='json', HTTP_AUTHORIZATION=self.get_http_authorization_for_user(users['security_fiu_users'][0]),
         )
 
         # Assert Response
@@ -296,16 +291,16 @@ class CheckTestCase(APITestCase, AuthTestCaseMixin):
                 'decision_reason': 'computer says no',
                 'rejection_reasons': {
                     'payment_source_linked_other_prisoners': True,
-                }
+                },
             },
-            format='json', HTTP_AUTHORIZATION=self.get_http_authorization_for_user(users['security_fiu_users'][0])
+            format='json', HTTP_AUTHORIZATION=self.get_http_authorization_for_user(users['security_fiu_users'][0]),
         )
 
         # Assert Response
         self.assertEqual(response.status_code, 400)
         self.assertEqual(
             response.json(),
-            {'non_field_errors': ['You cannot give rejection reasons when accepting a check']}
+            {'non_field_errors': ['You cannot give rejection reasons when accepting a check']},
         )
 
         # Assert Lack of State Change
@@ -361,11 +356,9 @@ class CreditCheckTestCase(TestCase):
         load_random_prisoner_locations(number_of_prisoners=1)
         generate_payments(10)
         call_command('update_security_profiles')
-        credit = Credit.objects.credited().first()
-        credit.owner = None
-        credit.resolution = CreditResolution.initial.value
-        payment = credit.payment
-        payment.status = PaymentStatus.pending.value
+        Credit.objects_all.update(owner=None, resolution=CreditResolution.initial)
+        Payment.objects.update(status=PaymentStatus.pending)
+        credit = Credit.objects_all.filter(resolution=CreditResolution.initial).first()
         credit.log_set.filter(action=LogAction.credited).delete()
         return credit
 
@@ -428,6 +421,18 @@ class CreditCheckTestCase(TestCase):
         self.assertIn('FIU payment sources', description)
         self.assertIn('FIUMONP', check.rules)
         self.assertIn('FIUMONS', check.rules)
+
+    def test_credit_with_monitored_partial_email_address(self):
+        MonitoredPartialEmailAddress.objects.create(keyword='john')
+
+        credit = self._make_candidate_credit()
+        credit.payment.email = 'mary.johnson@mtp.local'
+
+        self.assertTrue(credit.should_check())
+        check = Check.objects.create_for_credit(credit)
+        self.assertEqual(check.status, CheckStatus.pending.value)
+        description = '\n'.join(check.description)
+        self.assertIn('Payment source is using a monitored keyword in the email address', description)
 
     def test_credit_with_matched_csfreq_rule(self):
         rule = RULES['CSFREQ']
@@ -498,7 +503,7 @@ class AutomaticCreditCheckTestCase(APITestCase, AuthTestCaseMixin):
                 'line2': '',
                 'city': 'London',
                 'country': 'UK',
-                'postcode': 'SW1H 9EU'
+                'postcode': 'SW1H 9EU',
             },
         }
         response = self.client.patch(
@@ -551,7 +556,7 @@ class AutomaticCreditCheckTestCase(APITestCase, AuthTestCaseMixin):
                 'line2': '',
                 'city': 'London',
                 'country': 'UK',
-                'postcode': 'SW1H 9EU'
+                'postcode': 'SW1H 9EU',
             },
         }
         response = self.client.patch(
@@ -580,17 +585,15 @@ class AutoAcceptRuleTestCase(APITestCase, AuthTestCaseMixin):
         sender_profiles[0].debit_card_details.first().monitoring_users.add(self.users['security_fiu_users'][0].id)
 
         response = self.client.post(
-            reverse(
-                'security-check-auto-accept-list'
-            ),
+            reverse('security-check-auto-accept-list'),
             data={
                 'prisoner_profile_id': prisoner_profiles[0].id,
                 'debit_card_sender_details_id': sender_profiles[0].debit_card_details.first().id,
                 'states': [
                     {
                         'reason': 'This person has amazing hair',
-                    }
-                ]
+                    },
+                ],
             },
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.users['security_fiu_users'][0]),
@@ -605,9 +608,9 @@ class AutoAcceptRuleTestCase(APITestCase, AuthTestCaseMixin):
             overrides={
                 'credit': {
                     'prisoner_profile_id': self.auto_accept_rule.prisoner_profile_id,
-                    'sender_profile_id': self.auto_accept_rule.debit_card_sender_details.sender.id
-                }
-            }
+                    'sender_profile_id': self.auto_accept_rule.debit_card_sender_details.sender.id,
+                },
+            },
         )
         credit = payments[0].credit
 
@@ -622,17 +625,14 @@ class AutoAcceptRuleTestCase(APITestCase, AuthTestCaseMixin):
 
     def test_payment_for_pair_with_inactive_auto_accept_caught_by_delayed_capture(self):
         self.client.patch(
-            reverse(
-                'security-check-auto-accept-detail',
-                args=[self.auto_accept_rule.id]
-            ),
+            reverse('security-check-auto-accept-detail', args=[self.auto_accept_rule.id]),
             data={
                 'states': [
                     {
                         'active': False,
                         'reason': 'Ignore that they cut off their hair',
-                    }
-                ]
+                    },
+                ],
             },
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.users['security_fiu_users'][0]),
@@ -642,9 +642,9 @@ class AutoAcceptRuleTestCase(APITestCase, AuthTestCaseMixin):
             overrides={
                 'credit': {
                     'prisoner_profile_id': self.auto_accept_rule.prisoner_profile_id,
-                    'sender_profile_id': self.auto_accept_rule.debit_card_sender_details.sender.id
-                }
-            }
+                    'sender_profile_id': self.auto_accept_rule.debit_card_sender_details.sender.id,
+                },
+            },
         )
         credit = payments[0].credit
 
@@ -659,16 +659,16 @@ class AutoAcceptRuleTestCase(APITestCase, AuthTestCaseMixin):
 
     def test_payment_where_sender_not_on_auto_accept_caught_by_delayed_capture(self):
         sender_profile_id = SenderProfile.objects.exclude(
-            id=self.auto_accept_rule.debit_card_sender_details.sender.id
+            id=self.auto_accept_rule.debit_card_sender_details.sender.id,
         ).first().id
         payments = generate_payments(
             payment_batch=1,
             overrides={
                 'credit': {
                     'prisoner_profile_id': self.auto_accept_rule.prisoner_profile_id,
-                    'sender_profile_id': sender_profile_id
-                }
-            }
+                    'sender_profile_id': sender_profile_id,
+                },
+            },
         )
         credit = payments[0].credit
 
@@ -682,16 +682,16 @@ class AutoAcceptRuleTestCase(APITestCase, AuthTestCaseMixin):
 
     def test_payment_where_prisoner_not_on_auto_accept_caught_by_delayed_capture(self):
         prisoner_profile_id = PrisonerProfile.objects.exclude(
-            id=self.auto_accept_rule.prisoner_profile_id
+            id=self.auto_accept_rule.prisoner_profile_id,
         ).first().id
         payments = generate_payments(
             payment_batch=1,
             overrides={
                 'credit': {
                     'prisoner_profile_id': prisoner_profile_id,
-                    'sender_profile_id': self.auto_accept_rule.debit_card_sender_details.sender.id
-                }
-            }
+                    'sender_profile_id': self.auto_accept_rule.debit_card_sender_details.sender.id,
+                },
+            },
         )
         credit = payments[0].credit
 

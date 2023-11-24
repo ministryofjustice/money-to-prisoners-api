@@ -26,7 +26,7 @@ from security.models import (
 )
 from security.tests.utils import (
     generate_sender_profiles_from_payments,
-    generate_prisoner_profiles_from_prisoner_locations
+    generate_prisoner_profiles_from_prisoner_locations,
 )
 
 
@@ -66,7 +66,7 @@ class BaseCheckTestCase(APITestCase, AuthTestCaseMixin):
                 actioned_at=now(),
                 actioned_by=self.security_fiu_users[0],
                 decision_reason='because...',
-                rejection_reasons={'payment_source_linked_other_prisoners': True}
+                rejection_reasons={'payment_source_linked_other_prisoners': True},
             )
 
         for credit in Credit.objects.all():
@@ -150,11 +150,13 @@ class BaseCheckTestCase(APITestCase, AuthTestCaseMixin):
                 'reason': expected_check.auto_accept_rule_state.reason,
                 'created': expected_check.auto_accept_rule_state.created,
                 'auto_accept_rule': expected_check.auto_accept_rule_state.auto_accept_rule.pk,
-            } if expected_check.auto_accept_rule_state else None
+            } if expected_check.auto_accept_rule_state else None,
         }
-        self.assertEqual(expected_data_item, actual_check_data, msg=pformat(
-            list(dictdiffer.diff(expected_data_item, actual_check_data))
-        ))
+        self.assertEqual(
+            expected_data_item,
+            actual_check_data,
+            msg=pformat(list(dictdiffer.diff(expected_data_item, actual_check_data))),
+        )
 
 
 class CheckListTestCase(BaseCheckTestCase):
@@ -274,9 +276,11 @@ class CheckListTestCase(BaseCheckTestCase):
         """
         Test that the list endpoint can filter by payment creation date.
         """
-        credits_started_at = list(Check.objects.all().order_by('credit__payment__created').values_list(
-            'credit__payment__created', flat=True
-        ))
+        credits_started_at = list(
+            Check.objects.all().order_by('credit__payment__created').values_list(
+                'credit__payment__created', flat=True,
+            ),
+        )
         check_count = len(credits_started_at)
         earliest_check = credits_started_at[0].isoformat()
         latest_check = credits_started_at[-1].isoformat()
@@ -388,12 +392,9 @@ class PatchCheckTestCase(BaseCheckTestCase):
 
         auth = self.get_http_authorization_for_user(self._get_authorised_user())
         response = self.client.patch(
-            reverse(
-                'security-check-detail',
-                kwargs={'pk': check.pk},
-            ),
+            reverse('security-check-detail', kwargs={'pk': check.pk}),
             data={
-                'assigned_to': assigned_to_user.id
+                'assigned_to': assigned_to_user.id,
             },
             format='json',
             HTTP_AUTHORIZATION=auth,
@@ -417,12 +418,9 @@ class PatchCheckTestCase(BaseCheckTestCase):
 
         auth = self.get_http_authorization_for_user(self._get_authorised_user())
         response = self.client.patch(
-            reverse(
-                'security-check-detail',
-                kwargs={'pk': check.pk},
-            ),
+            reverse('security-check-detail', kwargs={'pk': check.pk}),
             data={
-                'assigned_to': assigned_to_user.id
+                'assigned_to': assigned_to_user.id,
             },
             format='json',
             HTTP_AUTHORIZATION=auth,
@@ -431,12 +429,9 @@ class PatchCheckTestCase(BaseCheckTestCase):
         actual_check_data = response.json()
 
         response = self.client.patch(
-            reverse(
-                'security-check-detail',
-                kwargs={'pk': check.pk},
-            ),
+            reverse('security-check-detail', kwargs={'pk': check.pk}),
             data={
-                'assigned_to': new_assigned_to_user.id
+                'assigned_to': new_assigned_to_user.id,
             },
             format='json',
             HTTP_AUTHORIZATION=auth,
@@ -460,12 +455,9 @@ class PatchCheckTestCase(BaseCheckTestCase):
 
         auth = self.get_http_authorization_for_user(self._get_authorised_user())
         response = self.client.patch(
-            reverse(
-                'security-check-detail',
-                kwargs={'pk': check.pk},
-            ),
+            reverse('security-check-detail', kwargs={'pk': check.pk}),
             data={
-                'assigned_to': assigned_to_user.id
+                'assigned_to': assigned_to_user.id,
             },
             format='json',
             HTTP_AUTHORIZATION=auth,
@@ -473,12 +465,9 @@ class PatchCheckTestCase(BaseCheckTestCase):
         self.assertEqual(response.status_code, http_status.HTTP_200_OK)
 
         response = self.client.patch(
-            reverse(
-                'security-check-detail',
-                kwargs={'pk': check.pk},
-            ),
+            reverse('security-check-detail', kwargs={'pk': check.pk}),
             data={
-                'assigned_to': None
+                'assigned_to': None,
             },
             format='json',
             HTTP_AUTHORIZATION=auth,
@@ -486,12 +475,9 @@ class PatchCheckTestCase(BaseCheckTestCase):
         self.assertEqual(response.status_code, http_status.HTTP_200_OK)
 
         response = self.client.patch(
-            reverse(
-                'security-check-detail',
-                kwargs={'pk': check.pk},
-            ),
+            reverse('security-check-detail', kwargs={'pk': check.pk}),
             data={
-                'assigned_to': new_assigned_to_user.id
+                'assigned_to': new_assigned_to_user.id,
             },
             format='json',
             HTTP_AUTHORIZATION=auth,
@@ -514,12 +500,9 @@ class PatchCheckTestCase(BaseCheckTestCase):
 
         auth = self.get_http_authorization_for_user(self._get_authorised_user())
         response = self.client.patch(
-            reverse(
-                'security-check-detail',
-                kwargs={'pk': check.pk},
-            ),
+            reverse('security-check-detail', kwargs={'pk': check.pk}),
             data={
-                'assigned_to': assigned_to_user.id
+                'assigned_to': assigned_to_user.id,
             },
             format='json',
             HTTP_AUTHORIZATION=auth,
@@ -529,10 +512,7 @@ class PatchCheckTestCase(BaseCheckTestCase):
 
         self.assertNotEqual(check.status, CheckStatus.accepted.value)
         self.client.patch(
-            reverse(
-                'security-check-detail',
-                kwargs={'pk': check.pk},
-            ),
+            reverse('security-check-detail', kwargs={'pk': check.pk}),
             data={
                 'status': CheckStatus.accepted.value,
             },
@@ -561,10 +541,7 @@ class GetCheckTestCase(BaseCheckTestCase):
 
         auth = self.get_http_authorization_for_user(self._get_authorised_user())
         response = self.client.get(
-            reverse(
-                'security-check-detail',
-                kwargs={'pk': check.pk},
-            ),
+            reverse('security-check-detail', kwargs={'pk': check.pk}),
             format='json',
             HTTP_AUTHORIZATION=auth,
         )
@@ -583,10 +560,7 @@ class GetCheckTestCase(BaseCheckTestCase):
 
         auth = self.get_http_authorization_for_user(self._get_authorised_user())
         response = self.client.get(
-            reverse(
-                'security-check-detail',
-                kwargs={'pk': check.pk},
-            ),
+            reverse('security-check-detail', kwargs={'pk': check.pk}),
             format='json',
             HTTP_AUTHORIZATION=auth,
         )
@@ -601,17 +575,15 @@ class GetCheckTestCase(BaseCheckTestCase):
         """
         # Setup
         response = self.client.post(
-            reverse(
-                'security-check-auto-accept-list'
-            ),
+            reverse('security-check-auto-accept-list'),
             data={
                 'prisoner_profile_id': PrisonerProfile.objects.first().id,
                 'debit_card_sender_details_id': SenderProfile.objects.first().debit_card_details.first().id,
                 'states': [
                     {
                         'reason': 'This person has amazing hair',
-                    }
-                ]
+                    },
+                ],
             },
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self._get_authorised_user()),
@@ -623,20 +595,17 @@ class GetCheckTestCase(BaseCheckTestCase):
             overrides={
                 'credit': {
                     'prisoner_profile_id': auto_accept_rule.prisoner_profile_id,
-                    'sender_profile_id': auto_accept_rule.debit_card_sender_details.sender.id
-                }
+                    'sender_profile_id': auto_accept_rule.debit_card_sender_details.sender.id,
+                },
             },
-            reconcile_payments=False
+            reconcile_payments=False,
         )
         credit = payments[0].credit
         check = Check.objects.create_for_credit(credit)
 
         # Call
         response = self.client.get(
-            reverse(
-                'security-check-detail',
-                kwargs={'pk': check.pk},
-            ),
+            reverse('security-check-detail', kwargs={'pk': check.pk}),
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self._get_authorised_user()),
         )
@@ -660,10 +629,7 @@ class AcceptCheckTestCase(BaseCheckTestCase):
 
         auth = self.get_http_authorization_for_user(self._get_unauthorised_application_user())
         response = self.client.post(
-            reverse(
-                'security-check-accept',
-                kwargs={'pk': check.pk},
-            ),
+            reverse('security-check-accept', kwargs={'pk': check.pk}),
             format='json',
             data={
                 'decision_reason': '',
@@ -685,10 +651,7 @@ class AcceptCheckTestCase(BaseCheckTestCase):
         authorised_user = self._get_authorised_user()
         auth = self.get_http_authorization_for_user(authorised_user)
         response = self.client.post(
-            reverse(
-                'security-check-accept',
-                kwargs={'pk': check.pk},
-            ),
+            reverse('security-check-accept', kwargs={'pk': check.pk}),
             format='json',
             data={
                 'decision_reason': '',
@@ -716,10 +679,7 @@ class AcceptCheckTestCase(BaseCheckTestCase):
         authorised_user = self._get_authorised_user()
         auth = self.get_http_authorization_for_user(authorised_user)
         response = self.client.post(
-            reverse(
-                'security-check-accept',
-                kwargs={'pk': check.pk},
-            ),
+            reverse('security-check-accept', kwargs={'pk': check.pk}),
             format='json',
             data={
                 'decision_reason': '',
@@ -748,10 +708,7 @@ class AcceptCheckTestCase(BaseCheckTestCase):
         authorised_user = self._get_authorised_user()
         auth = self.get_http_authorization_for_user(authorised_user)
         response = self.client.post(
-            reverse(
-                'security-check-accept',
-                kwargs={'pk': check.pk},
-            ),
+            reverse('security-check-accept', kwargs={'pk': check.pk}),
             format='json',
             data={
                 'decision_reason': '',
@@ -776,10 +733,7 @@ class AcceptCheckTestCase(BaseCheckTestCase):
         auth = self.get_http_authorization_for_user(authorised_user)
 
         response = self.client.post(
-            reverse(
-                'security-check-accept',
-                kwargs={'pk': check.pk},
-            ),
+            reverse('security-check-accept', kwargs={'pk': check.pk}),
             format='json',
             data={
                 'decision_reason': '',
@@ -792,7 +746,7 @@ class AcceptCheckTestCase(BaseCheckTestCase):
             response.json(),
             {
                 'status': ['Cannot accept a rejected check.'],
-            }
+            },
         )
 
         check.refresh_from_db()
@@ -813,13 +767,10 @@ class RejectCheckTestCase(BaseCheckTestCase):
 
         auth = self.get_http_authorization_for_user(self._get_unauthorised_application_user())
         response = self.client.post(
-            reverse(
-                'security-check-reject',
-                kwargs={'pk': check.pk},
-            ),
+            reverse('security-check-reject', kwargs={'pk': check.pk}),
             data={
                 'decision_reason': 'Some reason',
-                'rejection_reasons': {'payment_source_linked_other_prisoners': True}
+                'rejection_reasons': {'payment_source_linked_other_prisoners': True},
             },
             format='json',
             HTTP_AUTHORIZATION=auth,
@@ -840,13 +791,10 @@ class RejectCheckTestCase(BaseCheckTestCase):
         auth = self.get_http_authorization_for_user(authorised_user)
         reason = 'Some reason'
         response = self.client.post(
-            reverse(
-                'security-check-reject',
-                kwargs={'pk': check.pk},
-            ),
+            reverse('security-check-reject', kwargs={'pk': check.pk}),
             data={
                 'decision_reason': reason,
-                'rejection_reasons': {'payment_source_linked_other_prisoners': True}
+                'rejection_reasons': {'payment_source_linked_other_prisoners': True},
             },
             format='json',
             HTTP_AUTHORIZATION=auth,
@@ -874,13 +822,10 @@ class RejectCheckTestCase(BaseCheckTestCase):
         auth = self.get_http_authorization_for_user(authorised_user)
         reason = 'some reason'
         response = self.client.post(
-            reverse(
-                'security-check-reject',
-                kwargs={'pk': check.pk},
-            ),
+            reverse('security-check-reject', kwargs={'pk': check.pk}),
             data={
                 'decision_reason': reason,
-                'rejection_reasons': {'payment_source_linked_other_prisoners': True}
+                'rejection_reasons': {'payment_source_linked_other_prisoners': True},
             },
             format='json',
             HTTP_AUTHORIZATION=auth,
@@ -904,10 +849,7 @@ class RejectCheckTestCase(BaseCheckTestCase):
         auth = self.get_http_authorization_for_user(authorised_user)
 
         response = self.client.post(
-            reverse(
-                'security-check-reject',
-                kwargs={'pk': check.pk},
-            ),
+            reverse('security-check-reject', kwargs={'pk': check.pk}),
             {
                 'decision_reason': 'thisdoesntmatter',
             },
@@ -919,8 +861,8 @@ class RejectCheckTestCase(BaseCheckTestCase):
         self.assertDictEqual(
             response.json(),
             {
-                'rejection_reasons': ['This field is required.']
-            }
+                'rejection_reasons': ['This field is required.'],
+            },
         )
 
         check.refresh_from_db()
@@ -937,13 +879,10 @@ class RejectCheckTestCase(BaseCheckTestCase):
         auth = self.get_http_authorization_for_user(authorised_user)
 
         response = self.client.post(
-            reverse(
-                'security-check-reject',
-                kwargs={'pk': check.pk},
-            ),
+            reverse('security-check-reject', kwargs={'pk': check.pk}),
             {
                 'decision_reason': 'some reason',
-                'rejection_reasons': {'payment_source_linked_other_prisoners': True}
+                'rejection_reasons': {'payment_source_linked_other_prisoners': True},
             },
             format='json',
             HTTP_AUTHORIZATION=auth,
@@ -954,7 +893,7 @@ class RejectCheckTestCase(BaseCheckTestCase):
             response.json(),
             {
                 'status': ['Cannot reject an accepted check.'],
-            }
+            },
         )
 
         check.refresh_from_db()
@@ -976,27 +915,25 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
 
         self.prisoner_profile = generate_prisoner_profiles_from_prisoner_locations(prisoner_locations)[0]
         self.sender_profile, other_sender_profile = generate_sender_profiles_from_payments(
-            number_of_senders=2, reassign_dcsd=True
+            number_of_senders=2, reassign_dcsd=True,
         )
         self.debit_card_sender_details = self.sender_profile.debit_card_details.first()
         self.other_debit_card_sender_details = other_sender_profile.debit_card_details.first()
 
     def _create_auto_accept(
         self, prisoner_profile_id, debit_card_sender_details_id, reason, user, auto_accept_created=None,
-        auto_accept_state_created=None, expected_status_code=201
+        auto_accept_state_created=None, expected_status_code=201,
     ):
         response = self.client.post(
-            reverse(
-                'security-check-auto-accept-list'
-            ),
+            reverse('security-check-auto-accept-list'),
             data={
                 'prisoner_profile_id': prisoner_profile_id,
                 'debit_card_sender_details_id': debit_card_sender_details_id,
                 'states': [
                     {
-                        'reason': reason
-                    }
-                ]
+                        'reason': reason,
+                    },
+                ],
             },
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user),
@@ -1019,17 +956,14 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
 
     def _update_auto_accept(self, auto_accept_rule_id, reason, user, active=False, auto_accept_state_created=None):
         patch_response = self.client.patch(
-            reverse(
-                'security-check-auto-accept-detail',
-                args=[auto_accept_rule_id]
-            ),
+            reverse('security-check-auto-accept-detail', args=[auto_accept_rule_id]),
             data={
                 'states': [
                     {
                         'active': active,
-                        'reason': reason
-                    }
-                ]
+                        'reason': reason,
+                    },
+                ],
             },
             format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(user),
@@ -1058,7 +992,7 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
 
     def _list_auto_accept(
         self, url, user, strip_id=True, strip_created=True, strip_states_auto_accept_rule=True,
-        strip_states_created=True
+        strip_states_created=True,
     ):
         get_response = self.client.get(
             url,
@@ -1104,7 +1038,7 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
             'prisoner_name': prisoner_profile.prisoner_name,
             'prisoner_number': prisoner_profile.prisoner_number,
             'prisons': [],
-            'provided_names': []
+            'provided_names': [],
         }
 
     @staticmethod
@@ -1115,16 +1049,16 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
             'cardholder_names': [],
             'postcode': debit_card_sender_details.postcode,
             'sender': debit_card_sender_details.id,
-            'sender_emails': []
+            'sender_emails': [],
         }
 
     def test_auto_accept_rule_create(self):
         expected_response = {
             'prisoner_profile': self._prisoner_profile_to_api_dict(
-                self.prisoner_profile
+                self.prisoner_profile,
             ),
             'debit_card_sender_details': self._debit_card_sender_details_to_api_dict(
-                self.debit_card_sender_details
+                self.debit_card_sender_details,
             ),
             'states': [
                 {
@@ -1134,15 +1068,15 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                         'first_name': self.added_by_user.first_name,
                         'last_name': self.added_by_user.last_name,
                         'username': self.added_by_user.username,
-                    }
-                }
-            ]
+                    },
+                },
+            ],
         }
         actual_response = self._create_auto_accept(
             prisoner_profile_id=self.prisoner_profile.id,
             debit_card_sender_details_id=self.debit_card_sender_details.id,
             reason='they have amazing hair',
-            user=self.added_by_user
+            user=self.added_by_user,
         )
 
         self.assertIn('id', actual_response)
@@ -1156,9 +1090,7 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
         self.assertDictEqual(
             expected_response,
             actual_response,
-            msg=pformat(
-                list(dictdiffer.diff(expected_response, actual_response))
-            )
+            msg=pformat(list(dictdiffer.diff(expected_response, actual_response))),
         )
         self.assertEqual(CheckAutoAcceptRule.objects.count(), 1)
         auto_accept_rule = CheckAutoAcceptRule.objects.first()
@@ -1172,15 +1104,15 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
         # Setup
         expected_response = {
             'non_field_errors': [
-                'An existing AutoAcceptRule is present for this DebitCardSenderDetails/PrisonerProfile pair'
-            ]
+                'An existing AutoAcceptRule is present for this DebitCardSenderDetails/PrisonerProfile pair',
+            ],
         }
 
         self._create_auto_accept(
             prisoner_profile_id=self.prisoner_profile.id,
             debit_card_sender_details_id=self.debit_card_sender_details.id,
             reason='they have amazing hair',
-            user=self.added_by_user
+            user=self.added_by_user,
         )
 
         # Call
@@ -1189,16 +1121,14 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
             debit_card_sender_details_id=self.debit_card_sender_details.id,
             reason='Oh I know, dont they just',
             user=self.added_by_user,
-            expected_status_code=400
+            expected_status_code=400,
         )
 
         # Assert
         self.assertDictEqual(
             expected_response,
             actual_response,
-            msg=pformat(
-                list(dictdiffer.diff(expected_response, actual_response))
-            )
+            msg=pformat(list(dictdiffer.diff(expected_response, actual_response))),
         )
         self.assertEqual(CheckAutoAcceptRule.objects.count(), 1)
 
@@ -1206,10 +1136,10 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
         # Setup
         expected_response = {
             'prisoner_profile': self._prisoner_profile_to_api_dict(
-                self.prisoner_profile
+                self.prisoner_profile,
             ),
             'debit_card_sender_details': self._debit_card_sender_details_to_api_dict(
-                self.debit_card_sender_details
+                self.debit_card_sender_details,
             ),
             'states': [
                 {
@@ -1219,7 +1149,7 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                         'first_name': self.added_by_user.first_name,
                         'last_name': self.added_by_user.last_name,
                         'username': self.added_by_user.username,
-                    }
+                    },
                 },
                 {
                     'active': False,
@@ -1228,15 +1158,15 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                         'first_name': self.updated_by_user.first_name,
                         'last_name': self.updated_by_user.last_name,
                         'username': self.updated_by_user.username,
-                    }
-                }
-            ]
+                    },
+                },
+            ],
         }
         auto_accept_rule = self._create_auto_accept(
             prisoner_profile_id=self.prisoner_profile.id,
             debit_card_sender_details_id=self.debit_card_sender_details.id,
             reason='they have amazing hair',
-            user=self.added_by_user
+            user=self.added_by_user,
         )
 
         # Call
@@ -1244,16 +1174,14 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
             auto_accept_rule_id=auto_accept_rule['id'],
             active=False,
             reason='they have shaved it off',
-            user=self.updated_by_user
+            user=self.updated_by_user,
         )
 
         # Assert
         self.assertDictEqual(
             expected_response,
             actual_response,
-            msg=pformat(
-                list(dictdiffer.diff(expected_response, actual_response))
-            )
+            msg=pformat(list(dictdiffer.diff(expected_response, actual_response))),
         )
         self.assertEqual(CheckAutoAcceptRule.objects.count(), 1)
         self.assertEqual(CheckAutoAcceptRuleState.objects.count(), 2)
@@ -1266,10 +1194,10 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
         # Setup
         expected_response = {
             'prisoner_profile': self._prisoner_profile_to_api_dict(
-                self.prisoner_profile
+                self.prisoner_profile,
             ),
             'debit_card_sender_details': self._debit_card_sender_details_to_api_dict(
-                self.debit_card_sender_details
+                self.debit_card_sender_details,
             ),
             'states': [
                 {
@@ -1279,7 +1207,7 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                         'first_name': self.added_by_user.first_name,
                         'last_name': self.added_by_user.last_name,
                         'username': self.added_by_user.username,
-                    }
+                    },
                 },
                 {
                     'active': False,
@@ -1288,7 +1216,7 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                         'first_name': self.updated_by_user.first_name,
                         'last_name': self.updated_by_user.last_name,
                         'username': self.updated_by_user.username,
-                    }
+                    },
                 },
                 {
                     'active': True,
@@ -1297,21 +1225,21 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                         'first_name': self.updated_by_user.first_name,
                         'last_name': self.updated_by_user.last_name,
                         'username': self.updated_by_user.username,
-                    }
-                }
-            ]
+                    },
+                },
+            ],
         }
         auto_accept_rule = self._create_auto_accept(
             prisoner_profile_id=self.prisoner_profile.id,
             debit_card_sender_details_id=self.debit_card_sender_details.id,
             reason='they have amazing hair',
-            user=self.added_by_user
+            user=self.added_by_user,
         )
         self._update_auto_accept(
             auto_accept_rule_id=auto_accept_rule['id'],
             active=False,
             reason='they have shaved it off',
-            user=self.updated_by_user
+            user=self.updated_by_user,
         )
 
         # Call
@@ -1319,16 +1247,14 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
             auto_accept_rule_id=auto_accept_rule['id'],
             active=True,
             reason='they grew it back again',
-            user=self.updated_by_user
+            user=self.updated_by_user,
         )
 
         # Assert
         self.assertDictEqual(
             expected_response,
             actual_response,
-            msg=pformat(
-                list(dictdiffer.diff(expected_response, actual_response))
-            )
+            msg=pformat(list(dictdiffer.diff(expected_response, actual_response))),
         )
         self.assertEqual(CheckAutoAcceptRule.objects.count(), 1)
         self.assertEqual(CheckAutoAcceptRuleState.objects.count(), 3)
@@ -1345,10 +1271,10 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
             'previous': None,
             'results': [{
                 'prisoner_profile': self._prisoner_profile_to_api_dict(
-                    self.prisoner_profile
+                    self.prisoner_profile,
                 ),
                 'debit_card_sender_details': self._debit_card_sender_details_to_api_dict(
-                    self.debit_card_sender_details
+                    self.debit_card_sender_details,
                 ),
                 'states': [
                     {
@@ -1358,35 +1284,31 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                             'first_name': self.added_by_user.first_name,
                             'last_name': self.added_by_user.last_name,
                             'username': self.added_by_user.username,
-                        }
-                    }
-                ]
-            }]
+                        },
+                    },
+                ],
+            }],
         }
 
         post_response_payload = self._create_auto_accept(
             prisoner_profile_id=self.prisoner_profile.id,
             debit_card_sender_details_id=self.debit_card_sender_details.id,
             reason='they have amazing hair',
-            user=self.added_by_user
+            user=self.added_by_user,
         )
 
         expected_response['results'][0]['states'][0]['auto_accept_rule'] = post_response_payload['id']
         # Call
         actual_response = self._list_auto_accept(
-            url=reverse(
-                'security-check-auto-accept-list'
-            ),
+            url=reverse('security-check-auto-accept-list'),
             user=self.updated_by_user,
-            strip_states_auto_accept_rule=False
+            strip_states_auto_accept_rule=False,
         )
         # Assert
         self.assertDictEqual(
             expected_response,
             actual_response,
-            msg=pformat(
-                list(dictdiffer.diff(expected_response, actual_response))
-            )
+            msg=pformat(list(dictdiffer.diff(expected_response, actual_response))),
         )
 
     @parameterized.expand([
@@ -1399,15 +1321,15 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
         # Setup
         datetime_now = datetime.datetime.now()
         other_user = create_security_fiu_user(
-            name_and_password='security-fiu-2', first_name='Aardvark', last_name='Zebraington'
+            name_and_password='security-fiu-2', first_name='Aardvark', last_name='Zebraington',
         )
         possible_results = [
             {
                 'prisoner_profile': self._prisoner_profile_to_api_dict(
-                    self.prisoner_profile
+                    self.prisoner_profile,
                 ),
                 'debit_card_sender_details': self._debit_card_sender_details_to_api_dict(
-                    self.debit_card_sender_details
+                    self.debit_card_sender_details,
                 ),
                 'created': format_date_or_datetime(datetime_now - datetime.timedelta(hours=4)),
                 'states': [
@@ -1419,16 +1341,16 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                             'last_name': self.added_by_user.last_name,
                             'username': self.added_by_user.username,
                         },
-                        'created': format_date_or_datetime(datetime_now - datetime.timedelta(hours=1))
-                    }
-                ]
+                        'created': format_date_or_datetime(datetime_now - datetime.timedelta(hours=1)),
+                    },
+                ],
             },
             {
                 'prisoner_profile': self._prisoner_profile_to_api_dict(
-                    self.prisoner_profile
+                    self.prisoner_profile,
                 ),
                 'debit_card_sender_details': self._debit_card_sender_details_to_api_dict(
-                    self.other_debit_card_sender_details
+                    self.other_debit_card_sender_details,
                 ),
                 'created': format_date_or_datetime(datetime_now - datetime.timedelta(hours=3)),
                 'states': [
@@ -1440,10 +1362,10 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                             'last_name': other_user.last_name,
                             'username': other_user.username,
                         },
-                        'created': format_date_or_datetime(datetime_now - datetime.timedelta(hours=2))
-                    }
-                ]
-            }
+                        'created': format_date_or_datetime(datetime_now - datetime.timedelta(hours=2)),
+                    },
+                ],
+            },
         ]
         expected_response = {
             'count': 2,
@@ -1452,7 +1374,7 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
             'results': [
                 possible_results[first_index],
                 possible_results[second_index],
-            ]
+            ],
         }
 
         self._create_auto_accept(
@@ -1461,7 +1383,7 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
             reason='they have amazing hair',
             user=self.added_by_user,
             auto_accept_created=datetime_now - datetime.timedelta(hours=4),
-            auto_accept_state_created=datetime_now - datetime.timedelta(hours=1)
+            auto_accept_state_created=datetime_now - datetime.timedelta(hours=1),
         )
 
         self._create_auto_accept(
@@ -1470,29 +1392,25 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
             reason='they have an amazing beard',
             user=other_user,
             auto_accept_created=datetime_now - datetime.timedelta(hours=3),
-            auto_accept_state_created=datetime_now - datetime.timedelta(hours=2)
+            auto_accept_state_created=datetime_now - datetime.timedelta(hours=2),
         )
 
         # Call
         actual_response = self._list_auto_accept(
             url='{}?ordering={}'.format(
-                reverse(
-                    'security-check-auto-accept-list',
-                ),
-                querystring
+                reverse('security-check-auto-accept-list'),
+                querystring,
             ),
             user=self.updated_by_user,
             strip_created=False,
-            strip_states_created=False
+            strip_states_created=False,
         )
 
         # Assert
         self.assertDictEqual(
             expected_response,
             actual_response,
-            msg=pformat(
-                list(dictdiffer.diff(expected_response, actual_response))
-            )
+            msg=pformat(list(dictdiffer.diff(expected_response, actual_response))),
         )
 
     def test_auto_accept_rule_list_filter_is_active(self):
@@ -1504,10 +1422,10 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
             'previous': None,
             'results': [{
                 'prisoner_profile': self._prisoner_profile_to_api_dict(
-                    self.prisoner_profile
+                    self.prisoner_profile,
                 ),
                 'debit_card_sender_details': self._debit_card_sender_details_to_api_dict(
-                    self.debit_card_sender_details
+                    self.debit_card_sender_details,
                 ),
                 'states': [
                     {
@@ -1517,10 +1435,10 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
                             'first_name': self.added_by_user.first_name,
                             'last_name': self.added_by_user.last_name,
                             'username': self.added_by_user.username,
-                        }
-                    }
+                        },
+                    },
                 ],
-            }]
+            }],
         }
 
         self._create_auto_accept(
@@ -1529,7 +1447,7 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
             reason='they have amazing hair',
             user=self.added_by_user,
             auto_accept_created=datetime_now - datetime.timedelta(hours=4),
-            auto_accept_state_created=datetime_now - datetime.timedelta(hours=1)
+            auto_accept_state_created=datetime_now - datetime.timedelta(hours=1),
         )
 
         other_check_auto_accept = self._create_auto_accept(
@@ -1538,7 +1456,7 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
             reason='they have an amazing beard',
             user=self.added_by_user,
             auto_accept_created=datetime_now - datetime.timedelta(hours=3),
-            auto_accept_state_created=datetime_now - datetime.timedelta(hours=2)
+            auto_accept_state_created=datetime_now - datetime.timedelta(hours=2),
         )
 
         self._update_auto_accept(
@@ -1546,24 +1464,20 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
             active=False,
             reason='they shaved it off',
             user=self.updated_by_user,
-            auto_accept_state_created=datetime_now - datetime.timedelta(hours=1)
+            auto_accept_state_created=datetime_now - datetime.timedelta(hours=1),
         )
 
         # Execute
         actual_response = self._list_auto_accept(
             '{}?is_active=true'.format(
-                reverse(
-                    'security-check-auto-accept-list'
-                )
+                reverse('security-check-auto-accept-list'),
             ),
-            user=self.updated_by_user
+            user=self.updated_by_user,
         )
 
         # Assert
         self.assertDictEqual(
             expected_response,
             actual_response,
-            msg=pformat(
-                list(dictdiffer.diff(expected_response, actual_response))
-            )
+            msg=pformat(list(dictdiffer.diff(expected_response, actual_response))),
         )

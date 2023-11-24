@@ -403,7 +403,7 @@ class MonitoredPartialEmailAddressManager(models.Manager):
 
 
 class CheckManager(models.Manager):
-    ENABLED_RULE_CODES = ('FIUMONP', 'FIUMONS', 'CSFREQ', 'CSNUM', 'CPNUM')
+    ENABLED_RULE_CODES = ('FIUMONP', 'FIUMONS', 'FIUMONE', 'CSFREQ', 'CSNUM', 'CPNUM')
 
     def create_for_credit(self, credit):
         from notification.rules import RULES

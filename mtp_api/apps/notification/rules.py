@@ -13,7 +13,7 @@ from notification.models import (
     Event, CreditEvent, DisbursementEvent,
     SenderProfileEvent, RecipientProfileEvent, PrisonerProfileEvent,
 )
-from security.models import SenderProfile, RecipientProfile, PrisonerProfile
+from security.models import SenderProfile, RecipientProfile, PrisonerProfile, MonitoredPartialEmailAddress
 
 ENABLED_RULE_CODES = {'MONP', 'MONS'}
 
@@ -160,6 +160,16 @@ class MonitoredRule(BaseRule):
         return getattr(record, self.kwargs['profile'])
 
 
+class MonitoredPartialEmailAddressRule(BaseRule):
+    applies_to_models = (Credit,)
+
+    def triggered(self, record: Credit) -> Triggered:
+        if hasattr(record, 'payment') and record.payment.email:
+            is_monitored = MonitoredPartialEmailAddress.objects.is_email_address_monitored(record.payment.email)
+            return Triggered(is_monitored)  # TODO: should record keyword?
+        return Triggered(False)
+
+
 class CountingRule(BaseRule):
     def __init__(self, *args, profile, count, limit, days, **kwargs):
         """
@@ -233,7 +243,7 @@ RULES = {
         profile='sender_profile',
     ),
 
-    # rules used only in specially-generated notification reports
+    # rules used in specially-generated notification reports
     'MONR': MonitoredRule(
         'MONR',
         description='Disbursements for recipients you are monitoring',
@@ -263,6 +273,11 @@ RULES = {
         applies_to_models=(Disbursement,),
         profile='recipient_profile',
         user_filters={'groups__name': 'FIU'},
+    ),
+    'FIUMONE': MonitoredPartialEmailAddressRule(
+        'FIUMONE',
+        description='Payment source is using a monitored keyword in the email address',
+        abbr_description='fiu email addr',
     ),
     'NWN': NotWholeNumberRule(
         'NWN',
