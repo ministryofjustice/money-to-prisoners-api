@@ -2,7 +2,7 @@
 
 money-to-prisoners-common~=16.4.0
 
-psycopg2~=2.9.6
+psycopg2~=2.9.9
 
 coreapi~=2.3.3
 djangorestframework~=3.14.0
