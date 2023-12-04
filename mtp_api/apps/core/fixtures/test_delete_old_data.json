@@ -19,6 +19,23 @@
         }
     },
     {
+        "model": "notification.Event",
+        "pk": 13,
+        "fields": {
+            "rule": "MONP",
+            "description": "Credits or disbursements for prisoners you are monitoring",
+            "triggered_at": "2023-11-29T13:47:31.283Z"
+        }
+    },
+    {
+        "model": "notification.PrisonerProfileEvent",
+        "pk": 1,
+        "fields": {
+            "event_id": 13,
+            "prisoner_profile_id": 1
+        }
+    },
+    {
         "model": "security.SenderProfile",
         "pk": 1,
         "fields": {
@@ -45,6 +62,23 @@
         }
     },
     {
+        "model": "notification.Event",
+        "pk": 9,
+        "fields": {
+            "rule": "MONS",
+            "description": "Credits for payment sources you are monitoring",
+            "triggered_at": "2023-11-29T13:47:31.283Z"
+        }
+    },
+    {
+        "model": "notification.SenderProfileEvent",
+        "pk": 1,
+        "fields": {
+            "event_id": 9,
+            "sender_profile_id": 1
+        }
+    },
+    {
         "model": "security.PrisonerProfile",
         "pk": 2,
         "fields": {
@@ -54,6 +88,23 @@
             "credit_total": 4000,
             "disbursement_count": 1,
             "disbursement_total": 2000
+        }
+    },
+    {
+        "model": "notification.Event",
+        "pk": 14,
+        "fields": {
+            "rule": "MONP",
+            "description": "Credits or disbursements for prisoners you are monitoring",
+            "triggered_at": "2023-11-29T13:47:31.283Z"
+        }
+    },
+    {
+        "model": "notification.PrisonerProfileEvent",
+        "pk": 2,
+        "fields": {
+            "event_id": 14,
+            "prisoner_profile_id": 2
         }
     },
     {
@@ -83,6 +134,23 @@
         }
     },
     {
+        "model": "notification.Event",
+        "pk": 10,
+        "fields": {
+            "rule": "MONS",
+            "description": "Credits for payment sources you are monitoring",
+            "triggered_at": "2023-11-29T13:47:31.283Z"
+        }
+    },
+    {
+        "model": "notification.SenderProfileEvent",
+        "pk": 2,
+        "fields": {
+            "event_id": 10,
+            "sender_profile_id": 2
+        }
+    },
+    {
         "model": "security.RecipientProfile",
         "pk": 1,
         "fields": {
@@ -105,6 +173,23 @@
         "fields": {
             "recipient_bank_account_id": 1,
             "recipient_id": 1
+        }
+    },
+    {
+        "model": "notification.Event",
+        "pk": 15,
+        "fields": {
+            "rule": "MONP",
+            "description": "Credits or disbursements for prisoners you are monitoring",
+            "triggered_at": "2023-11-29T13:47:31.283Z"
+        }
+    },
+    {
+        "model": "notification.RecipientProfileEvent",
+        "pk": 1,
+        "fields": {
+            "event_id": 15,
+            "recipient_profile_id": 1
         }
     },
     {
@@ -133,6 +218,23 @@
         }
     },
     {
+        "model": "notification.Event",
+        "pk": 11,
+        "fields": {
+            "rule": "MONP",
+            "description": "Credits or disbursements for prisoners you are monitoring",
+            "triggered_at": "2023-11-29T13:47:31.283Z"
+        }
+    },
+    {
+        "model": "notification.RecipientProfileEvent",
+        "pk": 2,
+        "fields": {
+            "event_id": 11,
+            "recipient_profile_id": 2
+        }
+    },
+    {
         "model": "security.RecipientProfile",
         "pk": 3,
         "fields": {
@@ -155,6 +257,23 @@
         "fields": {
             "recipient_bank_account_id": 3,
             "recipient_id": 3
+        }
+    },
+    {
+        "model": "notification.Event",
+        "pk": 12,
+        "fields": {
+            "rule": "MONP",
+            "description": "Credits or disbursements for prisoners you are monitoring",
+            "triggered_at": "2023-11-29T13:47:31.283Z"
+        }
+    },
+    {
+        "model": "notification.RecipientProfileEvent",
+        "pk": 3,
+        "fields": {
+            "event_id": 12,
+            "recipient_profile_id": 3
         }
     },
     {

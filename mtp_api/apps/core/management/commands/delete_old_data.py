@@ -9,7 +9,7 @@ from django.utils import timezone
 from account.models import Balance
 from credit.models import Credit
 from disbursement.models import Disbursement
-from notification.models import Event, CreditEvent, DisbursementEvent
+from notification.models import Event, CreditEvent, DisbursementEvent, PrisonerProfileEvent, RecipientProfileEvent, SenderProfileEvent
 from payment.models import Batch, Payment
 from prison.models import Prison, PrisonerLocation
 from security.models import (
@@ -64,6 +64,10 @@ class Command(BaseCommand):
         if sender_profile:
             if not sender_profile.credits.exists():
                 self.print_message(f'SenderProfile {sender_profile} has no credits, deleting...')
+
+                self.print_message(f'Deleting associated Events...')
+                self.delete_events(sender_profile.senderprofileevent_set.all())
+
                 record_deleted = sender_profile.delete()
                 self.print_message(f'Records deleted: {record_deleted}.')
             else:
@@ -89,6 +93,9 @@ class Command(BaseCommand):
             if not recipient_profile.disbursements.exists():
                 self.print_message(f'RecipientProfile {recipient_profile} has no disbursements, deleting...')
 
+                self.print_message(f'Deleting associated Events...')
+                self.delete_events(recipient_profile.recipientprofileevent_set.all())
+
                 for recipient_details in recipient_profile.bank_transfer_details.all():
                     bank_account = recipient_details.recipient_bank_account
                     # NOTE: Checking only senders because we reached this point via the recipient
@@ -113,6 +120,10 @@ class Command(BaseCommand):
         if prisoner_profile:
             if not prisoner_profile.credits.exists() and not prisoner_profile.disbursements.exists():
                 self.print_message(f'PrisonerProfile {prisoner_profile} has no credits nor disbursements, deleting...')
+
+                self.print_message(f'Deleting associated Events...')
+                self.delete_events(prisoner_profile.prisonerprofileevent_set.all())
+
                 record_deleted = prisoner_profile.delete()
                 self.print_message(f'Records deleted: {record_deleted}.')
             else:
@@ -121,7 +132,7 @@ class Command(BaseCommand):
                             .recalculate_totals()
                 self.print_message(f'PrisonerProfile {prisoner_profile} updated.')
 
-    def delete_events(self, thing_events: Sequence[CreditEvent | DisbursementEvent]):
+    def delete_events(self, thing_events: Sequence[CreditEvent | DisbursementEvent | PrisonerProfileEvent | RecipientProfileEvent |SenderProfileEvent]):
         for thing_event in thing_events:
             event = thing_event.event
             self.print_message(f'Deleting Event {event}...')
