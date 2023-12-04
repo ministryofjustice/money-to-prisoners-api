@@ -68,6 +68,12 @@ class Command(BaseCommand):
                 self.print_message(f'Deleting associated Events...')
                 self.delete_events(sender_profile.senderprofileevent_set.all())
 
+                self.print_message(f"Deleting SenderProfile's SavedSearches '*/senders/{sender_profile.id}/*'...")
+                record_deleted = SavedSearch.objects \
+                    .filter(site_url__contains=f'/senders/{sender_profile.id}/') \
+                    .delete()
+                self.print_message(f'Records deleted: {record_deleted}.')
+
                 record_deleted = sender_profile.delete()
                 self.print_message(f'Records deleted: {record_deleted}.')
             else:
@@ -123,6 +129,12 @@ class Command(BaseCommand):
 
                 self.print_message(f'Deleting associated Events...')
                 self.delete_events(prisoner_profile.prisonerprofileevent_set.all())
+
+                self.print_message(f"Deleting PrisoneProfile's SavedSearches '*/prisoners/{prisoner_profile.id}/*'...")
+                record_deleted = SavedSearch.objects \
+                    .filter(site_url__contains=f'/prisoners/{prisoner_profile.id}/') \
+                    .delete()
+                self.print_message(f'Records deleted: {record_deleted}.')
 
                 record_deleted = prisoner_profile.delete()
                 self.print_message(f'Records deleted: {record_deleted}.')

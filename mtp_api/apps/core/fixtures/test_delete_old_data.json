@@ -36,6 +36,16 @@
         }
     },
     {
+        "model": "security.SavedSearch",
+        "pk": 3,
+        "fields": {
+            "description": "A1409AE JAMES HALLS",
+            "endpoint": "/prisoners/1/credits",
+            "site_url": "/en-gb/security/prisoners/1/?ordering=-received_at",
+            "user_id": 1
+        }
+    },
+    {
         "model": "security.SenderProfile",
         "pk": 1,
         "fields": {
@@ -79,6 +89,16 @@
         }
     },
     {
+        "model": "security.SavedSearch",
+        "pk": 1,
+        "fields": {
+            "description": "MRS HALLS",
+            "endpoint": "/senders/1/credits",
+            "site_url": "/en-gb/security/senders/1/?ordering=-received_at",
+            "user_id": 1
+        }
+    },
+    {
         "model": "security.PrisonerProfile",
         "pk": 2,
         "fields": {
@@ -105,6 +125,16 @@
         "fields": {
             "event_id": 14,
             "prisoner_profile_id": 2
+        }
+    },
+    {
+        "model": "security.SavedSearch",
+        "pk": 4,
+        "fields": {
+            "description": "B1510BF JOHN WALLS",
+            "endpoint": "/prisoners/2/credits",
+            "site_url": "/en-gb/security/prisoners/2/?ordering=-received_at",
+            "user_id": 1
         }
     },
     {
@@ -148,6 +178,16 @@
         "fields": {
             "event_id": 10,
             "sender_profile_id": 2
+        }
+    },
+    {
+        "model": "security.SavedSearch",
+        "pk": 2,
+        "fields": {
+            "description": "MRS WALLS",
+            "endpoint": "/senders/2/credits",
+            "site_url": "/en-gb/security/senders/2/?ordering=-received_at",
+            "user_id": 1
         }
     },
     {

@@ -11,7 +11,7 @@ from disbursement.models import Disbursement, Log as DisbursementLog
 from notification.tests.utils import make_recipient
 from notification.models import Event, CreditEvent, DisbursementEvent, PrisonerProfileEvent, RecipientProfileEvent, SenderProfileEvent
 from payment.models import Payment
-from security.models import  PrisonerProfile, RecipientProfile, SenderProfile, BankTransferRecipientDetails, BankAccount
+from security.models import  PrisonerProfile, RecipientProfile, SavedSearch, SenderProfile, BankTransferRecipientDetails, BankAccount
 from transaction.models import Transaction
 
 
@@ -55,19 +55,25 @@ class TestDeleteOldData(TestCase):
         self.sender_profile_event_1 = SenderProfileEvent.objects.get(pk=1)
         # NOTE: Event are shared between various records so PK may not match
         self.event_9 = self.sender_profile_event_1.event
+        self.saved_search_1 = SavedSearch.objects.get(pk=1)
         self.sender_profile_2_delete = SenderProfile.objects.get(pk=2)
         self.sender_profile_event_2_delete = SenderProfileEvent.objects.get(pk=2)
         # NOTE: Event are shared between various records so PK may not match
         self.event_10_delete = self.sender_profile_event_2_delete.event
+        self.saved_search_2_delete = SavedSearch.objects.get(pk=2)
 
         self.prisoner_profile_1_update = PrisonerProfile.objects.get(pk=1)
         self.prisoner_profile_event_1 = PrisonerProfileEvent.objects.get(pk=1)
         # NOTE: Event are shared between various records so PK may not match
         self.event_13 = self.prisoner_profile_event_1.event
+        # NOTE: SavedSearch are shared between various records so PK may not match
+        self.saved_search_3 = SavedSearch.objects.get(pk=3)
         self.prisoner_profile_2_delete = PrisonerProfile.objects.get(pk=2)
         self.prisoner_profile_event_2_delete = PrisonerProfileEvent.objects.get(pk=2)
         # NOTE: Event are shared between various records so PK may not match
         self.event_14_delete = self.prisoner_profile_event_2_delete.event
+        # NOTE: SavedSearch are shared between various records so PK may not match
+        self.saved_search_4_delete = SavedSearch.objects.get(pk=4)
 
         self.recipient_profile_1_delete = RecipientProfile.objects.get(pk=1)
         self.recipient_profile_event_1_delete = RecipientProfileEvent.objects.get(pk=1)
@@ -223,6 +229,8 @@ class TestDeleteOldData(TestCase):
         # Event/SenderProfileEvent records not deleted
         self.sender_profile_event_1.refresh_from_db()
         self.event_9.refresh_from_db()
+        # SavedSearch not deleted
+        self.saved_search_1.refresh_from_db()
 
         # Sender Profile 2 deleted (Credit 4 was deleted and was only credit)
         self.assertRaises(SenderProfile.DoesNotExist, self.sender_profile_2_delete.refresh_from_db)
@@ -230,6 +238,8 @@ class TestDeleteOldData(TestCase):
         # Event/SenderProfileEvent records deleted
         self.assertRaises(SenderProfileEvent.DoesNotExist, self.sender_profile_event_2_delete.refresh_from_db)
         self.assertRaises(Event.DoesNotExist, self.event_10_delete.refresh_from_db)
+        # SavedSearch deleted
+        self.assertRaises(SavedSearch.DoesNotExist, self.saved_search_2_delete.refresh_from_db)
 
         # Prisoner Profile 1 updated (Credit 1 was deleted/Disbursements 1/3 deleted)
         self.prisoner_profile_1_update.refresh_from_db()
@@ -241,6 +251,8 @@ class TestDeleteOldData(TestCase):
         # Event/PrisonerProfileEvent records not deleted
         self.prisoner_profile_event_1.refresh_from_db()
         self.event_13.refresh_from_db()
+        # SavedSearch not deleted
+        self.saved_search_3.refresh_from_db()
 
         # Prisoner Profile 2 deleted (Credit 4 and Disbursement 2 deleted, nothing left)
         self.assertRaises(PrisonerProfile.DoesNotExist, self.prisoner_profile_2_delete.refresh_from_db)
@@ -248,6 +260,8 @@ class TestDeleteOldData(TestCase):
         # Event/PrisonerProfileEvent records deleted
         self.assertRaises(PrisonerProfileEvent.DoesNotExist, self.prisoner_profile_event_2_delete.refresh_from_db)
         self.assertRaises(Event.DoesNotExist, self.event_14_delete.refresh_from_db)
+        # SavedSearch deleted
+        self.assertRaises(SavedSearch.DoesNotExist, self.saved_search_4_delete.refresh_from_db)
 
         # Recipient Profile 1 deleted (Disbursement 1 was deleted and was the only disbursement)
         self.assertRaises(RecipientProfile.DoesNotExist, self.recipient_profile_1_delete.refresh_from_db)
