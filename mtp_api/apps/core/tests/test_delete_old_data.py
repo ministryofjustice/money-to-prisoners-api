@@ -5,130 +5,235 @@ from django.core.management import call_command
 from django.test import TestCase
 from django.test.utils import captured_stdout
 from django.utils import timezone
-from model_bakery import baker
 
-from credit.models import Credit, CreditResolution
-from disbursement.models import Disbursement, DisbursementResolution
+from credit.models import Credit, Log as CreditLog
+from disbursement.models import Disbursement, Log as DisbursementLog
 from notification.tests.utils import make_recipient
-from payment.models import Payment, PaymentStatus
-from security.models import RecipientProfile
-from transaction.models import Transaction, TransactionSource
+from notification.models import Event, CreditEvent, DisbursementEvent
+from payment.models import Payment
+from security.models import  PrisonerProfile, RecipientProfile, SenderProfile, BankTransferRecipientDetails, BankAccount
+from transaction.models import Transaction
 
 
 class TestDeleteOldData(TestCase):
-    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
+    """
+    ```mermaid
+    mindmap
+        root
+            SenderProfile1_UPDATED
+                Credit1_DELETED
+                Credit2
+                Credit3
+            SenderProfile2_DELETED
+                Credit4_DELETED
+            PrisonerProfile1_UPDATED
+                Credit1_DELETED
+                Credit2
+                Credit3
+                Disbursement1_DELETED
+                Disbursement3_DELETED
+                Disbursement4_DELETED
+            PrisonerProfile2_DELETED
+                Credit4_DELETED
+                Disbursement2_DELETED
+            RecipientProfile1_DELETED
+                Disbursement1_DELETED
+            RecipientProfile2_DELETED
+                Disbursement2_DELETED
+            RecipientProfile3_UPDATED
+                Disbursement3_DELETED
+                Disbursement4
+    ```
+    """
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json', 'test_delete_old_data.json']
 
     def setUp(self):
         super().setUp()
         self.today = datetime.date(2023, 1, 1)
-        old_datetime = timezone.make_aware(datetime.datetime(2015, 11, 11, 9))
-        new_datetime = timezone.make_aware(datetime.datetime(2022, 12, 31, 9))
 
-        self.old_credit: Credit = baker.make(
-            Credit,
-            prisoner_number='A1409AE',
-            prisoner_name='JAMES HALLS',
-            prison_id='IXB',
-            amount=3000,
-            created=old_datetime,
-            received_at=old_datetime,
-            resolution=CreditResolution.pending.value,
-        )
-        self.old_payment = baker.make(
-            Payment,
-            credit=self.old_credit,
-            amount=self.old_credit.amount,
-            status=PaymentStatus.taken,
-            cardholder_name='Mrs. Halls',
-            created=old_datetime,
-            modified=old_datetime,
-        )
-        self.recipient = make_recipient()
-        self.old_disbursement = baker.make(
-            Disbursement,
-            amount=4000,
-            recipient_profile=self.recipient,
-            created=old_datetime,
-            resolution=DisbursementResolution.sent,
-        )
-        self.old_transaction = baker.make(
-            Transaction,
-            source=TransactionSource.bank_transfer,
-            received_at=old_datetime,
-        )
+        self.sender_profile_1_update = SenderProfile.objects.get(pk=1)
+        self.sender_profile_2_delete = SenderProfile.objects.get(pk=2)
 
-        self.new_credit: Credit = baker.make(
-            Credit,
-            prisoner_number='A1409AE',
-            prisoner_name='JAMES HALLS',
-            prison_id='IXB',
-            amount=3000,
-            created=new_datetime,
-            received_at=new_datetime,
-            resolution=CreditResolution.pending.value,
-        )
-        self.new_payment = baker.make(
-            Payment,
-            credit=self.new_credit,
-            amount=self.new_credit.amount,
-            status=PaymentStatus.taken,
-            cardholder_name='Mrs. Halls',
-            created=new_datetime,
-            modified=new_datetime,
-        )
-        self.new_disbursement = baker.make(
-            Disbursement,
-            amount=5000,
-            recipient_profile=self.recipient,
-            created=new_datetime,
-            resolution=DisbursementResolution.sent,
-        )
-        self.new_transaction = baker.make(
-            Transaction,
-            source=TransactionSource.administrative,
-            received_at=new_datetime,
-        )
+        self.prisoner_profile_1_update = PrisonerProfile.objects.get(pk=1)
+        self.prisoner_profile_2_delete = PrisonerProfile.objects.get(pk=2)
+
+        self.recipient_profile_1_delete = RecipientProfile.objects.get(pk=1)
+        self.recipient_profile_2_delete = RecipientProfile.objects.get(pk=2)
+        self.recipient_profile_3_update = RecipientProfile.objects.get(pk=3)
+
+        self.credit_1_delete = Credit.objects.get(pk=1)
+        self.payment_1_delete = Payment.objects.get(pk=1)
+        self.credit_log_1_delete = CreditLog.objects.get(pk=1)
+        self.credit_event_1_delete = CreditEvent.objects.get(pk=1)
+        self.event_1_delete = self.credit_event_1_delete.event
+
+        self.credit_2 = Credit.objects.get(pk=2)
+        self.payment_2 = Payment.objects.get(pk=2)
+        self.credit_log_2 = CreditLog.objects.get(pk=2)
+        self.credit_event_2 = CreditEvent.objects.get(pk=2)
+        # NOTE: Event's are shared between various records so PK may not match
+        self.event_3 = self.credit_event_2.event
+
+        self.credit_3 = Credit.objects.get(pk=3)
+        self.payment_3 = Payment.objects.get(pk=3)
+        self.credit_log_3 = CreditLog.objects.get(pk=3)
+        self.credit_event_3 = CreditEvent.objects.get(pk=3)
+        # NOTE: Event's are shared between various records so PK may not match
+        self.event_4 = self.credit_event_3.event
+
+        self.credit_4_delete = Credit.objects.get(pk=4)
+        self.payment_4_delete = Payment.objects.get(pk=4)
+        self.credit_log_4_delete = CreditLog.objects.get(pk=4)
+        self.credit_event_4_delete = CreditEvent.objects.get(pk=4)
+        # NOTE: Event's are shared between various records so PK may not match
+        self.event_5_delete = self.credit_event_4_delete.event
+
+        self.disbursement_1_delete = Disbursement.objects.get(pk=1)
+        self.bank_transfer_recipient_details_1_delete = BankTransferRecipientDetails.objects.get(pk=1)
+        self.bank_account_1_delete = self.bank_transfer_recipient_details_1_delete.recipient_bank_account
+        self.disbursement_log_1_delete = DisbursementLog.objects.get(pk=1)
+        self.disbursement_event_1_delete = DisbursementEvent.objects.get(pk=1)
+        # NOTE: Event's are shared between various records so PK may not match
+        self.event_2_delete = self.disbursement_event_1_delete.event
+
+        self.disbursement_2_delete = Disbursement.objects.get(pk=2)
+        self.bank_transfer_recipient_details_2_delete = BankTransferRecipientDetails.objects.get(pk=1)
+        self.bank_account_2_delete = self.bank_transfer_recipient_details_2_delete.recipient_bank_account
+        self.disbursement_log_2_delete = DisbursementLog.objects.get(pk=2)
+        self.disbursement_event_2_delete = DisbursementEvent.objects.get(pk=2)
+        # NOTE: Event's are shared between various records so PK may not match
+        self.event_6_delete = self.disbursement_event_2_delete.event
+
+        self.disbursement_3_delete = Disbursement.objects.get(pk=3)
+        self.disbursement_log_3_delete = DisbursementLog.objects.get(pk=3)
+        self.disbursement_event_3_delete = DisbursementEvent.objects.get(pk=3)
+        # NOTE: Event's are shared between various records so PK may not match
+        self.event_7_delete = self.disbursement_event_2_delete.event
+
+        self.disbursement_4 = Disbursement.objects.get(pk=4)
+        # NOTE: Disbursement 3 also sent to BankAccount 3/RecipientProfile 3
+        self.bank_transfer_recipient_details_3 = BankTransferRecipientDetails.objects.get(pk=3)
+        self.bank_account_3 = self.bank_transfer_recipient_details_3.recipient_bank_account
+        self.disbursement_log_4 = DisbursementLog.objects.get(pk=4)
+        self.disbursement_event_4 = DisbursementEvent.objects.get(pk=4)
+        # NOTE: Event's are shared between various records so PK may not match
+        self.event_8_delete = self.disbursement_event_2_delete.event
+
+        self.transaction_1_delete = Transaction.objects.get(pk=1)
+        self.transaction_2 = Transaction.objects.get(pk=2)
 
     @mock.patch('django.utils.timezone.localdate')
     def test_deletes_old_data(self, mocked_localdate):
         mocked_localdate.return_value = self.today
 
-        credits = [(credit.id, credit.prisoner_name, credit.created) for credit in Credit.objects.all()]
-        disbursements = [(disbursement.id, disbursement.created) for disbursement in Disbursement.objects.all()]
-        transactions = [(tx.id, tx.received_at) for tx in Transaction.objects.all()]
-        print(f'CREDITS BEFORE = {credits}')
-        print(f'DISBURSEMENTES BEFORE = {disbursements}')
-        print(f'TRANSACTIONS BEFORE = {transactions}')
-
         with captured_stdout() as stdout:
             call_command('delete_old_data')
 
-        credits = [(credit.id, credit.prisoner_name, credit.created) for credit in Credit.objects.all()]
-        disbursements = [(disbursement.id, disbursement.created) for disbursement in Disbursement.objects.all()]
-        transactions = [(tx.id, tx.received_at) for tx in Transaction.objects.all()]
-        print(f'CREDITS AFTER = {credits}')
-        print(f'DISBURSEMENTES AFTER = {disbursements}')
-        print(f'TRANSACTIONS AFTER = {transactions}')
-
-        # Deletes records older than 7 years
-        self.assertFalse(Credit.objects.filter(id=self.old_credit.pk).exists())
-        self.assertFalse(Payment.objects.filter(uuid=self.old_payment.pk).exists())
-        self.assertFalse(Disbursement.objects.filter(id=self.old_disbursement.pk).exists())
-        self.assertFalse(Transaction.objects.filter(id=self.old_transaction.pk).exists())
-
-        # Does NOT delete records from the last 7 years
-        self.assertTrue(Credit.objects.filter(id=self.new_credit.pk).exists())
-        self.assertTrue(Payment.objects.filter(uuid=self.new_payment.pk).exists())
-        self.assertTrue(Disbursement.objects.filter(id=self.new_disbursement.pk).exists())
-        # Recipient not deleted even if the related old disbursement was deleted
-        self.assertTrue(RecipientProfile.objects.filter(id=self.recipient.pk).exists())
-        self.assertTrue(Transaction.objects.filter(id=self.new_transaction.pk).exists())
-
         stdout = stdout.getvalue()
-        print(stdout)
+        print(f"OUTPUT = ~~~~~~~~~~~~\n{stdout}~~~~~~~~~~~~\n")
+
+        # Credit 1 deleted (and related records)
+        self.assertRaises(Credit.DoesNotExist, self.credit_1_delete.refresh_from_db)
+        self.assertRaises(Payment.DoesNotExist, self.payment_1_delete.refresh_from_db)
+        self.assertRaises(CreditLog.DoesNotExist, self.credit_log_1_delete.refresh_from_db)
+        self.assertRaises(CreditEvent.DoesNotExist, self.credit_event_1_delete.refresh_from_db)
+        self.assertRaises(Event.DoesNotExist, self.event_1_delete.refresh_from_db)
+        self.assertIn("Deleting Credit Credit 1, £10 Mrs. Halls > JAMES HALLS, credited...", stdout)
+
+        # Credit 2 and related records untouched
+        self.credit_2.refresh_from_db()
+        self.payment_2.refresh_from_db()
+
+        # Credit 3 and related records untouched
+        self.credit_3.refresh_from_db()
+        self.payment_3.refresh_from_db()
+
+        # Credit 4 deleted (and related records)
+        self.assertRaises(Credit.DoesNotExist, self.credit_4_delete.refresh_from_db)
+        self.assertRaises(Payment.DoesNotExist, self.payment_4_delete.refresh_from_db)
+        self.assertRaises(CreditLog.DoesNotExist, self.credit_log_4_delete.refresh_from_db)
+        self.assertRaises(CreditEvent.DoesNotExist, self.credit_event_4_delete.refresh_from_db)
+        self.assertRaises(Event.DoesNotExist, self.event_5_delete.refresh_from_db)
+        self.assertIn("Deleting Credit Credit 4, £40 Mrs. Walls > JOHN WALLS, credited...", stdout)
+
+        # Disbursement 1 deleted (and related records)
+        self.assertRaises(Disbursement.DoesNotExist, self.disbursement_1_delete.refresh_from_db)
+        self.assertRaises(BankTransferRecipientDetails.DoesNotExist, self.bank_transfer_recipient_details_1_delete.refresh_from_db)
+        self.assertRaises(BankAccount.DoesNotExist, self.bank_account_1_delete.refresh_from_db)
+        self.assertRaises(DisbursementLog.DoesNotExist, self.disbursement_log_1_delete.refresh_from_db)
+        self.assertRaises(DisbursementEvent.DoesNotExist, self.disbursement_event_1_delete.refresh_from_db)
+        self.assertRaises(Event.DoesNotExist, self.event_2_delete.refresh_from_db)
+        self.assertIn("Deleting Disbursement Disbursement 1, £10 A1409AE > , sent...", stdout)
+
+        # Disbursement 2 deleted (and related records)
+        self.assertRaises(Disbursement.DoesNotExist, self.disbursement_2_delete.refresh_from_db)
+        self.assertRaises(BankTransferRecipientDetails.DoesNotExist, self.bank_transfer_recipient_details_2_delete.refresh_from_db)
+        self.assertRaises(BankAccount.DoesNotExist, self.bank_account_2_delete.refresh_from_db)
+        self.assertRaises(DisbursementLog.DoesNotExist, self.disbursement_log_2_delete.refresh_from_db)
+        self.assertRaises(DisbursementEvent.DoesNotExist, self.disbursement_event_2_delete.refresh_from_db)
+        self.assertRaises(Event.DoesNotExist, self.event_6_delete.refresh_from_db)
+        self.assertIn("Deleting Disbursement Disbursement 2, £20 B1510BF > , sent...", stdout)
+
+        # Disbursement 3 deleted (and related records)
+        self.assertRaises(Disbursement.DoesNotExist, self.disbursement_3_delete.refresh_from_db)
+        self.assertRaises(DisbursementLog.DoesNotExist, self.disbursement_log_3_delete.refresh_from_db)
+        self.assertRaises(DisbursementEvent.DoesNotExist, self.disbursement_event_3_delete.refresh_from_db)
+        self.assertRaises(Event.DoesNotExist, self.event_7_delete.refresh_from_db)
+        self.assertIn("Deleting Disbursement Disbursement 3, £30 A1409AE > , sent...", stdout)
+
+        # Disbursement 4 untouched
+        self.disbursement_4.refresh_from_db()
+        # NOTE: Disbursement 4 also sent to RecipientProfile 3
+        self.bank_transfer_recipient_details_3.refresh_from_db()
+        self.bank_account_3.refresh_from_db()
+
+        # Transaction 1 deleted
+        self.assertRaises(Transaction.DoesNotExist, self.transaction_1_delete.refresh_from_db)
+
+        # Transaction 2 untouched
+        self.transaction_2.refresh_from_db()
+
+        # Sender Profile 1 updated (Credit 1 was deleted)
+        self.sender_profile_1_update.refresh_from_db()
+        self.assertEqual(self.sender_profile_1_update.credit_count, 1)
+        self.assertEqual(self.sender_profile_1_update.credit_total, self.credit_2.amount)
+        self.assertEqual([c.id for c in self.sender_profile_1_update.credits.all()], [self.credit_2.id, self.credit_3.id])
+        self.assertIn("SenderProfile Sender 1 updated.", stdout)
+
+        # Sender Profile 2 deleted (Credit 4 was deleted and was only credit)
+        self.assertRaises(SenderProfile.DoesNotExist, self.sender_profile_2_delete.refresh_from_db)
+        self.assertIn("SenderProfile Sender 2 has no credits, deleting...", stdout)
+
+        # Prisoner Profile 1 updated (Credit 1 was deleted/Disbursements 1/3 deleted)
+        self.prisoner_profile_1_update.refresh_from_db()
+        self.assertEqual(self.prisoner_profile_1_update.credit_count, 1)
+        self.assertEqual(self.prisoner_profile_1_update.credit_total, self.credit_2.amount)
+        self.assertEqual(self.prisoner_profile_1_update.disbursement_count, 1)
+        self.assertEqual(self.prisoner_profile_1_update.disbursement_total, self.disbursement_4.amount)
+        self.assertIn("PrisonerProfile Prisoner 1 (A1409AE) updated.", stdout)
+
+        # Prisoner Profile 2 deleted (Credit 4 and Disbursement 2 deleted, nothing left)
+        self.assertRaises(PrisonerProfile.DoesNotExist, self.prisoner_profile_2_delete.refresh_from_db)
+        self.assertIn("PrisonerProfile Prisoner 2 (B1510BF) has no credits nor disbursements, deleting...", stdout)
+
+        # Recipient Profile 1 deleted (Disbursement 1 was deleted and was the only disbursement)
+        self.assertRaises(RecipientProfile.DoesNotExist, self.recipient_profile_1_delete.refresh_from_db)
+        self.assertIn("RecipientProfile Recipient 1 has no disbursements, deleting...", stdout)
+
+        # Recipient Profile 2 deleted (Disbursement 2 was deleted and was the only disbursement)
+        self.assertRaises(RecipientProfile.DoesNotExist, self.recipient_profile_1_delete.refresh_from_db)
+        self.assertIn("RecipientProfile Recipient 2 has no disbursements, deleting...", stdout)
+
+        # Recipient Profile 3 updated (Disbursement 3 was deleted)
+        self.recipient_profile_3_update.refresh_from_db()
+        self.assertEqual(self.recipient_profile_3_update.disbursement_count, 1)
+        self.assertEqual(self.recipient_profile_3_update.disbursement_total, self.disbursement_4.amount)
+        self.assertIn("RecipientProfile Recipient 3 updated.", stdout)
 
         seven_years_ago = self.today - datetime.timedelta(days=7*365)
         self.assertIn(f'older than {seven_years_ago}', stdout)
-        self.assertIn('Records deleted: (2, {\'payment.Payment\': 1, \'credit.Credit\': 1})', stdout)
-        self.assertIn('Records deleted: (1, {\'disbursement.Disbursement\': 1})', stdout)
-        self.assertIn('Records deleted: (1, {\'transaction.Transaction\': 1})', stdout)
+        self.assertIn("Records deleted: (3, {'payment.Payment': 1, 'credit.Log': 1, 'credit.Credit': 1}).", stdout)
+        self.assertIn("Records deleted: (2, {'notification.CreditEvent': 1, 'notification.Event': 1}).", stdout)
+        self.assertIn("Records deleted: (2, {'disbursement.Log': 1, 'disbursement.Disbursement': 1}).", stdout)
+        self.assertIn("Records deleted: (2, {'notification.DisbursementEvent': 1, 'notification.Event': 1}).", stdout)
+        self.assertIn("Records deleted: (1, {'transaction.Transaction': 1}).", stdout)
