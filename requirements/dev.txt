@@ -1,6 +1,6 @@
 # Place development and testing dependencies here
 
-money-to-prisoners-common[testing]~=16.4.0
+money-to-prisoners-common[testing]~=16.5.0
 
 -r base.txt
 
