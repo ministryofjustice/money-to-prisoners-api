@@ -91,8 +91,8 @@ class TransactionView(
             )
 
     def get_serializer(self, *args, **kwargs):
-        many = kwargs.pop('many', True)
-        return super().get_serializer(many=many, *args, **kwargs)
+        kwargs.setdefault('many', True)
+        return super().get_serializer(*args, **kwargs)
 
     def get_object(self):
         """Return dummy object to allow for mass patching"""

@@ -276,5 +276,5 @@ class CommentView(
     )
 
     def get_serializer(self, *args, **kwargs):
-        many = kwargs.pop('many', True)
-        return super().get_serializer(many=many, *args, **kwargs)
+        kwargs.setdefault('many', True)
+        return super().get_serializer(*args, **kwargs)
