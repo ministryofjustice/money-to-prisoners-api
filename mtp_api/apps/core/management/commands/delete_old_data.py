@@ -107,18 +107,20 @@ class Command(BaseCommand):
                 self.print_message(f'Deleting associated Events...', depth+2)
                 self.delete_events(recipient_profile.recipientprofileevent_set.all(), depth+3)
 
-                for recipient_details in recipient_profile.bank_transfer_details.all():
-                    bank_account = recipient_details.recipient_bank_account
-                    # NOTE: Checking only senders because we reached this point via the recipient
-                    #       BankTransferRecipientDetails will be cascade-deleted anyway when the RecipientProfile
-                    #       will be deleted, so no point in checking if bank_account.recipients is empty.
-                    if not bank_account.senders.exists():
-                        self.print_message(f'BankAccount {bank_account} has no senders, deleting...', depth+2)
-                        record_deleted = bank_account.delete()
-                        self.print_message(f'Records deleted: {record_deleted}.', depth+3)
+                bank_accounts_to_check = [
+                    recipient_details.recipient_bank_account
+
+                    for recipient_details in recipient_profile.bank_transfer_details.all()
+                ]
 
                 record_deleted = recipient_profile.delete()
                 self.print_message(f'Records deleted: {record_deleted}.', depth+2)
+
+                for bank_account in bank_accounts_to_check:
+                    if not bank_account.senders.exists() and not bank_account.recipients.exists():
+                        self.print_message(f'BankAccount {bank_account} has no senders nor recipients, deleting...', depth+2)
+                        record_deleted = bank_account.delete()
+                        self.print_message(f'Records deleted: {record_deleted}.', depth+3)
             else:
                 RecipientProfile.objects \
                     .filter(id=recipient_profile.id) \
