@@ -13,7 +13,7 @@ from notification.models import Event, CreditEvent, DisbursementEvent, PrisonerP
 from payment.models import Batch, Payment
 from prison.models import Prison, PrisonerLocation
 from security.models import (
-    RecipientProfile, SenderProfile, PrisonerProfile, SavedSearch
+    BankAccount, RecipientProfile, SenderProfile, PrisonerProfile, SavedSearch
 )
 from transaction.models import Transaction
 
@@ -78,8 +78,16 @@ class Command(BaseCommand):
                     .delete()
                 self.print_message(f'Records deleted: {record_deleted}.', depth+3)
 
+                bank_accounts_to_check = [
+                    sender_details.sender_bank_account
+
+                    for sender_details in sender_profile.bank_transfer_details.all()
+                ]
+
                 record_deleted = sender_profile.delete()
                 self.print_message(f'Records deleted: {record_deleted}.', depth+2)
+
+                self.delete_orphan_bank_accounts(bank_accounts_to_check, depth+2)
             else:
                 SenderProfile.objects \
                     .filter(id=sender_profile.id) \
@@ -116,11 +124,7 @@ class Command(BaseCommand):
                 record_deleted = recipient_profile.delete()
                 self.print_message(f'Records deleted: {record_deleted}.', depth+2)
 
-                for bank_account in bank_accounts_to_check:
-                    if not bank_account.senders.exists() and not bank_account.recipients.exists():
-                        self.print_message(f'BankAccount {bank_account} has no senders nor recipients, deleting...', depth+2)
-                        record_deleted = bank_account.delete()
-                        self.print_message(f'Records deleted: {record_deleted}.', depth+3)
+                self.delete_orphan_bank_accounts(bank_accounts_to_check, depth+2)
             else:
                 RecipientProfile.objects \
                     .filter(id=recipient_profile.id) \
@@ -157,3 +161,10 @@ class Command(BaseCommand):
             self.print_message(f'Deleting Event {event}...', depth)
             record_deleted = event.delete()
             self.print_message(f'Records deleted: {record_deleted}.', depth+1)
+
+    def delete_orphan_bank_accounts(self, bank_accounts: Sequence[BankAccount], depth):
+        for bank_account in bank_accounts:
+            if not bank_account.senders.exists() and not bank_account.recipients.exists():
+                self.print_message(f'BankAccount {bank_account} has no senders nor recipients, deleting...', depth)
+                record_deleted = bank_account.delete()
+                self.print_message(f'Records deleted: {record_deleted}.', depth+1)
