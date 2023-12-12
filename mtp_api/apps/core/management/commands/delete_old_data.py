@@ -16,6 +16,7 @@ from security.models import (
     BankAccount, RecipientProfile, SenderProfile, PrisonerProfile, SavedSearch
 )
 from transaction.models import Transaction
+from user_event_log.models import UserEvent
 
 
 class Command(BaseCommand):
@@ -51,6 +52,10 @@ class Command(BaseCommand):
 
         self.print_message(f'\nDeleting Payment older than {seven_years_ago}...')
         records_deleted = Payment.objects.filter(modified__lt=seven_years_ago).delete()
+        self.print_message(f'Records deleted: {records_deleted}.', 1)
+
+        self.print_message(f'\nDeleting UserEvent older than {seven_years_ago}...')
+        records_deleted = UserEvent.objects.filter(timestamp__lt=seven_years_ago).delete()
         self.print_message(f'Records deleted: {records_deleted}.', 1)
 
     @transaction.atomic

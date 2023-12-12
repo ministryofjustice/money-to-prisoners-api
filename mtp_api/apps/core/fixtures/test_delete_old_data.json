@@ -725,5 +725,27 @@
             "received_at": "2023-11-29T13:47:31.283Z",
             "amount": 20000
         }
+    },
+    {
+        "model": "user_event_log.UserEvent",
+        "pk": 1,
+        "fields": {
+            "timestamp": "2015-11-11T13:47:31.283Z",
+            "user_id": 1,
+            "kind": "noms_ops_search",
+            "api_url_path": "/credits",
+            "data": "{\"filters\": {\"prison\": [\"MDI\"]}, \"results\": 11111}"
+        }
+    },
+    {
+        "model": "user_event_log.UserEvent",
+        "pk": 2,
+        "fields": {
+            "timestamp": "2023-11-29T13:47:31.283Z",
+            "user_id": 1,
+            "kind": "noms_ops_search",
+            "api_url_path": "/credits",
+            "data": "{\"filters\": {\"prison\": [\"MDI\"]}, \"results\": 22222}"
+        }
     }
 ]

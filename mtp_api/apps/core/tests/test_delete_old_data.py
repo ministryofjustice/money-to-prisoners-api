@@ -13,6 +13,7 @@ from notification.models import Event, CreditEvent, DisbursementEvent, PrisonerP
 from payment.models import Payment
 from security.models import  PrisonerProfile, RecipientProfile, SavedSearch, SenderProfile, BankTransferRecipientDetails, BankAccount
 from transaction.models import Transaction
+from user_event_log.models import UserEvent
 
 
 class TestDeleteOldData(TestCase):
@@ -149,6 +150,9 @@ class TestDeleteOldData(TestCase):
         self.transaction_1_delete = Transaction.objects.get(pk=1)
         self.transaction_2 = Transaction.objects.get(pk=2)
 
+        self.user_event_1_delete = UserEvent.objects.get(pk=1)
+        self.user_event_2 = UserEvent.objects.get(pk=2)
+
     @mock.patch('django.utils.timezone.localdate')
     def test_deletes_old_data(self, mocked_localdate):
         mocked_localdate.return_value = self.today
@@ -219,6 +223,12 @@ class TestDeleteOldData(TestCase):
 
         # Transaction 2 untouched
         self.transaction_2.refresh_from_db()
+
+        # User Event 1 deleted
+        self.assertRaises(UserEvent.DoesNotExist, self.user_event_1_delete.refresh_from_db)
+
+        # User Event 2 untouched
+        self.user_event_2.refresh_from_db()
 
         # Sender Profile 1 updated (Credit 1 was deleted)
         self.sender_profile_1_update.refresh_from_db()
@@ -293,3 +303,4 @@ class TestDeleteOldData(TestCase):
         self.assertIn("Records deleted: (2, {'disbursement.Log': 1, 'disbursement.Disbursement': 1}).", stdout)
         self.assertIn("Records deleted: (2, {'notification.DisbursementEvent': 1, 'notification.Event': 1}).", stdout)
         self.assertIn("Records deleted: (1, {'transaction.Transaction': 1}).", stdout)
+        self.assertIn("Records deleted: (1, {'user_event_log.UserEvent': 1}).", stdout)
