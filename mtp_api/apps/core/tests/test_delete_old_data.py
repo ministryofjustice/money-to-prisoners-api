@@ -10,8 +10,8 @@ from credit.models import Credit, Log as CreditLog
 from disbursement.models import Disbursement, Log as DisbursementLog
 from notification.tests.utils import make_recipient
 from notification.models import Event, CreditEvent, DisbursementEvent, PrisonerProfileEvent, RecipientProfileEvent, SenderProfileEvent
-from payment.models import Payment
-from security.models import  PrisonerProfile, RecipientProfile, SavedSearch, SenderProfile, BankTransferRecipientDetails, BankAccount
+from payment.models import BillingAddress, Payment
+from security.models import  DebitCardSenderDetails, PrisonerProfile, RecipientProfile, SavedSearch, SenderProfile, BankTransferRecipientDetails, BankAccount
 from transaction.models import Transaction
 from user_event_log.models import UserEvent
 
@@ -115,6 +115,24 @@ class TestDeleteOldData(TestCase):
         self.credit_event_4_delete = CreditEvent.objects.get(pk=4)
         # NOTE: Event are shared between various records so PK may not match
         self.event_5_delete = self.credit_event_4_delete.event
+
+        self.debit_card_sender_details_1 = DebitCardSenderDetails.objects.get(pk=1)
+        # NOTE: Sender 1 is not deleted because it has multiple
+        # credits. The DebitCardSenderDetails is not CASCADE-deleted
+        # and the BillingAddress' debit_card_sender_details_id field
+        # is **not** set to NULL. This means that the BillingAddress
+        # is still in use (also referenced by other payments in this
+        # case)
+        self.billing_address_1 = self.payment_1_delete.billing_address
+
+        # NOTE: DebitCardSenderDetails 2 is CASCADE-deleted when
+        # the Sender 2 is deleted (because it has no credits left).
+        # The debit_card_sender_details_id on the BillingAddress 2
+        # is set to NULL. When the Credit 4 is deleted this
+        # BillingAddress wouldn't have any payments and will be
+        # deleted
+        self.debit_card_sender_details_2_delete = DebitCardSenderDetails.objects.get(pk=2)
+        self.billing_address_2_delete = self.payment_4_delete.billing_address
 
         self.disbursement_1_delete = Disbursement.objects.get(pk=1)
         self.bank_transfer_recipient_details_1_delete = BankTransferRecipientDetails.objects.get(pk=1)
@@ -241,6 +259,9 @@ class TestDeleteOldData(TestCase):
         self.event_9.refresh_from_db()
         # SavedSearch not deleted
         self.saved_search_1.refresh_from_db()
+        # DebitCardSenderDetails and BillingAddress not deleted
+        self.debit_card_sender_details_1.refresh_from_db()
+        self.billing_address_1.refresh_from_db()
 
         # Sender Profile 2 deleted (Credit 4 was deleted and was only credit)
         self.assertRaises(SenderProfile.DoesNotExist, self.sender_profile_2_delete.refresh_from_db)
@@ -250,6 +271,9 @@ class TestDeleteOldData(TestCase):
         self.assertRaises(Event.DoesNotExist, self.event_10_delete.refresh_from_db)
         # SavedSearch deleted
         self.assertRaises(SavedSearch.DoesNotExist, self.saved_search_2_delete.refresh_from_db)
+        # DebitCardSenderDetails and BillingAddress deleted
+        self.assertRaises(DebitCardSenderDetails.DoesNotExist, self.debit_card_sender_details_2_delete.refresh_from_db)
+        self.assertRaises(BillingAddress.DoesNotExist, self.billing_address_2_delete.refresh_from_db)
 
         # Prisoner Profile 1 updated (Credit 1 was deleted/Disbursements 1/3 deleted)
         self.prisoner_profile_1_update.refresh_from_db()

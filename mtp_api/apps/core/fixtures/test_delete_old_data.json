@@ -72,6 +72,18 @@
         }
     },
     {
+        "model": "payment.BillingAddress",
+        "pk": 1,
+        "fields": {
+            "line1": "Flat 1",
+            "line2": "11 Something Road",
+            "city": "London",
+            "country": "United Kingdom",
+            "postcode": "AB1 2CD",
+            "debit_card_sender_details_id": 1
+        }
+    },
+    {
         "model": "notification.Event",
         "pk": 9,
         "fields": {
@@ -161,6 +173,18 @@
         "fields": {
             "debit_card_sender_details_id": 2,
             "email": "mrs.walls@example.com"
+        }
+    },
+    {
+        "model": "payment.BillingAddress",
+        "pk": 2,
+        "fields": {
+            "line1": "Flat 2",
+            "line2": "22 Something Else Street",
+            "city": "Manchester",
+            "country": "United Kingdom",
+            "postcode": "CD2 3EF",
+            "debit_card_sender_details_id": 2
         }
     },
     {
@@ -339,6 +363,7 @@
             "amount": 1000,
             "status": "taken",
             "cardholder_name": "Mrs. Halls",
+            "billing_address_id": 1,
             "created": "2015-11-11T13:47:31.283Z",
             "modified": "2015-11-11T13:47:31.283Z"
         }
@@ -437,6 +462,7 @@
             "amount": 2000,
             "status": "taken",
             "cardholder_name": "Mrs. Halls",
+            "billing_address_id": 1,
             "created": "2020-12-11T13:47:31.283Z",
             "modified": "2020-12-11T13:47:31.283Z"
         }
@@ -492,6 +518,7 @@
             "amount": 3000,
             "status": "pending",
             "cardholder_name": "Mrs. Halls",
+            "billing_address_id": 1,
             "created": "2023-11-29T13:47:31.283Z",
             "modified": "2023-11-29T13:47:31.283Z"
         }
@@ -547,6 +574,7 @@
             "amount": 4000,
             "status": "taken",
             "cardholder_name": "Mrs. Walls",
+            "billing_address_id": 2,
             "created": "2015-11-11T13:47:31.283Z",
             "modified": "2015-11-11T13:47:31.283Z"
         }

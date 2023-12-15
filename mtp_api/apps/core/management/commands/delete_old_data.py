@@ -10,7 +10,7 @@ from account.models import Balance
 from credit.models import Credit
 from disbursement.models import Disbursement
 from notification.models import Event, CreditEvent, DisbursementEvent, PrisonerProfileEvent, RecipientProfileEvent, SenderProfileEvent
-from payment.models import Batch, Payment
+from payment.models import Batch, BillingAddress, Payment
 from prison.models import Prison, PrisonerLocation
 from security.models import (
     BankAccount, RecipientProfile, SenderProfile, PrisonerProfile, SavedSearch
@@ -66,6 +66,11 @@ class Command(BaseCommand):
         self.print_message(f'Deleting associated Events...', depth+1)
         self.delete_events(credit.creditevent_set.all(), depth+2)
 
+        billing_address_to_check = None
+        # Some old credits may not have a (card) payment, e.g. bank transfers
+        if credit.payment:
+            billing_address_to_check = credit.payment.billing_address
+
         record_deleted = credit.delete()
         self.print_message(f'Records deleted: {record_deleted}.', depth+1)
 
@@ -93,6 +98,7 @@ class Command(BaseCommand):
                 self.print_message(f'Records deleted: {record_deleted}.', depth+2)
 
                 self.delete_orphan_bank_accounts(bank_accounts_to_check, depth+2)
+                self.delete_orphan_billing_address(billing_address_to_check, depth+2)
             else:
                 SenderProfile.objects \
                     .filter(id=sender_profile.id) \
@@ -172,4 +178,14 @@ class Command(BaseCommand):
             if not bank_account.senders.exists() and not bank_account.recipients.exists():
                 self.print_message(f'BankAccount {bank_account} has no senders nor recipients, deleting...', depth)
                 record_deleted = bank_account.delete()
+                self.print_message(f'Records deleted: {record_deleted}.', depth+1)
+
+    def delete_orphan_billing_address(self, billing_address: BillingAddress | None, depth):
+        if billing_address:
+            billing_address.refresh_from_db()
+
+            if not billing_address.debit_card_sender_details_id and not billing_address.payment_set.exists():
+                self.print_message(f'BillingAddress {billing_address} has no debit_card_sender_details nor credits, deleting...', depth)
+
+                record_deleted = billing_address.delete()
                 self.print_message(f'Records deleted: {record_deleted}.', depth+1)
