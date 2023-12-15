@@ -6,12 +6,10 @@ from django.core.management import BaseCommand
 from django.db import transaction
 from django.utils import timezone
 
-from account.models import Balance
 from credit.models import Credit
 from disbursement.models import Disbursement
-from notification.models import Event, CreditEvent, DisbursementEvent, PrisonerProfileEvent, RecipientProfileEvent, SenderProfileEvent
-from payment.models import Batch, BillingAddress, Payment
-from prison.models import Prison, PrisonerLocation
+from notification.models import CreditEvent, DisbursementEvent, PrisonerProfileEvent, RecipientProfileEvent, SenderProfileEvent
+from payment.models import BillingAddress, Payment
 from security.models import (
     BankAccount, RecipientProfile, SenderProfile, PrisonerProfile, SavedSearch
 )
