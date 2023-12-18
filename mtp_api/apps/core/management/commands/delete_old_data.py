@@ -8,7 +8,8 @@ from django.utils import timezone
 
 from credit.models import Credit
 from disbursement.models import Disbursement
-from notification.models import CreditEvent, DisbursementEvent, PrisonerProfileEvent, RecipientProfileEvent, SenderProfileEvent
+from notification.models import CreditEvent, DisbursementEvent, PrisonerProfileEvent, \
+    RecipientProfileEvent, SenderProfileEvent
 from payment.models import BillingAddress, Payment
 from security.models import (
     BankAccount, RecipientProfile, SenderProfile, PrisonerProfile, SavedSearch
@@ -23,7 +24,7 @@ class Command(BaseCommand):
     """
     help = textwrap.dedent(__doc__).strip()
 
-    def print_message(self, message, depth = 0):
+    def print_message(self, message, depth=0):
         self.write('\t' * depth + message)
 
     def handle(self, *args, **options):
@@ -61,7 +62,7 @@ class Command(BaseCommand):
         depth = 1
         self.print_message(f'Deleting Credit {credit}...', depth)
 
-        self.print_message(f'Deleting associated Events...', depth+1)
+        self.print_message('Deleting associated Events...', depth+1)
         self.delete_events(credit.creditevent_set.all(), depth+2)
 
         billing_address_to_check = None
@@ -77,10 +78,13 @@ class Command(BaseCommand):
             if not sender_profile.credits.exists():
                 self.print_message(f'SenderProfile {sender_profile} has no credits, deleting...', depth+1)
 
-                self.print_message(f'Deleting associated Events...', depth+2)
+                self.print_message('Deleting associated Events...', depth+2)
                 self.delete_events(sender_profile.senderprofileevent_set.all(), depth+3)
 
-                self.print_message(f"Deleting SenderProfile's SavedSearches '*/senders/{sender_profile.id}/*'...", depth+2)
+                self.print_message(
+                    f"Deleting SenderProfile's SavedSearches '*/senders/{sender_profile.id}/*'...",
+                    depth+2,
+                )
                 record_deleted = SavedSearch.objects \
                     .filter(site_url__contains=f'/senders/{sender_profile.id}/') \
                     .delete()
@@ -110,7 +114,7 @@ class Command(BaseCommand):
         depth = 1
         self.print_message(f'Deleting Disbursement {disbursement}...', depth)
 
-        self.print_message(f'Deleting associated Events...', depth+1)
+        self.print_message('Deleting associated Events...', depth+1)
         self.delete_events(disbursement.disbursementevent_set.all(), depth+2)
 
         record_deleted = disbursement.delete()
@@ -121,7 +125,7 @@ class Command(BaseCommand):
             if not recipient_profile.disbursements.exists():
                 self.print_message(f'RecipientProfile {recipient_profile} has no disbursements, deleting...', depth+1)
 
-                self.print_message(f'Deleting associated Events...', depth+2)
+                self.print_message('Deleting associated Events...', depth+2)
                 self.delete_events(recipient_profile.recipientprofileevent_set.all(), depth+3)
 
                 bank_accounts_to_check = [
@@ -145,12 +149,18 @@ class Command(BaseCommand):
     def update_or_delete_prisoner_profile(self, prisoner_profile: PrisonerProfile | None, depth):
         if prisoner_profile:
             if not prisoner_profile.credits.exists() and not prisoner_profile.disbursements.exists():
-                self.print_message(f'PrisonerProfile {prisoner_profile} has no credits nor disbursements, deleting...', depth)
+                self.print_message(
+                    f'PrisonerProfile {prisoner_profile} has no credits nor disbursements, deleting...',
+                    depth,
+                )
 
-                self.print_message(f'Deleting associated Events...', depth+1)
+                self.print_message('Deleting associated Events...', depth+1)
                 self.delete_events(prisoner_profile.prisonerprofileevent_set.all(), depth+2)
 
-                self.print_message(f"Deleting PrisoneProfile's SavedSearches '*/prisoners/{prisoner_profile.id}/*'...", depth+1)
+                self.print_message(
+                    f"Deleting PrisoneProfile's SavedSearches '*/prisoners/{prisoner_profile.id}/*'...",
+                    depth+1,
+                )
                 record_deleted = SavedSearch.objects \
                     .filter(site_url__contains=f'/prisoners/{prisoner_profile.id}/') \
                     .delete()
@@ -164,7 +174,9 @@ class Command(BaseCommand):
                             .recalculate_totals()
                 self.print_message(f'PrisonerProfile {prisoner_profile} updated.', depth)
 
-    def delete_events(self, thing_events: Sequence[CreditEvent | DisbursementEvent | PrisonerProfileEvent | RecipientProfileEvent |SenderProfileEvent], depth):
+    EventType = CreditEvent | DisbursementEvent | PrisonerProfileEvent | RecipientProfileEvent | SenderProfileEvent
+
+    def delete_events(self, thing_events: Sequence[EventType], depth):
         for thing_event in thing_events:
             event = thing_event.event
             self.print_message(f'Deleting Event {event}...', depth)
@@ -182,8 +194,12 @@ class Command(BaseCommand):
         if billing_address:
             billing_address.refresh_from_db()
 
-            if not billing_address.debit_card_sender_details_id and not billing_address.payment_set.exists():
-                self.print_message(f'BillingAddress {billing_address} has no debit_card_sender_details nor credits, deleting...', depth)
+            payments = billing_address.payment_set
+            if not billing_address.debit_card_sender_details_id and not payments.exists():
+                self.print_message(
+                    f'BillingAddress {billing_address} has no debit_card_sender_details nor credits, deleting...',
+                    depth,
+                )
 
                 record_deleted = billing_address.delete()
                 self.print_message(f'Records deleted: {record_deleted}.', depth+1)

@@ -4,14 +4,15 @@ from unittest import mock
 from django.core.management import call_command
 from django.test import TestCase
 from django.test.utils import captured_stdout
-from django.utils import timezone
 
 from credit.models import Credit, Log as CreditLog
 from disbursement.models import Disbursement, Log as DisbursementLog
-from notification.tests.utils import make_recipient
-from notification.models import Event, CreditEvent, DisbursementEvent, PrisonerProfileEvent, RecipientProfileEvent, SenderProfileEvent
+from notification.models import Event, CreditEvent, DisbursementEvent, \
+    PrisonerProfileEvent, RecipientProfileEvent, SenderProfileEvent
 from payment.models import BillingAddress, Payment
-from security.models import  DebitCardSenderDetails, PrisonerProfile, RecipientProfile, SavedSearch, SenderProfile, BankTransferRecipientDetails, BankAccount
+from security.models import DebitCardSenderDetails, PrisonerProfile, \
+    RecipientProfile, SavedSearch, SenderProfile, BankTransferRecipientDetails, \
+    BankAccount
 from transaction.models import Transaction
 from user_event_log.models import UserEvent
 
@@ -179,7 +180,7 @@ class TestDeleteOldData(TestCase):
             call_command('delete_old_data')
 
         stdout = stdout.getvalue()
-        print(f"OUTPUT = ~~~~~~~~~~~~\n{stdout}~~~~~~~~~~~~\n")
+        print(f'OUTPUT = ~~~~~~~~~~~~\n{stdout}~~~~~~~~~~~~\n')
 
         # Credit 1 deleted (and related records)
         self.assertRaises(Credit.DoesNotExist, self.credit_1_delete.refresh_from_db)
@@ -187,7 +188,7 @@ class TestDeleteOldData(TestCase):
         self.assertRaises(CreditLog.DoesNotExist, self.credit_log_1_delete.refresh_from_db)
         self.assertRaises(CreditEvent.DoesNotExist, self.credit_event_1_delete.refresh_from_db)
         self.assertRaises(Event.DoesNotExist, self.event_1_delete.refresh_from_db)
-        self.assertIn("Deleting Credit Credit 1, £10 Mrs. Halls > JAMES HALLS, credited...", stdout)
+        self.assertIn('Deleting Credit Credit 1, £10 Mrs. Halls > JAMES HALLS, credited...', stdout)
 
         # Credit 2 and related records untouched
         self.credit_2.refresh_from_db()
@@ -203,32 +204,37 @@ class TestDeleteOldData(TestCase):
         self.assertRaises(CreditLog.DoesNotExist, self.credit_log_4_delete.refresh_from_db)
         self.assertRaises(CreditEvent.DoesNotExist, self.credit_event_4_delete.refresh_from_db)
         self.assertRaises(Event.DoesNotExist, self.event_5_delete.refresh_from_db)
-        self.assertIn("Deleting Credit Credit 4, £40 Mrs. Walls > JOHN WALLS, credited...", stdout)
+        self.assertIn('Deleting Credit Credit 4, £40 Mrs. Walls > JOHN WALLS, credited...', stdout)
 
         # Disbursement 1 deleted (and related records)
         self.assertRaises(Disbursement.DoesNotExist, self.disbursement_1_delete.refresh_from_db)
-        self.assertRaises(BankTransferRecipientDetails.DoesNotExist, self.bank_transfer_recipient_details_1_delete.refresh_from_db)
+        self.assertRaises(
+            BankTransferRecipientDetails.DoesNotExist,
+            self.bank_transfer_recipient_details_1_delete.refresh_from_db,
+        )
         self.assertRaises(BankAccount.DoesNotExist, self.bank_account_1_delete.refresh_from_db)
         self.assertRaises(DisbursementLog.DoesNotExist, self.disbursement_log_1_delete.refresh_from_db)
         self.assertRaises(DisbursementEvent.DoesNotExist, self.disbursement_event_1_delete.refresh_from_db)
         self.assertRaises(Event.DoesNotExist, self.event_2_delete.refresh_from_db)
-        self.assertIn("Deleting Disbursement Disbursement 1, £10 A1409AE > , sent...", stdout)
+        self.assertIn('Deleting Disbursement Disbursement 1, £10 A1409AE > , sent...', stdout)
 
         # Disbursement 2 deleted (and related records)
         self.assertRaises(Disbursement.DoesNotExist, self.disbursement_2_delete.refresh_from_db)
-        self.assertRaises(BankTransferRecipientDetails.DoesNotExist, self.bank_transfer_recipient_details_2_delete.refresh_from_db)
+        self.assertRaises(
+            BankTransferRecipientDetails.DoesNotExist, self.bank_transfer_recipient_details_2_delete.refresh_from_db,
+        )
         self.assertRaises(BankAccount.DoesNotExist, self.bank_account_2_delete.refresh_from_db)
         self.assertRaises(DisbursementLog.DoesNotExist, self.disbursement_log_2_delete.refresh_from_db)
         self.assertRaises(DisbursementEvent.DoesNotExist, self.disbursement_event_2_delete.refresh_from_db)
         self.assertRaises(Event.DoesNotExist, self.event_6_delete.refresh_from_db)
-        self.assertIn("Deleting Disbursement Disbursement 2, £20 B1510BF > , sent...", stdout)
+        self.assertIn('Deleting Disbursement Disbursement 2, £20 B1510BF > , sent...', stdout)
 
         # Disbursement 3 deleted (and related records)
         self.assertRaises(Disbursement.DoesNotExist, self.disbursement_3_delete.refresh_from_db)
         self.assertRaises(DisbursementLog.DoesNotExist, self.disbursement_log_3_delete.refresh_from_db)
         self.assertRaises(DisbursementEvent.DoesNotExist, self.disbursement_event_3_delete.refresh_from_db)
         self.assertRaises(Event.DoesNotExist, self.event_7_delete.refresh_from_db)
-        self.assertIn("Deleting Disbursement Disbursement 3, £30 A1409AE > , sent...", stdout)
+        self.assertIn('Deleting Disbursement Disbursement 3, £30 A1409AE > , sent...', stdout)
 
         # Disbursement 4 untouched
         self.disbursement_4.refresh_from_db()
@@ -252,8 +258,12 @@ class TestDeleteOldData(TestCase):
         self.sender_profile_1_update.refresh_from_db()
         self.assertEqual(self.sender_profile_1_update.credit_count, 1)
         self.assertEqual(self.sender_profile_1_update.credit_total, self.credit_2.amount)
-        self.assertEqual([c.id for c in self.sender_profile_1_update.credits.all()], [self.credit_2.id, self.credit_3.id])
-        self.assertIn("SenderProfile Sender 1 updated.", stdout)
+
+        self.assertEqual(
+            [c.id for c in self.sender_profile_1_update.credits.all()],
+            [self.credit_2.id, self.credit_3.id],
+        )
+        self.assertIn('SenderProfile Sender 1 updated.', stdout)
         # Event/SenderProfileEvent records not deleted
         self.sender_profile_event_1.refresh_from_db()
         self.event_9.refresh_from_db()
@@ -265,7 +275,7 @@ class TestDeleteOldData(TestCase):
 
         # Sender Profile 2 deleted (Credit 4 was deleted and was only credit)
         self.assertRaises(SenderProfile.DoesNotExist, self.sender_profile_2_delete.refresh_from_db)
-        self.assertIn("SenderProfile Sender 2 has no credits, deleting...", stdout)
+        self.assertIn('SenderProfile Sender 2 has no credits, deleting...', stdout)
         # Event/SenderProfileEvent records deleted
         self.assertRaises(SenderProfileEvent.DoesNotExist, self.sender_profile_event_2_delete.refresh_from_db)
         self.assertRaises(Event.DoesNotExist, self.event_10_delete.refresh_from_db)
@@ -281,7 +291,7 @@ class TestDeleteOldData(TestCase):
         self.assertEqual(self.prisoner_profile_1_update.credit_total, self.credit_2.amount)
         self.assertEqual(self.prisoner_profile_1_update.disbursement_count, 1)
         self.assertEqual(self.prisoner_profile_1_update.disbursement_total, self.disbursement_4.amount)
-        self.assertIn("PrisonerProfile Prisoner 1 (A1409AE) updated.", stdout)
+        self.assertIn('PrisonerProfile Prisoner 1 (A1409AE) updated.', stdout)
         # Event/PrisonerProfileEvent records not deleted
         self.prisoner_profile_event_1.refresh_from_db()
         self.event_13.refresh_from_db()
@@ -290,7 +300,7 @@ class TestDeleteOldData(TestCase):
 
         # Prisoner Profile 2 deleted (Credit 4 and Disbursement 2 deleted, nothing left)
         self.assertRaises(PrisonerProfile.DoesNotExist, self.prisoner_profile_2_delete.refresh_from_db)
-        self.assertIn("PrisonerProfile Prisoner 2 (B1510BF) has no credits nor disbursements, deleting...", stdout)
+        self.assertIn('PrisonerProfile Prisoner 2 (B1510BF) has no credits nor disbursements, deleting...', stdout)
         # Event/PrisonerProfileEvent records deleted
         self.assertRaises(PrisonerProfileEvent.DoesNotExist, self.prisoner_profile_event_2_delete.refresh_from_db)
         self.assertRaises(Event.DoesNotExist, self.event_14_delete.refresh_from_db)
@@ -299,14 +309,14 @@ class TestDeleteOldData(TestCase):
 
         # Recipient Profile 1 deleted (Disbursement 1 was deleted and was the only disbursement)
         self.assertRaises(RecipientProfile.DoesNotExist, self.recipient_profile_1_delete.refresh_from_db)
-        self.assertIn("RecipientProfile Recipient 1 has no disbursements, deleting...", stdout)
+        self.assertIn('RecipientProfile Recipient 1 has no disbursements, deleting...', stdout)
         # Event/RecipientProfileEvent records deleted
         self.assertRaises(RecipientProfileEvent.DoesNotExist, self.recipient_profile_event_1_delete.refresh_from_db)
         self.assertRaises(Event.DoesNotExist, self.event_15_delete.refresh_from_db)
 
         # Recipient Profile 2 deleted (Disbursement 2 was deleted and was the only disbursement)
         self.assertRaises(RecipientProfile.DoesNotExist, self.recipient_profile_1_delete.refresh_from_db)
-        self.assertIn("RecipientProfile Recipient 2 has no disbursements, deleting...", stdout)
+        self.assertIn('RecipientProfile Recipient 2 has no disbursements, deleting...', stdout)
         # Event/RecipientProfileEvent records deleted
         self.assertRaises(RecipientProfileEvent.DoesNotExist, self.recipient_profile_event_2_delete.refresh_from_db)
         self.assertRaises(Event.DoesNotExist, self.event_11_delete.refresh_from_db)
@@ -315,16 +325,22 @@ class TestDeleteOldData(TestCase):
         self.recipient_profile_3_update.refresh_from_db()
         self.assertEqual(self.recipient_profile_3_update.disbursement_count, 1)
         self.assertEqual(self.recipient_profile_3_update.disbursement_total, self.disbursement_4.amount)
-        self.assertIn("RecipientProfile Recipient 3 updated.", stdout)
+        self.assertIn('RecipientProfile Recipient 3 updated.', stdout)
         # Event/RecipientProfileEvent records not deleted
         self.recipient_profile_event_3.refresh_from_db()
         self.event_12.refresh_from_db()
 
         seven_years_ago = self.today - datetime.timedelta(days=7*365)
         self.assertIn(f'older than {seven_years_ago}', stdout)
-        self.assertIn("Records deleted: (3, {'payment.Payment': 1, 'credit.Log': 1, 'credit.Credit': 1}).", stdout)
+        self.assertIn(
+            "Records deleted: (3, {'payment.Payment': 1, 'credit.Log': 1, 'credit.Credit': 1}).",
+            stdout,
+        )
         self.assertIn("Records deleted: (2, {'notification.CreditEvent': 1, 'notification.Event': 1}).", stdout)
         self.assertIn("Records deleted: (2, {'disbursement.Log': 1, 'disbursement.Disbursement': 1}).", stdout)
-        self.assertIn("Records deleted: (2, {'notification.DisbursementEvent': 1, 'notification.Event': 1}).", stdout)
+        self.assertIn(
+            "Records deleted: (2, {'notification.DisbursementEvent': 1, 'notification.Event': 1}).",
+            stdout,
+        )
         self.assertIn("Records deleted: (1, {'transaction.Transaction': 1}).", stdout)
         self.assertIn("Records deleted: (1, {'user_event_log.UserEvent': 1}).", stdout)
