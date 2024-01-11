@@ -12,17 +12,13 @@ if __name__ == '__main__':
         import mtp_common
 
         # NB: this version does not need to be updated unless mtp_common changes significantly
-        if mtp_common.VERSION < (10,):
+        if mtp_common.VERSION < (16,):
             raise ImportError
     except ImportError:
-        try:
-            import pkg_resources
-        except ImportError:
-            raise SystemExit('setuptools and pip are required')
-        try:
-            pip = pkg_resources.load_entry_point('pip', 'console_scripts', 'pip')
-        except pkg_resources.ResolutionError:
-            raise SystemExit('setuptools and pip are required')
+        import importlib.metadata
+
+        (entry_point,) = importlib.metadata.entry_points(name='pip', group='console_scripts')
+        pip = entry_point.load()
 
         print('Pre-installing MTP-common and base requirements')
         pip(['install', '--requirement', f'{root_path}/requirements/base.txt'])
