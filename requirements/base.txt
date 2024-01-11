@@ -8,11 +8,11 @@ coreapi~=2.3.3
 djangorestframework~=3.14.0
 drf-yasg~=1.21.7
 django-model-utils~=4.3.1
-django-filter~=23.4
+django-filter~=23.5
 oauthlib~=3.2.2
 django-oauth-toolkit~=2.3.0
 drf-extensions~=0.7.1
-drf-nested-routers~=0.93.4
+drf-nested-routers~=0.93.5
 crontab~=1.0
 xlrd~=2.0.1
 reportlab>=4.0,<4.1
@@ -22,5 +22,5 @@ openpyxl~=3.1
 pyjwt~=2.8.0
 
 # these are used mainly in tests, but are required to load random data in test environments
-Faker~=20.1
+Faker~=22.0
 model-bakery~=1.17
