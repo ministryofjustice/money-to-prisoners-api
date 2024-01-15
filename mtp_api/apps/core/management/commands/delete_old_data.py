@@ -67,7 +67,7 @@ class Command(BaseCommand):
 
         billing_address_to_check = None
         # Some old credits may not have a (card) payment, e.g. bank transfers
-        if credit.payment:
+        if hasattr(credit, 'payment'):
             billing_address_to_check = credit.payment.billing_address
 
         record_deleted = credit.delete()
