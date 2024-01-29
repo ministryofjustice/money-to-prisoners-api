@@ -123,7 +123,8 @@ class Command(BaseCommand):
                     .recalculate_totals()
                 self.print_message(f'SenderProfile {sender_profile} updated.', depth+1)
 
-        self.update_or_delete_prisoner_profile(credit.prisoner_profile, depth+1)
+        if credit.prisoner_profile:
+            self.update_or_delete_prisoner_profile(credit.prisoner_profile, depth+1)
 
     @transaction.atomic
     def delete_disbursement(self, disbursement: Disbursement):
@@ -160,35 +161,35 @@ class Command(BaseCommand):
                     .recalculate_totals()
                 self.print_message(f'RecipientProfile {recipient_profile} updated.', depth+1)
 
-        self.update_or_delete_prisoner_profile(disbursement.prisoner_profile, depth+1)
+        if disbursement.prisoner_profile:
+            self.update_or_delete_prisoner_profile(disbursement.prisoner_profile, depth+1)
 
     def update_or_delete_prisoner_profile(self, prisoner_profile: PrisonerProfile | None, depth):
-        if prisoner_profile:
-            if not prisoner_profile.credits.exists() and not prisoner_profile.disbursements.exists():
-                self.print_message(
-                    f'PrisonerProfile {prisoner_profile} has no credits nor disbursements, deleting...',
-                    depth,
-                )
+        if not prisoner_profile.credits.exists() and not prisoner_profile.disbursements.exists():
+            self.print_message(
+                f'PrisonerProfile {prisoner_profile} has no credits nor disbursements, deleting...',
+                depth,
+            )
 
-                self.print_message('Deleting associated Events...', depth+1)
-                self.delete_events(prisoner_profile.prisonerprofileevent_set.all(), depth+2)
+            self.print_message('Deleting associated Events...', depth+1)
+            self.delete_events(prisoner_profile.prisonerprofileevent_set.all(), depth+2)
 
-                self.print_message(
-                    f"Deleting PrisoneProfile's SavedSearches '*/prisoners/{prisoner_profile.id}/*'...",
-                    depth+1,
-                )
-                record_deleted = SavedSearch.objects \
-                    .filter(site_url__contains=f'/prisoners/{prisoner_profile.id}/') \
-                    .delete()
-                self.print_message(f'Records deleted: {record_deleted}.', depth+2)
+            self.print_message(
+                f"Deleting PrisoneProfile's SavedSearches '*/prisoners/{prisoner_profile.id}/*'...",
+                depth+1,
+            )
+            record_deleted = SavedSearch.objects \
+                .filter(site_url__contains=f'/prisoners/{prisoner_profile.id}/') \
+                .delete()
+            self.print_message(f'Records deleted: {record_deleted}.', depth+2)
 
-                record_deleted = prisoner_profile.delete()
-                self.print_message(f'Records deleted: {record_deleted}.', depth+1)
-            else:
-                PrisonerProfile.objects \
-                            .filter(id=prisoner_profile.id) \
-                            .recalculate_totals()
-                self.print_message(f'PrisonerProfile {prisoner_profile} updated.', depth)
+            record_deleted = prisoner_profile.delete()
+            self.print_message(f'Records deleted: {record_deleted}.', depth+1)
+        else:
+            PrisonerProfile.objects \
+                        .filter(id=prisoner_profile.id) \
+                        .recalculate_totals()
+            self.print_message(f'PrisonerProfile {prisoner_profile} updated.', depth)
 
     EventType = CreditEvent | DisbursementEvent | PrisonerProfileEvent | RecipientProfileEvent | SenderProfileEvent
 
