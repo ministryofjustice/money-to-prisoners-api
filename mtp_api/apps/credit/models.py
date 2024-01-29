@@ -103,6 +103,7 @@ class Credit(TimeStampedModel):
         )
         indexes = [
             models.Index(fields=['prisoner_number', 'prisoner_dob']),
+            models.Index(fields=['created']),
             models.Index(fields=['received_at', 'id']),
             models.Index(fields=['-received_at', 'id']),
             models.Index(fields=['amount', 'id']),
