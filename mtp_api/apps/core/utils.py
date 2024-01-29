@@ -17,6 +17,7 @@ def monday_of_same_week(date: datetime.date) -> datetime.date:
     monday = date - datetime.timedelta(days=date.weekday())
     return monday
 
+
 def date_argument(argument) -> datetime.datetime:
     if not argument:
         return None
@@ -24,6 +25,7 @@ def date_argument(argument) -> datetime.datetime:
     if not date:
         raise CommandError('Cannot parse date')
     return beginning_of_day(date)
+
 
 def beginning_of_day(date) -> datetime.datetime:
     return timezone.make_aware(datetime.datetime.combine(date, datetime.time.min))

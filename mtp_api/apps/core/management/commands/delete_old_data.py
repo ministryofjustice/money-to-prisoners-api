@@ -4,6 +4,7 @@ from typing import Sequence
 
 from django.core.management import BaseCommand, CommandError
 from django.db import transaction
+from django.utils import timezone
 
 from core.utils import beginning_of_day, date_argument
 from credit.models import Credit
@@ -26,11 +27,14 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         super().add_arguments(parser)
-        parser.add_argument('--before', help='Delete data before this date (exclusive). Defaults to 7 years ago. Can\'t be later than 7 years ago.')
+        parser.add_argument(
+            '--before',
+            help="Delete data before this date (exclusive). Defaults to 7 years ago. Can't be later than 7 years ago.",
+        )
 
     @classmethod
     def get_cutoff_date(cls, **options):
-        today = beginning_of_day(datetime.date.today())
+        today = beginning_of_day(timezone.localdate())
         seven_years_ago = today - datetime.timedelta(days=7*365)
 
         before = date_argument(options['before'])
