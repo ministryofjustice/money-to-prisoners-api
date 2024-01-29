@@ -2,10 +2,10 @@ import datetime
 import textwrap
 from typing import Sequence
 
-from django.core.management import BaseCommand
+from django.core.management import BaseCommand, CommandError
 from django.db import transaction
-from django.utils import timezone
 
+from core.utils import beginning_of_day, date_argument
 from credit.models import Credit
 from disbursement.models import Disbursement
 from notification.models import CreditEvent, DisbursementEvent, PrisonerProfileEvent, \
@@ -24,6 +24,23 @@ class Command(BaseCommand):
     """
     help = textwrap.dedent(__doc__).strip()
 
+    def add_arguments(self, parser):
+        super().add_arguments(parser)
+        parser.add_argument('--before', help='Delete data before this date (exclusive). Defaults to 7 years ago. Can\'t be later than 7 years ago.')
+
+    @classmethod
+    def get_cutoff_date(cls, **options):
+        today = beginning_of_day(datetime.date.today())
+        seven_years_ago = today - datetime.timedelta(days=7*365)
+
+        before = date_argument(options['before'])
+        if not before:
+            return seven_years_ago
+        elif before > seven_years_ago:
+            raise CommandError('"--before" must be older than 7 years ago')
+
+        return before
+
     def print_message(self, message, depth=0):
         self.write('\t' * depth + message)
 
@@ -32,29 +49,28 @@ class Command(BaseCommand):
 
         self.write = self.stdout.write if verbosity else lambda m: m
 
-        today = timezone.localdate()
-        seven_years_ago = today - datetime.timedelta(days=7*365)
+        cutoff_date = self.get_cutoff_date(**options)
 
-        self.print_message(f'\nDeleting Credits older than {seven_years_ago}...')
-        credits_to_delete = Credit.objects.filter(created__lt=seven_years_ago)
+        self.print_message(f'\nDeleting Credits older than {cutoff_date}...')
+        credits_to_delete = Credit.objects.filter(created__lt=cutoff_date)
         for credit in credits_to_delete:
             self.delete_credit(credit)
 
-        self.print_message(f'\nDeleting Disbursments older than {seven_years_ago}...')
-        disbursements_to_delete = Disbursement.objects.filter(created__lt=seven_years_ago)
+        self.print_message(f'\nDeleting Disbursments older than {cutoff_date}...')
+        disbursements_to_delete = Disbursement.objects.filter(created__lt=cutoff_date)
         for disbursement in disbursements_to_delete:
             self.delete_disbursement(disbursement)
 
-        self.print_message(f'\nDeleting Transactions older than {seven_years_ago}...')
-        records_deleted = Transaction.objects.filter(received_at__lt=seven_years_ago).delete()
+        self.print_message(f'\nDeleting Transactions older than {cutoff_date}...')
+        records_deleted = Transaction.objects.filter(received_at__lt=cutoff_date).delete()
         self.print_message(f'Records deleted: {records_deleted}.', 1)
 
-        self.print_message(f'\nDeleting Payment older than {seven_years_ago}...')
-        records_deleted = Payment.objects.filter(modified__lt=seven_years_ago).delete()
+        self.print_message(f'\nDeleting Payment older than {cutoff_date}...')
+        records_deleted = Payment.objects.filter(modified__lt=cutoff_date).delete()
         self.print_message(f'Records deleted: {records_deleted}.', 1)
 
-        self.print_message(f'\nDeleting UserEvent older than {seven_years_ago}...')
-        records_deleted = UserEvent.objects.filter(timestamp__lt=seven_years_ago).delete()
+        self.print_message(f'\nDeleting UserEvent older than {cutoff_date}...')
+        records_deleted = UserEvent.objects.filter(timestamp__lt=cutoff_date).delete()
         self.print_message(f'Records deleted: {records_deleted}.', 1)
 
     @transaction.atomic
