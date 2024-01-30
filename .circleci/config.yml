@@ -7,7 +7,7 @@ orbs:
 parameters:
   postgres-version:
     type: string
-    default: '14.3'
+    default: '14.10'
   kubectl-version:
     type: string
     default: v1.26.11
