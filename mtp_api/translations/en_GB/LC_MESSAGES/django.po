@@ -423,7 +423,7 @@ msgid "These prisoners’ accounts have been credited"
 msgstr ""
 
 #: apps/credit/notices/__init__.py:35
-msgid "Her Majesty’s Prison and Probation Service"
+msgid "His Majesty’s Prison and Probation Service"
 msgstr ""
 
 #: apps/credit/notices/prisoner_credits.py:15
