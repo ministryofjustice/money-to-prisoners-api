@@ -24,6 +24,7 @@ class Command(BaseCommand):
         verbosity = options['verbosity']
 
         cutoff_date = now() - relativedelta(months=self.inactive_months)
+        admin_cutoff_date = now() - relativedelta(months=self.inactive_months * 2)
 
         applications = list(Application.objects.filter(client_id__in=self.applications).values_list('pk', flat=True))
         if len(applications) != len(self.applications):
@@ -44,6 +45,12 @@ class Command(BaseCommand):
             Q(last_login__isnull=True) & Q(date_joined__lt=cutoff_date)
         ).distinct('username')
         for user in users:
+            if user.groups.filter(name='UserAdmin').exists():
+                if (
+                    user.last_login and user.last_login >= admin_cutoff_date or
+                    user.last_login is None and user.date_joined >= admin_cutoff_date
+                ):
+                    continue
             if verbosity > 0:
                 self.stderr.write(f'Deactivating {user.username}')
             user.is_active = False
