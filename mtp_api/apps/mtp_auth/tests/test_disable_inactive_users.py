@@ -12,9 +12,13 @@ from mtp_auth.management.commands.disable_inactive_users import User
 class DisableInactiveUsersTestCase(TestCase):
     fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
+    date_joined = make_aware(datetime.datetime(2023, 2, 8, 12))
+    last_login = make_aware(datetime.datetime(2023, 4, 10, 11))
+
     def setUp(self):
         super().setUp()
         self.users = make_test_users()
+        self.user_admins = make_test_user_admins()
 
     def assertInactiveUsernames(self, usernames: list[str]):  # noqa: N802
         self.assertSequenceEqual(
@@ -22,22 +26,21 @@ class DisableInactiveUsersTestCase(TestCase):
             sorted(usernames),
         )
 
+    def make_user_old(self, user, /, **kwargs):
+        user.date_joined = self.date_joined
+        user.last_login = self.last_login
+        for attr, value in kwargs.items():
+            setattr(user, attr, value)
+        user.save()
+
     def test_users_who_have_not_logged_in_for_a_while_are_disabled(self):
         prison_clerk = self.users['prison_clerks'][0]
         bank_admin = self.users['bank_admins'][0]
         security_staff = self.users['security_staff'][0]
 
-        date_joined = make_aware(datetime.datetime(2023, 2, 8, 12))
-        last_login = make_aware(datetime.datetime(2023, 4, 10, 11))
-
-        def set_old_last_login(user):
-            user.date_joined = date_joined
-            user.last_login = last_login
-            user.save()
-
-        set_old_last_login(prison_clerk)
-        set_old_last_login(bank_admin)
-        set_old_last_login(security_staff)
+        self.make_user_old(prison_clerk)
+        self.make_user_old(bank_admin)
+        self.make_user_old(security_staff)
 
         self.assertFalse(User.objects.filter(is_active=False).exists())
         call_command('disable_inactive_users', verbosity=0)
@@ -48,16 +51,9 @@ class DisableInactiveUsersTestCase(TestCase):
         refund_bank_admin = self.users['refund_bank_admins'][0]
         fiu_user = self.users['security_fiu_users'][0]
 
-        date_joined = make_aware(datetime.datetime(2023, 2, 8, 12))
-
-        def set_unused_old_account(user):
-            user.date_joined = date_joined
-            user.last_login = None
-            user.save()
-
-        set_unused_old_account(prison_clerk)
-        set_unused_old_account(refund_bank_admin)
-        set_unused_old_account(fiu_user)
+        self.make_user_old(prison_clerk, last_login=None)
+        self.make_user_old(refund_bank_admin, last_login=None)
+        self.make_user_old(fiu_user, last_login=None)
 
         self.assertFalse(User.objects.filter(is_active=False).exists())
         call_command('disable_inactive_users', verbosity=0)
@@ -68,18 +64,9 @@ class DisableInactiveUsersTestCase(TestCase):
         disbursement_bank_admin = self.users['disbursement_bank_admins'][0]
         prisoner_location_admin = self.users['prisoner_location_admins'][0]
 
-        date_joined = make_aware(datetime.datetime(2023, 2, 8, 12))
-        last_login = make_aware(datetime.datetime(2023, 4, 10, 11))
-
-        def set_already_inactive(user):
-            user.date_joined = date_joined
-            user.last_login = last_login
-            user.is_active = False
-            user.save()
-
-        set_already_inactive(prison_clerk)
-        set_already_inactive(disbursement_bank_admin)
-        set_already_inactive(prisoner_location_admin)
+        self.make_user_old(prison_clerk, is_active=False)
+        self.make_user_old(disbursement_bank_admin, is_active=False)
+        self.make_user_old(prisoner_location_admin, is_active=False)
 
         self.assertInactiveUsernames(
             [prison_clerk.username, disbursement_bank_admin.username, prisoner_location_admin.username],
@@ -92,34 +79,16 @@ class DisableInactiveUsersTestCase(TestCase):
     def test_inactive_superusers_are_ignored(self):
         create_super_admin()
 
-        date_joined = make_aware(datetime.datetime(2023, 2, 8, 12))
-        last_login = make_aware(datetime.datetime(2023, 4, 10, 11))
-
-        def set_old_last_login(user):
-            user.date_joined = date_joined
-            user.last_login = last_login
-            user.save()
-
-        set_old_last_login(User.objects.get(username='admin'))
+        self.make_user_old(User.objects.get(username='admin'))
 
         self.assertFalse(User.objects.filter(is_active=False).exists())
         call_command('disable_inactive_users', verbosity=0)
         self.assertFalse(User.objects.filter(is_active=False).exists())
 
     def test_inactive_staff_are_ignored(self):
-        user_admins = make_test_user_admins()
-        fiu_admin = user_admins['security_fiu_uas'][0]
+        fiu_admin = self.user_admins['security_fiu_uas'][0]
 
-        date_joined = make_aware(datetime.datetime(2023, 2, 8, 12))
-        last_login = make_aware(datetime.datetime(2023, 4, 10, 11))
-
-        def set_old_last_login(user):
-            user.date_joined = date_joined
-            user.last_login = last_login
-            user.is_staff = True  # upgrade user to allow access to django admin
-            user.save()
-
-        set_old_last_login(fiu_admin)
+        self.make_user_old(fiu_admin, is_staff=True)  # upgrade user to allow access to django admin
 
         call_command('disable_inactive_users', verbosity=0)
         self.assertFalse(User.objects.filter(is_active=False).exists())
@@ -127,15 +96,7 @@ class DisableInactiveUsersTestCase(TestCase):
     def test_inactive_users_of_other_apps_are_ignored(self):
         send_money_user = self.users['send_money_users'][0]
 
-        date_joined = make_aware(datetime.datetime(2023, 2, 8, 12))
-        last_login = make_aware(datetime.datetime(2023, 4, 10, 11))
-
-        def set_old_last_login(user):
-            user.date_joined = date_joined
-            user.last_login = last_login
-            user.save()
-
-        set_old_last_login(send_money_user)
+        self.make_user_old(send_money_user)
 
         self.assertFalse(User.objects.filter(is_active=False).exists())
         call_command('disable_inactive_users', verbosity=0)
