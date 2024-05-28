@@ -108,10 +108,8 @@ def load_prisoner_locations_from_file(filename):
 def load_prisoner_locations_from_dev_prison_api(number_of_prisoners=50):
     """
     Get prisoners locations from the dev HMPPS Prison API.
-
     This relies on the existance of well-known prisons in the dev API.
-
-    See API documentation: https://api.prison.service.justice.gov.uk/swagger-ui/index.html
+    See API documentation: https://prison-api.prison.service.justice.gov.uk/swagger-ui/index.html
     """
 
     if settings.ENVIRONMENT == 'prod':
