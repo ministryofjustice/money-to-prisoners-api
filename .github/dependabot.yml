@@ -4,9 +4,15 @@ updates:
   - package-ecosystem: pip
     directory: /requirements/
     ignore:
+      - dependency-name: drf-nested-routers
+        versions:
+          - ">=0.94.0"  # requires django 4.2+
+      - dependency-name: model-bakery
+        versions:
+          - ">=1.18.0"  # requires django 4.2+
       - dependency-name: psycopg2-binary
         versions:
-          - ">=2.9"
+          - ">=2.9"  # once on django 4.2+, use psycopg3
     schedule:
       interval: monthly
     pull-request-branch-name:
