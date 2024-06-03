@@ -11,7 +11,7 @@ node_modules/
 npm-debug.log
 
 # app-specific
-.eslintrc.json
+eslint.config.cjs
 .sass-lint.yml
 docker-compose.yml
 package.json
