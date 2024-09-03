@@ -9,4 +9,4 @@ class TestSwagger(APITestCase):
             '/swagger/?format=openapi',
             follow=True
         )
-        self.assertEquals(response.status_code, 200)
+        self.assertEqual(response.status_code, 200)

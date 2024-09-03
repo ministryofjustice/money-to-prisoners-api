@@ -1,13 +1,13 @@
 # Dependencies needed for all environments
 
-money-to-prisoners-common~=17.0.0
+money-to-prisoners-common~=17.1.0
 
 psycopg2~=2.9.9
 
 coreapi~=2.3.3
 djangorestframework~=3.15.1
 drf-yasg~=1.21.7
-django-model-utils~=4.5.0
+django-model-utils~=4.5.1
 django-filter~=23.5
 oauthlib~=3.2.2
 django-oauth-toolkit~=2.4.0
@@ -17,11 +17,11 @@ crontab~=1.0
 xlrd~=2.0.1
 reportlab~=4.2
 python-dateutil>=2.9
-numpy>=1.26,<2
+numpy>=1.26,<3
 scipy>=1.11,<2
 openpyxl~=3.1
-pyjwt~=2.8.0
+pyjwt~=2.9.0
 
 # these are used mainly in tests, but are required to load random data in test environments
-Faker~=25.3
+Faker~=28.1
 model-bakery~=1.17
