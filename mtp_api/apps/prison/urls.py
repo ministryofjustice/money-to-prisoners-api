@@ -1,4 +1,4 @@
-from django.conf.urls import include, url
+from django.urls import include, re_path
 from rest_framework import routers
 
 from prison import views
@@ -15,11 +15,11 @@ router.register(
 )
 
 urlpatterns = [
-    url(r'^', include(router.urls)),
-    url(r'^prisoner_locations/actions/delete_old/$',
+    re_path(r'^', include(router.urls)),
+    re_path(r'^prisoner_locations/actions/delete_old/$',
         views.DeleteOldPrisonerLocationsView.as_view(),
         name='prisonerlocation-delete-old'),
-    url(r'^prisoner_locations/actions/delete_inactive/$',
+    re_path(r'^prisoner_locations/actions/delete_inactive/$',
         views.DeleteInactivePrisonerLocationsView.as_view(),
         name='prisonerlocation-delete-inactive'),
 ]
