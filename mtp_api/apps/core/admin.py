@@ -2,9 +2,9 @@ from datetime import datetime
 
 from django import forms
 from django.conf import settings
-from django.conf.urls import url
 from django.contrib import admin
 from django.contrib.admin.utils import prepare_lookup_value
+from django.urls import re_path
 from django.utils import formats
 from django.utils.translation import gettext_lazy as _
 
@@ -34,45 +34,45 @@ class AdminSite(admin.AdminSite):
 
         return [
             # older dashboards
-            url(r'^dashboard/$', DashboardView.as_view(), name='dashboard'),
-            url(r'^dashboard/(?P<slug>[^/]+)/$', DashboardView.as_view(fullscreen=True), name='dashboard_fullscreen'),
+            re_path(r'^dashboard/$', DashboardView.as_view(), name='dashboard'),
+            re_path(r'^dashboard/(?P<slug>[^/]+)/$', DashboardView.as_view(fullscreen=True), name='dashboard_fullscreen'),
 
             # performance dashboard and reports
-            url(r'^credit/report/$', CreditReportAdminView.as_view(),
+            re_path(r'^credit/report/$', CreditReportAdminView.as_view(),
                 name='credit-report'),
-            url(r'^credit/prison-report/$', PrisonCreditReportAdminView.as_view(),
+            re_path(r'^credit/prison-report/$', PrisonCreditReportAdminView.as_view(),
                 name='credit-prison-report'),
-            url(r'^disbursement/report/$', DisbursementReportAdminView.as_view(),
+            re_path(r'^disbursement/report/$', DisbursementReportAdminView.as_view(),
                 name='disbursement-report'),
-            url(r'^disbursement/prison-report/$', PrisonDisbursementReportAdminView.as_view(),
+            re_path(r'^disbursement/prison-report/$', PrisonDisbursementReportAdminView.as_view(),
                 name='disbursement-prison-report'),
-            url(r'^performance/dashboard/$', PerformanceDashboardView.as_view(),
+            re_path(r'^performance/dashboard/$', PerformanceDashboardView.as_view(),
                 name='performance_dashboard'),
-            url(r'^performance/login-stats/$', LoginStatsView.as_view(),
+            re_path(r'^performance/login-stats/$', LoginStatsView.as_view(),
                 name='login-stats'),
-            url(r'^performance/digitaltakeup/upload/$', DigitalTakeupUploadView.as_view(),
+            re_path(r'^performance/digitaltakeup/upload/$', DigitalTakeupUploadView.as_view(),
                 name='digital_takeup_upload'),
-            url(r'^performance/digitaltakeup/report/$', DigitalTakeupReport.as_view(),
+            re_path(r'^performance/digitaltakeup/report/$', DigitalTakeupReport.as_view(),
                 name='digital_takeup_report'),
-            url(r'^performance/digitaltakeup/prisons/$', PrisonDigitalTakeupView.as_view(),
+            re_path(r'^performance/digitaltakeup/prisons/$', PrisonDigitalTakeupView.as_view(),
                 name='digital_takeup_prisons'),
-            url(r'^performance/usersatisfaction/upload/$', UserSatisfactionUploadView.as_view(),
+            re_path(r'^performance/usersatisfaction/upload/$', UserSatisfactionUploadView.as_view(),
                 name='user_satisfaction_upload'),
-            url(r'^performance/usersatisfaction/report/$', UserSatisfactionReport.as_view(),
+            re_path(r'^performance/usersatisfaction/report/$', UserSatisfactionReport.as_view(),
                 name='user_satisfaction_report'),
-            url(r'^performance/zendesk-report/$', ZendeskReportAdminView.as_view(),
+            re_path(r'^performance/zendesk-report/$', ZendeskReportAdminView.as_view(),
                 name='zendesk_report'),
-            url(r'^security/check/report/$', CheckReportAdminView.as_view(),
+            re_path(r'^security/check/report/$', CheckReportAdminView.as_view(),
                 name='check_report'),
 
             # additional admin views
-            url(r'^payment/payment/search/$', PaymentSearchView.as_view(),
+            re_path(r'^payment/payment/search/$', PaymentSearchView.as_view(),
                 name='payment_search'),
-            url(r'^prison/prisonerbalance/upload/$', PrisonerBalanceUploadView.as_view(),
+            re_path(r'^prison/prisonerbalance/upload/$', PrisonerBalanceUploadView.as_view(),
                 name='prisoner_balance_upload'),
 
             # testing views
-            url(r'^testing/recreate-data/$', RecreateTestDataView.as_view(), name='recreate_test_data'),
+            re_path(r'^testing/recreate-data/$', RecreateTestDataView.as_view(), name='recreate_test_data'),
         ] + super().get_urls()
 
     def index(self, request, extra_context=None):

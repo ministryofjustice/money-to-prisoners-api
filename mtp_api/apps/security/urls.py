@@ -1,4 +1,4 @@
-from django.conf.urls import url, include
+from django.urls import include, re_path
 from rest_framework_nested import routers
 
 from security import views
@@ -46,9 +46,9 @@ router.register(
 
 
 urlpatterns = [
-    url(r'^', include(router.urls)),
-    url(r'^', include(sender_router.urls)),
-    url(r'^', include(recipient_router.urls)),
-    url(r'^', include(prisoner_router.urls)),
-    url(r'^monitored/$', views.MonitoredView.as_view(), name='monitored-list'),
+    re_path(r'^', include(router.urls)),
+    re_path(r'^', include(sender_router.urls)),
+    re_path(r'^', include(recipient_router.urls)),
+    re_path(r'^', include(prisoner_router.urls)),
+    re_path(r'^monitored/$', views.MonitoredView.as_view(), name='monitored-list'),
 ]
