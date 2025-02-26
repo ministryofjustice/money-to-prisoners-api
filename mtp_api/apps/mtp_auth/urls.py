@@ -14,11 +14,19 @@ router.register(r'job-information', views.JobInformationViewSet, basename='job-i
 urlpatterns = [
     re_path(r'^', include(router.urls)),
     re_path(r'^', include(user_router.urls)),
-    re_path(r'^change_password/$', views.ChangePasswordView.as_view(),
-        name='user-change-password'),
-    re_path(r'^change_password/(?P<code>[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/$',
+    re_path(
+        r'^change_password/$',
+        views.ChangePasswordView.as_view(),
+        name='user-change-password',
+    ),
+    re_path(
+        r'^change_password/(?P<code>[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/$',
         views.ChangePasswordWithCodeView.as_view(),
-        name='user-change-password-with-code'),
-    re_path(r'^reset_password/$', views.ResetPasswordView.as_view(),
-        name='user-reset-password'),
+        name='user-change-password-with-code',
+    ),
+    re_path(
+        r'^reset_password/$',
+        views.ResetPasswordView.as_view(),
+        name='user-reset-password',
+    ),
 ]

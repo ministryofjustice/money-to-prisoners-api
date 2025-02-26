@@ -15,8 +15,16 @@ batch_credits_router.register(r'credits', views.PrivateEstateBatchCreditsView, b
 
 urlpatterns = [
     re_path(r'^credits/$', csrf_exempt(views.GetCredits.as_view({'get': 'list'}, suffix='List')), name='credit-list'),
-    re_path(r'^credits/actions/review/$', views.ReviewCredits.as_view(actions={'post': 'review'}), name='credit-review'),
-    re_path(r'^credits/actions/credit/$', views.CreditCredits.as_view(actions={'post': 'credit'}), name='credit-credit'),
+    re_path(
+        r'^credits/actions/review/$',
+        views.ReviewCredits.as_view(actions={'post': 'review'}),
+        name='credit-review',
+    ),
+    re_path(
+      r'^credits/actions/credit/$',
+      views.CreditCredits.as_view(actions={'post': 'credit'}),
+      name='credit-credit',
+    ),
     re_path(
         r'^credits/actions/setmanual/$',
         views.SetManualCredits.as_view(actions={'post': 'credit'}),
