@@ -16,10 +16,14 @@ router.register(
 
 urlpatterns = [
     re_path(r'^', include(router.urls)),
-    re_path(r'^prisoner_locations/actions/delete_old/$',
+    re_path(
+        r'^prisoner_locations/actions/delete_old/$',
         views.DeleteOldPrisonerLocationsView.as_view(),
-        name='prisonerlocation-delete-old'),
-    re_path(r'^prisoner_locations/actions/delete_inactive/$',
+        name='prisonerlocation-delete-old',
+    ),
+    re_path(
+        r'^prisoner_locations/actions/delete_inactive/$',
         views.DeleteInactivePrisonerLocationsView.as_view(),
-        name='prisonerlocation-delete-inactive'),
+        name='prisonerlocation-delete-inactive',
+    ),
 ]
