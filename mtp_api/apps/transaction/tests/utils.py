@@ -52,7 +52,7 @@ def random_reference(prisoner_number=None, prisoner_dob=None):
 
 
 def get_noon(dt):
-    return dt.tzinfo.localize(dt.replace(hour=12, minute=0, second=0, microsecond=0, tzinfo=None))
+    return dt.replace(hour=12, minute=0, second=0, microsecond=0)
 
 
 def latest_transaction_date():
