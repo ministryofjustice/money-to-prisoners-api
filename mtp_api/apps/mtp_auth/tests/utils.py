@@ -29,7 +29,7 @@ class AuthTestCaseMixin:
             client_id = self.APPLICATION_ID_MAP[group.name]
         application = Application.objects.get(client_id=client_id)
 
-        token = get_random_string()
+        token = get_random_string(length=35)
         AccessToken.objects.create(
             token=token,
             application=application,

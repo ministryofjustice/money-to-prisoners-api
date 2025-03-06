@@ -91,10 +91,12 @@ class UserAdmin(DjangoUserAdmin):
         'prisonusermapping__prisons',
         'applicationusermapping__application'
     )
-    actions = DjangoUserAdmin.actions + ['remove_account_lockouts']
+    # TODO: Revert tuple() conversion once we're using Django 4.x
+    actions = tuple(DjangoUserAdmin.actions) + ('remove_account_lockouts',)
     add_form = RestrictedUserCreationForm
     form = RestrictedUserChangeForm
-    inlines = DjangoUserAdmin.inlines + [FlagInline]
+    # TODO: Revert tuple() conversion once we're using Django 4.x
+    inlines = tuple(DjangoUserAdmin.inlines) + (FlagInline,)
 
     def has_delete_permission(self, request, obj=None):
         return False

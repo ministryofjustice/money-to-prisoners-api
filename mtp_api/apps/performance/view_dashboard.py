@@ -132,10 +132,7 @@ def get_next_month(month, year):
 
 
 def make_first_of_month(month, month_year, tz):
-    month_and_year = datetime.datetime(year=month_year, month=month, day=1)
-    month_and_year = tz.localize(month_and_year)
-
-    return month_and_year
+    return datetime.datetime(year=month_year, month=month, day=1, tzinfo=tz)
 
 
 class PerformanceDashboardView(AdminViewMixin, TemplateView):
