@@ -24,4 +24,4 @@ pyjwt~=2.9.0
 
 # these are used mainly in tests, but are required to load random data in test environments
 Faker~=33.1
-model-bakery~=1.17
+model-bakery~=1.20
