@@ -1,9 +1,8 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest import mock
 
 from django.core.management import CommandError, call_command
 from django.test import TestCase
-from django.utils.timezone import utc
 
 from core.tests.utils import make_test_users
 from credit.models import Credit
@@ -23,7 +22,7 @@ class AbandonedPaymentClearingTestCase(TestCase):
 
     @mock.patch('django.utils.timezone.now')
     def test_clearing_abandoned_payments(self, mocked_now):
-        now = datetime(2016, 10, 5, 12, tzinfo=utc)
+        now = datetime(2016, 10, 5, 12, tzinfo=timezone.utc)
         mocked_now.return_value = now
         abandoned_count = Payment.objects.abandoned(now - timedelta(days=2)).count()
         call_command('clear_abandoned_payments', age=2, verbosity=0)
@@ -33,7 +32,7 @@ class AbandonedPaymentClearingTestCase(TestCase):
 
     @mock.patch('django.utils.timezone.now')
     def test_clearing_abandoned_payments_does_nothing_if_none_exist(self, mocked_now):
-        now = datetime(2016, 10, 5, 12, tzinfo=utc)
+        now = datetime(2016, 10, 5, 12, tzinfo=timezone.utc)
         mocked_now.return_value = now
         abandoned_count = Payment.objects.abandoned(now - timedelta(days=2)).count()
         call_command('clear_abandoned_payments', age=2, verbosity=0)

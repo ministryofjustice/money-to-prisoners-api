@@ -1,4 +1,4 @@
-from django.conf.urls import url, include
+from django.urls import include, re_path
 from rest_framework import routers
 
 from payment import views
@@ -8,5 +8,5 @@ router.register(r'payments', views.PaymentView)
 router.register(r'batches', views.BatchView)
 
 urlpatterns = [
-    url(r'^', include(router.urls)),
+    re_path(r'^', include(router.urls)),
 ]

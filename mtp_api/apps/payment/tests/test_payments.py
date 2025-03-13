@@ -1,8 +1,7 @@
-from datetime import datetime, time, timedelta
+from datetime import datetime, time, timedelta, timezone
 
 from django.conf import settings
 from django.test import TestCase
-from django.utils.timezone import utc
 
 from core.tests.utils import make_test_users
 from payment.constants import PaymentStatus
@@ -12,7 +11,7 @@ from prison.tests.utils import load_random_prisoner_locations
 
 
 def get_worldpay_cutoff(date):
-    return datetime.combine(date, time(0, 0, 0, tzinfo=utc))
+    return datetime.combine(date, time(0, 0, 0, tzinfo=timezone.utc))
 
 
 class ReconcilePaymentsTestCase(TestCase):

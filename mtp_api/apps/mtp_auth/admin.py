@@ -91,10 +91,10 @@ class UserAdmin(DjangoUserAdmin):
         'prisonusermapping__prisons',
         'applicationusermapping__application'
     )
-    actions = DjangoUserAdmin.actions + ['remove_account_lockouts']
+    actions = DjangoUserAdmin.actions + ('remove_account_lockouts',)
     add_form = RestrictedUserCreationForm
     form = RestrictedUserChangeForm
-    inlines = DjangoUserAdmin.inlines + [FlagInline]
+    inlines = DjangoUserAdmin.inlines + (FlagInline,)
 
     def has_delete_permission(self, request, obj=None):
         return False

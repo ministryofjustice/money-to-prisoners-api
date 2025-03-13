@@ -1,4 +1,4 @@
-from django.conf.urls import url, include
+from django.urls import include, re_path
 from rest_framework import routers
 
 from account import views
@@ -7,5 +7,5 @@ router = routers.DefaultRouter()
 router.register(r'balances', views.BalanceView)
 
 urlpatterns = [
-    url(r'^', include(router.urls)),
+    re_path(r'^', include(router.urls)),
 ]

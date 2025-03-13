@@ -1,7 +1,5 @@
 import functools
 
-default_app_config = 'core.app.AppConfig'
-
 _not_provided = object()
 
 
