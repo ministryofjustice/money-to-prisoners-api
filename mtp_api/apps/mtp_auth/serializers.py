@@ -3,6 +3,7 @@ from django.contrib.auth.models import Group
 from django.contrib.auth.password_validation import get_default_password_validators
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.transaction import atomic
+from django.utils.crypto import get_random_string
 from django.utils.translation import gettext, gettext_lazy as _
 from mtp_common.tasks import send_email
 from rest_framework import serializers
@@ -23,7 +24,7 @@ def generate_new_password():
 
     validators = get_default_password_validators()
     for __ in range(5):
-        password = User.objects.make_random_password(length=10)
+        password = get_random_string(length=10, allowed_chars='abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789')
         try:
             for validator in validators:
                 validator.validate(password)
