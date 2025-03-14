@@ -1,4 +1,4 @@
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone as tz
 
 from django.contrib.auth import get_user_model
 from django.urls import reverse, reverse_lazy
@@ -284,7 +284,7 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(log.action, LogAction.failed.value)
 
     def test_update_received_at_succeeds(self):
-        received_at = datetime(2016, 9, 22, 23, 12, tzinfo=timezone.utc)
+        received_at = datetime(2016, 9, 22, 23, 12, tzinfo=tz.utc)
         response = self._test_update_payment(
             status=PaymentStatus.taken.value,
             received_at=received_at.isoformat(),

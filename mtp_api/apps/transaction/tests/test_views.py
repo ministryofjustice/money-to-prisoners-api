@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta, time
+from datetime import date, datetime, timedelta, time, timezone as tz
 
 from django.conf import settings
 from django.urls import reverse
@@ -554,11 +554,11 @@ class GetTransactionsFilteredByDateTestCase(GetTransactionsBaseTestCase):
 
         start_date = datetime.combine(
             self._get_latest_date() - timedelta(days=2),
-            time(10, 0, tzinfo=timezone.utc)
+            time(10, 0, tzinfo=tz.utc)
         )
         end_date = datetime.combine(
             self._get_latest_date(),
-            time(22, 0, tzinfo=timezone.utc)
+            time(22, 0, tzinfo=tz.utc)
         )
 
         response = self.client.get(
@@ -612,11 +612,11 @@ class ReconcileTransactionsTestCase(
     def _get_date_bounds(self):
         start_date = datetime.combine(
             self._get_latest_date(),
-            time(0, 0, tzinfo=timezone.utc)
+            time(0, 0, tzinfo=tz.utc)
         )
         end_date = datetime.combine(
             self._get_latest_date() + timedelta(days=1),
-            time(0, 0, tzinfo=timezone.utc)
+            time(0, 0, tzinfo=tz.utc)
         )
         return start_date, end_date
 
