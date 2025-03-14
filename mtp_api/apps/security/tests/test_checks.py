@@ -488,7 +488,7 @@ class AutomaticCreditCheckTestCase(APITestCase, AuthTestCaseMixin):
             format='json', HTTP_AUTHORIZATION=auth_header,
         )
         payment = response.json()
-        self.assertQuerysetEqual(Check.objects.filter(credit__payment__uuid=payment['uuid']), [])
+        self.assertQuerySetEqual(Check.objects.filter(credit__payment__uuid=payment['uuid']), [])
 
         payment_update = {
             'email': 'sender@outside.local',
@@ -541,7 +541,7 @@ class AutomaticCreditCheckTestCase(APITestCase, AuthTestCaseMixin):
             format='json', HTTP_AUTHORIZATION=auth_header,
         )
         payment = response.json()
-        self.assertQuerysetEqual(Check.objects.filter(credit__payment__uuid=payment['uuid']), [])
+        self.assertQuerySetEqual(Check.objects.filter(credit__payment__uuid=payment['uuid']), [])
 
         payment_update = {
             'email': 'sender@outside.local',

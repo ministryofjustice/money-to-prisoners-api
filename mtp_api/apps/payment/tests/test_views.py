@@ -1,4 +1,4 @@
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone as tz
 
 from django.contrib.auth import get_user_model
 from django.urls import reverse, reverse_lazy
@@ -230,8 +230,8 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         })
         payment = Payment.objects.first()
         credit = payment.credit
-        self.assertQuerysetEqual(credit.prisoner_profile.senders.all(), [credit.sender_profile], transform=lambda x: x)
-        self.assertQuerysetEqual(credit.sender_profile.prisons.all(), [credit.prison], transform=lambda x: x)
+        self.assertQuerySetEqual(credit.prisoner_profile.senders.all(), [credit.sender_profile], transform=lambda x: x)
+        self.assertQuerySetEqual(credit.sender_profile.prisons.all(), [credit.prison], transform=lambda x: x)
 
         response = self.client.patch(
             reverse('payment-detail', args=[self.payment_uuid]),
@@ -251,8 +251,8 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
 
         self.assertEqual(payment.status, PaymentStatus.rejected.value)
         self.assertEqual(credit.resolution, CreditResolution.failed.value)
-        self.assertQuerysetEqual(credit.prisoner_profile.senders.all(), [])
-        self.assertQuerysetEqual(credit.sender_profile.prisons.all(), [])
+        self.assertQuerySetEqual(credit.prisoner_profile.senders.all(), [])
+        self.assertQuerySetEqual(credit.sender_profile.prisons.all(), [])
         self.assertIsNotNone(credit.prison)
         self.assertIsNotNone(credit.prisoner_name)
         self.assertIsNone(credit.received_at)
@@ -284,7 +284,7 @@ class UpdatePaymentViewTestCase(AuthTestCaseMixin, APITestCase):
         self.assertEqual(log.action, LogAction.failed.value)
 
     def test_update_received_at_succeeds(self):
-        received_at = datetime(2016, 9, 22, 23, 12, tzinfo=timezone.utc)
+        received_at = datetime(2016, 9, 22, 23, 12, tzinfo=tz.utc)
         response = self._test_update_payment(
             status=PaymentStatus.taken.value,
             received_at=received_at.isoformat(),

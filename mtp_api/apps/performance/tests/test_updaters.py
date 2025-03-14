@@ -1,5 +1,5 @@
 import base64
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone as tz
 from unittest import mock
 
 from django.db.models import Sum
@@ -27,7 +27,7 @@ class CompletionRateTestCase(TestCase):
 
     @mock.patch('performance.updaters.timezone.now')
     def test_last_week_timestamp(self, mock_now):
-        mock_now.return_value = datetime(2016, 8, 22, 12, 54, 53, tzinfo=timezone.utc)
+        mock_now.return_value = datetime(2016, 8, 22, 12, 54, 53, tzinfo=tz.utc)
 
         updater = updaters.TotalCompletionRateUpdater()
         self.assertEqual(
@@ -74,7 +74,7 @@ class CompletionRateTestCase(TestCase):
     @mock.patch('performance.updaters.timezone.now')
     @mock.patch('performance.updaters.requests')
     def test_run(self, mock_requests, mock_now):
-        timestamp = datetime(2016, 8, 22, 12, 54, 53, tzinfo=timezone.utc)
+        timestamp = datetime(2016, 8, 22, 12, 54, 53, tzinfo=tz.utc)
         mock_now.return_value = timestamp
         mock_requests.post.return_value = mock.MagicMock()
         mock_requests.post.return_value.status_code = 200
@@ -109,7 +109,7 @@ class TransactionsByChannelTypeTestCase(TestCase):
     def setUp(self):
         super().setUp()
         self.data_date = date(2016, 8, 21)
-        self.now = datetime(2016, 8, 22, 12, 54, 53, tzinfo=timezone.utc)
+        self.now = datetime(2016, 8, 22, 12, 54, 53, tzinfo=tz.utc)
         DigitalTakeup(
             date=self.data_date, prison=Prison.objects.all()[0], credits_by_post=3, credits_by_mtp=5
         ).save()
