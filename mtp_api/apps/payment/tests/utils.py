@@ -1,4 +1,5 @@
 import datetime
+from datetime import timezone as tz
 from itertools import cycle
 import random
 import uuid
@@ -161,11 +162,11 @@ def create_payments(
         while reconciliation_date < latest_payment_date().date() - datetime.timedelta(days=1):
             start_date = datetime.datetime.combine(
                 reconciliation_date,
-                datetime.time(0, 0, tzinfo=timezone.utc)
+                datetime.time(0, 0, tzinfo=tz.utc)
             )
             end_date = datetime.datetime.combine(
                 reconciliation_date + datetime.timedelta(days=1),
-                datetime.time(0, 0, tzinfo=timezone.utc)
+                datetime.time(0, 0, tzinfo=tz.utc)
             )
             Payment.objects.reconcile(start_date, end_date, None)
             reconciliation_date += datetime.timedelta(days=1)

@@ -3,7 +3,7 @@ NB: GOV.UK have retired the performance platform
 """
 
 import base64
-from datetime import datetime, time, timedelta
+from datetime import datetime, time, timedelta, timezone as tz
 import logging
 from urllib.parse import urljoin
 
@@ -61,7 +61,7 @@ class BaseUpdater:
         if self._skip():
             logger.warning('Performance platform update skipped for %(resource)s', {'resource': self.resource})
             return
-        govuk_timestamp = self.timestamp.replace(tzinfo=timezone.utc).isoformat()
+        govuk_timestamp = self.timestamp.replace(tzinfo=tz.utc).isoformat()
         self.data.update(
             service='money to prisoners',
             period=self.period,

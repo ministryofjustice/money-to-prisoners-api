@@ -1,6 +1,6 @@
 # Dependencies needed for all environments
 
-money-to-prisoners-common~=17.1.0
+money-to-prisoners-common~=19.0.1
 
 psycopg2~=2.9.9
 
@@ -12,7 +12,7 @@ django-filter~=23.5
 oauthlib~=3.2.2
 django-oauth-toolkit~=2.4.0
 drf-extensions~=0.7.1
-drf-nested-routers~=0.93.5
+drf-nested-routers~=0.94.1
 crontab~=1.0
 xlrd~=2.0.1
 reportlab~=4.2
@@ -24,4 +24,4 @@ pyjwt~=2.9.0
 
 # these are used mainly in tests, but are required to load random data in test environments
 Faker~=33.1
-model-bakery~=1.17
+model-bakery~=1.20
