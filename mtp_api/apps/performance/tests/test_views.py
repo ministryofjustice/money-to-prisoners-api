@@ -145,7 +145,7 @@ class PerformanceDataViewTestCase(AuthTestCaseMixin, APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('Enter a valid date.', response.json()['week__lt'])
+        self.assertIn('Enter a valid date', response.json()['week__lt'])
 
         # Both "dates" not valid
         params = {
@@ -159,8 +159,8 @@ class PerformanceDataViewTestCase(AuthTestCaseMixin, APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         body = response.json()
-        self.assertIn('Enter a valid date.', body['week__gte'])
-        self.assertIn('Enter a valid date.', body['week__lt'])
+        self.assertIn('Enter a valid date', body['week__gte'])
+        self.assertIn('Enter a valid date', body['week__lt'])
 
     def _monday_n_weeks_ago(self, weeks_ago):
         """
