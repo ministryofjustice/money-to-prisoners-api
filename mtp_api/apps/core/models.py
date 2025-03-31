@@ -89,8 +89,8 @@ class TruncUtcDate(TruncBase):
         # Cast to UTC date rather than truncate to date.
         lhs, lhs_params = compiler.compile(self.lhs)
         tzname = 'utc' if settings.USE_TZ else None
-        sql = connection.ops.datetime_cast_date_sql(lhs, tzname)
-        return sql, lhs_params
+        sql, params = connection.ops.datetime_cast_date_sql(lhs, lhs_params, tzname)
+        return sql, params
 
 
 class TruncLocalDate(TruncBase):
@@ -102,8 +102,8 @@ class TruncLocalDate(TruncBase):
         # Cast to local date rather than truncate to date.
         lhs, lhs_params = compiler.compile(self.lhs)
         tzname = settings.TIME_ZONE if settings.USE_TZ else None
-        sql = connection.ops.datetime_cast_date_sql(lhs, tzname)
-        return sql, lhs_params
+        sql, params = connection.ops.datetime_cast_date_sql(lhs, lhs_params, tzname)
+        return sql, params
 
 
 models.DateTimeField.register_lookup(TruncUtcDate)

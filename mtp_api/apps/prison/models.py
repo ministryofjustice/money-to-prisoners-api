@@ -109,9 +109,9 @@ class PrisonerLocation(TimeStampedModel):
     active = models.BooleanField(default=False, db_index=True)
 
     class Meta:
-        index_together = (
-            ('prisoner_number', 'prisoner_dob'),
-        )
+        indexes = [
+            models.Index(fields=['prisoner_number', 'prisoner_dob']),
+        ]
         ordering = ('prisoner_number',)
         get_latest_by = 'created'
 
@@ -136,9 +136,9 @@ class PrisonerBalance(TimeStampedModel):
     amount = models.BigIntegerField()
 
     class Meta:
-        index_together = (
-            ('prisoner_number', 'prison'),
-        )
+        indexes = [
+            models.Index(fields=['prisoner_number', 'prison']),
+        ]
 
     def __str__(self):
         return f'{self.prisoner_number} has balance £{self.amount/100:0.2f}'
