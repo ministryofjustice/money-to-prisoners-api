@@ -1,7 +1,7 @@
 import datetime
+from datetime import timezone
 
 from django.utils.dateformat import format as format_date
-from django.utils import timezone
 
 from credit.tests.test_views.test_credit_list import CreditListTestCase
 
