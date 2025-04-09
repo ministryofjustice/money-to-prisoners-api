@@ -507,14 +507,15 @@ class AccountRequestViewSet(viewsets.ModelViewSet):
                 staff_email=True,
             )
 
-        LogEntry.objects.log_action(
+        LogEntry.objects.create(
             user_id=request.user.pk,
             content_type_id=get_content_type_for_model(user).pk,
-            object_id=user.pk,
+            object_id=str(user.pk),
             object_repr=gettext('Accepted account request for %(username)s') % {
                 'username': user.username,
             },
             action_flag=CHANGE_LOG_ENTRY,
+            change_message='',
         )
 
         instance.delete()
@@ -529,14 +530,15 @@ class AccountRequestViewSet(viewsets.ModelViewSet):
             },
             staff_email=True,
         )
-        LogEntry.objects.log_action(
+        LogEntry.objects.create(
             user_id=self.request.user.pk,
             content_type_id=get_content_type_for_model(instance).pk,
-            object_id=instance.pk,
+            object_id=str(instance.pk),
             object_repr=gettext('Declined account request from %(username)s') % {
                 'username': instance.username,
             },
             action_flag=DELETION_LOG_ENTRY,
+            change_message='',
         )
         super().perform_destroy(instance)
 
