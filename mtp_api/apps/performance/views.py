@@ -57,14 +57,14 @@ class DigitalTakeupUploadView(AdminViewMixin, FormView):
 
         self.update_performance_data(form.date)
 
-        LogEntry.objects.log_action(
+        LogEntry.objects.create(
             user_id=self.request.user.pk,
-            content_type_id=None, object_id=None,
             object_repr=self.save_message % {
                 'date': date_format(form.date, 'DATE_FORMAT'),
                 'prison_count': len(form.credits_by_prison),
             },
             action_flag=ADDITION_LOG_ENTRY,
+            change_message='',
         )
         messages.success(self.request, self.save_message % {
             'date': date_format(form.date, 'DATE_FORMAT'),
@@ -158,11 +158,11 @@ class UserSatisfactionUploadView(AdminViewMixin, FormView):
         message = _('Saved user satisfaction records for %(count)d days') % {
             'count': len(form.records),
         }
-        LogEntry.objects.log_action(
+        LogEntry.objects.create(
             user_id=self.request.user.pk,
-            content_type_id=None, object_id=None,
             object_repr=message,
             action_flag=ADDITION_LOG_ENTRY,
+            change_message='',
         )
         messages.success(self.request, message)
         return super().form_valid(form)

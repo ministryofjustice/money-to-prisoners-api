@@ -1,4 +1,4 @@
-from datetime import datetime, time
+from datetime import datetime, time, timezone as tz
 
 from django.db import models
 from django.utils import timezone
@@ -96,7 +96,7 @@ class BaseCreditViewTestCase(AuthTestCaseMixin, APITestCase):
                     c
                     for c in credits
                     if c.received_at
-                    and c.received_at < datetime.combine(timezone.now().date(), time.min).replace(tzinfo=timezone.utc)
+                    and c.received_at < datetime.combine(timezone.now().date(), time.min).replace(tzinfo=tz.utc)
                 ]
             managing_prisons = list(PrisonUserMapping.objects.get_prison_set_for_user(logged_in_user))
             return [c for c in credits if c.prison in managing_prisons]

@@ -105,11 +105,13 @@ class UserAdmin(DjangoUserAdmin):
             attempts = FailedLoginAttempt.objects.filter(user=instance)
             if attempts.count():
                 attempts.delete()
-                LogEntry.objects.log_action(
+                LogEntry.objects.create(
                     user_id=request.user.pk,
-                    content_type_id=get_content_type_for_model(instance).pk, object_id=instance.pk,
+                    content_type_id=get_content_type_for_model(instance).pk,
+                    object_id=str(instance.pk),
                     object_repr=_('Remove lockouts'),
                     action_flag=CHANGE_LOG_ENTRY,
+                    change_message='',
                 )
                 accounts.append(instance)
         if accounts:
