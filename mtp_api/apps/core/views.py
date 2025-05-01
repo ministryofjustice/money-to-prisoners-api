@@ -247,13 +247,13 @@ class RecreateTestDataView(AdminViewMixin, FormView):
         output.seek(0)
         command_output = output.read()
 
-        LogEntry.objects.log_action(
+        LogEntry.objects.create(
             user_id=self.request.user.pk,
-            content_type_id=None, object_id=None,
             object_repr=_('Data reset to %(scenario)s scenario') % {
                 'scenario': scenario
             },
             action_flag=CHANGE_LOG_ENTRY,
+            change_message='',
         )
         logger.info('User "%(username)s" reset data for testing using "%(scenario)s" scenario', {
             'username': self.request.user.username,
