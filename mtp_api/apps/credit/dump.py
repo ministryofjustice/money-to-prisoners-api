@@ -63,7 +63,10 @@ class CreditSerialiser(Serialiser):
             'NOMIS transaction', 'WorldPay order code',
 
             'Security check codes', 'Security check description',
-            'Security check status', 'Security check actioned by', 'Security check rejection reasons',
+            'Security check status',
+            'Security check actioned by',
+            'Security check decision reason',
+            'Security check rejection reasons',
         ]
         return headers
 
@@ -135,6 +138,7 @@ class CreditSerialiser(Serialiser):
             security_check_description = '; '.join(security_check.description)
             security_check_status = CheckStatus[security_check.status].label
             security_check_actioned_by = security_check.actioned_by.username if security_check.actioned_by else ''
+            security_check_decision_reason = security_check.decision_reason
             if len(security_check.rules) > 0:
                 security_check_rules = security_check.rules
                 security_check_rejection_reasons = '; '.join(
@@ -148,6 +152,7 @@ class CreditSerialiser(Serialiser):
                 'Security check description': security_check_description,
                 'Security check status': security_check_status,
                 'Security check actioned by': security_check_actioned_by,
+                'Security check decision reason': security_check_decision_reason,
                 'Security check rejection reasons': security_check_rejection_reasons,
             }
 
