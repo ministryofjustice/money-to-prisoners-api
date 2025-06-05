@@ -102,6 +102,7 @@ class Command(BaseDumpCommand):
             'Security check actioned by': 'security_check_actioned_by',
             'Security check codes': 'security_check_codes',
             'Security check description': 'security_check_description',
+            'Security check decision reason': 'security_check_decision_reason',
             'Security check rejection reasons': 'security_check_rejection_reasons',
             'Security check status': 'security_check_status',
             'Sender email': 'sender_email',
