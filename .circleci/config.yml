@@ -8,7 +8,7 @@ parameters:
   postgres-version:
     type: string
     description: tag of cimg/postgres docker image to use
-    default: '16.1'
+    default: '16.8'
   kubectl-version:
     type: string
     description: version of kubectl binary to use
