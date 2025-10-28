@@ -12,7 +12,7 @@ parameters:
   kubectl-version:
     type: string
     description: version of kubectl binary to use
-    default: v1.31.6
+    default: v1.32.9
 
 commands:
   setup:
@@ -219,7 +219,7 @@ jobs:
           name: Install kubectl
           command: |
             curl -LO https://dl.k8s.io/release/<< pipeline.parameters.kubectl-version >>/bin/linux/amd64/kubectl
-            echo "$(curl -L -s https://dl.k8s.io/<< pipeline.parameters.kubectl-version >>/bin/linux/amd64/kubectl.sha256) kubectl" | sha256sum --check
+            echo "$(curl -L -s https://dl.k8s.io/release/<< pipeline.parameters.kubectl-version >>/bin/linux/amd64/kubectl.sha256) kubectl" | sha256sum --check
             sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
             kubectl version --client --output yaml
       - run:
