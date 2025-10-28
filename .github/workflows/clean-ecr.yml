@@ -19,7 +19,7 @@ jobs:
           ref: main
 
       - name: Assume IAM role to access ECR
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           aws-region: ${{ vars.ECR_REGION }}
           role-to-assume: ${{ secrets.ECR_ROLE_TO_ASSUME }}
