@@ -1,8 +1,9 @@
 # Dependencies needed for all environments
 
-money-to-prisoners-common~=21.1.0
+money-to-prisoners-common~=21.2.0
 
-psycopg2~=2.9.9
+# TODO: move to psycopg3
+psycopg2~=2.9.11
 
 coreapi~=2.3.3
 djangorestframework~=3.16.1

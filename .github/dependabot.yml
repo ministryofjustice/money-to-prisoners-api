@@ -4,9 +4,10 @@ updates:
   - package-ecosystem: pip
     directory: /requirements/
     ignore:
+      # TODO: move to psycopg3
       - dependency-name: psycopg2-binary
         versions:
-          - ">=2.9"  # once on django 4.2+, use psycopg3
+          - ">=2.9"
     schedule:
       interval: monthly
     pull-request-branch-name:
