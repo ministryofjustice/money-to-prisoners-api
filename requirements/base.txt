@@ -8,7 +8,7 @@ psycopg2~=2.9.11
 coreapi~=2.3.3
 djangorestframework~=3.16.1
 drf-yasg~=1.21.11
-django-filter~=25.1
+django-filter~=25.2
 django-model-utils~=5.0.0
 oauthlib~=3.3.1
 django-oauth-toolkit~=3.1.0
@@ -24,5 +24,5 @@ openpyxl~=3.1
 pyjwt~=2.10.1
 
 # these are used mainly in tests, but are required to load random data in test environments
-Faker~=33.1
 model-bakery~=1.23
+Faker~=40.1
