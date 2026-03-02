@@ -24,7 +24,7 @@ Some build tasks expect the active virtual environment to be at `/venv/`, but sh
 its location.
 
 You can copy `mtp_api/settings/local.py.sample` to `local.py` to overlay local settings that won’t be committed,
-for example DB name, but it’s not required for a standard setup.
+for example, DB name, but it’s not required for a standard setup.
 
 Create a PostgreSQL database called `mtp_api` (to use a different name, edit your local settings appropriately).
 
