@@ -1,0 +1,19 @@
+# Runs the services needed for running the application entirely locally
+
+services:
+
+  mtp-db:
+    image: postgres:16
+    container_name: mtp-postgres
+    networks:
+      - hmpps
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=mtp_api
+
+networks:
+  hmpps:
