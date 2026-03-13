@@ -2,6 +2,8 @@
 
 Backend and internal admin site for [Prisoner Money suite of apps](https://github.com/ministryofjustice/money-to-prisoners).
 
+View overview and guidelines [here](guidelines.md)
+
 ## Requirements
 
 - Unix-like platform with Python 3.12 and NodeJS 24 (e.g. via [nvm](https://github.com/nvm-sh/nvm#installing-and-updating) or [fnm](https://github.com/Schniz/fnm#installation))
