@@ -47,6 +47,7 @@ class Command(TestServerCommand):
 
         def extended_create_test_db(self, *args, **kwargs):
             # extends the test db creation method to load and generate testing data
+            kwargs['keepdb'] = True
             db_name = create_test_db(*args, **kwargs)
             call_command('loaddata', *fixture_labels, **{'verbosity': this.verbosity})
             this.load_test_data()
