@@ -6,10 +6,13 @@ from django.utils.translation import gettext_lazy as _
 from django.views.generic import RedirectView
 from moj_irat.views import HealthcheckView, PingJsonView
 from mtp_common.metrics.views import metrics_view
-
+from .simulator.simulate_send_money import simulate_get_payment_response, simulate_payment_response
 from .views import schema_view
 
 urlpatterns = [
+     re_path('gov-uk/payments/$', simulate_payment_response, name='simulate-payment-response'),
+    re_path('gov-uk/payments/(?P<processor_id>[\w-]+)/$', simulate_get_payment_response, name='simulate-get-payments'),
+
     re_path(r'^', include('prison.urls')),
     re_path(r'^', include('mtp_auth.urls')),
     re_path(r'^', include('transaction.urls')),
