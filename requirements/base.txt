@@ -5,7 +5,7 @@ money-to-prisoners-common~=21.2.1
 # TODO: move to psycopg3
 psycopg2~=2.9.11
 
-djangorestframework~=3.16.1
+djangorestframework~=3.17.1
 drf-yasg~=1.21.15
 django-filter~=25.2
 django-model-utils~=5.0.0
