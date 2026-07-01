@@ -3,7 +3,7 @@
 money-to-prisoners-common~=21.2.5
 
 # TODO: move to psycopg3
-psycopg2~=2.9.11
+psycopg2~=2.9.12
 
 djangorestframework~=3.17.1
 drf-yasg~=1.21.15
