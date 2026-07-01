@@ -20,7 +20,7 @@ python-dateutil>=2.9.0.post0
 numpy>=2.4.6,<3
 scipy>=1.17.1,<2
 openpyxl~=3.1
-pyjwt~=2.12.1
+pyjwt~=2.13.0
 
 # these are used mainly in tests, but are required to load random data in test environments
 model-bakery~=1.23
