@@ -9,6 +9,11 @@
 # excludes files nested in test sub-packages). NB: CircleCI has never run those
 # nested files (~27 of them) — that is a pre-existing CI coverage gap tracked
 # separately; do not silently change this selection without addressing it.
+#
+# Each job recomputes the image tag from the immutable github context + its own
+# ECR login, rather than passing it via job outputs: `needs.<job>.outputs` proved
+# unreliable here (arrived empty downstream even on fresh pushes). Recomputing is
+# deterministic and also makes re-runs correct.
 name: Build, test and push
 on:
   push:
@@ -19,10 +24,6 @@ jobs:
   build:
     name: Build image
     runs-on: ubuntu-latest
-    outputs:
-      tag: ${{ steps.tags.outputs.tag }}
-      version: ${{ steps.tags.outputs.version }}
-      registry: ${{ steps.tags.outputs.registry }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -42,7 +43,7 @@ jobs:
           tag=api.${version}
           registry=${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}
           echo "version=${version}" >> "$GITHUB_OUTPUT"
-          echo "tag=${tag}"         >> "$GITHUB_OUTPUT"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
           echo "registry=${registry}" >> "$GITHUB_OUTPUT"
           echo "Building ${tag}"
       - name: Pull base image
@@ -80,10 +81,16 @@ jobs:
           aws-region: ${{ vars.ECR_REGION }}
           role-to-assume: ${{ secrets.ECR_ROLE_TO_ASSUME }}
       - name: Log docker into ECR
+        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
+      - name: Compute image tags
+        id: tags
+        run: |
+          branch_lc=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]')
+          echo "image=${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:api.${branch_lc}.${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
       - name: Run check + makemigrations --check
         env:
-          IMAGE: ${{ needs.build.outputs.registry }}:${{ needs.build.outputs.tag }}
+          IMAGE: ${{ steps.tags.outputs.image }}
         run: |
           docker pull ${IMAGE}
           docker run --name postgres --detach \
@@ -114,7 +121,13 @@ jobs:
           aws-region: ${{ vars.ECR_REGION }}
           role-to-assume: ${{ secrets.ECR_ROLE_TO_ASSUME }}
       - name: Log docker into ECR
+        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
+      - name: Compute image tags
+        id: tags
+        run: |
+          branch_lc=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]')
+          echo "image=${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:api.${branch_lc}.${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
       - name: Select this shard's test modules
         id: modules
         run: |
@@ -126,7 +139,7 @@ jobs:
           echo "Shard ${{ matrix.shard }} runs: ${modules}"
       - name: Test docker image
         env:
-          IMAGE: ${{ needs.build.outputs.registry }}:${{ needs.build.outputs.tag }}
+          IMAGE: ${{ steps.tags.outputs.image }}
           TESTMODULES: ${{ steps.modules.outputs.modules }}
         run: |
           docker pull ${IMAGE}
@@ -164,16 +177,20 @@ jobs:
           aws-region: ${{ vars.ECR_REGION }}
           role-to-assume: ${{ secrets.ECR_ROLE_TO_ASSUME }}
       - name: Log docker into ECR
+        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
+      - name: Compute image tags
+        id: tags
+        run: |
+          branch_lc=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]')
+          registry=${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}
+          echo "registry=${registry}" >> "$GITHUB_OUTPUT"
+          echo "tag=api.${branch_lc}.${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
       - name: Push api (acts as latest)
         env:
-          REGISTRY: ${{ needs.build.outputs.registry }}
-          TAG: ${{ needs.build.outputs.tag }}
+          REGISTRY: ${{ steps.tags.outputs.registry }}
+          TAG: ${{ steps.tags.outputs.tag }}
         run: |
-          if [ -z "${REGISTRY}" ] || [ -z "${TAG}" ]; then
-            echo "::error::build outputs are empty — this happens when RE-RUNNING the workflow (GitHub does not repopulate needs.build.outputs on a re-run). Push a new commit instead of re-running."
-            exit 1
-          fi
           docker pull ${REGISTRY}:${TAG}
           docker tag ${REGISTRY}:${TAG} ${REGISTRY}:api
           docker push ${REGISTRY}:api
@@ -184,31 +201,46 @@ jobs:
     if: ${{ github.ref_name == 'main' && vars.GHA_DEPLOY_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     steps:
+      - name: Assume IAM role to access ECR
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-region: ${{ vars.ECR_REGION }}
+          role-to-assume: ${{ secrets.ECR_ROLE_TO_ASSUME }}
+      - name: Log docker into ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Compute image tags
+        id: tags
+        run: |
+          branch_lc=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]')
+          version=${branch_lc}.${GITHUB_SHA::7}
+          registry=${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "image=${registry}:api.${version}" >> "$GITHUB_OUTPUT"
       - name: Install kubectl
         uses: azure/setup-kubectl@v4
         with:
           version: v1.32.9
       - name: Deploy to test
         env:
-          REGISTRY: ${{ needs.build.outputs.registry }}
-          TAG: ${{ needs.build.outputs.tag }}
-          VERSION: ${{ needs.build.outputs.version }}
+          IMAGE: ${{ steps.tags.outputs.image }}
+          VERSION: ${{ steps.tags.outputs.version }}
           K8S_CLUSTER_CERT: ${{ secrets.K8S_CLUSTER_CERT }}
           K8S_CLUSTER_NAME: ${{ secrets.K8S_CLUSTER_NAME }}
           K8S_CLUSTER_SERVER: ${{ secrets.K8S_CLUSTER_SERVER }}
           K8S_NAMESPACE: ${{ secrets.K8S_NAMESPACE }}
           K8S_TOKEN: ${{ secrets.K8S_TOKEN }}
         run: |
-          if [ -z "${REGISTRY}" ] || [ -z "${TAG}" ] || [ -z "${VERSION}" ]; then
-            echo "::error::build outputs are empty — this happens when RE-RUNNING the workflow (GitHub does not repopulate needs.build.outputs on a re-run). A patch here would set an empty image on the deployment. Push a new commit instead of re-running."
+          # defence in depth: never patch the cluster with an empty image/version
+          if [ -z "${IMAGE}" ] || [ "${IMAGE}" = ":" ] || [ -z "${VERSION}" ]; then
+            echo "::error::computed image/version is empty — refusing to patch the deployment"
             exit 1
           fi
-          echo "Deploying to test"
+          echo "Deploying to test: ${IMAGE}"
           echo -n "${K8S_CLUSTER_CERT}" | base64 -d > /tmp/mtp-k8s-ca.crt
           kubectl config set-cluster ${K8S_CLUSTER_NAME} --certificate-authority=/tmp/mtp-k8s-ca.crt --server=${K8S_CLUSTER_SERVER}
           kubectl config set-credentials github-actions --token=${K8S_TOKEN}
           kubectl config set-context ${K8S_CLUSTER_NAME} --cluster=${K8S_CLUSTER_NAME} --user=github-actions --namespace=${K8S_NAMESPACE}
           kubectl config use-context ${K8S_CLUSTER_NAME}
-          IMAGE=${REGISTRY}:${TAG}
           kubectl patch configmap app-versions --patch "{\"data\": {\"api\": \"${VERSION}\"}}"
           kubectl patch deployment api --type strategic --patch "{\"metadata\": {\"annotations\": {\"kubernetes.io/change-cause\": \"${VERSION}\"}}, \"spec\": {\"template\": {\"spec\": {\"containers\": [{\"name\": \"app\", \"image\": \"${IMAGE}\"}], \"initContainers\": [{\"name\": \"init\", \"image\": \"${IMAGE}\"},{\"name\": \"copy-static\", \"image\": \"${IMAGE}\"}]}}}}"
