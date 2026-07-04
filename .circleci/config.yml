@@ -9,10 +9,6 @@ parameters:
     type: string
     description: tag of cimg/postgres docker image to use
     default: '16.8'
-  kubectl-version:
-    type: string
-    description: version of kubectl binary to use
-    default: v1.32.9
 
 commands:
   setup:
@@ -206,41 +202,6 @@ jobs:
             fi
       - logout-ecr
 
-  deploy:
-    executor:
-      name: aws-ecr/default
-      docker_layer_caching: true
-    environment:
-      app: api
-    working_directory: /tmp/repo
-    steps:
-      - setup
-      - run:
-          name: Install kubectl
-          command: |
-            curl -LO https://dl.k8s.io/release/<< pipeline.parameters.kubectl-version >>/bin/linux/amd64/kubectl
-            echo "$(curl -L -s https://dl.k8s.io/release/<< pipeline.parameters.kubectl-version >>/bin/linux/amd64/kubectl.sha256) kubectl" | sha256sum --check
-            sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
-            kubectl version --client --output yaml
-      - run:
-          name: Deploy to test
-          command: |
-            if [[ "${CIRCLE_BRANCH}" == "main" ]]; then
-              . /tmp/mtp-env.sh
-              echo "Deploying to test"
-
-              echo -n ${K8S_CLUSTER_CERT} | base64 -d > /tmp/mtp-k8s-ca.crt
-              kubectl config set-cluster ${K8S_CLUSTER_NAME} --certificate-authority=/tmp/mtp-k8s-ca.crt --server=${K8S_CLUSTER_SERVER}
-              kubectl config set-credentials circleci --token=${K8S_TOKEN}
-              kubectl config set-context ${K8S_CLUSTER_NAME} --cluster=${K8S_CLUSTER_NAME} --user=circleci --namespace=${K8S_NAMESPACE}
-              kubectl config use-context ${K8S_CLUSTER_NAME}
-              IMAGE=${registry}:${tag}
-              kubectl patch configmap app-versions --patch "{\"data\": {\"${app}\": \"${version}\"}}"
-              kubectl patch deployment ${app} --type strategic --patch "{\"metadata\": {\"annotations\": {\"kubernetes.io/change-cause\": \"${version}\"}}, \"spec\": {\"template\": {\"spec\": {\"containers\": [{\"name\": \"app\", \"image\": \"${IMAGE}\"}], \"initContainers\": [{\"name\": \"init\", \"image\": \"${IMAGE}\"},{\"name\": \"copy-static\", \"image\": \"${IMAGE}\"}]}}}}"
-            else
-              echo "Not deploying to test"
-            fi
-
   clean:
     executor:
       name: aws-ecr/default
@@ -293,9 +254,6 @@ workflows:
           requires:
             - check
             - test
-      - deploy:
-          requires:
-            - push
       - clean:
           requires:
             - push
