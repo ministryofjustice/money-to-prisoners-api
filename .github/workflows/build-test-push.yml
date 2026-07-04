@@ -1,0 +1,206 @@
+# NOTE: bespoke workflow for the api app — do not regenerate from the shared
+# templates-apps generator (the generator skips build-test-push.yml for api).
+# api's test suite has cross-file state dependencies, so tests are split across
+# a matrix of parallel shards (each its own process + Postgres), mirroring the
+# isolation of the CircleCI 16-way `tests split`.
+#
+# The shard selection matches CircleCI's `tests glob "mtp_api/apps/**/tests/test_*.py"`
+# exactly (test files directly under a tests/ dir — the `! -path '*/tests/*/*'`
+# excludes files nested in test sub-packages). NB: CircleCI has never run those
+# nested files (~27 of them) — that is a pre-existing CI coverage gap tracked
+# separately; do not silently change this selection without addressing it.
+name: Build, test and push
+on:
+  push:
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  build:
+    name: Build image
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tags.outputs.tag }}
+      version: ${{ steps.tags.outputs.version }}
+      registry: ${{ steps.tags.outputs.registry }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Assume IAM role to access ECR
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-region: ${{ vars.ECR_REGION }}
+          role-to-assume: ${{ secrets.ECR_ROLE_TO_ASSUME }}
+      - name: Log docker into ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Compute image tags
+        id: tags
+        run: |
+          branch_lc=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]')
+          version=${branch_lc}.${GITHUB_SHA::7}
+          tag=api.${version}
+          registry=${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "tag=${tag}"         >> "$GITHUB_OUTPUT"
+          echo "registry=${registry}" >> "$GITHUB_OUTPUT"
+          echo "Building ${tag}"
+      - name: Pull base image
+        run: |
+          docker pull ${{ steps.tags.outputs.registry }}:base-web
+          docker tag ${{ steps.tags.outputs.registry }}:base-web base-web
+      - name: Build docker image
+        env:
+          TAG: ${{ steps.tags.outputs.tag }}
+        run: |
+          docker build \
+            --force-rm \
+            --build-arg APP_GIT_COMMIT=${GITHUB_SHA} \
+            --build-arg APP_GIT_BRANCH=${GITHUB_REF_NAME} \
+            --build-arg APP_BUILD_TAG=${TAG} \
+            --build-arg APP_BUILD_DATE=$(date +%FT%T%z) \
+            --tag ${TAG} \
+            .
+      - name: Push image to ECR (branch-sha tag, so shards can pull)
+        env:
+          TAG: ${{ steps.tags.outputs.tag }}
+          REGISTRY: ${{ steps.tags.outputs.registry }}
+        run: |
+          docker tag ${TAG} ${REGISTRY}:${TAG}
+          docker push ${REGISTRY}:${TAG}
+
+  check:
+    name: Django checks
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assume IAM role to access ECR
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-region: ${{ vars.ECR_REGION }}
+          role-to-assume: ${{ secrets.ECR_ROLE_TO_ASSUME }}
+      - name: Log docker into ECR
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Run check + makemigrations --check
+        env:
+          IMAGE: ${{ needs.build.outputs.registry }}:${{ needs.build.outputs.tag }}
+        run: |
+          docker pull ${IMAGE}
+          docker run --name postgres --detach \
+            -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=mtp_api \
+            cimg/postgres:16.8
+          sleep 10
+          docker run --name api \
+            -e DJANGO_SETTINGS_MODULE=mtp_api.settings.ci \
+            -e DB_PASSWORD=postgres -e DB_USERNAME=postgres -e DB_HOST=postgres \
+            --link postgres \
+            ${IMAGE} \
+            /bin/bash -c 'cd /app && /app/venv/bin/python manage.py check --verbosity=2 && /app/venv/bin/python manage.py makemigrations --check --verbosity=2'
+
+  test:
+    name: Test (shard ${{ matrix.shard }})
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Assume IAM role to access ECR
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-region: ${{ vars.ECR_REGION }}
+          role-to-assume: ${{ secrets.ECR_ROLE_TO_ASSUME }}
+      - name: Log docker into ECR
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Select this shard's test modules
+        id: modules
+        run: |
+          modules=$(find mtp_api -path '*/tests/test_*.py' ! -path '*/tests/*/*' | sort \
+            | awk -v s=${{ matrix.shard }} 'NR % 16 == s' \
+            | sed 's#/#.#g; s#\.py$##' | tr '\n' ' ')
+          echo "count=$(echo ${modules} | wc -w)" >> "$GITHUB_OUTPUT"
+          echo "modules=${modules}" >> "$GITHUB_OUTPUT"
+          echo "Shard ${{ matrix.shard }} runs: ${modules}"
+      - name: Test docker image
+        env:
+          IMAGE: ${{ needs.build.outputs.registry }}:${{ needs.build.outputs.tag }}
+          TESTMODULES: ${{ steps.modules.outputs.modules }}
+        run: |
+          docker pull ${IMAGE}
+          docker run --name postgres --detach \
+            -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=mtp_api \
+            cimg/postgres:16.8
+          sleep 10
+          docker run --name api \
+            -e DJANGO_SETTINGS_MODULE=mtp_api.settings.ci \
+            -e DB_PASSWORD=postgres -e DB_USERNAME=postgres -e DB_HOST=postgres \
+            -e TESTMODULES="${TESTMODULES}" \
+            --link postgres \
+            ${IMAGE} \
+            /bin/bash -c '/app/venv/bin/pip install -r requirements/ci.txt && cd /app && /app/venv/bin/python manage.py test ${TESTMODULES} --verbosity=2'
+      - name: Extract test reports
+        if: always()
+        run: docker cp api:/app/reports /tmp/reports || true
+      - name: Publish test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-shard-${{ matrix.shard }}
+          path: /tmp/reports
+          if-no-files-found: warn
+
+  push:
+    name: Push latest tag
+    needs: [check, test]
+    if: ${{ github.ref_name == 'main' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assume IAM role to access ECR
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-region: ${{ vars.ECR_REGION }}
+          role-to-assume: ${{ secrets.ECR_ROLE_TO_ASSUME }}
+      - name: Log docker into ECR
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Push api (acts as latest)
+        env:
+          REGISTRY: ${{ needs.build.outputs.registry }}
+          TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          docker pull ${REGISTRY}:${TAG}
+          docker tag ${REGISTRY}:${TAG} ${REGISTRY}:api
+          docker push ${REGISTRY}:api
+
+  deploy:
+    name: Deploy to test
+    needs: [check, test]
+    if: ${{ github.ref_name == 'main' && vars.GHA_DEPLOY_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.32.9
+      - name: Deploy to test
+        env:
+          REGISTRY: ${{ needs.build.outputs.registry }}
+          TAG: ${{ needs.build.outputs.tag }}
+          VERSION: ${{ needs.build.outputs.version }}
+          K8S_CLUSTER_CERT: ${{ secrets.K8S_CLUSTER_CERT }}
+          K8S_CLUSTER_NAME: ${{ secrets.K8S_CLUSTER_NAME }}
+          K8S_CLUSTER_SERVER: ${{ secrets.K8S_CLUSTER_SERVER }}
+          K8S_NAMESPACE: ${{ secrets.K8S_NAMESPACE }}
+          K8S_TOKEN: ${{ secrets.K8S_TOKEN }}
+        run: |
+          echo "Deploying to test"
+          echo -n "${K8S_CLUSTER_CERT}" | base64 -d > /tmp/mtp-k8s-ca.crt
+          kubectl config set-cluster ${K8S_CLUSTER_NAME} --certificate-authority=/tmp/mtp-k8s-ca.crt --server=${K8S_CLUSTER_SERVER}
+          kubectl config set-credentials github-actions --token=${K8S_TOKEN}
+          kubectl config set-context ${K8S_CLUSTER_NAME} --cluster=${K8S_CLUSTER_NAME} --user=github-actions --namespace=${K8S_NAMESPACE}
+          kubectl config use-context ${K8S_CLUSTER_NAME}
+          IMAGE=${REGISTRY}:${TAG}
+          kubectl patch configmap app-versions --patch "{\"data\": {\"api\": \"${VERSION}\"}}"
+          kubectl patch deployment api --type strategic --patch "{\"metadata\": {\"annotations\": {\"kubernetes.io/change-cause\": \"${VERSION}\"}}, \"spec\": {\"template\": {\"spec\": {\"containers\": [{\"name\": \"app\", \"image\": \"${IMAGE}\"}], \"initContainers\": [{\"name\": \"init\", \"image\": \"${IMAGE}\"},{\"name\": \"copy-static\", \"image\": \"${IMAGE}\"}]}}}}"
