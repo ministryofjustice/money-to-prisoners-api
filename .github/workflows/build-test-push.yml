@@ -2,7 +2,13 @@
 # templates-apps generator (the generator skips build-test-push.yml for api).
 # api's test suite has cross-file state dependencies, so tests are split across
 # a matrix of parallel shards (each its own process + Postgres), mirroring the
-# isolation of the CircleCI 16-way `tests split` that keeps this suite green.
+# isolation of the CircleCI 16-way `tests split`.
+#
+# The shard selection matches CircleCI's `tests glob "mtp_api/apps/**/tests/test_*.py"`
+# exactly (test files directly under a tests/ dir — the `! -path '*/tests/*/*'`
+# excludes files nested in test sub-packages). NB: CircleCI has never run those
+# nested files (~27 of them) — that is a pre-existing CI coverage gap tracked
+# separately; do not silently change this selection without addressing it.
 name: Build, test and push
 on:
   push:
@@ -112,7 +118,7 @@ jobs:
       - name: Select this shard's test modules
         id: modules
         run: |
-          modules=$(find mtp_api -path '*/tests/*' -name 'test_*.py' | sort \
+          modules=$(find mtp_api -path '*/tests/test_*.py' ! -path '*/tests/*/*' | sort \
             | awk -v s=${{ matrix.shard }} 'NR % 16 == s' \
             | sed 's#/#.#g; s#\.py$##' | tr '\n' ' ')
           echo "count=$(echo ${modules} | wc -w)" >> "$GITHUB_OUTPUT"
