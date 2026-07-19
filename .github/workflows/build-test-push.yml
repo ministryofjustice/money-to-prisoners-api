@@ -20,6 +20,7 @@ on:
 permissions:
   id-token: write
   contents: read
+  packages: write
 jobs:
   build:
     name: Build image
@@ -35,6 +36,12 @@ jobs:
       - name: Log docker into ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
+      - name: Log docker into GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Compute image tags
         id: tags
         run: |
@@ -42,14 +49,19 @@ jobs:
           version=${branch_lc}.${GITHUB_SHA::7}
           tag=api.${version}
           registry=${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}
+          ghcr_package=ghcr.io/${{ github.repository_owner }}/money-to-prisoners-api
+          ghcr_base=ghcr.io/${{ github.repository_owner }}/money-to-prisoners-base
           echo "version=${version}" >> "$GITHUB_OUTPUT"
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
           echo "registry=${registry}" >> "$GITHUB_OUTPUT"
+          echo "ghcr_package=${ghcr_package}" >> "$GITHUB_OUTPUT"
+          echo "ghcr_base=${ghcr_base}" >> "$GITHUB_OUTPUT"
           echo "Building ${tag}"
+      # base images come from the public GHCR package, so this needs no credentials
       - name: Pull base image
         run: |
-          docker pull ${{ steps.tags.outputs.registry }}:base-web
-          docker tag ${{ steps.tags.outputs.registry }}:base-web base-web
+          docker pull ${{ steps.tags.outputs.ghcr_base }}:base-web
+          docker tag ${{ steps.tags.outputs.ghcr_base }}:base-web base-web
       - name: Build docker image
         env:
           TAG: ${{ steps.tags.outputs.tag }}
@@ -62,13 +74,19 @@ jobs:
             --build-arg APP_BUILD_DATE=$(date +%FT%T%z) \
             --tag ${TAG} \
             .
-      - name: Push image to ECR (branch-sha tag, so shards can pull)
+      # shards pull the branch-sha tag from ECR; GHCR is published in parallel
+      - name: Push image to ECR (branch-sha tag, so shards can pull) and GHCR
         env:
           TAG: ${{ steps.tags.outputs.tag }}
+          VERSION: ${{ steps.tags.outputs.version }}
           REGISTRY: ${{ steps.tags.outputs.registry }}
+          GHCR_PACKAGE: ${{ steps.tags.outputs.ghcr_package }}
         run: |
           docker tag ${TAG} ${REGISTRY}:${TAG}
           docker push ${REGISTRY}:${TAG}
+          echo "Pushing ${VERSION} to GHCR ${GHCR_PACKAGE}"
+          docker tag ${TAG} ${GHCR_PACKAGE}:${VERSION}
+          docker push ${GHCR_PACKAGE}:${VERSION}
 
   check:
     name: Django checks
@@ -179,21 +197,35 @@ jobs:
       - name: Log docker into ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
+      - name: Log docker into GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Compute image tags
         id: tags
         run: |
           branch_lc=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]')
           registry=${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}
+          ghcr_package=ghcr.io/${{ github.repository_owner }}/money-to-prisoners-api
           echo "registry=${registry}" >> "$GITHUB_OUTPUT"
           echo "tag=api.${branch_lc}.${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          echo "version=${branch_lc}.${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          echo "ghcr_package=${ghcr_package}" >> "$GITHUB_OUTPUT"
       - name: Push api (acts as latest)
         env:
           REGISTRY: ${{ steps.tags.outputs.registry }}
           TAG: ${{ steps.tags.outputs.tag }}
+          VERSION: ${{ steps.tags.outputs.version }}
+          GHCR_PACKAGE: ${{ steps.tags.outputs.ghcr_package }}
         run: |
           docker pull ${REGISTRY}:${TAG}
           docker tag ${REGISTRY}:${TAG} ${REGISTRY}:api
           docker push ${REGISTRY}:api
+          echo "Pushing latest to GHCR"
+          docker tag ${REGISTRY}:${TAG} ${GHCR_PACKAGE}:latest
+          docker push ${GHCR_PACKAGE}:latest
 
   deploy:
     name: Deploy to test
