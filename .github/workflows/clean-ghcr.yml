@@ -5,6 +5,11 @@ on:
     # clean up branch images when a PR is closed
     types:
       - closed
+  workflow_dispatch:
+  schedule:
+    # A PR merged while its own build is still running is cleaned up before that build
+    # pushes its image, so sweep up anything left behind by a branch that has since gone.
+    - cron: '14 3 * * 1'
 jobs:
   clean-ghcr:
     name: Clean GHCR
@@ -18,7 +23,6 @@ jobs:
         uses: actions/checkout@v7
         with:
           ref: main
-
       - name: Delete branch images from GHCR
         run: python3 .github/scripts/clean-ghcr.py
         env:

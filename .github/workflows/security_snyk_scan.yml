@@ -12,6 +12,7 @@ jobs:
       contents: read
       actions: read
       security-events: write
+      id-token: write
     uses: ministryofjustice/hmpps-github-actions/.github/workflows/security_snyk_scan_ecr.yml@v2 # WORKFLOW_VERSION
     with:
       channel_id: ${{ vars.SECURITY_ALERTS_SLACK_CHANNEL_ID || 'NO_SLACK' }}
