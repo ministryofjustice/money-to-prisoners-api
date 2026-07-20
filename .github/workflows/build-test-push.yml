@@ -10,15 +10,14 @@
 # nested files (~27 of them) — that is a pre-existing CI coverage gap tracked
 # separately; do not silently change this selection without addressing it.
 #
-# Each job recomputes the image tag from the immutable github context + its own
-# ECR login, rather than passing it via job outputs: `needs.<job>.outputs` proved
-# unreliable here (arrived empty downstream even on fresh pushes). Recomputing is
-# deterministic and also makes re-runs correct.
+# Each job recomputes the image tag from the immutable github context rather than
+# passing it via job outputs: `needs.<job>.outputs` proved unreliable here (arrived
+# empty downstream even on fresh pushes). Recomputing is deterministic and also makes
+# re-runs correct.
 name: Build, test and push
 on:
   push:
 permissions:
-  id-token: write
   contents: read
   packages: write
 jobs:
@@ -28,14 +27,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-      - name: Assume IAM role to access ECR
-        uses: aws-actions/configure-aws-credentials@v6
-        with:
-          aws-region: ${{ vars.ECR_REGION }}
-          role-to-assume: ${{ secrets.ECR_ROLE_TO_ASSUME }}
-      - name: Log docker into ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
       - name: Log docker into GHCR
         uses: docker/login-action@v3
         with:
@@ -48,12 +39,10 @@ jobs:
           branch_lc=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]')
           version=${branch_lc}.${GITHUB_SHA::7}
           tag=api.${version}
-          registry=${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}
           ghcr_package=ghcr.io/${{ github.repository_owner }}/money-to-prisoners-api
           ghcr_base=ghcr.io/${{ github.repository_owner }}/money-to-prisoners-base
           echo "version=${version}" >> "$GITHUB_OUTPUT"
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
-          echo "registry=${registry}" >> "$GITHUB_OUTPUT"
           echo "ghcr_package=${ghcr_package}" >> "$GITHUB_OUTPUT"
           echo "ghcr_base=${ghcr_base}" >> "$GITHUB_OUTPUT"
           echo "Building ${tag}"
@@ -74,17 +63,15 @@ jobs:
             --build-arg APP_BUILD_DATE=$(date +%FT%T%z) \
             --tag ${TAG} \
             .
-      # shards pull the branch-sha tag from ECR; GHCR is published in parallel
-      - name: Push image to ECR (branch-sha tag, so shards can pull) and GHCR
+      # the check and test shards pull this tag back down; the package is public,
+      # so they need no registry credentials at all
+      - name: Push image (branch-sha tag, so shards can pull)
         env:
           TAG: ${{ steps.tags.outputs.tag }}
           VERSION: ${{ steps.tags.outputs.version }}
-          REGISTRY: ${{ steps.tags.outputs.registry }}
           GHCR_PACKAGE: ${{ steps.tags.outputs.ghcr_package }}
         run: |
-          docker tag ${TAG} ${REGISTRY}:${TAG}
-          docker push ${REGISTRY}:${TAG}
-          echo "Pushing ${VERSION} to GHCR ${GHCR_PACKAGE}"
+          echo "Pushing ${VERSION} to ${GHCR_PACKAGE}"
           docker tag ${TAG} ${GHCR_PACKAGE}:${VERSION}
           docker push ${GHCR_PACKAGE}:${VERSION}
 
@@ -93,19 +80,11 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Assume IAM role to access ECR
-        uses: aws-actions/configure-aws-credentials@v6
-        with:
-          aws-region: ${{ vars.ECR_REGION }}
-          role-to-assume: ${{ secrets.ECR_ROLE_TO_ASSUME }}
-      - name: Log docker into ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
       - name: Compute image tags
         id: tags
         run: |
           branch_lc=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]')
-          echo "image=${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:api.${branch_lc}.${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          echo "image=ghcr.io/${{ github.repository_owner }}/money-to-prisoners-api:${branch_lc}.${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
       - name: Run check + makemigrations --check
         env:
           IMAGE: ${{ steps.tags.outputs.image }}
@@ -133,19 +112,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-      - name: Assume IAM role to access ECR
-        uses: aws-actions/configure-aws-credentials@v6
-        with:
-          aws-region: ${{ vars.ECR_REGION }}
-          role-to-assume: ${{ secrets.ECR_ROLE_TO_ASSUME }}
-      - name: Log docker into ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
       - name: Compute image tags
         id: tags
         run: |
           branch_lc=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]')
-          echo "image=${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:api.${branch_lc}.${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          echo "image=ghcr.io/${{ github.repository_owner }}/money-to-prisoners-api:${branch_lc}.${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
       - name: Select this shard's test modules
         id: modules
         run: |
@@ -189,14 +160,6 @@ jobs:
     if: ${{ github.ref_name == 'main' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Assume IAM role to access ECR
-        uses: aws-actions/configure-aws-credentials@v6
-        with:
-          aws-region: ${{ vars.ECR_REGION }}
-          role-to-assume: ${{ secrets.ECR_ROLE_TO_ASSUME }}
-      - name: Log docker into ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
       - name: Log docker into GHCR
         uses: docker/login-action@v3
         with:
@@ -207,24 +170,17 @@ jobs:
         id: tags
         run: |
           branch_lc=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]')
-          registry=${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}
           ghcr_package=ghcr.io/${{ github.repository_owner }}/money-to-prisoners-api
-          echo "registry=${registry}" >> "$GITHUB_OUTPUT"
-          echo "tag=api.${branch_lc}.${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
           echo "version=${branch_lc}.${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
           echo "ghcr_package=${ghcr_package}" >> "$GITHUB_OUTPUT"
-      - name: Push api (acts as latest)
+      - name: Push latest tag
         env:
-          REGISTRY: ${{ steps.tags.outputs.registry }}
-          TAG: ${{ steps.tags.outputs.tag }}
           VERSION: ${{ steps.tags.outputs.version }}
           GHCR_PACKAGE: ${{ steps.tags.outputs.ghcr_package }}
         run: |
-          docker pull ${REGISTRY}:${TAG}
-          docker tag ${REGISTRY}:${TAG} ${REGISTRY}:api
-          docker push ${REGISTRY}:api
-          echo "Pushing latest to GHCR"
-          docker tag ${REGISTRY}:${TAG} ${GHCR_PACKAGE}:latest
+          echo "Pushing latest to ${GHCR_PACKAGE}"
+          docker pull ${GHCR_PACKAGE}:${VERSION}
+          docker tag ${GHCR_PACKAGE}:${VERSION} ${GHCR_PACKAGE}:latest
           docker push ${GHCR_PACKAGE}:latest
 
   deploy:
@@ -233,14 +189,6 @@ jobs:
     if: ${{ github.ref_name == 'main' && vars.GHA_DEPLOY_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Assume IAM role to access ECR
-        uses: aws-actions/configure-aws-credentials@v6
-        with:
-          aws-region: ${{ vars.ECR_REGION }}
-          role-to-assume: ${{ secrets.ECR_ROLE_TO_ASSUME }}
-      - name: Log docker into ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
       - name: Compute image tags
         id: tags
         run: |
