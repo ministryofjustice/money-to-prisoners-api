@@ -1,9 +1,17 @@
 #!/usr/bin/env python
 """
-Delete this repository's branch images from GHCR once their pull request closes
+Delete this repository's branch images from GHCR
 
 Branch builds are tagged `[branch].[commit]` and are never deployed after the pull request
 ends, but GHCR - unlike ECR - has no lifecycle policy, so nothing removes them otherwise.
+
+Two modes, because closing a pull request is not enough on its own:
+
+- on a closed pull request, delete that branch's images
+- on a schedule, delete images for any branch that no longer exists
+
+The sweep exists because a pull request merged while its own build is still running is
+cleaned up before that build pushes its image, leaving the image behind for good.
 
 Runs on the github runner with the repository's own GITHUB_TOKEN: a package can only be
 administered by a token from the repository it is linked to.
@@ -11,6 +19,7 @@ administered by a token from the repository it is linked to.
 import json
 import logging
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -18,34 +27,87 @@ import urllib.request
 logger = logging.getLogger(__name__)
 
 API_ROOT = 'https://api.github.com'
+# the `[commit]` half of a `[branch].[commit]` image tag
+COMMIT_RE = re.compile(r'^[0-9a-f]{7,40}$')
 
 
 def clean_ghcr():
     organisation, package = os.environ['GITHUB_REPOSITORY'].split('/', 1)
-    branch = get_pull_request_branch()
-    prefix = f'{branch}.'
-
     versions = list_versions(organisation, package)
     logger.info(f'{package} has {len(versions)} version(s)')
 
-    deletable = []
-    for version_id, tags in versions:
-        if not tags:
-            # untagged versions are usually a superseded build or an attestation, but a
-            # multi-arch child manifest is also untagged, so leave them to the base cleanup
-            continue
-        # every tag must belong to this branch: a digest also tagged `latest` is in use
-        if all(tag.startswith(prefix) for tag in tags):
-            deletable.append((version_id, tags))
+    if os.environ.get('GITHUB_EVENT_NAME') == 'pull_request':
+        branch = get_pull_request_branch()
+        deletable = versions_for_branches(versions, {branch})
+        described = f'branch {branch}'
+    else:
+        live_branches = {branch.lower() for branch in list_branches(organisation, package)}
+        logger.info(f'{len(live_branches)} branch(es) still exist')
+        deletable = versions_for_deleted_branches(versions, live_branches)
+        described = 'deleted branches'
 
     if not deletable:
-        logger.info(f'No images tagged {prefix}*')
+        logger.info(f'No images to delete for {described}')
         return
 
-    logger.info(f'Deleting {len(deletable)} image(s) tagged {prefix}*')
+    logger.info(f'Deleting {len(deletable)} image(s) for {described}')
     for version_id, tags in deletable:
         logger.info(f'  {", ".join(tags)}')
         delete_version(organisation, package, version_id)
+
+
+def versions_for_branches(versions, branches):
+    """
+    Versions whose every tag belongs to one of `branches`
+    """
+    prefixes = tuple(f'{branch}.' for branch in branches)
+    return [
+        (version_id, tags)
+        # a version with no tag at all is a superseded build or an attestation, and one
+        # tagged `latest` as well is in use, so neither is matched here
+        for version_id, tags in versions
+        if tags and all(tag.startswith(prefixes) for tag in tags)
+    ]
+
+
+def versions_for_deleted_branches(versions, live_branches):
+    """
+    Versions whose every tag belongs to a branch that no longer exists
+
+    NB: `main` always exists, so versions still deployed from it are never matched. Anything
+    whose branch cannot be determined is left alone.
+    """
+    deletable = []
+    for version_id, tags in versions:
+        if not tags:
+            continue
+        branches = set()
+        for tag in tags:
+            branch, _, commit = tag.rpartition('.')
+            if not (branch and COMMIT_RE.match(commit)):
+                # a tag such as `latest` names no branch, so this version is in use
+                break
+            branches.add(branch)
+        else:
+            if not (branches & live_branches):
+                deletable.append((version_id, tags))
+    return deletable
+
+
+def list_branches(organisation, repository):
+    """
+    Every branch that still exists in the repository
+    """
+    branches, page = [], 1
+    while True:
+        body = github_api(f'/repos/{organisation}/{repository}/branches?per_page=100&page={page}')
+        if not body:
+            break
+        branches.extend(branch['name'] for branch in body)
+        if len(body) < 100:
+            break
+        page += 1
+    return branches
 
 
 def get_pull_request_branch():
