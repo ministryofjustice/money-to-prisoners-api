@@ -27,8 +27,10 @@ import urllib.request
 logger = logging.getLogger(__name__)
 
 API_ROOT = 'https://api.github.com'
-# the `[commit]` half of a `[branch].[commit]` image tag
-COMMIT_RE = re.compile(r'^[0-9a-f]{7,40}$')
+# the `[commit]` half of a `[branch].[commit]` image tag, optionally carrying the platform
+# suffix that the build pushes before the two platforms are merged; without the suffix these
+# would look like tags naming no branch, and so would never be cleaned up
+COMMIT_RE = re.compile(r'^[0-9a-f]{7,40}(-(amd64|arm64))?$')
 
 
 def clean_ghcr():

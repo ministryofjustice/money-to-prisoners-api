@@ -14,6 +14,13 @@
 # passing it via job outputs: `needs.<job>.outputs` proved unreliable here (arrived
 # empty downstream even on fresh pushes). Recomputing is deterministic and also makes
 # re-runs correct.
+#
+# Images are multi-arch. Each platform is built on a native runner and pushed to
+# `[branch].[sha]-[platform]`; the merge job then points `[branch].[sha]` at an index
+# covering both, so the plain tag only appears once the build has passed. The full
+# 16-shard suite runs on amd64 only — that is what prod runs, and 32 shard jobs is a
+# poor trade — while the arm64 image still gets the `check` job, so it is never
+# published completely unexercised.
 name: Build, test and push
 on:
   push:
@@ -22,8 +29,17 @@ permissions:
   packages: write
 jobs:
   build:
-    name: Build image
-    runs-on: ubuntu-latest
+    name: Build image (${{ matrix.platform }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      # one platform failing should not hide whether the other builds
+      fail-fast: false
+      matrix:
+        include:
+          - platform: amd64
+            runner: ubuntu-latest
+          - platform: arm64
+            runner: ubuntu-24.04-arm
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -45,8 +61,9 @@ jobs:
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
           echo "ghcr_package=${ghcr_package}" >> "$GITHUB_OUTPUT"
           echo "ghcr_base=${ghcr_base}" >> "$GITHUB_OUTPUT"
-          echo "Building ${tag}"
-      # base images come from the public GHCR package, so this needs no credentials
+          echo "Building ${tag} for linux/${{ matrix.platform }}"
+      # base images come from the public GHCR package, so this needs no credentials;
+      # the package is multi-arch, so this pulls whichever platform the runner is
       - name: Pull base image
         run: |
           docker pull ${{ steps.tags.outputs.ghcr_base }}:base-web
@@ -65,26 +82,35 @@ jobs:
             .
       # the check and test shards pull this tag back down; the package is public,
       # so they need no registry credentials at all
-      - name: Push image (branch-sha tag, so shards can pull)
+      - name: Push image (per-platform tag, so shards can pull)
         env:
           TAG: ${{ steps.tags.outputs.tag }}
           VERSION: ${{ steps.tags.outputs.version }}
+          PLATFORM: ${{ matrix.platform }}
           GHCR_PACKAGE: ${{ steps.tags.outputs.ghcr_package }}
         run: |
-          echo "Pushing ${VERSION} to ${GHCR_PACKAGE}"
-          docker tag ${TAG} ${GHCR_PACKAGE}:${VERSION}
-          docker push ${GHCR_PACKAGE}:${VERSION}
+          echo "Pushing ${VERSION}-${PLATFORM} to ${GHCR_PACKAGE}"
+          docker tag ${TAG} ${GHCR_PACKAGE}:${VERSION}-${PLATFORM}
+          docker push ${GHCR_PACKAGE}:${VERSION}-${PLATFORM}
 
   check:
-    name: Django checks
+    name: Django checks (${{ matrix.platform }})
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: amd64
+            runner: ubuntu-latest
+          - platform: arm64
+            runner: ubuntu-24.04-arm
     steps:
       - name: Compute image tags
         id: tags
         run: |
           branch_lc=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]')
-          echo "image=ghcr.io/${{ github.repository_owner }}/money-to-prisoners-api:${branch_lc}.${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          echo "image=ghcr.io/${{ github.repository_owner }}/money-to-prisoners-api:${branch_lc}.${GITHUB_SHA::7}-${{ matrix.platform }}" >> "$GITHUB_OUTPUT"
       - name: Run check + makemigrations --check
         env:
           IMAGE: ${{ steps.tags.outputs.image }}
@@ -116,7 +142,8 @@ jobs:
         id: tags
         run: |
           branch_lc=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]')
-          echo "image=ghcr.io/${{ github.repository_owner }}/money-to-prisoners-api:${branch_lc}.${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          # the suite runs on amd64, which is what prod runs
+          echo "image=ghcr.io/${{ github.repository_owner }}/money-to-prisoners-api:${branch_lc}.${GITHUB_SHA::7}-amd64" >> "$GITHUB_OUTPUT"
       - name: Select this shard's test modules
         id: modules
         run: |
@@ -154,10 +181,9 @@ jobs:
           path: /tmp/reports
           if-no-files-found: warn
 
-  push:
-    name: Push latest tag
+  merge:
+    name: Merge into a multi-arch manifest
     needs: [check, test]
-    if: ${{ github.ref_name == 'main' }}
     runs-on: ubuntu-latest
     steps:
       - name: Log docker into GHCR
@@ -173,19 +199,26 @@ jobs:
           ghcr_package=ghcr.io/${{ github.repository_owner }}/money-to-prisoners-api
           echo "version=${branch_lc}.${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
           echo "ghcr_package=${ghcr_package}" >> "$GITHUB_OUTPUT"
-      - name: Push latest tag
+      - name: Merge platform tags
         env:
           VERSION: ${{ steps.tags.outputs.version }}
           GHCR_PACKAGE: ${{ steps.tags.outputs.ghcr_package }}
         run: |
-          echo "Pushing latest to ${GHCR_PACKAGE}"
-          docker pull ${GHCR_PACKAGE}:${VERSION}
-          docker tag ${GHCR_PACKAGE}:${VERSION} ${GHCR_PACKAGE}:latest
-          docker push ${GHCR_PACKAGE}:latest
+          echo "Merging ${VERSION} from amd64 and arm64"
+          docker buildx imagetools create \
+            --tag ${GHCR_PACKAGE}:${VERSION} \
+            ${GHCR_PACKAGE}:${VERSION}-amd64 \
+            ${GHCR_PACKAGE}:${VERSION}-arm64
+          if [[ "${GITHUB_REF_NAME}" == "main" ]]; then
+            echo "Pointing latest at ${VERSION}"
+            docker buildx imagetools create \
+              --tag ${GHCR_PACKAGE}:latest \
+              ${GHCR_PACKAGE}:${VERSION}
+          fi
 
   deploy:
     name: Deploy to test
-    needs: [check, test]
+    needs: merge
     if: ${{ github.ref_name == 'main' && vars.GHA_DEPLOY_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     steps:
