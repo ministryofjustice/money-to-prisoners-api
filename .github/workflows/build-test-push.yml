@@ -232,7 +232,7 @@ jobs:
           # keep flipping the deployment between registries
           echo "image=ghcr.io/${{ github.repository_owner }}/money-to-prisoners-api:${version}" >> "$GITHUB_OUTPUT"
       - name: Install kubectl
-        uses: azure/setup-kubectl@v4
+        uses: azure/setup-kubectl@v5
         with:
           version: v1.32.9
       - name: Deploy to test
