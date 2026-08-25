@@ -61,6 +61,12 @@ You’ll need to update translation files afterwards and manually check that the
 Push latest English to Transifex with `./run.py translations --push`.
 NB: you should pull updates before pushing to merge correctly.
 
+### Parity testing
+
+See [PARITY.md](PARITY.md) for how the `parity` environment (and its equivalent local
+database setup) is reset and reloaded with a fixed, reproducible data set, used to compare
+this service against its replacement.
+
 ## Deploying
 
 This is handled by [money-to-prisoners-deploy](https://github.com/ministryofjustice/money-to-prisoners-deploy/).
