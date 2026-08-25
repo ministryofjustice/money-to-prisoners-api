@@ -15,6 +15,10 @@
 node_modules/
 npm-debug.log
 
+# local developer settings, which may hold real credentials; gitignored, but a local
+# `docker build` would otherwise bake them into an image that is now published publicly
+**/settings/local.py
+
 # project
 Dockerfile
 docker-compose.yml

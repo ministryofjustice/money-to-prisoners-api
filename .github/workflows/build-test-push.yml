@@ -1,0 +1,260 @@
+# NOTE: bespoke workflow for the api app — do not regenerate from the shared
+# templates-apps generator (the generator skips build-test-push.yml for api).
+# api's test suite has cross-file state dependencies, so tests are split across
+# a matrix of parallel shards (each its own process + Postgres), mirroring the
+# isolation of the CircleCI 16-way `tests split`.
+#
+# The shard selection matches CircleCI's `tests glob "mtp_api/apps/**/tests/test_*.py"`
+# exactly (test files directly under a tests/ dir — the `! -path '*/tests/*/*'`
+# excludes files nested in test sub-packages). NB: CircleCI has never run those
+# nested files (~27 of them) — that is a pre-existing CI coverage gap tracked
+# separately; do not silently change this selection without addressing it.
+#
+# Each job recomputes the image tag from the immutable github context rather than
+# passing it via job outputs: `needs.<job>.outputs` proved unreliable here (arrived
+# empty downstream even on fresh pushes). Recomputing is deterministic and also makes
+# re-runs correct.
+#
+# Images are multi-arch. Each platform is built on a native runner and pushed to
+# `[branch].[sha]-[platform]`; the merge job then points `[branch].[sha]` at an index
+# covering both, so the plain tag only appears once the build has passed. The full
+# 16-shard suite runs on amd64 only — that is what prod runs, and 32 shard jobs is a
+# poor trade — while the arm64 image still gets the `check` job, so it is never
+# published completely unexercised.
+name: Build, test and push
+on:
+  push:
+permissions:
+  contents: read
+  packages: write
+jobs:
+  build:
+    name: Build image (${{ matrix.platform }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      # one platform failing should not hide whether the other builds
+      fail-fast: false
+      matrix:
+        include:
+          - platform: amd64
+            runner: ubuntu-latest
+          - platform: arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Log docker into GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Compute image tags
+        id: tags
+        run: |
+          branch_lc=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]')
+          version=${branch_lc}.${GITHUB_SHA::7}
+          tag=api.${version}
+          ghcr_package=ghcr.io/${{ github.repository_owner }}/money-to-prisoners-api
+          ghcr_base=ghcr.io/${{ github.repository_owner }}/money-to-prisoners-base
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "ghcr_package=${ghcr_package}" >> "$GITHUB_OUTPUT"
+          echo "ghcr_base=${ghcr_base}" >> "$GITHUB_OUTPUT"
+          echo "Building ${tag} for linux/${{ matrix.platform }}"
+      # base images come from the public GHCR package, so this needs no credentials;
+      # the package is multi-arch, so this pulls whichever platform the runner is
+      - name: Pull base image
+        run: |
+          docker pull ${{ steps.tags.outputs.ghcr_base }}:base-web
+          docker tag ${{ steps.tags.outputs.ghcr_base }}:base-web base-web
+      - name: Build docker image
+        env:
+          TAG: ${{ steps.tags.outputs.tag }}
+        run: |
+          docker build \
+            --force-rm \
+            --build-arg APP_GIT_COMMIT=${GITHUB_SHA} \
+            --build-arg APP_GIT_BRANCH=${GITHUB_REF_NAME} \
+            --build-arg APP_BUILD_TAG=${TAG} \
+            --build-arg APP_BUILD_DATE=$(date +%FT%T%z) \
+            --tag ${TAG} \
+            .
+      # the check and test shards pull this tag back down; the package is public,
+      # so they need no registry credentials at all
+      - name: Push image (per-platform tag, so shards can pull)
+        env:
+          TAG: ${{ steps.tags.outputs.tag }}
+          VERSION: ${{ steps.tags.outputs.version }}
+          PLATFORM: ${{ matrix.platform }}
+          GHCR_PACKAGE: ${{ steps.tags.outputs.ghcr_package }}
+        run: |
+          echo "Pushing ${VERSION}-${PLATFORM} to ${GHCR_PACKAGE}"
+          docker tag ${TAG} ${GHCR_PACKAGE}:${VERSION}-${PLATFORM}
+          docker push ${GHCR_PACKAGE}:${VERSION}-${PLATFORM}
+
+  check:
+    name: Django checks (${{ matrix.platform }})
+    needs: build
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: amd64
+            runner: ubuntu-latest
+          - platform: arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - name: Compute image tags
+        id: tags
+        run: |
+          branch_lc=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]')
+          echo "image=ghcr.io/${{ github.repository_owner }}/money-to-prisoners-api:${branch_lc}.${GITHUB_SHA::7}-${{ matrix.platform }}" >> "$GITHUB_OUTPUT"
+      - name: Run check + makemigrations --check
+        env:
+          IMAGE: ${{ steps.tags.outputs.image }}
+        run: |
+          docker pull ${IMAGE}
+          docker run --name postgres --detach \
+            -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=mtp_api \
+            cimg/postgres:16.13
+          sleep 10
+          docker run --name api \
+            -e DJANGO_SETTINGS_MODULE=mtp_api.settings.ci \
+            -e DB_PASSWORD=postgres -e DB_USERNAME=postgres -e DB_HOST=postgres \
+            --link postgres \
+            ${IMAGE} \
+            /bin/bash -c 'cd /app && /app/venv/bin/python manage.py check --verbosity=2 && /app/venv/bin/python manage.py makemigrations --check --verbosity=2'
+
+  test:
+    name: Test (shard ${{ matrix.shard }})
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Compute image tags
+        id: tags
+        run: |
+          branch_lc=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]')
+          # the suite runs on amd64, which is what prod runs
+          echo "image=ghcr.io/${{ github.repository_owner }}/money-to-prisoners-api:${branch_lc}.${GITHUB_SHA::7}-amd64" >> "$GITHUB_OUTPUT"
+      - name: Select this shard's test modules
+        id: modules
+        run: |
+          modules=$(find mtp_api -path '*/tests/test_*.py' ! -path '*/tests/*/*' | sort \
+            | awk -v s=${{ matrix.shard }} 'NR % 16 == s' \
+            | sed 's#/#.#g; s#\.py$##' | tr '\n' ' ')
+          echo "count=$(echo ${modules} | wc -w)" >> "$GITHUB_OUTPUT"
+          echo "modules=${modules}" >> "$GITHUB_OUTPUT"
+          echo "Shard ${{ matrix.shard }} runs: ${modules}"
+      - name: Test docker image
+        env:
+          IMAGE: ${{ steps.tags.outputs.image }}
+          TESTMODULES: ${{ steps.modules.outputs.modules }}
+        run: |
+          docker pull ${IMAGE}
+          docker run --name postgres --detach \
+            -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=mtp_api \
+            cimg/postgres:16.13
+          sleep 10
+          docker run --name api \
+            -e DJANGO_SETTINGS_MODULE=mtp_api.settings.ci \
+            -e DB_PASSWORD=postgres -e DB_USERNAME=postgres -e DB_HOST=postgres \
+            -e TESTMODULES="${TESTMODULES}" \
+            --link postgres \
+            ${IMAGE} \
+            /bin/bash -c '/app/venv/bin/pip install -r requirements/ci.txt && cd /app && /app/venv/bin/python manage.py test ${TESTMODULES} --verbosity=2'
+      - name: Extract test reports
+        if: always()
+        run: docker cp api:/app/reports /tmp/reports || true
+      - name: Publish test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-shard-${{ matrix.shard }}
+          path: /tmp/reports
+          if-no-files-found: warn
+
+  merge:
+    name: Merge into a multi-arch manifest
+    needs: [check, test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log docker into GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Compute image tags
+        id: tags
+        run: |
+          branch_lc=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]')
+          ghcr_package=ghcr.io/${{ github.repository_owner }}/money-to-prisoners-api
+          echo "version=${branch_lc}.${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          echo "ghcr_package=${ghcr_package}" >> "$GITHUB_OUTPUT"
+      - name: Merge platform tags
+        env:
+          VERSION: ${{ steps.tags.outputs.version }}
+          GHCR_PACKAGE: ${{ steps.tags.outputs.ghcr_package }}
+        run: |
+          echo "Merging ${VERSION} from amd64 and arm64"
+          docker buildx imagetools create \
+            --tag ${GHCR_PACKAGE}:${VERSION} \
+            ${GHCR_PACKAGE}:${VERSION}-amd64 \
+            ${GHCR_PACKAGE}:${VERSION}-arm64
+          if [[ "${GITHUB_REF_NAME}" == "main" ]]; then
+            echo "Pointing latest at ${VERSION}"
+            docker buildx imagetools create \
+              --tag ${GHCR_PACKAGE}:latest \
+              ${GHCR_PACKAGE}:${VERSION}
+          fi
+
+  deploy:
+    name: Deploy to test
+    needs: merge
+    if: ${{ github.ref_name == 'main' && vars.GHA_DEPLOY_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Compute image tags
+        id: tags
+        run: |
+          branch_lc=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]')
+          version=${branch_lc}.${GITHUB_SHA::7}
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          # must match what `app apply` renders, or the next apply and the next merge
+          # keep flipping the deployment between registries
+          echo "image=ghcr.io/${{ github.repository_owner }}/money-to-prisoners-api:${version}" >> "$GITHUB_OUTPUT"
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.32.9
+      - name: Deploy to test
+        env:
+          IMAGE: ${{ steps.tags.outputs.image }}
+          VERSION: ${{ steps.tags.outputs.version }}
+          K8S_CLUSTER_CERT: ${{ secrets.K8S_CLUSTER_CERT }}
+          K8S_CLUSTER_NAME: ${{ secrets.K8S_CLUSTER_NAME }}
+          K8S_CLUSTER_SERVER: ${{ secrets.K8S_CLUSTER_SERVER }}
+          K8S_NAMESPACE: ${{ secrets.K8S_NAMESPACE }}
+          K8S_TOKEN: ${{ secrets.K8S_TOKEN }}
+        run: |
+          # defence in depth: never patch the cluster with an empty image/version
+          if [ -z "${IMAGE}" ] || [ "${IMAGE}" = ":" ] || [ -z "${VERSION}" ]; then
+            echo "::error::computed image/version is empty — refusing to patch the deployment"
+            exit 1
+          fi
+          echo "Deploying to test: ${IMAGE}"
+          echo -n "${K8S_CLUSTER_CERT}" | base64 -d > /tmp/mtp-k8s-ca.crt
+          kubectl config set-cluster ${K8S_CLUSTER_NAME} --certificate-authority=/tmp/mtp-k8s-ca.crt --server=${K8S_CLUSTER_SERVER}
+          kubectl config set-credentials github-actions --token=${K8S_TOKEN}
+          kubectl config set-context ${K8S_CLUSTER_NAME} --cluster=${K8S_CLUSTER_NAME} --user=github-actions --namespace=${K8S_NAMESPACE}
+          kubectl config use-context ${K8S_CLUSTER_NAME}
+          kubectl patch configmap app-versions --patch "{\"data\": {\"api\": \"${VERSION}\"}}"
+          kubectl patch deployment api --type strategic --patch "{\"metadata\": {\"annotations\": {\"kubernetes.io/change-cause\": \"${VERSION}\"}}, \"spec\": {\"template\": {\"spec\": {\"containers\": [{\"name\": \"app\", \"image\": \"${IMAGE}\"}], \"initContainers\": [{\"name\": \"init\", \"image\": \"${IMAGE}\"},{\"name\": \"copy-static\", \"image\": \"${IMAGE}\"}]}}}}"

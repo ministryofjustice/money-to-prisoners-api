@@ -2,6 +2,9 @@
 
 Backend and internal admin site for [Prisoner Money suite of apps](https://github.com/ministryofjustice/money-to-prisoners).
 
+How this app fits into the wider service — architecture, data flows, deployment and
+support — is documented in [money-to-prisoners-deploy](https://github.com/ministryofjustice/money-to-prisoners-deploy/blob/main/docs/README.md).
+
 View overview and guidelines [here](guidelines.md)
 
 ## Requirements
@@ -11,7 +14,7 @@ View overview and guidelines [here](guidelines.md)
 
 ## Developing
 
-[![CircleCI](https://circleci.com/gh/ministryofjustice/money-to-prisoners-api.svg?style=svg)](https://circleci.com/gh/ministryofjustice/money-to-prisoners-api)
+[![Build, test and push](https://github.com/ministryofjustice/money-to-prisoners-api/actions/workflows/build-test-push.yml/badge.svg)](https://github.com/ministryofjustice/money-to-prisoners-api/actions/workflows/build-test-push.yml)
 
 It’s recommended that you use a python virtual environment to isolate each application.
 
