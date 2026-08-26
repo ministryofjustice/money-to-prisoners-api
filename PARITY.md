@@ -68,23 +68,42 @@ E2E tests actually need (see below).
 
 ## Running it locally
 
-The local dev stack (built and orchestrated by `money-to-prisoners-common`'s
-`docker-compose.yml`) already sets `ENV: local` for the `api` container, so no extra
-environment configuration is required.
+The local dev stack is built and orchestrated by `money-to-prisoners-common`'s
+`docker-compose.yml`, **not** the `docker-compose.yml` in this repository (this repo's own
+compose file only spins up a standalone Postgres instance for running the app outside Docker
+entirely — it has no `api` service). That compose file already sets `ENV: local` for the `api`
+container, so no extra environment configuration is required.
 
-1. Start the stack as normal, from `~/code/mtp/money-to-prisoners-common`:
+1. Start the stack as normal, from `~/code/mtp/money-to-prisoners-common` (**not** from
+   `money-to-prisoners-api`):
    ```shell
    docker compose up
    ```
    (or however you usually start it — this also spins up the Postgres `db` service.)
-2. In another terminal, load the parity data set into your local database:
+2. In another terminal, **from that same `money-to-prisoners-common` directory**, load the
+   parity data set into your local database:
    ```shell
    docker compose exec api ./manage.py load_parity_data
    ```
+   `docker compose` only knows about the services defined in whatever compose file(s) are in
+   your *current directory* — running this from `money-to-prisoners-api` (which has its own,
+   unrelated `docker-compose.yml`) will fail with `no such service: api` or
+   `service "api" is not running`, even though a container with that service is genuinely
+   running elsewhere.
 3. That's it — your local database now contains exactly the same reference data (groups,
    prisons, users, OAuth apps/roles) as the parity environment. Log in to any of the
    constituent apps using any of the fixed accounts described above (e.g. `bank-admin` /
    `bank-admin`, or `admin` / `admin` for Django admin).
+
+### Troubleshooting
+
+- `service "api" is not running` / `no such service: api` / `service "mtp-api" is not running`
+  — almost always means you're not in `money-to-prisoners-common` when running `docker compose`.
+  `cd ~/code/mtp/money-to-prisoners-common` first. Also double check you're using the **compose
+  service name** `api`, not the container name `mtp-api` shown in Docker Desktop (they're
+  defined as `container_name: mtp-api` under the `api:` service key in that compose file).
+- To confirm what's actually running and from where, run `docker compose ps -a` from
+  `money-to-prisoners-common` — it lists every service by name alongside its container name.
 
 Running the command without Docker (e.g. `./manage.py load_parity_data` against your own local
 Postgres, per the `local.py` settings) also works out of the box, since `ENVIRONMENT` already
