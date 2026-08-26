@@ -61,10 +61,16 @@ under `fixtures/parity/` is static, hand-authored JSON.
   - Prison/application/user mappings and `hmpps-employee` flags for the relevant users.
   - This file has **no dates to rebase** — nothing in it is time-sensitive, so there's no
     `01_users.meta.json`.
+- **`02_prisoners.json`** — 5 example prisoner locations, deliberately named/numbered so
+  they're unmistakably test data at a glance: `TEST PRISONER ONE`..`FIVE`, with prisoner
+  numbers `Z9901TD`..`Z9905TD` (`TD` = "Test Data"), spread across both sample prisons
+  (`IXB`/`INP`), created by the fixed `admin` user (pk `1001`). No `.meta.json` either —
+  prisoner locations themselves aren't date-sensitive (their linked credits/disbursements
+  would be, in a future fixture).
 
-There is deliberately **no prisoner or credit/payment/disbursement data yet**. That will be
-added incrementally, fixture by fixture, as the team works out what each constituent service's
-E2E tests actually need (see below).
+There is deliberately **no credit/payment/disbursement data yet**. That will be added
+incrementally, fixture by fixture, as the team works out what each constituent service's E2E
+tests actually need (see below).
 
 ## Running it locally
 
