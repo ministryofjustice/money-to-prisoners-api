@@ -100,5 +100,3 @@ class Command(BaseCommand):
             update_kwargs = {field: F(field) + shift for field in fields}
             model.objects.all().update(**update_kwargs)
             print_message(f'  Shifted {", ".join(fields)} on {model_label} by {shift}')
-
-
