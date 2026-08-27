@@ -137,6 +137,44 @@ kubectl -n money-to-prisoners-test exec deploy/api -- ./manage.py load_test_data
 ...except `load_parity_data` takes no arguments — everything it loads is fixed by the
 fixtures in the repository, not by command-line flags.
 
+### Deploying a branch to parity before it's merged to `main`
+
+Unlike `test` (which auto-deploys on every merge to `main`, via the `deploy` job in this
+repo's `build-test-push.yml`), nothing auto-deploys to `parity` — it's not restricted to
+`main` either, so you can (and should) test changes there from a feature branch/draft PR
+before merging. This is done entirely from the separate `money-to-prisoners-deploy`
+repository (see its `PARITY.md`/`docs/deployment.md` for the full picture); the short
+version:
+
+1. Push your branch and wait for its GitHub Actions build to go green (the same
+   `build-test-push.yml` run that would eventually deploy to `test` on `main` also builds
+   and pushes an image for any branch — it just doesn't auto-deploy anywhere except `main`
+   → `test`). You need the whole run green, not just the initial build job, since the image
+   tag is only pointed at a multi-arch manifest once `check`/`test` pass too.
+2. From `money-to-prisoners-deploy`, with its virtualenv active and `git-crypt unlock` run:
+   ```shell
+   ./manage.py app deploy parity api <branch>.<short-commit-sha>
+   ```
+   e.g. `./manage.py app deploy parity api parity-env-setup.55ef31a`. This checks the image
+   exists in the registry, then patches both the `app-versions` ConfigMap and the `api`
+   Deployment's image for the `parity` namespace. Branch names are lower-cased in the built
+   tag, so match that if your branch has capitals.
+3. Confirm what's configured vs actually running:
+   ```shell
+   ./manage.py app versions parity
+   ```
+4. **Wait for the rollout to finish** before running any `manage.py` command against the
+   pod — patching the Deployment only starts a rolling update, and with several replicas
+   `kubectl exec deploy/api` can otherwise land on a pod that's still running the old image:
+   ```shell
+   kubectl -n money-to-prisoners-parity rollout status deployment/api
+   ```
+5. Only then run `load_parity_data` (or anything else) against the pod, as described above.
+
+Once your branch is merged to `main`, consider re-running
+`./manage.py app deploy parity api main.<sha>` (or `latest`) so `parity` doesn't stay
+pinned to a stale feature-branch build indefinitely.
+
 ## Adding extra data (prisoners, credits, payments, etc.)
 
 As the team identifies what data each service's E2E tests need, add it as a new numbered
