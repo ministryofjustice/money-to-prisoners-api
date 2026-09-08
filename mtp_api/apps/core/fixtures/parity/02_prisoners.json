@@ -1,0 +1,73 @@
+[
+{
+  "model": "prison.prisonerlocation",
+  "pk": 10001,
+  "fields": {
+    "created": "2026-01-01T00:00:00Z",
+    "modified": "2026-01-01T00:00:00Z",
+    "created_by": 1001,
+    "prisoner_name": "TEST PRISONER ONE",
+    "prisoner_number": "Z9901TD",
+    "prisoner_dob": "1980-01-01",
+    "prison": "IXB",
+    "active": true
+  }
+},
+{
+  "model": "prison.prisonerlocation",
+  "pk": 10002,
+  "fields": {
+    "created": "2026-01-01T00:00:00Z",
+    "modified": "2026-01-01T00:00:00Z",
+    "created_by": 1001,
+    "prisoner_name": "TEST PRISONER TWO",
+    "prisoner_number": "Z9902TD",
+    "prisoner_dob": "1985-02-02",
+    "prison": "INP",
+    "active": true
+  }
+},
+{
+  "model": "prison.prisonerlocation",
+  "pk": 10003,
+  "fields": {
+    "created": "2026-01-01T00:00:00Z",
+    "modified": "2026-01-01T00:00:00Z",
+    "created_by": 1001,
+    "prisoner_name": "TEST PRISONER THREE",
+    "prisoner_number": "Z9903TD",
+    "prisoner_dob": "1990-03-03",
+    "prison": "IXB",
+    "active": true
+  }
+},
+{
+  "model": "prison.prisonerlocation",
+  "pk": 10004,
+  "fields": {
+    "created": "2026-01-01T00:00:00Z",
+    "modified": "2026-01-01T00:00:00Z",
+    "created_by": 1001,
+    "prisoner_name": "TEST PRISONER FOUR",
+    "prisoner_number": "Z9904TD",
+    "prisoner_dob": "1995-04-04",
+    "prison": "INP",
+    "active": true
+  }
+},
+{
+  "model": "prison.prisonerlocation",
+  "pk": 10005,
+  "fields": {
+    "created": "2026-01-01T00:00:00Z",
+    "modified": "2026-01-01T00:00:00Z",
+    "created_by": 1001,
+    "prisoner_name": "TEST PRISONER FIVE",
+    "prisoner_number": "Z9905TD",
+    "prisoner_dob": "2000-05-05",
+    "prison": "IXB",
+    "active": true
+  }
+}
+]
+

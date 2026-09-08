@@ -3,6 +3,7 @@
 *.mo
 *.pot
 venv/
+.idea/
 
 # sass & node.js
 *.sass-cache/
