@@ -1,0 +1,233 @@
+[
+  {
+    "model": "credit.credit",
+    "pk": 1,
+    "fields": {
+      "amount": 5000,
+      "received_at": "2026-09-09T09:00:00.000Z",
+      "prisoner_number": "Z9901TD",
+      "prisoner_dob": "1980-01-01",
+      "prisoner_name": "TEST PRISONER ONE",
+      "prison_id": "IXB",
+      "resolution": "pending",
+      "reconciled": false,
+      "reviewed": false,
+      "blocked": false,
+      "nomis_transaction_id": null,
+      "is_counted_in_sender_profile_total": false,
+      "is_counted_in_prisoner_profile_total": false,
+      "created": "2026-09-09T09:00:00.000Z",
+      "modified": "2026-09-09T09:00:00.000Z"
+    }
+  },
+  {
+    "model": "credit.credit",
+    "pk": 2,
+    "fields": {
+      "amount": 1000,
+      "received_at": "2026-09-08T09:00:00.000Z",
+      "prisoner_number": "Z9901TD",
+      "prisoner_dob": "1980-01-01",
+      "prisoner_name": "TEST PRISONER ONE",
+      "prison_id": "IXB",
+      "resolution": "pending",
+      "reconciled": false,
+      "reviewed": false,
+      "blocked": false,
+      "nomis_transaction_id": null,
+      "is_counted_in_sender_profile_total": false,
+      "is_counted_in_prisoner_profile_total": false,
+      "created": "2026-09-08T09:00:00.000Z",
+      "modified": "2026-09-08T09:00:00.000Z"
+    }
+  },
+  {
+    "model": "credit.credit",
+    "pk": 3,
+    "fields": {
+      "amount": 3000,
+      "received_at": "2026-09-07T09:00:00.000Z",
+      "prisoner_number": "Z9902TD",
+      "prisoner_dob": "1985-02-02",
+      "prisoner_name": "TEST PRISONER TWO",
+      "prison_id": "INP",
+      "resolution": "pending",
+      "reconciled": false,
+      "reviewed": false,
+      "blocked": false,
+      "nomis_transaction_id": null,
+      "is_counted_in_sender_profile_total": false,
+      "is_counted_in_prisoner_profile_total": false,
+      "created": "2026-09-07T09:00:00.000Z",
+      "modified": "2026-09-07T09:00:00.000Z"
+    }
+  },
+  {
+    "model": "credit.credit",
+    "pk": 4,
+    "fields": {
+      "amount": 4400,
+      "received_at": "2026-09-06T09:00:00.000Z",
+      "prisoner_number": "Z9902TD",
+      "prisoner_dob": "1985-02-02",
+      "prisoner_name": "TEST PRISONER TWO",
+      "prison_id": "IXB",
+      "resolution": "pending",
+      "reconciled": false,
+      "reviewed": false,
+      "blocked": false,
+      "nomis_transaction_id": null,
+      "is_counted_in_sender_profile_total": false,
+      "is_counted_in_prisoner_profile_total": false,
+      "created": "2026-09-06T09:00:00.000Z",
+      "modified": "2026-09-06T09:00:00.000Z"
+    }
+  },
+  {
+    "model": "credit.credit",
+    "pk": 5,
+    "fields": {
+      "amount": 1000,
+      "received_at": "2026-09-05T09:00:00.000Z",
+      "prisoner_number": "Z9902TD",
+      "prisoner_dob": "1985-02-02",
+      "prisoner_name": "TEST PRISONER TWO",
+      "prison_id": "IXB",
+      "resolution": "pending",
+      "reconciled": false,
+      "reviewed": false,
+      "blocked": false,
+      "nomis_transaction_id": null,
+      "is_counted_in_sender_profile_total": false,
+      "is_counted_in_prisoner_profile_total": false,
+      "created": "2026-09-05T09:00:00.000Z",
+      "modified": "2026-09-05T09:00:00.000Z"
+    }
+  },
+  {
+    "model": "credit.credit",
+    "pk": 6,
+    "fields": {
+      "amount": 70000,
+      "received_at": "2026-09-04T09:00:00.000Z",
+      "prisoner_name": "TEST PRISONER THREE",
+      "prisoner_number": "Z9903TD",
+      "prisoner_dob": "1990-03-03",
+      "prison_id": "IXB",
+      "resolution": "pending",
+      "reconciled": false,
+      "reviewed": false,
+      "blocked": false,
+      "nomis_transaction_id": null,
+      "is_counted_in_sender_profile_total": false,
+      "is_counted_in_prisoner_profile_total": false,
+      "created": "2026-09-04T09:00:00.000Z",
+      "modified": "2026-09-04T09:00:00.000Z"
+    }
+  },
+  {
+    "model": "credit.credit",
+    "pk": 7,
+    "fields": {
+      "amount": 100,
+      "received_at": "2026-09-03T09:00:00.000Z",
+      "prisoner_name": "TEST PRISONER FOUR",
+      "prisoner_number": "Z9904TD",
+      "prisoner_dob": "1995-04-04",
+      "prison": "INP",
+      "resolution": "pending",
+      "reconciled": false,
+      "reviewed": false,
+      "blocked": false,
+      "nomis_transaction_id": null,
+      "is_counted_in_sender_profile_total": false,
+      "is_counted_in_prisoner_profile_total": false,
+      "created": "2026-09-03T09:00:00.000Z",
+      "modified": "2026-09-03T09:00:00.000Z"
+    }
+  },
+  {
+    "model": "credit.credit",
+    "pk": 8,
+    "fields": {
+      "amount": 9900,
+      "received_at": "2026-09-02T09:00:00.000Z",
+      "prisoner_name": "TEST PRISONER FOUR",
+      "prisoner_number": "Z9904TD",
+      "prisoner_dob": "1995-04-04",
+      "prison": "INP",
+      "resolution": "pending",
+      "reconciled": false,
+      "reviewed": false,
+      "blocked": false,
+      "nomis_transaction_id": null,
+      "is_counted_in_sender_profile_total": false,
+      "is_counted_in_prisoner_profile_total": false,
+      "created": "2026-09-02T09:00:00.000Z",
+      "modified": "2026-09-02T09:00:00.000Z"
+    }
+  },
+  {
+    "model": "credit.credit",
+    "pk": 9,
+    "fields": {
+      "amount": 600,
+      "received_at": "2026-09-01T09:00:00.000Z",
+      "prisoner_name": "TEST PRISONER FOUR",
+      "prisoner_number": "Z9904TD",
+      "prisoner_dob": "1995-04-04",
+      "prison": "INP",
+      "resolution": "pending",
+      "reconciled": false,
+      "reviewed": false,
+      "blocked": false,
+      "nomis_transaction_id": null,
+      "is_counted_in_sender_profile_total": false,
+      "is_counted_in_prisoner_profile_total": false,
+      "created": "2026-09-01T09:00:00.000Z",
+      "modified": "2026-09-01T09:00:00.000Z"
+    }
+  },
+  {
+    "model": "credit.credit",
+    "pk": 10,
+    "fields": {
+      "amount": 1000,
+      "received_at": "2026-08-31T09:00:00.000Z",
+      "prisoner_name": "TEST PRISONER FIVE",
+      "prisoner_number": "Z9905TD",
+      "prisoner_dob": "2000-05-05",
+      "prison": "IXB",
+      "resolution": "pending",
+      "reconciled": false,
+      "reviewed": false,
+      "blocked": false,
+      "nomis_transaction_id": null,
+      "is_counted_in_sender_profile_total": false,
+      "is_counted_in_prisoner_profile_total": false,
+      "created": "2026-08-31T09:00:00.000Z",
+      "modified": "2026-08-31T09:00:00.000Z"
+    }
+  },
+  {
+    "model": "credit.credit",
+    "pk": 11,
+    "fields": {
+      "amount": 7000,
+      "received_at": "2026-08-31T09:00:00.000Z",
+      "prisoner_name": "TEST PRISONER FIVE",
+      "prisoner_number": "Z9905TD",
+      "prisoner_dob": "2000-05-05",
+      "prison": "IXB",
+      "resolution": "pending",
+      "reconciled": false,
+      "reviewed": false,
+      "blocked": false,
+      "nomis_transaction_id": null,
+      "is_counted_in_sender_profile_total": false,
+      "is_counted_in_prisoner_profile_total": false,
+      "created": "2026-08-31T09:00:00.000Z",
+      "modified": "2026-08-31T09:00:00.000Z"
+    }
+  }
+]
