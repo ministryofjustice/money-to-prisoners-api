@@ -8,7 +8,143 @@ demand), the `parity` environment is fully controlled by this repository: its da
 wiped and reloaded from a fixed, static set of Django fixtures every day (via a cron job),
 so both services are always compared against identical, reproducible data.
 
-## How it works
+This guide gets you from a clean checkout to a passing local Playwright run. It assumes
+you're running the whole stack via **Docker Compose from `money-to-prisoners-common`** —
+that's the default, recommended way to run everything locally, and what the rest of this
+document assumes throughout.
+
+## Prerequisites
+
+Clone these repositories as siblings of this one (i.e. all under the same parent directory,
+e.g. `~/code/mtp/`):
+
+- `money-to-prisoners-common` — orchestrates the local Docker Compose stack for every app
+  (`api`, `cashbook`, `bank-admin`, `noms-ops`, `send-money`, `emails`, `start-page`) plus a
+  Postgres `db` service. **This is the directory you'll run `docker compose` from — not this
+  repo**, which has its own, unrelated `docker-compose.yml` (see "This repo's own
+  `docker-compose.yml`" below).
+- `money-to-prisoners-bank-admin` (and the other app repos, as needed) — each is bind-mounted
+  into its container by `money-to-prisoners-common`'s compose file for live reload, so no
+  separate build step is required beyond `docker compose up`.
+- `hmpps-prisoner-monies-playwright-suite` — the E2E test suite that exercises the running
+  stack.
+
+## 1. Configure environment variables
+
+`money-to-prisoners-common`'s `docker-compose.yml` already sets sensible defaults for local
+dev (`ENV: local`, `DEBUG: True`, DB connection details, etc.) — no extra config is needed
+just to bring the stack up. However, a couple of app features need real secrets to work
+end-to-end, and those aren't (and shouldn't be) committed to the repo.
+
+**Where secrets go:** create a `.env` file at the root of `money-to-prisoners-common` (it's
+already covered by that repo's `.gitignore`, so it's safe to keep real values in it). Docker
+Compose automatically loads this file and substitutes any `${VAR_NAME}` references used in
+`docker-compose.yml`.
+
+**Do not** put these in an app's own `settings/local.py` — `money-to-prisoners-common`'s
+`docker-compose.yml` deliberately bind-mounts an empty stub
+(`docker/no-local-settings.py`) over every app's `settings/local.py` at container runtime, so
+that containers use `DB_HOST=db` rather than whatever a host-oriented `local.py` sets. Each
+app's `.dockerignore` also separately excludes `settings/local.py` from ever being baked into
+an image. Environment variables in `docker-compose.yml` (backed by the `.env` file) are the
+only supported way to configure secrets for the Compose stack.
+
+Currently required:
+
+| Variable                  | Service      | Why it's needed                                                                                                                                                      |
+|----------------------------|--------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `ZENDESK_API_USERNAME`     | `bank-admin` | Bank Admin's "Get help" feedback form creates a real Zendesk ticket on submit. Without this (and the two below), the form fails silently and never redirects to `/feedback/success/`, which breaks the Playwright bank-admin get-help spec. |
+| `ZENDESK_API_TOKEN`        | `bank-admin` | As above.                                                                                                                                                              |
+| `ZENDESK_REQUESTER_ID`     | `bank-admin` | As above.                                                                                                                                                              |
+
+`money-to-prisoners-common/docker-compose.yml`'s `bank-admin` service already references these
+as `${ZENDESK_API_USERNAME:-}` etc. in its `environment:` block, so you only need to supply the
+values. Create `money-to-prisoners-common/.env`:
+
+```dotenv
+ZENDESK_API_USERNAME=servicedesk@digital.justice.gov.uk
+ZENDESK_API_TOKEN=<your-zendesk-api-token>
+ZENDESK_REQUESTER_ID=<your-zendesk-requester-id>
+```
+
+Ask a teammate or check the team's secrets store for real values if you don't have them.
+
+If you add a fixture or feature that needs a new secret in future, follow the same pattern:
+add `${VAR_NAME:-}` to the relevant service's `environment:` block in
+`money-to-prisoners-common/docker-compose.yml` (safe to commit — no real value in it), and
+document the real value's variable name (not its value) in the table above.
+
+## 2. Start the local stack
+
+From `money-to-prisoners-common`:
+
+```shell
+docker compose up
+```
+
+This builds/starts every app service (`api`, `cashbook`, `bank-admin`, `noms-ops`,
+`send-money`, `emails`, `start-page`) plus the shared Postgres `db` service, all on a common
+Docker network so they can reach each other by service name (e.g. `bank-admin` reaches the API
+at `http://api:8000`).
+
+Leave this running in its own terminal; run the remaining steps from a second terminal.
+
+## 3. Load the parity data set
+
+Still from `money-to-prisoners-common` (Compose only recognises services defined in the
+compose file(s) in your *current* directory — running this from `money-to-prisoners-api`
+will fail with `no such service: api`, even though a container with that name is running):
+
+```shell
+docker compose exec api ./manage.py load_parity_data
+```
+
+This wipes your local database and reloads it from the fixed set of fixtures in
+`mtp_api/apps/core/fixtures/parity/` (see "How the fixtures work" below) — the exact same data
+used in the real `parity` environment. Your local stack now has the same reference data
+(groups, prisons, users, OAuth apps/roles) and example prisoners/credits/payments/
+disbursements/transactions as `parity`.
+
+Log in to any app using any of the fixed accounts (every password matches its username, e.g.
+`bank-admin` / `bank-admin`, or `admin` / `admin` for Django admin).
+
+Re-run this command at any point to reset your local database back to this same known state —
+useful whenever your local data has drifted from what you need for a test.
+
+## 4. Run the Playwright suite
+
+From `hmpps-prisoner-monies-playwright-suite`:
+
+```shell
+npm test
+```
+
+This runs every project defined in `playwright.config.ts` against the URLs in that repo's own
+`.env` (e.g. `URL_BANK_ADMIN=http://localhost:8002`), which match the ports
+`money-to-prisoners-common`'s compose file publishes. To run just one app's tests:
+
+```shell
+npm run test:bank-admin
+npm run test:send-money
+```
+
+## Troubleshooting
+
+- **`service "api" is not running"` / `no such service: api`** — you're not in
+  `money-to-prisoners-common` when running `docker compose`. `cd` there first. Also check
+  you're using the Compose **service name** `api`, not the container name `mtp-api` shown in
+  Docker Desktop (`docker compose ps -a` lists both).
+- **A table looks empty even though `load_parity_data` reported success** — you're likely
+  connected to the wrong Postgres instance. This repo's *own* `docker-compose.yml` (unrelated
+  to the one above) spins up a separate standalone Postgres published on host port `5432`,
+  purely for running the app outside Docker entirely — `money-to-prisoners-common`'s `db`
+  service does not publish `5432` to the host at all, so a host-based GUI client pointed at
+  `localhost:5432` cannot be looking at the data you just loaded. Verify directly instead:
+  ```shell
+  docker compose exec api ./manage.py shell -c "from disbursement.models import Disbursement; print(Disbursement.objects.count())"
+  ```
+
+## How the fixtures work
 
 Everything lives under:
 
@@ -67,56 +203,40 @@ under `fixtures/parity/` is static, hand-authored JSON.
   (`IXB`/`INP`), created by the fixed `admin` user (pk `1001`). No `.meta.json` either —
   prisoner locations themselves aren't date-sensitive (their linked credits/disbursements
   would be, in a future fixture).
+- **`03_credits.json`** / **`03_credits.meta.json`** — example credits (one per sample
+  prisoner), left with `"resolution": "pending"` (i.e. not yet credited/refunded) and rebased
+  to stay within the last several days of "today". **Known issue:** because these are
+  `pending` rather than `credited`, they're old enough to be picked up by Bank Admin's
+  "Access Pay file – refunds" feature as outstanding refund candidates. This currently
+  conflicts with `hmpps-prisoner-monies-playwright-suite`'s
+  `tests/bank-admin/specs/test-happy-path-downloads-page.spec.ts`, which asserts that section
+  says *"There are no refunds to process through Access Pay"* — i.e. it assumes no pending
+  credits exist. See "Known data/test conflicts" below before changing either side.
+- **`04_disbursement_logs.json`** — `disbursement.log` entries for the disbursements in
+  `05_disbursements.json` (e.g. `created`/`confirmed`/`sent` actions), rebased via its own
+  `.meta.json` alongside them.
+- **`05_disbursements.json`** — 11 example disbursements spread across both sample prisoners
+  and prisons, in a mix of `confirmed`/`sent` resolutions, referencing the sample prisoners
+  from `02_prisoners.json` by `prisoner_number`/`prison_id` rather than by fixture pk.
+- **`06_payments.json`** — example `payment.payment` records tied to some of the credits in
+  `03_credits.json`, rebased in step with them.
+- **`07_transactions.json`** — example `transaction.transaction` rows (bank transfer
+  credits/debits), rebased via their own `.meta.json`.
 
-There is deliberately **no credit/payment/disbursement data yet**. That will be added
-incrementally, fixture by fixture, as the team works out what each constituent service's E2E
-tests actually need (see below).
+More fixtures will continue to be added incrementally as the team works out what each
+constituent service's E2E tests actually need (see "Adding extra data" below).
 
-## Running it locally
+### This repo's own `docker-compose.yml`
 
-The local dev stack is built and orchestrated by `money-to-prisoners-common`'s
-`docker-compose.yml`, **not** the `docker-compose.yml` in this repository (this repo's own
-compose file only spins up a standalone Postgres instance for running the app outside Docker
-entirely — it has no `api` service). That compose file already sets `ENV: local` for the `api`
-container, so no extra environment configuration is required.
-
-1. Start the stack as normal, from `~/code/mtp/money-to-prisoners-common` (**not** from
-   `money-to-prisoners-api`):
-   ```shell
-   docker compose up
-   ```
-   (or however you usually start it — this also spins up the Postgres `db` service.)
-2. In another terminal, **from that same `money-to-prisoners-common` directory**, load the
-   parity data set into your local database:
-   ```shell
-   docker compose exec api ./manage.py load_parity_data
-   ```
-   `docker compose` only knows about the services defined in whatever compose file(s) are in
-   your *current directory* — running this from `money-to-prisoners-api` (which has its own,
-   unrelated `docker-compose.yml`) will fail with `no such service: api` or
-   `service "api" is not running`, even though a container with that service is genuinely
-   running elsewhere.
-3. That's it — your local database now contains exactly the same reference data (groups,
-   prisons, users, OAuth apps/roles) as the parity environment. Log in to any of the
-   constituent apps using any of the fixed accounts described above (e.g. `bank-admin` /
-   `bank-admin`, or `admin` / `admin` for Django admin).
-
-### Troubleshooting
-
-- `service "api" is not running` / `no such service: api` / `service "mtp-api" is not running`
-  — almost always means you're not in `money-to-prisoners-common` when running `docker compose`.
-  `cd ~/code/mtp/money-to-prisoners-common` first. Also double check you're using the **compose
-  service name** `api`, not the container name `mtp-api` shown in Docker Desktop (they're
-  defined as `container_name: mtp-api` under the `api:` service key in that compose file).
-- To confirm what's actually running and from where, run `docker compose ps -a` from
-  `money-to-prisoners-common` — it lists every service by name alongside its container name.
-
-Running the command without Docker (e.g. `./manage.py load_parity_data` against your own local
-Postgres, per the `local.py` settings) also works out of the box, since `ENVIRONMENT` already
-defaults to `'local'` when the `ENV` environment variable isn't set at all.
-
-Re-running the command at any point completely resets your local database back to this same
-known state — useful whenever your local data has drifted from what you need for a test.
+`money-to-prisoners-api` has its own `docker-compose.yml`, unrelated to the one used to run
+the full local stack (see "Prerequisites" above) — it only spins up a standalone Postgres
+instance (`mtp-postgres` container, `mtp_api` database, published on host port `5432`) for
+running this app outside Docker entirely (e.g. `./manage.py runserver` against it directly).
+It has no `api` service, so `docker compose` commands for the full stack must always be run
+from `money-to-prisoners-common`, not from here. Running `./manage.py load_parity_data`
+without Docker at all (against this standalone Postgres, per your own `settings/local.py`)
+also works out of the box, since `ENVIRONMENT` already defaults to `'local'` when `ENV` isn't
+set.
 
 ## Applying it to the real parity environment
 
@@ -225,4 +345,33 @@ follow to stay consistent with what's already there:
 After adding a new fixture (and optional meta file), just re-run `load_parity_data` (locally or
 in the real parity environment) — it will pick up the new file automatically via its glob, no
 other changes required.
+
+## Known data/test conflicts
+
+Because fixtures are added independently, by different people, for different services'
+tests, it's possible for one fixture to have a side effect that breaks an *existing* E2E test
+elsewhere, without anyone intending it. This section tracks currently-known conflicts of that
+kind so they aren't rediscovered/re-debugged from scratch each time.
+
+- **`03_credits.json`'s `pending` credits vs. Bank Admin's downloads-page test.** The credits
+  in `03_credits.json` are deliberately left `"resolution": "pending"` (not `credited` or
+  `refunded`), rebased to stay within the last several days. Bank Admin's "Access Pay file –
+  refunds" download section treats old, still-`pending` credits as outstanding refund
+  candidates and generates a downloadable file for them — but
+  `hmpps-prisoner-monies-playwright-suite`'s
+  `tests/bank-admin/specs/test-happy-path-downloads-page.spec.ts` asserts the opposite: that
+  the section shows *"There are no refunds to process through Access Pay"*, i.e. it assumes
+  there's nothing pending. Whichever fixture/test was authored first didn't know about the
+  other's assumption. **Not yet resolved** — needs a decision on whether to:
+  - change the `03_credits.json` credits to `"resolution": "credited"` (if they were never
+    meant to represent refund candidates), or
+  - update the Playwright spec to expect a refund file (if parity data is *supposed* to
+    include unresolved credits), or
+  - split "refund-triggering" credit data into its own separate, deliberately-added fixture,
+    per rule 4 above, so it's opt-in rather than a side effect of unrelated credit data.
+
+  If you add new prisoner/credit/transaction/disbursement fixtures in future, check whether
+  any existing Playwright spec (across all four apps' test suites) makes assumptions about
+  there being *no* data of that kind, the way this one does — that's the class of conflict to
+  watch for.
 
