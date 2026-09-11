@@ -1,8 +1,11 @@
+import datetime
 import re
 
 from django.conf import settings
 from django.core.validators import RegexValidator
 from django.db import models
+from django.utils.crypto import salted_hmac
+from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 
 from model_utils.models import TimeStampedModel
@@ -142,3 +145,70 @@ class PrisonerBalance(TimeStampedModel):
 
     def __str__(self):
         return f'{self.prisoner_number} has balance £{self.amount/100:0.2f}'
+
+
+class PrisonerValidityAttemptManager(models.Manager):
+    def hash_prisoner_number(self, prisoner_number):
+        return salted_hmac('prisoner_validity', prisoner_number.strip().upper(), algorithm='sha256').hexdigest()
+
+    def in_window(self, ip_address):
+        window_start = now() - datetime.timedelta(seconds=settings.PRISONER_VALIDITY_WINDOW_SECONDS)
+        return self.get_queryset().filter(ip_address=ip_address, created__gte=window_start)
+
+    def is_rate_limited(self, ip_address):
+        """
+        Returns (limited, retry_after_seconds) for an IP address.
+        Limits apply on the number of failed checks and on the number of distinct prisoners tried in the window.
+        An unknown IP address is never limited.
+        """
+        if not settings.PRISONER_VALIDITY_LIMITING_ENABLED or not ip_address:
+            return False, 0
+        attempts = self.in_window(ip_address)
+        failed_attempts = attempts.filter(matched=False)
+        failed_count = failed_attempts.count()
+        distinct_prisoner_count = attempts.values('prisoner_number_hash').distinct().count()
+        if failed_count >= settings.PRISONER_VALIDITY_FAILURE_LIMIT:
+            # the attempt whose expiry brings the count back under the limit
+            excess = failed_count - settings.PRISONER_VALIDITY_FAILURE_LIMIT
+            unblocking_attempt = failed_attempts.order_by('created')[excess]
+        elif distinct_prisoner_count >= settings.PRISONER_VALIDITY_DISTINCT_PRISONER_LIMIT:
+            # approximation: the caller may need to retry once more if several prisoners were tried early on
+            unblocking_attempt = attempts.order_by('created').first()
+        else:
+            return False, 0
+        window = datetime.timedelta(seconds=settings.PRISONER_VALIDITY_WINDOW_SECONDS)
+        retry_after = int((unblocking_attempt.created + window - now()).total_seconds())
+        return True, max(retry_after, 1)
+
+    def record(self, ip_address, prisoner_number, matched):
+        return self.get_queryset().create(
+            ip_address=ip_address or None,
+            prisoner_number_hash=self.hash_prisoner_number(prisoner_number),
+            matched=matched,
+        )
+
+    def delete_older_than(self, days):
+        return self.get_queryset().filter(created__lt=now() - datetime.timedelta(days=days)).delete()
+
+
+class PrisonerValidityAttempt(TimeStampedModel):
+    """
+    A record of each prisoner validity check made from the public send-money service.
+    The prisoner number is stored only as a keyed hash and the date of birth is not stored at all.
+    """
+    ip_address = models.GenericIPAddressField(blank=True, null=True, db_index=True)
+    prisoner_number_hash = models.CharField(max_length=64, db_index=True)
+    matched = models.BooleanField()
+
+    objects = PrisonerValidityAttemptManager()
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['ip_address', 'created']),
+        ]
+        ordering = ('-created',)
+        get_latest_by = 'created'
+
+    def __str__(self):
+        outcome = 'matched' if self.matched else 'not found'
+        return f'{self.ip_address or "unknown IP"} {outcome} at {self.created:%Y-%m-%d %H:%M}'
