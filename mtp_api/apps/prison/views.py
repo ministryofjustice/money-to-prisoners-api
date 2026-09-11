@@ -1,5 +1,7 @@
 import datetime
+import ipaddress
 import logging
+import os
 
 from django.contrib import messages
 from django.db import models, transaction
@@ -24,7 +26,11 @@ from mtp_auth.permissions import (
     get_client_permissions_class,
 )
 from prison.forms import PrisonerBalanceUploadForm
-from prison.models import PrisonerLocation, Category, Population, Prison, PrisonerBalance, PrisonerCreditNoticeEmail
+from prison.metrics import prisoner_validity_checks
+from prison.models import (
+    PrisonerLocation, Category, Population, Prison, PrisonerBalance, PrisonerCreditNoticeEmail,
+    PrisonerValidityAttempt,
+)
 from prison.serializers import (
     PrisonerLocationSerializer,
     PrisonerValiditySerializer,
@@ -133,6 +139,11 @@ class DeleteInactivePrisonerLocationsView(generics.GenericAPIView):
 
 
 class PrisonerValidityView(mixins.ListModelMixin, viewsets.GenericViewSet):
+    """
+    Confirms whether a prisoner number and date of birth match someone currently in the estate.
+    Called from the public send-money service, so every check is recorded against the sender's IP address
+    (forwarded by send-money in the X-Sender-IP header) and repeated or broad lookups can be limited.
+    """
     queryset = PrisonerLocation.objects.filter(active=True)
     permission_classes = (
         IsAuthenticated, SendMoneyClientIDPermissions,
@@ -146,6 +157,31 @@ class PrisonerValidityView(mixins.ListModelMixin, viewsets.GenericViewSet):
             prisoner_dob=self.request.GET['prisoner_dob'],
         )
 
+    def get_sender_ip_address(self):
+        sender_ip = self.request.META.get('HTTP_X_SENDER_IP', '').strip()
+        if not sender_ip:
+            return None
+        try:
+            return str(ipaddress.ip_address(sender_ip))
+        except ValueError:
+            return None
+
+    def log_check(self, outcome, sender_ip, prisoner_number, **extra_fields):
+        prisoner_validity_checks.labels(
+            outcome=outcome,
+            pid=str(os.getpid()),  # pid is needed as uwsgi runs with multiple workers
+        ).inc()
+        logger.info(
+            'Prisoner validity check %(outcome)s',
+            {'outcome': outcome},
+            extra={'elk_fields': {
+                '@fields.outcome': outcome,
+                '@fields.client_ip': sender_ip,
+                '@fields.prisoner_hash': PrisonerValidityAttempt.objects.hash_prisoner_number(prisoner_number),
+                **extra_fields,
+            }},
+        )
+
     def list(self, request, *args, **kwargs):
         prisoner_number = self.request.GET.get('prisoner_number', '')
         prisoner_dob = self.request.GET.get('prisoner_dob', '')
@@ -157,7 +193,22 @@ class PrisonerValidityView(mixins.ListModelMixin, viewsets.GenericViewSet):
             return Response(data={'errors': "'prisoner_number' and 'prisoner_dob' "
                                             'fields are required'},
                             status=status.HTTP_400_BAD_REQUEST)
-        return super().list(request, *args, **kwargs)
+
+        sender_ip = self.get_sender_ip_address()
+        limited, retry_after = PrisonerValidityAttempt.objects.is_rate_limited(sender_ip)
+        if limited:
+            self.log_check('rate_limited', sender_ip, prisoner_number, **{'@fields.retry_after': retry_after})
+            return Response(
+                data={'errors': 'too_many_attempts', 'retry_after': retry_after},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+                headers={'Retry-After': str(retry_after)},
+            )
+
+        response = super().list(request, *args, **kwargs)
+        matched = response.data['count'] == 1
+        PrisonerValidityAttempt.objects.record(sender_ip, prisoner_number, matched)
+        self.log_check('matched' if matched else 'not_found', sender_ip, prisoner_number)
+        return response
 
 
 class PrisonerAccountBalanceView(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
