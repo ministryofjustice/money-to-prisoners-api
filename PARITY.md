@@ -49,7 +49,7 @@ app's `.dockerignore` also separately excludes `settings/local.py` from ever bei
 an image. Environment variables in `docker-compose.yml` (backed by the `.env` file) are the
 only supported way to configure secrets for the Compose stack.
 
-Currently required:
+Currently required secrets (values, not names, live in `.env`):
 
 | Variable                  | Service      | Why it's needed                                                                                                                                                      |
 |----------------------------|--------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -68,6 +68,28 @@ ZENDESK_REQUESTER_ID=<your-zendesk-requester-id>
 ```
 
 Ask a teammate or check the team's secrets store for real values if you don't have them.
+
+Note that these three values are **not secret to `test`/`parity`** — they're the same
+credentials `money-to-prisoners-deploy` already configures for those environments (see
+`config/{test,parity}/env/common-secrets.yml`), because "if Test does it, Parity should too"
+applies here too. This means submitting the get-help form locally creates a **real ticket** in
+the shared Zendesk queue used by `test`/`parity`, so don't spam it.
+
+In addition, `money-to-prisoners-common/docker-compose.yml`'s shared `x-environment` anchor
+already sets these (no `.env` needed — they're not secrets, just config that needs to match
+`test`/`parity`):
+
+| Variable                        | Value | Why it's needed                                                                                                                                                                                 |
+|----------------------------------|-------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `NOVEMBER_SECOND_CHANGES_LIVE`   | `1`   | Gates whether Bank Admin still shows Access Pay refund file downloads (pre-policy-change behaviour) or the "no refunds needed" message (post-policy-change). `test`/`parity` both set this to `1` (see `config/{test,parity}/env/bank-admin.yml`); without it locally, Bank Admin's downloads page shows refund downloads instead, breaking the Playwright bank-admin downloads-page spec. |
+| `BANK_TRANSFERS_ENABLED`         | `0`   | Matches `test`/`parity`'s `send-money`/`cashbook`/`noms-ops` config — bank transfers are no longer an accepted payment method.                                                                |
+| `PRISONER_CAPPING_ENABLED`       | `1`   | Matches `test`/`parity`'s config for the same apps.                                                                                                                                             |
+
+These are read once by Django at process start (`os.environ.get(...)` in each app's
+`settings/base.py`), so they can only be changed by recreating the container with a different
+`environment:` block — there's no way to toggle them per-Playwright-test-run, and no reason to:
+they represent a fixed environment-level policy state, not something an individual test should
+own.
 
 If you add a fixture or feature that needs a new secret in future, follow the same pattern:
 add `${VAR_NAME:-}` to the relevant service's `environment:` block in
@@ -143,6 +165,14 @@ npm run test:send-money
   ```shell
   docker compose exec api ./manage.py shell -c "from disbursement.models import Disbursement; print(Disbursement.objects.count())"
   ```
+- **A Playwright spec fails on something that looks unrelated to any fixture data** (e.g. a
+  page shows content that assumes a policy/feature flag is on or off) — check whether the app
+  needs a plain (non-secret) environment variable set to match `test`/`parity`, before assuming
+  a fixture needs changing. `money-to-prisoners-deploy`'s `config/{test,parity}/env/*.yml`
+  files are the source of truth for what real `test`/`parity` set; anything found there that
+  local Compose doesn't already set (see the `x-environment` anchor and the
+  `NOVEMBER_SECOND_CHANGES_LIVE` example above) should be added there too, not worked around in
+  a fixture or the test itself.
 
 ## How the fixtures work
 
@@ -205,13 +235,7 @@ under `fixtures/parity/` is static, hand-authored JSON.
   would be, in a future fixture).
 - **`03_credits.json`** / **`03_credits.meta.json`** — example credits (one per sample
   prisoner), left with `"resolution": "pending"` (i.e. not yet credited/refunded) and rebased
-  to stay within the last several days of "today". **Known issue:** because these are
-  `pending` rather than `credited`, they're old enough to be picked up by Bank Admin's
-  "Access Pay file – refunds" feature as outstanding refund candidates. This currently
-  conflicts with `hmpps-prisoner-monies-playwright-suite`'s
-  `tests/bank-admin/specs/test-happy-path-downloads-page.spec.ts`, which asserts that section
-  says *"There are no refunds to process through Access Pay"* — i.e. it assumes no pending
-  credits exist. See "Known data/test conflicts" below before changing either side.
+  to stay within the last several days of "today".
 - **`04_disbursement_logs.json`** — `disbursement.log` entries for the disbursements in
   `05_disbursements.json` (e.g. `created`/`confirmed`/`sent` actions), rebased via its own
   `.meta.json` alongside them.
@@ -353,25 +377,13 @@ tests, it's possible for one fixture to have a side effect that breaks an *exist
 elsewhere, without anyone intending it. This section tracks currently-known conflicts of that
 kind so they aren't rediscovered/re-debugged from scratch each time.
 
-- **`03_credits.json`'s `pending` credits vs. Bank Admin's downloads-page test.** The credits
-  in `03_credits.json` are deliberately left `"resolution": "pending"` (not `credited` or
-  `refunded`), rebased to stay within the last several days. Bank Admin's "Access Pay file –
-  refunds" download section treats old, still-`pending` credits as outstanding refund
-  candidates and generates a downloadable file for them — but
-  `hmpps-prisoner-monies-playwright-suite`'s
-  `tests/bank-admin/specs/test-happy-path-downloads-page.spec.ts` asserts the opposite: that
-  the section shows *"There are no refunds to process through Access Pay"*, i.e. it assumes
-  there's nothing pending. Whichever fixture/test was authored first didn't know about the
-  other's assumption. **Not yet resolved** — needs a decision on whether to:
-  - change the `03_credits.json` credits to `"resolution": "credited"` (if they were never
-    meant to represent refund candidates), or
-  - update the Playwright spec to expect a refund file (if parity data is *supposed* to
-    include unresolved credits), or
-  - split "refund-triggering" credit data into its own separate, deliberately-added fixture,
-    per rule 4 above, so it's opt-in rather than a side effect of unrelated credit data.
+If you add new prisoner/credit/transaction/disbursement fixtures in future, check whether any
+existing Playwright spec (across all four apps' test suites) makes assumptions about there
+being *no* data of that kind — that's the class of conflict to watch for. Before assuming a
+fixture is the cause of a test failure, also rule out **environment/settings gaps** between
+local Compose and the real `test`/`parity` environments (see the
+`NOVEMBER_SECOND_CHANGES_LIVE` example above) — a test can fail for reasons that have nothing
+to do with the data itself.
 
-  If you add new prisoner/credit/transaction/disbursement fixtures in future, check whether
-  any existing Playwright spec (across all four apps' test suites) makes assumptions about
-  there being *no* data of that kind, the way this one does — that's the class of conflict to
-  watch for.
+There are currently no known conflicts of this kind.
 
