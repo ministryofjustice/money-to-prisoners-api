@@ -51,39 +51,51 @@ only supported way to configure secrets for the Compose stack.
 
 Currently required secrets (values, not names, live in `.env`):
 
-| Variable                  | Service      | Why it's needed                                                                                                                                                      |
-|----------------------------|--------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `ZENDESK_API_USERNAME`     | `bank-admin` | Bank Admin's "Get help" feedback form creates a real Zendesk ticket on submit. Without this (and the two below), the form fails silently and never redirects to `/feedback/success/`, which breaks the Playwright bank-admin get-help spec. |
-| `ZENDESK_API_TOKEN`        | `bank-admin` | As above.                                                                                                                                                              |
-| `ZENDESK_REQUESTER_ID`     | `bank-admin` | As above.                                                                                                                                                              |
+| Variable                            | Service       | Why it's needed                                                                                                                                                                                                                     |
+|--------------------------------------|---------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `ZENDESK_API_USERNAME`               | `bank-admin`  | Bank Admin's "Get help" feedback form creates a real Zendesk ticket on submit. Without this (and the two below), the form fails silently and never redirects to `/feedback/success/`, which breaks the Playwright bank-admin get-help spec. |
+| `ZENDESK_API_TOKEN`                  | `bank-admin`  | As above.                                                                                                                                                                                                                          |
+| `ZENDESK_REQUESTER_ID`               | `bank-admin`  | As above.                                                                                                                                                                                                                          |
+| `GOVUK_NOTIFY_CALLBACKS_BEARER_TOKEN`| `emails`      | Authenticates incoming delivery-receipt/inbound-SMS callbacks from GOV.UK Notify (`/notify-callbacks/`). Defaults to `'CHANGE_ME'` if unset, which never matches any bearer token supplied, breaking the Playwright emails-api specs. |
+| `GOVUK_PAY_AUTH_TOKEN`               | `send-money`  | Authenticates outgoing requests to the GOV.UK Pay sandbox API when creating a card payment. Without it, the debit-card journey fails at the card details step with "We are experiencing technical problems", breaking the Playwright send-money happy-path spec. |
 
-`money-to-prisoners-common/docker-compose.yml`'s `bank-admin` service already references these
-as `${ZENDESK_API_USERNAME:-}` etc. in its `environment:` block, so you only need to supply the
-values. Create `money-to-prisoners-common/.env`:
+`money-to-prisoners-common/docker-compose.yml`'s `bank-admin`/`emails`/`send-money` services
+already reference these as `${VAR_NAME:-}` etc. in their `environment:` blocks, so you only
+need to supply the values. Create `money-to-prisoners-common/.env`:
 
 ```dotenv
 ZENDESK_API_USERNAME=servicedesk@digital.justice.gov.uk
 ZENDESK_API_TOKEN=<your-zendesk-api-token>
 ZENDESK_REQUESTER_ID=<your-zendesk-requester-id>
+GOVUK_NOTIFY_CALLBACKS_BEARER_TOKEN=<your-govuk-notify-callbacks-bearer-token>
+GOVUK_PAY_AUTH_TOKEN=<a-govuk-pay-sandbox-auth-token>
 ```
 
 Ask a teammate or check the team's secrets store for real values if you don't have them.
 
-Note that these three values are **not secret to `test`/`parity`** — they're the same
-credentials `money-to-prisoners-deploy` already configures for those environments (see
-`config/{test,parity}/env/common-secrets.yml`), because "if Test does it, Parity should too"
-applies here too. This means submitting the get-help form locally creates a **real ticket** in
-the shared Zendesk queue used by `test`/`parity`, so don't spam it.
+Note that these are **not secret to `test`/`parity`** — they're the same credentials
+`money-to-prisoners-deploy` already configures for those environments (see
+`config/{test,parity}/env/{common,emails,send-money}-secrets.yml`), because "if Test does it,
+Parity should too" applies here too. This means:
+- submitting the Bank Admin get-help form locally creates a **real ticket** in the shared
+  Zendesk queue used by `test`/`parity`, so don't spam it;
+- the GOV.UK Pay token is a shared sandbox/test-mode key, so it never moves real money, but
+  payments made with it are still visible in that shared sandbox account.
 
 In addition, `money-to-prisoners-common/docker-compose.yml`'s shared `x-environment` anchor
-already sets these (no `.env` needed — they're not secrets, just config that needs to match
+already sets this (no `.env` needed — it's not a secret, just config that needs to match
 `test`/`parity`):
 
 | Variable                        | Value | Why it's needed                                                                                                                                                                                 |
 |----------------------------------|-------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `NOVEMBER_SECOND_CHANGES_LIVE`   | `1`   | Gates whether Bank Admin still shows Access Pay refund file downloads (pre-policy-change behaviour) or the "no refunds needed" message (post-policy-change). `test`/`parity` both set this to `1` (see `config/{test,parity}/env/bank-admin.yml`); without it locally, Bank Admin's downloads page shows refund downloads instead, breaking the Playwright bank-admin downloads-page spec. |
-| `BANK_TRANSFERS_ENABLED`         | `0`   | Matches `test`/`parity`'s `send-money`/`cashbook`/`noms-ops` config — bank transfers are no longer an accepted payment method.                                                                |
-| `PRISONER_CAPPING_ENABLED`       | `1`   | Matches `test`/`parity`'s config for the same apps.                                                                                                                                             |
+
+`test`/`parity` also set `BANK_TRANSFERS_ENABLED: "0"` and `PRISONER_CAPPING_ENABLED: "1"` for
+`send-money`/`cashbook`/`noms-ops` as part of the same policy change. These are **deliberately
+not** set locally yet: enabling `PRISONER_CAPPING_ENABLED` currently breaks the send-money
+happy-path spec, because it triggers a NOMIS prisoner account balance lookup this local stack
+doesn't have data for. Add them only after that's sorted out, and re-check the send-money/
+cashbook/noms-ops Playwright suites before doing so.
 
 These are read once by Django at process start (`os.environ.get(...)` in each app's
 `settings/base.py`), so they can only be changed by recreating the container with a different
@@ -95,6 +107,11 @@ If you add a fixture or feature that needs a new secret in future, follow the sa
 add `${VAR_NAME:-}` to the relevant service's `environment:` block in
 `money-to-prisoners-common/docker-compose.yml` (safe to commit — no real value in it), and
 document the real value's variable name (not its value) in the table above.
+
+The Playwright suite itself also needs some of these values (and its own non-secret config)
+in its own `hmpps-prisoner-monies-playwright-suite/.env` — see that repo's `.env.example` for
+the full list, which follows the same pattern: safe defaults/URLs committed directly,
+secret values left blank with a comment on where to find them.
 
 ## 2. Start the local stack
 
@@ -227,12 +244,17 @@ under `fixtures/parity/` is static, hand-authored JSON.
   - Prison/application/user mappings and `hmpps-employee` flags for the relevant users.
   - This file has **no dates to rebase** — nothing in it is time-sensitive, so there's no
     `01_users.meta.json`.
-- **`02_prisoners.json`** — 5 example prisoner locations, deliberately named/numbered so
+- **`02_prisoners.json`** — 6 example prisoner locations, deliberately named/numbered so
   they're unmistakably test data at a glance: `TEST PRISONER ONE`..`FIVE`, with prisoner
   numbers `Z9901TD`..`Z9905TD` (`TD` = "Test Data"), spread across both sample prisons
-  (`IXB`/`INP`), created by the fixed `admin` user (pk `1001`). No `.meta.json` either —
-  prisoner locations themselves aren't date-sensitive (their linked credits/disbursements
-  would be, in a future fixture).
+  (`IXB`/`INP`), created by the fixed `admin` user (pk `1001`). Also includes
+  `TEST PRISONER SIX (SEND-MONEY)` (`A0076EA`, DOB `1999-01-01`) — needed because
+  `hmpps-prisoner-monies-playwright-suite`'s send-money happy-path spec looks this exact
+  number/DOB up via the API's `/prisoner_validity/` endpoint; the name only has to be
+  obviously-test data, since Send Money's confirmation page displays whatever name the sender
+  typed in, not this fixture's `prisoner_name`. No `.meta.json` either — prisoner locations
+  themselves aren't date-sensitive (their linked credits/disbursements would be, in a future
+  fixture).
 - **`03_credits.json`** / **`03_credits.meta.json`** — example credits (one per sample
   prisoner), left with `"resolution": "pending"` (i.e. not yet credited/refunded) and rebased
   to stay within the last several days of "today".
@@ -386,4 +408,24 @@ local Compose and the real `test`/`parity` environments (see the
 to do with the data itself.
 
 There are currently no known conflicts of this kind.
+
+## History: closing the gap to a fully green `npm test`
+
+The following were found and fixed while getting a clean `docker compose up` → `load_parity_data`
+→ `npm test` run working end to end, in case similar issues resurface:
+
+- **Missing prisoner fixture for send-money** — see the `02_prisoners.json` entry above.
+- **Missing `GOVUK_NOTIFY_CALLBACKS_BEARER_TOKEN`/`GOVUK_PAY_AUTH_TOKEN`** — see the env var
+  table above.
+- **`money-to-prisoners-emails`'s `NotifyCallbackView` always rejected callbacks with
+  "Insecure connection" locally.** `request.is_secure()` reflects whatever a real
+  TLS-terminating proxy tells Django via the `X-Forwarded-Proto` header (`SECURE_PROXY_SSL_HEADER`
+  setting) — nothing in the codebase configured this, so the check could never pass without a
+  real reverse proxy in front, which local Compose doesn't have. Fixed by adding
+  `SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')` to
+  `money-to-prisoners-emails/mtp_emails/settings/base.py` (a standard, safe pattern for apps
+  that only accept traffic via a trusted ingress), and updating
+  `hmpps-prisoner-monies-playwright-suite`'s emails-api specs to send that header themselves,
+  standing in for the ingress. The app's own Django unit tests already mocked `is_secure()`
+  directly, so this wasn't caught by CI either.
 

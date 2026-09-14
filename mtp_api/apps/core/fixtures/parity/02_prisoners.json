@@ -68,6 +68,21 @@
     "prison": "IXB",
     "active": true
   }
+},
+{
+  "model": "prison.prisonerlocation",
+  "pk": 10006,
+  "fields": {
+    "created": "2026-01-01T00:00:00Z",
+    "modified": "2026-01-01T00:00:00Z",
+    "created_by": 1001,
+    "prisoner_name": "TEST PRISONER SIX (SEND-MONEY)",
+    "prisoner_number": "A0076EA",
+    "prisoner_dob": "1999-01-01",
+    "prison": "IXB",
+    "active": true
+  }
 }
 ]
+
 
