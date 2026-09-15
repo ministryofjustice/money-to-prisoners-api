@@ -417,15 +417,22 @@ The following were found and fixed while getting a clean `docker compose up` →
 - **Missing prisoner fixture for send-money** — see the `02_prisoners.json` entry above.
 - **Missing `GOVUK_NOTIFY_CALLBACKS_BEARER_TOKEN`/`GOVUK_PAY_AUTH_TOKEN`** — see the env var
   table above.
-- **`money-to-prisoners-emails`'s `NotifyCallbackView` always rejected callbacks with
-  "Insecure connection" locally.** `request.is_secure()` reflects whatever a real
-  TLS-terminating proxy tells Django via the `X-Forwarded-Proto` header (`SECURE_PROXY_SSL_HEADER`
-  setting) — nothing in the codebase configured this, so the check could never pass without a
-  real reverse proxy in front, which local Compose doesn't have. Fixed by adding
-  `SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')` to
-  `money-to-prisoners-emails/mtp_emails/settings/base.py` (a standard, safe pattern for apps
-  that only accept traffic via a trusted ingress), and updating
-  `hmpps-prisoner-monies-playwright-suite`'s emails-api specs to send that header themselves,
-  standing in for the ingress. The app's own Django unit tests already mocked `is_secure()`
-  directly, so this wasn't caught by CI either.
+- **`money-to-prisoners-emails`'s `NotifyCallbackView` always rejected local callbacks with
+  "Insecure connection".** `request.is_secure()` only returns `True` if Django is configured
+  (via `SECURE_PROXY_SSL_HEADER`) to trust an `X-Forwarded-Proto` header from a real
+  TLS-terminating proxy, or if the raw WSGI environ's scheme is already `https`. Nothing in
+  `money-to-prisoners-emails` configures `SECURE_PROXY_SSL_HEADER` - and a direct plain-HTTP
+  request to the real `test` environment
+  (`http://emails-test.prisoner-money.service.justice.gov.uk/notify-callbacks/`) already gets
+  past this check with no such header, confirming the ingress/uwsgi layer sets the WSGI scheme
+  directly for real deployments, with no help from Django settings needed. Locally there's no
+  such proxy, so the check always fails.
 
+  Rather than change `money-to-prisoners-emails` itself (any setting there loads in every
+  environment that uses the same settings module family, including real deployments, and we'd
+  rather not touch legacy app code/settings on an assumption we can't fully verify), the fix is
+  entirely scoped to this repo: the `emails` service's `settings/local.py` bind-mount points at
+  a new `docker/emails-local-settings.py` (instead of the shared empty `no-local-settings.py`)
+  which sets `SECURE_PROXY_SSL_HEADER` - loaded only inside this container. The Playwright
+  emails-api specs send `X-Forwarded-Proto: https` themselves, standing in for a real ingress.
+  `money-to-prisoners-emails` itself is completely untouched.
