@@ -65,16 +65,6 @@ GOVUK_PAY_AUTH_TOKEN=<a-govuk-pay-sandbox-auth-token>
 
 Ask a teammate or check the team's secrets store for real values if you don't have them.
 
-Parity should too" applies here too. This means:
-- submitting the Bank Admin get-help form locally creates a **real ticket** in the shared
-  Zendesk queue used by `test`/`parity`, so don't spam it;
-- the GOV.UK Pay token is a shared sandbox/test-mode key, so it never moves real money, but
-  payments made with it are still visible in that shared sandbox account.
-
-In addition, `money-to-prisoners-common/docker-compose.yml`'s shared `x-environment` anchor
-already sets this (no `.env` needed — it's not a secret, just config that needs to match
-`test`/`parity`):
-
 | Variable                        | Value | Why it's needed                                                                                                                                                                                 |
 |----------------------------------|-------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `NOVEMBER_SECOND_CHANGES_LIVE`   | `1`   | Gates whether Bank Admin still shows Access Pay refund file downloads (pre-policy-change behaviour) or the "no refunds needed" message (post-policy-change). `test`/`parity` both set this to `1` (see `config/{test,parity}/env/bank-admin.yml`); without it locally, Bank Admin's downloads page shows refund downloads instead, breaking the Playwright bank-admin downloads-page spec. |
