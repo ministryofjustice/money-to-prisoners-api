@@ -66,9 +66,10 @@ NB: you should pull updates before pushing to merge correctly.
 
 ### Parity testing
 
-See [PARITY.md](PARITY.md) for how the `parity` environment (and its equivalent local
-database setup) is reset and reloaded with a fixed, reproducible data set, used to compare
-this service against its replacement.
+See [PARITY.md](PARITY.md) for how this repository's fixed, reproducible fixture data set (used
+to compare this service against its replacement) is structured and how to add more of it. See
+[`money-to-prisoners-common`'s `PARITY.md`](https://github.com/ministryofjustice/money-to-prisoners-common/blob/main/PARITY.md)
+for how to run/orchestrate the whole local parity stack and Playwright suite.
 
 ## Deploying
 

@@ -1,14 +1,53 @@
 # Parity environment
 
-This document describes the tooling built to support **parity testing** — comparing this
-legacy service against its replacement, built on the organisation's standard tech stack.
+This document describes how the `parity` environment's fixed, reproducible fixture data set is
+maintained in this repository, and how to add more of it.
 
-Unlike the `test` environment (whose data we don't control and which we can't reset on
-demand), the `parity` environment is fully controlled by this repository: its database is
-wiped and reloaded from a fixed, static set of Django fixtures every day (via a cron job),
-so both services are always compared against identical, reproducible data.
+For how to configure and run the *whole* local stack (Docker Compose, secrets, starting
+services, running the Playwright suite, and deploying a branch to the real `parity`
+environment), see
+[`money-to-prisoners-common`'s `PARITY.md`](https://github.com/ministryofjustice/money-to-prisoners-common/blob/main/PARITY.md)
+— that's the repository you'll actually run `docker compose` from. This document only covers
+the API-specific mechanics: the `load_parity_data` command, the fixtures it loads, and how to
+extend them.
 
-## How it works
+Unlike the `test` environment (whose data we don't control and which we can't reset on demand),
+the `parity` environment is fully controlled by this repository: its database is wiped and
+reloaded from a fixed, static set of Django fixtures every day (via a cron job), so both
+services are always compared against identical, reproducible data.
+
+## Loading the parity data set
+
+From `money-to-prisoners-common` (see that repo's `PARITY.md` for the full local stack setup):
+
+```shell
+docker compose exec api ./manage.py load_parity_data
+```
+
+This wipes your local database and reloads it from the fixed set of fixtures in
+`mtp_api/apps/core/fixtures/parity/` (see "How the fixtures work" below) — the exact same data
+used in the real `parity` environment. Your local stack now has the same reference data
+(groups, prisons, users, OAuth apps/roles) and example prisoners/credits/payments/
+disbursements/transactions as `parity`.
+
+Log in to any app using any of the fixed accounts (every password matches its username, e.g.
+`bank-admin` / `bank-admin`, or `admin` / `admin` for Django admin).
+
+Re-run this command at any point to reset your local database back to this same known state —
+useful whenever your local data has drifted from what you need for a test.
+
+### This repo's own `docker-compose.yml`
+
+`money-to-prisoners-api` has its own `docker-compose.yml`, unrelated to the one used to run the
+full local stack (see `money-to-prisoners-common`'s `PARITY.md`) — it only spins up a standalone
+Postgres instance (`mtp-postgres` container, `mtp_api` database, published on host port `5432`)
+for running this app outside Docker entirely (e.g. `./manage.py runserver` against it directly).
+It has no `api` service, so `docker compose` commands for the full stack must always be run from
+`money-to-prisoners-common`, not from here. Running `./manage.py load_parity_data` without
+Docker at all (against this standalone Postgres, per your own `settings/local.py`) also works
+out of the box, since `ENVIRONMENT` already defaults to `'local'` when `ENV` isn't set.
+
+## How the fixtures work
 
 Everything lives under:
 
@@ -61,64 +100,30 @@ under `fixtures/parity/` is static, hand-authored JSON.
   - Prison/application/user mappings and `hmpps-employee` flags for the relevant users.
   - This file has **no dates to rebase** — nothing in it is time-sensitive, so there's no
     `01_users.meta.json`.
-- **`02_prisoners.json`** — 5 example prisoner locations, deliberately named/numbered so
-  they're unmistakably test data at a glance: `TEST PRISONER ONE`..`FIVE`, with prisoner
-  numbers `Z9901TD`..`Z9905TD` (`TD` = "Test Data"), spread across both sample prisons
-  (`IXB`/`INP`), created by the fixed `admin` user (pk `1001`). No `.meta.json` either —
-  prisoner locations themselves aren't date-sensitive (their linked credits/disbursements
-  would be, in a future fixture).
+- **`02_prisoners.json`** — 6 example prisoner locations, deliberately named/numbered so
+  they're unmistakably test data at a glance. No `.meta.json` either — prisoner locations
+  themselves aren't date-sensitive (their linked credits/disbursements would be, in a future
+  fixture).
+- **`03_credits.json`** / **`03_credits.meta.json`** — example credits (one per sample
+  prisoner), left with `"resolution": "pending"` (i.e. not yet credited/refunded) and rebased
+  to stay within the last several days of "today".
+- **`04_disbursement_logs.json`** — `disbursement.log` entries for the disbursements in
+  `05_disbursements.json` (e.g. `created`/`confirmed`/`sent` actions), rebased via its own
+  `.meta.json` alongside them.
+- **`05_disbursements.json`** — 11 example disbursements spread across both sample prisoners
+  and prisons, in a mix of `confirmed`/`sent` resolutions, referencing the sample prisoners
+  from `02_prisoners.json` by `prisoner_number`/`prison_id` rather than by fixture pk.
+- **`06_payments.json`** — example `payment.payment` records tied to some of the credits in
+  `03_credits.json`, rebased in step with them.
+- **`07_transactions.json`** — example `transaction.transaction` rows (bank transfer
+  credits/debits), rebased via their own `.meta.json`.
 
-There is deliberately **no credit/payment/disbursement data yet**. That will be added
-incrementally, fixture by fixture, as the team works out what each constituent service's E2E
-tests actually need (see below).
+More fixtures will continue to be added incrementally as the team works out what each
+constituent service's E2E tests actually need (see "Adding extra data" below).
 
-## Running it locally
+## Deploying
 
-The local dev stack is built and orchestrated by `money-to-prisoners-common`'s
-`docker-compose.yml`, **not** the `docker-compose.yml` in this repository (this repo's own
-compose file only spins up a standalone Postgres instance for running the app outside Docker
-entirely — it has no `api` service). That compose file already sets `ENV: local` for the `api`
-container, so no extra environment configuration is required.
-
-1. Start the stack as normal, from `~/code/mtp/money-to-prisoners-common` (**not** from
-   `money-to-prisoners-api`):
-   ```shell
-   docker compose up
-   ```
-   (or however you usually start it — this also spins up the Postgres `db` service.)
-2. In another terminal, **from that same `money-to-prisoners-common` directory**, load the
-   parity data set into your local database:
-   ```shell
-   docker compose exec api ./manage.py load_parity_data
-   ```
-   `docker compose` only knows about the services defined in whatever compose file(s) are in
-   your *current directory* — running this from `money-to-prisoners-api` (which has its own,
-   unrelated `docker-compose.yml`) will fail with `no such service: api` or
-   `service "api" is not running`, even though a container with that service is genuinely
-   running elsewhere.
-3. That's it — your local database now contains exactly the same reference data (groups,
-   prisons, users, OAuth apps/roles) as the parity environment. Log in to any of the
-   constituent apps using any of the fixed accounts described above (e.g. `bank-admin` /
-   `bank-admin`, or `admin` / `admin` for Django admin).
-
-### Troubleshooting
-
-- `service "api" is not running` / `no such service: api` / `service "mtp-api" is not running`
-  — almost always means you're not in `money-to-prisoners-common` when running `docker compose`.
-  `cd ~/code/mtp/money-to-prisoners-common` first. Also double check you're using the **compose
-  service name** `api`, not the container name `mtp-api` shown in Docker Desktop (they're
-  defined as `container_name: mtp-api` under the `api:` service key in that compose file).
-- To confirm what's actually running and from where, run `docker compose ps -a` from
-  `money-to-prisoners-common` — it lists every service by name alongside its container name.
-
-Running the command without Docker (e.g. `./manage.py load_parity_data` against your own local
-Postgres, per the `local.py` settings) also works out of the box, since `ENVIRONMENT` already
-defaults to `'local'` when the `ENV` environment variable isn't set at all.
-
-Re-running the command at any point completely resets your local database back to this same
-known state — useful whenever your local data has drifted from what you need for a test.
-
-## Applying it to the real parity environment
+### Applying it to the real parity environment
 
 The parity environment's `ENV` variable is set to `parity` (this is a deployment/infrastructure
 concern, outside this repository). The daily cron job should run:
@@ -137,43 +142,9 @@ kubectl -n money-to-prisoners-test exec deploy/api -- ./manage.py load_test_data
 ...except `load_parity_data` takes no arguments — everything it loads is fixed by the
 fixtures in the repository, not by command-line flags.
 
-### Deploying a branch to parity before it's merged to `main`
-
-Unlike `test` (which auto-deploys on every merge to `main`, via the `deploy` job in this
-repo's `build-test-push.yml`), nothing auto-deploys to `parity` — it's not restricted to
-`main` either, so you can (and should) test changes there from a feature branch/draft PR
-before merging. This is done entirely from the separate `money-to-prisoners-deploy`
-repository (see its `PARITY.md`/`docs/deployment.md` for the full picture); the short
-version:
-
-1. Push your branch and wait for its GitHub Actions build to go green (the same
-   `build-test-push.yml` run that would eventually deploy to `test` on `main` also builds
-   and pushes an image for any branch — it just doesn't auto-deploy anywhere except `main`
-   → `test`). You need the whole run green, not just the initial build job, since the image
-   tag is only pointed at a multi-arch manifest once `check`/`test` pass too.
-2. From `money-to-prisoners-deploy`, with its virtualenv active and `git-crypt unlock` run:
-   ```shell
-   ./manage.py app deploy parity api <branch>.<short-commit-sha>
-   ```
-   e.g. `./manage.py app deploy parity api parity-env-setup.55ef31a`. This checks the image
-   exists in the registry, then patches both the `app-versions` ConfigMap and the `api`
-   Deployment's image for the `parity` namespace. Branch names are lower-cased in the built
-   tag, so match that if your branch has capitals.
-3. Confirm what's configured vs actually running:
-   ```shell
-   ./manage.py app versions parity
-   ```
-4. **Wait for the rollout to finish** before running any `manage.py` command against the
-   pod — patching the Deployment only starts a rolling update, and with several replicas
-   `kubectl exec deploy/api` can otherwise land on a pod that's still running the old image:
-   ```shell
-   kubectl -n money-to-prisoners-parity rollout status deployment/api
-   ```
-5. Only then run `load_parity_data` (or anything else) against the pod, as described above.
-
-Once your branch is merged to `main`, consider re-running
-`./manage.py app deploy parity api main.<sha>` (or `latest`) so `parity` doesn't stay
-pinned to a stale feature-branch build indefinitely.
+For how to deploy a branch (including this one) to the real `parity` environment before it's
+merged to `main`, see `money-to-prisoners-common`'s `PARITY.md` — that process is the same for
+every service, not specific to the API.
 
 ## Adding extra data (prisoners, credits, payments, etc.)
 
@@ -225,4 +196,3 @@ follow to stay consistent with what's already there:
 After adding a new fixture (and optional meta file), just re-run `load_parity_data` (locally or
 in the real parity environment) — it will pick up the new file automatically via its glob, no
 other changes required.
-
