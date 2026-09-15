@@ -15,19 +15,16 @@ document assumes throughout.
 
 ## Prerequisites
 
-Clone these repositories as siblings of this one (i.e. all under the same parent directory,
-e.g. `~/code/mtp/`):
+Clone the full set of Money to Prisoner services as siblings of this one (i.e. all under the same parent directory,
+e.g. `~/code/mtp/`).
 
-- `money-to-prisoners-common` — orchestrates the local Docker Compose stack for every app
-  (`api`, `cashbook`, `bank-admin`, `noms-ops`, `send-money`, `emails`, `start-page`) plus a
-  Postgres `db` service. **This is the directory you'll run `docker compose` from — not this
-  repo**, which has its own, unrelated `docker-compose.yml` (see "This repo's own
-  `docker-compose.yml`" below).
-- `money-to-prisoners-bank-admin` (and the other app repos, as needed) — each is bind-mounted
-  into its container by `money-to-prisoners-common`'s compose file for live reload, so no
-  separate build step is required beyond `docker compose up`.
-- `hmpps-prisoner-monies-playwright-suite` — the E2E test suite that exercises the running
-  stack.
+`money-to-prisoners-common` — orchestrates the local Docker Compose stack for every app
+(`api`, `cashbook`, `bank-admin`, `noms-ops`, `send-money`, `emails`, `start-page`) plus a
+Postgres `db` service. **This is the directory you'll run `docker compose` from — not this
+repo**, which has its own, unrelated `docker-compose.yml`
+
+`hmpps-prisoner-monies-playwright-suite` is the E2E test suite that exercises the running
+ stack.
 
 ## 1. Configure environment variables
 
@@ -37,16 +34,11 @@ just to bring the stack up. However, a couple of app features need real secrets 
 end-to-end, and those aren't (and shouldn't be) committed to the repo.
 
 **Where secrets go:** create a `.env` file at the root of `money-to-prisoners-common` (it's
-already covered by that repo's `.gitignore`, so it's safe to keep real values in it). Docker
-Compose automatically loads this file and substitutes any `${VAR_NAME}` references used in
-`docker-compose.yml`.
+already covered by that repo's `.gitignore`, so it's safe to keep real values in it).
+Docker Compose automatically loads this file and loads environment variables for the suite.
 
-**Do not** put these in an app's own `settings/local.py` — `money-to-prisoners-common`'s
-`docker-compose.yml` deliberately bind-mounts an empty stub
-(`docker/no-local-settings.py`) over every app's `settings/local.py` at container runtime, so
-that containers use `DB_HOST=db` rather than whatever a host-oriented `local.py` sets. Each
-app's `.dockerignore` also separately excludes `settings/local.py` from ever being baked into
-an image. Environment variables in `docker-compose.yml` (backed by the `.env` file) are the
+**Do not** put these in an app's own `settings/local.py` — this is not used for docker.
+Environment variables in `docker-compose.yml` (backed by the `.env` file) are the
 only supported way to configure secrets for the Compose stack.
 
 Currently required secrets (values, not names, live in `.env`):
@@ -73,9 +65,6 @@ GOVUK_PAY_AUTH_TOKEN=<a-govuk-pay-sandbox-auth-token>
 
 Ask a teammate or check the team's secrets store for real values if you don't have them.
 
-Note that these are **not secret to `test`/`parity`** — they're the same credentials
-`money-to-prisoners-deploy` already configures for those environments (see
-`config/{test,parity}/env/{common,emails,send-money}-secrets.yml`), because "if Test does it,
 Parity should too" applies here too. This means:
 - submitting the Bank Admin get-help form locally creates a **real ticket** in the shared
   Zendesk queue used by `test`/`parity`, so don't spam it;
