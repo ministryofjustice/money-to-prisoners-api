@@ -69,18 +69,8 @@ Ask a teammate or check the team's secrets store for real values if you don't ha
 |----------------------------------|-------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `NOVEMBER_SECOND_CHANGES_LIVE`   | `1`   | Gates whether Bank Admin still shows Access Pay refund file downloads (pre-policy-change behaviour) or the "no refunds needed" message (post-policy-change). `test`/`parity` both set this to `1` (see `config/{test,parity}/env/bank-admin.yml`); without it locally, Bank Admin's downloads page shows refund downloads instead, breaking the Playwright bank-admin downloads-page spec. |
 
-`test`/`parity` also set `BANK_TRANSFERS_ENABLED: "0"` and `PRISONER_CAPPING_ENABLED: "1"` for
-`send-money`/`cashbook`/`noms-ops` as part of the same policy change. These are **deliberately
-not** set locally yet: enabling `PRISONER_CAPPING_ENABLED` currently breaks the send-money
-happy-path spec, because it triggers a NOMIS prisoner account balance lookup this local stack
-doesn't have data for. Add them only after that's sorted out, and re-check the send-money/
-cashbook/noms-ops Playwright suites before doing so.
-
 These are read once by Django at process start (`os.environ.get(...)` in each app's
-`settings/base.py`), so they can only be changed by recreating the container with a different
-`environment:` block — there's no way to toggle them per-Playwright-test-run, and no reason to:
-they represent a fixed environment-level policy state, not something an individual test should
-own.
+`settings/base.py`), so they can only be changed by recreating the container if changed
 
 If you add a fixture or feature that needs a new secret in future, follow the same pattern:
 add `${VAR_NAME:-}` to the relevant service's `environment:` block in
@@ -224,14 +214,7 @@ under `fixtures/parity/` is static, hand-authored JSON.
   - This file has **no dates to rebase** — nothing in it is time-sensitive, so there's no
     `01_users.meta.json`.
 - **`02_prisoners.json`** — 6 example prisoner locations, deliberately named/numbered so
-  they're unmistakably test data at a glance: `TEST PRISONER ONE`..`FIVE`, with prisoner
-  numbers `Z9901TD`..`Z9905TD` (`TD` = "Test Data"), spread across both sample prisons
-  (`IXB`/`INP`), created by the fixed `admin` user (pk `1001`). Also includes
-  `TEST PRISONER SIX (SEND-MONEY)` (`A0076EA`, DOB `1999-01-01`) — needed because
-  `hmpps-prisoner-monies-playwright-suite`'s send-money happy-path spec looks this exact
-  number/DOB up via the API's `/prisoner_validity/` endpoint; the name only has to be
-  obviously-test data, since Send Money's confirmation page displays whatever name the sender
-  typed in, not this fixture's `prisoner_name`. No `.meta.json` either — prisoner locations
+  they're unmistakably test data at a glance. No `.meta.json` either — prisoner locations
   themselves aren't date-sensitive (their linked credits/disbursements would be, in a future
   fixture).
 - **`03_credits.json`** / **`03_credits.meta.json`** — example credits (one per sample
@@ -263,7 +246,9 @@ without Docker at all (against this standalone Postgres, per your own `settings/
 also works out of the box, since `ENVIRONMENT` already defaults to `'local'` when `ENV` isn't
 set.
 
-## Applying it to the real parity environment
+## Deploying
+
+### Applying it to the real parity environment
 
 The parity environment's `ENV` variable is set to `parity` (this is a deployment/infrastructure
 concern, outside this repository). The daily cron job should run:
@@ -370,48 +355,3 @@ follow to stay consistent with what's already there:
 After adding a new fixture (and optional meta file), just re-run `load_parity_data` (locally or
 in the real parity environment) — it will pick up the new file automatically via its glob, no
 other changes required.
-
-## Known data/test conflicts
-
-Because fixtures are added independently, by different people, for different services'
-tests, it's possible for one fixture to have a side effect that breaks an *existing* E2E test
-elsewhere, without anyone intending it. This section tracks currently-known conflicts of that
-kind so they aren't rediscovered/re-debugged from scratch each time.
-
-If you add new prisoner/credit/transaction/disbursement fixtures in future, check whether any
-existing Playwright spec (across all four apps' test suites) makes assumptions about there
-being *no* data of that kind — that's the class of conflict to watch for. Before assuming a
-fixture is the cause of a test failure, also rule out **environment/settings gaps** between
-local Compose and the real `test`/`parity` environments (see the
-`NOVEMBER_SECOND_CHANGES_LIVE` example above) — a test can fail for reasons that have nothing
-to do with the data itself.
-
-There are currently no known conflicts of this kind.
-
-## History: closing the gap to a fully green `npm test`
-
-The following were found and fixed while getting a clean `docker compose up` → `load_parity_data`
-→ `npm test` run working end to end, in case similar issues resurface:
-
-- **Missing prisoner fixture for send-money** — see the `02_prisoners.json` entry above.
-- **Missing `GOVUK_NOTIFY_CALLBACKS_BEARER_TOKEN`/`GOVUK_PAY_AUTH_TOKEN`** — see the env var
-  table above.
-- **`money-to-prisoners-emails`'s `NotifyCallbackView` always rejected local callbacks with
-  "Insecure connection".** `request.is_secure()` only returns `True` if Django is configured
-  (via `SECURE_PROXY_SSL_HEADER`) to trust an `X-Forwarded-Proto` header from a real
-  TLS-terminating proxy, or if the raw WSGI environ's scheme is already `https`. Nothing in
-  `money-to-prisoners-emails` configures `SECURE_PROXY_SSL_HEADER` - and a direct plain-HTTP
-  request to the real `test` environment
-  (`http://emails-test.prisoner-money.service.justice.gov.uk/notify-callbacks/`) already gets
-  past this check with no such header, confirming the ingress/uwsgi layer sets the WSGI scheme
-  directly for real deployments, with no help from Django settings needed. Locally there's no
-  such proxy, so the check always fails.
-
-  Rather than change `money-to-prisoners-emails` itself (any setting there loads in every
-  environment that uses the same settings module family, including real deployments, and we'd
-  rather not touch legacy app code/settings on an assumption we can't fully verify), the fix is
-  entirely scoped to this repo: the `emails` service's `settings/local.py` bind-mount points at
-  a new `docker/emails-local-settings.py` (instead of the shared empty `no-local-settings.py`)
-  which sets `SECURE_PROXY_SSL_HEADER` - loaded only inside this container. The Playwright
-  emails-api specs send `X-Forwarded-Proto: https` themselves, standing in for a real ingress.
-  `money-to-prisoners-emails` itself is completely untouched.
