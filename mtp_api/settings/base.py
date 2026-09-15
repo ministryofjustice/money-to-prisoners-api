@@ -326,6 +326,14 @@ OAUTH2_PROVIDER_APPLICATION_MODEL = 'oauth2_provider.Application'
 MTP_AUTH_LOCKOUT_COUNT = 5  # 5 times
 MTP_AUTH_LOCKOUT_LOCKOUT_PERIOD = 10 * 60  # 10 minutes, update mtp-common locked_out message if changes
 
+# recording and limiting of prisoner validity checks made from the public send-money service
+# recording is always on; limiting is off until thresholds have been set from real traffic
+PRISONER_VALIDITY_LIMITING_ENABLED = os.environ.get('PRISONER_VALIDITY_LIMITING_ENABLED', 'False') == 'True'
+PRISONER_VALIDITY_WINDOW_SECONDS = int(os.environ.get('PRISONER_VALIDITY_WINDOW_SECONDS', 60 * 60))
+PRISONER_VALIDITY_FAILURE_LIMIT = int(os.environ.get('PRISONER_VALIDITY_FAILURE_LIMIT', 10))
+PRISONER_VALIDITY_DISTINCT_PRISONER_LIMIT = int(os.environ.get('PRISONER_VALIDITY_DISTINCT_PRISONER_LIMIT', 10))
+PRISONER_VALIDITY_ATTEMPT_RETENTION_DAYS = int(os.environ.get('PRISONER_VALIDITY_ATTEMPT_RETENTION_DAYS', 90))
+
 REF_CODE_BASE = 900001
 CARD_REF_CODE_BASE = 800001
 

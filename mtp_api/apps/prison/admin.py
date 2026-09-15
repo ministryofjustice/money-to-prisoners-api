@@ -1,5 +1,7 @@
 from django.contrib import admin, messages
 from django.contrib.admin import ModelAdmin, RelatedFieldListFilter
+from django.contrib.admin.models import LogEntry, CHANGE as CHANGE_LOG_ENTRY
+from django.contrib.admin.options import get_content_type_for_model
 from django.db import models
 from django.utils.translation import gettext, gettext_lazy as _
 from mtp_common.utils import format_currency
@@ -9,7 +11,7 @@ from prison.models import (
     Prison, Population, Category,
     PrisonBankAccount, RemittanceEmail,
     PrisonerLocation, PrisonerCreditNoticeEmail,
-    PrisonerBalance,
+    PrisonerBalance, PrisonerValidityAttempt,
 )
 
 
@@ -83,3 +85,42 @@ class PrisonerBalanceAdmin(ModelAdmin):
     @add_short_description(_('amount'))
     def formatted_amount(self, instance):
         return format_currency(instance.amount)
+
+
+@admin.register(PrisonerValidityAttempt)
+class PrisonerValidityAttemptAdmin(ModelAdmin):
+    list_display = ('created', 'ip_address', 'matched', 'prisoner_number_hash')
+    list_filter = ('matched', ('created', DateFilter))
+    search_fields = ('ip_address', 'prisoner_number_hash')
+    readonly_fields = ('created', 'ip_address', 'matched', 'prisoner_number_hash')
+    actions = ['clear_attempts_for_ip_addresses']
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    @add_short_description(_('Clear all attempts from selected IP addresses'))
+    def clear_attempts_for_ip_addresses(self, request, queryset):
+        # support route for lifting a rate limit applied in error, mirroring the account lockout removal
+        ip_addresses = sorted(filter(None, set(queryset.values_list('ip_address', flat=True))))
+        if not ip_addresses:
+            messages.info(request, _('No IP addresses selected'))
+            return
+        deleted, _details = PrisonerValidityAttempt.objects.filter(ip_address__in=ip_addresses).delete()
+        LogEntry.objects.create(
+            user_id=request.user.pk,
+            content_type_id=get_content_type_for_model(PrisonerValidityAttempt).pk,
+            object_id='',
+            object_repr=gettext('Clear prisoner validity attempts'),
+            action_flag=CHANGE_LOG_ENTRY,
+            change_message=', '.join(ip_addresses),
+        )
+        messages.info(request, gettext('Cleared %(count)d attempts from %(ip_addresses)s') % {
+            'count': deleted,
+            'ip_addresses': ', '.join(ip_addresses),
+        })
