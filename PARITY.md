@@ -129,7 +129,7 @@ The parity environment's `ENV` variable is set to `parity` (this is a deployment
 concern, outside this repository). The daily cron job should run:
 
 ```shell
-kubectl -n money-to-prisoners-parity exec deploy/api -- ./manage.py load_parity_data
+kubectl -n money-to-prisoners-parity exec deploy/api -- venv/bin/python manage.py load_parity_data
 ```
 
 This mirrors the equivalent existing pattern used to refresh the `test` environment with
