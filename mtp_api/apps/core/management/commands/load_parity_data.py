@@ -65,9 +65,13 @@ class Command(BaseCommand):
         if not fixture_files:
             raise CommandError(f'No parity fixtures found in {PARITY_FIXTURES_DIR}')
 
-        print_message('Loading reference fixtures (groups, prison types, prisons)')
+        print_message('Loading reference fixtures (groups, prison types, sample prisons, special prisons)')
         call_command(
-            'loaddata', 'initial_groups.json', 'initial_types.json', 'test_prisons.json',
+            'loaddata',
+            'initial_groups.json',
+            'initial_types.json',
+            'test_prisons.json',
+            'test_nomis_special_prisons.json',
             verbosity=verbosity,
         )
 
