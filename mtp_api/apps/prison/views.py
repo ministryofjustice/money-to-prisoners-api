@@ -166,18 +166,22 @@ class PrisonerValidityView(mixins.ListModelMixin, viewsets.GenericViewSet):
         except ValueError:
             return None
 
-    def log_check(self, outcome, sender_ip, prisoner_number, **extra_fields):
+    def log_check(self, outcome, sender_ip, prisoner_number, prisoner_dob, **extra_fields):
         prisoner_validity_checks.labels(
             outcome=outcome,
             pid=str(os.getpid()),  # pid is needed as uwsgi runs with multiple workers
         ).inc()
+        attempts = PrisonerValidityAttempt.objects
         logger.info(
             'Prisoner validity check %(outcome)s',
             {'outcome': outcome},
             extra={'elk_fields': {
                 '@fields.outcome': outcome,
                 '@fields.client_ip': sender_ip,
-                '@fields.prisoner_hash': PrisonerValidityAttempt.objects.hash_prisoner_number(prisoner_number),
+                '@fields.prisoner_hash': attempts.hash_prisoner_number(prisoner_number),
+                # distinct values of this for one address mean the date of birth is being guessed,
+                # rather than the same details being submitted repeatedly
+                '@fields.prisoner_details_hash': attempts.hash_prisoner_details(prisoner_number, prisoner_dob),
                 **extra_fields,
             }},
         )
@@ -197,7 +201,8 @@ class PrisonerValidityView(mixins.ListModelMixin, viewsets.GenericViewSet):
         sender_ip = self.get_sender_ip_address()
         limited, retry_after = PrisonerValidityAttempt.objects.is_rate_limited(sender_ip)
         if limited:
-            self.log_check('rate_limited', sender_ip, prisoner_number, **{'@fields.retry_after': retry_after})
+            self.log_check('rate_limited', sender_ip, prisoner_number, prisoner_dob,
+                           **{'@fields.retry_after': retry_after})
             return Response(
                 data={'errors': 'too_many_attempts', 'retry_after': retry_after},
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -206,8 +211,8 @@ class PrisonerValidityView(mixins.ListModelMixin, viewsets.GenericViewSet):
 
         response = super().list(request, *args, **kwargs)
         matched = response.data['count'] == 1
-        PrisonerValidityAttempt.objects.record(sender_ip, prisoner_number, matched)
-        self.log_check('matched' if matched else 'not_found', sender_ip, prisoner_number)
+        PrisonerValidityAttempt.objects.record(sender_ip, prisoner_number, prisoner_dob, matched)
+        self.log_check('matched' if matched else 'not_found', sender_ip, prisoner_number, prisoner_dob)
         return response
 
 

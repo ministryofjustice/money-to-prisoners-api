@@ -91,8 +91,8 @@ class PrisonerBalanceAdmin(ModelAdmin):
 class PrisonerValidityAttemptAdmin(ModelAdmin):
     list_display = ('created', 'ip_address', 'matched', 'prisoner_number_hash')
     list_filter = ('matched', ('created', DateFilter))
-    search_fields = ('ip_address', 'prisoner_number_hash')
-    readonly_fields = ('created', 'ip_address', 'matched', 'prisoner_number_hash')
+    search_fields = ('ip_address', 'prisoner_number_hash', 'prisoner_details_hash')
+    readonly_fields = ('created', 'ip_address', 'matched', 'prisoner_number_hash', 'prisoner_details_hash')
     actions = ['clear_attempts_for_ip_addresses']
 
     def has_add_permission(self, request):

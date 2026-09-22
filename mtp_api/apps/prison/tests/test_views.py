@@ -12,6 +12,7 @@ from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateformat import format as format_date
+from django.utils.dateparse import parse_date
 from model_bakery import baker
 from mtp_common.nomis import Connector
 from mtp_common.test_utils import silence_logger
@@ -670,7 +671,9 @@ class PrisonerValidityRecordingTestCase(PrisonerValidityViewTestCase):
         # three failures recorded while the limit was higher; the oldest expiring would still leave 2 in the
         # window, so retry-after must be measured from the second-oldest
         for seconds_ago in (500, 300, 1):
-            attempt = PrisonerValidityAttempt.objects.record(self.sender_ip, invalid_data['prisoner_number'], False)
+            attempt = PrisonerValidityAttempt.objects.record(
+                self.sender_ip, invalid_data['prisoner_number'], datetime.date(1980, 1, 1), False
+            )
             PrisonerValidityAttempt.objects.filter(pk=attempt.pk).update(
                 created=timezone.now() - datetime.timedelta(seconds=seconds_ago)
             )
@@ -700,6 +703,52 @@ class PrisonerValidityRecordingTestCase(PrisonerValidityViewTestCase):
         call_command('clean_up', verbosity=0)
         self.assertEqual(PrisonerValidityAttempt.objects.count(), 1)
         self.assertFalse(PrisonerValidityAttempt.objects.filter(pk=old_attempt.pk).exists())
+
+    def test_records_a_hash_covering_the_date_of_birth(self):
+        valid_data = self.get_valid_data()
+        self.call_authorised_endpoint(valid_data)
+        attempt = PrisonerValidityAttempt.objects.get()
+        expected = PrisonerValidityAttempt.objects.hash_prisoner_details(
+            valid_data['prisoner_number'], parse_date(valid_data['prisoner_dob'])
+        )
+        self.assertEqual(attempt.prisoner_details_hash, expected)
+        self.assertEqual(len(attempt.prisoner_details_hash), 64)
+        # neither input is recoverable from the stored value, and it differs from the number-only hash
+        self.assertNotIn(valid_data['prisoner_number'], attempt.prisoner_details_hash)
+        self.assertNotIn(valid_data['prisoner_dob'], attempt.prisoner_details_hash)
+        self.assertNotEqual(attempt.prisoner_details_hash, attempt.prisoner_number_hash)
+
+    def test_guessing_dates_of_birth_is_distinguishable_from_repeated_identical_submissions(self):
+        # the same prisoner tried with several dates of birth: the F16 attack
+        guessed = self.get_valid_data()
+        for day in range(1, 6):
+            self.call_authorised_endpoint(dict(guessed, prisoner_dob='1980-01-%02d' % day))
+        guessing = PrisonerValidityAttempt.objects.filter(ip_address=self.sender_ip)
+        self.assertEqual(guessing.count(), 5)
+        self.assertEqual(guessing.values('prisoner_number_hash').distinct().count(), 1)
+        self.assertEqual(guessing.values('prisoner_details_hash').distinct().count(), 5)
+
+        # the same details submitted repeatedly, as a stuck client would: indistinguishable before this change
+        repeating_ip = '198.51.100.7'
+        repeated = self.get_valid_data()
+        for _ in range(5):
+            self.call_authorised_endpoint(repeated, sender_ip=repeating_ip)
+        repeating = PrisonerValidityAttempt.objects.filter(ip_address=repeating_ip)
+        self.assertEqual(repeating.count(), 5)
+        self.assertEqual(repeating.values('prisoner_number_hash').distinct().count(), 1)
+        self.assertEqual(repeating.values('prisoner_details_hash').distinct().count(), 1)
+
+    def test_details_hash_is_stable_and_case_insensitive(self):
+        objects = PrisonerValidityAttempt.objects
+        dob = datetime.date(1980, 10, 4)
+        self.assertEqual(
+            objects.hash_prisoner_details('a1231de', dob),
+            objects.hash_prisoner_details('A1231DE', dob),
+        )
+        self.assertNotEqual(
+            objects.hash_prisoner_details('A1231DE', dob),
+            objects.hash_prisoner_details('A1231DE', datetime.date(1980, 10, 5)),
+        )
 
     def test_admin_action_clears_attempts_for_selected_ip_addresses(self):
         invalid_data = self.get_invalid_data()

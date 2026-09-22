@@ -151,6 +151,14 @@ class PrisonerValidityAttemptManager(models.Manager):
     def hash_prisoner_number(self, prisoner_number):
         return salted_hmac('prisoner_validity', prisoner_number.strip().upper(), algorithm='sha256').hexdigest()
 
+    def hash_prisoner_details(self, prisoner_number, prisoner_dob):
+        """
+        Hashes the number and date of birth together so that repeated guessing of a date of birth can be told
+        apart from the same details being submitted repeatedly, without storing the date of birth itself.
+        """
+        details = '%s|%s' % (prisoner_number.strip().upper(), prisoner_dob.isoformat() if prisoner_dob else '')
+        return salted_hmac('prisoner_validity_details', details, algorithm='sha256').hexdigest()
+
     def in_window(self, ip_address):
         window_start = now() - datetime.timedelta(seconds=settings.PRISONER_VALIDITY_WINDOW_SECONDS)
         return self.get_queryset().filter(ip_address=ip_address, created__gte=window_start)
@@ -180,10 +188,11 @@ class PrisonerValidityAttemptManager(models.Manager):
         retry_after = int((unblocking_attempt.created + window - now()).total_seconds())
         return True, max(retry_after, 1)
 
-    def record(self, ip_address, prisoner_number, matched):
+    def record(self, ip_address, prisoner_number, prisoner_dob, matched):
         return self.get_queryset().create(
             ip_address=ip_address or None,
             prisoner_number_hash=self.hash_prisoner_number(prisoner_number),
+            prisoner_details_hash=self.hash_prisoner_details(prisoner_number, prisoner_dob),
             matched=matched,
         )
 
@@ -194,10 +203,13 @@ class PrisonerValidityAttemptManager(models.Manager):
 class PrisonerValidityAttempt(TimeStampedModel):
     """
     A record of each prisoner validity check made from the public send-money service.
-    The prisoner number is stored only as a keyed hash and the date of birth is not stored at all.
+    The prisoner number and date of birth are stored only as keyed hashes, never in readable form.
+    Counting distinct prisoner_number_hash values for an address shows how many prisoners were looked up;
+    counting distinct prisoner_details_hash values shows whether the date of birth was being guessed.
     """
     ip_address = models.GenericIPAddressField(blank=True, null=True, db_index=True)
     prisoner_number_hash = models.CharField(max_length=64, db_index=True)
+    prisoner_details_hash = models.CharField(max_length=64, db_index=True, blank=True)
     matched = models.BooleanField()
 
     objects = PrisonerValidityAttemptManager()
