@@ -30,6 +30,13 @@ used in the real `parity` environment. Your local stack now has the same referen
 (groups, prisons, users, OAuth apps/roles) and example prisoners/credits/payments/
 disbursements/transactions as `parity`.
 
+The fixtures themselves are static and repeatable, but some runtime journeys still call the dev
+prison API to validate balances or refresh a prisoner's location. That means a prisoner number in
+our fixed parity data can still "drift" relative to the fixture: for example, a prisoner seeded in
+parity as being at `IXB` may later be reported by the live API as `OUT` or `TRN`. Parity seeds a
+small set of special NOMIS location codes to keep that fallback path working without having to
+mirror the entire live prison reference list.
+
 Log in to any app using any of the fixed accounts (every password matches its username, e.g.
 `bank-admin` / `bank-admin`, or `admin` / `admin` for Django admin).
 
@@ -70,11 +77,14 @@ under `fixtures/parity/` is static, hand-authored JSON.
    enough (it wipes the whole database) that it should only ever run somewhere explicitly
    known to be safe. In particular, it will always refuse to run against `test` or `prod`.
 2. Calls `delete_all_data` to guarantee a clean slate.
-3. Loads the reference fixtures that already exist elsewhere in this codebase, unmodified and
-   without any duplication: `initial_groups.json`, `initial_types.json`, `test_prisons.json`.
-   These give us the standard permission groups, prison population/category types, and the two
+3. Loads the reference fixtures that already exist elsewhere in this codebase, plus a small
+   parity-specific supplement for special NOMIS location codes:
+   `initial_groups.json`, `initial_types.json`, `test_prisons.json`,
+   `test_nomis_special_prisons.json`.
+   These give us the standard permission groups, prison population/category types, the two
    sample prisons (`IXB` "Prison 1", `INP` "Prison 2") that the rest of the codebase's test
-   fixtures already rely on.
+   fixtures already rely on, and special placeholder prisons such as `OUT` (outside
+   jurisdiction), `TRN` (transfer), and `FOI`.
 4. Loads every fixture found under `mtp_api/apps/core/fixtures/parity/*.json` (excluding
    `*.meta.json` files — see below), sorted alphabetically. Fixtures are numbered
    (`01_users.json`, `02_...json`, etc.) purely so the load order is obvious to anyone browsing
@@ -129,7 +139,7 @@ The parity environment's `ENV` variable is set to `parity` (this is a deployment
 concern, outside this repository). The daily cron job should run:
 
 ```shell
-kubectl -n money-to-prisoners-parity exec deploy/api -- ./manage.py load_parity_data
+kubectl -n money-to-prisoners-parity exec deploy/api -- venv/bin/python manage.py load_parity_data
 ```
 
 This mirrors the equivalent existing pattern used to refresh the `test` environment with
