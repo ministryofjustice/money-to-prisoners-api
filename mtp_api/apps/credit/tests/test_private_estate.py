@@ -60,6 +60,14 @@ class PrivateEstateBatchTestCase(AuthTestCaseMixin, APITestCase):
 
         self.latest_date = timezone.localtime().replace(hour=0, minute=0, second=0, microsecond=0)
 
+        # the tests need a batch holding a credited private-estate credit, and batches are only made for past days,
+        # but the credits moved above may all be pending or from today
+        credited_before_today = Credit.objects.credited().filter(received_at__lt=self.latest_date)
+        if not credited_before_today.filter(prison__private_estate=True).exists():
+            credit_to_move = credited_before_today.filter(prison__private_estate=False).first()
+            if credit_to_move:
+                Credit.objects.filter(pk=credit_to_move.pk).update(prison=self.private_prison)
+
         date = timezone.localtime(Credit.objects.earliest().received_at)
         date = date.replace(hour=0, minute=0, second=0, microsecond=0)
         while date < self.latest_date:
