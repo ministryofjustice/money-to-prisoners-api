@@ -88,7 +88,7 @@ Run it:
   - Update messages with `./run.py make_messages`.
   - Requires `transifex-cli` for pulling/pushing translations via `./run.py translations`.
 - **Sample Data**:
-  - Data can be loaded via `./manage.py load_test_data` or through the Django admin (`/admin/recreate-test-data/`).
+  - Data can be loaded via `./manage.py load_test_data` or through the Django admin (`/admin/testing/recreate-data/`).
 - **API Documentation**:
   - Swagger: `http://localhost:8000/swagger/`
   - Redoc: `http://localhost:8000/redoc/`

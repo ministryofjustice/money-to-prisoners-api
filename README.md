@@ -41,16 +41,17 @@ The latter is generally the most useful, especially when working with client app
 
 This will build everything and run the local server at [http://localhost:8000/](http://localhost:8000/).
 
-A dockerised version can be run locally with `./run.py local_docker`,
-but this does not run uWSGI like the deployed version does.
+To run the API together with the client apps, see the [getting-started guide](https://github.com/ministryofjustice/money-to-prisoners-deploy/blob/main/docs/getting-started.md):
+each client app's repository has a `docker-compose.yml` that runs the published API image with test data.
 
 ### Sample data generation
 
 As well as the management command (`./manage.py load_test_data`), the entire data set can also be regenerated
-from [Django admin](http://localhost:8000/admin/recreate-test-data/).
+from [Django admin](http://localhost:8000/admin/testing/recreate-data/).
 It’s also reset when using `./run.py start --test-mode`.
 
 These scenarios create a different set of test users for the client applications – see the user list in Django admin.
+The users created by `load_test_data` are listed in the [getting-started guide](https://github.com/ministryofjustice/money-to-prisoners-deploy/blob/main/docs/getting-started.md#test-logins).
 
 ### Translating
 
@@ -80,7 +81,7 @@ This is handled by [money-to-prisoners-deploy](https://github.com/ministryofjust
 We have both swagger and redoc.io integration with this API.
 They can be found on your development environment:
 * Swagger: http://localhost:8000/swagger/
-* Redoc: https://localhost:8000/redoc/
+* Redoc: http://localhost:8000/redoc/
 
 Similar pages are also available on the test environment
 
