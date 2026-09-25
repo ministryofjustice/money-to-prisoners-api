@@ -37,3 +37,6 @@ htmlcov/
 # Editors
 .vim
 .vim-bookmarks
+
+# database schema report
+/schema-spy-report/
