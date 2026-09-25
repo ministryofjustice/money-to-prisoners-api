@@ -65,6 +65,19 @@ You’ll need to update translation files afterwards and manually check that the
 Push latest English to Transifex with `./run.py translations --push`.
 NB: you should pull updates before pushing to merge correctly.
 
+### Database schema report
+
+A [SchemaSpy](https://schemaspy.org/) report of the database structure is published every day from `main`.
+It is published from `money-to-prisoners-deploy`, not from this repository, because this repository is public
+and parts of the schema are sensitive. See
+[Database schema report](https://github.com/ministryofjustice/money-to-prisoners-deploy/blob/main/docs/schema-report.md)
+for the link and who can see it.
+
+To generate the same report from your local database, run `./run.py schema_report`. This needs Docker.
+It migrates the database configured in your local settings, then writes the report to `schema-spy-report/`
+(open `schema-spy-report/index.html`). On Apple Silicon it can take 15 minutes or more, because the SchemaSpy image
+only runs under emulation.
+
 ### Parity testing
 
 See [PARITY.md](PARITY.md) for how this repository's fixed, reproducible fixture data set (used
