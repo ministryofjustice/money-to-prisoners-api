@@ -214,27 +214,50 @@ class PrisonerValidityAttemptManager(models.Manager):
     def is_rate_limited(self, ip_address):
         """
         Returns (limited, retry_after_seconds) for an IP address.
-        Limits apply on the number of failed checks and on the number of distinct prisoners tried in the window.
+        Only failed checks in the window count. An address is limited when its failed checks reach the failure limit,
+        cover too many distinct prisoners, or try too many distinct prisoner number and date of birth combinations.
+        Matched checks never count, so organisations and shared connections that look up many prisoners correctly
+        are not limited.
         An unknown IP address is never limited.
         """
         if not settings.PRISONER_VALIDITY_LIMITING_ENABLED or not ip_address:
             return False, 0
-        attempts = self.in_window(ip_address)
-        failed_attempts = attempts.filter(matched=False)
-        failed_count = failed_attempts.count()
-        distinct_prisoner_count = attempts.values('prisoner_number_hash').distinct().count()
-        if failed_count >= settings.PRISONER_VALIDITY_FAILURE_LIMIT:
-            # the attempt whose expiry brings the count back under the limit
-            excess = failed_count - settings.PRISONER_VALIDITY_FAILURE_LIMIT
-            unblocking_attempt = failed_attempts.order_by('created')[excess]
-        elif distinct_prisoner_count >= settings.PRISONER_VALIDITY_DISTINCT_PRISONER_LIMIT:
-            # approximation: the caller may need to retry once more if several prisoners were tried early on
-            unblocking_attempt = attempts.order_by('created').first()
-        else:
+        failed_attempts = self.in_window(ip_address).filter(matched=False)
+
+        def last_seen(field):
+            # when each distinct value was last tried; rows recorded before the details hash existed have none
+            return (
+                failed_attempts.exclude(**{field: ''}).order_by().values(field)
+                .annotate(last_seen=models.Max('created')).values_list('last_seen', flat=True)
+            )
+
+        unblocked_from = [
+            self.limit_expires_from(failed_attempts.values_list('created', flat=True),
+                                    settings.PRISONER_VALIDITY_FAILURE_LIMIT),
+            self.limit_expires_from(last_seen('prisoner_number_hash'),
+                                    settings.PRISONER_VALIDITY_DISTINCT_PRISONER_LIMIT),
+            self.limit_expires_from(last_seen('prisoner_details_hash'),
+                                    settings.PRISONER_VALIDITY_DISTINCT_DETAILS_LIMIT),
+        ]
+        unblocked_from = [when for when in unblocked_from if when]
+        if not unblocked_from:
             return False, 0
+        # every limit that applies must have expired
         window = datetime.timedelta(seconds=settings.PRISONER_VALIDITY_WINDOW_SECONDS)
-        retry_after = int((unblocking_attempt.created + window - now()).total_seconds())
+        retry_after = int((max(unblocked_from) + window - now()).total_seconds())
         return True, max(retry_after, 1)
+
+    @staticmethod
+    def limit_expires_from(last_seen_times, limit):
+        """
+        Given when each counted thing was last seen in the window, returns the time whose expiry brings the count
+        back under the limit, or None if the count is already under it
+        """
+        last_seen_times = sorted(last_seen_times)
+        excess = len(last_seen_times) - limit
+        if excess < 0:
+            return None
+        return last_seen_times[excess]
 
     def record(self, ip_address, prisoner_number, prisoner_dob, matched):
         return self.get_queryset().create(
