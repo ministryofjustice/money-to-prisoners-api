@@ -12,7 +12,8 @@ from django.db.models.functions.datetime import TruncBase
 from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from model_utils.models import TimeStampedModel
+from model_utils.fields import AutoCreatedField, AutoLastModifiedField
+from model_utils.models import TimeStampedModel as BaseTimeStampedModel
 
 logger = logging.getLogger('mtp')
 
@@ -39,6 +40,17 @@ def validate_monday(date: datetime.date):
     # 1 = Monday
     if date.isoweekday() != 1:
         raise ValidationError(_('"%s" is not a Monday') % date.strftime('%d %b %Y').lstrip('0'))
+
+
+class TimeStampedModel(BaseTimeStampedModel):
+    """
+    django-model-utils' TimeStampedModel with database comments on its `created` and `modified` fields
+    """
+    created = AutoCreatedField(_('created'), db_comment='When this row was created.')
+    modified = AutoLastModifiedField(_('modified'), db_comment='When this row was last changed.')
+
+    class Meta:
+        abstract = True
 
 
 class ScheduledCommand(models.Model):
@@ -110,7 +122,7 @@ models.DateTimeField.register_lookup(TruncUtcDate)
 models.DateTimeField.register_lookup(TruncLocalDate)
 
 
-class FileDownload(TimeStampedModel):
+class FileDownload(BaseTimeStampedModel):
     label = models.CharField(max_length=255, db_index=True)
     date = models.DateField(db_index=True)
 
