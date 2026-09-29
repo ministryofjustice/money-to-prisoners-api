@@ -649,20 +649,89 @@ class PrisonerValidityRecordingTestCase(PrisonerValidityViewTestCase):
         for _ in range(4):
             self.assertValidResponse(self.call_authorised_endpoint(valid_data), valid_data)
 
-    @override_settings(PRISONER_VALIDITY_LIMITING_ENABLED=True, PRISONER_VALIDITY_DISTINCT_PRISONER_LIMIT=2)
-    def test_looking_up_many_distinct_prisoners_is_limited_even_when_matched(self):
-        locations = list(self.prisoner_locations[:3])
-        for location in locations[:2]:
+    def record_failure(self, prisoner_number, prisoner_dob, seconds_ago):
+        attempt = PrisonerValidityAttempt.objects.record(self.sender_ip, prisoner_number, prisoner_dob, False)
+        PrisonerValidityAttempt.objects.filter(pk=attempt.pk).update(
+            created=timezone.now() - datetime.timedelta(seconds=seconds_ago)
+        )
+        return attempt
+
+    @override_settings(PRISONER_VALIDITY_LIMITING_ENABLED=True, PRISONER_VALIDITY_DISTINCT_PRISONER_LIMIT=2,
+                       PRISONER_VALIDITY_DISTINCT_DETAILS_LIMIT=2)
+    def test_looking_up_many_distinct_prisoners_correctly_is_not_limited(self):
+        # organisations and shared connections send to many prisoners and get the details right
+        for location in self.prisoner_locations[:4]:
             data = {
                 'prisoner_number': location.prisoner_number,
                 'prisoner_dob': format_date(location.prisoner_dob, 'Y-m-d'),
             }
             self.assertValidResponse(self.call_authorised_endpoint(data), data)
-        data = {
-            'prisoner_number': locations[2].prisoner_number,
-            'prisoner_dob': format_date(locations[2].prisoner_dob, 'Y-m-d'),
-        }
-        self.assertRateLimited(self.call_authorised_endpoint(data))
+
+    @override_settings(PRISONER_VALIDITY_LIMITING_ENABLED=True, PRISONER_VALIDITY_FAILURE_LIMIT=100,
+                       PRISONER_VALIDITY_DISTINCT_PRISONER_LIMIT=2, PRISONER_VALIDITY_DISTINCT_DETAILS_LIMIT=100)
+    def test_failing_on_many_distinct_prisoners_is_limited(self):
+        self.assertEmptyResponse(self.call_authorised_endpoint(self.get_invalid_data()))
+        self.assertEmptyResponse(self.call_authorised_endpoint(self.get_invalid_data()))
+        self.assertEqual(PrisonerValidityAttempt.objects.values('prisoner_number_hash').distinct().count(), 2)
+        self.assertRateLimited(self.call_authorised_endpoint(self.get_invalid_data()))
+
+    @override_settings(PRISONER_VALIDITY_LIMITING_ENABLED=True, PRISONER_VALIDITY_FAILURE_LIMIT=100,
+                       PRISONER_VALIDITY_DISTINCT_PRISONER_LIMIT=100, PRISONER_VALIDITY_DISTINCT_DETAILS_LIMIT=3)
+    def test_guessing_dates_of_birth_is_limited(self):
+        # the F16 attack: one prisoner number tried with different dates of birth
+        guessed = self.get_valid_data()
+        for day in range(1, 4):
+            self.assertEmptyResponse(self.call_authorised_endpoint(dict(guessed, prisoner_dob='1901-01-%02d' % day)))
+        self.assertRateLimited(self.call_authorised_endpoint(dict(guessed, prisoner_dob='1901-01-04')))
+        # the right details are refused too until the limit expires
+        self.assertRateLimited(self.call_authorised_endpoint(guessed))
+
+    @override_settings(PRISONER_VALIDITY_LIMITING_ENABLED=True, PRISONER_VALIDITY_FAILURE_LIMIT=100,
+                       PRISONER_VALIDITY_DISTINCT_PRISONER_LIMIT=100, PRISONER_VALIDITY_DISTINCT_DETAILS_LIMIT=2)
+    def test_repeating_the_same_wrong_details_is_not_counted_as_guessing(self):
+        invalid_data = self.get_invalid_data()
+        for _ in range(4):
+            self.assertEmptyResponse(self.call_authorised_endpoint(invalid_data))
+
+    @override_settings(PRISONER_VALIDITY_LIMITING_ENABLED=True, PRISONER_VALIDITY_FAILURE_LIMIT=100,
+                       PRISONER_VALIDITY_DISTINCT_PRISONER_LIMIT=100, PRISONER_VALIDITY_DISTINCT_DETAILS_LIMIT=2)
+    def test_attempts_recorded_without_a_details_hash_do_not_count_as_guessing(self):
+        # rows recorded before the details hash was added have an empty value, which is not a distinct combination
+        prisoner_number = self.get_invalid_prisoner_number('')
+        for day in range(1, 4):
+            self.record_failure(prisoner_number, datetime.date(1901, 1, day), seconds_ago=10)
+        PrisonerValidityAttempt.objects.update(prisoner_details_hash='')
+        self.assertEmptyResponse(self.call_authorised_endpoint(self.get_invalid_data()))
+
+    @override_settings(PRISONER_VALIDITY_LIMITING_ENABLED=True, PRISONER_VALIDITY_FAILURE_LIMIT=100,
+                       PRISONER_VALIDITY_DISTINCT_PRISONER_LIMIT=2, PRISONER_VALIDITY_DISTINCT_DETAILS_LIMIT=100,
+                       PRISONER_VALIDITY_WINDOW_SECONDS=600)
+    def test_retry_after_for_distinct_prisoners_counts_from_when_each_was_last_tried(self):
+        prisoner_a, prisoner_b, prisoner_c = (self.get_invalid_prisoner_number('') for _ in range(3))
+        dob = datetime.date(1901, 1, 1)
+        self.record_failure(prisoner_a, dob, seconds_ago=500)
+        self.record_failure(prisoner_b, dob, seconds_ago=300)
+        self.record_failure(prisoner_a, dob, seconds_ago=100)
+        self.record_failure(prisoner_c, dob, seconds_ago=1)
+        # three distinct prisoners against a limit of 2: two must expire to get back under it; prisoner b expires
+        # in 300s, but prisoner a was tried again 100s ago so only expires in 500s
+        response = self.call_authorised_endpoint(self.get_invalid_data())
+        self.assertRateLimited(response)
+        self.assertAlmostEqual(response.json()['retry_after'], 500, delta=5)
+
+    @override_settings(PRISONER_VALIDITY_LIMITING_ENABLED=True, PRISONER_VALIDITY_FAILURE_LIMIT=3,
+                       PRISONER_VALIDITY_DISTINCT_PRISONER_LIMIT=2, PRISONER_VALIDITY_DISTINCT_DETAILS_LIMIT=100,
+                       PRISONER_VALIDITY_WINDOW_SECONDS=600)
+    def test_retry_after_waits_for_every_limit_that_applies(self):
+        prisoner_a, prisoner_b = (self.get_invalid_prisoner_number('') for _ in range(2))
+        dob = datetime.date(1901, 1, 1)
+        self.record_failure(prisoner_a, dob, seconds_ago=500)
+        self.record_failure(prisoner_a, dob, seconds_ago=400)
+        self.record_failure(prisoner_b, dob, seconds_ago=50)
+        # the failure limit clears in 100s, but the distinct prisoner limit only when prisoner a expires in 200s
+        response = self.call_authorised_endpoint(self.get_invalid_data())
+        self.assertRateLimited(response)
+        self.assertAlmostEqual(response.json()['retry_after'], 200, delta=5)
 
     @override_settings(PRISONER_VALIDITY_LIMITING_ENABLED=True, PRISONER_VALIDITY_FAILURE_LIMIT=2,
                        PRISONER_VALIDITY_WINDOW_SECONDS=600)
