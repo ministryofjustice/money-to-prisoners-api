@@ -8,16 +8,17 @@ from django.utils.crypto import salted_hmac
 from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 
-from model_utils.models import TimeStampedModel
+from core.models import TimeStampedModel
 
 validate_prisoner_number = RegexValidator(r'^[A-Z]\d{4}[A-Z]{2}$', message=_('Invalid prisoner number'))
 
 
 class Population(models.Model):
-    name = models.CharField(max_length=30)
-    description = models.CharField(max_length=255)
+    name = models.CharField(max_length=30, db_comment='Short code, such as young.')
+    description = models.CharField(max_length=255, db_comment='Name shown to users, such as Young offender.')
 
     class Meta:
+        db_table_comment = 'Prisons: kinds of people a prison holds, such as male, female, adult or young offender.'
         ordering = ('name',)
 
     def __str__(self):
@@ -25,10 +26,14 @@ class Population(models.Model):
 
 
 class Category(models.Model):
-    name = models.CharField(max_length=30)
-    description = models.CharField(max_length=255)
+    name = models.CharField(max_length=30, db_comment='Short code, such as B or IRC.')
+    description = models.CharField(max_length=255, db_comment='Name shown to users, such as Category B.')
 
     class Meta:
+        db_table_comment = (
+            'Prisons: kinds of prison, such as category A to D, young offender institution '
+            'or immigration removal centre.'
+        )
         ordering = ('name',)
         verbose_name_plural = 'categories'
 
@@ -37,22 +42,42 @@ class Category(models.Model):
 
 
 class Prison(TimeStampedModel):
-    nomis_id = models.CharField(max_length=3, primary_key=True, verbose_name='NOMIS id')
-    general_ledger_code = models.CharField(max_length=8)
-    name = models.CharField(max_length=500)
-    region = models.CharField(max_length=255, blank=True)
+    nomis_id = models.CharField(
+        max_length=3, primary_key=True, verbose_name='NOMIS id',
+        db_comment='Code for the prison in NOMIS, such as BXI.',
+    )
+    general_ledger_code = models.CharField(
+        max_length=8,
+        db_comment="The prison's business unit code in the finance system, used in the journals Bank Admin produces.",
+    )
+    name = models.CharField(max_length=500, db_comment='Full name of the prison.')
+    region = models.CharField(max_length=255, blank=True, db_comment='Region the prison is in.')
     populations = models.ManyToManyField(Population)
     categories = models.ManyToManyField(Category)
-    pre_approval_required = models.BooleanField(default=False)
+    pre_approval_required = models.BooleanField(
+        default=False,
+        db_comment='Whether security staff review credits for this prison before prison staff credit them.',
+    )
 
-    private_estate = models.BooleanField(default=False)
-    use_nomis_for_balances = models.BooleanField(default=True)
-    cms_establishment_code = models.CharField(max_length=10, blank=True)
+    private_estate = models.BooleanField(
+        default=False,
+        db_comment='Whether the prison is privately run. Bank Admin sends its credits to it each day.',
+    )
+    use_nomis_for_balances = models.BooleanField(
+        default=True,
+        db_comment="Whether prisoners' account balances come from NOMIS. "
+                   'If not, they come from prison_prisonerbalance.',
+    )
+    cms_establishment_code = models.CharField(
+        max_length=10, blank=True,
+        db_comment='Code used in the name of the daily credits file sent to a privately run prison.',
+    )
 
     name_prefixes = ('HMP/YOI', 'HMP', 'HMYOI/RC', 'HMYOI', 'IRC', 'STC')
     re_prefixes = re.compile(r'^(%s)?' % (' |'.join(('HMP & YOI', 'HMYOI & RC') + name_prefixes) + ' '))
 
     class Meta:
+        db_table_comment = 'Prisons: prisons and other establishments that prisoners can be sent money in.'
         ordering = ('name',)
 
     @classmethod
@@ -68,17 +93,21 @@ class Prison(TimeStampedModel):
 
 
 class PrisonBankAccount(models.Model):
-    prison = models.OneToOneField(Prison, on_delete=models.CASCADE)
+    prison = models.OneToOneField(Prison, on_delete=models.CASCADE, db_comment='The privately run prison.')
 
-    address_line1 = models.CharField(max_length=250)
-    address_line2 = models.CharField(max_length=250, blank=True)
-    city = models.CharField(max_length=250)
-    postcode = models.CharField(max_length=250)
+    address_line1 = models.CharField(max_length=250, db_comment='First line of the postal address.')
+    address_line2 = models.CharField(max_length=250, blank=True, db_comment='Second line of the postal address.')
+    city = models.CharField(max_length=250, db_comment='Town or city.')
+    postcode = models.CharField(max_length=250, db_comment='Postcode.')
 
-    sort_code = models.CharField(max_length=50)
-    account_number = models.CharField(max_length=50)
+    sort_code = models.CharField(max_length=50, db_comment='Sort code of the bank account.')
+    account_number = models.CharField(max_length=50, db_comment='Account number of the bank account.')
 
     class Meta:
+        db_table_comment = (
+            "Prisons: bank account and address of a privately run prison, which the prison's daily credits are "
+            'paid into.'
+        )
         ordering = ('prison',)
 
     def __str__(self):
@@ -92,10 +121,11 @@ class PrisonBankAccount(models.Model):
 
 
 class RemittanceEmail(models.Model):
-    prison = models.ForeignKey(Prison, on_delete=models.CASCADE)
-    email = models.EmailField()
+    prison = models.ForeignKey(Prison, on_delete=models.CASCADE, db_comment='The privately run prison.')
+    email = models.EmailField(db_comment='Email address.')
 
     class Meta:
+        db_table_comment = "Prisons: email addresses that a privately run prison's daily credits file is sent to."
         ordering = ('prison',)
 
     def __str__(self):
@@ -103,15 +133,25 @@ class RemittanceEmail(models.Model):
 
 
 class PrisonerLocation(TimeStampedModel):
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, blank=True, null=True, on_delete=models.SET_NULL)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, blank=True, null=True, on_delete=models.SET_NULL,
+        db_comment='Who uploaded the record.',
+    )
 
-    prisoner_name = models.CharField(blank=True, max_length=250)
-    prisoner_number = models.CharField(max_length=250)
-    prisoner_dob = models.DateField()
-    prison = models.ForeignKey(Prison, on_delete=models.CASCADE)
-    active = models.BooleanField(default=False, db_index=True)
+    prisoner_name = models.CharField(blank=True, max_length=250, db_comment="Prisoner's name, from NOMIS.")
+    prisoner_number = models.CharField(max_length=250, db_comment='Prisoner number, from NOMIS.')
+    prisoner_dob = models.DateField(db_comment="Prisoner's date of birth, from NOMIS.")
+    prison = models.ForeignKey(Prison, on_delete=models.CASCADE, db_comment='Prison the prisoner is in.')
+    active = models.BooleanField(
+        default=False, db_index=True,
+        db_comment='Whether this is a current record. Records stay inactive until their whole upload has finished.',
+    )
 
     class Meta:
+        db_table_comment = (
+            'Prisons: which prison each prisoner is in, uploaded from NOMIS through NOMS Ops. '
+            'Used to check the details senders give and to match credits to prisoners.'
+        )
         indexes = [
             models.Index(fields=['prisoner_number', 'prisoner_dob']),
         ]
@@ -123,10 +163,14 @@ class PrisonerLocation(TimeStampedModel):
 
 
 class PrisonerCreditNoticeEmail(models.Model):
-    prison = models.OneToOneField(Prison, on_delete=models.CASCADE)
-    email = models.EmailField()
+    prison = models.OneToOneField(Prison, on_delete=models.CASCADE, db_comment='The prison.')
+    email = models.EmailField(db_comment='Email address.')
 
     class Meta:
+        db_table_comment = (
+            'Prisons: the email address that each prison is sent its daily credit notices at, '
+            'for printing and handing to prisoners.'
+        )
         ordering = ('prison',)
 
     def __str__(self):
@@ -134,11 +178,15 @@ class PrisonerCreditNoticeEmail(models.Model):
 
 
 class PrisonerBalance(TimeStampedModel):
-    prisoner_number = models.CharField(max_length=250, primary_key=True)
-    prison = models.ForeignKey(Prison, on_delete=models.CASCADE)
-    amount = models.BigIntegerField()
+    prisoner_number = models.CharField(max_length=250, primary_key=True, db_comment='Prisoner number.')
+    prison = models.ForeignKey(Prison, on_delete=models.CASCADE, db_comment='Prison the prisoner is in.')
+    amount = models.BigIntegerField(db_comment='Balance, in pence.')
 
     class Meta:
+        db_table_comment = (
+            "Prisons: prisoners' account balances at prisons that do not use NOMIS for them, uploaded through "
+            'the API admin site. Only balances above a set amount are uploaded, so a missing row means a low balance.'
+        )
         indexes = [
             models.Index(fields=['prisoner_number', 'prison']),
         ]
@@ -230,14 +278,27 @@ class PrisonerValidityAttempt(TimeStampedModel):
     Counting distinct prisoner_number_hash values for an address shows how many prisoners were looked up;
     counting distinct prisoner_details_hash values shows whether the date of birth was being guessed.
     """
-    ip_address = models.GenericIPAddressField(blank=True, null=True, db_index=True)
-    prisoner_number_hash = models.CharField(max_length=64, db_index=True)
-    prisoner_details_hash = models.CharField(max_length=64, db_index=True, blank=True)
-    matched = models.BooleanField()
+    ip_address = models.GenericIPAddressField(
+        blank=True, null=True, db_index=True,
+        db_comment='IP address the check came from.',
+    )
+    prisoner_number_hash = models.CharField(
+        max_length=64, db_index=True,
+        db_comment='Keyed hash of the prisoner number. The number itself is not stored.',
+    )
+    prisoner_details_hash = models.CharField(
+        max_length=64, db_index=True, blank=True,
+        db_comment='Keyed hash of the prisoner number and date of birth together.',
+    )
+    matched = models.BooleanField(db_comment='Whether the details matched a prisoner.')
 
     objects = PrisonerValidityAttemptManager()
 
     class Meta:
+        db_table_comment = (
+            'Prisons: each check made on Send Money that a prisoner number and date of birth match a prisoner, '
+            'used to limit repeated guessing. Old records are deleted.'
+        )
         indexes = [
             models.Index(fields=['ip_address', 'created']),
         ]

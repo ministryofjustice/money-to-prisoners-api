@@ -12,7 +12,8 @@ from django.db.models.functions.datetime import TruncBase
 from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from model_utils.models import TimeStampedModel
+from model_utils.fields import AutoCreatedField, AutoLastModifiedField
+from model_utils.models import TimeStampedModel as BaseTimeStampedModel
 
 logger = logging.getLogger('mtp')
 
@@ -41,12 +42,38 @@ def validate_monday(date: datetime.date):
         raise ValidationError(_('"%s" is not a Monday') % date.strftime('%d %b %Y').lstrip('0'))
 
 
+class TimeStampedModel(BaseTimeStampedModel):
+    """
+    django-model-utils' TimeStampedModel with database comments on its `created` and `modified` fields
+    """
+    created = AutoCreatedField(_('created'), db_comment='When this row was created.')
+    modified = AutoLastModifiedField(_('modified'), db_comment='When this row was last changed.')
+
+    class Meta:
+        abstract = True
+
+
 class ScheduledCommand(models.Model):
-    name = models.CharField(max_length=255, validators=[validate_command_name])
-    arg_string = models.CharField(max_length=255, blank=True)
-    cron_entry = models.CharField(max_length=255, validators=[validate_cron_entry])
-    next_execution = models.DateTimeField(null=True, blank=True)
-    delete_after_next = models.BooleanField(default=False)
+    name = models.CharField(
+        max_length=255, validators=[validate_command_name],
+        db_comment='Name of the management command to run.',
+    )
+    arg_string = models.CharField(
+        max_length=255, blank=True,
+        db_comment='Arguments given to the command, separated by spaces.',
+    )
+    cron_entry = models.CharField(
+        max_length=255, validators=[validate_cron_entry],
+        db_comment='When to run the command, as a cron schedule.',
+    )
+    next_execution = models.DateTimeField(null=True, blank=True, db_comment='When the command will next run.')
+    delete_after_next = models.BooleanField(
+        default=False,
+        db_comment='Whether to delete this schedule after the command next runs.',
+    )
+
+    class Meta:
+        db_table_comment = 'Core: management commands that the API runs on a schedule.'
 
     def get_args(self):
         return self.arg_string.split(' ') if self.arg_string else []
@@ -111,8 +138,11 @@ models.DateTimeField.register_lookup(TruncLocalDate)
 
 
 class FileDownload(TimeStampedModel):
-    label = models.CharField(max_length=255, db_index=True)
-    date = models.DateField(db_index=True)
+    label = models.CharField(max_length=255, db_index=True, db_comment='Which kind of file was downloaded.')
+    date = models.DateField(db_index=True, db_comment='The day of credits that the file covers.')
 
     class Meta:
+        db_table_comment = (
+            'Core: which daily files Bank Admin users have downloaded, so that missed days can be pointed out.'
+        )
         unique_together = ('label', 'date')

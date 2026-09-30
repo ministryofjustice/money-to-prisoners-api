@@ -1,39 +1,78 @@
 from django.db import models
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
-from model_utils.models import TimeStampedModel
 from mtp_common.utils import format_currency
 
+from core.models import TimeStampedModel
 from credit.models import Credit
 from transaction.constants import TransactionStatus, TransactionCategory, TransactionSource
 from transaction.managers import TransactionManager
 
 
 class Transaction(TimeStampedModel):
-    amount = models.BigIntegerField()
-    category = models.CharField(max_length=50, choices=TransactionCategory.choices, db_index=True)
-    source = models.CharField(max_length=50, choices=TransactionSource.choices, db_index=True)
+    amount = models.BigIntegerField(db_comment='Amount in pence.')
+    category = models.CharField(
+        max_length=50, choices=TransactionCategory.choices, db_index=True,
+        db_comment='credit: money paid in; debit: money paid out.',
+    )
+    source = models.CharField(
+        max_length=50, choices=TransactionSource.choices, db_index=True,
+        db_comment='bank_transfer: money sent to a prisoner by bank transfer; '
+                   'administrative: anything else, such as card payment settlements and returned payments.',
+    )
 
-    processor_type_code = models.CharField(max_length=12, blank=True, null=True)
-    sender_sort_code = models.CharField(max_length=50, blank=True)
-    sender_account_number = models.CharField(max_length=50, blank=True)
-    sender_name = models.CharField(max_length=250, blank=True)
+    processor_type_code = models.CharField(
+        max_length=12, blank=True, null=True,
+        db_comment='Transaction type code from the bank statement file.',
+    )
+    sender_sort_code = models.CharField(max_length=50, blank=True, db_comment="Sort code of the sender's account.")
+    sender_account_number = models.CharField(
+        max_length=50, blank=True,
+        db_comment="Account number of the sender's account.",
+    )
+    sender_name = models.CharField(
+        max_length=250, blank=True,
+        db_comment="Sender's name, from the description field on the bank statement.",
+    )
 
     # used by building societies to identify the account nr
-    sender_roll_number = models.CharField(blank=True, max_length=50)
+    sender_roll_number = models.CharField(
+        blank=True, max_length=50,
+        db_comment='Roll number, for building society accounts that use one to identify the account.',
+    )
 
     # original reference
-    reference = models.TextField(blank=True)
-    received_at = models.DateTimeField(auto_now=False, db_index=True)
+    reference = models.TextField(
+        blank=True,
+        db_comment='Reference given by the sender, which should be the prisoner number and date of birth.',
+    )
+    received_at = models.DateTimeField(
+        auto_now=False, db_index=True,
+        db_comment='Date on the bank statement, recorded as midday UTC.',
+    )
 
     # 6-digit reference code for reconciliation
-    ref_code = models.CharField(max_length=12, blank=True, null=True,
-                                help_text=_('For reconciliation'))
+    ref_code = models.CharField(
+        max_length=12, blank=True, null=True, help_text=_('For reconciliation'),
+        db_comment='Reference code given during reconciliation: for bank transfers, numbered from 900001 '
+                   'within each day; for a card payment settlement, the code of the card payment batch.',
+    )
 
-    incomplete_sender_info = models.BooleanField(default=False)
-    reference_in_sender_field = models.BooleanField(default=False)
+    incomplete_sender_info = models.BooleanField(
+        default=False,
+        db_comment="Whether the sender's bank details are missing or incomplete, so the money cannot be "
+                   'returned to them.',
+    )
+    reference_in_sender_field = models.BooleanField(
+        default=False,
+        db_comment='Whether the prisoner number and date of birth were found in the name field rather than '
+                   'the reference.',
+    )
 
-    credit = models.OneToOneField(Credit, on_delete=models.CASCADE, null=True)
+    credit = models.OneToOneField(
+        Credit, on_delete=models.CASCADE, null=True,
+        db_comment='The credit made by this bank transfer; empty for administrative transactions.',
+    )
 
     # NB: there are matching boolean fields or properties on the model instance for each
     STATUS_LOOKUP = {
@@ -78,6 +117,10 @@ class Transaction(TimeStampedModel):
     objects = TransactionManager()
 
     class Meta:
+        db_table_comment = (
+            'Transactions: lines from the statement of the bank account that receives prisoner money, '
+            'loaded daily by the Transaction Uploader. Each bank transfer to a prisoner makes one credit.'
+        )
         ordering = ('received_at', 'id',)
         get_latest_by = 'received_at'
         permissions = (
