@@ -73,6 +73,11 @@ and parts of the schema are sensitive. See
 [Database schema report](https://github.com/ministryofjustice/money-to-prisoners-deploy/blob/main/docs/schema-report.md)
 for the link and who can see it.
 
+Every table and column has a description, which the report shows and which is also stored in the database.
+When you add a model or a field, give it a `db_table_comment` or `db_comment`: say what the value is, its units
+and where it comes from. `core.tests.test_db_comments` fails if one is missing. This repository is public, so
+descriptions of the security tables say what a column holds, never how it is used.
+
 To generate the same report from your local database, run `./run.py schema_report`. This needs Docker.
 It migrates the database configured in your local settings, then writes the report to `schema-spy-report/`
 (open `schema-spy-report/index.html`). On Apple Silicon it can take 15 minutes or more, because the SchemaSpy image
