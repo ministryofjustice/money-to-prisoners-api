@@ -9,9 +9,8 @@ from django.db import models
 from django.dispatch import receiver
 from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
-from model_utils.models import TimeStampedModel
 
-from core.models import ScheduledCommand
+from core.models import ScheduledCommand, TimeStampedModel
 from prison.models import Prison
 from security.constants import CheckStatus
 from security.managers import (
@@ -25,14 +24,18 @@ logger = logging.getLogger('mtp')
 
 
 class SenderProfile(TimeStampedModel):
-    credit_count = models.BigIntegerField(default=0)
-    credit_total = models.BigIntegerField(default=0)
+    credit_count = models.BigIntegerField(default=0, db_comment='Number of credits from this sender.')
+    credit_total = models.BigIntegerField(default=0, db_comment='Total of credits from this sender, in pence.')
 
     prisons = models.ManyToManyField(Prison, related_name='senders')
 
     objects = SenderProfileManager()
 
     class Meta:
+        db_table_comment = (
+            'Security: one row for each person or account that has sent money, grouping their credits. '
+            'Their details are in security_banktransfersenderdetails or security_debitcardsenderdetails.'
+        )
         ordering = ('created',)
         indexes = [
             models.Index(fields=['credit_count']),
@@ -69,15 +72,20 @@ class SenderProfile(TimeStampedModel):
 
 
 class BankAccount(models.Model):
-    sort_code = models.CharField(max_length=50, blank=True)
-    account_number = models.CharField(max_length=50, blank=True)
-    roll_number = models.CharField(max_length=50, blank=True)
+    sort_code = models.CharField(max_length=50, blank=True, db_comment='Sort code.')
+    account_number = models.CharField(max_length=50, blank=True, db_comment='Account number.')
+    roll_number = models.CharField(
+        max_length=50, blank=True, db_comment='Building society roll number, if the account has one.',
+    )
 
     monitoring_users = models.ManyToManyField(
         User, related_name='monitored_bank_accounts'
     )
 
     class Meta:
+        db_table_comment = (
+            'Security: bank accounts that bank transfers have come from or disbursements have been paid to.'
+        )
         unique_together = (
             ('sort_code', 'account_number', 'roll_number'),
         )
@@ -90,15 +98,17 @@ class BankAccount(models.Model):
 
 
 class BankTransferSenderDetails(TimeStampedModel):
-    sender_name = models.CharField(max_length=250, blank=True)
+    sender_name = models.CharField(max_length=250, blank=True, db_comment="Sender's name from the bank statement.")
     sender_bank_account = models.ForeignKey(
-        BankAccount, on_delete=models.CASCADE, related_name='senders'
+        BankAccount, on_delete=models.CASCADE, related_name='senders', db_comment="The sender's bank account.",
     )
     sender = models.ForeignKey(
-        SenderProfile, on_delete=models.CASCADE, related_name='bank_transfer_details'
+        SenderProfile, on_delete=models.CASCADE, related_name='bank_transfer_details',
+        db_comment='The sender profile these details belong to.',
     )
 
     class Meta:
+        db_table_comment = 'Security: the name and bank account of a sender who has sent money by bank transfer.'
         ordering = ('created',)
         verbose_name_plural = 'bank transfer sender details'
 
@@ -107,11 +117,18 @@ class BankTransferSenderDetails(TimeStampedModel):
 
 
 class DebitCardSenderDetails(TimeStampedModel):
-    card_number_last_digits = models.CharField(max_length=4, blank=True, null=True, db_index=True)
-    card_expiry_date = models.CharField(max_length=5, blank=True, null=True)
-    postcode = models.CharField(max_length=250, blank=True, null=True, db_index=True)
+    card_number_last_digits = models.CharField(
+        max_length=4, blank=True, null=True, db_index=True, db_comment='Last 4 digits of the card number.',
+    )
+    card_expiry_date = models.CharField(
+        max_length=5, blank=True, null=True, db_comment='Card expiry date, as MM/YY.',
+    )
+    postcode = models.CharField(
+        max_length=250, blank=True, null=True, db_index=True, db_comment="Postcode of the card's billing address.",
+    )
     sender = models.ForeignKey(
-        SenderProfile, on_delete=models.CASCADE, related_name='debit_card_details'
+        SenderProfile, on_delete=models.CASCADE, related_name='debit_card_details',
+        db_comment='The sender profile these details belong to.',
     )
 
     monitoring_users = models.ManyToManyField(
@@ -119,6 +136,10 @@ class DebitCardSenderDetails(TimeStampedModel):
     )
 
     class Meta:
+        db_table_comment = (
+            'Security: a debit card that money has been sent with, identified by the last 4 digits of its number, '
+            'its expiry date and its billing postcode. The full card number is never stored.'
+        )
         ordering = ('created',)
         verbose_name_plural = 'debit card sender details'
         unique_together = (
@@ -130,13 +151,15 @@ class DebitCardSenderDetails(TimeStampedModel):
 
 
 class CardholderName(models.Model):
-    name = models.CharField(max_length=250)
+    name = models.CharField(max_length=250, db_comment='Name on the card, as given in GOV.UK Pay.')
     debit_card_sender_details = models.ForeignKey(
         DebitCardSenderDetails, on_delete=models.CASCADE,
-        related_name='cardholder_names', related_query_name='cardholder_name'
+        related_name='cardholder_names', related_query_name='cardholder_name',
+        db_comment='The debit card.',
     )
 
     class Meta:
+        db_table_comment = 'Security: each different cardholder name used with a debit card.'
         ordering = ('pk',)
 
     def __str__(self):
@@ -144,13 +167,15 @@ class CardholderName(models.Model):
 
 
 class SenderEmail(models.Model):
-    email = models.CharField(max_length=250)
+    email = models.CharField(max_length=250, db_comment='Email address given by the sender on Send Money.')
     debit_card_sender_details = models.ForeignKey(
         DebitCardSenderDetails, on_delete=models.CASCADE,
-        related_name='sender_emails', related_query_name='sender_email'
+        related_name='sender_emails', related_query_name='sender_email',
+        db_comment='The debit card.',
     )
 
     class Meta:
+        db_table_comment = 'Security: each different email address given by senders paying with a debit card.'
         ordering = ('pk',)
 
     def __str__(self):
@@ -158,14 +183,20 @@ class SenderEmail(models.Model):
 
 
 class RecipientProfile(TimeStampedModel):
-    disbursement_count = models.BigIntegerField(default=0)
-    disbursement_total = models.BigIntegerField(default=0)
+    disbursement_count = models.BigIntegerField(default=0, db_comment='Number of disbursements to this recipient.')
+    disbursement_total = models.BigIntegerField(
+        default=0, db_comment='Total of disbursements to this recipient, in pence.',
+    )
 
     prisons = models.ManyToManyField(Prison, related_name='recipients')
 
     objects = RecipientProfileManager()
 
     class Meta:
+        db_table_comment = (
+            'Security: one row for each person or company that prisoners have sent money to, grouping their '
+            'disbursements. Bank account details are in security_banktransferrecipientdetails.'
+        )
         ordering = ('created',)
         indexes = [
             models.Index(fields=['disbursement_count']),
@@ -184,28 +215,34 @@ class RecipientProfile(TimeStampedModel):
 
 class BankTransferRecipientDetails(TimeStampedModel):
     recipient_bank_account = models.ForeignKey(
-        BankAccount, on_delete=models.CASCADE, related_name='recipients'
+        BankAccount, on_delete=models.CASCADE, related_name='recipients', db_comment="The recipient's bank account.",
     )
     recipient = models.ForeignKey(
-        RecipientProfile, on_delete=models.CASCADE, related_name='bank_transfer_details'
+        RecipientProfile, on_delete=models.CASCADE, related_name='bank_transfer_details',
+        db_comment='The recipient profile these details belong to.',
     )
 
     class Meta:
+        db_table_comment = 'Security: the bank account of a recipient who has been paid by bank transfer.'
         ordering = ('created',)
         verbose_name_plural = 'bank transfer recipient details'
 
 
 class PrisonerProfile(TimeStampedModel):
-    credit_count = models.BigIntegerField(default=0)
-    credit_total = models.BigIntegerField(default=0)
-    disbursement_count = models.BigIntegerField(default=0)
-    disbursement_total = models.BigIntegerField(default=0)
+    credit_count = models.BigIntegerField(default=0, db_comment='Number of credits to this prisoner.')
+    credit_total = models.BigIntegerField(default=0, db_comment='Total of credits to this prisoner, in pence.')
+    disbursement_count = models.BigIntegerField(default=0, db_comment='Number of disbursements from this prisoner.')
+    disbursement_total = models.BigIntegerField(
+        default=0, db_comment='Total of disbursements from this prisoner, in pence.',
+    )
 
-    prisoner_name = models.CharField(max_length=250)
-    prisoner_number = models.CharField(max_length=250, db_index=True)
-    prisoner_dob = models.DateField(blank=True, null=True)
+    prisoner_name = models.CharField(max_length=250, db_comment="Prisoner's name, from NOMIS.")
+    prisoner_number = models.CharField(max_length=250, db_index=True, db_comment='Prisoner number.')
+    prisoner_dob = models.DateField(blank=True, null=True, db_comment="Prisoner's date of birth.")
     current_prison = models.ForeignKey(
-        Prison, on_delete=models.SET_NULL, null=True, related_name='current_prisoners'
+        Prison, on_delete=models.SET_NULL, null=True, related_name='current_prisoners',
+        db_comment='Prison the prisoner is in now, from prison_prisonerlocation; empty if they have no current '
+                   'location, such as after release.',
     )
 
     prisons = models.ManyToManyField(Prison, related_name='historic_prisoners')
@@ -219,6 +256,10 @@ class PrisonerProfile(TimeStampedModel):
     objects = PrisonerProfileManager()
 
     class Meta:
+        db_table_comment = (
+            'Security: one row for each prisoner who has received or sent money, grouping their credits and '
+            'disbursements.'
+        )
         ordering = ('created',)
         unique_together = (
             ('prisoner_number', 'prisoner_dob',),
@@ -250,13 +291,15 @@ class PrisonerProfile(TimeStampedModel):
 
 
 class ProvidedPrisonerName(models.Model):
-    name = models.CharField(max_length=250)
+    name = models.CharField(max_length=250, db_comment='Name for the prisoner as typed by a sender.')
     prisoner = models.ForeignKey(
         PrisonerProfile, on_delete=models.CASCADE,
         related_name='provided_names', related_query_name='provided_name',
+        db_comment='The prisoner profile.',
     )
 
     class Meta:
+        db_table_comment = 'Security: each different name that senders have typed for a prisoner on Send Money.'
         ordering = ('pk',)
 
     def __str__(self):
@@ -264,13 +307,21 @@ class ProvidedPrisonerName(models.Model):
 
 
 class SavedSearch(TimeStampedModel):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    description = models.CharField(max_length=255)
-    endpoint = models.CharField(max_length=255)
-    last_result_count = models.IntegerField(default=0)
-    site_url = models.CharField(max_length=1000, null=True, blank=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, db_comment='The NOMS Ops user who saved the search.')
+    description = models.CharField(max_length=255, db_comment='Name of the search shown to the user.')
+    endpoint = models.CharField(max_length=255, db_comment='The API address the search is run against.')
+    last_result_count = models.IntegerField(
+        default=0, db_comment='Number of results when the user last looked, so that new results can be counted.',
+    )
+    site_url = models.CharField(
+        max_length=1000, null=True, blank=True, db_comment='Address of the page in NOMS Ops that shows the search.',
+    )
 
     class Meta:
+        db_table_comment = (
+            'Security: searches and pages that NOMS Ops users have chosen to follow, with the search values '
+            'in security_searchfilter.'
+        )
         ordering = ('created',)
 
     def __str__(self):
@@ -278,24 +329,31 @@ class SavedSearch(TimeStampedModel):
 
 
 class SearchFilter(models.Model):
-    field = models.CharField(max_length=255)
-    value = models.CharField(max_length=255)
+    field = models.CharField(max_length=255, db_comment='Name of the search field.')
+    value = models.CharField(max_length=255, db_comment='Value searched for.')
     saved_search = models.ForeignKey(
-        SavedSearch, on_delete=models.CASCADE, related_name='filters'
+        SavedSearch, on_delete=models.CASCADE, related_name='filters', db_comment='The saved search.',
     )
+
+    class Meta:
+        db_table_comment = 'Security: the search values of each saved search.'
 
     def __str__(self):
         return '{field}={value}'.format(field=self.field, value=self.value)
 
 
 class MonitoredPartialEmailAddress(TimeStampedModel):
-    keyword = models.CharField(max_length=255, unique=True, validators=[MinLengthValidator(3)], error_messages={
-        'unique': _('Keyword already exists.'),
-    })
+    keyword = models.CharField(
+        max_length=255, unique=True, validators=[MinLengthValidator(3)], error_messages={
+            'unique': _('Keyword already exists.'),
+        },
+        db_comment='Part of an email address, in lower case and at least 3 characters long.',
+    )
 
     objects = MonitoredPartialEmailAddressManager()
 
     class Meta:
+        db_table_comment = 'Security: parts of email addresses entered by security staff in NOMS Ops.'
         ordering = ('keyword',)
         verbose_name = 'monitored partial email address'
         verbose_name_plural = 'monitored partial email addresses'
@@ -312,41 +370,49 @@ class Check(TimeStampedModel):
         'credit.Credit',
         on_delete=models.CASCADE,
         related_name='security_check',
+        db_comment='The credit being checked.',
     )
     status = models.CharField(
         max_length=50,
         choices=CheckStatus.choices,
         db_index=True,
+        db_comment='pending: waiting for a decision; accepted: the credit may go ahead; '
+                   'rejected: the credit is to be refunded.',
     )
     description = ArrayField(
         models.CharField(max_length=200),
         null=True,
         blank=True,
+        db_comment='Text shown to security staff saying why the credit needs checking.',
     )
     rules = ArrayField(
         models.CharField(max_length=50),
         null=True,
         blank=True,
+        db_comment='Codes of the rules that led to the check.',
     )
-    actioned_at = models.DateTimeField(null=True, blank=True)
+    actioned_at = models.DateTimeField(null=True, blank=True, db_comment='When the check was accepted or rejected.')
     actioned_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='security_check_actioned_by'
+        related_name='security_check_actioned_by',
+        db_comment='Who accepted or rejected the check.',
     )
-    decision_reason = models.TextField(blank=True)
+    decision_reason = models.TextField(blank=True, db_comment='Note given by the person who made the decision.')
     assigned_to = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='security_check_assigned_to'
+        related_name='security_check_assigned_to',
+        db_comment='The member of security staff dealing with the check.',
     )
     rejection_reasons = models.JSONField(
         name='rejection_reasons',
-        default=dict
+        default=dict,
+        db_comment='The reasons chosen when the check was rejected.',
     )
     # We persist AutoAcceptRuleState for three reasons:
     # 1. To link an applicable AutoAcceptRule to the Check, even if not active
@@ -362,10 +428,17 @@ class Check(TimeStampedModel):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='checks'
+        related_name='checks',
+        db_comment='The auto-accept rule, as it stood at the time, that applied to this credit, if any.',
     )
 
     objects = CheckManager()
+
+    class Meta:
+        db_table_comment = (
+            'Security: credits that security staff need to accept or reject before prison staff can credit them. '
+            'At most one per credit.'
+        )
 
     def accept(self, by, reason=''):
         """
@@ -414,10 +487,12 @@ class Check(TimeStampedModel):
 
 class CheckAutoAcceptRule(TimeStampedModel):
     debit_card_sender_details = models.ForeignKey(
-        DebitCardSenderDetails, on_delete=models.CASCADE, related_name='check_auto_accept_rules'
+        DebitCardSenderDetails, on_delete=models.CASCADE, related_name='check_auto_accept_rules',
+        db_comment='The debit card.',
     )
     prisoner_profile = models.ForeignKey(
-        PrisonerProfile, on_delete=models.CASCADE, related_name='check_auto_accept_rules'
+        PrisonerProfile, on_delete=models.CASCADE, related_name='check_auto_accept_rules',
+        db_comment='The prisoner.',
     )
 
     objects = CheckAutoAcceptRuleManager()
@@ -429,6 +504,10 @@ class CheckAutoAcceptRule(TimeStampedModel):
         return self.get_latest_state().active
 
     class Meta:
+        db_table_comment = (
+            'Security: pairs of debit card and prisoner whose credits security staff have agreed to accept '
+            'without checking each time. Whether each is switched on is in security_checkautoacceptrulestate.'
+        )
         ordering = ('created',)
         unique_together = (
             ('debit_card_sender_details', 'prisoner_profile',),
@@ -437,19 +516,23 @@ class CheckAutoAcceptRule(TimeStampedModel):
 
 class CheckAutoAcceptRuleState(TimeStampedModel):
     auto_accept_rule = models.ForeignKey(
-        CheckAutoAcceptRule, on_delete=models.CASCADE, related_name='states'
+        CheckAutoAcceptRule, on_delete=models.CASCADE, related_name='states', db_comment='The auto-accept rule.',
     )
     added_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='security_check_auto_accept_rule_state_added_by'
+        related_name='security_check_auto_accept_rule_state_added_by',
+        db_comment='Who switched the rule on or off.',
     )
-    active = models.BooleanField()
-    reason = models.TextField()
+    active = models.BooleanField(db_comment='Whether the rule was switched on.')
+    reason = models.TextField(db_comment='Reason given for the change.')
 
     class Meta:
+        db_table_comment = (
+            'Security: history of each auto-accept rule being switched on or off. The latest row is the current state.'
+        )
         ordering = ('created',)
 
 
