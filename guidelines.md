@@ -44,7 +44,7 @@ Core functionality is heavily tested using Django's test framework. Notable test
   ```shell
   ./run.py dependencies
   ```
-- **Database**: PostgreSQL 14. Create a database named `mtp_api`. Configuration can be overridden in `mtp_api/settings/local.py` (copy from `local.py.sample`).
+- **Database**: PostgreSQL 18. Create a database named `mtp_api`. Configuration can be overridden in `mtp_api/settings/local.py` (copy from `local.py.sample`).
 - **Management Script**: `run.py` is a wrapper around `manage.py` and other build tasks (SASS, JS, etc.).
   - Run `./run.py --verbosity 2 help` for a list of all tasks.
   - Use `./run.py serve` to start the development server with live-reload.
