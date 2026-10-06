@@ -1,11 +1,13 @@
 import datetime
 import textwrap
 
+from django.conf import settings
 from django.core.management import BaseCommand, call_command
 from django.utils.timezone import now
 from mtp_common.stack import StackException, is_first_instance
 
 from mtp_auth.models import Login
+from prison.models import PrisonerValidityAttempt
 
 
 class Command(BaseCommand):
@@ -29,5 +31,6 @@ class Command(BaseCommand):
             call_command('clear_password_change_requests', verbosity=verbosity)
             call_command('clear_abandoned_payments', age=7, verbosity=verbosity)
             Login.objects.filter(created__lt=now() - datetime.timedelta(days=365)).delete()
+            PrisonerValidityAttempt.objects.delete_older_than(settings.PRISONER_VALIDITY_ATTEMPT_RETENTION_DAYS)
         elif verbosity:
             self.stdout.write('Clean-up tasks do not run on secondary instances')

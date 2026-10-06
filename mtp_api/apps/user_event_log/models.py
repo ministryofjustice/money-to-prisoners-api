@@ -33,19 +33,32 @@ class UserEvent(models.Model):
     """
 
     id = models.BigAutoField(primary_key=True)
-    timestamp = models.DateTimeField(auto_now=True, db_index=True)
+    timestamp = models.DateTimeField(auto_now=True, db_index=True, db_comment='When it happened.')
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='user_events',
+        db_comment='Who did it.',
     )
-    kind = models.CharField(max_length=254, choices=UserEventKind.choices)
-    api_url_path = models.CharField(verbose_name='API URL path', max_length=5000, db_index=True)
-    data = models.JSONField(null=True, encoder=FlexibleDjangoJSONEncoder)
+    kind = models.CharField(
+        max_length=254, choices=UserEventKind.choices,
+        db_comment='What kind of event. Currently only noms_ops_search: a search in NOMS Ops.',
+    )
+    api_url_path = models.CharField(
+        verbose_name='API URL path', max_length=5000, db_index=True,
+        db_comment='The API address that was requested.',
+    )
+    data = models.JSONField(
+        null=True, encoder=FlexibleDjangoJSONEncoder,
+        db_comment='Details of the event, such as the search filters used.',
+    )
 
     def __str__(self):
         """Human-friendly string representation."""
         return f'{self.timestamp} – {self.user} – {self.get_kind_display()}'
 
     class Meta:
+        db_table_comment = (
+            'User events: a lasting record of particular things users did, such as searches in NOMS Ops.'
+        )
         ordering = ('-timestamp', '-pk')

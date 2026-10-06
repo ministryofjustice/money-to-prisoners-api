@@ -1,0 +1,8 @@
+{
+  "authored_date": "2026-09-09",
+  "anchor_date": 0,
+  "date_fields": {
+    "transaction.transaction": ["received_at", "created", "modified"]
+  }
+}
+
