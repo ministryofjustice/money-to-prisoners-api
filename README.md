@@ -10,7 +10,7 @@ View overview and guidelines [here](guidelines.md)
 ## Requirements
 
 - Unix-like platform with Python 3.12 and NodeJS 24 (e.g. via [nvm](https://github.com/nvm-sh/nvm#installing-and-updating) or [fnm](https://github.com/Schniz/fnm#installation))
-- PostgreSQL 14 (though the version is not a strict requirement as no special features are used)
+- PostgreSQL 18 (no special features are used, so the exact version is not critical)
 
 ## Developing
 
