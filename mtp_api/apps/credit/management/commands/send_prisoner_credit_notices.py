@@ -64,7 +64,7 @@ class Command(BaseCommand):
             return
         if path.stat().st_size >= NOTIFY_UPLOAD_LIMIT:
             error_message = (
-                f'Cannot send prisoner notice email to {credit_notice_email.prison.nomis_id} '
+                f'Cannot send prisoner notice email to {credit_notice_email.prison.name}'
                 'because the attachment is too big'
             )
             logger.error(error_message)
