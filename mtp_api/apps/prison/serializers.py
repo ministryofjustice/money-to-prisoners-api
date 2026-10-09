@@ -137,7 +137,8 @@ class PrisonerAccountBalanceSerializer(serializers.Serializer):
                     'exception': e,
                 }
             )
-            raise ValidationError(f'NOMIS balances for {prisoner_location.prisoner_number} is malformed: {e}')
+            # details of the problem are logged above but not returned to clients
+            raise ValidationError(f'NOMIS balances for {prisoner_location.prisoner_number} is malformed')
         except requests.RequestException as e:
             if (
                 getattr(e, 'response', None) is not None

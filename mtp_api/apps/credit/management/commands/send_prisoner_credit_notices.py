@@ -60,18 +60,19 @@ class Command(BaseCommand):
         date_reference = parsed_date_or_yesterday(date).strftime('%Y-%m-%d')
         if not path.exists():
             if self.verbosity:
-                self.stdout.write(f'Nothing to send to {credit_notice_email}')
+                self.stdout.write(f'Nothing to send to {credit_notice_email.prison.name}')
             return
         if path.stat().st_size >= NOTIFY_UPLOAD_LIMIT:
             error_message = (
-                f'Cannot send prisoner notice email to {credit_notice_email} because the attachment is too big'
+                f'Cannot send prisoner notice email to {credit_notice_email.prison.name} '
+                'because the attachment is too big'
             )
             logger.error(error_message)
             self.stdout.write(error_message)
             return
 
         if self.verbosity:
-            self.stdout.write(f'Sending prisoner notice email to {credit_notice_email}')
+            self.stdout.write(f'Sending prisoner notice email to {credit_notice_email.prison.name}')
         send_email(
             template_name='api-prisoner-notice-email',
             to=credit_notice_email.email,
