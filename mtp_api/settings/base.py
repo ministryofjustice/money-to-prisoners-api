@@ -281,6 +281,8 @@ if os.environ.get('SENTRY_DSN'):
     import sentry_sdk
     from sentry_sdk.integrations.django import DjangoIntegration
 
+    from core.sentry import scrub_prisoner_details
+
     sentry_sdk.init(
         dsn=os.environ['SENTRY_DSN'],
         integrations=[DjangoIntegration()],
@@ -288,6 +290,9 @@ if os.environ.get('SENTRY_DSN'):
         release=APP_GIT_COMMIT or 'unknown',
         send_default_pii=DEBUG,
         max_request_body_size='medium' if DEBUG else 'never',
+        # local variables throughout the api hold personal details
+        include_local_variables=False,
+        before_send=scrub_prisoner_details,
     )
 
 REST_FRAMEWORK = {
