@@ -16,6 +16,8 @@ class PrisonerProfileManager(models.Manager):
 
     @transaction.atomic
     def update_current_prisons(self):
+        # only rows whose prison has changed are updated (and so locked): this runs often and
+        # card payments need to update prisoner profiles too
         with connection.cursor() as cursor:
             cursor.execute(
                 'UPDATE security_prisonerprofile '
@@ -25,7 +27,9 @@ class PrisonerProfileManager(models.Manager):
                 'ON pp.prisoner_number = pl.prisoner_number '
                 'AND pl.active is True '
                 'WHERE security_prisonerprofile.id = pp.id '
+                'AND security_prisonerprofile.current_prison_id IS DISTINCT FROM pl.prison_id '
             )
+            return cursor.rowcount
 
     def get_for_credit(self, credit):
         if credit.prisoner_profile:
