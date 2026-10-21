@@ -1048,7 +1048,7 @@ class CheckAutoAcceptRuleViewTestCase(APITestCase, AuthTestCaseMixin):
             'card_number_last_digits': debit_card_sender_details.card_number_last_digits,
             'cardholder_names': [],
             'postcode': debit_card_sender_details.postcode,
-            'sender': debit_card_sender_details.id,
+            'sender': debit_card_sender_details.sender_id,
             'sender_emails': [],
         }
 
