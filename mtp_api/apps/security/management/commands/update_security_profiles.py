@@ -1,3 +1,4 @@
+from django.db import connection
 from django.db.transaction import atomic
 from django.core.management import BaseCommand, CommandError
 
@@ -16,6 +17,8 @@ class Command(BaseCommand):
                             help='Number of objects to process in one atomic transaction')
         parser.add_argument('--recalculate-totals', action='store_true', help='Recalculates the counts and totals only')
         parser.add_argument('--recreate', action='store_true', help='Deletes existing profiles')
+        parser.add_argument('--lock-timeout', type=int, default=10,
+                            help='Seconds to wait for a locked row before failing; 0 waits indefinitely')
 
     def handle(self, **options):
         if options['recalculate_totals'] and options['recreate']:
@@ -25,10 +28,22 @@ class Command(BaseCommand):
         if batch_size < 1:
             raise CommandError('Batch size must be at least 1')
 
-        if options['recalculate_totals']:
-            self.handle_totals(batch_size=batch_size)
-        else:
-            self.handle_update(batch_size=batch_size, recreate=options['recreate'])
+        lock_timeout = options['lock_timeout']
+        if lock_timeout < 0:
+            raise CommandError('Lock timeout cannot be negative')
+
+        # card payments update the same profiles so this job should not queue up behind
+        # (and so delay) other locks for long
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT set_config('lock_timeout', %s, false)", [f'{lock_timeout}s'])
+        try:
+            if options['recalculate_totals']:
+                self.handle_totals(batch_size=batch_size)
+            else:
+                self.handle_update(batch_size=batch_size, recreate=options['recreate'])
+        finally:
+            with connection.cursor() as cursor:
+                cursor.execute('RESET lock_timeout')
 
     def handle_update(self, batch_size, recreate):
         if recreate:
