@@ -14,8 +14,8 @@ class CreditListInvalidValuesTestCase(CreditListTestCase):
             url, format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['count'], 0)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['status'][0].code, 'invalid_choice')
 
     def test_invalid_user_filter(self):
         logged_in_user = self.prison_clerks[0]
@@ -24,8 +24,8 @@ class CreditListInvalidValuesTestCase(CreditListTestCase):
             url, format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['count'], 0)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['user'][0].code, 'invalid_choice')
 
     def test_invalid_prison_filter(self):
         logged_in_user = self.prison_clerks[0]
@@ -34,8 +34,8 @@ class CreditListInvalidValuesTestCase(CreditListTestCase):
             url, format='json',
             HTTP_AUTHORIZATION=self.get_http_authorization_for_user(logged_in_user)
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['count'], 0)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['prison'][0].code, 'invalid_choice')
 
     def test_prison_not_managed_by_loggedin_user(self):
         logged_in_user = self.prison_clerks[0]

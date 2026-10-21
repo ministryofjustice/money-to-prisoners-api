@@ -146,9 +146,14 @@ class BaseCheckTestCase(APITestCase, AuthTestCaseMixin):
                 expected_check.rejection_reasons if expected_check.status == CheckStatus.rejected.value else {}
             ),
             'auto_accept_rule_state': {
-                'added_by': expected_check.auto_accept_rule_state.added_by,
+                'added_by': {
+                    'username': expected_check.auto_accept_rule_state.added_by.username,
+                    'first_name': expected_check.auto_accept_rule_state.added_by.first_name,
+                    'last_name': expected_check.auto_accept_rule_state.added_by.last_name,
+                },
+                'active': expected_check.auto_accept_rule_state.active,
                 'reason': expected_check.auto_accept_rule_state.reason,
-                'created': expected_check.auto_accept_rule_state.created,
+                'created': format_date_or_datetime(expected_check.auto_accept_rule_state.created),
                 'auto_accept_rule': expected_check.auto_accept_rule_state.auto_accept_rule.pk,
             } if expected_check.auto_accept_rule_state else None,
         }
@@ -590,6 +595,8 @@ class GetCheckTestCase(BaseCheckTestCase):
         )
         self.assertEqual(response.status_code, 201)
         auto_accept_rule = CheckAutoAcceptRule.objects.get(id=response.json()['id'])
+        # FIU monitoring the prisoner triggers FIUMONP, so the rule state always gets attached
+        auto_accept_rule.prisoner_profile.monitoring_users.add(self._get_authorised_user())
         payments = generate_payments(
             payment_batch=1,
             overrides={
@@ -602,6 +609,7 @@ class GetCheckTestCase(BaseCheckTestCase):
         )
         credit = payments[0].credit
         check = Check.objects.create_for_credit(credit)
+        self.assertIsNotNone(check.auto_accept_rule_state)
 
         # Call
         response = self.client.get(
