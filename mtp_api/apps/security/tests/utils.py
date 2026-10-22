@@ -302,7 +302,7 @@ def generate_auto_accept_rules():
 
 @transaction.atomic()
 def generate_prisoner_profiles_from_prisoner_locations(prisoner_locations):
-    # TODO remove this when updated to django 3.* and `ignore_conflicts` kwarg available
+    # Filter out existing profiles instead of using ignore_conflicts, which leaves the returned profiles without PKs
     existing_prisoner_profiles = PrisonerProfile.objects.values_list('prisoner_number', flat=True)
     prisoner_locations_filtered = list(
         filter(

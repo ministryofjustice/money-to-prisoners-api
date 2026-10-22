@@ -79,9 +79,8 @@ class ScheduledCommand(models.Model):
         return self.arg_string.split(' ') if self.arg_string else []
 
     def run(self):
+        # NB: next_execution must already have been moved on and committed (see run_scheduled_commands)
         logger.info('Running scheduled command "%s"', self)
-        self.update_next_execution()
-        self.save()
         start = pc()
         call_command(self.name, *self.get_args())
         logger.info('Completed scheduled command "%s" in %ss', self, pc() - start)
