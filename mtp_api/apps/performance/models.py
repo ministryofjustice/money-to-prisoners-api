@@ -115,18 +115,34 @@ class DigitalTakeupQueryset(models.QuerySet):
 
 
 class DigitalTakeup(models.Model):
-    date = models.DateField()
-    prison = models.ForeignKey('prison.Prison', on_delete=models.CASCADE)
-    credits_by_post = models.IntegerField(verbose_name=_('Credits by post'))
-    credits_by_mtp = models.IntegerField(verbose_name=_('Credits sent digitally'))
-    amount_by_post = models.IntegerField(verbose_name=_('Amount by post'), null=True)
-    amount_by_mtp = models.IntegerField(verbose_name=_('Amount sent digitally'), null=True)
+    date = models.DateField(db_comment='The day.')
+    prison = models.ForeignKey('prison.Prison', on_delete=models.CASCADE, db_comment='The prison.')
+    credits_by_post = models.IntegerField(
+        verbose_name=_('Credits by post'),
+        db_comment='Number of credits received by post.',
+    )
+    credits_by_mtp = models.IntegerField(
+        verbose_name=_('Credits sent digitally'),
+        db_comment='Number of credits received through Prisoner Money.',
+    )
+    amount_by_post = models.IntegerField(
+        verbose_name=_('Amount by post'), null=True,
+        db_comment='Total received by post, in pence.',
+    )
+    amount_by_mtp = models.IntegerField(
+        verbose_name=_('Amount sent digitally'), null=True,
+        db_comment='Total received through Prisoner Money, in pence.',
+    )
 
     objects = DigitalTakeupManager.from_queryset(DigitalTakeupQueryset)()
 
     reports_start = datetime.date(2017, 1, 1)
 
     class Meta:
+        db_table_comment = (
+            'Performance: number and value of credits each prison received by post and through Prisoner Money '
+            'on each day, uploaded from a spreadsheet through the API admin site.'
+        )
         unique_together = ('date', 'prison')
         ordering = ('date',)
         get_latest_by = 'date'
@@ -204,12 +220,27 @@ class UserSatisfaction(models.Model):
     """
     The number of responses for each rating per day as provided by the Feedback Explorer export on GOV.UK publishing
     """
-    date = models.DateField(primary_key=True)
-    rated_1 = models.PositiveIntegerField(verbose_name=_('Very dissatisfied'))
-    rated_2 = models.PositiveIntegerField(verbose_name=_('Dissatisfied'))
-    rated_3 = models.PositiveIntegerField(verbose_name=_('Neither satisfied or dissatisfied'))
-    rated_4 = models.PositiveIntegerField(verbose_name=_('Satisfied'))
-    rated_5 = models.PositiveIntegerField(verbose_name=_('Very satisfied'))
+    date = models.DateField(primary_key=True, db_comment='The day.')
+    rated_1 = models.PositiveIntegerField(
+        verbose_name=_('Very dissatisfied'),
+        db_comment='Number of responses rating the service: very dissatisfied.',
+    )
+    rated_2 = models.PositiveIntegerField(
+        verbose_name=_('Dissatisfied'),
+        db_comment='Number of responses rating the service: dissatisfied.',
+    )
+    rated_3 = models.PositiveIntegerField(
+        verbose_name=_('Neither satisfied or dissatisfied'),
+        db_comment='Number of responses rating the service: neither satisfied or dissatisfied.',
+    )
+    rated_4 = models.PositiveIntegerField(
+        verbose_name=_('Satisfied'),
+        db_comment='Number of responses rating the service: satisfied.',
+    )
+    rated_5 = models.PositiveIntegerField(
+        verbose_name=_('Very satisfied'),
+        db_comment='Number of responses rating the service: very satisfied.',
+    )
     rating_field_names = [f'rated_{rating}' for rating in range(1, 6)]
 
     objects = models.Manager.from_queryset(UserSatisfactionQueryset)()
@@ -217,6 +248,10 @@ class UserSatisfaction(models.Model):
     reports_start = datetime.date(2016, 11, 15)
 
     class Meta:
+        db_table_comment = (
+            'Performance: number of responses at each satisfaction rating each day, '
+            'from the feedback export on GOV.UK publishing.'
+        )
         ordering = ('date',)
         get_latest_by = 'date'
 
@@ -247,15 +282,25 @@ class PerformanceData(models.Model):
     """
 
     # Monday of that week
-    week = models.DateField(primary_key=True, verbose_name='Week commencing', validators=[validate_monday])
+    week = models.DateField(
+        primary_key=True, verbose_name='Week commencing', validators=[validate_monday],
+        db_comment='The Monday the week starts on.',
+    )
 
     # Digital Take-up data
-    credits_total = models.PositiveIntegerField(verbose_name='Transactions – total', null=True, blank=True)
-    credits_by_mtp = models.PositiveIntegerField(verbose_name='Transactions – online', null=True, blank=True)
+    credits_total = models.PositiveIntegerField(
+        verbose_name='Transactions – total', null=True, blank=True,
+        db_comment='Number of credits received by any method.',
+    )
+    credits_by_mtp = models.PositiveIntegerField(
+        verbose_name='Transactions – online', null=True, blank=True,
+        db_comment='Number of credits received through Prisoner Money.',
+    )
     digital_takeup = models.FloatField(
         verbose_name='Digital take-up',
         null=True, blank=True,
         validators=[MinValueValidator(0), MaxValueValidator(1)],
+        db_comment='Share of credits received through Prisoner Money, from 0 to 1.',
     )
 
     # Completion rate, taken from Google Analytics/Google Data Studio
@@ -263,6 +308,7 @@ class PerformanceData(models.Model):
         verbose_name='Completion rate',
         null=True, blank=True,
         validators=[MinValueValidator(0), MaxValueValidator(1)],
+        db_comment='Share of people who finished sending money after starting, from 0 to 1, from web analytics.',
     )
 
     # User satisfaction data, weekly aggregation from UserSatisfaction model
@@ -270,17 +316,37 @@ class PerformanceData(models.Model):
         verbose_name=_('User satisfaction'),
         null=True, blank=True,
         validators=[MinValueValidator(0), MaxValueValidator(1)],
+        db_comment='Share of responses that were satisfied or very satisfied, from 0 to 1.',
     )
-    rated_1 = models.PositiveIntegerField(verbose_name=_('Very dissatisfied'), null=True, blank=True)
-    rated_2 = models.PositiveIntegerField(verbose_name=_('Dissatisfied'), null=True, blank=True)
-    rated_3 = models.PositiveIntegerField(verbose_name=_('Neither satisfied or dissatisfied'), null=True, blank=True)
-    rated_4 = models.PositiveIntegerField(verbose_name=_('Satisfied'), null=True, blank=True)
-    rated_5 = models.PositiveIntegerField(verbose_name=_('Very satisfied'), null=True, blank=True)
+    rated_1 = models.PositiveIntegerField(
+        verbose_name=_('Very dissatisfied'), null=True, blank=True,
+        db_comment='Number of responses rating the service: very dissatisfied.',
+    )
+    rated_2 = models.PositiveIntegerField(
+        verbose_name=_('Dissatisfied'), null=True, blank=True,
+        db_comment='Number of responses rating the service: dissatisfied.',
+    )
+    rated_3 = models.PositiveIntegerField(
+        verbose_name=_('Neither satisfied or dissatisfied'), null=True, blank=True,
+        db_comment='Number of responses rating the service: neither satisfied or dissatisfied.',
+    )
+    rated_4 = models.PositiveIntegerField(
+        verbose_name=_('Satisfied'), null=True, blank=True,
+        db_comment='Number of responses rating the service: satisfied.',
+    )
+    rated_5 = models.PositiveIntegerField(
+        verbose_name=_('Very satisfied'), null=True, blank=True,
+        db_comment='Number of responses rating the service: very satisfied.',
+    )
 
     rating_field_names = [f'rated_{rating}' for rating in range(1, 6)]
     percentage_field_names = ('digital_takeup', 'completion_rate', 'user_satisfaction')
 
     class Meta:
+        db_table_comment = (
+            "Performance: weekly figures for reporting on the service's performance, "
+            'mostly built from other tables by the update_performance_data command.'
+        )
         ordering = ('week',)
         get_latest_by = 'week'
         verbose_name = verbose_name_plural = _('Performance data')

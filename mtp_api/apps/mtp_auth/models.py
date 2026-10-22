@@ -8,9 +8,9 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
-from model_utils.models import TimeStampedModel
 from mtp_common.tasks import send_email
 
+from core.models import TimeStampedModel
 from prison.models import Prison
 
 
@@ -35,17 +35,28 @@ class PrisonUserMappingManager(models.Manager):
 
 
 class PrisonUserMapping(TimeStampedModel):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, db_comment='The user.')
     prisons = models.ManyToManyField('prison.Prison')
     objects = PrisonUserMappingManager()
+
+    class Meta:
+        db_table_comment = (
+            'User accounts: links a staff user to the prisons they work with (see mtp_auth_prisonusermapping_prisons).'
+        )
 
     def __str__(self):
         return self.user.username
 
 
 class ApplicationUserMapping(TimeStampedModel):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    application = models.ForeignKey('oauth2_provider.Application', on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, db_comment='The user.')
+    application = models.ForeignKey(
+        'oauth2_provider.Application', on_delete=models.CASCADE,
+        db_comment='An app the user may sign in to.',
+    )
+
+    class Meta:
+        db_table_comment = 'User accounts: which Prisoner Money apps each user may sign in to.'
 
     def __str__(self):
         return '%s -> %s' % (self.user.username, self.application.client_id)
@@ -63,15 +74,27 @@ class Role(models.Model):
     they are assigned a role and gain access to associated application and groups. Separate logic also
     means that they inherit the creating/approving user's prison set (except from FIU)
     """
-    name = models.CharField(max_length=30, unique=True)
-    key_group = models.OneToOneField('auth.Group', unique=True, on_delete=models.CASCADE)
+    name = models.CharField(
+        max_length=30, unique=True, db_comment='Name of the role, such as prison-clerk or security.',
+    )
+    key_group = models.OneToOneField(
+        'auth.Group', unique=True, on_delete=models.CASCADE,
+        db_comment='The group that identifies users with this role. Users are given it when their account is created.',
+    )
     other_groups = models.ManyToManyField('auth.Group', blank=True, related_name='+')
-    application = models.ForeignKey('oauth2_provider.Application', related_name='+', on_delete=models.CASCADE)
-    login_url = models.URLField()
+    application = models.ForeignKey(
+        'oauth2_provider.Application', related_name='+', on_delete=models.CASCADE,
+        db_comment='The app that users with this role sign in to.',
+    )
+    login_url = models.URLField(db_comment="Address of the app's sign-in page, used in emails to users.")
 
     objects = RoleManager()
 
     class Meta:
+        db_table_comment = (
+            'User accounts: the kinds of staff account, such as prison clerk or security staff, '
+            'with the app and groups that each one is given.'
+        )
         ordering = ('name',)
 
     def __str__(self):
@@ -88,19 +111,30 @@ class Role(models.Model):
 
 
 class JobInformation(TimeStampedModel):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    title = models.CharField(max_length=255)
-    prison_estate = models.CharField(max_length=255)
-    tasks = models.TextField()
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, db_comment='The user.')
+    title = models.CharField(max_length=255, db_comment='Job title, chosen from a list or typed in.')
+    prison_estate = models.CharField(
+        max_length=255, db_comment='Area of the prison estate the user works in: Local prison, Regional or National.',
+    )
+    tasks = models.TextField(db_comment="The user's description of their main tasks.")
 
     class Meta:
+        db_table_comment = 'User accounts: job details that NOMS Ops users give the first time they sign in.'
         verbose_name_plural = 'job information'
 
 
 class Login(models.Model):
-    created = models.DateTimeField(auto_now_add=True)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    application = models.ForeignKey('oauth2_provider.Application', on_delete=models.CASCADE)
+    created = models.DateTimeField(auto_now_add=True, db_comment='When the user signed in.')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, db_comment='The user.')
+    application = models.ForeignKey(
+        'oauth2_provider.Application', on_delete=models.CASCADE, db_comment='The app signed in to.',
+    )
+
+    class Meta:
+        db_table_comment = (
+            'User accounts: each successful sign-in by a member of staff, used for the staff sign-ins report in '
+            'the API admin site. Service accounts are not recorded. Deleted after a year.'
+        )
 
     ignored_usernames = {
         'transaction-uploader', 'prisoner-location-uploader',
@@ -185,12 +219,18 @@ class FailedLoginAttemptManager(models.Manager):
 
 
 class FailedLoginAttempt(TimeStampedModel):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    application = models.ForeignKey('oauth2_provider.Application', on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, db_comment='The user.')
+    application = models.ForeignKey(
+        'oauth2_provider.Application', on_delete=models.CASCADE, db_comment='The app the attempt was made on.',
+    )
 
     objects = FailedLoginAttemptManager()
 
     class Meta:
+        db_table_comment = (
+            'User accounts: sign-in attempts with a wrong password. Too many in a row lock the account for a time. '
+            'Cleared after a successful sign-in.'
+        )
         ordering = ('-created',)
 
     def __str__(self):
@@ -198,8 +238,17 @@ class FailedLoginAttempt(TimeStampedModel):
 
 
 class PasswordChangeRequest(TimeStampedModel):
-    code = models.UUIDField(default=uuid.uuid4, primary_key=True, editable=False)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    code = models.UUIDField(
+        default=uuid.uuid4, primary_key=True, editable=False,
+        db_comment='Code in the link emailed to the user.',
+    )
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, db_comment='The user.')
+
+    class Meta:
+        db_table_comment = (
+            'User accounts: requests to reset a forgotten password, made through a link sent by email. '
+            'Deleted after 12 hours.'
+        )
 
     def __str__(self):
         return '{user} {created}'.format(user=self.user, created=self.created)
@@ -207,17 +256,28 @@ class PasswordChangeRequest(TimeStampedModel):
 
 class AccountRequest(TimeStampedModel):
     # NB: these fields must be synchronised with any changes to the user model
-    username = models.CharField(max_length=150, validators=[AbstractUser.username_validator])
-    first_name = models.CharField(max_length=30)
-    last_name = models.CharField(max_length=30)
-    email = models.EmailField()
-    manager_email = models.EmailField(blank=True, null=True)
+    username = models.CharField(
+        max_length=150, validators=[AbstractUser.username_validator], db_comment='Requested username.',
+    )
+    first_name = models.CharField(max_length=30, db_comment='First name.')
+    last_name = models.CharField(max_length=30, db_comment='Last name.')
+    email = models.EmailField(db_comment='Email address.')
+    manager_email = models.EmailField(
+        blank=True, null=True, db_comment="Line manager's email address; required for security staff.",
+    )
 
-    reason = models.TextField(blank=True)
-    role = models.ForeignKey(Role, related_name='+', on_delete=models.CASCADE)
-    prison = models.ForeignKey(Prison, related_name='+', on_delete=models.CASCADE, blank=True, null=True)
+    reason = models.TextField(blank=True, db_comment='Why the person needs an account.')
+    role = models.ForeignKey(Role, related_name='+', on_delete=models.CASCADE, db_comment='The role requested.')
+    prison = models.ForeignKey(
+        Prison, related_name='+', on_delete=models.CASCADE, blank=True, null=True,
+        db_comment='Prison the person works at; optional for security staff.',
+    )
 
     class Meta:
+        db_table_comment = (
+            'User accounts: requests for a new staff account, made from the sign-in page of an app. '
+            "Waiting for one of the app's user admins to accept or decline. Deleted once dealt with."
+        )
         ordering = ('created',)
 
     def __str__(self):
@@ -225,10 +285,17 @@ class AccountRequest(TimeStampedModel):
 
 
 class Flag(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='flags')
-    name = models.SlugField()
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='flags', db_comment='The user.',
+    )
+    name = models.SlugField(
+        db_comment='Name of the flag, such as hmpps-employee, set by the apps to remember answers and messages seen.',
+    )
 
     class Meta:
+        db_table_comment = (
+            'User accounts: named markers that the apps set on a user, such as that a message has been seen.'
+        )
         unique_together = [('user', 'name')]
 
     def __str__(self):

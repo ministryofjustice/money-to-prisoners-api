@@ -1,5 +1,9 @@
+import datetime
+from unittest import mock
+
 from django.core.management import call_command
-from django.test import TestCase
+from django.db import OperationalError, connection
+from django.test import TestCase, TransactionTestCase
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.test.utils import captured_stdout
@@ -10,6 +14,8 @@ from mtp_common.test_utils import silence_logger
 
 from credit.constants import CreditResolution
 from credit.models import Credit
+from core.management.commands import run_scheduled_commands
+from core.models import ScheduledCommand
 from core.tests.utils import make_test_users, delete_non_related_nullable_fields
 from disbursement.constants import DisbursementResolution, DisbursementMethod
 from disbursement.models import Disbursement
@@ -19,6 +25,7 @@ from payment.models import Payment
 from payment.tests.utils import create_payments, generate_payments, generate_initial_payment_data
 from prison.models import PrisonerLocation, Prison
 from prison.tests.utils import load_random_prisoner_locations
+from security.management.commands import update_security_profiles
 from security.models import (
     SenderProfile, PrisonerProfile, RecipientProfile,
     BankAccount, BankTransferSenderDetails, DebitCardSenderDetails,
@@ -109,6 +116,27 @@ class UpdateSecurityProfilesTestCase(TestCase):
         generate_disbursements(disbursement_batch=100, days_of_history=5)
         call_command('update_security_profiles', verbosity=0)
         self._assert_counts()
+
+    def _get_lock_timeout(self):
+        with connection.cursor() as cursor:
+            cursor.execute('SHOW lock_timeout')
+            return cursor.fetchone()[0]
+
+    @captured_stdout()
+    @silence_logger()
+    def test_update_security_profiles_sets_lock_timeout_while_running(self):
+        default_lock_timeout = self._get_lock_timeout()
+        lock_timeouts = []
+
+        def record_lock_timeout(*args, **kwargs):
+            lock_timeouts.append(self._get_lock_timeout())
+
+        with mock.patch.object(update_security_profiles.Command, 'handle_update', side_effect=record_lock_timeout):
+            call_command('update_security_profiles', verbosity=0)
+            call_command('update_security_profiles', '--lock-timeout', '0', verbosity=0)
+
+        self.assertEqual(lock_timeouts, ['10s', '0'])
+        self.assertEqual(self._get_lock_timeout(), default_lock_timeout)
 
     @captured_stdout()
     @silence_logger()
@@ -376,6 +404,54 @@ class UpdateSecurityProfilesTestCase(TestCase):
         self._assert_counts()
 
 
+class UpdateSecurityProfilesLockingTestCase(TransactionTestCase):
+    fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
+
+    def setUp(self):
+        super().setUp()
+        make_test_users()
+        load_random_prisoner_locations()
+
+    @captured_stdout()
+    @silence_logger()
+    def test_profiles_are_not_left_locked_while_scheduled_job_runs(self):
+        # card payments update prisoner profiles so they must not wait for the whole job to finish
+        generate_payments(payment_batch=50, days_of_history=5)
+        ScheduledCommand.objects.create(
+            name='update_security_profiles',
+            arg_string='--batch-size 1',
+            cron_entry='*/30 * * * *',
+            next_execution=timezone.now() - datetime.timedelta(seconds=1),
+        )
+        # a separate database session, as if handling a card payment
+        other_connection = connection.copy()
+        self.addCleanup(other_connection.close)
+
+        processed_profiles = []
+        locked_profiles = []
+        calculate_totals = update_security_profiles.Command.calculate_credit_totals_for_prisoner_profiles
+
+        def check_earlier_batches_then_calculate_totals(command, prisoner_profiles):
+            for pk in processed_profiles:
+                try:
+                    with other_connection.cursor() as cursor:
+                        cursor.execute('SELECT id FROM security_prisonerprofile WHERE id = %s FOR UPDATE NOWAIT', [pk])
+                except OperationalError:
+                    locked_profiles.append(pk)
+            prisoner_profiles = list(prisoner_profiles)
+            processed_profiles.extend(prisoner_profiles)
+            return calculate_totals(command, prisoner_profiles)
+
+        with mock.patch.object(
+            update_security_profiles.Command, 'calculate_credit_totals_for_prisoner_profiles',
+            autospec=True, side_effect=check_earlier_batches_then_calculate_totals,
+        ):
+            run_scheduled_commands.Command().handle()
+
+        self.assertGreater(len(processed_profiles), 1, msg='Test needs more than one batch of prisoner profiles')
+        self.assertEqual(locked_profiles, [])
+
+
 class UpdateCurrentPrisonsTestCase(TestCase):
     fixtures = ['initial_types.json', 'test_prisons.json', 'initial_groups.json']
 
@@ -406,6 +482,25 @@ class UpdateCurrentPrisonsTestCase(TestCase):
 
         call_command('update_current_prisons')
         check_locations()
+
+    @captured_stdout()
+    @silence_logger()
+    def test_update_current_prisons_only_updates_changed_profiles(self):
+        generate_payments(payment_batch=50, days_of_history=5)
+        call_command('update_security_profiles', verbosity=0)
+        self.assertGreater(PrisonerProfile.objects.count(), 1)
+
+        # all profiles are up to date so none are updated (and locked)
+        self.assertEqual(PrisonerProfile.objects.update_current_prisons(), 0)
+
+        prisoner_profile = PrisonerProfile.objects.first()
+        location = PrisonerLocation.objects.get(prisoner_number=prisoner_profile.prisoner_number, active=True)
+        location.prison = Prison.objects.exclude(pk=location.prison_id).first()
+        location.save()
+
+        self.assertEqual(PrisonerProfile.objects.update_current_prisons(), 1)
+        prisoner_profile.refresh_from_db()
+        self.assertEqual(prisoner_profile.current_prison, location.prison)
 
 
 class BulkUnmonitorCommandTestCase(TestCase):

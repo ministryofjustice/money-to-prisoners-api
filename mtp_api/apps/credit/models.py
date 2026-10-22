@@ -7,9 +7,9 @@ from django.db.models import Q, Max
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
-from model_utils.models import TimeStampedModel
 from mtp_common.utils import format_currency
 
+from core.models import TimeStampedModel
 from credit.constants import CreditResolution, CreditStatus, CreditSource, LogAction
 from credit.managers import (
     CompletedCreditManager,
@@ -36,33 +36,74 @@ logger = logging.getLogger('mtp')
 
 
 class Credit(TimeStampedModel):
-    amount = models.BigIntegerField(db_index=True)
-    received_at = models.DateTimeField(auto_now=False, blank=True, null=True, db_index=True)
+    amount = models.BigIntegerField(db_index=True, db_comment='Amount in pence.')
+    received_at = models.DateTimeField(
+        auto_now=False, blank=True, null=True, db_index=True,
+        db_comment='When the money was received: when a card payment was taken, '
+                   'or the date on the bank statement for a bank transfer.',
+    )
 
-    prisoner_number = models.CharField(max_length=250, blank=True, null=True, db_index=True)
-    prisoner_dob = models.DateField(blank=True, null=True)
-    prisoner_name = models.CharField(blank=True, null=True, max_length=250)
-    prison = models.ForeignKey(Prison, blank=True, null=True, on_delete=models.SET_NULL)
+    prisoner_number = models.CharField(
+        max_length=250, blank=True, null=True, db_index=True,
+        db_comment='Prisoner number given by the sender.',
+    )
+    prisoner_dob = models.DateField(blank=True, null=True, db_comment="Prisoner's date of birth given by the sender.")
+    prisoner_name = models.CharField(
+        blank=True, null=True, max_length=250,
+        db_comment="Prisoner's name, taken from their prisoner location when the credit is matched to them.",
+    )
+    prison = models.ForeignKey(
+        Prison, blank=True, null=True, on_delete=models.SET_NULL,
+        db_comment='Prison the money is for; empty if the prisoner could not be found.',
+    )
 
-    resolution = models.CharField(max_length=50,
-                                  choices=CreditResolution.choices, default=CreditResolution.pending.value,
-                                  db_index=True)
-    reconciled = models.BooleanField(default=False)
-    reviewed = models.BooleanField(default=False)
-    blocked = models.BooleanField(default=False)
-    nomis_transaction_id = models.CharField(max_length=50, blank=True, null=True)
+    resolution = models.CharField(
+        max_length=50, choices=CreditResolution.choices, default=CreditResolution.pending.value, db_index=True,
+        db_comment='initial: card payment not yet complete; pending: waiting to be credited or refunded; '
+                   "manual: needs processing by hand; credited: added to the prisoner's account; "
+                   'refunded: returned to the sender; failed: the card payment did not complete.',
+    )
+    reconciled = models.BooleanField(
+        default=False,
+        db_comment='Whether the credit has been included in the daily reconciliation for the bank.',
+    )
+    reviewed = models.BooleanField(default=False, db_comment='Whether security staff have reviewed the credit.')
+    blocked = models.BooleanField(
+        default=False,
+        db_comment='Whether the credit is held back from being credited to the prisoner, '
+                   "such as a bank transfer without the sender's bank details.",
+    )
+    nomis_transaction_id = models.CharField(
+        max_length=50, blank=True, null=True,
+        db_comment="ID of the transaction in NOMIS that added the money to the prisoner's account.",
+    )
 
-    owner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+        db_comment="The member of prison staff who credited the money to the prisoner's account.",
+    )
 
-    sender_profile = models.ForeignKey('security.SenderProfile', related_name='credits', blank=True, null=True,
-                                       on_delete=models.SET_NULL)
-    is_counted_in_sender_profile_total = models.BooleanField(default=False)
-    is_counted_in_prisoner_profile_total = models.BooleanField(default=False)
-    prisoner_profile = models.ForeignKey('security.PrisonerProfile', related_name='credits', blank=True, null=True,
-                                         on_delete=models.SET_NULL)
+    sender_profile = models.ForeignKey(
+        'security.SenderProfile', related_name='credits', blank=True, null=True, on_delete=models.SET_NULL,
+        db_comment='The profile of the sender of this credit.',
+    )
+    is_counted_in_sender_profile_total = models.BooleanField(
+        default=False,
+        db_comment="Whether this credit has been added to its sender profile's totals.",
+    )
+    is_counted_in_prisoner_profile_total = models.BooleanField(
+        default=False,
+        db_comment="Whether this credit has been added to its prisoner profile's totals.",
+    )
+    prisoner_profile = models.ForeignKey(
+        'security.PrisonerProfile', related_name='credits', blank=True, null=True, on_delete=models.SET_NULL,
+        db_comment='The profile of the prisoner receiving this credit.',
+    )
 
-    private_estate_batch = models.ForeignKey('credit.PrivateEstateBatch', null=True, blank=True,
-                                             on_delete=models.SET_NULL)
+    private_estate_batch = models.ForeignKey(
+        'credit.PrivateEstateBatch', null=True, blank=True, on_delete=models.SET_NULL,
+        db_comment='For a privately run prison, the daily batch this credit was sent to the prison in.',
+    )
 
     objects = CompletedCreditManager.from_queryset(CreditQuerySet)()
     objects_all = CreditManager.from_queryset(CreditQuerySet)()
@@ -94,6 +135,11 @@ class Credit(TimeStampedModel):
     }
 
     class Meta:
+        db_table_comment = (
+            'Credits: money sent to a prisoner, by debit card (see payment_payment) '
+            'or by bank transfer (see transaction_transaction). '
+            'Each credit is checked, credited to the prisoner or refunded, and reconciled.'
+        )
         ordering = ('received_at', 'id',)
         get_latest_by = 'received_at'
         permissions = (
@@ -375,16 +421,22 @@ class Credit(TimeStampedModel):
 
 
 class Log(TimeStampedModel):
-    credit = models.ForeignKey(Credit, on_delete=models.CASCADE)
+    credit = models.ForeignKey(Credit, on_delete=models.CASCADE, db_comment='The credit the action was taken on.')
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True,
-        on_delete=models.SET_NULL, related_name='credit_log'
+        on_delete=models.SET_NULL, related_name='credit_log',
+        db_comment='Who took the action; empty for automatic actions.',
     )
-    action = models.CharField(max_length=50, choices=LogAction.choices)
+    action = models.CharField(
+        max_length=50, choices=LogAction.choices,
+        db_comment='What happened: created, credited, refunded, reconciled, reviewed, manual (marked for '
+                   'processing by hand) or failed. locked, unlocked and uncredited are no longer used.',
+    )
 
     objects = LogManager()
 
     class Meta:
+        db_table_comment = 'Credits: history of the actions taken on each credit, with who took them and when.'
         ordering = ('id',)
         indexes = [
             models.Index(fields=['created']),
@@ -399,10 +451,22 @@ class Log(TimeStampedModel):
 
 
 class CreditingTime(models.Model):
-    credit = models.OneToOneField(Credit, primary_key=True, on_delete=models.CASCADE)
-    crediting_time = models.DurationField(null=True)
+    credit = models.OneToOneField(
+        Credit, primary_key=True, on_delete=models.CASCADE,
+        db_comment='The credit.',
+    )
+    crediting_time = models.DurationField(
+        null=True,
+        db_comment='Time from receiving the money to crediting it, less any weekend days in between.',
+    )
 
     objects = CreditingTimeManager()
+
+    class Meta:
+        db_table_comment = (
+            'Credits: how long each credited credit took to be credited, for performance reporting. '
+            'Rebuilt in full from credit_log by the recalculate_crediting_times command.'
+        )
 
     def __str__(self):
         if self.crediting_time is None:
@@ -412,13 +476,18 @@ class CreditingTime(models.Model):
 
 class Comment(TimeStampedModel):
     credit = models.ForeignKey(
-        Credit, on_delete=models.CASCADE, related_name='comments'
+        Credit, on_delete=models.CASCADE, related_name='comments',
+        db_comment='The credit the note is about.',
     )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True,
-        on_delete=models.SET_NULL, related_name='credit_comments'
+        on_delete=models.SET_NULL, related_name='credit_comments',
+        db_comment='Who wrote the note.',
     )
-    comment = models.TextField(max_length=3000)
+    comment = models.TextField(max_length=3000, db_comment='The note.')
+
+    class Meta:
+        db_table_comment = 'Credits: notes that staff have added to credits.'
 
     def __str__(self):
         return 'Comment on credit {credit_id} by {user}'.format(
@@ -428,10 +497,17 @@ class Comment(TimeStampedModel):
 
 
 class ProcessingBatch(TimeStampedModel):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        db_comment='The member of prison staff crediting the batch.',
+    )
     credits = models.ManyToManyField(Credit)
 
     class Meta:
+        db_table_comment = (
+            "Credits: credits that a member of prison staff is adding to prisoners' accounts together in Cashbook, "
+            'so that nobody else processes them at the same time. Expires after 2 minutes without progress.'
+        )
         verbose_name_plural = 'processing batches'
 
     def __str__(self):
@@ -450,12 +526,16 @@ class ProcessingBatch(TimeStampedModel):
 
 
 class PrivateEstateBatch(TimeStampedModel):
-    date = models.DateField()
-    prison = models.ForeignKey(Prison, on_delete=models.CASCADE)
+    date = models.DateField(db_comment='Day on which the credits were received.')
+    prison = models.ForeignKey(Prison, on_delete=models.CASCADE, db_comment='The privately run prison.')
 
     objects = PrivateEstateBatchManager()
 
     class Meta:
+        db_table_comment = (
+            "Credits: one day's credits for a privately run prison, which are emailed to that prison "
+            'by the Bank Admin app.'
+        )
         ordering = ('date',)
         get_latest_by = 'date'
         verbose_name_plural = 'private estate batches'

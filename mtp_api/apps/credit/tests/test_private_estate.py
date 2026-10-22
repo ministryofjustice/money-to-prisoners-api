@@ -54,9 +54,19 @@ class PrivateEstateBatchTestCase(AuthTestCaseMixin, APITestCase):
         private_estate_credit_set = Credit.objects.filter(prison__private_estate=True).filter(creditable)
         if not private_estate_credit_set.exists():
             public_estate_credits = Credit.objects.filter(prison__private_estate=False).filter(creditable)
-            public_estate_credits[public_estate_credits.count() // 2:].update(prison=self.private_prison)
+            # a sliced queryset cannot be updated, so select the credits to move by id
+            credit_ids_to_move = public_estate_credits.values_list('pk', flat=True)[public_estate_credits.count() // 2:]
+            Credit.objects.filter(pk__in=list(credit_ids_to_move)).update(prison=self.private_prison)
 
         self.latest_date = timezone.localtime().replace(hour=0, minute=0, second=0, microsecond=0)
+
+        # the tests need a batch holding a credited private-estate credit, and batches are only made for past days,
+        # but the credits moved above may all be pending or from today
+        credited_before_today = Credit.objects.credited().filter(received_at__lt=self.latest_date)
+        if not credited_before_today.filter(prison__private_estate=True).exists():
+            credit_to_move = credited_before_today.filter(prison__private_estate=False).first()
+            if credit_to_move:
+                Credit.objects.filter(pk=credit_to_move.pk).update(prison=self.private_prison)
 
         date = timezone.localtime(Credit.objects.earliest().received_at)
         date = date.replace(hour=0, minute=0, second=0, microsecond=0)

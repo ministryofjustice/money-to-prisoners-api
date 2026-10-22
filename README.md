@@ -10,7 +10,7 @@ View overview and guidelines [here](guidelines.md)
 ## Requirements
 
 - Unix-like platform with Python 3.12 and NodeJS 24 (e.g. via [nvm](https://github.com/nvm-sh/nvm#installing-and-updating) or [fnm](https://github.com/Schniz/fnm#installation))
-- PostgreSQL 14 (though the version is not a strict requirement as no special features are used)
+- PostgreSQL 18 (no special features are used, so the exact version is not critical)
 
 ## Developing
 
@@ -41,16 +41,17 @@ The latter is generally the most useful, especially when working with client app
 
 This will build everything and run the local server at [http://localhost:8000/](http://localhost:8000/).
 
-A dockerised version can be run locally with `./run.py local_docker`,
-but this does not run uWSGI like the deployed version does.
+To run the API together with the client apps, see the [getting-started guide](https://github.com/ministryofjustice/money-to-prisoners-deploy/blob/main/docs/getting-started.md):
+each client app's repository has a `docker-compose.yml` that runs the published API image with test data.
 
 ### Sample data generation
 
 As well as the management command (`./manage.py load_test_data`), the entire data set can also be regenerated
-from [Django admin](http://localhost:8000/admin/recreate-test-data/).
+from [Django admin](http://localhost:8000/admin/testing/recreate-data/).
 It’s also reset when using `./run.py start --test-mode`.
 
 These scenarios create a different set of test users for the client applications – see the user list in Django admin.
+The users created by `load_test_data` are listed in the [getting-started guide](https://github.com/ministryofjustice/money-to-prisoners-deploy/blob/main/docs/getting-started.md#test-logins).
 
 ### Translating
 
@@ -64,6 +65,31 @@ You’ll need to update translation files afterwards and manually check that the
 Push latest English to Transifex with `./run.py translations --push`.
 NB: you should pull updates before pushing to merge correctly.
 
+### Database schema report
+
+A [SchemaSpy](https://schemaspy.org/) report of the database structure is published every day from `main`.
+It is published from `money-to-prisoners-deploy`, not from this repository, because this repository is public
+and parts of the schema are sensitive. See
+[Database schema report](https://github.com/ministryofjustice/money-to-prisoners-deploy/blob/main/docs/schema-report.md)
+for the link and who can see it.
+
+Every table and column has a description, which the report shows and which is also stored in the database.
+When you add a model or a field, give it a `db_table_comment` or `db_comment`: say what the value is, its units
+and where it comes from. `core.tests.test_db_comments` fails if one is missing. This repository is public, so
+descriptions of the security tables say what a column holds, never how it is used.
+
+To generate the same report from your local database, run `./run.py schema_report`. This needs Docker.
+It migrates the database configured in your local settings, then writes the report to `schema-spy-report/`
+(open `schema-spy-report/index.html`). On Apple Silicon it can take 15 minutes or more, because the SchemaSpy image
+only runs under emulation.
+
+### Parity testing
+
+See [PARITY.md](PARITY.md) for how this repository's fixed, reproducible fixture data set (used
+to compare this service against its replacement) is structured and how to add more of it. See
+[`money-to-prisoners-common`'s `PARITY.md`](https://github.com/ministryofjustice/money-to-prisoners-common/blob/main/PARITY.md)
+for how to run/orchestrate the whole local parity stack and Playwright suite.
+
 ## Deploying
 
 This is handled by [money-to-prisoners-deploy](https://github.com/ministryofjustice/money-to-prisoners-deploy/).
@@ -73,7 +99,7 @@ This is handled by [money-to-prisoners-deploy](https://github.com/ministryofjust
 We have both swagger and redoc.io integration with this API.
 They can be found on your development environment:
 * Swagger: http://localhost:8000/swagger/
-* Redoc: https://localhost:8000/redoc/
+* Redoc: http://localhost:8000/redoc/
 
 Similar pages are also available on the test environment
 

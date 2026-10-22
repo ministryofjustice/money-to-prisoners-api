@@ -1,9 +1,9 @@
 from django.conf import settings
 from django.db import models
 from django.dispatch import receiver
-from model_utils.models import TimeStampedModel
 from mtp_common.utils import format_currency
 
+from core.models import TimeStampedModel
 from disbursement import InvalidDisbursementStateException
 from disbursement.constants import DisbursementResolution, DisbursementMethod, LogAction
 from disbursement.managers import DisbursementManager, DisbursementQuerySet, LogManager
@@ -15,50 +15,94 @@ from prison.models import Prison
 
 
 class Disbursement(TimeStampedModel):
-    amount = models.PositiveIntegerField(db_index=True)
-    prisoner_number = models.CharField(max_length=250, db_index=True)
-    prisoner_name = models.CharField(max_length=250)
-    prison = models.ForeignKey(Prison, on_delete=models.PROTECT)
+    amount = models.PositiveIntegerField(db_index=True, db_comment='Amount in pence.')
+    prisoner_number = models.CharField(
+        max_length=250, db_index=True, db_comment='Number of the prisoner sending the money.',
+    )
+    prisoner_name = models.CharField(max_length=250, db_comment="Prisoner's name.")
+    prison = models.ForeignKey(
+        Prison, on_delete=models.PROTECT, db_comment='Prison the prisoner was in when the request was made.',
+    )
     resolution = models.CharField(
         max_length=50,
         choices=DisbursementResolution.choices, default=DisbursementResolution.pending.value,
-        db_index=True
+        db_index=True,
+        db_comment='pending: waiting for a second member of prison staff to confirm it; '
+                   'rejected: cancelled by prison staff; '
+                   "preconfirmed: being confirmed, while the money is taken from the prisoner's account in NOMIS; "
+                   "confirmed: taken from the prisoner's account; "
+                   'sent: included in the daily file that Bank Admin produces for the payment to be made.',
     )
-    method = models.CharField(max_length=50, choices=DisbursementMethod.choices, db_index=True)
-    remittance_description = models.CharField(max_length=250, blank=True)
+    method = models.CharField(
+        max_length=50, choices=DisbursementMethod.choices, db_index=True,
+        db_comment='How the money is paid: bank_transfer or cheque.',
+    )
+    remittance_description = models.CharField(
+        max_length=250, blank=True,
+        db_comment="Description shown on the recipient's bank statement or with the cheque.",
+    )
 
     # recipient details
-    recipient_is_company = models.BooleanField(default=False)
-    recipient_first_name = models.CharField(max_length=250, blank=True)
-    recipient_last_name = models.CharField(max_length=250)
-    recipient_email = models.EmailField(null=True, blank=True)
+    recipient_is_company = models.BooleanField(
+        default=False, db_comment='Whether the recipient is a company rather than a person.',
+    )
+    recipient_first_name = models.CharField(
+        max_length=250, blank=True, db_comment="Recipient's first name; empty for a company.",
+    )
+    recipient_last_name = models.CharField(
+        max_length=250, db_comment="Recipient's last name, or the company name.",
+    )
+    recipient_email = models.EmailField(null=True, blank=True, db_comment="Recipient's email address, if given.")
 
-    address_line1 = models.CharField(max_length=250, blank=True, null=True)
-    address_line2 = models.CharField(max_length=250, blank=True, null=True)
-    city = models.CharField(max_length=250, blank=True, null=True)
-    postcode = models.CharField(max_length=250, blank=True, null=True)
-    country = models.CharField(max_length=250, blank=True, null=True)
+    address_line1 = models.CharField(
+        max_length=250, blank=True, null=True, db_comment="First line of the recipient's postal address.",
+    )
+    address_line2 = models.CharField(
+        max_length=250, blank=True, null=True, db_comment="Second line of the recipient's postal address.",
+    )
+    city = models.CharField(max_length=250, blank=True, null=True, db_comment='Town or city.')
+    postcode = models.CharField(max_length=250, blank=True, null=True, db_comment='Postcode.')
+    country = models.CharField(max_length=250, blank=True, null=True, db_comment='Country, if not the UK.')
 
-    sort_code = models.CharField(max_length=50, blank=True, null=True)
-    account_number = models.CharField(max_length=50, blank=True, null=True)
+    sort_code = models.CharField(
+        max_length=50, blank=True, null=True, db_comment="Sort code of the recipient's bank account.",
+    )
+    account_number = models.CharField(
+        max_length=50, blank=True, null=True, db_comment="Account number of the recipient's bank account.",
+    )
     # used by building societies to identify the account nr
-    roll_number = models.CharField(max_length=50, blank=True, null=True)
+    roll_number = models.CharField(
+        max_length=50, blank=True, null=True,
+        db_comment="Building society roll number, where the recipient's account needs one.",
+    )
 
-    nomis_transaction_id = models.CharField(max_length=50, blank=True, null=True)
-    invoice_number = models.CharField(max_length=50, blank=True, null=True)
+    nomis_transaction_id = models.CharField(
+        max_length=50, blank=True, null=True,
+        db_comment="ID of the transaction in NOMIS that took the money from the prisoner's account.",
+    )
+    invoice_number = models.CharField(
+        max_length=50, blank=True, null=True,
+        db_comment='Reference for the finance system, set when the disbursement is confirmed: '
+                   'PMD followed by a number.',
+    )
 
     recipient_profile = models.ForeignKey(
         'security.RecipientProfile', related_name='disbursements', blank=True, null=True,
-        on_delete=models.SET_NULL
+        on_delete=models.SET_NULL, db_comment='The profile of the recipient.',
     )
     prisoner_profile = models.ForeignKey(
         'security.PrisonerProfile', related_name='disbursements', blank=True, null=True,
-        on_delete=models.SET_NULL
+        on_delete=models.SET_NULL, db_comment='The profile of the prisoner sending the money.',
     )
 
     objects = DisbursementManager.from_queryset(DisbursementQuerySet)()
 
     class Meta:
+        db_table_comment = (
+            'Disbursements: money that a prisoner asks to send out of their prison account to a person or company, '
+            'by bank transfer or cheque. Requested and confirmed by prison staff in Cashbook, then paid by the '
+            'finance team from the file that Bank Admin produces.'
+        )
         ordering = ('id',)
         get_latest_by = 'created'
         indexes = [
@@ -161,16 +205,25 @@ class Disbursement(TimeStampedModel):
 
 
 class Log(TimeStampedModel):
-    disbursement = models.ForeignKey(Disbursement, on_delete=models.CASCADE)
+    disbursement = models.ForeignKey(
+        Disbursement, on_delete=models.CASCADE, db_comment='The disbursement the action was taken on.',
+    )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True,
-        on_delete=models.SET_NULL, related_name='disbursement_log'
+        on_delete=models.SET_NULL, related_name='disbursement_log',
+        db_comment='Who took the action.',
     )
-    action = models.CharField(max_length=50, choices=LogAction.choices)
+    action = models.CharField(
+        max_length=50, choices=LogAction.choices,
+        db_comment='What happened: created, edited, rejected, confirmed or sent.',
+    )
 
     objects = LogManager()
 
     class Meta:
+        db_table_comment = (
+            'Disbursements: history of the actions taken on each disbursement, with who took them and when.'
+        )
         ordering = ('id',)
         indexes = [
             models.Index(fields=['created']),
@@ -186,16 +239,22 @@ class Log(TimeStampedModel):
 
 class Comment(TimeStampedModel):
     disbursement = models.ForeignKey(
-        Disbursement, on_delete=models.CASCADE, related_name='comments'
+        Disbursement, on_delete=models.CASCADE, related_name='comments',
+        db_comment='The disbursement the note is about.',
     )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True,
-        on_delete=models.SET_NULL, related_name='disbursement_comments'
+        on_delete=models.SET_NULL, related_name='disbursement_comments',
+        db_comment='Who wrote the note.',
     )
-    comment = models.TextField(max_length=3000)
-    category = models.CharField(max_length=100, blank=True, default='')
+    comment = models.TextField(max_length=3000, db_comment='The note.')
+    category = models.CharField(
+        max_length=100, blank=True, default='',
+        db_comment='What kind of note it is; reject means the reason given for cancelling the disbursement.',
+    )
 
     class Meta:
+        db_table_comment = 'Disbursements: notes that staff have added to disbursements.'
         ordering = ('created',)
 
     def __str__(self):

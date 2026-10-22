@@ -1,0 +1,37 @@
+[
+  {
+    "model": "prison.prison",
+    "pk": "OUT",
+    "fields": {
+      "name": "OUTSIDE JURISDICTION",
+      "general_ledger_code": "OUT",
+      "use_nomis_for_balances": false,
+      "created": "2015-10-28T12:00:00Z",
+      "modified": "2015-10-28T12:00:00Z"
+    }
+  },
+  {
+    "model": "prison.prison",
+    "pk": "TRN",
+    "fields": {
+      "name": "TRANSFER",
+      "general_ledger_code": "TRN",
+      "use_nomis_for_balances": false,
+      "created": "2015-10-28T12:00:00Z",
+      "modified": "2015-10-28T12:00:00Z"
+    }
+  },
+  {
+    "model": "prison.prison",
+    "pk": "FOI",
+    "fields": {
+      "name": "FOREIGN PRISON (OUTSIDE ENGLAND & WALES)",
+      "general_ledger_code": "FOI",
+      "use_nomis_for_balances": false,
+      "created": "2015-10-28T12:00:00Z",
+      "modified": "2015-10-28T12:00:00Z"
+    }
+  }
+]
+
+

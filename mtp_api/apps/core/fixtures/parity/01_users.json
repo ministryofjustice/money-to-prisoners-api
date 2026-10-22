@@ -1,0 +1,443 @@
+[
+{
+  "model": "auth.user",
+  "pk": 1001,
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$5135vzgus8U05J9YoNjhDZ$2vQM0JUIp5XFwOTrltX43XHNcxuyTdVhJVhCbqJW4W8=",
+    "last_login": null,
+    "is_superuser": true,
+    "username": "admin",
+    "first_name": "Admin",
+    "last_name": "User",
+    "email": "admin@mtp.local",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-01-01T00:00:00Z",
+    "groups": [1, 2, 3, 4, 5, 6, 7, 8, 9],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 1002,
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$oVmKltpy8k5r8L52ibPUVy$LqMA6CRKGAMdPWmuu5uoeZyKMoy/lCAmEBmUbqoQmZM=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "bank-admin",
+    "first_name": "Bank",
+    "last_name": "Admin",
+    "email": "bank-admin@mtp.local",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-01-01T00:00:00Z",
+    "groups": [2],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 1003,
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$gbqYXCj32CUBcRCyz0zHep$/WaMyT+rVXQ4n6Ic2c29U6vI6CZyMcnctKxm4QpEfZE=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "refund-bank-admin",
+    "first_name": "Refund",
+    "last_name": "Admin",
+    "email": "refund-bank-admin@mtp.local",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-01-01T00:00:00Z",
+    "groups": [4, 2],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 1004,
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$g1IeP6tlcywZqTSPQ8hxRQ$j3NckCHaQ4MA/Wjz1z9AbZ7pIkSFx63b/NszHQXQhM8=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "disbursement-bank-admin",
+    "first_name": "Disbursement",
+    "last_name": "Admin",
+    "email": "disbursement-bank-admin@mtp.local",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-01-01T00:00:00Z",
+    "groups": [8],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 1005,
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$I5vOha02wyKaM2fdTCkqeS$lvysT1If/ZNZAPnchBD0GxRxN5C67zwCCzqiTLVBJFE=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "prisoner-location-admin",
+    "first_name": "Prisoner Location",
+    "last_name": "Admin",
+    "email": "prisoner-location-admin@mtp.local",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-01-01T00:00:00Z",
+    "groups": [1],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 1006,
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$YcKBwTxAq17cSrbZ0J95j4$JCezcw/oz+9oHFwJTHImeVwYBgSUVSu33T/0mVn4upw=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "security-staff",
+    "first_name": "Security",
+    "last_name": "Staff",
+    "email": "security-staff@mtp.local",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-01-01T00:00:00Z",
+    "groups": [7],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 1007,
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$CdAV7BCZkpkEBbOxHY96Ig$635SZpbcZDJqCMmG/eiWkB/W0h4jAR+08RsvR48R820=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "prison-security",
+    "first_name": "Security",
+    "last_name": "Staff",
+    "email": "prison-security@mtp.local",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-01-01T00:00:00Z",
+    "groups": [7],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 1008,
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$vzNEiq3JFovxGvzXNjAymj$QLgMxgcHUFFC/FM1jnHndRvD5ZUiEUtH/lygbsayVbQ=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "security-fiu-0",
+    "first_name": "Security FIU",
+    "last_name": "Staff",
+    "email": "security-fiu-0@mtp.local",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-01-01T00:00:00Z",
+    "groups": [7, 9, 6],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 1009,
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$57m4GoGmTjuF61HvnIqpC1$pz5Vk1mWjHaK5JG2fJvCoNfcLNdpllthHi7rfDAEkck=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "send-money",
+    "first_name": "Send Money",
+    "last_name": "Shared",
+    "email": "send-money@mtp.local",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-01-01T00:00:00Z",
+    "groups": [5],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 1010,
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$f7RbxG1C63jnFkVN4F6VQ1$pVYFD70KZz88mKWHzC+kGstGWDiELsge7q5EQkaB2VA=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "test-prison-1-clerk",
+    "first_name": "Prison 1",
+    "last_name": "Clerk",
+    "email": "test-prison-1-clerk@mtp.local",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-01-01T00:00:00Z",
+    "groups": [3],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 1011,
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$BYN7pOEq1hmnspmiq73B2i$gL26J4EVsb5yqheyxBrYdJZA9idxmhLrA3EdBDD2rmc=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "test-prison-2-clerk",
+    "first_name": "Prison 2",
+    "last_name": "Clerk",
+    "email": "test-prison-2-clerk@mtp.local",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-01-01T00:00:00Z",
+    "groups": [3],
+    "user_permissions": []
+  }
+},
+
+{
+  "model": "oauth2_provider.application",
+  "pk": 2001,
+  "fields": {
+    "client_id": "cashbook",
+    "user": 1001,
+    "redirect_uris": "",
+    "post_logout_redirect_uris": "",
+    "client_type": "confidential",
+    "authorization_grant_type": "password",
+    "client_secret": "cashbook",
+    "name": "Digital cashbook",
+    "skip_authorization": false,
+    "created": "2026-01-01T00:00:00Z",
+    "updated": "2026-01-01T00:00:00Z",
+    "algorithm": ""
+  }
+},
+{
+  "model": "oauth2_provider.application",
+  "pk": 2002,
+  "fields": {
+    "client_id": "noms-ops",
+    "user": 1001,
+    "redirect_uris": "",
+    "post_logout_redirect_uris": "",
+    "client_type": "confidential",
+    "authorization_grant_type": "password",
+    "client_secret": "noms-ops",
+    "name": "Prisoner money intelligence",
+    "skip_authorization": false,
+    "created": "2026-01-01T00:00:00Z",
+    "updated": "2026-01-01T00:00:00Z",
+    "algorithm": ""
+  }
+},
+{
+  "model": "oauth2_provider.application",
+  "pk": 2003,
+  "fields": {
+    "client_id": "bank-admin",
+    "user": 1001,
+    "redirect_uris": "",
+    "post_logout_redirect_uris": "",
+    "client_type": "confidential",
+    "authorization_grant_type": "password",
+    "client_secret": "bank-admin",
+    "name": "Bank admin",
+    "skip_authorization": false,
+    "created": "2026-01-01T00:00:00Z",
+    "updated": "2026-01-01T00:00:00Z",
+    "algorithm": ""
+  }
+},
+{
+  "model": "oauth2_provider.application",
+  "pk": 2004,
+  "fields": {
+    "client_id": "send-money",
+    "user": 1001,
+    "redirect_uris": "",
+    "post_logout_redirect_uris": "",
+    "client_type": "confidential",
+    "authorization_grant_type": "password",
+    "client_secret": "send-money",
+    "name": "Send money to someone in prison",
+    "skip_authorization": false,
+    "created": "2026-01-01T00:00:00Z",
+    "updated": "2026-01-01T00:00:00Z",
+    "algorithm": ""
+  }
+},
+
+{
+  "model": "mtp_auth.role",
+  "pk": 3001,
+  "fields": {
+    "name": "prison-clerk",
+    "key_group": 3,
+    "other_groups": [],
+    "application": 2001,
+    "login_url": "http://localhost/cashbook/"
+  }
+},
+{
+  "model": "mtp_auth.role",
+  "pk": 3002,
+  "fields": {
+    "name": "prisoner-location-admin",
+    "key_group": 1,
+    "other_groups": [],
+    "application": 2002,
+    "login_url": "http://localhost/noms-ops/"
+  }
+},
+{
+  "model": "mtp_auth.role",
+  "pk": 3003,
+  "fields": {
+    "name": "security",
+    "key_group": 7,
+    "other_groups": [],
+    "application": 2002,
+    "login_url": "http://localhost/noms-ops/"
+  }
+},
+{
+  "model": "mtp_auth.role",
+  "pk": 3004,
+  "fields": {
+    "name": "bank-admin",
+    "key_group": 2,
+    "other_groups": [4],
+    "application": 2003,
+    "login_url": "http://localhost/bank-admin/"
+  }
+},
+{
+  "model": "mtp_auth.role",
+  "pk": 3005,
+  "fields": {
+    "name": "disbursement-admin",
+    "key_group": 8,
+    "other_groups": [],
+    "application": 2003,
+    "login_url": "http://localhost/bank-admin/"
+  }
+},
+
+{
+  "model": "mtp_auth.applicationusermapping",
+  "pk": 4001,
+  "fields": {"created": "2026-01-01T00:00:00Z", "modified": "2026-01-01T00:00:00Z", "user": 1001, "application": 2001}
+},
+{
+  "model": "mtp_auth.applicationusermapping",
+  "pk": 4002,
+  "fields": {"created": "2026-01-01T00:00:00Z", "modified": "2026-01-01T00:00:00Z", "user": 1001, "application": 2002}
+},
+{
+  "model": "mtp_auth.applicationusermapping",
+  "pk": 4003,
+  "fields": {"created": "2026-01-01T00:00:00Z", "modified": "2026-01-01T00:00:00Z", "user": 1001, "application": 2003}
+},
+{
+  "model": "mtp_auth.applicationusermapping",
+  "pk": 4004,
+  "fields": {"created": "2026-01-01T00:00:00Z", "modified": "2026-01-01T00:00:00Z", "user": 1001, "application": 2004}
+},
+{
+  "model": "mtp_auth.applicationusermapping",
+  "pk": 4005,
+  "fields": {"created": "2026-01-01T00:00:00Z", "modified": "2026-01-01T00:00:00Z", "user": 1002, "application": 2003}
+},
+{
+  "model": "mtp_auth.applicationusermapping",
+  "pk": 4006,
+  "fields": {"created": "2026-01-01T00:00:00Z", "modified": "2026-01-01T00:00:00Z", "user": 1003, "application": 2003}
+},
+{
+  "model": "mtp_auth.applicationusermapping",
+  "pk": 4007,
+  "fields": {"created": "2026-01-01T00:00:00Z", "modified": "2026-01-01T00:00:00Z", "user": 1004, "application": 2003}
+},
+{
+  "model": "mtp_auth.applicationusermapping",
+  "pk": 4008,
+  "fields": {"created": "2026-01-01T00:00:00Z", "modified": "2026-01-01T00:00:00Z", "user": 1005, "application": 2002}
+},
+{
+  "model": "mtp_auth.applicationusermapping",
+  "pk": 4009,
+  "fields": {"created": "2026-01-01T00:00:00Z", "modified": "2026-01-01T00:00:00Z", "user": 1006, "application": 2002}
+},
+{
+  "model": "mtp_auth.applicationusermapping",
+  "pk": 4010,
+  "fields": {"created": "2026-01-01T00:00:00Z", "modified": "2026-01-01T00:00:00Z", "user": 1007, "application": 2002}
+},
+{
+  "model": "mtp_auth.applicationusermapping",
+  "pk": 4011,
+  "fields": {"created": "2026-01-01T00:00:00Z", "modified": "2026-01-01T00:00:00Z", "user": 1008, "application": 2002}
+},
+{
+  "model": "mtp_auth.applicationusermapping",
+  "pk": 4012,
+  "fields": {"created": "2026-01-01T00:00:00Z", "modified": "2026-01-01T00:00:00Z", "user": 1009, "application": 2004}
+},
+{
+  "model": "mtp_auth.applicationusermapping",
+  "pk": 4013,
+  "fields": {"created": "2026-01-01T00:00:00Z", "modified": "2026-01-01T00:00:00Z", "user": 1010, "application": 2001}
+},
+{
+  "model": "mtp_auth.applicationusermapping",
+  "pk": 4014,
+  "fields": {"created": "2026-01-01T00:00:00Z", "modified": "2026-01-01T00:00:00Z", "user": 1011, "application": 2001}
+},
+
+{
+  "model": "mtp_auth.prisonusermapping",
+  "pk": 5001,
+  "fields": {"created": "2026-01-01T00:00:00Z", "modified": "2026-01-01T00:00:00Z", "user": 1001, "prisons": ["IXB", "INP"]}
+},
+{
+  "model": "mtp_auth.prisonusermapping",
+  "pk": 5002,
+  "fields": {"created": "2026-01-01T00:00:00Z", "modified": "2026-01-01T00:00:00Z", "user": 1007, "prisons": ["IXB"]}
+},
+{
+  "model": "mtp_auth.prisonusermapping",
+  "pk": 5003,
+  "fields": {"created": "2026-01-01T00:00:00Z", "modified": "2026-01-01T00:00:00Z", "user": 1010, "prisons": ["IXB"]}
+},
+{
+  "model": "mtp_auth.prisonusermapping",
+  "pk": 5004,
+  "fields": {"created": "2026-01-01T00:00:00Z", "modified": "2026-01-01T00:00:00Z", "user": 1011, "prisons": ["INP"]}
+},
+
+{
+  "model": "mtp_auth.flag",
+  "pk": 6001,
+  "fields": {"user": 1001, "name": "hmpps-employee"}
+},
+{
+  "model": "mtp_auth.flag",
+  "pk": 6002,
+  "fields": {"user": 1006, "name": "hmpps-employee"}
+},
+{
+  "model": "mtp_auth.flag",
+  "pk": 6003,
+  "fields": {"user": 1007, "name": "hmpps-employee"}
+},
+{
+  "model": "mtp_auth.flag",
+  "pk": 6004,
+  "fields": {"user": 1008, "name": "hmpps-employee"}
+}
+]
+
