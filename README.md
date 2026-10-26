@@ -83,6 +83,53 @@ It migrates the database configured in your local settings, then writes the repo
 (open `schema-spy-report/index.html`). On Apple Silicon it can take 15 minutes or more, because the SchemaSpy image
 only runs under emulation.
 
+### Database migrations
+
+Review `./manage.py sqlmigrate <app> <migration>` before releasing changes to an existing
+table. Arrange those releases out of hours or behind holding pages for affected clients,
+with background writers paused as needed. The deployment init container has a 5-second
+lock timeout; API requests keep their normal database settings. This limits each lock wait,
+not statement execution or the duration for which acquired locks are held.
+
+For **comment-only** changes, put explicit `RunSQL("COMMENT ON ...")` operations inside
+`SeparateDatabaseAndState`. Keep the generated `AlterField` (or `AlterModelTableComment`)
+in `state_operations`, with the full field definition matching the model, and use only
+`COMMENT ON` in `database_operations`. For example, for an existing `Record.reference`
+field stored in `example_record`:
+
+```python
+migrations.SeparateDatabaseAndState(
+    database_operations=[
+        migrations.RunSQL(
+            sql='COMMENT ON COLUMN "example_record"."reference" IS \'External reference\';',
+            reverse_sql='COMMENT ON COLUMN "example_record"."reference" IS \'Previous description\';',
+        ),
+    ],
+    state_operations=[
+        migrations.AlterField(
+            model_name='record',
+            name='reference',
+            field=models.CharField(max_length=200, db_comment='External reference'),
+        ),
+    ],
+)
+```
+
+Replace the example names, complete field definition and previous comment with the real
+values; use `IS NULL` in the reverse SQL if there was no previous comment. Use the same
+pattern with `COMMENT ON TABLE` and `AlterModelTableComment` for table descriptions.
+Check both forward and reverse SQL and run `makemigrations --check --dry-run` to verify
+that migration state still matches the models. Do not rewrite migrations already applied.
+
+Django 5.2 can emit a no-change `ALTER COLUMN ... TYPE` for a field comment change. Besides
+requiring a stronger table lock, PostgreSQL removes column statistics when changing type.
+After **any migration that alters existing columns**, run `ANALYZE` on every affected table
+or schedule it immediately after release; include the table list and owner in the release
+plan. See the [release steps](https://github.com/ministryofjustice/money-to-prisoners-deploy/blob/main/deploy-to-prod-runbook.md#database-migrations)
+and [lock-timeout recovery](https://github.com/ministryofjustice/money-to-prisoners-deploy/blob/main/docs/support.md#migration-lock-timeouts).
+The [Django migration operations reference](https://docs.djangoproject.com/en/5.2/ref/migration-operations/#separatedatabaseandstate)
+explains how database and model state operations are kept separate.
+
 ### Parity testing
 
 See [PARITY.md](PARITY.md) for how this repository's fixed, reproducible fixture data set (used

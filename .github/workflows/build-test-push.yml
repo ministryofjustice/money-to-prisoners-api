@@ -256,4 +256,5 @@ jobs:
           kubectl config set-context ${K8S_CLUSTER_NAME} --cluster=${K8S_CLUSTER_NAME} --user=github-actions --namespace=${K8S_NAMESPACE}
           kubectl config use-context ${K8S_CLUSTER_NAME}
           kubectl patch configmap app-versions --patch "{\"data\": {\"api\": \"${VERSION}\"}}"
-          kubectl patch deployment api --type strategic --patch "{\"metadata\": {\"annotations\": {\"kubernetes.io/change-cause\": \"${VERSION}\"}}, \"spec\": {\"template\": {\"spec\": {\"containers\": [{\"name\": \"app\", \"image\": \"${IMAGE}\"}], \"initContainers\": [{\"name\": \"init\", \"image\": \"${IMAGE}\"},{\"name\": \"copy-static\", \"image\": \"${IMAGE}\"}]}}}}"
+          # Keep init-only PGOPTIONS aligned with deploy config/apps.yml (api.web.init_env).
+          kubectl patch deployment api --type strategic --patch "{\"metadata\": {\"annotations\": {\"kubernetes.io/change-cause\": \"${VERSION}\"}}, \"spec\": {\"template\": {\"spec\": {\"containers\": [{\"name\": \"app\", \"image\": \"${IMAGE}\"}], \"initContainers\": [{\"name\": \"init\", \"image\": \"${IMAGE}\", \"env\": [{\"name\": \"PGOPTIONS\", \"value\": \"-c lock_timeout=5s\"}]},{\"name\": \"copy-static\", \"image\": \"${IMAGE}\"}]}}}}"
