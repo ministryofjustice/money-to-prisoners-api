@@ -91,6 +91,13 @@ with background writers paused as needed. The deployment init container has a 5-
 lock timeout; API requests keep their normal database settings. This limits each lock wait,
 not statement execution or the duration for which acquired locks are held.
 
+Schedule concurrent index migrations (`AddIndexConcurrently`) out of hours too. The
+5-second timeout also applies when `CREATE INDEX CONCURRENTLY` waits for transactions.
+A failed build can leave an invalid index behind; subsequent migration attempts then fail
+because the index name already exists. Follow the
+[concurrent index recovery procedure](https://github.com/ministryofjustice/money-to-prisoners-deploy/blob/main/docs/support.md#failed-concurrent-index-builds)
+before retrying. Do not rewrite already-applied migrations such as `credit/0041`.
+
 For **comment-only** changes, put explicit `RunSQL("COMMENT ON ...")` operations inside
 `SeparateDatabaseAndState`. Keep the generated `AlterField` (or `AlterModelTableComment`)
 in `state_operations`, with the full field definition matching the model, and use only
@@ -123,9 +130,35 @@ that migration state still matches the models. Do not rewrite migrations already
 
 Django 5.2 can emit a no-change `ALTER COLUMN ... TYPE` for a field comment change. Besides
 requiring a stronger table lock, PostgreSQL removes column statistics when changing type.
-After **any migration that alters existing columns**, run `ANALYZE` on every affected table
-or schedule it immediately after release; include the table list and owner in the release
-plan. See the [release steps](https://github.com/ministryofjustice/money-to-prisoners-deploy/blob/main/deploy-to-prod-runbook.md#database-migrations)
+For future changes to existing columns, prefer a **separate follow-on migration** that
+runs `ANALYZE` on every affected table automatically in all environments. Make it depend
+on the schema migration and set `atomic = False`, so it does not extend the schema
+migration's exclusive lock. For example (replace the dependency and table name):
+
+```python
+from django.db import migrations
+
+
+class Migration(migrations.Migration):
+    atomic = False
+
+    dependencies = [('your_app', 'previous_schema_migration')]
+
+    operations = [
+        migrations.RunSQL(
+            'ANALYZE public.affected_table;',
+            reverse_sql=migrations.RunSQL.noop,
+        ),
+    ]
+```
+
+`ANALYZE` permits ordinary reads and writes, but can contend with maintenance or DDL;
+the migration lock timeout still applies. If the analysis migration fails, the preceding
+schema migration may already be committed. Recover and retry, or run table-specific
+`ANALYZE` manually immediately after release and verify completion. Keep that manual
+fallback for releases without an analysis migration; include affected tables and an owner
+in the release plan. Do not add a migration just for historical changes already applied.
+See the [release steps](https://github.com/ministryofjustice/money-to-prisoners-deploy/blob/main/deploy-to-prod-runbook.md#database-migrations)
 and [lock-timeout recovery](https://github.com/ministryofjustice/money-to-prisoners-deploy/blob/main/docs/support.md#migration-lock-timeouts).
 The [Django migration operations reference](https://docs.djangoproject.com/en/5.2/ref/migration-operations/#separatedatabaseandstate)
 explains how database and model state operations are kept separate.
