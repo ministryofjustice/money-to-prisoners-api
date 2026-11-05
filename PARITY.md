@@ -114,8 +114,8 @@ under `fixtures/parity/` is static, hand-authored JSON.
   deliberately named/numbered so they're unmistakably test data at a glance (`TEST PRISONER
   ONE`, `TWO`, etc.). The last 2 (`FOGELL MCLOVIN` / `A9971EC` and `EF'LIAICO ALFRISHA` /
   `G8879UP`, pks `10007`-`10008`) are **real test prisoners that exist in the dev/test prisoner
-  search API**, deliberately included so that journeys which look up a prisoner by number
-  against that live API (rather than purely from this fixture) still resolve to a real record.
+  search API**. They allow journeys that call the API to use prisoner details that also exist
+  in the seeded internal database, supporting integration and parity testing.
   No `.meta.json` either — prisoner locations themselves aren't date-sensitive (their linked
   credits/disbursements would be, in a future fixture).
 - **`03_credits.json`** / **`03_credits.meta.json`** — example credits (one per sample
