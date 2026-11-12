@@ -96,6 +96,10 @@ under `fixtures/parity/` is static, hand-authored JSON.
 
 ### What's currently in `fixtures/parity/`
 
+- **`00_prisons.json`** — prisons that exist in the dev prison API but aren't in the sample
+  prisons: currently `LEI` (HMP Leeds), where `G8879UP` is located. The balance lookup falls
+  back to the prisoner's real NOMIS location, and fails with `Cannot find <code> in Prison
+  table` if that prison isn't present here. Add any other prison codes the dev API returns here.
 - **`01_users.json`** — hand-authored (not a `dumpdata` export) fixture containing:
   - The `admin` superuser and 10 other fixed accounts, one per role (`bank-admin`,
     `refund-bank-admin`, `disbursement-bank-admin`, `prisoner-location-admin`,
