@@ -96,6 +96,10 @@ under `fixtures/parity/` is static, hand-authored JSON.
 
 ### What's currently in `fixtures/parity/`
 
+- **`00_prisons.json`** — prisons that exist in the dev prison API but aren't in the sample
+  prisons: currently `LEI` (HMP Leeds), where `G8879UP` is located. The balance lookup falls
+  back to the prisoner's real NOMIS location, and fails with `Cannot find <code> in Prison
+  table` if that prison isn't present here. Add any other prison codes the dev API returns here.
 - **`01_users.json`** — hand-authored (not a `dumpdata` export) fixture containing:
   - The `admin` superuser and 10 other fixed accounts, one per role (`bank-admin`,
     `refund-bank-admin`, `disbursement-bank-admin`, `prisoner-location-admin`,
@@ -110,10 +114,14 @@ under `fixtures/parity/` is static, hand-authored JSON.
   - Prison/application/user mappings and `hmpps-employee` flags for the relevant users.
   - This file has **no dates to rebase** — nothing in it is time-sensitive, so there's no
     `01_users.meta.json`.
-- **`02_prisoners.json`** — 6 example prisoner locations, deliberately named/numbered so
-  they're unmistakably test data at a glance. No `.meta.json` either — prisoner locations
-  themselves aren't date-sensitive (their linked credits/disbursements would be, in a future
-  fixture).
+- **`02_prisoners.json`** — 8 example prisoner locations. The first 6 (pks `10001`-`10006`) are
+  deliberately named/numbered so they're unmistakably test data at a glance (`TEST PRISONER
+  ONE`, `TWO`, etc.). The last 2 (`FOGELL MCLOVIN` / `A9971EC` and `EF'LIAICO ALFRISHA` /
+  `G8879UP`, pks `10007`-`10008`) are **real test prisoners that exist in the dev/test prisoner
+  search API**. They allow journeys that call the API to use prisoner details that also exist
+  in the seeded internal database, supporting integration and parity testing.
+  No `.meta.json` either — prisoner locations themselves aren't date-sensitive (their linked
+  credits/disbursements would be, in a future fixture).
 - **`03_credits.json`** / **`03_credits.meta.json`** — example credits (one per sample
   prisoner), left with `"resolution": "pending"` (i.e. not yet credited/refunded) and rebased
   to stay within the last several days of "today".
