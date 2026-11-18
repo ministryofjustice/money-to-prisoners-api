@@ -259,7 +259,10 @@ class ChangePasswordWithCodeView(generics.GenericAPIView):
             new_password = serializer.validated_data['new_password']
 
             try:
-                user = PasswordChangeRequest.objects.get(code=code).user
+                user = PasswordChangeRequest.objects.get(
+                    code=code,
+                    created__gt=timezone.now() - PasswordChangeRequest.expiry,
+                ).user
                 password_validation.validate_password(new_password, user)
                 user.set_password(new_password)
                 user.save()
@@ -326,7 +329,10 @@ class ResetPasswordView(generics.GenericAPIView):
                 return self.failure_response('no_email', field='username')
 
             service_name = 'prisoner money'
-            change_request, _ = PasswordChangeRequest.objects.get_or_create(user=user)
+            # always issue a new code so the link lasts as long as the email says;
+            # this also invalidates any earlier links, including the one sent when the account was created
+            PasswordChangeRequest.objects.filter(user=user).delete()
+            change_request = PasswordChangeRequest.objects.create(user=user)
             change_password_url = urlsplit(
                 serializer.validated_data['create_password']['password_change_url']
             )

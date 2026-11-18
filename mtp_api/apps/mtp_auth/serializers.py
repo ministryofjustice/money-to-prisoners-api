@@ -1,4 +1,4 @@
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -21,15 +21,21 @@ from prison.models import Prison
 User = get_user_model()
 
 
-def get_create_password_url(application, change_request):
+def get_staff_app_urls():
     """
-    Link to the staff app page where a user sets their password using a PasswordChangeRequest code
+    Staff apps where users can set their password, by OAuth client ID
     """
-    app_url = {
+    return {
         CASHBOOK_OAUTH_CLIENT_ID: settings.CASHBOOK_URL,
         BANK_ADMIN_OAUTH_CLIENT_ID: settings.BANK_ADMIN_URL,
         NOMS_OPS_OAUTH_CLIENT_ID: settings.NOMS_OPS_URL,
-    }[application.client_id]
+    }
+
+
+def get_create_password_url(app_url, change_request):
+    """
+    Link to the staff app page where a user sets their password using a PasswordChangeRequest code
+    """
     # path and parameter name must match `password_change_with_code` view in each app (via mtp-common)
     query = urlencode({'reset_code': str(change_request.code)})
     return f'{app_url}/create_password/?{query}'
@@ -188,6 +194,9 @@ class UserSerializer(serializers.ModelSerializer):
 
         if not role:
             raise serializers.ValidationError({'role': 'Role must be specified'})
+        app_url = get_staff_app_urls().get(role.application.client_id)
+        if not app_url:
+            raise serializers.ValidationError({'role': 'Users cannot set a password for role: %s' % role.name})
         prisons = validated_data.pop('prisons', None)
         new_user = super().create(validated_data)
 
@@ -211,12 +220,12 @@ class UserSerializer(serializers.ModelSerializer):
                 PrisonUserMapping.objects.assign_prisons_to_user(new_user, prisons)
 
         send_email(
-            template_name='api-new-user',
+            template_name='api-new-user-create-password',
             to=new_user.email,
             personalisation={
                 'name': new_user.get_full_name(),
                 'username': new_user.username,
-                'create_password_url': get_create_password_url(role.application, change_request),
+                'create_password_url': get_create_password_url(app_url, change_request),
                 'service_name': role.application.name.lower(),
                 'login_url': role.login_url,
             },
@@ -303,6 +312,17 @@ class ChangePasswordSerializer(serializers.Serializer):
 class CreateNewPasswordSerializer(serializers.Serializer):
     password_change_url = serializers.CharField()
     reset_code_param = serializers.CharField()
+
+    def validate_password_change_url(self, value):
+        # the emailed link contains a live code so it must only ever point to one of our staff apps
+        url = urlsplit(value)
+        allowed_origins = {
+            (app_url.scheme, app_url.netloc)
+            for app_url in map(urlsplit, get_staff_app_urls().values())
+        }
+        if (url.scheme, url.netloc.lower()) not in allowed_origins:
+            raise serializers.ValidationError('Password change URL must be on a staff app')
+        return value
 
 
 class ResetPasswordSerializer(serializers.Serializer):

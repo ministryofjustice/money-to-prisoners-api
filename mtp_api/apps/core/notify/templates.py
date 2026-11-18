@@ -190,7 +190,9 @@ class ApiNotifyTemplates(NotifyTemplateRegistry):
                 'service_name', 'login_url',
             ],
         },
-        'api-new-user': {
+        # replaces `api-new-user`, which contained a password; a new name means the
+        # Notify template can be created before release without breaking the running version
+        'api-new-user-create-password': {
             'subject': 'Your new ((service_name)) account is ready to use',
             'body': textwrap.dedent("""
                 Dear ((name)),
