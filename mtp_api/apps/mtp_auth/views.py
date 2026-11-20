@@ -38,7 +38,7 @@ from mtp_auth.permissions import UserPermissions, AnyAdminClientIDPermissions, A
 from mtp_auth.serializers import (
     RoleSerializer, UserSerializer, FlagSerializer, AccountRequestSerializer,
     ChangePasswordSerializer, ResetPasswordSerializer, ChangePasswordWithCodeSerializer,
-    generate_new_password, JobInformationSerializer
+    JobInformationSerializer
 )
 from prison.models import Prison
 
@@ -259,10 +259,15 @@ class ChangePasswordWithCodeView(generics.GenericAPIView):
             new_password = serializer.validated_data['new_password']
 
             try:
-                user = PasswordChangeRequest.objects.get(code=code).user
+                user = PasswordChangeRequest.objects.get(
+                    code=code,
+                    created__gt=timezone.now() - PasswordChangeRequest.expiry,
+                ).user
                 password_validation.validate_password(new_password, user)
                 user.set_password(new_password)
                 user.save()
+                # links are single-use
+                PasswordChangeRequest.objects.filter(user=user).delete()
                 return Response(status=status.HTTP_204_NO_CONTENT)
             except PasswordChangeRequest.DoesNotExist:
                 return Response(status=status.HTTP_404_NOT_FOUND)
@@ -282,7 +287,6 @@ class ResetPasswordView(generics.GenericAPIView):
     immutable_users = ['transaction-uploader', 'send-money']
 
     error_messages = {
-        'generic': _('There has been a system error. Please try again later'),
         'not_found': _('Username doesn’t match any user account'),
         'locked_out': _('Your account is locked, '
                         'please contact the person who set it up'),
@@ -303,7 +307,6 @@ class ResetPasswordView(generics.GenericAPIView):
         )
 
     @atomic
-    @method_decorator(sensitive_variables('password'))
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
@@ -326,49 +329,30 @@ class ResetPasswordView(generics.GenericAPIView):
                 return self.failure_response('no_email', field='username')
 
             service_name = 'prisoner money'
-            if serializer.validated_data.get('create_password'):
-                change_request, _ = PasswordChangeRequest.objects.get_or_create(user=user)
-                change_password_url = urlsplit(
-                    serializer.validated_data['create_password']['password_change_url']
-                )
-                query = parse_qs(change_password_url.query)
-                query.update({
-                    serializer.validated_data['create_password']['reset_code_param']: str(change_request.code)
-                })
-                change_password_url = list(change_password_url)
-                change_password_url[3] = urlencode(query)
-                change_password_url = urlunsplit(change_password_url)
-                send_email(
-                    template_name='api-new-password',
-                    to=user.email,
-                    personalisation={
-                        'service_name': service_name,
-                        'change_password_url': change_password_url,
-                    },
-                    staff_email=True,
-                )
-                return Response(status=status.HTTP_204_NO_CONTENT)
-            else:
-                password = generate_new_password()
-                if not password:
-                    logger.error('Password could not be generated; have validators changed?')
-                    return self.failure_response('generic')
-
-                user.set_password(password)
-                user.save()
-
-                send_email(
-                    template_name='api-reset-password',
-                    to=user.email,
-                    personalisation={
-                        'service_name': service_name,
-                        'username': user.username,
-                        'password': password,
-                    },
-                    staff_email=True,
-                )
-
-                return Response(status=status.HTTP_204_NO_CONTENT)
+            # always issue a new code so the link lasts as long as the email says;
+            # this also invalidates any earlier links, including the one sent when the account was created
+            PasswordChangeRequest.objects.filter(user=user).delete()
+            change_request = PasswordChangeRequest.objects.create(user=user)
+            change_password_url = urlsplit(
+                serializer.validated_data['create_password']['password_change_url']
+            )
+            query = parse_qs(change_password_url.query)
+            query.update({
+                serializer.validated_data['create_password']['reset_code_param']: str(change_request.code)
+            })
+            change_password_url = list(change_password_url)
+            change_password_url[3] = urlencode(query)
+            change_password_url = urlunsplit(change_password_url)
+            send_email(
+                template_name='api-new-password',
+                to=user.email,
+                personalisation={
+                    'service_name': service_name,
+                    'change_password_url': change_password_url,
+                },
+                staff_email=True,
+            )
+            return Response(status=status.HTTP_204_NO_CONTENT)
         else:
             return self.failure_response(serializer.errors)
 

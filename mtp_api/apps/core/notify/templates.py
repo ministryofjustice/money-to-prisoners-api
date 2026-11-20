@@ -190,7 +190,9 @@ class ApiNotifyTemplates(NotifyTemplateRegistry):
                 'service_name', 'login_url',
             ],
         },
-        'api-new-user': {
+        # replaces `api-new-user`, which contained a password; a new name means the
+        # Notify template can be created before release without breaking the running version
+        'api-new-user-create-password': {
             'subject': 'Your new ((service_name)) account is ready to use',
             'body': textwrap.dedent("""
                 Dear ((name)),
@@ -198,14 +200,18 @@ class ApiNotifyTemplates(NotifyTemplateRegistry):
                 Your new ((service_name)) account has been created for you.
 
                 Username: ((username))
-                Password: ((password))
-                You can now sign in at: ((login_url))
+
+                Open the link below in your browser to create your password.
+                The link can only be used once and expires after 12 hours.
+                ((create_password_url))
+
+                If the link has expired, go to ((login_url)) and select ‘Forgotten your password?’.
 
                 Kind regards,
                 Prisoner money team
             """).strip(),
             'personalisation': [
-                'name', 'username', 'password',
+                'name', 'username', 'create_password_url',
                 'service_name', 'login_url',
             ],
         },
@@ -220,22 +226,6 @@ class ApiNotifyTemplates(NotifyTemplateRegistry):
             """).strip(),
             'personalisation': [
                 'service_name', 'change_password_url',
-            ],
-        },
-        'api-reset-password': {
-            'subject': 'Your new ((service_name)) password',
-            'body': textwrap.dedent("""
-                Your new ((service_name)) password has been created for you.
-
-                Username: ((username))
-                Password: ((password))
-
-                Kind regards,
-                Prisoner money team
-            """).strip(),
-            'personalisation': [
-                'username', 'password',
-                'service_name',
             ],
         },
         'api-user-moved': {
