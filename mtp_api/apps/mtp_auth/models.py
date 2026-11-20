@@ -250,6 +250,9 @@ class PasswordChangeRequest(TimeStampedModel):
             'Deleted after 12 hours.'
         )
 
+    # emails tell users that links expire after this long
+    expiry = datetime.timedelta(hours=12)
+
     def __str__(self):
         return '{user} {created}'.format(user=self.user, created=self.created)
 

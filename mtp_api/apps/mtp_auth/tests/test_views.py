@@ -851,6 +851,39 @@ class CreateUserTestCase(AuthBaseTestCase):
             Application.objects.get(client_id=target_client_id).name.lower(),
         )
 
+        self.assertNotIn('password', send_email_kwargs['personalisation'])
+        self.assertFalse(new_user.has_usable_password())
+        change_request = PasswordChangeRequest.objects.get(user=new_user)
+        app_url = {
+            CASHBOOK_OAUTH_CLIENT_ID: settings.CASHBOOK_URL,
+            BANK_ADMIN_OAUTH_CLIENT_ID: settings.BANK_ADMIN_URL,
+            NOMS_OPS_OAUTH_CLIENT_ID: settings.NOMS_OPS_URL,
+        }[target_client_id]
+        self.assertEqual(
+            send_email_kwargs['personalisation']['create_password_url'],
+            f'{app_url}/create_password/?reset_code={change_request.code}',
+        )
+
+    def test_cannot_create_user_for_app_without_create_password_page(self, mock_send_email):
+        user_data = {
+            'username': 'new-bank-admin',
+            'first_name': 'New',
+            'last_name': 'Bank Admin',
+            'email': 'nba@mtp.local',
+            'role': 'bank-admin',
+        }
+        with mock.patch('mtp_auth.serializers.get_staff_app_urls', return_value={}):
+            response = self.client.post(
+                self.get_url(),
+                format='json',
+                data=user_data,
+                HTTP_AUTHORIZATION=self.get_http_authorization_for_user(self.bank_uas[0], client_id='bank-admin'),
+            )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('role', response.json())
+        self.assertFalse(User.objects.filter(username='new-bank-admin').exists())
+        mock_send_email.assert_not_called()
+
     def test_create_bank_admin(self, mock_send_email):
         user_data = {
             'username': 'new-bank-admin',
@@ -2005,6 +2038,15 @@ class ResetPasswordTestCase(AuthBaseTestCase):
         self.user.set_password(self.current_password)
         self.user.save()
 
+    def request_reset(self, username, password_change_url=None):
+        return self.client.post(self.reset_url, {
+            'username': username,
+            'create_password': {
+                'password_change_url': password_change_url or f'{settings.CASHBOOK_URL}/path',
+                'reset_code_param': 'reset_code',
+            },
+        }, format='json')
+
     def assertErrorResponse(self, mock_send_email, response, error_dict):  # noqa: N802
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         error = json.loads(response.content.decode('utf-8')).get('errors', {})
@@ -2019,7 +2061,7 @@ class ResetPasswordTestCase(AuthBaseTestCase):
         mock_send_email.assert_not_called()
 
     def test_unknown_user(self, mock_send_email):
-        response = self.client.post(self.reset_url, {'username': 'unknown'})
+        response = self.request_reset('unknown')
         self.assertErrorResponse(mock_send_email, response, {
             'username': [ResetPasswordView.error_messages['not_found']],
         })
@@ -2032,7 +2074,7 @@ class ResetPasswordTestCase(AuthBaseTestCase):
             username = username.replace('_', '-')
         else:
             username += '_'
-        response = self.client.post(self.reset_url, {'username': username})
+        response = self.request_reset(username)
         self.assertErrorResponse(mock_send_email, response, {
             'username': [ResetPasswordView.error_messages['not_found']],
         })
@@ -2043,7 +2085,7 @@ class ResetPasswordTestCase(AuthBaseTestCase):
             User.objects.get(username=username)
         except User.DoesNotExist:
             self.fail()
-        response = self.client.post(self.reset_url, {'username': username})
+        response = self.request_reset(username)
         self.assertErrorResponse(mock_send_email, response, {
             'username': [ResetPasswordView.error_messages['not_found']],
         })
@@ -2051,7 +2093,7 @@ class ResetPasswordTestCase(AuthBaseTestCase):
     def test_user_with_no_email(self, mock_send_email):
         self.user.email = ''
         self.user.save()
-        response = self.client.post(self.reset_url, {'username': self.user.username})
+        response = self.request_reset(self.user.username)
         self.assertErrorResponse(mock_send_email, response, {
             'username': [ResetPasswordView.error_messages['no_email']],
         })
@@ -2060,7 +2102,7 @@ class ResetPasswordTestCase(AuthBaseTestCase):
         other_user = User.objects.exclude(pk=self.user.pk).first()
         self.user.email = other_user.email.title()
         self.user.save()
-        response = self.client.post(self.reset_url, {'username': self.user.email})
+        response = self.request_reset(self.user.email)
         self.assertErrorResponse(mock_send_email, response, {
             'username': [ResetPasswordView.error_messages['multiple_found']],
         })
@@ -2069,28 +2111,67 @@ class ResetPasswordTestCase(AuthBaseTestCase):
         app = Application.objects.first()
         for _ in range(settings.MTP_AUTH_LOCKOUT_COUNT):
             FailedLoginAttempt.objects.create(user=self.user, application=app)
-        response = self.client.post(self.reset_url, {'username': self.user.username})
+        response = self.request_reset(self.user.username)
         self.assertErrorResponse(mock_send_email, response, {
             'username': [ResetPasswordView.error_messages['locked_out']],
         })
 
     def assertPasswordReset(self, mock_send_email, username):  # noqa: N802
-        response = self.client.post(self.reset_url, {'username': username})
+        response = self.request_reset(username)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         user = authenticate(username=self.user.username, password=self.current_password)
-        self.assertIsNone(user, msg='Password was not changed')
+        self.assertEqual(self.user.username, getattr(user, 'username', None),
+                         msg='Password should not change until user follows link')
 
-        self.assertEqual(PasswordChangeRequest.objects.all().count(), 0,
-                         msg='Password change request should not be created')
+        self.assertEqual(PasswordChangeRequest.objects.all().count(), 1)
+        change_request = PasswordChangeRequest.objects.get()
+        self.assertEqual(change_request.user, self.user)
 
         self.assertEqual(mock_send_email.call_count, 1)
         send_email_kwargs = mock_send_email.call_args_list[0].kwargs
-        self.assertEqual(send_email_kwargs['personalisation']['username'], self.user.username)
-        self.assertNotIn(self.current_password, send_email_kwargs['personalisation'].values())
-        password = send_email_kwargs['personalisation']['password']
-        user = authenticate(username=self.user.username, password=password)
-        self.assertEqual(self.user.username, getattr(user, 'username', None),
-                         msg='Cannot log in with new password')
+        self.assertEqual(send_email_kwargs['template_name'], 'api-new-password')
+        self.assertNotIn('password', send_email_kwargs['personalisation'])
+        self.assertEqual(
+            send_email_kwargs['personalisation']['change_password_url'],
+            f'{settings.CASHBOOK_URL}/path?reset_code={change_request.code}',
+        )
+
+    def test_reset_without_create_password_is_rejected(self, mock_send_email):
+        # plaintext password emails are no longer supported
+        response = self.client.post(self.reset_url, {'username': self.user.username})
+        self.assertErrorResponse(mock_send_email, response, {})
+        self.assertIn('create_password', response.json()['errors'])
+
+    def test_reset_link_must_be_on_a_staff_app(self, mock_send_email):
+        for password_change_url in [
+            'https://example.com/create_password/',
+            f'{settings.CASHBOOK_URL}.example.com/create_password/',
+            settings.CASHBOOK_URL.replace('://', '://user@') + '/create_password/',
+            '/create_password/',
+        ]:
+            with self.subTest(password_change_url=password_change_url):
+                response = self.request_reset(self.user.username, password_change_url)
+                self.assertErrorResponse(mock_send_email, response, {})
+                self.assertIn('password_change_url', response.json()['errors']['create_password'])
+
+    def test_reset_link_can_be_on_any_staff_app(self, mock_send_email):
+        for app_url in (settings.CASHBOOK_URL, settings.BANK_ADMIN_URL, settings.NOMS_OPS_URL):
+            with self.subTest(app_url=app_url):
+                response = self.request_reset(self.user.username, f'{app_url}/create_password/')
+                self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_reset_replaces_existing_codes(self, mock_send_email):
+        # e.g. the code sent when the account was created, which would expire sooner
+        old_change_request = PasswordChangeRequest.objects.create(user=self.user)
+        response = self.request_reset(self.user.username)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        change_request = PasswordChangeRequest.objects.get(user=self.user)
+        self.assertNotEqual(change_request.code, old_change_request.code)
+        self.assertEqual(
+            mock_send_email.call_args_list[0].kwargs['personalisation']['change_password_url'],
+            f'{settings.CASHBOOK_URL}/path?reset_code={change_request.code}',
+        )
 
     def test_password_reset_by_username(self, mock_send_email):
         self.assertPasswordReset(mock_send_email, self.user.username)
@@ -2108,7 +2189,7 @@ class ResetPasswordTestCase(AuthBaseTestCase):
         response = self.client.post(self.reset_url, {
             'username': self.user.username,
             'create_password': {
-                'password_change_url': 'http://localhost/path',
+                'password_change_url': f'{settings.CASHBOOK_URL}/path',
                 'reset_code_param': 'reset_code'
             }
         }, format='json')
@@ -2122,7 +2203,7 @@ class ResetPasswordTestCase(AuthBaseTestCase):
         change_request = PasswordChangeRequest.objects.all().first()
         self.assertEqual(
             mock_send_email.call_args_list[0].kwargs['personalisation']['change_password_url'],
-            f'http://localhost/path?reset_code={change_request.code}',
+            f'{settings.CASHBOOK_URL}/path?reset_code={change_request.code}',
         )
 
 
@@ -2146,7 +2227,7 @@ class ChangePasswordWithCodeTestCase(AuthBaseTestCase):
         response = self.client.post(self.reset_url, {
             'username': self.user.username,
             'create_password': {
-                'password_change_url': 'http://localhost/',
+                'password_change_url': f'{settings.CASHBOOK_URL}/',
                 'reset_code_param': 'reset_code'
             }
         }, format='json')
@@ -2166,12 +2247,34 @@ class ChangePasswordWithCodeTestCase(AuthBaseTestCase):
         self.assertEqual(self.user.username, getattr(user, 'username', None),
                          msg='Cannot log in with new password')
 
+        self.assertFalse(PasswordChangeRequest.objects.exists(), msg='Code should be deleted after use')
+        response = self.client.post(
+            self.get_change_url(code), {'new_password': 'another-' + self.new_password}
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND, msg='Code should be single-use')
+        user = authenticate(username=self.user.username, password=self.new_password)
+        self.assertEqual(self.user.username, getattr(user, 'username', None))
+
+    def test_password_change_fails_with_expired_code(self):
+        change_request = PasswordChangeRequest.objects.create(user=self.user)
+        PasswordChangeRequest.objects.filter(pk=change_request.pk).update(
+            created=now() - PasswordChangeRequest.expiry - datetime.timedelta(minutes=1),
+        )
+        response = self.client.post(
+            self.get_change_url(change_request.code), {'new_password': self.new_password}
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+        user = authenticate(username=self.user.username, password=self.current_password)
+        self.assertEqual(self.user.username, getattr(user, 'username', None),
+                         msg='Password should not change with an expired code')
+
     @mock.patch('mtp_auth.views.send_email')
     def test_password_change_fails_with_incorrect_code(self, mock_send_email):
         self.client.post(self.reset_url, {
             'username': self.user.username,
             'create_password': {
-                'password_change_url': 'http://localhost/',
+                'password_change_url': f'{settings.CASHBOOK_URL}/',
                 'reset_code_param': 'reset_code'
             }
         }, format='json')
@@ -2639,13 +2742,18 @@ class AccountRequestTestCase(AuthBaseTestCase):
             )
 
             send_email_kwargs = mock_send_email.call_args_list[-1].kwargs
-            self.assertEqual(send_email_kwargs['template_name'], 'api-new-user')
+            self.assertEqual(send_email_kwargs['template_name'], 'api-new-user-create-password')
             self.assertEqual(send_email_kwargs['to'], request.email)
             self.assertEqual(send_email_kwargs['personalisation']['username'], user.username)
             self.assertEqual(send_email_kwargs['personalisation']['service_name'], role.application.name.lower())
             self.assertEqual(send_email_kwargs['personalisation']['login_url'], role.login_url)
-            password = send_email_kwargs['personalisation']['password']
-            self.assertTrue(user.check_password(password))
+            self.assertNotIn('password', send_email_kwargs['personalisation'])
+            self.assertFalse(user.has_usable_password())
+            change_request = PasswordChangeRequest.objects.get(user=user)
+            self.assertEqual(
+                send_email_kwargs['personalisation']['create_password_url'],
+                f'{settings.CASHBOOK_URL}/create_password/?reset_code={change_request.code}',
+            )
 
         assert_user_created({}, user_admin=False)
         self.assertFalse(AccountRequest.objects.exists())
@@ -2673,7 +2781,7 @@ class AccountRequestTestCase(AuthBaseTestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK, msg=response.content)
         self.assertEqual(mock_send_email.call_count, 1)
-        self.assertEqual(mock_send_email.call_args_list[-1].kwargs['template_name'], 'api-new-user')
+        self.assertEqual(mock_send_email.call_args_list[-1].kwargs['template_name'], 'api-new-user-create-password')
 
         user = User.objects.get(username=request.username)
         self.assertSetEqual(

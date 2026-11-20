@@ -1,4 +1,3 @@
-from datetime import timedelta
 import textwrap
 
 from django.core.management import BaseCommand
@@ -14,7 +13,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         verbosity = options.get('verbosity', 1)
-        requests = PasswordChangeRequest.objects.filter(created__lte=now() - timedelta(hours=12))
+        requests = PasswordChangeRequest.objects.filter(created__lte=now() - PasswordChangeRequest.expiry)
         if verbosity:
             msg = 'Deleting %d expired password change request(s)' % requests.count()
             self.stdout.write(msg)
