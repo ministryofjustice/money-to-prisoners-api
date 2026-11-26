@@ -5,7 +5,7 @@ import pathlib
 from django.core.management import BaseCommand, CommandError
 from django.utils.dateparse import parse_date
 from django.utils.timezone import localdate, make_aware
-from mtp_common.nomis import can_access_nomis, get_location as nomis_get_location
+from mtp_common.prisoner_search import can_access_prisoner_search, get_location as prisoner_search_get_location
 import requests
 
 from credit.constants import LogAction as CreditLogAction
@@ -104,9 +104,10 @@ def parsed_date_or_yesterday(date) -> datetime.date:
 
 
 def get_housing(prisoner_number):
-    if not can_access_nomis():
+    if not can_access_prisoner_search():
         return
     try:
-        return nomis_get_location(prisoner_number, retries=2)['housing_location']
+        # Prisoner Search only provides the cell as a string (e.g. 'A-2-002'), not labelled levels
+        return {'description': prisoner_search_get_location(prisoner_number, retries=2)['cell_location']}
     except (TypeError, KeyError, ValueError, requests.RequestException):
         return
