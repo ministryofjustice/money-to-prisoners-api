@@ -31,7 +31,12 @@ class Command(BaseCommand):
         }
 
         today = timezone.localdate()
-        preferences = EmailNotificationPreferences.objects.filter(frequency=frequency).exclude(last_sent_at=today)
+        # disabled users keep their preferences and monitoring (FIU checks depend on monitoring)
+        # but are not emailed
+        preferences = EmailNotificationPreferences.objects.filter(
+            frequency=frequency,
+            user__is_active=True,
+        ).exclude(last_sent_at=today)
         for preference in preferences:
             user = preference.user
             event_group = summarise_group(group_events(events, user))
