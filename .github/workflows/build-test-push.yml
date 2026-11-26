@@ -302,4 +302,6 @@ jobs:
           kubectl patch configmap app-versions --patch "{\"data\": {\"api\": \"${VERSION}\"}}"
           # Keep init-only PGOPTIONS aligned with deploy config/apps.yml (api.web.init_env).
           kubectl patch deployment api --type strategic --patch "{\"metadata\": {\"annotations\": {\"kubernetes.io/change-cause\": \"${VERSION}\"}}, \"spec\": {\"template\": {\"spec\": {\"containers\": [{\"name\": \"app\", \"image\": \"${IMAGE}\"}], \"initContainers\": [{\"name\": \"init\", \"image\": \"${IMAGE}\", \"env\": [{\"name\": \"PGOPTIONS\", \"value\": \"-c lock_timeout=5s\"}]},{\"name\": \"copy-static\", \"image\": \"${IMAGE}\"}]}}}}"
+          # parity-load-data runs the api image (tracks_version_of: api in money-to-prisoners-deploy)
+          kubectl patch cronjob parity-load-data --type json --patch "[{\"op\": \"replace\", \"path\": \"/spec/jobTemplate/spec/template/spec/containers/0/image\", \"value\": \"${IMAGE}\"}]"
           kubectl rollout status deployment/api --timeout=10m
