@@ -128,6 +128,35 @@ class SendNotificationEmailsTestCase(NotificationBaseTestCase):
         self.assertEqual(send_email_kwargs['personalisation']['count'], transaction_count)
         self.assertIsNotNone(EmailNotificationPreferences.objects.get(user=user).last_sent_at)
 
+    def test_does_not_send_email_with_events_to_disabled_user(self, mock_send_email):
+        user = self.security_staff[0]
+        user.flags.create(name=EMAILS_STARTED_FLAG)
+        EmailNotificationPreferences(user=user, frequency=EmailFrequency.daily).save()
+        self.create_profiles_but_unlink_objects()
+        for profile in DebitCardSenderDetails.objects.all():
+            profile.monitoring_users.add(user)
+        user.is_active = False
+        user.save()
+        call_command('update_security_profiles')
+        call_command('send_notification_emails')
+
+        # events are still created for disabled users who monitor profiles; only the email is withheld
+        self.assertTrue(Event.objects.filter(user=user).exists())
+        mock_send_email.assert_not_called()
+        self.assertIsNone(EmailNotificationPreferences.objects.get(user=user).last_sent_at)
+
+    def test_does_not_send_first_email_to_disabled_user(self, mock_send_email):
+        user = self.security_staff[0]
+        EmailNotificationPreferences(user=user, frequency=EmailFrequency.daily).save()
+        user.is_active = False
+        user.save()
+        call_command('update_security_profiles')
+        call_command('send_notification_emails')
+
+        mock_send_email.assert_not_called()
+        self.assertFalse(user.flags.filter(name=EMAILS_STARTED_FLAG).exists())
+        self.assertIsNone(EmailNotificationPreferences.objects.get(user=user).last_sent_at)
+
     def test_profile_grouping(self, mock_send_email):
         user = self.security_staff[0]
         call_command('update_security_profiles')
