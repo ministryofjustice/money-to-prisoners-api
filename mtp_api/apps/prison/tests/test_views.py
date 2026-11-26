@@ -975,6 +975,7 @@ class PrisonerAccountBalanceTestCase(AuthTestCaseMixin, APITestCase):
         HMPPS_CLIENT_SECRET='EXAMPLE',
         HMPPS_AUTH_BASE_URL='https://sign-in-dev.hmpps.local/auth/',
         HMPPS_PRISON_API_BASE_URL='https://api-dev.prison.local/',
+        HMPPS_OFFENDER_SEARCH_BASE_URL='https://prisoner-search-dev.prison.local/',
     )
     @mock.patch('mtp_api.apps.prison.serializers.nomis.connector', Connector())
     def test_prisoner_location_mismatch_prisoner_found(self, *args):
@@ -1004,12 +1005,11 @@ class PrisonerAccountBalanceTestCase(AuthTestCaseMixin, APITestCase):
             )
             rsps.add(
                 responses.GET,
-                f'{settings.HMPPS_PRISON_API_BASE_URL}api/v1/offenders/{self.prisoner_location_public.prisoner_number}/location',  # noqa: E501
+                f'{settings.HMPPS_OFFENDER_SEARCH_BASE_URL}prisoner/{self.prisoner_location_public.prisoner_number}',
                 json={
-                    'establishment': {
-                        'code': new_prison.nomis_id,
-                        'desc': new_prison.name
-                    },
+                    'prisonerNumber': self.prisoner_location_public.prisoner_number,
+                    'prisonId': new_prison.nomis_id,
+                    'prisonName': new_prison.name,
                 }
             )
             rsps.add(
@@ -1032,6 +1032,7 @@ class PrisonerAccountBalanceTestCase(AuthTestCaseMixin, APITestCase):
         HMPPS_CLIENT_SECRET='EXAMPLE',
         HMPPS_AUTH_BASE_URL='https://sign-in-dev.hmpps.local/auth/',
         HMPPS_PRISON_API_BASE_URL='https://api-dev.prison.local/',
+        HMPPS_OFFENDER_SEARCH_BASE_URL='https://prisoner-search-dev.prison.local/',
     )
     @mock.patch('mtp_api.apps.prison.serializers.nomis.connector', Connector())
     def test_prisoner_location_mismatch_no_prisoner_found(self, *args):
@@ -1054,8 +1055,8 @@ class PrisonerAccountBalanceTestCase(AuthTestCaseMixin, APITestCase):
             )
             rsps.add(
                 responses.GET,
-                f'{settings.HMPPS_PRISON_API_BASE_URL}api/v1/offenders/{self.prisoner_location_public.prisoner_number}/location',  # noqa: E501
-                status=400,
+                f'{settings.HMPPS_OFFENDER_SEARCH_BASE_URL}prisoner/{self.prisoner_location_public.prisoner_number}',
+                status=404,
             )
             response = self.make_api_call(self.prisoner_location_public, self.send_money_user)
 

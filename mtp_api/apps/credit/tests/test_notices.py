@@ -211,11 +211,11 @@ class CreatePrisonerNoticesTestCase(NoticesCommandTestCase):
         # leave only 1 credit as credited and no sent disbursements
 
     @mock.patch(
-        'credit.management.commands.create_prisoner_credit_notices.can_access_nomis',
+        'credit.management.commands.create_prisoner_credit_notices.can_access_prisoner_search',
         mock.Mock(return_value=True),
     )
     @mock.patch('credit.management.commands.create_prisoner_credit_notices.PrisonerCreditNoticeBundle')
-    @mock.patch('credit.management.commands.create_prisoner_credit_notices.nomis_get_location')
+    @mock.patch('credit.management.commands.create_prisoner_credit_notices.prisoner_search_get_location')
     def call_command(self, housing_response, expected_location, mock_get_location, bundle_class):
         credited_date = self.latest_credit.modified.date()
         location_response = {
@@ -248,53 +248,19 @@ class CreatePrisonerNoticesTestCase(NoticesCommandTestCase):
 
     def test_location_present(self):
         self.call_command(
-            {
-                'housing_location': {
-                    'description': 'LEI-A-2-002',
-                    'levels': [
-                        {'type': 'Wing', 'value': 'A'},
-                        {'type': 'Landing', 'value': '2'},
-                        {'type': 'Cell', 'value': '002'},
-                    ],
-                },
-            },
-            {
-                'description': 'LEI-A-2-002',
-                'levels': [
-                    {'type': 'Wing', 'value': 'A'},
-                    {'type': 'Landing', 'value': '2'},
-                    {'type': 'Cell', 'value': '002'},
-                ],
-            },
+            {'cell_location': 'A-2-002'},
+            {'description': 'A-2-002'},
         )
 
     def test_location_long_form(self):
         self.call_command(
-            {
-                'housing_location': {
-                    'description': 'HEI-1-1-A-001',
-                    'levels': [
-                        {'type': 'Block', 'value': '1'},
-                        {'type': 'Tier', 'value': '1'},
-                        {'type': 'Spur', 'value': 'A'},
-                        {'type': 'Cell', 'value': '001'},
-                    ],
-                },
-            },
-            {
-                'description': 'HEI-1-1-A-001',
-                'levels': [
-                    {'type': 'Block', 'value': '1'},
-                    {'type': 'Tier', 'value': '1'},
-                    {'type': 'Spur', 'value': 'A'},
-                    {'type': 'Cell', 'value': '001'},
-                ],
-            },
+            {'cell_location': '1-1-A-001'},
+            {'description': '1-1-A-001'},
         )
 
 
 @mock.patch('credit.management.commands.send_prisoner_credit_notices.send_email')
-@mock.patch('credit.management.commands.create_prisoner_credit_notices.nomis_get_location')
+@mock.patch('credit.management.commands.create_prisoner_credit_notices.prisoner_search_get_location')
 class SendPrisonerCreditNoticeTestCase(NoticesCommandTestCase):
     def test_no_emails_sent_if_prisons_have_addresses(self, nomis_get_location, mock_send_email):
         nomis_get_location.side_effect = NotImplementedError

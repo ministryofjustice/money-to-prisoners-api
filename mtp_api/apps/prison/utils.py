@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 
 import requests
-from mtp_common import nomis
+from mtp_common import prisoner_search
 
 from prison.models import Prison, PrisonerLocation
 
@@ -12,17 +12,17 @@ logger = logging.getLogger('mtp')
 def fetch_prisoner_location_from_nomis(prisoner_location: PrisonerLocation) -> Optional[PrisonerLocation]:
     new_location = None
     try:
-        new_location = nomis.get_location(prisoner_location.prisoner_number)
+        new_location = prisoner_search.get_location(prisoner_location.prisoner_number)
         if not new_location:
             logger.error(
-                'Malformed response from NOMIS when looking up prisoner location for %(prisoner_number)s',
+                'Malformed response from Prisoner Search when looking up prisoner location for %(prisoner_number)s',
                 {'prisoner_number': prisoner_location.prisoner_number}
             )
             return None
         new_prison = Prison.objects.get(nomis_id=new_location['nomis_id'])
     except requests.RequestException:
         logger.error(
-            'Cannot look up prisoner location for %(prisoner_number)s in NOMIS',
+            'Cannot look up prisoner location for %(prisoner_number)s in Prisoner Search',
             {'prisoner_number': prisoner_location.prisoner_number}
         )
         return None
@@ -34,7 +34,7 @@ def fetch_prisoner_location_from_nomis(prisoner_location: PrisonerLocation) -> O
         return None
     else:
         logger.info(
-            'Location fetched from nomis of %(prisoner_number)s is %(prison_nomis_id)s',
+            'Location fetched from Prisoner Search of %(prisoner_number)s is %(prison_nomis_id)s',
             {
                 'prisoner_number': prisoner_location.prisoner_number,
                 'prison_nomis_id': new_prison.nomis_id,
