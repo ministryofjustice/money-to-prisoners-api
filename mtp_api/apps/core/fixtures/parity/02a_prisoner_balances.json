@@ -1,0 +1,12 @@
+[
+  {
+    "model": "prison.prisonerbalance",
+    "pk": "A9971EC",
+    "fields": {
+      "prison": "LEI",
+      "amount": 70100,
+      "created": "2026-01-01T00:00:00Z",
+      "modified": "2026-01-01T00:00:00Z"
+    }
+  }
+]
