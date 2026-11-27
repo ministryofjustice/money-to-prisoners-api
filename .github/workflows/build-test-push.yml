@@ -258,3 +258,50 @@ jobs:
           kubectl patch configmap app-versions --patch "{\"data\": {\"api\": \"${VERSION}\"}}"
           # Keep init-only PGOPTIONS aligned with deploy config/apps.yml (api.web.init_env).
           kubectl patch deployment api --type strategic --patch "{\"metadata\": {\"annotations\": {\"kubernetes.io/change-cause\": \"${VERSION}\"}}, \"spec\": {\"template\": {\"spec\": {\"containers\": [{\"name\": \"app\", \"image\": \"${IMAGE}\"}], \"initContainers\": [{\"name\": \"init\", \"image\": \"${IMAGE}\", \"env\": [{\"name\": \"PGOPTIONS\", \"value\": \"-c lock_timeout=5s\"}]},{\"name\": \"copy-static\", \"image\": \"${IMAGE}\"}]}}}}"
+
+  deploy-parity:
+    name: Deploy to parity
+    needs: deploy
+    if: ${{ github.ref_name == 'main' && vars.GHA_DEPLOY_ENABLED == 'true' && vars.PARITY_DEPLOY_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    environment: parity
+    concurrency:
+      group: deploy-parity
+      cancel-in-progress: false
+    steps:
+      - name: Compute image tags
+        id: tags
+        run: |
+          branch_lc=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]')
+          version=${branch_lc}.${GITHUB_SHA::7}
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "image=ghcr.io/${{ github.repository_owner }}/money-to-prisoners-api:${version}" >> "$GITHUB_OUTPUT"
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v5
+        with:
+          version: v1.32.9
+      - name: Deploy to parity
+        env:
+          IMAGE: ${{ steps.tags.outputs.image }}
+          VERSION: ${{ steps.tags.outputs.version }}
+          KUBE_CERT: ${{ secrets.KUBE_CERT }}
+          KUBE_CLUSTER: ${{ secrets.KUBE_CLUSTER }}
+          KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
+          KUBE_TOKEN: ${{ secrets.KUBE_TOKEN }}
+        run: |
+          if [[ -z "${IMAGE}" || "${IMAGE}" == ":" || -z "${VERSION}" || -z "${KUBE_CERT}" || -z "${KUBE_CLUSTER}" || -z "${KUBE_NAMESPACE}" || -z "${KUBE_TOKEN}" ]]; then
+            echo "::error::Image version or parity Kubernetes credentials are missing."
+            exit 1
+          fi
+          echo "Deploying to parity: ${IMAGE}"
+          echo "${KUBE_CERT}" > /tmp/mtp-k8s-ca.crt
+          kubectl config set-cluster parity --certificate-authority=/tmp/mtp-k8s-ca.crt --server="https://${KUBE_CLUSTER}"
+          kubectl config set-credentials github-actions --token="${KUBE_TOKEN}"
+          kubectl config set-context parity --cluster=parity --user=github-actions --namespace="${KUBE_NAMESPACE}"
+          kubectl config use-context parity
+          kubectl patch configmap app-versions --patch "{\"data\": {\"api\": \"${VERSION}\"}}"
+          # Keep init-only PGOPTIONS aligned with deploy config/apps.yml (api.web.init_env).
+          kubectl patch deployment api --type strategic --patch "{\"metadata\": {\"annotations\": {\"kubernetes.io/change-cause\": \"${VERSION}\"}}, \"spec\": {\"template\": {\"spec\": {\"containers\": [{\"name\": \"app\", \"image\": \"${IMAGE}\"}], \"initContainers\": [{\"name\": \"init\", \"image\": \"${IMAGE}\", \"env\": [{\"name\": \"PGOPTIONS\", \"value\": \"-c lock_timeout=5s\"}]},{\"name\": \"copy-static\", \"image\": \"${IMAGE}\"}]}}}}"
+          # parity-load-data runs the api image (tracks_version_of: api in money-to-prisoners-deploy)
+          kubectl patch cronjob parity-load-data --type json --patch "[{\"op\": \"replace\", \"path\": \"/spec/jobTemplate/spec/template/spec/containers/0/image\", \"value\": \"${IMAGE}\"}]"
+          kubectl rollout status deployment/api --timeout=10m
